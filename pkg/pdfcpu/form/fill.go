@@ -492,6 +492,7 @@ func fillRadioButtonGroup(
 	ctx *model.Context,
 	d types.Dict,
 	id, name string,
+	opts []string,
 	locked bool,
 	format DataFormat,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
@@ -515,6 +516,16 @@ func fillRadioButtonGroup(
 	}
 
 	vNew := vv[0]
+
+	if len(opts) > 0 {
+		for i, o := range opts {
+			if o == vNew {
+				vNew = strconv.Itoa(i)
+				break
+			}
+		}
+	}
+
 	vOld := ""
 	if s := d.NameEntry("V"); s != nil {
 		n, err := types.DecodeName(*s)
@@ -575,6 +586,7 @@ func fillCheckBox(
 	ctx *model.Context,
 	d types.Dict,
 	id, name string,
+	opts []string,
 	locked bool,
 	format DataFormat,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
@@ -598,7 +610,7 @@ func fillCheckBox(
 	}
 
 	s := strings.ToLower(vv[0])
-	vNew := strings.HasPrefix(s, "t")
+	vNew := strings.HasPrefix(s, "t") // true
 	vOld := false
 	if o, found := d.Find("V"); found {
 		vOld = o.(types.Name) != "Off"
@@ -652,12 +664,17 @@ func fillBtn(
 		return nil
 	}
 
+	opts, err := parseOptions(ctx.XRefTable, d, OPTIONAL)
+	if err != nil {
+		return err
+	}
+
 	if len(d.ArrayEntry("Kids")) > 1 {
-		if err := fillRadioButtonGroup(ctx, d, id, name, locked, format, fillDetails, ok); err != nil {
+		if err := fillRadioButtonGroup(ctx, d, id, name, opts, locked, format, fillDetails, ok); err != nil {
 			return err
 		}
 	} else {
-		if err := fillCheckBox(ctx, d, id, name, locked, format, fillDetails, ok); err != nil {
+		if err := fillCheckBox(ctx, d, id, name, opts, locked, format, fillDetails, ok); err != nil {
 			return err
 		}
 	}
@@ -708,7 +725,7 @@ func fillComboBox(
 		return nil
 	}
 
-	s, err := types.EscapeUTF16String(vNew)
+	s, err := types.EscapedUTF16String(vNew)
 	if err != nil {
 		return err
 	}
@@ -743,7 +760,7 @@ func updateListBoxValues(multi bool, d types.Dict, opts, vNew []string) (types.A
 					break
 				}
 			}
-			s, err := types.EscapeUTF16String(v)
+			s, err := types.EscapedUTF16String(v)
 			if err != nil {
 				return nil, err
 			}
@@ -760,7 +777,7 @@ func updateListBoxValues(multi bool, d types.Dict, opts, vNew []string) (types.A
 	}
 
 	v := vNew[0]
-	s, err := types.EscapeUTF16String(v)
+	s, err := types.EscapedUTF16String(v)
 	if err != nil {
 		return nil, err
 	}
@@ -861,7 +878,7 @@ func fillCh(
 		return errors.New("pdfcpu: corrupt form field: missing entry Ff")
 	}
 
-	opts, err := parseOptions(ctx.XRefTable, d)
+	opts, err := parseOptions(ctx.XRefTable, d, REQUIRED)
 	if err != nil {
 		return err
 	}
@@ -909,7 +926,7 @@ func fillDateField(
 		return nil
 	}
 
-	s, err := types.EscapeUTF16String(vNew)
+	s, err := types.EscapedUTF16String(vNew)
 	if err != nil {
 		return err
 	}
@@ -959,11 +976,10 @@ func fillTextField(
 		return nil
 	}
 
-	s, err := types.EscapeUTF16String(vNew)
+	s, err := types.EscapedUTF16String(vNew)
 	if err != nil {
 		return err
 	}
-
 	d["V"] = types.StringLiteral(*s)
 
 	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
@@ -1109,7 +1125,7 @@ func setupFillFonts(xRefTable *model.XRefTable) error {
 	m := xRefTable.FillFonts
 
 	if d == nil {
-		// setup/reuse Helvetica and add to m
+		// TODO setup/reuse Helvetica and add to m
 		return nil
 	}
 

@@ -360,7 +360,7 @@ func bmDict(ctx *model.Context, bm Bookmark, parent types.IndirectRef) (types.Di
 
 	var o types.Object = *ir
 
-	s, err := types.EscapeUTF16String(bm.Title)
+	s, err := types.EscapedUTF16String(bm.Title)
 	if err != nil {
 		return nil, err
 	}

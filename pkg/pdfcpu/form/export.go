@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,6 +28,15 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
+)
+
+const (
+
+	// REQUIRED is used for required dict entries.
+	REQUIRED = true
+
+	// OPTIONAL is used for optional dict entries.
+	OPTIONAL = false
 )
 
 // Header represents form meta data.
@@ -186,15 +196,24 @@ func (f Form) listBoxValuesAndLock(id, name string) ([]string, bool, bool) {
 	return nil, false, false
 }
 
-func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, error) {
+func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, bool, error) {
 
 	var opts []string
 	p := 0
 
+	opts, err := parseOptions(xRefTable, d, OPTIONAL)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if len(opts) > 0 {
+		return opts, true, nil
+	}
+
 	for _, o := range d.ArrayEntry("Kids") {
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		indRef := d.IndirectRefEntry("P")
@@ -208,16 +227,16 @@ func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 
 		d1 := d.DictEntry("AP")
 		if d1 == nil {
-			return nil, errors.New("corrupt form field: missing entry AP")
+			return nil, false, errors.New("corrupt form field: missing entry AP")
 		}
 		d2 := d1.DictEntry("N")
 		if d2 == nil {
-			return nil, errors.New("corrupt AP field: missing entry N")
+			return nil, false, errors.New("corrupt AP field: missing entry N")
 		}
 		for k := range d2 {
 			k, err := types.DecodeName(k)
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
 			if k != "Off" {
 				for _, opt := range opts {
@@ -230,15 +249,42 @@ func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 		}
 	}
 
-	return opts, nil
+	return opts, false, nil
+}
+
+func resolveOption(s string, opts []string, explicit bool) (string, error) {
+	n, err := types.DecodeName(s)
+	if err != nil {
+		return "", err
+	}
+	if len(opts) > 0 && explicit {
+		j, err := strconv.Atoi(n)
+		if err != nil {
+			return "", err
+		}
+		for i, o := range opts {
+			if i == j {
+				n = o
+				break
+			}
+		}
+	}
+	return n, nil
 }
 
 func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict, id, name string, locked bool) (*RadioButtonGroup, error) {
 
 	rbg := &RadioButtonGroup{Pages: []int{page}, ID: id, Name: name, Locked: locked}
 
+	opts, explicit, err := extractRadioButtonGroupOptions(xRefTable, d)
+	if err != nil {
+		return nil, err
+	}
+
+	rbg.Options = opts
+
 	if s := d.NameEntry("DV"); s != nil {
-		n, err := types.DecodeName(*s)
+		n, err := resolveOption(*s, opts, explicit)
 		if err != nil {
 			return nil, err
 		}
@@ -246,7 +292,7 @@ func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict,
 	}
 
 	if s := d.NameEntry("V"); s != nil {
-		n, err := types.DecodeName(*s)
+		n, err := resolveOption(*s, opts, explicit)
 		if err != nil {
 			return nil, err
 		}
@@ -254,13 +300,6 @@ func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict,
 			rbg.Value = n
 		}
 	}
-
-	opts, err := extractRadioButtonGroupOptions(xRefTable, d)
-	if err != nil {
-		return nil, err
-	}
-
-	rbg.Options = opts
 
 	return rbg, nil
 }
@@ -300,7 +339,7 @@ func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, nam
 		cb.Value = strings.TrimSpace(s)
 	}
 
-	opts, err := parseOptions(xRefTable, d)
+	opts, err := parseOptions(xRefTable, d, REQUIRED)
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +499,7 @@ func extractListBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name
 		lb.Values = ss
 	}
 
-	opts, err := parseOptions(xRefTable, d)
+	opts, err := parseOptions(xRefTable, d, REQUIRED)
 	if err != nil {
 		return nil, err
 	}

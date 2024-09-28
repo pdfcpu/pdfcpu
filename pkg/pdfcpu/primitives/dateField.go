@@ -306,10 +306,12 @@ func (df *DateField) calcFontFromDA(ctx *model.Context, d types.Dict, fonts map[
 		return nil, errors.New("pdfcpu: unable to detect indirect reference for font")
 	}
 
+	fillFont := formFontIndRef(ctx.XRefTable, fontID) != nil
+
 	df.fontID = id
 	df.Font.Name = name
 	df.Font.Lang = lang
-	//df.RTL = pdffont.RTL(lang)
+	df.Font.FillFont = fillFont
 
 	return fontIndRef, nil
 }
@@ -454,7 +456,7 @@ func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	}
 
 	lineBB := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
-	s := model.PrepBytes(xRefTable, v, f.Name, true, false)
+	s := model.PrepBytes(xRefTable, v, f.Name, true, false, f.FillFont)
 	x := 2 * boWidth
 	if x == 0 {
 		x = 2
@@ -599,7 +601,7 @@ func (df *DateField) handleBorderAndMK(d types.Dict) {
 func (df *DateField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	pdf := df.pdf
 
-	id, err := types.EscapeUTF16String(df.ID)
+	id, err := types.EscapedUTF16String(df.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -656,7 +658,7 @@ func (df *DateField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	df.handleBorderAndMK(d)
 
 	if df.Value != "" {
-		s, err := types.EscapeUTF16String(df.Value)
+		s, err := types.EscapedUTF16String(df.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -664,7 +666,7 @@ func (df *DateField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	}
 
 	if df.Default != "" {
-		s, err := types.EscapeUTF16String(df.Default)
+		s, err := types.EscapedUTF16String(df.Default)
 		if err != nil {
 			return nil, err
 		}

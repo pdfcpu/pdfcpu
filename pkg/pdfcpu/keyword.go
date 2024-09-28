@@ -76,7 +76,7 @@ func finalizeKeywords(ctx *model.Context) error {
 
 	s0 := strings.Join(ss, "; ")
 
-	s, err := types.EscapeUTF16String(s0)
+	s, err := types.EscapedUTF16String(s0)
 	if err != nil {
 		return err
 	}

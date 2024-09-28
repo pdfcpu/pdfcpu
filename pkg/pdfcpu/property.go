@@ -51,7 +51,7 @@ func PropertiesAdd(ctx *model.Context, properties map[string]string) error {
 	d, _ := ctx.DereferenceDict(*ctx.Info)
 
 	for k, v := range properties {
-		s, err := types.EscapeUTF16String(v)
+		s, err := types.EscapedUTF16String(v)
 		if err != nil {
 			return err
 		}

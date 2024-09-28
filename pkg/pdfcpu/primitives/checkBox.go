@@ -533,7 +533,7 @@ func (cb *CheckBox) appearanceIndRefs(fonts model.FontMap, bgCol *color.SimpleCo
 
 func (cb *CheckBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 
-	id, err := types.EscapeUTF16String(cb.ID)
+	id, err := types.EscapedUTF16String(cb.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -595,7 +595,7 @@ func (cb *CheckBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	)
 
 	if cb.Tip != "" {
-		tu, err := types.EscapeUTF16String(cb.Tip)
+		tu, err := types.EscapedUTF16String(cb.Tip)
 		if err != nil {
 			return nil, err
 		}

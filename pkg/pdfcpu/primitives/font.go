@@ -29,13 +29,14 @@ import (
 )
 
 type FormFont struct {
-	pdf    *PDF
-	Name   string
-	Lang   string // ISO-639
-	Script string // ISO-15924
-	Size   int
-	Color  string `json:"col"`
-	col    *color.SimpleColor
+	pdf      *PDF
+	Name     string
+	Lang     string // ISO-639
+	Script   string // ISO-15924
+	Size     int
+	Color    string `json:"col"`
+	col      *color.SimpleColor
+	FillFont bool
 }
 
 // ISO-639 country codes

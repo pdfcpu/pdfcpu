@@ -332,7 +332,7 @@ func (ann Annotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.Indirec
 	}
 
 	if ann.Contents != "" {
-		s, err := types.EscapeUTF16String(ann.Contents)
+		s, err := types.EscapedUTF16String(ann.Contents)
 		if err != nil {
 			return nil, err
 		}
@@ -581,7 +581,7 @@ func (ann MarkupAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.I
 	}
 
 	if ann.T != "" {
-		s, err := types.EscapeUTF16String(ann.T)
+		s, err := types.EscapedUTF16String(ann.T)
 		if err != nil {
 			return nil, err
 		}
@@ -597,7 +597,7 @@ func (ann MarkupAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.I
 	}
 
 	if ann.RC != "" {
-		s, err := types.EscapeUTF16String(ann.RC)
+		s, err := types.EscapedUTF16String(ann.RC)
 		if err != nil {
 			return nil, err
 		}
@@ -607,7 +607,7 @@ func (ann MarkupAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.I
 	d.InsertString("CreationDate", ann.CreationDate)
 
 	if ann.Subj != "" {
-		s, err := types.EscapeUTF16String(ann.Subj)
+		s, err := types.EscapedUTF16String(ann.Subj)
 		if err != nil {
 			return nil, err
 		}
@@ -815,7 +815,7 @@ func (ann FreeTextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types
 		}
 		ann.Text = ann.Contents
 	}
-	s, err := types.EscapeUTF16String(ann.Text)
+	s, err := types.EscapedUTF16String(ann.Text)
 	if err != nil {
 		return nil, err
 	}

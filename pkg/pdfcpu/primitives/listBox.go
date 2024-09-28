@@ -327,9 +327,12 @@ func (lb *ListBox) calcFontFromDA(ctx *model.Context, d types.Dict, fonts map[st
 		return nil, errors.New("pdfcpu: unable to detect indirect reference for font")
 	}
 
+	fillFont := formFontIndRef(ctx.XRefTable, fontID) != nil
+
 	lb.fontID = id
 	lb.Font.Name = name
 	lb.Font.Lang = lang
+	lb.Font.FillFont = fillFont
 	lb.RTL = pdffont.RTL(lang)
 
 	return fontIndRef, nil
@@ -481,7 +484,7 @@ func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 			s = model.DecodeUTF8ToByte(s)
 		}
 		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
-		s = model.PrepBytes(xRefTable, s, f.Name, true, lb.RTL)
+		s = model.PrepBytes(xRefTable, s, f.Name, true, lb.RTL, f.FillFont)
 		x := 2 * boWidth
 		if x == 0 {
 			x = 2
@@ -615,7 +618,7 @@ func (lb *ListBox) handleVAndDV(d types.Dict) error {
 				ind = append(ind, types.Integer(i))
 			}
 		}
-		s, err := types.EscapeUTF16String(v)
+		s, err := types.EscapedUTF16String(v)
 		if err != nil {
 			return err
 		}
@@ -634,7 +637,7 @@ func (lb *ListBox) handleVAndDV(d types.Dict) error {
 
 	arr = types.Array{}
 	for _, v := range lb.Defaults {
-		s, err := types.EscapeUTF16String(v)
+		s, err := types.EscapedUTF16String(v)
 		if err != nil {
 			return err
 		}
@@ -653,14 +656,14 @@ func (lb *ListBox) handleVAndDV(d types.Dict) error {
 func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	pdf := lb.pdf
 
-	id, err := types.EscapeUTF16String(lb.ID)
+	id, err := types.EscapedUTF16String(lb.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	opt := types.Array{}
 	for _, s := range lb.Options {
-		s1, err := types.EscapeUTF16String(s)
+		s1, err := types.EscapedUTF16String(s)
 		if err != nil {
 			return nil, err
 		}
@@ -684,7 +687,7 @@ func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	)
 
 	if lb.Tip != "" {
-		tu, err := types.EscapeUTF16String(lb.Tip)
+		tu, err := types.EscapedUTF16String(lb.Tip)
 		if err != nil {
 			return nil, err
 		}

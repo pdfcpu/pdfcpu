@@ -121,7 +121,7 @@ func EncodeUTF16String(s string) string {
 	return string(bb)
 }
 
-func EscapeUTF16String(s string) (*string, error) {
+func EscapedUTF16String(s string) (*string, error) {
 	return Escape(EncodeUTF16String(s))
 }
 

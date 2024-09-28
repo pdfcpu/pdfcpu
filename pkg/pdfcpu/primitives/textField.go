@@ -248,6 +248,8 @@ func (tf *TextField) calcFontFromDA(ctx *model.Context, d types.Dict, needUTF8 b
 		return nil, errors.New("pdfcpu: unable to detect indirect reference for font")
 	}
 
+	fillFont := formFontIndRef(ctx.XRefTable, fontID) != nil
+
 	if needUTF8 && font.IsCoreFont(name) {
 		id, name, lang, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
 		if err != nil {
@@ -258,6 +260,7 @@ func (tf *TextField) calcFontFromDA(ctx *model.Context, d types.Dict, needUTF8 b
 	tf.fontID = id
 	tf.Font.Name = name
 	tf.Font.Lang = lang
+	tf.Font.FillFont = fillFont
 	tf.RTL = pdffont.RTL(lang)
 
 	return fontIndRef, nil
@@ -387,7 +390,7 @@ func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y f
 	for i := 0; i < len(lines); i++ {
 		s := lines[i]
 		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
-		s = model.PrepBytes(xRefTable, s, f.Name, !cjk, f.RTL())
+		s = model.PrepBytes(xRefTable, s, f.Name, !cjk, f.RTL(), f.FillFont)
 		x := 2 * boWidth
 		if x == 0 {
 			x = 2
@@ -591,7 +594,7 @@ func (tf *TextField) handleBorderAndMK(d types.Dict) {
 func (tf *TextField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	pdf := tf.pdf
 
-	id, err := types.EscapeUTF16String(tf.ID)
+	id, err := types.EscapedUTF16String(tf.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -612,7 +615,7 @@ func (tf *TextField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	)
 
 	if tf.Tip != "" {
-		tu, err := types.EscapeUTF16String(tf.Tip)
+		tu, err := types.EscapedUTF16String(tf.Tip)
 		if err != nil {
 			return nil, err
 		}
@@ -622,7 +625,7 @@ func (tf *TextField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	tf.handleBorderAndMK(d)
 
 	if tf.Value != "" {
-		s, err := types.EscapeUTF16String(tf.Value)
+		s, err := types.EscapedUTF16String(tf.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -630,7 +633,7 @@ func (tf *TextField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	}
 
 	if tf.Default != "" {
-		s, err := types.EscapeUTF16String(tf.Default)
+		s, err := types.EscapedUTF16String(tf.Default)
 		if err != nil {
 			return nil, err
 		}
@@ -1015,7 +1018,15 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine 
 		return err
 	}
 
-	d1 := sd.DictEntry("Resources")
+	obj, ok := sd.Find("Resources")
+	if !ok {
+		return renderTextFieldAP(ctx, d, text, multiLine, fonts)
+	}
+
+	d1, err := ctx.DereferenceDict(obj)
+	if err != nil {
+		return err
+	}
 	if d1 == nil {
 		return renderTextFieldAP(ctx, d, text, multiLine, fonts)
 	}
@@ -1043,6 +1054,8 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine 
 		return err
 	}
 
+	fillFont := formFontIndRef(ctx.XRefTable, fontID) != nil
+
 	tf, _, err := NewTextField(ctx, d, text, multiLine, fontIndRef, fonts)
 	if err != nil {
 		return err
@@ -1052,6 +1065,7 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine 
 	tf.fontID = fontID
 	tf.Font.Name = name
 	tf.Font.Lang = lang
+	tf.Font.FillFont = fillFont
 	tf.RTL = pdffont.RTL(lang)
 
 	bb, err := tf.renderN(ctx.XRefTable)

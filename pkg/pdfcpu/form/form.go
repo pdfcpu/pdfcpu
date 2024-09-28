@@ -250,8 +250,14 @@ func extractStringSlice(a types.Array) ([]string, error) {
 	return ss, nil
 }
 
-func parseOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, error) {
-	o, _ := d.Find("Opt")
+func parseOptions(xRefTable *model.XRefTable, d types.Dict, required bool) ([]string, error) {
+	o, ok := d.Find("Opt")
+	if !ok {
+		if required {
+			return nil, errors.New("corrupt form field: missing entry \"Opt\"")
+		}
+		return nil, nil
+	}
 	a, err := xRefTable.DereferenceArray(o)
 	if err != nil {
 		return nil, err
@@ -285,27 +291,33 @@ func parseStringLiteralArray(xRefTable *model.XRefTable, d types.Dict, key strin
 	return nil, nil
 }
 
-func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) (string, error) {
+func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, error) {
 
-	var vv []string
+	vv, err := parseOptions(xRefTable, d, OPTIONAL)
+	if err != nil {
+		return nil, err
+	}
+	if len(vv) > 0 {
+		return vv, nil
+	}
 
 	for _, o := range d.ArrayEntry("Kids") {
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		d1 := d.DictEntry("AP")
 		if d1 == nil {
-			return "", errors.New("corrupt form field: missing entry AP")
+			return nil, errors.New("corrupt form field: missing entry \"AP\"")
 		}
 		d2 := d1.DictEntry("N")
 		if d2 == nil {
-			return "", errors.New("corrupt AP field: missing entry N")
+			return nil, errors.New("corrupt AP field: missing entry \"N\"")
 		}
 		for k := range d2 {
 			k, err := types.DecodeName(k)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			if k != "Off" {
 				found := false
@@ -323,12 +335,22 @@ func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) (s
 		}
 	}
 
-	return strings.Join(vv, ","), nil
+	return vv, nil //strings.Join(vv, ","), nil
 }
 
 func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
 
 	f.Typ = FTRadioButtonGroup
+
+	opts, err := collectRadioButtonGroupOptions(xRefTable, d)
+	if err != nil {
+		return err
+	}
+
+	f.Opts = strings.Join(opts, ",")
+	if len(f.Opts) > 0 {
+		fm.opt = true
+	}
 
 	if s := d.NameEntry("V"); s != nil {
 		v, err := types.DecodeName(*s)
@@ -336,22 +358,23 @@ func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field,
 			return err
 		}
 		if v != "Off" {
+			if len(opts) > 0 {
+				j, err := strconv.Atoi(v)
+				if err == nil {
+					for i, o := range opts {
+						if i == j {
+							v = o
+							break
+						}
+					}
+				}
+			}
 			if w := runewidth.StringWidth(v); w > fm.valMax {
 				fm.valMax = w
 			}
 			fm.val = true
 			f.V = v
 		}
-	}
-
-	s, err := collectRadioButtonGroupOptions(xRefTable, d)
-	if err != nil {
-		return err
-	}
-
-	f.Opts = s
-	if len(f.Opts) > 0 {
-		fm.opt = true
 	}
 
 	return nil
@@ -484,7 +507,7 @@ func collectListBox(xRefTable *model.XRefTable, multi bool, d types.Dict, f *Fie
 func collectCh(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
 	ff := d.IntEntry("Ff")
 
-	vv, err := parseOptions(xRefTable, d)
+	vv, err := parseOptions(xRefTable, d, REQUIRED)
 	if err != nil {
 		return err
 	}
@@ -600,7 +623,7 @@ func collectPageField(
 	if ft == nil {
 		ft = d.NameEntry("FT")
 		if ft == nil {
-			return errors.Errorf("pdfcpu: corrupt form field %s: missing entry FT\n%s", f.ID, d)
+			return errors.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", f.ID, d)
 		}
 	}
 
@@ -1256,11 +1279,11 @@ func resetBtn(xRefTable *model.XRefTable, d types.Dict) error {
 		}
 		d1 := d.DictEntry("AP")
 		if d1 == nil {
-			return errors.New("corrupt form field: missing entry AP")
+			return errors.New("corrupt form field: missing entry \"AP\"")
 		}
 		d2 := d1.DictEntry("N")
 		if d2 == nil {
-			return errors.New("corrupt AP field: missing entry N")
+			return errors.New("corrupt AP field: missing entry \"N\"")
 		}
 		for k := range d2 {
 			k, err := types.DecodeName(k)
@@ -1339,10 +1362,10 @@ func resetMultiListBox(xRefTable *model.XRefTable, d types.Dict, opts []string) 
 func resetCh(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRef) error {
 	ff := d.IntEntry("Ff")
 	if ff == nil {
-		return errors.New("pdfcpu: corrupt form field: missing entry Ff")
+		return errors.New("pdfcpu: corrupt form field: missing entry \"Ff\"")
 	}
 
-	opts, err := parseOptions(ctx.XRefTable, d)
+	opts, err := parseOptions(ctx.XRefTable, d, REQUIRED)
 	if err != nil {
 		return err
 	}
@@ -1456,7 +1479,7 @@ func resetPageFields(
 		if ft == nil {
 			ft = d.NameEntry("FT")
 			if ft == nil {
-				return errors.Errorf("pdfcpu: corrupt form field %s: missing entry FT\n%s", fi.id, d)
+				return errors.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
 			}
 		}
 
@@ -1556,7 +1579,7 @@ func ensureAP(ctx *model.Context, d types.Dict, fi *fieldInfo, fonts map[string]
 	if ft == nil {
 		ft = d.NameEntry("FT")
 		if ft == nil {
-			return errors.Errorf("pdfcpu: corrupt form field %s: missing entry FT\n%s", fi.id, d)
+			return errors.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
 		}
 	}
 
@@ -1718,7 +1741,7 @@ func deleteAP(d types.Dict, fi *fieldInfo) error {
 	if ft == nil {
 		ft = d.NameEntry("FT")
 		if ft == nil {
-			return errors.Errorf("pdfcpu: corrupt form field %s: missing entry FT\n%s", fi.id, d)
+			return errors.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
 		}
 	}
 	if *ft == "Ch" {

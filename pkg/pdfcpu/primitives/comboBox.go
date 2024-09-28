@@ -257,9 +257,12 @@ func (cb *ComboBox) calcFontFromDA(ctx *model.Context, d types.Dict, fonts map[s
 		return nil, errors.New("pdfcpu: unable to detect indirect reference for font")
 	}
 
+	fillFont := formFontIndRef(ctx.XRefTable, fontID) != nil
+
 	cb.fontID = id
 	cb.Font.Name = name
 	cb.Font.Lang = lang
+	cb.Font.FillFont = fillFont
 	cb.RTL = pdffont.RTL(lang)
 
 	return fontIndRef, nil
@@ -386,7 +389,7 @@ func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		v = model.DecodeUTF8ToByte(v)
 	}
 	lineBB := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
-	s := model.PrepBytes(xRefTable, v, f.Name, true, cb.RTL)
+	s := model.PrepBytes(xRefTable, v, f.Name, true, cb.RTL, f.FillFont)
 	x := 2 * boWidth
 	if x == 0 {
 		x = 2
@@ -467,14 +470,14 @@ func (cb *ComboBox) handleBorderAndMK(d types.Dict) {
 func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	pdf := cb.pdf
 
-	id, err := types.EscapeUTF16String(cb.ID)
+	id, err := types.EscapedUTF16String(cb.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	opt := types.Array{}
 	for _, s := range cb.Options {
-		s, err := types.EscapeUTF16String(s)
+		s, err := types.EscapedUTF16String(s)
 		if err != nil {
 			return nil, err
 		}
@@ -498,7 +501,7 @@ func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	)
 
 	if cb.Tip != "" {
-		tu, err := types.EscapeUTF16String(cb.Tip)
+		tu, err := types.EscapedUTF16String(cb.Tip)
 		if err != nil {
 			return nil, err
 		}
@@ -509,7 +512,7 @@ func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 
 	v := cb.Value
 	if cb.Default != "" {
-		s, err := types.EscapeUTF16String(cb.Default)
+		s, err := types.EscapedUTF16String(cb.Default)
 		if err != nil {
 			return nil, err
 		}
@@ -526,7 +529,7 @@ func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 			break
 		}
 	}
-	s, err := types.EscapeUTF16String(v)
+	s, err := types.EscapedUTF16String(v)
 	if err != nil {
 		return nil, err
 	}

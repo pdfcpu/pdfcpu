@@ -537,7 +537,7 @@ func createFileAttachmentAnnotation(xRefTable *model.XRefTable, pageIndRef types
 
 	fn := filepath.Base(fileName)
 
-	s, err := types.EscapeUTF16String(fn)
+	s, err := types.EscapedUTF16String(fn)
 	if err != nil {
 		return nil, err
 	}
@@ -583,7 +583,7 @@ func createFileSpecDict(xRefTable *model.XRefTable, fileName string) (types.Dict
 	}
 	fn := filepath.Base(fileName)
 
-	s, err := types.EscapeUTF16String(fn)
+	s, err := types.EscapedUTF16String(fn)
 	if err != nil {
 		return nil, err
 	}
