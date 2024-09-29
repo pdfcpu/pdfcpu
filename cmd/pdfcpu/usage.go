@@ -1622,7 +1622,7 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
    set viewer preferences via JSON file:
          pdfcpu viewerpref set test.pdf viewerpref.json
 
-         and eg. viewerpref.json (each preferences is optional!):
+         and eg. viewerpref.json (each preference is optional!):
 
          {
             "viewerPreferences": {

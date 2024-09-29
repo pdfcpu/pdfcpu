@@ -230,7 +230,13 @@ func ListImages(ctx *model.Context, selectedPages types.IntSet) ([]string, error
 		return nil, err
 	}
 
-	return append([]string{fmt.Sprintf("%d images available(%s)", j, types.ByteSize(size))}, ss...), nil
+	s := fmt.Sprintf("%d images available", j)
+
+	if j > 0 {
+		s += fmt.Sprintf(" (%s)", types.ByteSize(size))
+	}
+
+	return append([]string{s}, ss...), nil
 }
 
 // WriteImageToDisk returns a closure for writing img to disk.
@@ -245,12 +251,6 @@ func WriteImageToDisk(outDir, fileName string) func(model.Image, bool, int) erro
 			qual = "thumb"
 		}
 		f := fmt.Sprintf(s+"_%s.%s", fileName, img.PageNr, qual, img.FileType)
-		// if singleImgPerPage {
-		// 	if img.thumb {
-		// 		s += "_" + qual
-		// 	}
-		// 	f = fmt.Sprintf(s+".%s", fileName, img.pageNr, img.FileType)
-		// }
 		outFile := filepath.Join(outDir, f)
 		log.CLI.Printf("writing %s\n", outFile)
 		return WriteReader(outFile, img)

@@ -653,30 +653,41 @@ func validateNameTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict, f
 		return err
 	}
 
-	var fkv, lkv string
-
 	o, err := xRefTable.Dereference(a[0])
 	if err != nil {
 		return err
 	}
-
 	s, err := types.StringOrHexLiteral(o)
 	if err != nil {
 		return err
 	}
-	fkv = *s
+	fkv := *s
 
-	if o, err = xRefTable.Dereference(a[1]); err != nil {
+	o, err = xRefTable.Dereference(a[1])
+	if err != nil {
 		return err
 	}
-
 	s, err = types.StringOrHexLiteral(o)
 	if err != nil {
 		return err
 	}
-	lkv = *s
+	lkv := *s
 
-	if firstKey < fkv || lastKey > lkv {
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+
+		if fkv != firstKey && xRefTable.ValidationMode == model.ValidationRelaxed {
+			fkv = firstKey
+			a[0] = types.StringLiteral(fkv)
+		}
+
+		if lkv != lastKey && xRefTable.ValidationMode == model.ValidationRelaxed {
+			lkv = lastKey
+			a[1] = types.StringLiteral(lkv)
+		}
+
+	}
+
+	if firstKey != fkv || lastKey != lkv {
 		return errors.Errorf("pdfcpu: validateNameTreeDictLimitsEntry: leaf node corrupted (firstKey: %s vs %s) (lastKey: %s vs %s)\n", firstKey, fkv, lastKey, lkv)
 	}
 

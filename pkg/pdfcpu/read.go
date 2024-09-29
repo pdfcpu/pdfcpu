@@ -2280,7 +2280,7 @@ func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.S
 	}
 
 	l1 := 0
-	if sd.StreamLength != nil {
+	if !fixLength && sd.StreamLength != nil {
 		l1 = int(*sd.StreamLength)
 	}
 	rawContent, err := readStreamContent(rd, l1)

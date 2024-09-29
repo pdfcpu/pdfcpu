@@ -245,11 +245,15 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 
 	for _, a := range aa {
 		fileName := filepath.Join(outDir, a.FileName)
-		logWritingTo(fileName)
 		f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 		if err != nil {
-			return err
+			fileName = filepath.Base(a.FileName)
+			f, err = os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+			if err != nil {
+				return err
+			}
 		}
+		logWritingTo(fileName)
 		if _, err = io.Copy(f, a); err != nil {
 			return err
 		}

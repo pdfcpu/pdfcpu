@@ -1463,7 +1463,6 @@ func validateDashPatternArray(xRefTable *model.XRefTable, arr types.Array) bool 
 
 		if f != 0 {
 			all0 = false
-			break
 		}
 
 	}
@@ -1507,9 +1506,7 @@ func validateBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
 				return true
 			}
 
-			if !validateDashPatternArray(xRefTable, dpa) {
-				return false
-			}
+			return validateDashPatternArray(xRefTable, dpa)
 		}
 
 		o, err := xRefTable.Dereference(a[i])
