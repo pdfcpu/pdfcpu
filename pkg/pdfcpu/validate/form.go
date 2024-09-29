@@ -229,7 +229,9 @@ func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName stri
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		validate = validateDARelaxed
 	}
-	if (*outFieldType).Value() == "Tx" {
+
+	if outFieldType == nil || (*outFieldType).Value() == "Tx" {
+		//if (*outFieldType).Value() == "Tx" {
 		da, err := validateStringEntry(xRefTable, d, dictName, "DA", requiresDA, model.V10, validate)
 		if err != nil {
 			if !terminalNode && requiresDA {
