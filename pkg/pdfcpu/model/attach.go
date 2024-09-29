@@ -365,7 +365,6 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 		}
 		a := Attachment{Reader: bytes.NewReader(sd.Content), ID: id, FileName: fileName, Desc: desc, ModTime: modTime}
 		aa = append(aa, a)
-		println("added att")
 		return nil
 	}
 
@@ -398,7 +397,6 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 	}
 
 	// Extract all files.
-	println("extract ALL")
 	if err := ctx.Names["EmbeddedFiles"].Process(ctx.XRefTable, createAttachment); err != nil {
 		return nil, err
 	}
