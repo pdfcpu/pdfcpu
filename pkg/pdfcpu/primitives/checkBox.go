@@ -761,11 +761,11 @@ func (cb *CheckBox) render(p *model.Page, pageNr int, fonts model.FontMap) error
 	return cb.doRender(p, fonts)
 }
 
-func CalcCheckBoxASNames(d types.Dict) (types.Name, types.Name) {
-	apDict := d.DictEntry("AP")
-	d1 := apDict.DictEntry("D")
+func CalcCheckBoxASNames(ctx *model.Context, d types.Dict) (types.Name, types.Name) {
+	apDict := ctx.ResolveDictEntry(d, "AP")
+	d1 := ctx.ResolveDictEntry(apDict, "D")
 	if d1 == nil {
-		d1 = apDict.DictEntry("N")
+		d1 = ctx.ResolveDictEntry(apDict, "N")
 	}
 	offName, yesName := "Off", "Yes"
 	for k := range d1 {
