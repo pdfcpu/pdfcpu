@@ -468,3 +468,17 @@ func (xRefTable *XRefTable) DestName(obj types.Object) (string, error) {
 
 	return s, err
 }
+
+func (xRefTable *XRefTable) ResolveDictEntry(d types.Dict, key string) types.Dict {
+	value, found := d.Find(key)
+	if !found {
+		return nil
+	}
+
+	d, err := xRefTable.DereferenceDict(value)
+	if err != nil {
+		return nil
+	}
+
+	return d
+}

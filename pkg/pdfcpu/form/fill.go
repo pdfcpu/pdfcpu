@@ -569,7 +569,7 @@ func fillCheckBoxKid(ctx *model.Context, kids types.Array, off bool) (*types.Nam
 		return nil, errors.New("pdfcpu: corrupt AP field: missing entry N")
 	}
 
-	offName, yesName := primitives.CalcCheckBoxASNames(d2)
+	offName, yesName := primitives.CalcCheckBoxASNames(ctx, d2)
 	asName := yesName
 	if off {
 		asName = offName
@@ -637,7 +637,7 @@ func fillCheckBox(
 
 	d["V"] = v
 	if _, found := d.Find("AS"); found {
-		offName, yesName := primitives.CalcCheckBoxASNames(d)
+		offName, yesName := primitives.CalcCheckBoxASNames(ctx, d)
 		//fmt.Printf("off:<%s> yes:<%s>\n", offName, yesName)
 		asName := yesName
 		if v == "Off" {
