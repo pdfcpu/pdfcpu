@@ -27,29 +27,52 @@ type UserDate time.Time
 const userDateFormatNoTimeZone = "2006-01-02T15:04:05Z"
 const userDateFormatNegTimeZone = "2006-01-02T15:04:05-07:00"
 const userDateFormatPosTimeZone = "2006-01-02T15:04:05+07:00"
+const userDateFormatNoTimeZoneWOSeconds = "2006-01-02T15:04Z"
+const userDateFormatNegTimeZoneWOSeconds = "2006-01-02T15:04-07:00"
+const userDateFormatPosTimeZoneWOSeconds = "2006-01-02T15:04+07:00"
 
-func (ud *UserDate) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+type userDate time.Time
+
+func ParseUserDate(s string) (time.Time, error) {
+	dat, err := time.Parse(userDateFormatNoTimeZone, s)
+	if err == nil {
+		return dat, nil
+	}
+	dat, err = time.Parse(userDateFormatPosTimeZone, s)
+	if err == nil {
+		return dat, nil
+	}
+	dat, err = time.Parse(userDateFormatNegTimeZone, s)
+	if err == nil {
+		return dat, nil
+	}
+	dat, err = time.Parse(userDateFormatNoTimeZoneWOSeconds, s)
+	if err == nil {
+		return dat, nil
+	}
+	dat, err = time.Parse(userDateFormatNegTimeZoneWOSeconds, s)
+	if err == nil {
+		return dat, nil
+	}
+	dat, err = time.Parse(userDateFormatPosTimeZoneWOSeconds, s)
+	if err == nil {
+		return dat, nil
+	}
+	return time.Time{}, err
+}
+
+func (ud *userDate) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	dateString := ""
 	err := d.DecodeElement(&dateString, &start)
 	if err != nil {
 		return err
 	}
-	dat, err := time.Parse(userDateFormatNoTimeZone, dateString)
-	if err == nil {
-		*ud = UserDate(dat)
-		return nil
+	dat, err := ParseUserDate(dateString)
+	if err != nil {
+		return err
 	}
-	dat, err = time.Parse(userDateFormatPosTimeZone, dateString)
-	if err == nil {
-		*ud = UserDate(dat)
-		return nil
-	}
-	dat, err = time.Parse(userDateFormatNegTimeZone, dateString)
-	if err == nil {
-		*ud = UserDate(dat)
-		return nil
-	}
-	return err
+	*ud = userDate(dat)
+	return nil
 }
 
 type Alt struct {
