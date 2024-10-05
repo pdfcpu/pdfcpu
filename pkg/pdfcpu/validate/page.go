@@ -114,7 +114,7 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 
 		// Digest empty array.
 		d["Contents"] = nil
-		model.ShowRepaired("corrupt page dict \"Contents\"")
+		model.ShowRepaired("page dict \"Contents\"")
 
 	case types.StringLiteral:
 
@@ -126,7 +126,7 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 
 		// Digest empty string literal.
 		d["Contents"] = nil
-		model.ShowRepaired("corrupt page dict \"Contents\"")
+		model.ShowRepaired("page dict \"Contents\"")
 
 	default:
 		return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", o)

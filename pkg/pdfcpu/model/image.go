@@ -239,25 +239,6 @@ func writeRGBA64ImageBuf(img image.Image) []byte {
 	return buf
 }
 
-// func writeYCbCrToRGBAImageBuf(img image.Image) []byte {
-// 	w := img.Bounds().Dx()
-// 	h := img.Bounds().Dy()
-// 	i := 0
-// 	buf := make([]byte, w*h*3)
-
-// 	for y := 0; y < h; y++ {
-// 		for x := 0; x < w; x++ {
-// 			c := img.At(x, y).(color.YCbCr)
-// 			r, g, b, _ := c.RGBA()
-// 			buf[i] = uint8(r >> 8 & 0xFF)
-// 			buf[i+1] = uint8(g >> 8 & 0xFF)
-// 			buf[i+2] = uint8(b >> 8 & 0xFF)
-// 			i += 3
-// 		}
-// 	}
-// 	return buf
-// }
-
 func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte) {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
@@ -390,8 +371,24 @@ func writeCMYKImageBuf(img image.Image) []byte {
 
 func convertToRGBA(img image.Image) *image.RGBA {
 	b := img.Bounds()
-	m := image.NewRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
+	m := image.NewRGBA(b)
 	draw.Draw(m, m.Bounds(), img, b.Min, draw.Src)
+	return m
+}
+
+func convertNYCbCrAToRGBA(img *image.NYCbCrA) *image.RGBA {
+	b := img.Bounds()
+	m := image.NewRGBA(b)
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			ycbr := img.YCbCrAt(x, y)
+			stride := img.Bounds().Dx()
+			alphaOffset := (y-b.Min.Y)*stride + (x - b.Min.X)
+			alpha := img.A[alphaOffset]
+			r, g, b := color.YCbCrToRGB(ycbr.Y, ycbr.Cb, ycbr.Cr)
+			m.Set(x, y, color.RGBA{R: r, G: g, B: b, A: alpha})
+		}
+	}
 	return m
 }
 
@@ -471,7 +468,7 @@ func createImageBuf(xRefTable *XRefTable, img image.Image, format string) ([]byt
 
 	var cs string
 
-	switch img.(type) {
+	switch img := img.(type) {
 	case *image.RGBA:
 		// A 32-bit alpha-premultiplied color, having 8 bits for each of red, green, blue and alpha.
 		// An alpha-premultiplied color component C has been scaled by alpha (A), so it has valid values 0 <= C <= A.
@@ -528,7 +525,9 @@ func createImageBuf(xRefTable *XRefTable, img image.Image, format string) ([]byt
 		buf, sm = writeRGBAImageBuf(convertToRGBA(img))
 
 	case *image.NYCbCrA:
-		return buf, sm, bpc, cs, errors.New("pdfcpu: unsupported image type: NYCbCrA")
+		cs = DeviceRGBCS
+		bpc = 8
+		buf, sm = writeRGBAImageBuf(convertNYCbCrAToRGBA(img))
 
 	case *image.Paletted:
 		// In-memory image of uint8 indices into a given palette.

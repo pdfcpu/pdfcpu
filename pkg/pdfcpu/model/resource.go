@@ -18,6 +18,7 @@ package model
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -100,24 +101,31 @@ func (fo FontObject) String() string {
 
 // ImageObject represents an image used in a PDF file.
 type ImageObject struct {
-	ResourceNames []string
+	ResourceNames map[int]string
 	ImageDict     *types.StreamDict
 }
 
-// AddResourceName adds a resourceName to this imageObject's ResourceNames dict.
-func (io *ImageObject) AddResourceName(resourceName string) {
-	for _, resName := range io.ResourceNames {
-		if resName == resourceName {
-			return
-		}
-	}
-	io.ResourceNames = append(io.ResourceNames, resourceName)
+// AddResourceName adds a resourceName to this imageObject's ResourceNames map.
+func (io *ImageObject) AddResourceName(pageNr int, resourceName string) {
+	io.ResourceNames[pageNr] = resourceName
 }
 
 // ResourceNamesString returns a string representation of the ResourceNames for this image.
 func (io ImageObject) ResourceNamesString() string {
+	pageNrs := make([]int, 0, len(io.ResourceNames))
+	for k := range io.ResourceNames {
+		pageNrs = append(pageNrs, k)
+	}
+	sort.Ints(pageNrs)
+	var sb strings.Builder
+	for i, pageNr := range pageNrs {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(fmt.Sprintf("%d:%s", pageNr, io.ResourceNames[pageNr]))
+	}
 	var resNames []string
-	resNames = append(resNames, io.ResourceNames...)
+	resNames = append(resNames, sb.String())
 	return strings.Join(resNames, ",")
 }
 

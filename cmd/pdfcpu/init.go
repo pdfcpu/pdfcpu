@@ -103,7 +103,9 @@ func initFormCmdMap() commandMap {
 func initImagesCmdMap() commandMap {
 	m := newCommandMap()
 	for k, v := range map[string]command{
-		"list": {processListImagesCommand, nil, "", ""},
+		"list":    {processListImagesCommand, nil, "", ""},
+		"extract": {processExtractImagesCommand, nil, "", ""},
+		"update":  {processUpdateImagesCommand, nil, "", ""},
 	} {
 		m.register(k, v)
 	}

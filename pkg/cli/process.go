@@ -173,6 +173,9 @@ func processImages(cmd *Command) (out []string, err error) {
 
 	case model.LISTIMAGES:
 		return ListImages(cmd)
+
+	case model.UPDATEIMAGES:
+		return UpdateImages(cmd)
 	}
 
 	return nil, nil

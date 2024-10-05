@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
@@ -54,6 +55,12 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) error {
 			s = " (try -mode=relaxed)"
 		}
 		err = errors.Wrap(err, fmt.Sprintf("validation error (obj#:%d)%s", ctx.CurObj, s))
+	}
+
+	if log.StatsEnabled() {
+		if err := pdfcpu.OptimizeXRefTable(ctx); err != nil {
+			return err
+		}
 	}
 
 	dur2 := time.Since(from2).Seconds()

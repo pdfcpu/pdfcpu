@@ -104,6 +104,7 @@ var (
 		model.IMPORTBOOKMARKS:         {0, 1},
 		model.EXPORTBOOKMARKS:         {0, 1},
 		model.LISTIMAGES:              {0, 1},
+		model.UPDATEIMAGES:            {0, 1},
 		model.CREATE:                  {0, 0},
 		model.DUMP:                    {0, 1},
 		model.LISTFORMFIELDS:          {0, 0},
@@ -122,6 +123,7 @@ var (
 		model.LISTVIEWERPREFERENCES:   {0, 1},
 		model.SETVIEWERPREFERENCES:    {0, 1},
 		model.RESETVIEWERPREFERENCES:  {0, 1},
+		model.ZOOM:                    {0, 1},
 	}
 
 	ErrUnknownEncryption = errors.New("pdfcpu: unknown encryption")

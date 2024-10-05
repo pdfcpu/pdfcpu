@@ -371,7 +371,7 @@ func decodeImage(ctx *model.Context, sd *types.StreamDict, filters, lastFilter s
 
 	switch lastFilter {
 
-	case filter.DCT, filter.JPX, filter.Flate, filter.CCITTFax, filter.RunLength:
+	case filter.DCT, filter.JPX, filter.Flate, filter.LZW, filter.CCITTFax, filter.RunLength:
 		if err := sd.Decode(); err != nil {
 			return err
 		}
@@ -442,7 +442,7 @@ func ExtractPageImages(ctx *model.Context, pageNr int, stub bool) (map[int]model
 	m := map[int]model.Image{}
 	for _, objNr := range ImageObjNrs(ctx, pageNr) {
 		imageObj := ctx.Optimize.ImageObjects[objNr]
-		img, err := ExtractImage(ctx, imageObj.ImageDict, false, imageObj.ResourceNames[0], objNr, stub)
+		img, err := ExtractImage(ctx, imageObj.ImageDict, false, imageObj.ResourceNames[pageNr-1], objNr, stub)
 		if err != nil {
 			return nil, err
 		}

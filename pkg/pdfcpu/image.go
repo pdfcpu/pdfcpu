@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"fmt"
+	"io"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -27,6 +28,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/pkg/errors"
 )
 
 // Images returns all embedded images of ctx.
@@ -255,4 +257,136 @@ func WriteImageToDisk(outDir, fileName string) func(model.Image, bool, int) erro
 		log.CLI.Printf("writing %s\n", outFile)
 		return WriteReader(outFile, img)
 	}
+}
+
+func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
+	imgObj := ctx.Optimize.ImageObjects[objNr]
+	if imgObj == nil {
+		return errors.Errorf("pdfcpu: unknown image object for objNr=%d", objNr)
+	}
+
+	d := imgObj.ImageDict
+
+	width := d.IntEntry("Width")
+	height := d.IntEntry("Height")
+
+	if width == nil || height == nil {
+		return errors.New("pdfcpu: corrupt image dict")
+	}
+
+	if *width != w || *height != h {
+		return errors.Errorf("pdfcpu: invalid image dimensions, want(%d,%d), got(%d,%d)", w, h, *width, *height)
+	}
+
+	return nil
+}
+
+// UpdateImagesByObjNr replaces an XObject.
+func UpdateImagesByObjNr(ctx *model.Context, rd io.Reader, objNr int) error {
+
+	sd, w, h, err := model.CreateImageStreamDict(ctx.XRefTable, rd, false, false)
+	if err != nil {
+		return err
+	}
+
+	if err := validateImageDimensions(ctx, objNr, w, h); err != nil {
+		return err
+	}
+
+	genNr := 0
+	entry, ok := ctx.FindTableEntry(objNr, genNr)
+	if !ok {
+		errors.Errorf("pdfcpu: invalid objNr=%d", objNr)
+	}
+
+	entry.Object = *sd
+
+	return nil
+}
+
+func isInheritedXObjectResource(inhRes types.Dict, id string) bool {
+	if inhRes == nil {
+		return false
+	}
+
+	d := inhRes.DictEntry("XObject")
+	if d == nil {
+		return false
+	}
+
+	for resId := range d {
+		if resId == id {
+			return true
+		}
+	}
+
+	return false
+}
+
+// UpdateImagesByPageNrAndId replaces the XObject referenced by pageNr and id.
+func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id string) error {
+
+	imgIndRef, w, h, err := model.CreateImageResource(ctx.XRefTable, rd, false, false)
+	if err != nil {
+		return err
+	}
+
+	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
+	if err != nil {
+		return err
+	}
+
+	obj, found := d.Find("Resources")
+	if !found {
+		if isInheritedXObjectResource(inhPAttrs.Resources, id) {
+			d1 := types.NewDict()
+			d1[id] = *imgIndRef
+			d2 := types.NewDict()
+			d2["XObject"] = d1
+			d["Resources"] = d2
+			return nil
+		}
+		return errors.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
+	}
+
+	resDict, err := ctx.DereferenceDict(obj)
+	if err != nil {
+		return err
+	}
+
+	obj1, ok := resDict.Find("XObject")
+	if !ok {
+		if isInheritedXObjectResource(inhPAttrs.Resources, id) {
+			d := types.NewDict()
+			d[id] = *imgIndRef
+			resDict["XObject"] = d
+			return nil
+		}
+		return errors.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
+	}
+
+	imgResDict, err := ctx.DereferenceDict(obj1)
+	if err != nil {
+		return err
+	}
+
+	for resId, indRef := range imgResDict {
+		if resId == id {
+
+			ir := indRef.(types.IndirectRef)
+			if err := validateImageDimensions(ctx, ir.ObjectNumber.Value(), w, h); err != nil {
+				return err
+			}
+
+			imgResDict[id] = *imgIndRef
+			return nil
+		}
+	}
+
+	if isInheritedXObjectResource(inhPAttrs.Resources, id) {
+		imgResDict[id] = *imgIndRef
+		return nil
+	}
+
+	return errors.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
 }

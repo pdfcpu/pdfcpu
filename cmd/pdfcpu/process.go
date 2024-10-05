@@ -1921,6 +1921,75 @@ func processListImagesCommand(conf *model.Configuration) {
 	process(cli.ListImagesCommand(inFiles, selectedPages, conf))
 }
 
+func processExtractImagesCommand(conf *model.Configuration) {
+	// See also processExtractCommand
+	if len(flag.Args()) != 2 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageImagesExtract)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+	outDir := flag.Arg(1)
+
+	pages, err := api.ParsePageSelection(selectedPages)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "problem with flag selectedPages: %v\n", err)
+		os.Exit(1)
+	}
+
+	process(cli.ExtractImagesCommand(inFile, outDir, pages, conf))
+}
+
+func processUpdateImagesCommand(conf *model.Configuration) {
+	argCount := len(flag.Args())
+	if argCount < 2 || argCount > 5 {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageImagesUpdate)
+		os.Exit(1)
+	}
+
+	inFile := flag.Arg(0)
+	if conf.CheckFileNameExt {
+		ensurePDFExtension(inFile)
+	}
+
+	imageFile := flag.Arg(1)
+	ensureImageExtension(imageFile)
+
+	outFile := ""
+	objNrOrPageNr := 0
+	id := ""
+
+	if argCount > 2 {
+		c := 2
+		if hasPDFExtension(flag.Arg(2)) {
+			outFile = flag.Arg(2)
+			c++
+		}
+		if argCount > c {
+			i, err := strconv.Atoi(flag.Arg(c))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+				os.Exit(1)
+			}
+			if i <= 0 {
+				fmt.Fprintln(os.Stderr, "objNr & pageNr must be > 0")
+				os.Exit(1)
+			}
+			objNrOrPageNr = i
+			if argCount == c+2 {
+				id = flag.Arg(c + 1)
+			}
+		}
+	}
+
+	//fmt.Printf("inFile:%s imgFile:%s outFile:%s, objPageNr:%d, id:%s\n", inFile, imageFile, outFile, objNrOrPageNr, id)
+
+	process(cli.UpdateImagesCommand(inFile, imageFile, outFile, objNrOrPageNr, id, conf))
+}
+
 func processDumpCommand(conf *model.Configuration) {
 	s := "No dump for you! - One year!\n\n"
 	if len(flag.Args()) != 3 {

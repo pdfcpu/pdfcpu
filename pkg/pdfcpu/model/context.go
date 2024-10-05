@@ -520,7 +520,10 @@ func (oc *OptimizationContext) collectImageInfo(logStr []string) []string {
 
 		for _, objectNumber := range objectNumbers {
 			imageObject := oc.ImageObjects[objectNumber]
-			logStr = append(logStr, fmt.Sprintf("#%-6d %s\n", objectNumber, imageObject.ResourceNamesString()))
+			resName, ok := imageObject.ResourceNames[i]
+			if ok {
+				logStr = append(logStr, fmt.Sprintf("#%-6d %s\n", objectNumber, resName))
+			}
 		}
 	}
 

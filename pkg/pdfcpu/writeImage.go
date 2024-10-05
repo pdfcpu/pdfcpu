@@ -953,7 +953,7 @@ func RenderImage(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool, r
 
 	switch f {
 
-	case filter.Flate, filter.CCITTFax, filter.RunLength:
+	case filter.Flate, filter.LZW, filter.CCITTFax, filter.RunLength:
 		return renderImage(xRefTable, sd, thumb, resourceName, objNr)
 
 	case filter.DCT:

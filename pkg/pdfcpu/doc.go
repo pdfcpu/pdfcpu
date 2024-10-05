@@ -22,7 +22,7 @@ The commands are:
 	fonts         install, list supported fonts, create cheat sheets
 	form          list, remove fields, lock, unlock, reset, export, fill form via JSON or CSV
 	grid          rearrange pages or images for enhanced browsing experience
-	images        list images for selected pages
+	images        list, extract, update images
 	import        import/convert images to PDF
 	info          print file info
 	keywords      list, add, remove keywords
@@ -46,7 +46,7 @@ The commands are:
 	trim          create trimmed version of selected pages
 	validate      validate PDF against PDF 32000-1:2008 (PDF 1.7) + basic PDF 2.0 validation
 	version       print version
-	viewpref      list, set, reset viewer preferences for opened document
+	viewerpref    list, set, reset viewer preferences for opened document
 	watermark     add, remove, update Unicode text, image or PDF watermarks for selected pages
 	zoom          zoom in/out of selected pages by magnification factor or corresponding margin
 */

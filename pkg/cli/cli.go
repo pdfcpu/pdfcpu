@@ -275,6 +275,24 @@ func ListImages(cmd *Command) ([]string, error) {
 	return ListImagesFile(cmd.InFiles, cmd.PageSelection, cmd.Conf)
 }
 
+// UpdateImages replaces image objects.
+func UpdateImages(cmd *Command) ([]string, error) {
+	var (
+		objNr  int
+		pageNr int
+		id     string
+	)
+	if cmd.IntVal > 0 {
+		if cmd.StringVal != "" {
+			pageNr = cmd.IntVal
+			id = cmd.StringVal
+		} else {
+			objNr = cmd.IntVal
+		}
+	}
+	return nil, api.UpdateImagesFile(cmd.InFiles[0], cmd.InFiles[1], *cmd.OutFile, objNr, pageNr, id, cmd.Conf)
+}
+
 // Dump known object to stdout.
 func Dump(cmd *Command) ([]string, error) {
 	mode := cmd.IntVals[0]

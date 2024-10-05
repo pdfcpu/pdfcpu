@@ -111,6 +111,7 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.LISTANNOTATIONS:         processPageAnnotations,
 	model.REMOVEANNOTATIONS:       processPageAnnotations,
 	model.LISTIMAGES:              processImages,
+	model.UPDATEIMAGES:            processImages,
 	model.DUMP:                    Dump,
 	model.CREATE:                  Create,
 	model.LISTFORMFIELDS:          processForm,
@@ -835,6 +836,22 @@ func ListImagesCommand(inFiles []string, pageSelection []string, conf *model.Con
 		InFiles:       inFiles,
 		PageSelection: pageSelection,
 		Conf:          conf}
+}
+
+// UpdateImagesCommand creates a new command to update images.
+func UpdateImagesCommand(inFile, imageFile, outFile string, objNrOrPageNr int, id string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.UPDATEIMAGES
+
+	return &Command{
+		Mode:      model.UPDATEIMAGES,
+		InFiles:   []string{inFile, imageFile},
+		OutFile:   &outFile,
+		IntVal:    objNrOrPageNr,
+		StringVal: id,
+		Conf:      conf}
 }
 
 // DumpCommand creates a new command to dump objects on stdout.

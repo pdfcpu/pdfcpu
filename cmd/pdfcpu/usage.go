@@ -43,7 +43,7 @@ The commands are:
    fonts         install, list supported fonts, create cheat sheets
    form          list, remove fields, lock, unlock, reset, export, fill form via JSON or CSV
    grid          rearrange pages or images for enhanced browsing experience
-   images        list images for selected pages
+   images        list, extract, update images
    import        import/convert images to PDF
    info          print file info
    keywords      list, add, remove keywords
@@ -1140,16 +1140,48 @@ Examples:
          pdfcpu annot remove in.pdf out.pdf Link 30 Text someId
       `
 
-	usageImagesList = "pdfcpu images list [-p(ages) selectedPages] inFile..." + generalFlags
+	usageImagesList    = "pdfcpu images list    [-p(ages) selectedPages] -- inFile..."
+	usageImagesExtract = "pdfcpu images extract [-p(ages) selectedPages] -- inFile outDir"
+	usageImagesUpdate  = "pdfcpu images update inFile imageFile [outFile] [ objNr | (pageNr Id) ]"
 
-	usageImages = "usage: " + usageImagesList
+	usageImages = "usage: " + usageImagesList +
+		"\n       " + usageImagesExtract +
+		"\n       " + usageImagesUpdate + generalFlags
 
-	usageLongImages = `Manage keywords.
+	usageLongImages = `Manage images.
 
      pages ... Please refer to "pdfcpu selectedpages"
     inFile ... input PDF file
+ imageFile ... image file
+   outFile ... output PDF file
+     objNr ... obj# from "pdfcpu images list"
+    pageNr ... Page from "pdfcpu images list"
+        Id ... Id from "pdfcpu images list"
     
-    Example: pdfcpu images list -p "1-5" gallery.pdf
+    Example: pdfcpu images list gallery.pdf
+             gallery.pdf:
+             1 images available (1.8 MB)
+             Page Obj# │ Id  │ Type  SoftMask ImgMask │ Width │ Height │ ColorSpace Comp bpc Interp │   Size │ Filters
+             ━━━━━━━━━━┿━━━━━┿━━━━━━━━━━━━━━━━━━━━━━━━┿━━━━━━━┿━━━━━━━━┿━━━━━━━━━━━━━━━━━━━━━━━━━━━━┿━━━━━━━━┿━━━━━━━━━━━━
+                1    3 │ Im0 │ image                  │  1268 │    720 │  DeviceRGB    3   8    *   │ 1.8 MB │ FlateDecode
+
+             # Extract all images into the current dir
+             pdfcpu images extract gallery.pdf .
+             extracting images from gallery.pdf into ./ ...
+             optimizing...
+             writing gallery_1_Im0.png
+
+             # Update image with Id=Im0 on page=1 with gallery_1_Im0.png
+             pdfcpu images update gallery.pdf gallery_1_Im0.png
+             pdfcpu images update gallery.pdf gallery_1_Im0.png out.pdf
+
+             # Update image object 3 with logo.png
+             pdfcpu images update gallery.pdf logo.png 3
+             pdfcpu images update gallery.pdf logo.png out.pdf 3
+
+             # update image with Id=Im0 on page=1 with logo.jpg
+             pdfcpu images update gallery.pdf logo.jpg 1 Im0
+             pdfcpu images update gallery.pdf logo.jpg out.pdf 1 Im0
     `
 
 	usageCreate     = "usage: pdfcpu create inFileJSON [inFile] outFile" + generalFlags
