@@ -109,8 +109,9 @@ func ReadWithContext(c context.Context, rs io.ReadSeeker, conf *model.Configurat
 	}
 
 	// Some PDFWriters write an incorrect Size into trailer.
-	if *ctx.XRefTable.Size < len(ctx.XRefTable.Table) {
-		*ctx.XRefTable.Size = len(ctx.XRefTable.Table)
+	if *ctx.XRefTable.Size != ctx.MaxObjNr+1 {
+		*ctx.XRefTable.Size = ctx.MaxObjNr + 1
+		model.ShowRepaired("trailer size")
 	}
 
 	if log.ReadEnabled() {
@@ -2661,14 +2662,15 @@ func dereferenceAndLoad(c context.Context, ctx *model.Context, objNr int, entry 
 }
 
 func dereferenceObject(c context.Context, ctx *model.Context, objNr int) error {
-	xRefTable := ctx.XRefTable
-	xRefTableSize := len(xRefTable.Table)
-
 	if log.ReadEnabled() {
 		log.Read.Printf("dereferenceObject: begin, dereferencing object %d\n", objNr)
 	}
 
-	entry := xRefTable.Table[objNr]
+	if objNr > ctx.MaxObjNr {
+		ctx.MaxObjNr = objNr
+	}
+
+	entry := ctx.Table[objNr]
 
 	if entry.Free {
 		if log.ReadEnabled() {
@@ -2678,7 +2680,7 @@ func dereferenceObject(c context.Context, ctx *model.Context, objNr int) error {
 	}
 
 	if entry.Compressed {
-		if err := decompressXRefTableEntry(xRefTable, objNr, entry); err != nil {
+		if err := decompressXRefTableEntry(ctx.XRefTable, objNr, entry); err != nil {
 			return err
 		}
 		//log.Read.Printf("dereferenceObject: decompressed entry, Compressed=%v\n%s\n", entry.Compressed, entry.Object)
@@ -2704,7 +2706,7 @@ func dereferenceObject(c context.Context, ctx *model.Context, objNr int) error {
 		logStream(entry.Object)
 		updateBinaryTotalSize(ctx, o)
 		if log.ReadEnabled() {
-			log.Read.Printf("dereferenceObject: using cached object %d of %d\n<%s>\n", objNr, xRefTableSize, entry.Object)
+			log.Read.Printf("dereferenceObject: using cached object %d of %d\n<%s>\n", objNr, ctx.MaxObjNr+1, entry.Object)
 		}
 		return nil
 	}

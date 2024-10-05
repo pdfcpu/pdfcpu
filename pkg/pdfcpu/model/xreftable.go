@@ -99,7 +99,8 @@ type PgAnnots map[AnnotationType]Annot
 // XRefTable represents a PDF cross reference table plus stats for a PDF file.
 type XRefTable struct {
 	Table               map[int]*XRefTableEntry
-	Size                *int               // Object count from PDF trailer dict.
+	Size                *int               // from trailer dict.
+	MaxObjNr            int                // after reading in all objects from xRef table.
 	PageCount           int                // Number of pages.
 	Root                *types.IndirectRef // Pointer to catalog (reference to root object).
 	RootDict            types.Dict         // Catalog
