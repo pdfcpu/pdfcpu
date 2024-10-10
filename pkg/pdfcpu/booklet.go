@@ -101,7 +101,10 @@ func getPageNumber(pageNumbers []int, n int) int {
 	return pageNumbers[n]
 }
 
-func nup2OutputPageNr(inputPageNr, inputPageCount int, pageNumbers []int) (int, bool) {
+type pageNumberFunction func(inputPageNr int, pageCount int, pageNumbers []int, nup *model.NUp) (int, bool)
+
+func nup2OutputPageNr(inputPageNr, inputPageCount int, pageNumbers []int, _ *model.NUp) (int, bool) {
+	// (output page, input page) = [(1,n), (2,1), (3, n-1), (4, 2), (5, n-2), (6, 3), ...]
 	var p int
 	if inputPageNr%2 == 0 {
 		p = inputPageCount - 1 - inputPageNr/2
@@ -134,24 +137,6 @@ func get4upPos(pos int, isLandscape bool) (out int) {
 		}
 	}
 	return pos % 4
-}
-
-func nup4OutputPageNr(inputPageNr int, pageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
-	switch nup.BookletType {
-	case model.Booklet:
-		// simple booklets are collated by collecting the top of the sheet, then the bottom, then the top of the next sheet, and so on.
-		// this is conceptually easier for collation without specialized tools.
-		if nup.IsTopFoldBinding() {
-			return nup4BasicTopFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
-		} else {
-			return nup4BasicSideFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
-		}
-	case model.BookletAdvanced:
-		// advanced booklets have a different collation pattern: collect the top of each sheet and then the bottom of each sheet.
-		// this allows printers to fold the sheets twice and then cut along one of the folds.
-		return nup4AdvancedSideFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
-	}
-	return 0, false
 }
 
 func nup4BasicSideFoldOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
@@ -421,44 +406,41 @@ func GetBookletOrdering(pages types.IntSet, nup *model.NUp) []model.BookletPage 
 func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) []model.BookletPage {
 	bookletPages := make([]model.BookletPage, pageCount)
 
+	var pageNumberFn pageNumberFunction
 	switch nup.BookletType {
 	case model.Booklet, model.BookletAdvanced:
 		switch nup.N() {
 		case 2:
-			// (output page, input page) = [(1,n), (2,1), (3, n-1), (4, 2), (5, n-2), (6, 3), ...]
-			for i := 0; i < pageCount; i++ {
-				pageNr, rotate := nup2OutputPageNr(i, pageCount, pageNumbers)
-				bookletPages[i].Number = pageNr
-				bookletPages[i].Rotate = rotate
-			}
-
+			pageNumberFn = nup2OutputPageNr
 		case 4:
-			for i := 0; i < pageCount; i++ {
-				pageNr, rotate := nup4OutputPageNr(i, pageCount, pageNumbers, nup)
-				bookletPages[i].Number = pageNr
-				bookletPages[i].Rotate = rotate
+			switch nup.BookletType {
+			case model.Booklet:
+				// simple booklets are collated by collecting the top of the sheet, then the bottom, then the top of the next sheet, and so on.
+				// this is conceptually easier for collation without specialized tools.
+				if nup.IsTopFoldBinding() {
+					pageNumberFn = nup4BasicTopFoldOutputPageNr
+				} else {
+					pageNumberFn = nup4BasicSideFoldOutputPageNr
+				}
+			case model.BookletAdvanced:
+				// advanced booklets have a different collation pattern: collect the top of each sheet and then the bottom of each sheet.
+				// this allows printers to fold the sheets twice and then cut along one of the folds.
+				pageNumberFn = nup4AdvancedSideFoldOutputPageNr
 			}
 		case 6:
-			for i := 0; i < pageCount; i++ {
-				pageNr, rotate := nupLRTBOutputPageNr(i, pageCount, pageNumbers, nup)
-				bookletPages[i].Number = pageNr
-				bookletPages[i].Rotate = rotate
-			}
+			pageNumberFn = nupLRTBOutputPageNr
 		case 8:
-			for i := 0; i < pageCount; i++ {
-				pageNr, rotate := nup8OutputPageNr(i, pageCount, pageNumbers, nup)
-				bookletPages[i].Number = pageNr
-				bookletPages[i].Rotate = rotate
-			}
+			pageNumberFn = nup8OutputPageNr
 		}
 	case model.BookletPerfectBound:
-		for i := 0; i < pageCount; i++ {
-			pageNr, rotate := nupPerfectBound(i, pageCount, pageNumbers, nup)
-			bookletPages[i].Number = pageNr
-			bookletPages[i].Rotate = rotate
-		}
+		pageNumberFn = nupPerfectBound
 	}
 
+	for i := 0; i < pageCount; i++ {
+		pageNr, rotate := pageNumberFn(i, pageCount, pageNumbers, nup)
+		bookletPages[i].Number = pageNr
+		bookletPages[i].Rotate = rotate
+	}
 	return bookletPages
 }
 
