@@ -70,11 +70,10 @@ func PDFBookletConfig(val int, desc string, conf *model.Configuration) (*model.N
 	if err := ParseNUpValue(val, nup); err != nil {
 		return nil, err
 	}
-	// 6up and 8up special cases
-	if nup.IsBooklet() && val > 4 && nup.IsTopFoldBinding() {
+	// 6up special cases
+	if nup.IsBooklet() && val == 6 && nup.IsTopFoldBinding() {
 		// You can't top fold a 6up with 3 rows.
-		// TODO: support this for 8up
-		return nup, fmt.Errorf("pdfcpu booklet: n>4 must have binding on side (portrait long-edge or landscape short-edge)")
+		return nup, fmt.Errorf("pdfcpu booklet: n=6 must have binding on side (portrait long-edge or landscape short-edge)")
 	}
 	// bookletadvanced
 	if nup.BookletType == model.BookletAdvanced && val == 4 && nup.IsTopFoldBinding() {
@@ -370,7 +369,7 @@ func nupPerfectBound(positionNumber int, inputPageCount int, pageNumbers []int, 
 	return getPageNumber(pageNumbers, p-1), rotate // p is one-indexed and we want zero-indexed
 }
 
-func GetBookletOrdering(pages types.IntSet, nup *model.NUp) []model.BookletPage {
+func GetBookletOrdering(pages types.IntSet, nup *model.NUp) ([]model.BookletPage, error) {
 	pageNumbers := sortSelectedPages(pages)
 	pageCount := len(pageNumbers)
 
@@ -396,14 +395,18 @@ func GetBookletOrdering(pages types.IntSet, nup *model.NUp) []model.BookletPage 
 				stop = len(pageNumbers)
 				nPagesPerSignature = pageCount - start
 			}
-			bookletPages = append(bookletPages, getBookletPageOrdering(nup, pageNumbers[start:stop], nPagesPerSignature)...)
+			signaturePages, err := getBookletPageOrdering(nup, pageNumbers[start:stop], nPagesPerSignature)
+			if err != nil {
+				return nil, err
+			}
+			bookletPages = append(bookletPages, signaturePages...)
 		}
-		return bookletPages
+		return bookletPages, nil
 	}
 	return getBookletPageOrdering(nup, pageNumbers, pageCount)
 }
 
-func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) []model.BookletPage {
+func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) ([]model.BookletPage, error) {
 	bookletPages := make([]model.BookletPage, pageCount)
 
 	var pageNumberFn pageNumberFunction
@@ -428,9 +431,16 @@ func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) []
 				pageNumberFn = nup4AdvancedSideFoldOutputPageNr
 			}
 		case 6:
+			if nup.IsTopFoldBinding() {
+				return nil, fmt.Errorf("top fold binding not supported for 6up")
+			}
 			pageNumberFn = nupLRTBOutputPageNr
 		case 8:
-			pageNumberFn = nup8OutputPageNr
+			if nup.BookletBinding == model.ShortEdge {
+				pageNumberFn = nupLRTBOutputPageNr
+			} else { // long edge
+				pageNumberFn = nup8OutputPageNr
+			}
 		}
 	case model.BookletPerfectBound:
 		pageNumberFn = nupPerfectBound
@@ -441,7 +451,7 @@ func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) []
 		bookletPages[i].Number = pageNr
 		bookletPages[i].Rotate = rotate
 	}
-	return bookletPages
+	return bookletPages, nil
 }
 
 func bookletPages(
@@ -455,7 +465,11 @@ func bookletPages(
 	formsResDict := types.NewDict()
 	rr := nup.RectsForGrid()
 
-	for i, bp := range GetBookletOrdering(selectedPages, nup) {
+	ordering, err := GetBookletOrdering(selectedPages, nup)
+	if err != nil {
+		return err
+	}
+	for i, bp := range ordering {
 
 		if i > 0 && i%len(rr) == 0 {
 			// Wrap complete page.
@@ -503,7 +517,11 @@ func BookletFromImages(ctx *model.Context, fileNames []string, nup *model.NUp, p
 	var buf bytes.Buffer
 	rr := nup.RectsForGrid()
 
-	for i, bp := range GetBookletOrdering(selectedPages, nup) {
+	ordering, err := GetBookletOrdering(selectedPages, nup)
+	if err != nil {
+		return err
+	}
+	for i, bp := range ordering {
 
 		if i > 0 && i%len(rr) == 0 {
 

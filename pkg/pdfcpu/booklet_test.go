@@ -189,6 +189,42 @@ var bookletTestCases = []pageOrderResults{
 		bookletType: "booklet",
 		binding:     "long",
 	},
+	{
+		id:        "8up portrait short edge",
+		nup:       8,
+		pageCount: 16,
+		expectedPageOrder: []int{
+			16, 1, 14, 3, 12, 5, 10, 7,
+			2, 15, 4, 13, 6, 11, 8, 9,
+		},
+		papersize:   "A6", // portrait, short-edge binding
+		bookletType: "booklet",
+		binding:     "short",
+	},
+	{
+		id:        "8up landscape short edge",
+		nup:       8,
+		pageCount: 16,
+		expectedPageOrder: []int{
+			16, 1, 14, 3, 12, 5, 10, 7,
+			2, 15, 4, 13, 6, 11, 8, 9,
+		},
+		papersize:   "A6L", // landscape, short-edge binding
+		bookletType: "booklet",
+		binding:     "short",
+	},
+	{
+		id:        "8up landscape long edge",
+		nup:       8,
+		pageCount: 16,
+		expectedPageOrder: []int{
+			1, 14, 16, 3, 5, 10, 12, 7,
+			13, 2, 4, 15, 9, 6, 8, 11,
+		},
+		papersize:   "A6L", // landscape, long-edge binding
+		bookletType: "booklet",
+		binding:     "long",
+	},
 	// perfect bound
 	{
 		id:        "perfect bound 2up",
@@ -323,7 +359,10 @@ func TestBookletPageOrder(t *testing.T) {
 				pageNumbers[i+1] = true
 			}
 			pageOrder := make([]int, len(test.expectedPageOrder))
-			out := GetBookletOrdering(pageNumbers, nup)
+			out, err := GetBookletOrdering(pageNumbers, nup)
+			if err != nil {
+				tt.Fatal(err)
+			}
 			if len(test.expectedPageOrder) != len(out) {
 				tt.Fatalf("page order output has the wrong length, expected %d but got %d", len(test.expectedPageOrder), len(out))
 			}
