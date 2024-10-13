@@ -1099,64 +1099,53 @@ func ObjectStreamDict(sd *types.StreamDict) (*types.ObjectStreamDict, error) {
 	return &osd, nil
 }
 
+func isMarkerTerminated(r rune) bool {
+	return r == 0x00 || unicode.IsSpace(r)
+}
+
 func detectMarker(line, marker string) int {
 	i := strings.Index(line, marker)
 	if i < 0 {
 		return i
 	}
-
 	if i+len(marker) >= len(line) {
 		return -1
 	}
-
-	// Skip until keyword is followed by eol.
 	off := i + len(marker)
-	for c := line[off]; c != 0x0A && c != 0x0D; {
-		if c == 0x20 {
-			off++
-			c = line[off]
-			continue
-		}
+	ind := i
+	for !isMarkerTerminated(rune(line[off])) {
 		line = line[off:]
 		if marker == "endobj" {
 			j := strings.Index(line, "xref")
 			if j >= 0 {
 				r := rune(line[j+4])
-				if unicode.IsSpace(r) || r == 0x0000 {
-					return i
+				if isMarkerTerminated(r) {
+					return ind
 				}
 			}
 		}
 		i = strings.Index(line, marker)
 		if i < 0 {
-			return i
+			return -1
 		}
 		if i+len(marker) >= len(line) {
 			return -1
 		}
+		off = i + len(marker)
+		ind += off
 	}
 
-	return i
+	return ind
 }
 
-func detectMarkers(line string, off int, endInd, streamInd *int) {
+func detectMarkers(line string, endInd, streamInd *int) {
 	//fmt.Printf("buflen=%d\n%s", len(line), hex.Dump([]byte(line)))
 	if *endInd <= 0 {
 		*endInd = detectMarker(line, "endobj")
-		if *endInd >= 0 {
-			//l := fmt.Sprintf("%x", *endInd)
-			//fmt.Printf("endobj: %s\n", l)
-			*endInd += off
 
-		}
 	}
 	if *streamInd <= 0 {
 		*streamInd = detectMarker(line, "stream")
-		if *streamInd > 0 {
-			//l := fmt.Sprintf("%x", *streamInd)
-			//fmt.Printf("stream: %s\n", l)
-			*streamInd += off
-		}
 	}
 }
 
@@ -1171,46 +1160,122 @@ func positionAfterStringLiteral(line string) (string, int, error) {
 	return line, i + 1, nil
 }
 
+func posFloor(pos1, pos2 int) int {
+	if pos1 < 0 {
+		return pos2
+	}
+	if pos1 < pos2 {
+		return pos2
+	}
+	if pos2 < 0 {
+		return pos1
+	}
+	return pos2
+}
+
+func detectNonEscaped(line, s string) int {
+	var ind int
+	for {
+		i := strings.Index(line, s)
+		if i < 0 {
+			// did not find s
+			return -1
+		}
+		if i == 0 {
+			// found s at pos 0
+			return ind
+		}
+		if line[i-1] != 0x5c {
+			// found s at pos i
+			return ind + i
+		}
+		// found escaped s
+		if i == len(line)-1 {
+			// last is escaped s -> did not find s
+			return -1
+		}
+		// moving on after escaped s
+		line = line[i+1:]
+		ind += i + 1
+	}
+}
+
 func DetectKeywords(line string) (endInd int, streamInd int, err error) {
+	// return endInd or streamInd which ever first encountered.
 	off, i := 0, 0
 	for {
 
-		pos1 := strings.Index(line, "(") // TODO ignore "\(""
-		pos2 := strings.Index(line, "%") // TODO ignore "\%""
+		strLitPos := detectNonEscaped(line, "(")
+		commentPos := detectNonEscaped(line, "%")
 
-		if pos1 < 0 && pos2 < 0 {
-			detectMarkers(line, off, &endInd, &streamInd)
+		detectMarkers(line, &endInd, &streamInd)
+
+		if off == 0 && endInd < 0 && streamInd < 0 {
+			return -1, -1, nil
+		}
+
+		if strLitPos < 0 && commentPos < 0 {
+			// neither ( nor % to skip
+			if endInd >= 0 {
+				endInd += off
+			}
+			if streamInd >= 0 {
+				streamInd += off
+			}
 			return endInd, streamInd, nil
 		}
 
-		if pos2 < 0 || (pos1 >= 0 && pos1 < pos2) {
-			// Skip string literal.
-			l := line[:pos1]
-			detectMarkers(l, off, &endInd, &streamInd)
-			if endInd > 0 || streamInd > 0 {
+		floor := posFloor(strLitPos, commentPos)
+
+		if endInd > 0 {
+			if endInd < floor {
+				// endobj before any ( or % to skip
+				endInd += off
+				if streamInd > 0 {
+					if streamInd > floor {
+						// stream after any ( or % to skip
+						streamInd = -1
+					} else {
+						streamInd += off
+					}
+				}
 				return endInd, streamInd, nil
 			}
-			line, i, err = positionAfterStringLiteral(line[pos1:])
-			if err != nil {
-				if endInd < 0 && streamInd < 0 {
-					err = nil
+		}
+
+		if streamInd > 0 {
+			if streamInd < floor {
+				// stream before any ( or % to skip
+				streamInd += off
+				if endInd > 0 {
+					if endInd > floor {
+						// endobj after any ( or % to skip
+						endInd = -1
+					} else {
+						endInd += off
+					}
 				}
-				return -1, -1, err
+				return endInd, streamInd, nil
 			}
-			off += pos1 + i
+		}
+
+		// skip comment if % before any (
+		if commentPos > 0 && (strLitPos < 0 || commentPos < strLitPos) {
+			line, i = positionToNextEOL(line[commentPos:])
+			if line == "" {
+				return -1, -1, nil
+			}
+			off += commentPos + i
+			endInd, streamInd = 0, 0
 			continue
 		}
 
-		// Skip comment.
-		l := line[:pos2]
-		detectMarkers(l, off, &endInd, &streamInd)
-		if endInd > 0 || streamInd > 0 {
-			return endInd, streamInd, nil
+		// Skip string literal.
+		line, i, err = positionAfterStringLiteral(line[strLitPos:])
+		if err != nil {
+			return -1, -1, err
 		}
-		line, i = positionToNextEOL(line[pos2:])
-		if line == "" {
-			return -1, -1, nil
-		}
-		off += pos2 + i
+		off += strLitPos + i
+		endInd, streamInd = 0, 0
 	}
 }
