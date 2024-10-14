@@ -70,6 +70,8 @@ func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error
 		RadioBtnAPs:   map[float64]*primitives.AP{},
 		OldFieldIDs:   types.StringSet{},
 		Debug:         false,
+		Offline:       ctx.Offline,
+		Timeout:       ctx.Timeout,
 	}
 
 	if err := cacheResIDs(ctx, pdf); err != nil {

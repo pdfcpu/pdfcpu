@@ -26,7 +26,7 @@ var (
 	fileStats, mode, selectedPages           string
 	upw, opw, key, perm, unit, conf          string
 	verbose, veryVerbose                     bool
-	links, quiet, sorted, bookmarks          bool
+	links, quiet, offline, sorted, bookmarks bool
 	all, dividerPage, json, replaceBookmarks bool
 	needStackTrace                           = true
 	cmdMap                                   commandMap

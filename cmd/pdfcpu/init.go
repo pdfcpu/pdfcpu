@@ -338,6 +338,10 @@ func initFlags() {
 	flag.StringVar(&mode, "mode", "", modeUsage)
 	flag.StringVar(&mode, "m", "", modeUsage)
 
+	flag.BoolVar(&offline, "offline", false, "")
+	flag.BoolVar(&offline, "off", false, "")
+	flag.BoolVar(&offline, "o", false, "")
+
 	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu selectedpages"
 	flag.StringVar(&selectedPages, "pages", "", selectedPagesUsage)
 	flag.StringVar(&selectedPages, "p", "", selectedPagesUsage)

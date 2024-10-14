@@ -131,6 +131,15 @@ func handleConfEncryptKeyLength(v string, c *Configuration) error {
 	return nil
 }
 
+func handleTimeout(v string, c *Configuration) error {
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return errors.Errorf("timeout is numeric > 0, got: %s", v)
+	}
+	c.Timeout = i
+	return nil
+}
+
 func handleConfPermissions(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
 	if err != nil {
@@ -167,49 +176,12 @@ func handleDateFormat(v string, c *Configuration) error {
 	return nil
 }
 
-func handleOptimize(k, v string, c *Configuration) error {
+func boolean(k, v string) (bool, error) {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
+		return false, errors.Errorf("config key %s is boolean", k)
 	}
-	c.Optimize = v == "true"
-	return nil
-}
-
-func handleOptimizeResourceDicts(k, v string, c *Configuration) error {
-	v = strings.ToLower(v)
-	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
-	}
-	c.OptimizeResourceDicts = v == "true"
-	return nil
-}
-
-func handleOptimizeDuplicateContentStreams(k, v string, c *Configuration) error {
-	v = strings.ToLower(v)
-	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
-	}
-	c.OptimizeDuplicateContentStreams = v == "true"
-	return nil
-}
-
-func handleCreateBookmarks(k, v string, c *Configuration) error {
-	v = strings.ToLower(v)
-	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
-	}
-	c.CreateBookmarks = v == "true"
-	return nil
-}
-
-func handleNeedAppearances(k, v string, c *Configuration) error {
-	v = strings.ToLower(v)
-	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
-	}
-	c.NeedAppearances = v == "true"
-	return nil
+	return v == "true", nil
 }
 
 func parseKeysPart1(k, v string, c *Configuration) (bool, error) {
@@ -243,44 +215,50 @@ func parseKeysPart1(k, v string, c *Configuration) (bool, error) {
 	return false, nil
 }
 
-func parseKeysPart2(k, v string, c *Configuration) error {
+func parseKeysPart2(k, v string, c *Configuration) (err error) {
 	switch k {
 
 	case "encryptUsingAES":
-		return handleConfEncryptUsingAES(k, v, c)
+		err = handleConfEncryptUsingAES(k, v, c)
 
 	case "encryptKeyLength":
-		return handleConfEncryptKeyLength(v, c)
+		err = handleConfEncryptKeyLength(v, c)
 
 	case "permissions":
-		return handleConfPermissions(v, c)
+		err = handleConfPermissions(v, c)
 
 	case "unit", "units":
-		return handleConfUnit(v, c)
+		err = handleConfUnit(v, c)
 
 	case "timestampFormat":
-		return handleTimestampFormat(v, c)
+		err = handleTimestampFormat(v, c)
 
 	case "dateFormat":
-		return handleDateFormat(v, c)
+		err = handleDateFormat(v, c)
 
 	case "optimize":
-		return handleOptimize(k, v, c)
+		c.Optimize, err = boolean(k, v)
 
 	case "optimizeResourceDicts":
-		return handleOptimizeResourceDicts(k, v, c)
+		c.OptimizeResourceDicts, err = boolean(k, v)
 
 	case "optimizeDuplicateContentStreams":
-		return handleOptimizeDuplicateContentStreams(k, v, c)
+		c.OptimizeDuplicateContentStreams, err = boolean(k, v)
 
 	case "createBookmarks":
-		return handleCreateBookmarks(k, v, c)
+		c.CreateBookmarks, err = boolean(k, v)
 
 	case "needAppearances":
-		return handleNeedAppearances(k, v, c)
+		c.NeedAppearances, err = boolean(k, v)
+
+	case "offline":
+		c.Offline, err = boolean(k, v)
+
+	case "timeout":
+		handleTimeout(v, c)
 	}
 
-	return nil
+	return err
 }
 
 func parseKeyValue(k, v string, c *Configuration) error {

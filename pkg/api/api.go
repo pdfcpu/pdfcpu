@@ -91,7 +91,7 @@ func ReadContextFile(inFile string) (*model.Context, error) {
 		logDisclaimerPDF20()
 	}
 
-	if err = validate.XRefTable(ctx.XRefTable); err != nil {
+	if err = validate.XRefTable(ctx); err != nil {
 		return nil, err
 	}
 
@@ -103,7 +103,7 @@ func ValidateContext(ctx *model.Context) error {
 	if ctx.Version() == model.V20 {
 		logDisclaimerPDF20()
 	}
-	return validate.XRefTable(ctx.XRefTable)
+	return validate.XRefTable(ctx)
 }
 
 // OptimizeContext optimizes ctx.

@@ -115,6 +115,8 @@ type PDF struct {
 	RadioBtnAPs     map[float64]*AP            `json:"-"`
 	HasForm         bool                       `json:"-"`
 	OldFieldIDs     types.StringSet            `json:"-"`
+	Offline         bool                       `json:"-"`
+	Timeout         int                        `json:"-"`
 	httpClient      *http.Client
 }
 

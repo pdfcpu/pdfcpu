@@ -39,6 +39,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+func abs(i int) int {
+	if i < 0 {
+		return -i
+	}
+	return i
+}
+
 func hasPDFExtension(filename string) bool {
 	return strings.HasSuffix(strings.ToLower(filename), ".pdf")
 }
@@ -165,6 +172,58 @@ func process(cmd *cli.Command) {
 	//os.Exit(0)
 }
 
+func getBaseDir(path string) string {
+	i := strings.Index(path, "**")
+	basePath := path[:i]
+	basePath = filepath.Clean(basePath)
+	if basePath == "" {
+		return "."
+	}
+	return basePath
+}
+
+func expandWildcardsRec(s string, inFiles *[]string, conf *model.Configuration) error {
+	s = filepath.Clean(s)
+	wantsPdf := strings.HasSuffix(s, ".pdf")
+	return filepath.WalkDir(getBaseDir(s), func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		//filename := d.Name()
+
+		if ok := hasPDFExtension(path); ok {
+			*inFiles = append(*inFiles, path)
+			return nil
+		}
+
+		if !wantsPdf && conf.CheckFileNameExt {
+			//sensurePDFExtension(path)
+			fmt.Fprintf(os.Stderr, "%s needs extension \".pdf\".\n", path)
+			os.Exit(1)
+		}
+
+		return nil
+	})
+}
+
+func expandWildcards(s string, inFiles *[]string, conf *model.Configuration) error {
+	paths, err := filepath.Glob(s)
+	if err != nil {
+		return err
+	}
+	for _, path := range paths {
+		if conf.CheckFileNameExt {
+			ensurePDFExtension(path)
+		}
+		*inFiles = append(*inFiles, path)
+	}
+	return nil
+}
+
 func processValidateCommand(conf *model.Configuration) {
 	if len(flag.Args()) == 0 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
@@ -173,18 +232,29 @@ func processValidateCommand(conf *model.Configuration) {
 
 	inFiles := []string{}
 	for _, arg := range flag.Args() {
-		if strings.Contains(arg, "*") {
-			matches, err := filepath.Glob(arg)
-			if err != nil {
+
+		if strings.Contains(arg, "**") {
+			// **/			fails on first file w/o extension "pdf"
+			// **/*.pdf
+			if err := expandWildcardsRec(arg, &inFiles, conf); err != nil {
 				fmt.Fprintf(os.Stderr, "%s", err)
-				os.Exit(1)
 			}
-			inFiles = append(inFiles, matches...)
 			continue
 		}
+
+		if strings.Contains(arg, "*") {
+			// *			fails on first file w/o extension "pdf"
+			// *.pdf
+			if err := expandWildcards(arg, &inFiles, conf); err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+			}
+			continue
+		}
+
 		if conf.CheckFileNameExt {
 			ensurePDFExtension(arg)
 		}
+
 		inFiles = append(inFiles, arg)
 	}
 
@@ -964,10 +1034,8 @@ func updateWatermarks(conf *model.Configuration, onTop bool) {
 	switch mode {
 	case "text":
 		wm, err = pdfcpu.ParseTextWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
-
 	case "image":
 		wm, err = pdfcpu.ParseImageWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
-
 	case "pdf":
 		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 	default:
@@ -1195,13 +1263,6 @@ func processRemovePagesCommand(conf *model.Configuration) {
 	}
 
 	process(cli.RemovePagesCommand(inFile, outFile, pages, conf))
-}
-
-func abs(i int) int {
-	if i < 0 {
-		return -i
-	}
-	return i
 }
 
 func processRotateCommand(conf *model.Configuration) {

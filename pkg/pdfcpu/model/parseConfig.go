@@ -49,6 +49,8 @@ type configuration struct {
 	OptimizeDuplicateContentStreams bool   `yaml:"optimizeDuplicateContentStreams"`
 	CreateBookmarks                 bool   `yaml:"createBookmarks"`
 	NeedAppearances                 bool   `yaml:"needAppearances"`
+	Offline                         bool   `yaml:"offline"`
+	Timeout                         int    `yaml:"timeout"`
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
@@ -100,6 +102,8 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	conf.OptimizeDuplicateContentStreams = c.OptimizeDuplicateContentStreams
 	conf.CreateBookmarks = c.CreateBookmarks
 	conf.NeedAppearances = c.NeedAppearances
+	conf.Offline = c.Offline
+	conf.Timeout = c.Timeout
 
 	return &conf
 }

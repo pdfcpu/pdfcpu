@@ -64,5 +64,11 @@ optimizeDuplicateContentStreams: false
 # merge creates bookmarks.
 createBookmarks: true
 
-# Viewer is expected to supply appearance streams for form fields.
+# viewer is expected to supply appearance streams for form fields.
 needAppearances: false
+
+# internet availability.
+offline: false
+
+# http timeout in seconds.
+timeout: 5
