@@ -413,8 +413,7 @@ func GetBookletOrdering(pages types.IntSet, nup *model.NUp) []model.BookletPage 
 				stop = len(pageNumbers)
 				nPagesPerSignature = pageCount - start
 			}
-			signaturePages := getBookletPageOrdering(nup, pageNumbers[start:stop], nPagesPerSignature)
-			bookletPages = append(bookletPages, signaturePages...)
+			bookletPages = append(bookletPages, getBookletPageOrdering(nup, pageNumbers[start:stop], nPagesPerSignature)...)
 		}
 		return bookletPages
 	}
