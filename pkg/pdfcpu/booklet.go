@@ -138,6 +138,24 @@ func get4upPos(pos int, isLandscape bool) (out int) {
 	return pos % 4
 }
 
+func nup4OutputPageNr(inputPageNr int, pageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
+	switch nup.BookletType {
+	case model.Booklet:
+		// simple booklets are collated by collecting the top of the sheet, then the bottom, then the top of the next sheet, and so on.
+		// this is conceptually easier for collation without specialized tools.
+		if nup.IsTopFoldBinding() {
+			return nup4BasicTopFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
+		} else {
+			return nup4BasicSideFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
+		}
+	case model.BookletAdvanced:
+		// advanced booklets have a different collation pattern: collect the top of each sheet and then the bottom of each sheet.
+		// this allows printers to fold the sheets twice and then cut along one of the folds.
+		return nup4AdvancedSideFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
+	}
+	return 0, false
+}
+
 func nup4BasicSideFoldOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
 	var p int
 	bookletSheetSideNumber := positionNumber / 4
@@ -369,7 +387,7 @@ func nupPerfectBound(positionNumber int, inputPageCount int, pageNumbers []int, 
 	return getPageNumber(pageNumbers, p-1), rotate // p is one-indexed and we want zero-indexed
 }
 
-func GetBookletOrdering(pages types.IntSet, nup *model.NUp) ([]model.BookletPage, error) {
+func GetBookletOrdering(pages types.IntSet, nup *model.NUp) []model.BookletPage {
 	pageNumbers := sortSelectedPages(pages)
 	pageCount := len(pageNumbers)
 
@@ -395,18 +413,15 @@ func GetBookletOrdering(pages types.IntSet, nup *model.NUp) ([]model.BookletPage
 				stop = len(pageNumbers)
 				nPagesPerSignature = pageCount - start
 			}
-			signaturePages, err := getBookletPageOrdering(nup, pageNumbers[start:stop], nPagesPerSignature)
-			if err != nil {
-				return nil, err
-			}
+			signaturePages := getBookletPageOrdering(nup, pageNumbers[start:stop], nPagesPerSignature)
 			bookletPages = append(bookletPages, signaturePages...)
 		}
-		return bookletPages, nil
+		return bookletPages
 	}
 	return getBookletPageOrdering(nup, pageNumbers, pageCount)
 }
 
-func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) ([]model.BookletPage, error) {
+func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) []model.BookletPage {
 	bookletPages := make([]model.BookletPage, pageCount)
 
 	var pageNumberFn pageNumberFunction
@@ -416,24 +431,8 @@ func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) ([
 		case 2:
 			pageNumberFn = nup2OutputPageNr
 		case 4:
-			switch nup.BookletType {
-			case model.Booklet:
-				// simple booklets are collated by collecting the top of the sheet, then the bottom, then the top of the next sheet, and so on.
-				// this is conceptually easier for collation without specialized tools.
-				if nup.IsTopFoldBinding() {
-					pageNumberFn = nup4BasicTopFoldOutputPageNr
-				} else {
-					pageNumberFn = nup4BasicSideFoldOutputPageNr
-				}
-			case model.BookletAdvanced:
-				// advanced booklets have a different collation pattern: collect the top of each sheet and then the bottom of each sheet.
-				// this allows printers to fold the sheets twice and then cut along one of the folds.
-				pageNumberFn = nup4AdvancedSideFoldOutputPageNr
-			}
+			pageNumberFn = nup4OutputPageNr
 		case 6:
-			if nup.IsTopFoldBinding() {
-				return nil, fmt.Errorf("top fold binding not supported for 6up")
-			}
 			pageNumberFn = nupLRTBOutputPageNr
 		case 8:
 			if nup.BookletBinding == model.ShortEdge {
@@ -451,7 +450,7 @@ func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) ([
 		bookletPages[i].Number = pageNr
 		bookletPages[i].Rotate = rotate
 	}
-	return bookletPages, nil
+	return bookletPages
 }
 
 func bookletPages(
@@ -465,11 +464,7 @@ func bookletPages(
 	formsResDict := types.NewDict()
 	rr := nup.RectsForGrid()
 
-	ordering, err := GetBookletOrdering(selectedPages, nup)
-	if err != nil {
-		return err
-	}
-	for i, bp := range ordering {
+	for i, bp := range GetBookletOrdering(selectedPages, nup) {
 
 		if i > 0 && i%len(rr) == 0 {
 			// Wrap complete page.
@@ -517,11 +512,7 @@ func BookletFromImages(ctx *model.Context, fileNames []string, nup *model.NUp, p
 	var buf bytes.Buffer
 	rr := nup.RectsForGrid()
 
-	ordering, err := GetBookletOrdering(selectedPages, nup)
-	if err != nil {
-		return err
-	}
-	for i, bp := range ordering {
+	for i, bp := range GetBookletOrdering(selectedPages, nup) {
 
 		if i > 0 && i%len(rr) == 0 {
 
