@@ -176,7 +176,7 @@ var bookletTestCases = []pageOrderResults{
 	},
 	// 8up test
 	{
-		id:        "8up",
+		id:        "8up portrait long edge",
 		nup:       8,
 		pageCount: 32,
 		expectedPageOrder: []int{
@@ -185,7 +185,7 @@ var bookletTestCases = []pageOrderResults{
 			9, 22, 24, 11, 13, 18, 20, 15,
 			21, 10, 12, 23, 17, 14, 16, 19,
 		},
-		papersize:   "A6", // portrait, long-edge binding
+		papersize:   "A6",
 		bookletType: "booklet",
 		binding:     "long",
 	},
@@ -197,7 +197,7 @@ var bookletTestCases = []pageOrderResults{
 			16, 1, 14, 3, 12, 5, 10, 7,
 			2, 15, 4, 13, 6, 11, 8, 9,
 		},
-		papersize:   "A6", // portrait, short-edge binding
+		papersize:   "A6",
 		bookletType: "booklet",
 		binding:     "short",
 	},
@@ -209,7 +209,7 @@ var bookletTestCases = []pageOrderResults{
 			16, 1, 14, 3, 12, 5, 10, 7,
 			2, 15, 4, 13, 6, 11, 8, 9,
 		},
-		papersize:   "A6L", // landscape, short-edge binding
+		papersize:   "A6L",
 		bookletType: "booklet",
 		binding:     "short",
 	},
@@ -221,7 +221,7 @@ var bookletTestCases = []pageOrderResults{
 			1, 14, 16, 3, 5, 10, 12, 7,
 			13, 2, 4, 15, 9, 6, 8, 11,
 		},
-		papersize:   "A6L", // landscape, long-edge binding
+		papersize:   "A6L",
 		bookletType: "booklet",
 		binding:     "long",
 	},
