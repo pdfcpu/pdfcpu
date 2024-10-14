@@ -23,7 +23,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -42,7 +41,7 @@ func (a Attachment) String() string {
 	return fmt.Sprintf("Attachment: id:%s desc:%s modTime:%s", a.ID, a.Desc, a.ModTime)
 }
 
-func decodeFileSpecStreamDict(sd *types.StreamDict, id string) error {
+func decodeFileSpecStreamDict(sd *types.StreamDict) error {
 	fpl := sd.FilterPipeline
 
 	if fpl == nil {
@@ -50,23 +49,6 @@ func decodeFileSpecStreamDict(sd *types.StreamDict, id string) error {
 		return nil
 	}
 
-	// Ignore filter chains with length > 1
-	if len(fpl) > 1 {
-		if log.DebugEnabled() {
-			log.Debug.Printf("decodedFileSpecStreamDict: ignore %s, more than 1 filter.\n", id)
-		}
-		return nil
-	}
-
-	// Only FlateDecode supported.
-	if fpl[0].Name != filter.Flate {
-		if log.DebugEnabled() {
-			log.Debug.Printf("decodedFileSpecStreamDict: ignore %s, %s filter unsupported.\n", id, fpl[0].Name)
-		}
-		return nil
-	}
-
-	// Decode streamDict for supported filters only.
 	return sd.Decode()
 }
 
@@ -158,7 +140,7 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o types.Object, dec
 		}
 	}
 
-	err = decodeFileSpecStreamDict(sd, id)
+	err = decodeFileSpecStreamDict(sd)
 
 	return sd, desc, fileName, modDate, err
 }

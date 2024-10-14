@@ -186,6 +186,8 @@ func TestValidate(t *testing.T) {
 	msg := "TestValidate"
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
 
+	//log.SetDefaultStatsLogger()
+
 	// Validate inFile.
 	if err := api.ValidateFile(inFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)

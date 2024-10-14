@@ -104,6 +104,10 @@ type baseFilter struct {
 	parms map[string]int
 }
 
+func SupportsDecodeParms(f string) bool {
+	return f == CCITTFax || f == LZW || f == Flate
+}
+
 func getReaderBytes(r io.Reader) ([]byte, error) {
 	var bb []byte
 	if buf, ok := r.(*bytes.Buffer); ok {

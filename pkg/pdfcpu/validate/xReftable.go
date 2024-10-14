@@ -77,7 +77,7 @@ func XRefTable(xRefTable *model.XRefTable) error {
 	xRefTable.Valid = true
 
 	if xRefTable.AAPLExtensions && log.CLIEnabled() {
-		log.CLI.Println("Note: PDF extensions by Apple will not be validated.")
+		log.CLI.Println("Note: custom extensions will not be validated.")
 	}
 
 	if log.ValidateEnabled() {
@@ -859,6 +859,8 @@ func checkForBrokenLinks(xRefTable *model.XRefTable) error {
 	if log.CLIEnabled() {
 		log.CLI.Println("validating URIs..")
 	}
+
+	println("checking links..")
 
 	pages := []int{}
 	for i := range xRefTable.URIs {

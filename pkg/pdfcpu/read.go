@@ -89,6 +89,10 @@ func ReadWithContext(c context.Context, rs io.ReadSeeker, conf *model.Configurat
 		return nil, err
 	}
 
+	if ctx.Read.FileSize == 0 {
+		return nil, errors.New("The file could not be opened because it is empty.")
+	}
+
 	if log.InfoEnabled() {
 		if ctx.Reader15 {
 			log.Info.Println("PDF Version 1.5 conforming reader")
@@ -173,7 +177,7 @@ func offsetLastXRefSection(ctx *model.Context, skip int64) (*int64, error) {
 
 		off, err := rs.Seek(-int64(i)*bufSize-skip, io.SeekEnd)
 		if err != nil {
-			return nil, errors.New("pdfcpu: can't find last xref section")
+			return nil, errors.New("the file may be damaged.")
 		}
 
 		if log.ReadEnabled() {
@@ -229,6 +233,11 @@ func createXRefTableEntry(entryType string, objNr int, offset, offExtra int64, g
 		}
 
 		if offset == 0 {
+			if objNr == 0 {
+				entry.Free = true
+				model.ShowRepaired("obj#0")
+				return entry, true
+			}
 			if log.InfoEnabled() {
 				log.Info.Printf("createXRefTableEntry: Skip entry for in use object #%d with offset 0\n", objNr)
 			}
@@ -1421,19 +1430,19 @@ func postProcess(ctx *model.Context, xrefSectionCount int) {
 	// Ensure free object #0 if exactly one xref subsection
 	// and in one of the following weird situations:
 	if xrefSectionCount == 1 && !ctx.Exists(0) {
+		// Fix for #250
 		if *ctx.Size == len(ctx.Table)+1 {
-			// Fix for #262
 			// Create free object 0 from scratch if the free list head is missing.
 			g0 := types.FreeHeadGeneration
 			ctx.Table[0] = &model.XRefTableEntry{Free: true, Offset: &zero, Generation: &g0}
 		} else {
-			// Fix for #250
 			// Create free object 0 by shifting down all objects by one.
 			for i := 1; i <= *ctx.Size; i++ {
 				ctx.Table[i-1] = ctx.Table[i]
 			}
 			delete(ctx.Table, *ctx.Size)
 		}
+		model.ShowRepaired("obj#0")
 	}
 }
 
@@ -1821,6 +1830,17 @@ func singleFilter(c context.Context, ctx *model.Context, filterName string, d ty
 	return []types.PDFFilter{{Name: filterName, DecodeParms: d}}, nil
 }
 
+func filterArraySupportsDecodeParms(filters types.Array) bool {
+	for _, obj := range filters {
+		if name, ok := obj.(types.Name); ok {
+			if filter.SupportsDecodeParms(name.String()) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Return the filter pipeline associated with this stream dict.
 func pdfFilterPipeline(c context.Context, ctx *model.Context, dict types.Dict) ([]types.PDFFilter, error) {
 	if log.ReadEnabled() {
@@ -1863,9 +1883,13 @@ func pdfFilterPipeline(c context.Context, ctx *model.Context, dict types.Dict) (
 	var decodeParmsArr types.Array
 	decodeParms, found := dict.Find("DecodeParms")
 	if found {
-		decodeParmsArr, ok = decodeParms.(types.Array)
-		if !ok || len(decodeParmsArr) != len(filterArray) {
-			return nil, errors.New("pdfcpu: pdfFilterPipeline: expected decodeParms array corrupt")
+		if filterArraySupportsDecodeParms(filterArray) {
+			decodeParmsArr, ok = decodeParms.(types.Array)
+			if ok {
+				if len(decodeParmsArr) != len(filterArray) {
+					return nil, errors.New("pdfcpu: pdfFilterPipeline: expected decodeParms array corrupt")
+				}
+			}
 		}
 	}
 
