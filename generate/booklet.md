@@ -125,7 +125,7 @@ _Only available for portrait, long-edge orientation._
 
 Eight of your pages fit on one side of a sheet (eg A6 on A3).
 
-Pages are arranged similar to 4-up with btype=booklet. To assemble:
+For long-edge binding, pages are arranged similar to 4-up with btype=booklet, but with an additonal rotation to fit the pages on the sheet. For short-edge binding, pages are arranged similar to 6-up (left-to-right, top-to-bottom order). To assemble:
 
 - print on both sides
 - For long-edge binding: cut the sheets in half horizontally and then cutting those half-sheets in half vertically. For short-edge binding: cut the sheets in quarters horizontally.
