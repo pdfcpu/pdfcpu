@@ -65,12 +65,12 @@ the sheet size of the paper you will be printing on, and the method you will be 
 
 The n-up value will be how many pages of your booklet will fit on one side of the sheet you will be printing on. The following options are available:
 
-| n-up | portrait            | landscape           | multifolio |
-| :--- | :------------------ | ------------------- | ---------- |
-| 2    | 1x2, long-edge only | 2x1, long-edge only | yes        |
-| 4    | 2x2                 | 2x2                 | no         |
-| 6    | 2x3, long-edge only | ---                 | no         |
-| 8    | 2x4, long-edge only | ---                 | no         |
+| n-up | portrait            | landscape            |
+| :--- | :------------------ | -------------------- |
+| 2    | 1x2, long-edge only | 2x1, long-edge only  |
+| 4    | 2x2                 | 2x2                  |
+| 6    | 2x3, long-edge only | ---                  |
+| 8    | 2x4 (all long-edge) | 4x2 (all short-edge) |
 
 #### n=2
 
@@ -125,15 +125,14 @@ _Only available for portrait, long-edge orientation._
 
 Eight of your pages fit on one side of a sheet (eg A6 on A3).
 
-Pages are arranged similar to 4-up with btype=booklet (but without the rotation). To assemble:
+Pages are arranged similar to 4-up with btype=booklet. To assemble:
 
 - print on both sides
-- cut the sheets in half horizontally and then cutting those half-sheets in half vertically
+- For long-edge binding: cut the sheets in half horizontally and then cutting those half-sheets in half vertically. For short-edge binding: cut the sheets in quarters horizontally.
 - arrange the sheet stacks for collation: moving left to right, then top to bottom, then by sheet (ie top-left sheet 1, top-right sheet 1, middle-left sheet 1, ...)
 - collate the stacks into individual sets of booklets
 - fold, bind, and trim (if desired)
 
-_Only available for portrait, long-edge orientation._
 <br>
 
 ### Perfect binding
@@ -156,8 +155,6 @@ This technique makes the most sense when your book has at least 128 pages.
 For example, you can bind your paper in eight sheet folios (also known as signatures), with each folio containing 32 pages of your book.
 For such a multi folio booklet set `multifolio:on` and play around with `foliosize` which defaults to 8.
 
-The multifolio option is only supported for `n=2`.
-
 ### Description
 
 A configuration string to specify the details of the booklet layout.
@@ -168,7 +165,7 @@ A configuration string to specify the details of the booklet layout.
 | formsize, paper size   | [paper size](../paper.md) to be used. Append L or P to enforce landscape/portrait mode  | A4      |
 | btype                  | The method for arranging pages into a booklet. (booklet, bookletadvanced, perfectbound) | booklet |
 | binding                | The edge of the paper which has the binding. (long, short)                              | long    |
-| multifolio             | on/off true/false, for n=2 and PDF input only                                           | off     |
+| multifolio             | on/off true/false, for PDF input only                                                   | off     |
 | foliosize              | for multi folio booklets only                                                           | 8       |
 | guides                 | on/off true/false                                                                       | off     |
 | border                 | on/off true/false                                                                       | off     |
