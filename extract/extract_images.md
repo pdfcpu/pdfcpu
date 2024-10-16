@@ -8,7 +8,8 @@ layout: default
 
 Extract all images of `book.pdf` into the current directory:
 
-NOTE: Meanwhile there is also the more intuitive command: `pdfcpu images extract'
+NOTE: Meanwhile there is also the more intuitive command: <br>
+`pdfcpu images extract`
 
 ```sh
 $ pdfcpu extract -mode image book.pdf .
