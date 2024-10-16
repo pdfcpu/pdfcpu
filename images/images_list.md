@@ -49,7 +49,7 @@ pdfcpu images list [-p(ages) selectedPages] inFile
  List all embedded images of test.pdf:
 
  ```
-$ pdfcpu image list test.pdf
+$ pdfcpu images list test.pdf
 pages: all
 4 images available
 Page  Obj# | Id  | Type  SoftMask ImgMask | Width | Height | Colorspace Comp bpc Interp |   Size | Filters

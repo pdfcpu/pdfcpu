@@ -37,6 +37,8 @@ pdfcpu images update inFile imageFile [outFile] [ objNr | (pageNr Id) ]
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file      | yes
+| imageFile    | image file          | yes
+| outFile      | PDF output file     | no
 | objNr        | object number       | no
 | pageNr       | page number         | no
 | Id           | resource id         | no
@@ -70,7 +72,7 @@ writing gallery_1_Im0.png
 
 <br>
 
-Update image with Id=Im0 on page=1 with gallery_1_Im0.png and write the result to updatedGallery.pdf.<br>
+Update image with Id=Im0 on page=1 with gallery_1_Im0.png and write the result to updatedGallery.pdf.<br><br>
 Here page number and resource id are contained in the image file name:
 
 ```sh
@@ -87,7 +89,7 @@ $ pdfcpu images update gallery.pdf logo.png 3
 
 <br>
 
-update image with Id=Im0 on page=1 with logo.jpg
+Update image with Id=Im0 on page=1 with logo.jpg:
 
 ```sh
 $ pdfcpu images update gallery.pdf logo.jpg 1 Im0

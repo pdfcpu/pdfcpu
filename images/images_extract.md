@@ -4,9 +4,7 @@ layout: default
 
 # Extract Images
 
-This command prints a list of embedded images for selected pages
-
-This command lets you extract individual images contained by pages from a PDF file:
+This command lets you extract individual images contained by pages:
 
 Have a look at some [examples](#examples).
 
