@@ -6,6 +6,4 @@ layout: default
 
 Manage embedded images.
 
-List images.
-
-Please use: [extract images](../extract/extract_images.md) for extracting images.
+List, extract or update images.

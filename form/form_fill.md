@@ -21,6 +21,8 @@ pdfcpu generates all appearance streams for form fields, but if you do have form
 issues then the following configuration option may help:
 `needAppearances: true`
 
+When filling radio button groups you may either provide the text or the array index as value.
+
 
 Have a look at some [examples](#examples). 
 
