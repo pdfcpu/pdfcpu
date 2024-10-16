@@ -90,7 +90,7 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "zineTest.pdf")},
 			filepath.Join(outDir, "BookletFromPDFA4_2Up.pdf"),
 			nil, // all pages
-			"p:A4 border:false, g:on, ma:10, bgcol:#beded9",
+			"p:A4, border:false, g:on, ma:10, bgcol:#beded9",
 			"points",
 			2,
 			false,
@@ -134,7 +134,8 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "bookletTest.pdf")},
 			filepath.Join(outDir, "BookletFromPDFLetter_2Up.pdf"),
 			[]string{"1-16"},
-			"p:LetterP, g:on, ma:10, bgcol:#f7e6c7",
+			// need to enforce orientation for 2up because pdf input gets rotated onto sheet
+			"p:LetterP, enforce:true, g:on, ma:10, bgcol:#f7e6c7",
 			"points",
 			2,
 			false,
