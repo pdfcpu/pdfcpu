@@ -20,7 +20,6 @@ Disables all output to stdOut.
 ## offline, o
 Disable outgoing HTTP traffic.<br>
 For validating links or filling image boxes.<br>
-default = false
 
 ## conf, c
 Set or disable [config dir](config_dir.md):
