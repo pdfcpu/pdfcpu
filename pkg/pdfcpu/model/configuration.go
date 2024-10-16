@@ -237,11 +237,17 @@ type Configuration struct {
 	// Optimize duplicate content streams across pages.
 	OptimizeDuplicateContentStreams bool
 
-	// Merge creates bookmarks
+	// Merge creates bookmarks.
 	CreateBookmarks bool
 
 	// PDF Viewer is expected to supply appearance streams for form fields.
 	NeedAppearances bool
+
+	// Internet availability.
+	Offline bool
+
+	// HTTP timeout in seconds.
+	Timeout int
 }
 
 // ConfigPath defines the location of pdfcpu's configuration directory.
@@ -341,6 +347,8 @@ func newDefaultConfiguration() *Configuration {
 		OptimizeDuplicateContentStreams: false,
 		CreateBookmarks:                 true,
 		NeedAppearances:                 false,
+		Offline:                         false,
+		Timeout:                         5,
 	}
 }
 
@@ -412,7 +420,9 @@ func (c Configuration) String() string {
 		"OptimizeResourceDicts %t\n"+
 		"OptimizeDuplicateContentStreams %t\n"+
 		"CreateBookmarks %t\n"+
-		"NeedAppearances %t\n",
+		"NeedAppearances %t\n"+
+		"Offline %t\n"+
+		"Timeout %d\n",
 		path,
 		c.CheckFileNameExt,
 		c.Reader15,
@@ -434,6 +444,8 @@ func (c Configuration) String() string {
 		c.OptimizeDuplicateContentStreams,
 		c.CreateBookmarks,
 		c.NeedAppearances,
+		c.Offline,
+		c.Timeout,
 	)
 }
 

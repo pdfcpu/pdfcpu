@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -264,17 +265,29 @@ func (ib *ImageBox) resource() (io.ReadCloser, error) {
 	pdf := ib.pdf
 	var f io.ReadCloser
 	if strings.HasPrefix(ib.Src, "http") {
+		if pdf.Offline {
+			if log.CLIEnabled() {
+				log.CLI.Printf("pdfcpu is offline, can't get %s\n", ib.Src)
+			}
+			return nil, nil
+		}
 		client := pdf.httpClient
 		if client == nil {
 			pdf.httpClient = &http.Client{
-				Timeout: 10 * time.Second,
+				Timeout: time.Duration(pdf.Timeout) * time.Second,
 			}
 			client = pdf.httpClient
 		}
 		resp, err := client.Get(ib.Src)
 		if err != nil {
-			if log.CLIEnabled() {
-				log.CLI.Printf("%v: %s\n", err, ib.Src)
+			if e, ok := err.(net.Error); ok && e.Timeout() {
+				if log.CLIEnabled() {
+					log.CLI.Printf("timeout: %s\n", ib.Src)
+				}
+			} else {
+				if log.CLIEnabled() {
+					log.CLI.Printf("%v: %s\n", err, ib.Src)
+				}
 			}
 			return nil, err
 		}

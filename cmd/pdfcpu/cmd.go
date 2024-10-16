@@ -139,6 +139,10 @@ func (m commandMap) process(cmdPrefix string, command string) (string, error) {
 	conf.OwnerPW = opw
 	conf.UserPW = upw
 
+	if !conf.Offline {
+		conf.Offline = offline
+	}
+
 	if m[cmdStr].handler != nil {
 		m[cmdStr].handler(conf)
 		return command, nil

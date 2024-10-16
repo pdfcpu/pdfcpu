@@ -19,6 +19,7 @@ package validate
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"sort"
@@ -32,13 +33,15 @@ import (
 )
 
 // XRefTable validates a PDF cross reference table obeying the validation mode.
-func XRefTable(xRefTable *model.XRefTable) error {
+func XRefTable(ctx *model.Context) error {
 	if log.InfoEnabled() {
 		log.Info.Println("validating")
 	}
 	if log.ValidateEnabled() {
 		log.Validate.Println("*** validateXRefTable begin ***")
 	}
+
+	xRefTable := ctx.XRefTable
 
 	metaDataAuthoritative, err := metaDataModifiedAfterInfoDict(xRefTable)
 	if err != nil {
@@ -55,7 +58,7 @@ func XRefTable(xRefTable *model.XRefTable) error {
 	}
 
 	// Validate root object(aka the document catalog) and page tree.
-	err = validateRootObject(xRefTable)
+	err = validateRootObject(ctx)
 	if err != nil {
 		return err
 	}
@@ -843,24 +846,26 @@ func logURIError(xRefTable *model.XRefTable, pages []int) {
 					s = "invalid url"
 				case "s":
 					s = "severe error"
+				case "t":
+					s = "timeout"
 				default:
 					s = fmt.Sprintf("status=%s", resp)
 				}
 				if log.CLIEnabled() {
-					log.CLI.Printf("Page %d: %s %s\n", page, uri, s)
+					log.CLI.Printf("Page %d: %s - %s\n", page, uri, s)
 				}
 			}
 		}
 	}
 }
 
-func checkForBrokenLinks(xRefTable *model.XRefTable) error {
+func checkForBrokenLinks(ctx *model.Context) error {
 	var httpErr bool
 	if log.CLIEnabled() {
 		log.CLI.Println("validating URIs..")
 	}
 
-	println("checking links..")
+	xRefTable := ctx.XRefTable
 
 	pages := []int{}
 	for i := range xRefTable.URIs {
@@ -869,7 +874,7 @@ func checkForBrokenLinks(xRefTable *model.XRefTable) error {
 	sort.Ints(pages)
 
 	client := http.Client{
-		Timeout: 5 * time.Second,
+		Timeout: time.Duration(ctx.Timeout) * time.Second,
 	}
 
 	for _, page := range pages {
@@ -885,8 +890,12 @@ func checkForBrokenLinks(xRefTable *model.XRefTable) error {
 			}
 			res, err := client.Get(uri)
 			if err != nil {
+				if e, ok := err.(net.Error); ok && e.Timeout() {
+					xRefTable.URIs[page][uri] = "t"
+				} else {
+					xRefTable.URIs[page][uri] = "s"
+				}
 				httpErr = true
-				xRefTable.URIs[page][uri] = "s"
 				continue
 			}
 			defer res.Body.Close()
@@ -909,7 +918,7 @@ func checkForBrokenLinks(xRefTable *model.XRefTable) error {
 	return nil
 }
 
-func validateRootObject(xRefTable *model.XRefTable) error {
+func validateRootObject(ctx *model.Context) error {
 	if log.ValidateEnabled() {
 		log.Validate.Println("*** validateRootObject begin ***")
 	}
@@ -951,6 +960,8 @@ func validateRootObject(xRefTable *model.XRefTable) error {
 	// DSS					y	2.0			dict			=> 12.8.4.3 Document Security Store	TODO
 	// AF					y	2.0			array of dicts	=> 14.3 Associated Files			TODO
 	// DPartRoot			y	2.0			dict			=> 14.12 Document parts				TODO
+
+	xRefTable := ctx.XRefTable
 
 	d, err := xRefTable.Catalog()
 	if err != nil {
@@ -1014,10 +1025,18 @@ func validateRootObject(xRefTable *model.XRefTable) error {
 	}
 
 	// Validate remainder of annotations after AcroForm validation only.
-	_, err = validatePagesAnnotations(xRefTable, rootPageNodeDict, 0)
+	if _, err = validatePagesAnnotations(xRefTable, rootPageNodeDict, 0); err != nil {
+		return err
+	}
 
 	if xRefTable.ValidateLinks && len(xRefTable.URIs) > 0 {
-		err = checkForBrokenLinks(xRefTable)
+		if ctx.Offline {
+			if log.CLIEnabled() {
+				log.CLI.Printf("pdfcpu is offline, can't validate Links")
+			}
+		} else {
+			err = checkForBrokenLinks(ctx)
+		}
 	}
 
 	if err == nil {
