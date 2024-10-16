@@ -90,7 +90,7 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "zineTest.pdf")},
 			filepath.Join(outDir, "BookletFromPDFA4_2Up.pdf"),
 			nil, // all pages
-			"p:A4, border:false, g:on, ma:10, bgcol:#beded9",
+			"p:A4 border:false, g:on, ma:10, bgcol:#beded9",
 			"points",
 			2,
 			false,
@@ -232,7 +232,7 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "bookletTestA6.pdf")},
 			filepath.Join(outDir, "BookletFromPDF8Up.pdf"),
 			nil,
-			// FIXME: need to enforce orientation for 8up because portrait pdf input gets rotated onto sheet
+			// need to enforce orientation for 8up because portrait pdf input gets rotated onto sheet
 			"p:A3, enforce:on, g:on, ma:10, bgcol:#f7e6c7",
 			"points",
 			8,
@@ -280,8 +280,10 @@ func TestBooklet(t *testing.T) {
 			false,
 		},
 	} {
-		conf := model.NewDefaultConfiguration()
-		conf.SetUnit(tt.unit)
-		testBooklet(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.n, tt.isImg, conf)
+		t.Run(tt.msg, func(subTest *testing.T) {
+			conf := model.NewDefaultConfiguration()
+			conf.SetUnit(tt.unit)
+			testBooklet(subTest, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.n, tt.isImg, conf)
+		})
 	}
 }
