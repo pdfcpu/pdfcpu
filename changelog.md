@@ -6,7 +6,7 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
-|2024-10-16 | [v0.9.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.9.0)                              | 
+|2024-10-?? | [v0.9.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.9.0)                              | 
 |2024-08-31 | [v0.8.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.8.1)                              | Improve CJK, annotation support,
 |           |                                                                                             | Fix #628, #687, #767, #819, #830, 
 |           |                                                                                             | #862, #867, #871, #881, #884-#887,
