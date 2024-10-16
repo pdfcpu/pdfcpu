@@ -6,6 +6,7 @@ layout: default
 
 * [Booklet](../generate/booklet.md) (arrange pages onto larger sheets to make a booklet or zine)
 * [Collect](../core/collect.md) a custom PDF page sequence
+* [Config](../getting_started/config_dir.md) print configuration 
 * [Create](../generate/create.md) PDF file via JSON with optional form
 * [Crop](../core/crop.md) (apply a custom crop box for selected pages)
 * [Cut](../generate/cut.md) page (apply custom horizontal/vertical cuts)
@@ -30,6 +31,7 @@ layout: default
 * [Split](../core/split.md) multi-page PDF into several PDFs according to split span
 * [Trim](../core/trim.md) (generate a custom version of a PDF including selected pages)
 * [Validate](../core/validate.md) PDF files up to version 1.7 + basic validation version 2.0
+* [Version](../getting_started/config_dir.md) print version 
 * [Zoom](../core/zoom.md) in/out of selected pages by magnification factor or corresponding margin
 
 Manage
@@ -41,6 +43,7 @@ Manage
 * [Embedded images](../images/images.md)
 * [Fonts](../fonts/fonts.md)
 * [Forms](../form/form.md)
+* [Images](../images/images.md)
 * [Page boundaries](../boxes/boxes.md)
 * [Page Layout](../pagelayout/pagelayout.md)
 * [Page Mode](../pagemode/pagemode.md)
