@@ -34,7 +34,7 @@ The commands are:
    fonts       install, list supported fonts
    form        list, remove fields, lock, unlock, reset, export, fill form via JSON or CSV
    grid        rearrange pages or images for enhanced browsing experience
-   images      list images for selected pages
+   images      list, extract, update images for selected pages
    import      import/convert images to PDF
    info        print file info
    keywords    list, add, remove document keywords
@@ -210,6 +210,8 @@ pdfcpu annotations remove [-p(ages) selectedPages] inFile [outFile] [objNr|annot
 Manage your images:
 ```
 pdfcpu images list [-p(ages) selectedPages] inFile...
+pdfcpu images extract [-p(ages) selectedPages] -- inFile outDir
+pdfcpu images update inFile imageFile [outFile] [ objNr | (pageNr Id) ]
 ```
 
 <br>

@@ -14,8 +14,8 @@ You can look up its location either like so:
 
 ```
 $ pdfcpu version
-pdfcpu: v0.8.0 dev
-commit: 38b29927 (2024-04-24T21:08:47Z)
+pdfcpu: v0.9.0 dev
+commit: 38b29927 (2024-10-16T21:08:47Z)
 base  : go1.22.0
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
@@ -25,8 +25,8 @@ or you can do the following which will print out both the config file path and i
 ```
 $ pdfcpu config
 #############################
-# pdfcpu v0.8.0 dev         #
-# Created: 2024-04-25 00:16 #
+# pdfcpu v0.9.0 dev         #
+# Created: 2024-10-16 13:49 #
 #############################
 #   Default configuration   #
 #############################
@@ -93,8 +93,14 @@ optimizeDuplicateContentStreams: false
 # merge creates bookmarks.
 createBookmarks: true
 
-# Viewer is expected to supply appearance streams for form fields.
+# viewer is expected to supply appearance streams for form fields.
 needAppearances: false
+
+# internet availability.
+offline: false
+
+# http timeout in seconds.
+timeout: 5
 ```
 
 <br>
