@@ -20,7 +20,7 @@ $ go install
 $ pdfcpu version
 ```
 
-## Using Go install:
+## Using Go Install
 ```
 $ go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@latest
 ```
