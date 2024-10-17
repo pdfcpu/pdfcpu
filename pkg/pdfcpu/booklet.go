@@ -44,7 +44,7 @@ func DefaultBookletConfig() *model.NUp {
 	nup.FolioSize = 8
 	nup.BookletType = model.Booklet
 	nup.BookletBinding = model.LongEdge
-	nup.Enforce = false
+	nup.Enforce = true
 	return nup
 }
 
