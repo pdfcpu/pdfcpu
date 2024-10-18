@@ -248,14 +248,13 @@ func (d Dict) IndirectRefEntry(key string) *IndirectRef {
 }
 
 // DictEntry expects and returns a PDFDict entry for given key.
+// Use ctx.ResolveDictEntry(d, key) if you want to resolve IndirectRef entries
 func (d Dict) DictEntry(key string) Dict {
 
 	value, found := d.Find(key)
 	if !found {
 		return nil
 	}
-
-	// TODO resolve indirect ref.
 
 	d, ok := value.(Dict)
 	if ok {
