@@ -150,8 +150,13 @@ func getCutFolds(nup *NUp) (horizontal cutOrFold, vertical cutOrFold) {
 			// Really, it has two horizontal cuts.
 			return cut, fold
 		case 8:
-			// Also has a horizontal cut in the center.
-			return fold, cut
+			if nup.BookletBinding == LongEdge {
+				// Also has cuts in the center row & column.
+				return cut, cut
+			} else {
+				// short edge has the fold in the center col. cut on each row
+				return cut, fold
+			}
 		}
 		return none, none
 	}
@@ -211,10 +216,17 @@ func DrawBookletGuides(nup *NUp, w io.Writer) FontMap {
 			drawGuideHorizontal(w, height*1/3, width, horz, nup, mb, fm)
 			drawGuideHorizontal(w, height*2/3, width, horz, nup, mb, fm)
 		case 8:
-			// 8up: middle cut and 1/4,3/4 folds
-			drawGuideHorizontal(w, height/2, width, cut, nup, mb, fm)
-			drawGuideHorizontal(w, height*1/4, width, fold, nup, mb, fm)
-			drawGuideHorizontal(w, height*3/4, width, fold, nup, mb, fm)
+			if nup.BookletBinding == LongEdge {
+				// 8up: middle cut and 1/4,3/4 folds
+				drawGuideHorizontal(w, height/2, width, cut, nup, mb, fm)
+				drawGuideHorizontal(w, height*1/4, width, fold, nup, mb, fm)
+				drawGuideHorizontal(w, height*3/4, width, fold, nup, mb, fm)
+			} else {
+				// short edge: cuts on rows
+				for i := 1; i < 4; i++ {
+					drawGuideHorizontal(w, height*float64(i)/4, width, cut, nup, mb, fm)
+				}
+			}
 		}
 	}
 	if vert != none {

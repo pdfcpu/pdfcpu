@@ -44,7 +44,7 @@ func DefaultBookletConfig() *model.NUp {
 	nup.FolioSize = 8
 	nup.BookletType = model.Booklet
 	nup.BookletBinding = model.LongEdge
-	nup.Enforce = false
+	nup.Enforce = true
 	return nup
 }
 
@@ -70,11 +70,10 @@ func PDFBookletConfig(val int, desc string, conf *model.Configuration) (*model.N
 	if err := ParseNUpValue(val, nup); err != nil {
 		return nil, err
 	}
-	// 6up and 8up special cases
-	if nup.IsBooklet() && val > 4 && nup.IsTopFoldBinding() {
+	// 6up special cases
+	if nup.IsBooklet() && val == 6 && nup.IsTopFoldBinding() {
 		// You can't top fold a 6up with 3 rows.
-		// TODO: support this for 8up
-		return nup, fmt.Errorf("pdfcpu booklet: n>4 must have binding on side (portrait long-edge or landscape short-edge)")
+		return nup, fmt.Errorf("pdfcpu booklet: n=6 must have binding on side (portrait long-edge or landscape short-edge)")
 	}
 	// bookletadvanced
 	if nup.BookletType == model.BookletAdvanced && val == 4 && nup.IsTopFoldBinding() {
@@ -101,7 +100,10 @@ func getPageNumber(pageNumbers []int, n int) int {
 	return pageNumbers[n]
 }
 
-func nup2OutputPageNr(inputPageNr, inputPageCount int, pageNumbers []int) (int, bool) {
+type pageNumberFunction func(inputPageNr int, pageCount int, pageNumbers []int, nup *model.NUp) (int, bool)
+
+func nup2OutputPageNr(inputPageNr, inputPageCount int, pageNumbers []int, _ *model.NUp) (int, bool) {
+	// (output page, input page) = [(1,n), (2,1), (3, n-1), (4, 2), (5, n-2), (6, 3), ...]
 	var p int
 	if inputPageNr%2 == 0 {
 		p = inputPageCount - 1 - inputPageNr/2
@@ -421,44 +423,32 @@ func GetBookletOrdering(pages types.IntSet, nup *model.NUp) []model.BookletPage 
 func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) []model.BookletPage {
 	bookletPages := make([]model.BookletPage, pageCount)
 
+	var pageNumberFn pageNumberFunction
 	switch nup.BookletType {
 	case model.Booklet, model.BookletAdvanced:
 		switch nup.N() {
 		case 2:
-			// (output page, input page) = [(1,n), (2,1), (3, n-1), (4, 2), (5, n-2), (6, 3), ...]
-			for i := 0; i < pageCount; i++ {
-				pageNr, rotate := nup2OutputPageNr(i, pageCount, pageNumbers)
-				bookletPages[i].Number = pageNr
-				bookletPages[i].Rotate = rotate
-			}
-
+			pageNumberFn = nup2OutputPageNr
 		case 4:
-			for i := 0; i < pageCount; i++ {
-				pageNr, rotate := nup4OutputPageNr(i, pageCount, pageNumbers, nup)
-				bookletPages[i].Number = pageNr
-				bookletPages[i].Rotate = rotate
-			}
+			pageNumberFn = nup4OutputPageNr
 		case 6:
-			for i := 0; i < pageCount; i++ {
-				pageNr, rotate := nupLRTBOutputPageNr(i, pageCount, pageNumbers, nup)
-				bookletPages[i].Number = pageNr
-				bookletPages[i].Rotate = rotate
-			}
+			pageNumberFn = nupLRTBOutputPageNr
 		case 8:
-			for i := 0; i < pageCount; i++ {
-				pageNr, rotate := nup8OutputPageNr(i, pageCount, pageNumbers, nup)
-				bookletPages[i].Number = pageNr
-				bookletPages[i].Rotate = rotate
+			if nup.BookletBinding == model.ShortEdge {
+				pageNumberFn = nupLRTBOutputPageNr
+			} else { // long edge
+				pageNumberFn = nup8OutputPageNr
 			}
 		}
 	case model.BookletPerfectBound:
-		for i := 0; i < pageCount; i++ {
-			pageNr, rotate := nupPerfectBound(i, pageCount, pageNumbers, nup)
-			bookletPages[i].Number = pageNr
-			bookletPages[i].Rotate = rotate
-		}
+		pageNumberFn = nupPerfectBound
 	}
 
+	for i := 0; i < pageCount; i++ {
+		pageNr, rotate := pageNumberFn(i, pageCount, pageNumbers, nup)
+		bookletPages[i].Number = pageNr
+		bookletPages[i].Rotate = rotate
+	}
 	return bookletPages
 }
 
