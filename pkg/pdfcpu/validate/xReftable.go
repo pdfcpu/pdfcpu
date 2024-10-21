@@ -859,24 +859,8 @@ func logURIError(xRefTable *model.XRefTable, pages []int) {
 	}
 }
 
-func checkForBrokenLinks(ctx *model.Context) error {
+func checkLinks(xRefTable *model.XRefTable, client http.Client, pages []int) bool {
 	var httpErr bool
-	if log.CLIEnabled() {
-		log.CLI.Println("validating URIs..")
-	}
-
-	xRefTable := ctx.XRefTable
-
-	pages := []int{}
-	for i := range xRefTable.URIs {
-		pages = append(pages, i)
-	}
-	sort.Ints(pages)
-
-	client := http.Client{
-		Timeout: time.Duration(ctx.Timeout) * time.Second,
-	}
-
 	for _, page := range pages {
 		for uri := range xRefTable.URIs[page] {
 			if log.CLIEnabled() {
@@ -906,6 +890,36 @@ func checkForBrokenLinks(ctx *model.Context) error {
 			}
 		}
 	}
+	return httpErr
+}
+
+func checkForBrokenLinks(ctx *model.Context) error {
+	if ctx.XRefTable.ValidateLinks && len(ctx.URIs) > 0 {
+		if ctx.Offline {
+			if log.CLIEnabled() {
+				log.CLI.Printf("pdfcpu is offline, can't validate Links")
+			}
+			return nil
+		}
+	}
+
+	if log.CLIEnabled() {
+		log.CLI.Println("validating URIs..")
+	}
+
+	xRefTable := ctx.XRefTable
+
+	pages := []int{}
+	for i := range xRefTable.URIs {
+		pages = append(pages, i)
+	}
+	sort.Ints(pages)
+
+	client := http.Client{
+		Timeout: time.Duration(ctx.Timeout) * time.Second,
+	}
+
+	httpErr := checkLinks(xRefTable, client, pages)
 
 	if log.CLIEnabled() {
 		logURIError(xRefTable, pages)
@@ -1029,15 +1043,7 @@ func validateRootObject(ctx *model.Context) error {
 		return err
 	}
 
-	if xRefTable.ValidateLinks && len(xRefTable.URIs) > 0 {
-		if ctx.Offline {
-			if log.CLIEnabled() {
-				log.CLI.Printf("pdfcpu is offline, can't validate Links")
-			}
-		} else {
-			err = checkForBrokenLinks(ctx)
-		}
-	}
+	err = checkForBrokenLinks(ctx)
 
 	if err == nil {
 		if log.ValidateEnabled() {

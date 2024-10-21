@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
@@ -116,6 +117,48 @@ func printConfiguration(conf *model.Configuration) {
 	fmt.Print(string(buf.String()))
 }
 
+func confirmed() bool {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("(yes/no): ")
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading input. Please try again.")
+			continue
+		}
+
+		input = strings.TrimSpace(strings.ToLower(input))
+
+		switch input {
+		case "yes":
+			return true
+		case "no":
+			return false
+		default:
+			fmt.Println("Invalid input. Please type 'yes' or 'no'.")
+		}
+	}
+}
+
+func resetConfiguration(conf *model.Configuration) {
+	fmt.Printf("Did you make a backup of %s ?\n", conf.Path)
+	if confirmed() {
+		fmt.Printf("Are you ready to reset your config.yml to %s ?\n", model.VersionStr)
+		if confirmed() {
+			fmt.Println("resetting..")
+			if err := model.ResetConfig(); err != nil {
+				fmt.Fprintf(os.Stderr, "pdfcpu: config problem: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Println("Ready - Don't forget to update config.yml with your modifications.")
+		} else {
+			fmt.Println("Operation canceled.")
+		}
+	} else {
+		fmt.Println("Operation canceled.")
+	}
+}
+
 func printPaperSizes(conf *model.Configuration) {
 	fmt.Fprintln(os.Stderr, paperSizes)
 }
@@ -130,7 +173,7 @@ func printVersion(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(os.Stdout, "pdfcpu: %s\n", model.VersionStr)
+	fmt.Fprintf(os.Stdout, "pdfcpu: %s\n", version)
 
 	if date == "?" {
 		if info, ok := debug.ReadBuildInfo(); ok {
@@ -192,20 +235,14 @@ func expandWildcardsRec(s string, inFiles *[]string, conf *model.Configuration) 
 		if d.IsDir() {
 			return nil
 		}
-
-		//filename := d.Name()
-
 		if ok := hasPDFExtension(path); ok {
 			*inFiles = append(*inFiles, path)
 			return nil
 		}
-
 		if !wantsPdf && conf.CheckFileNameExt {
-			//sensurePDFExtension(path)
 			fmt.Fprintf(os.Stderr, "%s needs extension \".pdf\".\n", path)
 			os.Exit(1)
 		}
-
 		return nil
 	})
 }
@@ -258,16 +295,15 @@ func processValidateCommand(conf *model.Configuration) {
 		inFiles = append(inFiles, arg)
 	}
 
-	if mode != "" && mode != "strict" && mode != "s" && mode != "relaxed" && mode != "r" {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
-		os.Exit(1)
-	}
-
 	switch mode {
 	case "strict", "s":
 		conf.ValidationMode = model.ValidationStrict
 	case "relaxed", "r":
 		conf.ValidationMode = model.ValidationRelaxed
+	case "":
+	default:
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
+		os.Exit(1)
 	}
 
 	if links {

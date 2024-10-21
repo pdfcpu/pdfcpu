@@ -87,7 +87,11 @@ func ReadContextFile(inFile string) (*model.Context, error) {
 		return nil, err
 	}
 
-	if ctx.Version() == model.V20 {
+	if ctx.Conf.Version != model.VersionStr {
+		model.CheckConfigVersion(ctx.Conf.Version)
+	}
+
+	if ctx.XRefTable.Version() == model.V20 {
 		logDisclaimerPDF20()
 	}
 
@@ -100,7 +104,7 @@ func ReadContextFile(inFile string) (*model.Context, error) {
 
 // ValidateContext validates ctx.
 func ValidateContext(ctx *model.Context) error {
-	if ctx.Version() == model.V20 {
+	if ctx.XRefTable.Version() == model.V20 {
 		logDisclaimerPDF20()
 	}
 	return validate.XRefTable(ctx)
@@ -236,7 +240,7 @@ func WriteIncr(ctx *model.Context, rws io.ReadWriteSeeker, conf *model.Configura
 // If path/pdfcpu is not existent, it will be created including config.yml
 func EnsureDefaultConfigAt(path string) error {
 	// Call if you have specific requirements regarding the location of the pdfcpu config dir.
-	return model.EnsureDefaultConfigAt(path)
+	return model.EnsureDefaultConfigAt(path, false)
 }
 
 var (

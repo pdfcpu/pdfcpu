@@ -20,6 +20,8 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 var (
@@ -34,8 +36,9 @@ var (
 
 // Set by Goreleaser.
 var (
-	commit = "?"
-	date   = "?"
+	version = model.VersionStr
+	commit  = "?"
+	date    = "?"
 )
 
 func init() {

@@ -380,7 +380,7 @@ func validateAnnotationDictLink(xRefTable *model.XRefTable, d types.Dict, dictNa
 	return validateBorderStyleDict(xRefTable, d, dictName, "BS", OPTIONAL, sinceVersion)
 }
 
-func validateAnnotationDictFreeTextPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAPAndDA(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 
 	required := REQUIRED
 
@@ -409,12 +409,21 @@ func validateAnnotationDictFreeTextPart1(xRefTable *model.XRefTable, d types.Dic
 		d["DA"] = types.StringLiteral(*da)
 	}
 
+	return nil
+}
+
+func validateAnnotationDictFreeTextPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+
+	if err := validateAPAndDA(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
 	// Q, optional, integer, since V1.4, 0,1,2
 	sinceVersion := model.V14
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V13
 	}
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "Q", OPTIONAL, sinceVersion, func(i int) bool { return 0 <= i && i <= 2 })
+	_, err := validateIntegerEntry(xRefTable, d, dictName, "Q", OPTIONAL, sinceVersion, func(i int) bool { return 0 <= i && i <= 2 })
 	if err != nil {
 		return err
 	}

@@ -28,6 +28,16 @@ import (
 
 // This gets rid of the gopkg.in/yaml.v2 dependency for wasm builds.
 
+func handleCreationDate(v string, c *Configuration) error {
+	c.CreationDate = v
+	return nil
+}
+
+func handleVersion(v string, c *Configuration) error {
+	c.Version = v
+	return nil
+}
+
 func handleCheckFileNameExt(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
@@ -186,6 +196,12 @@ func boolean(k, v string) (bool, error) {
 
 func parseKeysPart1(k, v string, c *Configuration) (bool, error) {
 	switch k {
+
+	case "created":
+		return true, handleCreationDate(v, c)
+
+	case "version":
+		return true, handleVersion(v, c)
 
 	case "checkFileNameExt":
 		return true, handleCheckFileNameExt(k, v, c)

@@ -29,6 +29,8 @@ import (
 )
 
 type configuration struct {
+	CreationDate                    string `yaml:"created"`
+	Version                         string `yaml:"version"`
 	CheckFileNameExt                bool   `yaml:"checkFileNameExt"`
 	Reader15                        bool   `yaml:"reader15"`
 	DecodeAllStreams                bool   `yaml:"decodeAllStreams"`
@@ -57,6 +59,8 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	var conf Configuration
 	conf.Path = configPath
 
+	conf.CreationDate = c.CreationDate
+	conf.Version = c.Version
 	conf.CheckFileNameExt = c.CheckFileNameExt
 	conf.Reader15 = c.Reader15
 	conf.DecodeAllStreams = c.DecodeAllStreams

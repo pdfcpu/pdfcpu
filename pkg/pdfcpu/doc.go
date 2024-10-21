@@ -12,7 +12,7 @@ The commands are:
 	changeopw     change owner password
 	changeupw     change user password
 	collect       create custom sequence of selected pages
-	config        print configuration
+	config        list, reset configuration
 	create        create PDF content including forms via JSON
 	crop          set cropbox for selected pages
 	cut           custom cut pages horizontally or vertically

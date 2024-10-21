@@ -106,7 +106,7 @@ func Write(ctx *model.Context) (err error) {
 	// we need to generate V1.7 PDF files.
 	v := model.V17
 
-	if ctx.Version() == model.V20 {
+	if ctx.XRefTable.Version() == model.V20 {
 		v = model.V20
 	}
 
@@ -213,7 +213,7 @@ func ensureFileID(ctx *model.Context) error {
 }
 
 func ensureInfoDictAndFileID(ctx *model.Context) error {
-	if ctx.Version() < model.V20 {
+	if ctx.XRefTable.Version() < model.V20 {
 		if err := ensureInfoDict(ctx); err != nil {
 			return err
 		}
@@ -917,7 +917,7 @@ func setupEncryption(ctx *model.Context) error {
 	}
 
 	d := newEncryptDict(
-		ctx.Version(),
+		ctx.XRefTable.Version(),
 		ctx.EncryptUsingAES,
 		ctx.EncryptKeyLength,
 		int16(ctx.Permissions),

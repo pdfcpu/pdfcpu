@@ -1200,6 +1200,46 @@ func detectNonEscaped(line, s string) int {
 	}
 }
 
+func applyOffBoth(endInd, streamInd, off int) (int, int, error) {
+	if endInd >= 0 {
+		endInd += off
+	}
+	if streamInd >= 0 {
+		streamInd += off
+	}
+	return endInd, streamInd, nil
+}
+
+func applyOffEndIndFirst(endInd, streamInd, off, floor int) (int, int, error) {
+	endInd += off
+	if streamInd > 0 {
+		if streamInd > floor {
+			// stream after any ( or % to skip
+			streamInd = -1
+		} else {
+			streamInd += off
+		}
+	}
+	return endInd, streamInd, nil
+}
+
+func applyOffStreamIndFirst(endInd, streamInd, off, floor int) (int, int, error) {
+	streamInd += off
+	if endInd > 0 {
+		if endInd > floor {
+			// endobj after any ( or % to skip
+			endInd = -1
+		} else {
+			endInd += off
+		}
+	}
+	return endInd, streamInd, nil
+}
+
+func isComment(commentPos, strLitPos int) bool {
+	return commentPos > 0 && (strLitPos < 0 || commentPos < strLitPos)
+}
+
 func DetectKeywords(line string) (endInd int, streamInd int, err error) {
 	// return endInd or streamInd which ever first encountered.
 	off, i := 0, 0
@@ -1216,13 +1256,7 @@ func DetectKeywords(line string) (endInd int, streamInd int, err error) {
 
 		if strLitPos < 0 && commentPos < 0 {
 			// neither ( nor % to skip
-			if endInd >= 0 {
-				endInd += off
-			}
-			if streamInd >= 0 {
-				streamInd += off
-			}
-			return endInd, streamInd, nil
+			return applyOffBoth(endInd, streamInd, off)
 		}
 
 		floor := posFloor(strLitPos, commentPos)
@@ -1230,37 +1264,19 @@ func DetectKeywords(line string) (endInd int, streamInd int, err error) {
 		if endInd > 0 {
 			if endInd < floor {
 				// endobj before any ( or % to skip
-				endInd += off
-				if streamInd > 0 {
-					if streamInd > floor {
-						// stream after any ( or % to skip
-						streamInd = -1
-					} else {
-						streamInd += off
-					}
-				}
-				return endInd, streamInd, nil
+				return applyOffEndIndFirst(endInd, streamInd, off, floor)
 			}
 		}
 
 		if streamInd > 0 {
 			if streamInd < floor {
 				// stream before any ( or % to skip
-				streamInd += off
-				if endInd > 0 {
-					if endInd > floor {
-						// endobj after any ( or % to skip
-						endInd = -1
-					} else {
-						endInd += off
-					}
-				}
-				return endInd, streamInd, nil
+				return applyOffStreamIndFirst(endInd, streamInd, off, floor)
 			}
 		}
 
 		// skip comment if % before any (
-		if commentPos > 0 && (strLitPos < 0 || commentPos < strLitPos) {
+		if isComment(commentPos, strLitPos) {
 			line, i = positionToNextEOL(line[commentPos:])
 			if line == "" {
 				return -1, -1, nil

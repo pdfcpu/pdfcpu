@@ -160,6 +160,10 @@ type Configuration struct {
 	// Location of corresponding config.yml
 	Path string
 
+	CreationDate string
+
+	Version string
+
 	// Check filename extensions.
 	CheckFileNameExt bool
 
@@ -269,11 +273,26 @@ var configFileBytes []byte
 //go:embed resources/Roboto-Regular.ttf
 var robotoFontFileBytes []byte
 
-func ensureConfigFileAt(path string) error {
+func ensureConfigFileAt(path string, override bool) error {
 	f, err := os.Open(path)
-	if err != nil {
+	if err != nil || override {
 		f.Close()
-		s := fmt.Sprintf("#############################\n# pdfcpu %s         #\n# Created: %s #\n", VersionStr, time.Now().Format("2006-01-02 15:04"))
+
+		s := fmt.Sprintf(`
+#############################
+#   Default configuration   #
+#############################
+
+# Creation date
+created: %s 
+
+# version (Do not edit!)
+version: %s 
+
+`,
+			time.Now().Format("2006-01-02 15:04"),
+			VersionStr)
+
 		bb := append([]byte(s), configFileBytes...)
 		if err := os.WriteFile(path, bb, os.ModePerm); err != nil {
 			return err
@@ -290,13 +309,13 @@ func ensureConfigFileAt(path string) error {
 
 // EnsureDefaultConfigAt tries to load the default configuration from path.
 // If path/pdfcpu/config.yaml is not found, it will be created.
-func EnsureDefaultConfigAt(path string) error {
+func EnsureDefaultConfigAt(path string, override bool) error {
 	configDir := filepath.Join(path, "pdfcpu")
 	font.UserFontDir = filepath.Join(configDir, "fonts")
 	if err := os.MkdirAll(font.UserFontDir, os.ModePerm); err != nil {
 		return err
 	}
-	if err := ensureConfigFileAt(filepath.Join(configDir, "config.yml")); err != nil {
+	if err := ensureConfigFileAt(filepath.Join(configDir, "config.yml"), override); err != nil {
 		return err
 	}
 	//fmt.Println(loadedDefaultConfig)
@@ -329,6 +348,8 @@ func newDefaultConfiguration() *Configuration {
 	// 		cli: supply -conf disable
 	// 		api: call api.DisableConfigDir()
 	return &Configuration{
+		CreationDate:                    time.Now().Format("2006-01-02 15:04"),
+		Version:                         VersionStr,
 		CheckFileNameExt:                true,
 		Reader15:                        true,
 		DecodeAllStreams:                false,
@@ -352,6 +373,14 @@ func newDefaultConfiguration() *Configuration {
 	}
 }
 
+func ResetConfig() error {
+	path, err := os.UserConfigDir()
+	if err != nil {
+		path = os.TempDir()
+	}
+	return EnsureDefaultConfigAt(path, true)
+}
+
 // NewDefaultConfiguration returns the default pdfcpu configuration.
 func NewDefaultConfiguration() *Configuration {
 	if loadedDefaultConfig != nil {
@@ -359,15 +388,12 @@ func NewDefaultConfiguration() *Configuration {
 		return &c
 	}
 	if ConfigPath != "disable" {
-		path, err := os.UserConfigDir()
-		if err != nil {
-			path = os.TempDir()
-		}
-		if err = EnsureDefaultConfigAt(path); err == nil {
+		err := ResetConfig()
+		if err == nil {
 			c := *loadedDefaultConfig
 			return &c
 		}
-		fmt.Fprintf(os.Stderr, "pdfcpu: config dir problem: %v\n", err)
+		fmt.Fprintf(os.Stderr, "pdfcpu: config problem: %v\n", err)
 		os.Exit(1)
 	}
 	// Bypass config.yml
@@ -401,6 +427,8 @@ func (c Configuration) String() string {
 	}
 	return fmt.Sprintf("pdfcpu configuration:\n"+
 		"Path:                %s\n"+
+		"CreationDate:		  %s\n"+
+		"Version:             %s\n"+
 		"CheckFileNameExt:    %t\n"+
 		"Reader15:            %t\n"+
 		"DecodeAllStreams:    %t\n"+
@@ -424,6 +452,8 @@ func (c Configuration) String() string {
 		"Offline %t\n"+
 		"Timeout %d\n",
 		path,
+		c.CreationDate,
+		c.Version,
 		c.CheckFileNameExt,
 		c.Reader15,
 		c.DecodeAllStreams,

@@ -71,6 +71,17 @@ func initBoxesCmdMap() commandMap {
 	return m
 }
 
+func initConfigCmdMap() commandMap {
+	m := newCommandMap()
+	for k, v := range map[string]command{
+		"list":  {printConfiguration, nil, "", ""},
+		"reset": {resetConfiguration, nil, "", ""},
+	} {
+		m.register(k, v)
+	}
+	return m
+}
+
 func initFontsCmdMap() commandMap {
 	m := newCommandMap()
 	for k, v := range map[string]command{
@@ -236,6 +247,7 @@ func initCommandMap() {
 	attachCmdMap := initAttachCmdMap()
 	bookmarksCmdMap := initBookmarksCmdMap()
 	boxesCmdMap := initBoxesCmdMap()
+	configCmdMap := initConfigCmdMap()
 	fontsCmdMap := initFontsCmdMap()
 	formCmdMap := initFormCmdMap()
 	imagesCmdMap := initImagesCmdMap()
@@ -261,7 +273,7 @@ func initCommandMap() {
 		"changeopw":     {processChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeOwnerPW},
 		"changeupw":     {processChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
 		"collect":       {processCollectCommand, nil, usageCollect, usageLongCollect},
-		"config":        {printConfiguration, nil, usageConfig, usageLongConfig},
+		"config":        {nil, configCmdMap, usageConfig, usageLongConfig},
 		"create":        {processCreateCommand, nil, usageCreate, usageLongCreate},
 		"crop":          {processCropCommand, nil, usageCrop, usageLongCrop},
 		"cut":           {processCutCommand, nil, usageCut, usageLongCut},

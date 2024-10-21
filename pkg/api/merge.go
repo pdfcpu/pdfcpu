@@ -35,7 +35,7 @@ func appendTo(rs io.ReadSeeker, fName string, ctxDest *model.Context, dividerPag
 		return err
 	}
 
-	if ctxDest.Version() < model.V20 && ctxSource.Version() == model.V20 {
+	if ctxDest.XRefTable.Version() < model.V20 && ctxSource.XRefTable.Version() == model.V20 {
 		return pdfcpu.ErrUnsupportedVersion
 	}
 
@@ -92,7 +92,7 @@ func prepDestContext(destFile string, rs io.ReadSeeker, conf *model.Configuratio
 		}
 	}
 
-	if ctxDest.Version() < model.V20 {
+	if ctxDest.XRefTable.Version() < model.V20 {
 		ctxDest.EnsureVersionForWriting()
 	}
 
@@ -254,7 +254,7 @@ func MergeCreateZip(rs1, rs2 io.ReadSeeker, w io.Writer, conf *model.Configurati
 	if err != nil {
 		return err
 	}
-	if ctxDest.Version() == model.V20 {
+	if ctxDest.XRefTable.Version() == model.V20 {
 		return pdfcpu.ErrUnsupportedVersion
 	}
 	ctxDest.EnsureVersionForWriting()
@@ -267,7 +267,7 @@ func MergeCreateZip(rs1, rs2 io.ReadSeeker, w io.Writer, conf *model.Configurati
 	if err != nil {
 		return err
 	}
-	if ctxSrc.Version() == model.V20 {
+	if ctxSrc.XRefTable.Version() == model.V20 {
 		return pdfcpu.ErrUnsupportedVersion
 	}
 

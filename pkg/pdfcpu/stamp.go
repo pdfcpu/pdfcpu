@@ -715,7 +715,7 @@ func createPDFResForWM(ctx *model.Context, wm *model.Watermark) error {
 	if err != nil {
 		return err
 	}
-	if otherCtx.Version() == model.V20 {
+	if otherCtx.XRefTable.Version() == model.V20 {
 		return ErrUnsupportedVersion
 	}
 

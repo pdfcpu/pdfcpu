@@ -90,31 +90,39 @@ func UpdateImages(rs io.ReadSeeker, rd io.Reader, w io.Writer, objNr, pageNr int
 	return Write(ctx, w, conf)
 }
 
+func ensurePageNrAndId(pageNr *int, id *string, imageFile string) (err error) {
+	// If objNr and pageNr and id are not set, we assume an image filename produced by "pdfcpu image list" and parse this info.
+	// eg. mountain_1_Im0.png => pageNr:1, id:Im0
+
+	if *pageNr > 0 && *id != "" {
+		return nil
+	}
+
+	s := strings.TrimSuffix(imageFile, filepath.Ext(imageFile))
+
+	ss := strings.Split(s, "_")
+
+	if len(ss) < 3 {
+		return errors.Errorf("pdfcpu: invalid image filename:%s - must conform to output filename of \"pdfcpu extract\"", imageFile)
+	}
+
+	*id = ss[len(ss)-1]
+
+	*pageNr, err = strconv.Atoi(ss[len(ss)-2])
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // UpdateImagesFile replaces the XObject identified by objNr or (pageNr and resourceId).
 func UpdateImagesFile(inFile, imageFile, outFile string, objNr, pageNr int, id string, conf *model.Configuration) (err error) {
 
-	if objNr < 1 && pageNr < 1 && id == "" {
-
-		// If objNr, pageNr and id are not set, we assume an image filename produced by "pdfcpu image list" and parse this info.
-		// eg. mountain_1_Im0.png => pageNr:1, id:Im0
-
-		s := strings.TrimSuffix(imageFile, filepath.Ext(imageFile))
-
-		ss := strings.Split(s, "_")
-
-		if len(ss) < 3 {
-			return errors.Errorf("pdfcpu: invalid image filename:%s - must conform to output filename of \"pdfcpu extract\"", imageFile)
-		}
-
-		id = ss[len(ss)-1]
-
-		i, err := strconv.Atoi(ss[len(ss)-2])
-		if err != nil {
+	if objNr < 1 {
+		if err = ensurePageNrAndId(&pageNr, &id, imageFile); err != nil {
 			return err
 		}
-
-		pageNr = i
-
 	}
 
 	var f0, f1, f2 *os.File

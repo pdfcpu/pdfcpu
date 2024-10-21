@@ -33,7 +33,7 @@ The commands are:
    changeopw     change owner password
    changeupw     change user password
    collect       create custom sequence of selected pages
-   config        print configuration
+   config        list, reset configuration
    create        create PDF content including forms via JSON
    crop          set cropbox for selected pages
    cut           custom cut pages horizontally or vertically
@@ -81,6 +81,7 @@ Use "pdfcpu help [command]" for more information about a command.`
 common flags: -v(erbose)  ... turn on logging
               -vv         ... verbose logging
               -q(uiet)    ... disable output
+              -o(ffline)  ... disable http traffic
               -c(onf)     ... set or disable config dir: $path|disable
               -opw        ... owner password
               -upw        ... user password
@@ -936,9 +937,6 @@ Examples: pdfcpu grid out.pdf 1 10 in.pdf
 	usagePaper     = "usage: pdfcpu paper"
 	usageLongPaper = "Print a list of supported paper sizes."
 
-	usageConfig     = "usage: pdfcpu config"
-	usageLongConfig = "Print configuration."
-
 	usageSelectedPages     = "usage: pdfcpu selectedpages"
 	usageLongSelectedPages = "Print definition of the -pages flag."
 
@@ -1706,4 +1704,12 @@ Examples:
    pdfcpu zoom -unit cm -- "vmargin: -1" in.pdf out.pdf ... zoom in to vertical margin of -1 cm
    pdfcpu zoom -unit cm -- "vmargin: 1, border:true, bgcolor:lightgray" in.pdf out.pdf ... zoom out to vertical margin of 1 cm
 `
+
+	usageConfigList  = "pdfcpu config list"
+	usageConfigReset = "pdfcpu config reset"
+
+	usageConfig = "usage: " + usageConfigList +
+		"\n       " + usageConfigReset + generalFlags
+
+	usageLongConfig = `Manage your pdfcpu configuration.`
 )

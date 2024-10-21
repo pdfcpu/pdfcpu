@@ -921,7 +921,7 @@ func getV(ctx *model.Context, d types.Dict, l int) (*int, error) {
 		if l != 256 {
 			return nil, errors.Errorf("getV: \"V\" 5 invalid length, must be 256, got %d", l)
 		}
-		if ctx.Version() != model.V20 && ctx.XRefTable.ValidationMode == model.ValidationStrict {
+		if ctx.XRefTable.Version() != model.V20 && ctx.XRefTable.ValidationMode == model.ValidationStrict {
 			return nil, errors.New("getV: 5 valid for PDF 2.0 only")
 		}
 	}
@@ -1016,7 +1016,7 @@ func length(d types.Dict) (int, error) {
 
 func getR(ctx *model.Context, d types.Dict) (int, error) {
 	maxR := 5
-	if ctx.Version() == model.V20 || ctx.XRefTable.ValidationMode == model.ValidationRelaxed {
+	if ctx.XRefTable.Version() == model.V20 || ctx.XRefTable.ValidationMode == model.ValidationRelaxed {
 		maxR = 6
 	}
 
@@ -1031,7 +1031,7 @@ func getR(ctx *model.Context, d types.Dict) (int, error) {
 func validateAlgorithm(ctx *model.Context) (ok bool) {
 	k := ctx.EncryptKeyLength
 
-	if ctx.Version() == model.V20 {
+	if ctx.XRefTable.Version() == model.V20 {
 		return ctx.EncryptUsingAES && k == 256
 	}
 
@@ -1628,7 +1628,7 @@ func fileID(ctx *model.Context) (types.HexLiteral, error) {
 	h.Write([]byte(strconv.Itoa(ctx.Read.ReadFileSize())))
 
 	// All values of the info dict which is assumed to be there at this point.
-	if ctx.Version() < model.V20 {
+	if ctx.XRefTable.Version() < model.V20 {
 		d, err := ctx.DereferenceDict(*ctx.Info)
 		if err != nil {
 			return "", err

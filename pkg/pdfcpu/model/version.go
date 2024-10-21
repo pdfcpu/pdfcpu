@@ -18,12 +18,14 @@ package model
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 
 // VersionStr is the current pdfcpu version.
-var VersionStr = "v0.8.1 dev"
+var VersionStr = "v0.9.0 dev"
 
 // Version is a type for the internal representation of PDF versions.
 type Version int
@@ -73,4 +75,35 @@ func (v Version) String() string {
 		return "2.0"
 	}
 	return "1." + fmt.Sprintf("%d", v)
+}
+
+func identicalMajorAndMinorVersions(v1, v2 string) bool {
+	ss1 := strings.Split(v1, ".")
+	if len(ss1) < 2 {
+		return false
+	}
+
+	ss2 := strings.Split(v2, ".")
+	if len(ss2) < 2 {
+		return false
+	}
+
+	return ss1[0] == ss2[0] && ss1[1] == ss2[1]
+}
+
+// CheckConfigVersion prints a warning if the configuration is outdated.
+func CheckConfigVersion(v string) {
+
+	if identicalMajorAndMinorVersions(v, VersionStr) {
+		return
+	}
+
+	if log.CLIEnabled() {
+		log.CLI.Println(`
+**************************** WARNING ****************************
+* Your configuration is not based on the current major version. *
+*        Please backup and then reset your configuration:       *
+*                     $ pdfcpu config reset                     *
+*****************************************************************`)
+	}
 }

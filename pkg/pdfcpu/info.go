@@ -514,7 +514,7 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet) (*PDF
 	info.Subject = ctx.Subject
 	info.Producer = ctx.Producer
 	info.Creator = ctx.Creator
-	info.CreationDate = ctx.CreationDate
+	info.CreationDate = ctx.XRefTable.CreationDate
 	info.ModificationDate = ctx.ModDate
 
 	info.PageMode = ""

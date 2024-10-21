@@ -103,7 +103,7 @@ func validateConfigDirFlag() {
 func ensureDefaultConfig() (*model.Configuration, error) {
 	validateConfigDirFlag()
 	if !types.MemberOf(model.ConfigPath, []string{"default", "disable"}) {
-		if err := model.EnsureDefaultConfigAt(model.ConfigPath); err != nil {
+		if err := model.EnsureDefaultConfigAt(model.ConfigPath, false); err != nil {
 			return nil, err
 		}
 	}
@@ -144,6 +144,11 @@ func (m commandMap) process(cmdPrefix string, command string) (string, error) {
 	}
 
 	if m[cmdStr].handler != nil {
+
+		if conf.Version != model.VersionStr {
+			model.CheckConfigVersion(conf.Version)
+		}
+
 		m[cmdStr].handler(conf)
 		return command, nil
 	}
