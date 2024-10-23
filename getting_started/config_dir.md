@@ -11,9 +11,7 @@ There is a configuration directory for user font management and storing the defa
 
 ## Config Dir
 
-pdfcpu will create this directory at the default user's config directory on execution of the first command.
-
-pdfcpu will create this directory at the default [user's config directory](https://golang.org/pkg/os/#UserConfigDir) on execution of the first command.
+pdfcpu will create this directory at the default [user's config directory](https://golang.org/pkg/os/#UserConfigDir) on the very first execution of a pdfcpu command.
 
 You can look up its location either like so:
 
