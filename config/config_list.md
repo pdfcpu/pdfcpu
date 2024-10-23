@@ -6,11 +6,11 @@ layout: default
 
 The configuration file (config.yml) holds carefully selected default values for various aspects of pdfcpu's operations.
 
-pdfcpu will create the config file together with the config directory directory on the very first execution of a pdfcpu command. (See more [here]())
+pdfcpu will create the config file together with the config directory on the very first execution of a pdfcpu command.
 
 This command prints the configuration file location followed by its content.
 
-Please also check out the [config dir](../getting_started/config_dir.md) docs.
+Please also check out the [configuration](../getting_started/config_dir.md) docs.
 
 
 ## Usage

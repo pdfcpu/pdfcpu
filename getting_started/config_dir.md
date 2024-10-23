@@ -8,6 +8,9 @@ Generally pdfcpu does not have to be configured.
 
 There is a configuration directory for user font management and storing the default configuration in effect.
 
+
+## Config Dir
+
 pdfcpu will create this directory at the default user's config directory on execution of the first command.
 
 pdfcpu will create this directory at the default [user's config directory](https://golang.org/pkg/os/#UserConfigDir) on execution of the first command.
@@ -24,7 +27,7 @@ config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 
 `pdfcpu config list` will also print the config file path followed by its content.
 
-Please also check out the [config list](../config/config_list.md) command.
+Please check out the [config list](../config/config_list.md) command.
 
 <br>
 

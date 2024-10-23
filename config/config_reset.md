@@ -26,7 +26,7 @@ Sometimes a new pdfcpu version introduces a new command that also extends the co
 Upgrading to a new version without upgrading the pdfcpu config file is not recommended.
 It may or may not lead to side effects and in worse case to a hard landing.
 
-Although the release notes will always include a reminder whenever a a config file upgrade is necessary 
+Although the release notes will always include a reminder whenever a config file upgrade is necessary 
 pdfcpu will output a warning whenever the config file version does not match the version of the current release.
 
 Consider this config file version:

@@ -4,6 +4,6 @@ layout: default
 
 # Config
 
-Manage your configuration.
+This command lets you manage your configuration.
 
 List or reset your configuration.
