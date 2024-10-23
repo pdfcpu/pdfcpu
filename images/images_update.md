@@ -6,9 +6,11 @@ layout: default
 
 This command lets you replace individual images by object number or page number and resource id.
 
-The necessary info is retrieved from the output of `pdfcpu images list`.
+This basic implementation allows for image replacement as long as there is no softmask or alpha channel involved and the image dimensions (width & height) match.
 
-Have a look at some [examples](#examples).
+The necessary info to execute this command is retrieved from the output of `pdfcpu images list`.
+
+Have a look at a [example](#example).
 
 ## Usage
 
@@ -45,7 +47,7 @@ pdfcpu images update inFile imageFile [outFile] [ objNr | (pageNr Id) ]
 
 <br>
 
-## Examples
+## Example
 
 List all contained images:
 

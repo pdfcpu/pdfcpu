@@ -6,7 +6,11 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
-|2024-10-?? | [v0.9.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.9.0)                              | 
+|2024-10-24 | [v0.9.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.9.0)                              | Add images list, extract, update cmds
+|           |                                                                                             | Add config list, reset cmds,
+|           |                                                                                             | Add offline flag, Fix 455, 859, 868, 
+|           |                                                                                             | 897, 935, 940, 941, 947, 948, 953, 
+|           |                                                                                             | 951, 953, 955, 961, 965
 |2024-08-31 | [v0.8.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.8.1)                              | Improve CJK, annotation support,
 |           |                                                                                             | Fix #628, #687, #767, #819, #830, 
 |           |                                                                                             | #862, #867, #871, #881, #884-#887,
