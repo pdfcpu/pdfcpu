@@ -44,7 +44,7 @@ base  : go1.23.0
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
 
-The major version is 9 and match, so no upgrade is needed.
+The major version of both is 9 and match, so no upgrade is needed.
 
 In contrast the config file version:
 ```

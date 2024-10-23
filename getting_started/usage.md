@@ -24,7 +24,7 @@ The commands are:
    changeopw   change owner password
    changeupw   change user password
    collect     create custom PDF page sequence
-   config      print configuration
+   config      list, reset configuration
    create      create PDF content via JSON
    crop        set crop box for selected pages
    cut         custom cut pages horizontally or vertically
@@ -311,6 +311,16 @@ Manage your page boundaries:
 pdfcpu boxes list    [-p(ages) selectedPages] -- [boxTypes] inFile
 pdfcpu boxes add     [-p(ages) selectedPages] -- description inFile [outFile]
 pdfcpu boxes remove  [-p(ages) selectedPages] -- boxTypes inFile [outFile]
+```
+
+<br>
+
+## [Config](../boxes/boxes.md)
+
+Manage your configuration:
+```
+pdfcpu config list
+pdfcpu config reset
 ```
 
 <br>

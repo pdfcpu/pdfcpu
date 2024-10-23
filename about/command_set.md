@@ -6,7 +6,6 @@ layout: default
 
 * [Booklet](../generate/booklet.md) (arrange pages onto larger sheets to make a booklet or zine)
 * [Collect](../core/collect.md) a custom PDF page sequence
-* [Config](../getting_started/config_dir.md) print configuration 
 * [Create](../generate/create.md) PDF file via JSON with optional form
 * [Crop](../core/crop.md) (apply a custom crop box for selected pages)
 * [Cut](../generate/cut.md) page (apply custom horizontal/vertical cuts)
@@ -38,6 +37,7 @@ Manage
 
 * [Annotations](../annot/annot.md)
 * [Bookmarks](../bookmarks/bookmarks.md)
+* [Configuration](../config/config.md)
 * [Document properties](../properties/properties.md)
 * [Embedded file attachments](../attach/attach.md)
 * [Embedded images](../images/images.md)
