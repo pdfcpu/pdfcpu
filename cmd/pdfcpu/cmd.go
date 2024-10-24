@@ -145,7 +145,7 @@ func (m commandMap) process(cmdPrefix string, command string) (string, error) {
 
 	if m[cmdStr].handler != nil {
 
-		if conf.Version != model.VersionStr {
+		if conf.Version != model.VersionStr && cmdStr != "reset" {
 			model.CheckConfigVersion(conf.Version)
 		}
 
