@@ -10,7 +10,7 @@ This basic implementation allows for image replacement as long as there is no so
 
 The necessary info to execute this command is retrieved from the output of `pdfcpu images list`.
 
-Have a look at a [example](#example).
+Have a look at an [example](#example).
 
 ## Usage
 

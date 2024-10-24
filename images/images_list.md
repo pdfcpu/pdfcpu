@@ -4,7 +4,7 @@ layout: default
 
 # List Images
 
-* This command prints a list of embedded images for selected pages
+This command prints a list of embedded images for selected pages
 
 Have a look at some [examples](#examples).
 
