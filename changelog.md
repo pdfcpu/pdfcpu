@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
+|2024-10-24 | [v0.9.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.9.1)                              | Fix config file handling
 |2024-10-24 | [v0.9.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.9.0)                              | Add images list, extract, update cmds
 |           |                                                                                             | Add config list, reset cmds,
 |           |                                                                                             | Add offline flag, 

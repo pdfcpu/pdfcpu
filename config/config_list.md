@@ -33,7 +33,7 @@ config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 created: 2024-10-22 19:25
 
 # version (Do not edit!)
-version: v0.9.0 dev
+version: v0.9.1 dev
 
 # toggle for inFilename extension check (.pdf)
 checkFileNameExt: true

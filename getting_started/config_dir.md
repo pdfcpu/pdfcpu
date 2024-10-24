@@ -17,9 +17,9 @@ You can look up its location either like so:
 
 ```
 $ pdfcpu version
-pdfcpu: v0.9.0 dev
-commit: 38b29927 (2024-10-16T21:08:47Z)
-base  : go1.22.0
+pdfcpu: v0.9.1 dev
+commit: c7034297 (2024-10-24T08:57:04Z)
+base  : go1.23.0
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 ```
 

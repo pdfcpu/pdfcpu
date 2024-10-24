@@ -49,7 +49,7 @@ The major version of both is 9 and match, so no upgrade is needed.
 In contrast the config file version:
 ```
 # version (Do not edit!)
-version: v0.9.0 dev
+version: v0.9.1 dev
 ```
 
 and the pdfcpu version:
@@ -65,13 +65,13 @@ have different major versions 9 and 10 respectively making a config file upgrade
 
 ## Output
 
-The following is the output from upgrading v0.8.x to v0.9.0:
+The following is the output from upgrading v0.8.x to v0.9.1:
 
 ```
 $ pdfcpu config reset
 Did you make a backup of /Users/horstrutter/Library/Application Support/pdfcpu/config.yml ?
 (yes/no): yes
-Are you ready to reset your config.yml to v0.9.0 dev ?
+Are you ready to reset your config.yml to v0.9.1 dev ?
 (yes/no): yes
 resetting..
 Ready - Don't forget to update config.yml with your modifications.
