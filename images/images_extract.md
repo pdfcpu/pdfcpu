@@ -4,7 +4,7 @@ layout: default
 
 # Extract Images
 
-This command lets you extract individual images contained by pages:
+This command lets you extract individual images contained by pages.
 
 Have a look at some [examples](#examples).
 

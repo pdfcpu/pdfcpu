@@ -4,9 +4,9 @@ layout: default
 
 # List Images
 
-This command prints a list of embedded images for selected pages
+This command prints a list of embedded images for selected pages.
 
-Have a look at some [examples](#examples).
+Have a look at an [example](#example).
 
 ## Usage
 
@@ -44,7 +44,7 @@ pdfcpu images list [-p(ages) selectedPages] inFile
 
 <br>
 
-## Examples
+## Example
 
  List all embedded images of test.pdf:
 
