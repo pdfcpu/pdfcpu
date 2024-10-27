@@ -465,6 +465,7 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// unused
 func (tf *TextField) RefreshN(xRefTable *model.XRefTable, indRef *types.IndirectRef) error {
 	bb, err := tf.renderN(xRefTable)
 	if err != nil {
@@ -1067,6 +1068,10 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine 
 	tf.Font.Lang = lang
 	tf.Font.FillFont = fillFont
 	tf.RTL = pdffont.RTL(lang)
+
+	if !font.SupportedFont(name) {
+		return errors.Errorf("pdfcpu: font unavailable: %s", name)
+	}
 
 	bb, err := tf.renderN(ctx.XRefTable)
 	if err != nil {

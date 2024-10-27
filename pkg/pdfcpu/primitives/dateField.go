@@ -486,6 +486,7 @@ func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 }
 
 // RefreshN updates the normal appearance referred to by indRef according to df.
+// Unused.
 func (df *DateField) RefreshN(xRefTable *model.XRefTable, indRef *types.IndirectRef) error {
 	bb, err := df.renderN(xRefTable)
 	if err != nil {

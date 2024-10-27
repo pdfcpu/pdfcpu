@@ -18,6 +18,7 @@ package validate
 
 import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -634,6 +635,10 @@ func validateDescendantFonts(xRefTable *model.XRefTable, d types.Dict, fontDictN
 	a, err := validateArrayEntry(xRefTable, d, fontDictName, "DescendantFonts", required, model.V10, func(a types.Array) bool { return len(a) == 1 })
 	if err != nil || a == nil {
 		return err
+	}
+
+	if len(a) != 1 {
+		return font.ErrCorruptFontDict
 	}
 
 	d1, err := xRefTable.DereferenceDict(a[0])

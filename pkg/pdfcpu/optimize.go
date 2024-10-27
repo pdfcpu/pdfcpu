@@ -1148,8 +1148,8 @@ func fontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) 
 	if err != nil || a == nil {
 		return nil, errors.Errorf("pdfcpu: fontDescriptor: DescendantFonts: IndirectRef or Array wth length 1 expected for font object %d\n", objNr)
 	}
-	if len(a) > 1 {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: DescendantFonts Array length > 1 %v\n", a)
+	if len(a) != 1 {
+		return nil, errors.Errorf("pdfcpu: fontDescriptor: DescendantFonts Array length <> 1 %v\n", a)
 	}
 
 	// dict is the fontDict of the descendant font.

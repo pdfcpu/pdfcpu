@@ -1084,8 +1084,11 @@ func Lang(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 		return "", err
 	}
 
-	indRef := arr[0].(types.IndirectRef)
-	d1, err := xRefTable.DereferenceDict(indRef)
+	if len(arr) != 1 {
+		return "", ErrCorruptFontDict
+	}
+
+	d1, err := xRefTable.DereferenceDict(arr[0])
 	if err != nil {
 		return "", err
 	}

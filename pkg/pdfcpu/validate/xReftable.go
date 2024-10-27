@@ -894,7 +894,10 @@ func checkLinks(xRefTable *model.XRefTable, client http.Client, pages []int) boo
 }
 
 func checkForBrokenLinks(ctx *model.Context) error {
-	if ctx.XRefTable.ValidateLinks && len(ctx.URIs) > 0 {
+	if !ctx.XRefTable.ValidateLinks {
+		return nil
+	}
+	if len(ctx.URIs) > 0 {
 		if ctx.Offline {
 			if log.CLIEnabled() {
 				log.CLI.Printf("pdfcpu is offline, can't validate Links")
