@@ -836,7 +836,9 @@ func validateNeedsRendering(xRefTable *model.XRefTable, rootDict types.Dict, req
 }
 
 func logURIError(xRefTable *model.XRefTable, pages []int) {
-	fmt.Println()
+	if log.CLIEnabled() {
+		log.CLI.Println()
+	}
 	for _, page := range pages {
 		for uri, resp := range xRefTable.URIs[page] {
 			if resp != "" {

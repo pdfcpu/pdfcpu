@@ -1738,6 +1738,9 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 // PageContent returns the content in PDF syntax for page dict d.
 func (xRefTable *XRefTable) PageContent(d types.Dict) ([]byte, error) {
 	o, _ := d.Find("Contents")
+	if o == nil {
+		return nil, ErrNoContent
+	}
 
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {

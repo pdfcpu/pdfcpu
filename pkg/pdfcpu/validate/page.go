@@ -113,7 +113,7 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 		}
 
 		// Digest empty array.
-		d["Contents"] = nil
+		d.Delete("Contents")
 		model.ShowRepaired("page dict \"Contents\"")
 
 	case types.StringLiteral:
@@ -125,7 +125,7 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 		}
 
 		// Digest empty string literal.
-		d["Contents"] = nil
+		d.Delete("Contents")
 		model.ShowRepaired("page dict \"Contents\"")
 
 	default:
@@ -1162,13 +1162,7 @@ func validatePages(xRefTable *model.XRefTable, rootDict types.Dict) (types.Dict,
 		if err != nil {
 			return nil, err
 		}
-		msg := "repaired: missing \"Pages\" indirect reference"
-		if log.DebugEnabled() {
-			log.Debug.Println("pdfcpu " + msg)
-		}
-		if log.CLIEnabled() {
-			log.CLI.Println(msg)
-		}
+		model.ShowRepaired("missing \"Pages\" indirect reference")
 	}
 
 	if ok {

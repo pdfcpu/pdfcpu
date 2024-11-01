@@ -91,7 +91,7 @@ func removeEmptyContentStreams(ctx *model.Context, pageDict types.Dict, obj type
 		}
 
 	} else if contentArr, ok = obj.(types.Array); !ok {
-		return errors.Errorf("removeEmptyContentStreams: obj#:%d corrupt page content array\n", pageObjNumber)
+		return errors.Errorf("removeEmptyContentStreams: obj#:%d corrupt page content array", pageObjNumber)
 	}
 
 	var newContentArr types.Array

@@ -57,7 +57,7 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) error {
 		err = errors.Wrap(err, fmt.Sprintf("validation error (obj#:%d)%s", ctx.CurObj, s))
 	}
 
-	if log.StatsEnabled() {
+	if log.StatsEnabled() || conf.Optimize {
 		if err := pdfcpu.OptimizeXRefTable(ctx); err != nil {
 			return err
 		}

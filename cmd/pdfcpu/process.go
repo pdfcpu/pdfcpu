@@ -225,6 +225,14 @@ func getBaseDir(path string) string {
 	return basePath
 }
 
+func isDir(path string) (bool, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false, err
+	}
+	return info.IsDir(), nil
+}
+
 func expandWildcardsRec(s string, inFiles *[]string, conf *model.Configuration) error {
 	s = filepath.Clean(s)
 	wantsPdf := strings.HasSuffix(s, ".pdf")
@@ -240,8 +248,9 @@ func expandWildcardsRec(s string, inFiles *[]string, conf *model.Configuration) 
 			return nil
 		}
 		if !wantsPdf && conf.CheckFileNameExt {
-			fmt.Fprintf(os.Stderr, "%s needs extension \".pdf\".\n", path)
-			os.Exit(1)
+			if !quiet {
+				fmt.Fprintf(os.Stderr, "%s needs extension \".pdf\".\n", path)
+			}
 		}
 		return nil
 	})
@@ -253,25 +262,31 @@ func expandWildcards(s string, inFiles *[]string, conf *model.Configuration) err
 		return err
 	}
 	for _, path := range paths {
+
 		if conf.CheckFileNameExt {
-			ensurePDFExtension(path)
+			if !hasPDFExtension(path) {
+				if isDir, err := isDir(path); isDir && err == nil {
+					continue
+				}
+				if !quiet {
+					fmt.Fprintf(os.Stderr, "%s needs extension \".pdf\".\n", path)
+				}
+				continue
+			}
 		}
+
 		*inFiles = append(*inFiles, path)
 	}
 	return nil
 }
 
-func processValidateCommand(conf *model.Configuration) {
-	if len(flag.Args()) == 0 || selectedPages != "" {
-		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
-		os.Exit(1)
-	}
-
+func collectInFiles(conf *model.Configuration) []string {
 	inFiles := []string{}
+
 	for _, arg := range flag.Args() {
 
 		if strings.Contains(arg, "**") {
-			// **/			fails on first file w/o extension "pdf"
+			// **/			skips files w/o extension "pdf"
 			// **/*.pdf
 			if err := expandWildcardsRec(arg, &inFiles, conf); err != nil {
 				fmt.Fprintf(os.Stderr, "%s", err)
@@ -280,7 +295,7 @@ func processValidateCommand(conf *model.Configuration) {
 		}
 
 		if strings.Contains(arg, "*") {
-			// *			fails on first file w/o extension "pdf"
+			// *			skips files w/o extension "pdf"
 			// *.pdf
 			if err := expandWildcards(arg, &inFiles, conf); err != nil {
 				fmt.Fprintf(os.Stderr, "%s", err)
@@ -289,11 +304,33 @@ func processValidateCommand(conf *model.Configuration) {
 		}
 
 		if conf.CheckFileNameExt {
-			ensurePDFExtension(arg)
+			if !hasPDFExtension(arg) {
+				if isDir, err := isDir(arg); isDir && err == nil {
+					if err := expandWildcards(arg+"/*", &inFiles, conf); err != nil {
+						fmt.Fprintf(os.Stderr, "%s", err)
+					}
+					continue
+				}
+				if !quiet {
+					fmt.Fprintf(os.Stderr, "%s needs extension \".pdf\".\n", arg)
+				}
+				continue
+			}
 		}
 
 		inFiles = append(inFiles, arg)
 	}
+
+	return inFiles
+}
+
+func processValidateCommand(conf *model.Configuration) {
+	if len(flag.Args()) == 0 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageValidate)
+		os.Exit(1)
+	}
+
+	inFiles := collectInFiles(conf)
 
 	switch mode {
 	case "strict", "s":
