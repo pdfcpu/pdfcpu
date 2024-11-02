@@ -7,6 +7,7 @@
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Latest release](https://img.shields.io/github/release/pdfcpu/pdfcpu.svg)](https://github.com/pdfcpu/pdfcpu/releases)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/hhrutter)
+[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20pdfcpu%20Guru-006BFF)](https://gurubase.io/g/pdfcpu)
 
 <a href="https://pdfcpu.io"><img src="resources/logoSmall.png" width="150"></a>
 <a href="https://pdfa.org"><img src="resources/pdfa.png" width="75"></a>
