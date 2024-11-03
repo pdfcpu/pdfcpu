@@ -73,8 +73,10 @@ func MergeRaw(rsc []io.ReadSeeker, w io.Writer, dividerPage bool, conf *model.Co
 		}
 	}
 
-	if err = OptimizeContext(ctxDest); err != nil {
-		return err
+	if conf.OptimizeBeforeWriting {
+		if err = OptimizeContext(ctxDest); err != nil {
+			return err
+		}
 	}
 
 	return WriteContext(ctxDest, w)
@@ -99,6 +101,19 @@ func prepDestContext(destFile string, rs io.ReadSeeker, conf *model.Configuratio
 	return ctxDest, nil
 }
 
+func appendFile(fName string, ctxDest *model.Context, dividerPage bool) error {
+	f, err := os.Open(fName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if log.CLIEnabled() {
+		log.CLI.Println(fName)
+	}
+	return appendTo(f, filepath.Base(fName), ctxDest, dividerPage)
+}
+
 // Merge concatenates inFiles.
 // if destFile is supplied it appends the result to destfile (=MERGEAPPEND)
 // if no destFile supplied it writes the result to the first entry of inFiles (=MERGECREATE).
@@ -120,6 +135,10 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 		inFiles = inFiles[1:]
 	}
 
+	if conf.CreateBookmarks && log.CLIEnabled() {
+		log.CLI.Println("creating bookmarks...")
+	}
+
 	f, err := os.Open(destFile)
 	if err != nil {
 		return err
@@ -138,29 +157,15 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 	}
 
 	for _, fName := range inFiles {
-		if err := func() error {
-			f, err := os.Open(fName)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-
-			if log.CLIEnabled() {
-				log.CLI.Println(fName)
-			}
-			if err = appendTo(f, filepath.Base(fName), ctxDest, dividerPage); err != nil {
-				return err
-			}
-
-			return nil
-
-		}(); err != nil {
+		if err := appendFile(fName, ctxDest, dividerPage); err != nil {
 			return err
 		}
 	}
 
-	if err := OptimizeContext(ctxDest); err != nil {
-		return err
+	if conf.OptimizeBeforeWriting {
+		if err := OptimizeContext(ctxDest); err != nil {
+			return err
+		}
 	}
 
 	return WriteContext(ctxDest, w)
@@ -275,8 +280,10 @@ func MergeCreateZip(rs1, rs2 io.ReadSeeker, w io.Writer, conf *model.Configurati
 		return err
 	}
 
-	if err := OptimizeContext(ctxDest); err != nil {
-		return err
+	if conf.OptimizeBeforeWriting {
+		if err := OptimizeContext(ctxDest); err != nil {
+			return err
+		}
 	}
 
 	return WriteContext(ctxDest, w)

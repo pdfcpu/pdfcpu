@@ -257,6 +257,10 @@ func handleDuplicateFontObject(ctx *model.Context, fontDict types.Dict, fName, r
 	// Check if this font dict matches the font dict of each font object number.
 	for _, fontObjNr := range fontObjNrs {
 
+		if fontObjNr == objNr {
+			continue
+		}
+
 		// Get the font object from the lookup table.
 		fontObject, ok := ctx.Optimize.FontObjects[fontObjNr]
 		if !ok {
@@ -433,8 +437,31 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 	// Get the set of image object numbers for pageNr.
 	pageImages := ctx.Optimize.PageImages[pageNr]
 
+	if duplImgObj, ok := ctx.Optimize.DuplicateImages[objNr]; ok {
+
+		newObjNr := duplImgObj.NewObjNr
+		// We have detected a redundant image dict.
+		if log.OptimizeEnabled() {
+			log.Optimize.Printf("handleDuplicateImageObject: redundant imageObj#:%d already registered with obj#:%d !\n", objNr, newObjNr)
+		}
+
+		// Register new page image for pageNr.
+		// The image for image object number is used instead of objNr.
+		pageImages[newObjNr] = true
+
+		// Add the resource name of this duplicate image to the list of registered resource names.
+		ctx.Optimize.ImageObjects[newObjNr].AddResourceName(pageNr, resourceName)
+
+		// Return the imageObjectNumber that will be used instead of objNr.
+		return &newObjNr, nil
+	}
+
 	// Process image dict, check if this is a duplicate.
 	for imageObjNr, imageObject := range ctx.Optimize.ImageObjects {
+
+		if imageObjNr == objNr {
+			continue
+		}
 
 		if log.OptimizeEnabled() {
 			log.Optimize.Printf("handleDuplicateImageObject: comparing with imagedict Obj %d\n", imageObjNr)
@@ -464,7 +491,7 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 		imageObject.AddResourceName(pageNr, resourceName)
 
 		// Register imageDict as duplicate.
-		ctx.Optimize.DuplicateImages[objNr] = imageDict
+		ctx.Optimize.DuplicateImages[objNr] = &model.DuplicateImageObject{ImageDict: imageDict, NewObjNr: imageObjNr}
 
 		// Return the imageObjectNumber that will be used instead of objNr.
 		return &imageObjNr, nil
@@ -927,10 +954,10 @@ func calcRedundantObjects(ctx *model.Context) error {
 		}
 	}
 
-	for i, sd := range ctx.Optimize.DuplicateImages {
+	for i, obj := range ctx.Optimize.DuplicateImages {
 		ctx.Optimize.DuplicateImageObjs[i] = true
 		// Identify and mark all involved potential duplicate objects for a redundant image.
-		if err := traverseObjectGraphAndMarkDuplicates(ctx.XRefTable, *sd, ctx.Optimize.DuplicateImageObjs); err != nil {
+		if err := traverseObjectGraphAndMarkDuplicates(ctx.XRefTable, *obj.ImageDict, ctx.Optimize.DuplicateImageObjs); err != nil {
 			return err
 		}
 	}
@@ -1279,8 +1306,8 @@ func calcImageBinarySizes(ctx *model.Context) {
 	}
 
 	// Calc memory usage for duplicate images.
-	for _, imageDict := range ctx.Optimize.DuplicateImages {
-		ctx.Read.BinaryImageDuplSize += *imageDict.StreamLength
+	for _, obj := range ctx.Optimize.DuplicateImages {
+		ctx.Read.BinaryImageDuplSize += *obj.ImageDict.StreamLength
 	}
 
 	if log.OptimizeEnabled() {
@@ -1522,7 +1549,11 @@ func OptimizeXRefTable(ctx *model.Context) error {
 		return err
 	}
 
-	if ctx.Cmd == model.OPTIMIZE && ctx.Conf.OptimizeResourceDicts {
+	if (ctx.Cmd == model.OPTIMIZE ||
+		ctx.Cmd == model.LISTIMAGES ||
+		ctx.Cmd == model.EXTRACTIMAGES ||
+		ctx.Cmd == model.UPDATEIMAGES) &&
+		ctx.Conf.OptimizeResourceDicts {
 		// Extra step with potential for performance hit when processing large files.
 		if err := optimizeResourceDicts(ctx); err != nil {
 			return err

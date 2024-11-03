@@ -58,6 +58,9 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) error {
 	}
 
 	if log.StatsEnabled() || conf.Optimize {
+		if log.CLIEnabled() {
+			log.CLI.Println("optimizing...")
+		}
 		if err := pdfcpu.OptimizeXRefTable(ctx); err != nil {
 			return err
 		}

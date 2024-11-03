@@ -75,6 +75,18 @@ func parseFlags(cmd *command) {
 		}
 		initLogging(verbose, veryVerbose)
 	}
+
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "bookmarks" || f.Name == "b" {
+			bookmarksSet = true
+		}
+		if f.Name == "offline" || f.Name == "off" || f.Name == "o" {
+			offlineSet = true
+		}
+		if f.Name == "optimize" || f.Name == "opt" {
+			optimizeSet = true
+		}
+	})
 }
 
 func validateConfigDirFlag() {
@@ -139,7 +151,7 @@ func (m commandMap) process(cmdPrefix string, command string) (string, error) {
 	conf.OwnerPW = opw
 	conf.UserPW = upw
 
-	if !conf.Offline {
+	if offlineSet {
 		conf.Offline = offline
 	}
 

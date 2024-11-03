@@ -293,6 +293,9 @@ func parseConfigFile(r io.Reader, configPath string) error {
 	var conf Configuration
 	conf.Path = configPath
 
+	// TODO add to config.yml
+	conf.OptimizeBeforeWriting = true
+
 	s := bufio.NewScanner(r)
 	for s.Scan() {
 		t := s.Text()

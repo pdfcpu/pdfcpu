@@ -322,8 +322,8 @@ func initFlags() {
 	flag.BoolVar(&all, "a", false, "")
 
 	bookmarksUsage := "create bookmarks while merging"
-	flag.BoolVar(&bookmarks, "bookmarks", true, bookmarksUsage)
-	flag.BoolVar(&bookmarks, "b", true, bookmarksUsage)
+	flag.BoolVar(&bookmarks, "bookmarks", false, bookmarksUsage)
+	flag.BoolVar(&bookmarks, "b", false, bookmarksUsage)
 
 	confUsage := "the config directory path | skip | none"
 	flag.StringVar(&conf, "config", "", confUsage)
@@ -353,6 +353,10 @@ func initFlags() {
 	flag.BoolVar(&offline, "offline", false, "")
 	flag.BoolVar(&offline, "off", false, "")
 	flag.BoolVar(&offline, "o", false, "")
+
+	optimizeUsage := "merge: optimize before writing"
+	flag.BoolVar(&optimize, "optimize", false, optimizeUsage)
+	flag.BoolVar(&optimize, "opt", false, optimizeUsage)
 
 	selectedPagesUsage := "a comma separated list of pages or page ranges, see pdfcpu selectedpages"
 	flag.StringVar(&selectedPages, "pages", "", selectedPagesUsage)

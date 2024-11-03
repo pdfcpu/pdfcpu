@@ -347,6 +347,11 @@ func processValidateCommand(conf *model.Configuration) {
 		conf.ValidateLinks = true
 	}
 
+	conf.Optimize = false
+	if optimizeSet {
+		conf.Optimize = optimize
+	}
+
 	process(cli.ValidateCommand(inFiles, conf))
 }
 
@@ -489,6 +494,23 @@ func processArgsForMerge(conf *model.Configuration) ([]string, string) {
 	return inFiles, outFile
 }
 
+func mergeCommandVariation(inFiles []string, outFile string, dividerPage bool, conf *model.Configuration) *cli.Command {
+	switch mode {
+
+	case "create":
+		return cli.MergeCreateCommand(inFiles, outFile, dividerPage, conf)
+
+	case "zip":
+		return cli.MergeCreateZipCommand(inFiles, outFile, conf)
+
+	case "append":
+		return cli.MergeAppendCommand(inFiles, outFile, dividerPage, conf)
+
+	}
+
+	return nil
+}
+
 func processMergeCommand(conf *model.Configuration) {
 	if mode == "" {
 		mode = "create"
@@ -521,24 +543,20 @@ func processMergeCommand(conf *model.Configuration) {
 
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+	}
+
+	if bookmarksSet {
 		conf.CreateBookmarks = bookmarks
 	}
 
-	conf.CreateBookmarks = bookmarks
+	if optimizeSet {
+		conf.OptimizeBeforeWriting = optimize
+	}
 
-	var cmd *cli.Command
-
-	switch mode {
-
-	case "create":
-		cmd = cli.MergeCreateCommand(inFiles, outFile, dividerPage, conf)
-
-	case "zip":
-		cmd = cli.MergeCreateZipCommand(inFiles, outFile, conf)
-
-	case "append":
-		cmd = cli.MergeAppendCommand(inFiles, outFile, dividerPage, conf)
-
+	cmd := mergeCommandVariation(inFiles, outFile, dividerPage, conf)
+	if cmd == nil {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageMerge)
+		os.Exit(1)
 	}
 
 	process(cmd)

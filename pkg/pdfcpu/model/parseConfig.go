@@ -47,12 +47,13 @@ type configuration struct {
 	TimestampFormat                 string `yaml:"timestampFormat"`
 	DateFormat                      string `yaml:"dateFormat"`
 	Optimize                        bool   `yaml:"optimize"`
-	OptimizeResourceDicts           bool   `yaml:"optimizeResourceDicts"`
-	OptimizeDuplicateContentStreams bool   `yaml:"optimizeDuplicateContentStreams"`
-	CreateBookmarks                 bool   `yaml:"createBookmarks"`
-	NeedAppearances                 bool   `yaml:"needAppearances"`
-	Offline                         bool   `yaml:"offline"`
-	Timeout                         int    `yaml:"timeout"`
+	OptimizeBeforeWriting           bool
+	OptimizeResourceDicts           bool `yaml:"optimizeResourceDicts"`
+	OptimizeDuplicateContentStreams bool `yaml:"optimizeDuplicateContentStreams"`
+	CreateBookmarks                 bool `yaml:"createBookmarks"`
+	NeedAppearances                 bool `yaml:"needAppearances"`
+	Offline                         bool `yaml:"offline"`
+	Timeout                         int  `yaml:"timeout"`
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
@@ -102,6 +103,10 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	conf.TimestampFormat = c.TimestampFormat
 	conf.DateFormat = c.DateFormat
 	conf.Optimize = c.Optimize
+
+	// TODO add to config.yml
+	conf.OptimizeBeforeWriting = true
+
 	conf.OptimizeResourceDicts = c.OptimizeResourceDicts
 	conf.OptimizeDuplicateContentStreams = c.OptimizeDuplicateContentStreams
 	conf.CreateBookmarks = c.CreateBookmarks

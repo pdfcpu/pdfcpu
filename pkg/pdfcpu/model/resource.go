@@ -105,6 +105,12 @@ type ImageObject struct {
 	ImageDict     *types.StreamDict
 }
 
+// DuplicateImageObject represents a redundant image.
+type DuplicateImageObject struct {
+	ImageDict *types.StreamDict
+	NewObjNr  int
+}
+
 // AddResourceName adds a resourceName to this imageObject's ResourceNames map.
 func (io *ImageObject) AddResourceName(pageNr int, resourceName string) {
 	io.ResourceNames[pageNr] = resourceName

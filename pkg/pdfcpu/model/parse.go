@@ -387,10 +387,6 @@ func parseStringLiteral(line *string) (types.Object, error) {
 		return nil, errBufNotAvailable
 	}
 
-	if log.ParseEnabled() {
-		log.Parse.Printf("ParseObject: value = String Literal: <%s>\n", *line)
-	}
-
 	l := *line
 
 	if log.ParseEnabled() {

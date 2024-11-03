@@ -290,10 +290,10 @@ type OptimizationContext struct {
 	DuplicateFontObjs types.IntSet        // The set of objects that represents the union of the object graphs of all duplicate font dicts.
 
 	// Image section
-	PageImages         []types.IntSet            // For each page a registry of image object numbers.
-	ImageObjects       map[int]*ImageObject      // ImageObject lookup table by image object number.
-	DuplicateImages    map[int]*types.StreamDict // Registry of duplicate image dicts.
-	DuplicateImageObjs types.IntSet              // The set of objects that represents the union of the object graphs of all duplicate image dicts.
+	PageImages         []types.IntSet                // For each page a registry of image object numbers.
+	ImageObjects       map[int]*ImageObject          // ImageObject lookup table by image object number.
+	DuplicateImages    map[int]*DuplicateImageObject // Registry of duplicate image dicts.
+	DuplicateImageObjs types.IntSet                  // The set of objects that represents the union of the object graphs of all duplicate image dicts.
 
 	ContentStreamCache map[int]*types.StreamDict
 	FormStreamCache    map[int]*types.StreamDict
@@ -313,7 +313,7 @@ func newOptimizationContext() *OptimizationContext {
 		DuplicateFonts:       map[int]types.Dict{},
 		DuplicateFontObjs:    types.IntSet{},
 		ImageObjects:         map[int]*ImageObject{},
-		DuplicateImages:      map[int]*types.StreamDict{},
+		DuplicateImages:      map[int]*DuplicateImageObject{},
 		DuplicateImageObjs:   types.IntSet{},
 		DuplicateInfoObjects: types.IntSet{},
 		ContentStreamCache:   map[int]*types.StreamDict{},

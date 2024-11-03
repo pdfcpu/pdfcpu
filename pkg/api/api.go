@@ -164,6 +164,7 @@ func cmdAssumingOptimization(cmd model.CommandMode) bool {
 		cmd == model.FILLFORMFIELDS ||
 		cmd == model.RESETFORMFIELDS ||
 		cmd == model.LISTIMAGES ||
+		cmd == model.UPDATEIMAGES ||
 		cmd == model.EXTRACTIMAGES ||
 		cmd == model.EXTRACTFONTS
 }

@@ -232,13 +232,17 @@ type Configuration struct {
 	// Date format.
 	DateFormat string
 
-	// Optimize.
+	// Optimize after reading and validating the xreftable but before processing.
 	Optimize bool
 
-	// Optimize page resources via content stream analysis.
+	// Optimize after processing but before writing.
+	// TODO add to config.yml
+	OptimizeBeforeWriting bool
+
+	// Optimize page resources via content stream analysis. (assuming Optimize == true || OptimizeBeforeWriting == true)
 	OptimizeResourceDicts bool
 
-	// Optimize duplicate content streams across pages.
+	// Optimize duplicate content streams across pages. (assuming Optimize == true || OptimizeBeforeWriting == true)
 	OptimizeDuplicateContentStreams bool
 
 	// Merge creates bookmarks.
@@ -364,6 +368,7 @@ func newDefaultConfiguration() *Configuration {
 		TimestampFormat:                 "2006-01-02 15:04",
 		DateFormat:                      "2006-01-02",
 		Optimize:                        true,
+		OptimizeBeforeWriting:           true,
 		OptimizeResourceDicts:           true,
 		OptimizeDuplicateContentStreams: false,
 		CreateBookmarks:                 true,
@@ -448,6 +453,7 @@ func (c Configuration) String() string {
 		"TimestampFormat:	  %s\n"+
 		"DateFormat:		  %s\n"+
 		"Optimize %t\n"+
+		"OptimizeBeforeWriting %t\n"+
 		"OptimizeResourceDicts %t\n"+
 		"OptimizeDuplicateContentStreams %t\n"+
 		"CreateBookmarks %t\n"+
@@ -473,6 +479,7 @@ func (c Configuration) String() string {
 		c.TimestampFormat,
 		c.DateFormat,
 		c.Optimize,
+		c.OptimizeBeforeWriting,
 		c.OptimizeResourceDicts,
 		c.OptimizeDuplicateContentStreams,
 		c.CreateBookmarks,
