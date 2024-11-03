@@ -9,7 +9,7 @@ Merge 2 or more PDF files into `outFile`. Have a look at some [examples](#exampl
 ## Usage
 
 ```
-pdfcpu merge [-m(ode) create|append|zip] [-s(ort) -b(ookmarks) -d(ivider)] outFile inFile...
+pdfcpu merge [-m(ode) create|append|zip] [-s(ort) -b(ookmarks) -d(ivider) -opt(imize)] outFile inFile...
 ```
 
 <br>
@@ -22,6 +22,7 @@ pdfcpu merge [-m(ode) create|append|zip] [-s(ort) -b(ookmarks) -d(ivider)] outFi
 | s(ort)     | sort inFiles if present              | unsorted  | no
 | b(ookmarks)| create bookmarks                     | yes       | no
 | d(ivider)  | insert separator between merged docs | no        | no
+| opt(imize) | optimize before writing              | yes       | no
 
 
 <br>
@@ -33,10 +34,11 @@ pdfcpu merge [-m(ode) create|append|zip] [-s(ort) -b(ookmarks) -d(ivider)] outFi
 | [v(erbose)](../getting_started/common_flags.md) | turn on logging |
 | [vv](../getting_started/common_flags.md)        | verbose logging |
 | [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
+| [-o(ffline)](../getting_started/common_flags.md)| disable http traffic |                                 | 
+| [c(onf)](../getting_started/common_flags.md)    | config dir      | $path, disable
+| [opw](../getting_started/common_flags.md)       | owner password  |
+| [upw](../getting_started/common_flags.md)       | user password   |
 | [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
-| [c(onf)](../getting_started/common_flags.md)       | config dir      | $path, disable
-| [upw](../getting_started/common_flags.md)          | user password   |
-| [opw](../getting_started/common_flags.md)          | owner password  |
 
 <br>
 
@@ -67,10 +69,10 @@ $ pdfcpu merge out.pdf in1.pdf in2.pdf in3.pdf
 
 <br>
 
-Merge all PDF Files in the current directory into `out.pdf`:
+Merge all PDF Files in the current directory into `out.pdf` and don't create bookmarks:
 
 ```sh
-$ pdfcpu merge out.pdf *.pdf
+$ pdfcpu merge -b=f out.pdf *.pdf
 ```
 
 <br>
