@@ -51,7 +51,7 @@ pdfcpu pages remove -p(ages) selectedPages inFile [outFile]
 Remove pages 1-3 and 5 from `notes.pdf`:
 
 ```sh
-$ pdfcpu page rem -pages 1-3,5 notes.pdf
+$ pdfcpu pages rem -pages 1-3,5 notes.pdf
 removing pages from notes.pdf ...
 writing notes_new.pdf ...
 ```
