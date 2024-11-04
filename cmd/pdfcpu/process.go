@@ -33,6 +33,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -1630,6 +1631,10 @@ func processInfoCommand(conf *model.Configuration) {
 
 	processDiplayUnit(conf)
 
+	if json {
+		log.SetCLILogger(nil)
+	}
+
 	process(cli.InfoCommand(inFiles, selectedPages, json, conf))
 }
 
@@ -2796,6 +2801,11 @@ func processListViewerPreferencesCommand(conf *model.Configuration) {
 	if conf.CheckFileNameExt {
 		ensurePDFExtension(inFile)
 	}
+
+	if json {
+		log.SetCLILogger(nil)
+	}
+
 	process(cli.ListViewerPreferencesCommand(inFile, all, json, conf))
 }
 

@@ -51,26 +51,10 @@ func init() {
 }
 
 func main() {
-
-	// f, err := os.Create("cpu.pprof")
-	// if err != nil {
-	// 	log.Fatal("could not create CPU profile: ", err)
-	// }
-	// defer f.Close() // error handling omitted for example
-	// if err := pprof.StartCPUProfile(f); err != nil {
-	// 	log.Fatal("could not start CPU profile: ", err)
-	// }
-	// defer pprof.StopCPUProfile()
-
-	// f, _ := os.Create("trace.out")
-	// defer f.Close()
-
-	// trace.Start(f)
-	// defer trace.Stop()
-	// if len(os.Args) == 1 {
-	// 	fmt.Fprintln(os.Stderr, usage)
-	// 	os.Exit(0)
-	// }
+	if len(os.Args) == 1 {
+		fmt.Fprintln(os.Stderr, usage)
+		os.Exit(0)
+	}
 
 	// The first argument is the pdfcpu command string.
 	cmdStr := os.Args[1]
@@ -85,16 +69,6 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Run 'pdfcpu help' for usage.")
 		os.Exit(1)
 	}
-
-	// f, err := os.Create("mem.pprof")
-	// if err != nil {
-	// 	log.Fatal("could not create memory profile: ", err)
-	// }
-	// defer f.Close() // error handling omitted for example
-	// runtime.GC()    // get up-to-date statistics
-	// if err := pprof.WriteHeapProfile(f); err != nil {
-	// 	log.Fatal("could not write memory profile: ", err)
-	// }
 
 	os.Exit(0)
 }
