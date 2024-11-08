@@ -243,17 +243,17 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 	return nil
 }
 
-func validateNamedDestinations(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+func validateNamedDestinations(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) (err error) {
 	// => 12.3.2.3 Named Destinations
 
 	// indRef or dict with destination array values.
 
-	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "Dests", required, sinceVersion, nil)
-	if err != nil || d == nil {
+	xRefTable.Dests, err = validateDictEntry(xRefTable, rootDict, "rootDict", "Dests", required, sinceVersion, nil)
+	if err != nil || xRefTable.Dests == nil {
 		return err
 	}
 
-	for _, o := range d {
+	for _, o := range xRefTable.Dests {
 		if _, err = validateDestination(xRefTable, o, false); err != nil {
 			return err
 		}

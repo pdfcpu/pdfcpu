@@ -105,6 +105,7 @@ type XRefTable struct {
 	Root                *types.IndirectRef // Pointer to catalog (reference to root object).
 	RootDict            types.Dict         // Catalog
 	Names               map[string]*Node   // Cache for name trees as found in catalog.
+	Dests               types.Dict         // Named destinations
 	NameRefs            map[string]NameMap // Name refs for merging only
 	Encrypt             *types.IndirectRef // Encrypt dict.
 	E                   *Enc
