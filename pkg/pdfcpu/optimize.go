@@ -421,7 +421,7 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pag
 			FontDict:      fontDict,
 		}
 
-		if log.StatsEnabled() || ctx.Cmd == model.EXTRACTFONTS {
+		if log.StatsEnabled() || ctx.Cmd == model.LISTINFO || ctx.Cmd == model.EXTRACTFONTS {
 			fontObj.Embedded, err = pdffont.Embedded(ctx.XRefTable, fontDict, objNr)
 			if err != nil {
 				return err

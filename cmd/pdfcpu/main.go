@@ -31,6 +31,7 @@ var (
 	links, quiet, offline                    bool
 	replaceBookmarks                         bool // Import Bookmarks
 	all                                      bool // List Viewer Preferences
+	fonts                                    bool // Info
 	json                                     bool // List Viewer Preferences, Info
 	bookmarks, dividerPage, optimize, sorted bool // Merge
 	bookmarksSet, offlineSet, optimizeSet    bool

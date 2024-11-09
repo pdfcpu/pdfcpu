@@ -185,7 +185,7 @@ func ExtractAttachments(cmd *Command) ([]string, error) {
 
 // ListInfo gathers information about inFile and returns the result as []string.
 func ListInfo(cmd *Command) ([]string, error) {
-	return ListInfoFiles(cmd.InFiles, cmd.PageSelection, cmd.BoolVal1, cmd.Conf)
+	return ListInfoFiles(cmd.InFiles, cmd.PageSelection, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
 }
 
 // CreateCheatSheetsFonts creates single page PDF cheat sheets for user fonts in current dir.

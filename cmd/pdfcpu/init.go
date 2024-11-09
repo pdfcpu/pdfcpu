@@ -334,6 +334,10 @@ func initFlags() {
 	flag.BoolVar(&dividerPage, "dividerPage", false, dividerPageUsage)
 	flag.BoolVar(&dividerPage, "d", false, dividerPageUsage)
 
+	fontsUsage := "include font info"
+	flag.BoolVar(&fonts, "fonts", false, fontsUsage)
+	flag.BoolVar(&fonts, "f", false, fontsUsage)
+
 	jsonUsage := "produce JSON output"
 	flag.BoolVar(&json, "json", false, jsonUsage)
 	flag.BoolVar(&json, "j", false, jsonUsage)

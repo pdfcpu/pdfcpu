@@ -595,7 +595,7 @@ func BookletCommand(inFiles []string, outFile string, pageSelection []string, nu
 }
 
 // InfoCommand creates a new command to output information about inFile.
-func InfoCommand(inFiles []string, pageSelection []string, json bool, conf *model.Configuration) *Command {
+func InfoCommand(inFiles []string, pageSelection []string, fonts, json bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -604,7 +604,8 @@ func InfoCommand(inFiles []string, pageSelection []string, json bool, conf *mode
 		Mode:          model.LISTINFO,
 		InFiles:       inFiles,
 		PageSelection: pageSelection,
-		BoolVal1:      json,
+		BoolVal1:      fonts,
+		BoolVal2:      json,
 		Conf:          conf}
 }
 

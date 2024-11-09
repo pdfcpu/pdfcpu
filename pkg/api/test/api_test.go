@@ -232,7 +232,7 @@ func TestInfo(t *testing.T) {
 	}
 	defer f.Close()
 
-	info, err := api.PDFInfo(f, inFile, nil, conf)
+	info, err := api.PDFInfo(f, inFile, nil, true, conf)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}

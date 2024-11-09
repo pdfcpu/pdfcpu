@@ -943,10 +943,11 @@ Examples: pdfcpu grid out.pdf 1 10 in.pdf
 	usageSelectedPages     = "usage: pdfcpu selectedpages"
 	usageLongSelectedPages = "Print definition of the -pages flag."
 
-	usageInfo     = "usage: pdfcpu info [-p(ages) selectedPages] [-j(son)] inFile..." + generalFlags
+	usageInfo     = "usage: pdfcpu info [-p(ages) selectedPages] [-f(onts) -j(son)] inFile..." + generalFlags
 	usageLongInfo = `Print info about a PDF file.
    
    pages ... Please refer to "pdfcpu selectedpages"
+   fonts ... include font info
     json ... output JSON
   inFile ... a list of PDF input files`
 

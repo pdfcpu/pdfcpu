@@ -260,14 +260,14 @@ func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Config
 }
 
 // ListInfoFile returns formatted information about inFile.
-func ListInfoFile(inFile string, selectedPages []string, conf *model.Configuration) ([]string, error) {
+func ListInfoFile(inFile string, selectedPages []string, fonts bool, conf *model.Configuration) ([]string, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	info, err := api.PDFInfo(f, inFile, selectedPages, conf)
+	info, err := api.PDFInfo(f, inFile, selectedPages, fonts, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func ListInfoFile(inFile string, selectedPages []string, conf *model.Configurati
 		return nil, err
 	}
 
-	ss, err := pdfcpu.ListInfo(info, pages)
+	ss, err := pdfcpu.ListInfo(info, pages, fonts)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +352,7 @@ func jsonInfo(info *pdfcpu.PDFInfo, pages types.IntSet) (map[string]model.PageBo
 	return nil, dims
 }
 
-func listInfoFilesJSON(inFiles []string, selectedPages []string, conf *model.Configuration) ([]string, error) {
+func listInfoFilesJSON(inFiles []string, selectedPages []string, fonts bool, conf *model.Configuration) ([]string, error) {
 	var infos []*pdfcpu.PDFInfo
 
 	for _, fn := range inFiles {
@@ -363,7 +363,7 @@ func listInfoFilesJSON(inFiles []string, selectedPages []string, conf *model.Con
 		}
 		defer f.Close()
 
-		info, err := api.PDFInfo(f, fn, selectedPages, conf)
+		info, err := api.PDFInfo(f, fn, selectedPages, fonts, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -395,10 +395,10 @@ func listInfoFilesJSON(inFiles []string, selectedPages []string, conf *model.Con
 }
 
 // ListInfoFiles returns formatted information about inFiles.
-func ListInfoFiles(inFiles []string, selectedPages []string, json bool, conf *model.Configuration) ([]string, error) {
+func ListInfoFiles(inFiles []string, selectedPages []string, fonts, json bool, conf *model.Configuration) ([]string, error) {
 
 	if json {
-		return listInfoFilesJSON(inFiles, selectedPages, conf)
+		return listInfoFilesJSON(inFiles, selectedPages, fonts, conf)
 	}
 
 	var ss []string
@@ -407,7 +407,7 @@ func ListInfoFiles(inFiles []string, selectedPages []string, json bool, conf *mo
 		if i > 0 {
 			ss = append(ss, "")
 		}
-		ssx, err := ListInfoFile(fn, selectedPages, conf)
+		ssx, err := ListInfoFile(fn, selectedPages, fonts, conf)
 		if err != nil {
 			if len(inFiles) == 1 {
 				return nil, err

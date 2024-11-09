@@ -1635,7 +1635,7 @@ func processInfoCommand(conf *model.Configuration) {
 		log.SetCLILogger(nil)
 	}
 
-	process(cli.InfoCommand(inFiles, selectedPages, json, conf))
+	process(cli.InfoCommand(inFiles, selectedPages, fonts, json, conf))
 }
 
 func processListFontsCommand(conf *model.Configuration) {
