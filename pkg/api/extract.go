@@ -29,6 +29,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
@@ -175,11 +176,13 @@ func ExtractFonts(rs io.ReadSeeker, outDir, fileName string, selectedPages []str
 
 	fileName = strings.TrimSuffix(filepath.Base(fileName), ".pdf")
 
+	objNrs, skipped := types.IntSet{}, types.IntSet{}
+
 	for i, v := range pages {
 		if !v {
 			continue
 		}
-		ff, err := pdfcpu.ExtractPageFonts(ctx, i)
+		ff, err := pdfcpu.ExtractPageFonts(ctx, i, objNrs, skipped)
 		if err != nil {
 			return err
 		}

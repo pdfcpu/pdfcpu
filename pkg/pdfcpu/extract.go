@@ -24,6 +24,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -506,15 +507,7 @@ func FontObjNrs(ctx *model.Context, pageNr int) []int {
 
 // ExtractFont extracts a font from fontObject.
 func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*Font, error) {
-	// Only embedded fonts have binary data.
-	if !fontObject.Embedded() {
-		if log.DebugEnabled() {
-			log.Debug.Printf("ExtractFont: ignoring obj#%d - non embedded font: %s\n", objNr, fontObject.FontName)
-		}
-		return nil, nil
-	}
-
-	d, err := fontDescriptor(ctx.XRefTable, fontObject.FontDict, objNr)
+	d, err := font.FontDescriptor(ctx.XRefTable, fontObject.FontDict, objNr)
 	if err != nil {
 		return nil, err
 	}
@@ -563,8 +556,12 @@ func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*F
 		f = &Font{bytes.NewReader(sd.Content), fontObject.FontName, "ttf"}
 
 	default:
+		s := fmt.Sprintf("extractFontData: obj#%d - unsupported fonttype %s -  font: %s\n", objNr, fontType, fontObject.FontName)
 		if log.InfoEnabled() {
-			log.Info.Printf("extractFontData: ignoring obj#%d - unsupported fonttype %s -  font: %s\n", objNr, fontType, fontObject.FontName)
+			log.Info.Println(s)
+		}
+		if log.CLIEnabled() {
+			log.CLI.Printf(s)
 		}
 		return nil, nil
 	}
@@ -573,9 +570,12 @@ func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*F
 }
 
 // ExtractPageFonts extracts all fonts used by pageNr.
-func ExtractPageFonts(ctx *model.Context, pageNr int) ([]Font, error) {
+func ExtractPageFonts(ctx *model.Context, pageNr int, objNrs, skipped types.IntSet) ([]Font, error) {
 	ff := []Font{}
 	for _, i := range FontObjNrs(ctx, pageNr) {
+		if objNrs[i] || skipped[i] {
+			continue
+		}
 		fontObject := ctx.Optimize.FontObjects[i]
 		f, err := ExtractFont(ctx, *fontObject, i)
 		if err != nil {
@@ -583,6 +583,9 @@ func ExtractPageFonts(ctx *model.Context, pageNr int) ([]Font, error) {
 		}
 		if f != nil {
 			ff = append(ff, *f)
+			objNrs[i] = true
+		} else {
+			skipped[i] = true
 		}
 	}
 	return ff, nil

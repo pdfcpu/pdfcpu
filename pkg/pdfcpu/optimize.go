@@ -414,13 +414,21 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pag
 
 		registerFontDictObjNr(ctx, fName, objNr)
 
-		ctx.Optimize.FontObjects[objNr] =
-			&model.FontObject{
-				ResourceNames: []string{qualifiedRName},
-				Prefix:        prefix,
-				FontName:      fName,
-				FontDict:      fontDict,
+		fontObj := model.FontObject{
+			ResourceNames: []string{qualifiedRName},
+			Prefix:        prefix,
+			FontName:      fName,
+			FontDict:      fontDict,
+		}
+
+		if log.StatsEnabled() || ctx.Cmd == model.EXTRACTFONTS {
+			fontObj.Embedded, err = pdffont.Embedded(ctx.XRefTable, fontDict, objNr)
+			if err != nil {
+				return err
 			}
+		}
+
+		ctx.Optimize.FontObjects[objNr] = &fontObj
 
 		pageFonts[objNr] = true
 	}
@@ -1061,25 +1069,29 @@ func calcEmbeddedFontsMemoryUsage(ctx *model.Context) error {
 
 	fontFileIndRefs := map[types.IndirectRef]bool{}
 
-	var objectNumbers []int
+	var objNrs []int
 
 	// Sorting unnecessary.
 	for k := range ctx.Optimize.FontObjects {
-		objectNumbers = append(objectNumbers, k)
+		objNrs = append(objNrs, k)
 	}
-	sort.Ints(objectNumbers)
+	sort.Ints(objNrs)
 
 	// Iterate over all embedded font objects and record font file references.
-	for _, objectNumber := range objectNumbers {
+	for _, objNr := range objNrs {
 
-		fontObject := ctx.Optimize.FontObjects[objectNumber]
+		fontObject := ctx.Optimize.FontObjects[objNr]
 
 		// Only embedded fonts have binary data.
-		if !fontObject.Embedded() {
+		ok, err := pdffont.Embedded(ctx.XRefTable, fontObject.FontDict, objNr)
+		if err != nil {
+			return err
+		}
+		if !ok {
 			continue
 		}
 
-		if err := processFontFilesForFontDict(ctx.XRefTable, fontObject.FontDict, objectNumber, fontFileIndRefs); err != nil {
+		if err := processFontFilesForFontDict(ctx.XRefTable, fontObject.FontDict, objNr, fontFileIndRefs); err != nil {
 			return err
 		}
 	}
@@ -1123,93 +1135,6 @@ func fontDescriptorFontFileIndirectObjectRef(fontDescriptorDict types.Dict) *typ
 	return ir
 }
 
-func trivialFontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) (types.Dict, error) {
-	o, ok := fontDict.Find("FontDescriptor")
-	if !ok {
-		return nil, nil
-	}
-
-	// fontDescriptor directly available.
-
-	d, err := xRefTable.DereferenceDict(o)
-	if err != nil {
-		return nil, err
-	}
-
-	if d == nil {
-		return nil, errors.Errorf("pdfcpu: trivialFontDescriptor: FontDescriptor is null for font object %d\n", objNr)
-	}
-
-	if d.Type() != nil && *d.Type() != "FontDescriptor" {
-		return nil, errors.Errorf("pdfcpu: trivialFontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
-	}
-
-	return d, nil
-}
-
-// FontDescriptor gets the font descriptor for this font.
-func fontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) (types.Dict, error) {
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("fontDescriptor begin")
-	}
-
-	d, err := trivialFontDescriptor(xRefTable, fontDict, objNr)
-	if err != nil {
-		return nil, err
-	}
-	if d != nil {
-		return d, nil
-	}
-
-	// Try to access a fontDescriptor in a Descendent font for Type0 fonts.
-
-	o, ok := fontDict.Find("DescendantFonts")
-	if !ok {
-		//logErrorOptimize.Printf("FontDescriptor: Neither FontDescriptor nor DescendantFonts for font object %d\n", objectNumber)
-		return nil, nil
-	}
-
-	// A descendant font is contained in an array of size 1.
-
-	a, err := xRefTable.DereferenceArray(o)
-	if err != nil || a == nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: DescendantFonts: IndirectRef or Array wth length 1 expected for font object %d\n", objNr)
-	}
-	if len(a) != 1 {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: DescendantFonts Array length <> 1 %v\n", a)
-	}
-
-	// dict is the fontDict of the descendant font.
-	d, err = xRefTable.DereferenceDict(a[0])
-	if err != nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: No descendant font dict for %v\n", a)
-	}
-	if d == nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: descendant font dict is null for %v\n", a)
-	}
-
-	if *d.Type() != "Font" {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: font dict with incorrect dict type for %v\n", d)
-	}
-
-	o, ok = d.Find("FontDescriptor")
-	if !ok {
-		log.Optimize.Printf("fontDescriptor: descendant font not embedded %s\n", d)
-		return nil, nil
-	}
-
-	d, err = xRefTable.DereferenceDict(o)
-	if err != nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: No FontDescriptor dict for font object %d\n", objNr)
-	}
-
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("fontDescriptor end")
-	}
-
-	return d, nil
-}
-
 // Record font file objects referenced by this fonts font descriptor for stats and size calculation.
 func processFontFilesForFontDict(xRefTable *model.XRefTable, fontDict types.Dict, objectNumber int, indRefsMap map[types.IndirectRef]bool) error {
 	if log.OptimizeEnabled() {
@@ -1219,7 +1144,7 @@ func processFontFilesForFontDict(xRefTable *model.XRefTable, fontDict types.Dict
 	// Note:
 	// "ToUnicode" is also an entry containing binary content that could be inspected for duplicate content.
 
-	d, err := fontDescriptor(xRefTable, fontDict, objectNumber)
+	d, err := pdffont.FontDescriptor(xRefTable, fontDict, objectNumber)
 	if err != nil {
 		return err
 	}
@@ -1571,8 +1496,10 @@ func OptimizeXRefTable(ctx *model.Context) error {
 	}
 
 	// Calculate memory usage of binary content for stats.
-	if err := calcBinarySizes(ctx); err != nil {
-		return err
+	if log.StatsEnabled() {
+		if err := calcBinarySizes(ctx); err != nil {
+			return err
+		}
 	}
 
 	ctx.Optimized = true

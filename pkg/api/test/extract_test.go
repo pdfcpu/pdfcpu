@@ -201,7 +201,7 @@ func TestExtractFontsLowLevel(t *testing.T) {
 
 	// Extract fonts for page 1.
 	i := 1
-	ff, err := pdfcpu.ExtractPageFonts(ctx, i)
+	ff, err := pdfcpu.ExtractPageFonts(ctx, 1, types.IntSet{}, types.IntSet{})
 	if err != nil {
 		t.Fatalf("%s extractPageFonts(%d): %v\n", msg, i, err)
 	}
