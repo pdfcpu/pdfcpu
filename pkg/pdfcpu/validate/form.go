@@ -201,13 +201,13 @@ func validateDARelaxed(s string) bool {
 			if i < 3 {
 				return false
 			}
-			if _, err := strconv.ParseFloat(da[i-3], 32); err != nil {
+			if _, err := strconv.ParseFloat(strings.TrimPrefix(da[i-3], "["), 32); err != nil {
 				return false
 			}
 			if _, err := strconv.ParseFloat(da[i-2], 32); err != nil {
 				return false
 			}
-			if _, err := strconv.ParseFloat(da[i-1], 32); err != nil {
+			if _, err := strconv.ParseFloat(strings.TrimSuffix(da[i-1], "]"), 32); err != nil {
 				return false
 			}
 		}
