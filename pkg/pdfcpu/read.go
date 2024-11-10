@@ -201,7 +201,7 @@ func offsetLastXRefSection(ctx *model.Context, skip int64) (*int64, error) {
 			continue
 		}
 
-		p := workBuf[j+len("startxref"):]
+		p := workBuf[j+len("startxref")+1:]
 		posEOF := strings.Index(string(p), "%%EOF")
 		if posEOF == -1 {
 			return nil, errors.New("pdfcpu: no matching %%EOF for startxref")
@@ -209,8 +209,11 @@ func offsetLastXRefSection(ctx *model.Context, skip int64) (*int64, error) {
 
 		p = p[:posEOF]
 		offset, err = strconv.ParseInt(strings.TrimSpace(string(p)), 10, 64)
-		if err != nil || offset >= ctx.Read.FileSize {
+		if err != nil {
 			return nil, errors.New("pdfcpu: corrupted last xref section")
+		}
+		if offset >= ctx.Read.FileSize {
+			offset = 0
 		}
 	}
 
@@ -784,6 +787,16 @@ func parseTrailerInfo(xRefTable *model.XRefTable, d types.Dict) error {
 func parseTrailerID(xRefTable *model.XRefTable, d types.Dict) error {
 	arr := d.ArrayEntry("ID")
 	if arr != nil {
+		if len(arr) != 2 {
+			if xRefTable.ValidationMode == model.ValidationStrict {
+				return errors.New("pdfcpu: parseTrailerID: invalid entry \"ID\"")
+			}
+			if len(arr) != 1 {
+				return errors.New("pdfcpu: parseTrailerID: invalid entry \"ID\"")
+			}
+			arr = append(arr, arr[0])
+			model.ShowRepaired("trailer ID")
+		}
 		xRefTable.ID = arr
 		if log.ReadEnabled() {
 			log.Read.Printf("parseTrailerID: ID object: %s\n", xRefTable.ID)

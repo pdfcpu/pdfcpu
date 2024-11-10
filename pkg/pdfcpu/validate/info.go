@@ -17,6 +17,7 @@ limitations under the License.
 package validate
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -30,8 +31,13 @@ func DocumentProperty(s string) bool {
 	return !types.MemberOf(s, []string{"Keywords", "Producer", "CreationDate", "ModDate", "Trapped"})
 }
 
-func validateInfoDictDate(xRefTable *model.XRefTable, o types.Object) (s string, err error) {
-	return validateDateObject(xRefTable, o, model.V10)
+func validateInfoDictDate(xRefTable *model.XRefTable, name string, o types.Object) (string, error) {
+	s, err := validateDateObject(xRefTable, o, model.V10)
+	if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+		err = nil
+		model.ShowRepaired(fmt.Sprintf("info dict \"%s\"", name))
+	}
+	return s, err
 }
 
 func validateInfoDictTrapped(xRefTable *model.XRefTable, o types.Object) error {
@@ -131,15 +137,12 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 
 	// date, optional
 	case "CreationDate":
-		xRefTable.CreationDate, err = validateInfoDictDate(xRefTable, v)
-		if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
-			err = nil
-		}
+		xRefTable.CreationDate, err = validateInfoDictDate(xRefTable, "CreationDate", v)
 
 	// date, required if PieceInfo is present in document catalog.
 	case "ModDate":
 		hasModDate = true
-		xRefTable.ModDate, err = validateInfoDictDate(xRefTable, v)
+		xRefTable.ModDate, err = validateInfoDictDate(xRefTable, "ModDate", v)
 
 	// name, optional, since V1.3
 	case "Trapped":

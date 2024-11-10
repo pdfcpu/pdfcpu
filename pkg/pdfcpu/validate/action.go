@@ -110,7 +110,15 @@ func validateGoToEActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 	// D, required, name, byte string or array
 	err = validateActionDestinationEntry(xRefTable, d, dictName, "D", REQUIRED, model.V10)
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return err
+		}
+		if err = validateActionDestinationEntry(xRefTable, d, dictName, "Dest", REQUIRED, model.V10); err != nil {
+			return err
+		}
+		d["D"] = d["Dest"]
+		delete(d, "Dest")
+		model.ShowRepaired("GotoEAction destination")
 	}
 
 	// NewWindow, optional, boolean, since V1.2

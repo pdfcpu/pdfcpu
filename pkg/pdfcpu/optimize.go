@@ -342,10 +342,6 @@ func registerFontDictObjNr(ctx *model.Context, fName string, objNr int) {
 
 // Get rid of redundant fonts for given fontResources dictionary.
 func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pageObjNumber int, rNamePrefix string) error {
-	if log.OptimizeEnabled() {
-		log.Optimize.Printf("optimizeFontResourcesDict begin: page=%d pageObjNumber=%d %s\nPageFonts=%v\n", pageNr, pageObjNumber, rDict, ctx.Optimize.PageFonts)
-	}
-
 	pageFonts := pageFonts(ctx, pageNr)
 
 	// Iterate over font resource dict.
@@ -361,10 +357,6 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pag
 		qualifiedRName := rName
 		if rNamePrefix != "" {
 			qualifiedRName = rNamePrefix + "." + rName
-		}
-
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeFontResourcesDict: processing font: %s, obj#=%d\n", qualifiedRName, objNr)
 		}
 
 		if _, found := ctx.Optimize.FontObjects[objNr]; found {
@@ -383,18 +375,10 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pag
 			continue
 		}
 
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeFontResourcesDict: fontDict: %s\n", fontDict)
-		}
-
 		// Get the unique font name.
 		prefix, fName, err := pdffont.Name(ctx.XRefTable, fontDict, objNr)
 		if err != nil {
 			return err
-		}
-
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeFontResourcesDict: baseFont: prefix=%s name=%s\n", prefix, fName)
 		}
 
 		// Check if fontDict is a duplicate and if so return the object number of the original.
@@ -409,6 +393,9 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pag
 			ir := types.NewIndirectRef(*originalObjNr, 0)
 			rDict[rName] = *ir
 			ctx.IncrementRefCount(ir)
+			if log.OptimizeEnabled() {
+				log.Optimize.Printf("optimizeFontResourcesDict: redundant fontDict prefix=%s name=%s (objNr#%d -> objNr#%d)\n", prefix, fName, objNr, originalObjNr)
+			}
 			continue
 		}
 
@@ -431,10 +418,6 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pag
 		ctx.Optimize.FontObjects[objNr] = &fontObj
 
 		pageFonts[objNr] = true
-	}
-
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("optimizeFontResourcesDict end:")
 	}
 
 	return nil
@@ -527,14 +510,13 @@ func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rNamePrefix
 		ir := types.NewIndirectRef(*originalObjNr, 0)
 		ctx.IncrementRefCount(ir)
 		rDict[rName] = *ir
+		if log.OptimizeEnabled() {
+			log.Optimize.Printf("optimizeXObjectImage: redundant xobject name=%s (objNr#%d -> objNr#%d)\n", qualifiedRName, objNr, originalObjNr)
+		}
 		return nil
 	}
 
 	// Register new image dict.
-	if log.OptimizeEnabled() {
-		log.Optimize.Printf("optimizeXObjectResourcesDict: adding new image obj#%d\n", objNr)
-	}
-
 	ctx.Optimize.ImageObjects[objNr] =
 		&model.ImageObject{
 			ResourceNames: map[int]string{pageNr: qualifiedRName},
@@ -996,22 +978,6 @@ func optimizeFontAndImages(ctx *model.Context) error {
 		return err
 	}
 
-	// Detect the number of pages of this PDF file.
-	pageCount := pageTreeRootDict.IntEntry("Count")
-	if pageCount == nil {
-		return errors.New("pdfcpu: optimizeFontAndImagess: missing \"Count\" in page root dict")
-	}
-
-	// If PageCount already set by validation doublecheck.
-	if ctx.PageCount > 0 && ctx.PageCount != *pageCount {
-		return errors.New("pdfcpu: optimizeFontAndImagess: unexpected page root dict pageCount discrepancy")
-	}
-
-	// If we optimize w/o prior validation, set PageCount.
-	if ctx.PageCount == 0 {
-		ctx.PageCount = *pageCount
-	}
-
 	// Prepare optimization environment.
 	ctx.Optimize.PageFonts = make([]types.IntSet, ctx.PageCount)
 	ctx.Optimize.PageImages = make([]types.IntSet, ctx.PageCount)
@@ -1461,9 +1427,10 @@ func optimizeResourceDicts(ctx *model.Context) error {
 
 // OptimizeXRefTable optimizes an xRefTable by locating and getting rid of redundant embedded fonts and images.
 func OptimizeXRefTable(ctx *model.Context) error {
-	if log.InfoEnabled() {
-		log.Info.Println("optimizing fonts & images")
+	if ctx.PageCount == 0 {
+		return nil
 	}
+
 	if log.OptimizeEnabled() {
 		log.Optimize.Println("optimizeXRefTable begin")
 	}

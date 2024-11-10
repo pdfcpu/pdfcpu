@@ -735,7 +735,11 @@ func parseIndRef(s, l, l1 string, line *string, i, i2 int, rangeErr bool) (types
 func parseFloat(s string) (types.Object, error) {
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return nil, err
+		s = strings.Replace(s, ".-", ".", 1)
+		f, err = strconv.ParseFloat(s, 64)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if log.ParseEnabled() {

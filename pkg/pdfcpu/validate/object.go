@@ -70,7 +70,7 @@ func validateArrayEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entr
 		log.Validate.Printf("validateArrayEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func validateBooleanEntry(xRefTable *model.XRefTable, d types.Dict, dictName, en
 		log.Validate.Printf("validateBooleanEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -254,7 +254,7 @@ func validateDateEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entry
 		log.Validate.Printf("validateDateEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -291,7 +291,7 @@ func validateDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entry
 		log.Validate.Printf("validateDictEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -391,7 +391,7 @@ func validateFunctionOrArrayOfFunctionsEntry(xRefTable *model.XRefTable, d types
 		log.Validate.Printf("validateFunctionOrArrayOfFunctionsEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return err
 	}
@@ -449,7 +449,7 @@ func validateIndRefEntry(xRefTable *model.XRefTable, d types.Dict, dictName, ent
 		log.Validate.Printf("validateIndRefEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -530,7 +530,7 @@ func validateIntegerEntry(xRefTable *model.XRefTable, d types.Dict, dictName, en
 		log.Validate.Printf("validateIntegerEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -680,7 +680,7 @@ func validateNameEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entry
 		log.Validate.Printf("validateNameEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -829,7 +829,7 @@ func validateNumberEntry(xRefTable *model.XRefTable, d types.Dict, dictName, ent
 		log.Validate.Printf("validateNumberEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -1002,9 +1002,19 @@ func validateStreamDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName,
 		log.Validate.Printf("validateStreamDictEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
-	if err != nil || o == nil {
+	o, found, err := d.Entry(dictName, entryName, required)
+	if err != nil {
 		return nil, err
+	}
+	if o == nil {
+		if !found {
+			return nil, nil
+		}
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return nil, errors.Errorf("pdfcpu: validateStreamDictEntry: dict=%s optional entry=%s is corrupt", dictName, entryName)
+		}
+		delete(d, entryName)
+		model.ShowRepaired("root dict \"Metadata\"")
 	}
 
 	sd, valid, err := xRefTable.DereferenceStreamDict(o)
@@ -1060,7 +1070,7 @@ func validateStringEntry(xRefTable *model.XRefTable, d types.Dict, dictName, ent
 		log.Validate.Printf("validateStringEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -1187,7 +1197,7 @@ func validateStringOrStreamEntry(xRefTable *model.XRefTable, d types.Dict, dictN
 		log.Validate.Printf("validateStringOrStreamEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return err
 	}
@@ -1232,7 +1242,7 @@ func validateNameOrStringEntry(xRefTable *model.XRefTable, d types.Dict, dictNam
 		log.Validate.Printf("validateNameOrStringEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return err
 	}
@@ -1277,7 +1287,7 @@ func validateIntOrStringEntry(xRefTable *model.XRefTable, d types.Dict, dictName
 		log.Validate.Printf("validateIntOrStringEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return err
 	}
@@ -1322,7 +1332,7 @@ func validateBooleanOrStreamEntry(xRefTable *model.XRefTable, d types.Dict, dict
 		log.Validate.Printf("validateBooleanOrStreamEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return err
 	}
@@ -1367,7 +1377,7 @@ func validateStreamDictOrDictEntry(xRefTable *model.XRefTable, d types.Dict, dic
 		log.Validate.Printf("validateStreamDictOrDictEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return err
 	}
@@ -1447,7 +1457,7 @@ func validateIntegerOrArrayOfIntegerEntry(xRefTable *model.XRefTable, d types.Di
 		log.Validate.Printf("validateIntegerOrArrayOfIntegerEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return err
 	}
@@ -1520,7 +1530,7 @@ func validateNameOrArrayOfNameEntry(xRefTable *model.XRefTable, d types.Dict, di
 		log.Validate.Printf("validateNameOrArrayOfNameEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return err
 	}
@@ -1592,7 +1602,7 @@ func validateBooleanOrArrayOfBooleanEntry(xRefTable *model.XRefTable, d types.Di
 		log.Validate.Printf("validateBooleanOrArrayOfBooleanEntry begin: entry=%s\n", entryName)
 	}
 
-	o, err := d.Entry(dictName, entryName, required)
+	o, _, err := d.Entry(dictName, entryName, required)
 	if err != nil || o == nil {
 		return err
 	}

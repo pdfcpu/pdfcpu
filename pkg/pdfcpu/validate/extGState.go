@@ -992,7 +992,7 @@ func validateExtGStateDict(xRefTable *model.XRefTable, o types.Object) error {
 	}
 
 	// Check for AAPL extensions.
-	o, err = d.Entry(dictName, "AAPL:AA", OPTIONAL)
+	o, _, err = d.Entry(dictName, "AAPL:AA", OPTIONAL)
 	if err != nil {
 		return err
 	}

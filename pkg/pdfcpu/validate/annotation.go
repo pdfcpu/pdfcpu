@@ -1842,16 +1842,6 @@ func validatePageAnnotations(xRefTable *model.XRefTable, d types.Dict) error {
 
 func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage int) (int, error) {
 
-	// Get number of pages of this PDF file.
-	pageCount := d.IntEntry("Count")
-	if pageCount == nil {
-		return curPage, errors.New("pdfcpu: validatePagesAnnotations: missing \"Count\"")
-	}
-
-	if log.ValidateEnabled() {
-		log.Validate.Printf("validatePagesAnnotations: This page node has %d pages\n", *pageCount)
-	}
-
 	// Iterate over page tree.
 	kidsArray := d.ArrayEntry("Kids")
 
@@ -1888,8 +1878,7 @@ func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage 
 		case "Page":
 			curPage++
 			xRefTable.CurPage = curPage
-			err = validatePageAnnotations(xRefTable, d)
-			if err != nil {
+			if err = validatePageAnnotations(xRefTable, d); err != nil {
 				return curPage, err
 			}
 

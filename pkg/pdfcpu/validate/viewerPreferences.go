@@ -226,9 +226,15 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 	validate = func(s string) bool { return types.MemberOf(s, []string{"L2R", "R2L"}) }
 	n, err = validateNameEntry(xRefTable, d, dictName, "Direction", OPTIONAL, model.V13, validate)
 	if err != nil {
-		return err
+		s, err := validateStringEntry(xRefTable, d, dictName, "Direction", OPTIONAL, model.V13, validate)
+		if err != nil {
+			return err
+		}
+		if s != nil {
+			vp.Direction = model.DirectionFor(*s)
+		}
 	}
-	if n != nil {
+	if vp.Direction == nil && n != nil {
 		vp.Direction = model.DirectionFor(n.String())
 	}
 
