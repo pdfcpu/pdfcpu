@@ -2055,6 +2055,11 @@ func ParseObjectWithContext(c context.Context, ctx *model.Context, offset int64,
 
 	obj, endInd, streamInd, streamOffset, err := object(c, ctx, offset, objNr, genNr)
 	if err != nil {
+		if ctx.XRefTable.ValidationMode == model.ValidationRelaxed {
+			if err == io.EOF {
+				err = nil
+			}
+		}
 		return nil, err
 	}
 
@@ -2665,6 +2670,9 @@ func dereferenceAndLoad(c context.Context, ctx *model.Context, objNr int, entry 
 	o, err := ParseObjectWithContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
 	if err != nil {
 		return errors.Wrapf(err, "dereferenceAndLoad: problem dereferencing object %d", objNr)
+	}
+	if o == nil {
+		return nil
 	}
 
 	entry.Object = o

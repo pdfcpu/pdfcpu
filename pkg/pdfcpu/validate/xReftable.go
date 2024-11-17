@@ -101,11 +101,24 @@ func metaDataModifiedAfterInfoDict(xRefTable *model.XRefTable) (bool, error) {
 		return false, err
 	}
 
-	if xmpMeta == nil || xRefTable.Info == nil {
-		return false, nil
+	if xmpMeta != nil {
+		xRefTable.CatalogXMPMeta = xmpMeta
 	}
 
-	xRefTable.CatalogXMPMeta = xmpMeta
+	if xmpMeta != nil && xRefTable.Info != nil {
+		indRef := rootDict.IndirectRefEntry("Metadata")
+		ok, err := model.EqualObjects(*indRef, *xRefTable.Info, xRefTable)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			xRefTable.Info = nil
+		}
+	}
+
+	if !(xmpMeta != nil && xRefTable.Info != nil) {
+		return false, nil
+	}
 
 	d, err := xRefTable.DereferenceDict(*xRefTable.Info)
 	if err != nil {

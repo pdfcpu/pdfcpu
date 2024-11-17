@@ -177,7 +177,13 @@ func validateFontDescriptorPart1(xRefTable *model.XRefTable, d types.Dict, dictN
 	}
 	_, err = validateNumberEntry(xRefTable, d, dictName, "FontWeight", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return err
+		}
+		validateFontWeight := func(s string) bool {
+			return types.MemberOf(s, []string{"Regular", "Bold", "Italic"})
+		}
+		validateNameEntry(xRefTable, d, dictName, "FontWeight", OPTIONAL, sinceVersion, validateFontWeight)
 	}
 
 	_, err = validateIntegerEntry(xRefTable, d, dictName, "Flags", REQUIRED, model.V10, nil)

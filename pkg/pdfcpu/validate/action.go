@@ -569,7 +569,7 @@ func validateNamedActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 
 	validate := func(s string) bool {
 
-		if types.MemberOf(s, []string{"NextPage", "PrevPage", "FirstPage", "Lastpage"}) {
+		if types.MemberOf(s, []string{"NextPage", "PrevPage", "FirstPage", "LastPage"}) {
 			return true
 		}
 
@@ -717,7 +717,11 @@ func validateRenditionActionDict(xRefTable *model.XRefTable, d types.Dict, dictN
 	// OP or JS need to be present.
 
 	// OP, integer
-	op, err := validateIntegerEntry(xRefTable, d, dictName, "OP", OPTIONAL, model.V15, func(i int) bool { return 0 <= i && i <= 4 })
+	sinceVersion := model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	op, err := validateIntegerEntry(xRefTable, d, dictName, "OP", OPTIONAL, sinceVersion, func(i int) bool { return 0 <= i && i <= 4 })
 	if err != nil {
 		return err
 	}
@@ -737,12 +741,16 @@ func validateRenditionActionDict(xRefTable *model.XRefTable, d types.Dict, dictN
 		return v == 0 || v == 4
 	}(op)
 
-	d1, err := validateDictEntry(xRefTable, d, dictName, "R", required, model.V15, nil)
+	sinceVersion = model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	d1, err := validateDictEntry(xRefTable, d, dictName, "R", required, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
 	if d1 != nil {
-		err = validateRenditionDict(xRefTable, d1, model.V15)
+		err = validateRenditionDict(xRefTable, d1, sinceVersion)
 		if err != nil {
 			return err
 		}
@@ -819,7 +827,7 @@ func validateActionDictCore(xRefTable *model.XRefTable, n *types.Name, d types.D
 		"ImportData":  {validateImportDataActionDict, model.V12},
 		"JavaScript":  {validateJavaScriptActionDict, model.V13},
 		"SetOCGState": {validateSetOCGStateActionDict, model.V15},
-		"Rendition":   {validateRenditionActionDict, model.V15},
+		"Rendition":   {validateRenditionActionDict, model.V14}, //model.V15
 		"Trans":       {validateTransActionDict, model.V15},
 		"GoTo3DView":  {validateGoTo3DViewActionDict, model.V16},
 	} {

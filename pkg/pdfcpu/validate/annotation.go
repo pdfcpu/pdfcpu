@@ -121,7 +121,7 @@ func validateBorderStyleDict(xRefTable *model.XRefTable, d types.Dict, dictName,
 	}
 
 	// D, optional, dash array
-	_, err = validateNumberArrayEntry(xRefTable, d1, dictName, "D", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) <= 2 })
+	_, err = validateNumberArrayEntry(xRefTable, d1, dictName, "D", OPTIONAL, model.V10, nil)
 
 	return err
 }
@@ -377,6 +377,9 @@ func validateAnnotationDictLink(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// BS, optional, border style dict, since V1.6
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V12
+	}
 	return validateBorderStyleDict(xRefTable, d, dictName, "BS", OPTIONAL, sinceVersion)
 }
 
@@ -475,7 +478,11 @@ func validateAnnotationDictFreeTextPart2(xRefTable *model.XRefTable, d types.Dic
 	}
 
 	// BE, optional, border effect dict, since V1.6
-	err = validateBorderEffectDictEntry(xRefTable, d, dictName, "BE", OPTIONAL, model.V15)
+	sinceVersion = model.V16
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	err = validateBorderEffectDictEntry(xRefTable, d, dictName, "BE", OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -570,20 +577,32 @@ func validateAnnotationDictLine(xRefTable *model.XRefTable, d types.Dict, dictNa
 		return err
 	}
 
-	// LLE, optional, number, since V1.6, >0
-	lle, err := validateNumberEntry(xRefTable, d, dictName, "LLE", OPTIONAL, model.V16, func(f float64) bool { return f > 0 })
+	// LLE, optional, number, since V1.6, > 0
+	sinceVersion = model.V16
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	lle, err := validateNumberEntry(xRefTable, d, dictName, "LLE", OPTIONAL, sinceVersion, func(f float64) bool { return f > 0 })
 	if err != nil {
 		return err
 	}
 
 	// LL, required if LLE present, number, since V1.6
-	_, err = validateNumberEntry(xRefTable, d, dictName, "LL", lle != nil, model.V16, nil)
+	sinceVersion = model.V16
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	_, err = validateNumberEntry(xRefTable, d, dictName, "LL", lle != nil, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
 
 	// Cap, optional, bool, since V1.6
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "Cap", OPTIONAL, model.V16, nil)
+	sinceVersion = model.V16
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "Cap", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
@@ -652,10 +671,14 @@ func validateAnnotationDictCircleOrSquare(xRefTable *model.XRefTable, d types.Di
 
 func validateEntryIT(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version) error {
 
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+
 	// IT, optional, name, since V1.6
 	validateIntent := func(s string) bool {
 
-		if xRefTable.Version() == model.V16 {
+		if xRefTable.Version() == sinceVersion {
 			return s == "PolygonCloud"
 		}
 
@@ -752,7 +775,11 @@ func validateAnnotationDictCaret(xRefTable *model.XRefTable, d types.Dict, dictN
 	// see 12.5.6.11
 
 	// RD, optional, rectangle, since V1.5
-	_, err := validateRectangleEntry(xRefTable, d, dictName, "RD", OPTIONAL, model.V15, nil)
+	sinceVersion := model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	_, err := validateRectangleEntry(xRefTable, d, dictName, "RD", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
@@ -810,9 +837,7 @@ func validateAnnotationDictFileAttachment(xRefTable *model.XRefTable, d types.Di
 	}
 
 	// Name, optional, name
-	_, err = validateNameEntry(xRefTable, d, dictName, "Name", OPTIONAL, model.V10, nil)
-
-	return err
+	return validateNameOrStringEntry(xRefTable, d, dictName, "Name", OPTIONAL, model.V10)
 }
 
 func validateAnnotationDictSound(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -1360,7 +1385,11 @@ func validateMarkupAnnotationPart2(xRefTable *model.XRefTable, d types.Dict, dic
 
 	// RT, optional, name, since V1.6
 	validate := func(s string) bool { return s == "R" || s == "Group" }
-	if _, err := validateNameEntry(xRefTable, d, dictName, "RT", OPTIONAL, model.V16, validate); err != nil {
+	sinceVersion = model.V16
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	if _, err := validateNameEntry(xRefTable, d, dictName, "RT", OPTIONAL, sinceVersion, validate); err != nil {
 		return err
 	}
 
@@ -1675,8 +1704,8 @@ func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, di
 		"Link":           {validateAnnotationDictLink, model.V10, false},
 		"FreeText":       {validateAnnotationDictFreeText, model.V12, true}, // model.V13
 		"Line":           {validateAnnotationDictLine, model.V13, true},
-		"Polygon":        {validateAnnotationDictPolyLine, model.V15, true},
-		"PolyLine":       {validateAnnotationDictPolyLine, model.V15, true},
+		"Polygon":        {validateAnnotationDictPolyLine, model.V14, true}, // model.V15
+		"PolyLine":       {validateAnnotationDictPolyLine, model.V14, true}, // model.V15
 		"Highlight":      {validateTextMarkupAnnotation, model.V13, true},
 		"Underline":      {validateTextMarkupAnnotation, model.V13, true},
 		"Squiggly":       {validateTextMarkupAnnotation, model.V14, true},
@@ -1684,14 +1713,14 @@ func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, di
 		"Square":         {validateAnnotationDictCircleOrSquare, model.V13, true},
 		"Circle":         {validateAnnotationDictCircleOrSquare, model.V13, true},
 		"Stamp":          {validateAnnotationDictStamp, model.V13, true},
-		"Caret":          {validateAnnotationDictCaret, model.V15, true},
+		"Caret":          {validateAnnotationDictCaret, model.V14, true}, // model.V15
 		"Ink":            {validateAnnotationDictInk, model.V13, true},
 		"Popup":          {validateAnnotationDictPopup, model.V12, false}, // model.V13
 		"FileAttachment": {validateAnnotationDictFileAttachment, model.V13, true},
 		"Sound":          {validateAnnotationDictSound, model.V12, true},
 		"Movie":          {validateAnnotationDictMovie, model.V12, false},
 		"Widget":         {validateAnnotationDictWidget, model.V12, false},
-		"Screen":         {validateAnnotationDictScreen, model.V15, false},
+		"Screen":         {validateAnnotationDictScreen, model.V14, false}, //  model.V15
 		"PrinterMark":    {validateAnnotationDictPrinterMark, model.V14, false},
 		"TrapNet":        {validateAnnotationDictTrapNet, model.V13, false},
 		"Watermark":      {validateAnnotationDictWatermark, model.V16, false},

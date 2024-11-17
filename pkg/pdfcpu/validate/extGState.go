@@ -886,7 +886,11 @@ func validateExtGStateDictPart2(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// SM, number, optional, since V1.3, smoothness tolerance
-	_, err = validateNumberEntry(xRefTable, d, dictName, "SM", OPTIONAL, model.V13, nil)
+	sinceVersion := model.V13
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V12
+	}
+	_, err = validateNumberEntry(xRefTable, d, dictName, "SM", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
