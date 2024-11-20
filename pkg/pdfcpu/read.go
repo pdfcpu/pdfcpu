@@ -36,6 +36,7 @@ import (
 
 const (
 	defaultBufSize = 1024
+	maximumBufSize = 1024 * 1024
 )
 
 var (
@@ -1699,16 +1700,18 @@ func buffer(c context.Context, rd io.Reader) (buf []byte, endInd int, streamInd 
 	//log.Read.Println("buffer: begin")
 
 	endInd, streamInd = -1, -1
+	growSize := defaultBufSize
 
 	for endInd < 0 && streamInd < 0 {
 		if err := c.Err(); err != nil {
 			return nil, 0, 0, 0, err
 		}
 
-		if buf, err = growBufBy(buf, defaultBufSize, rd); err != nil {
+		if buf, err = growBufBy(buf, growSize, rd); err != nil {
 			return nil, 0, 0, 0, err
 		}
 
+		growSize = min(growSize*2, maximumBufSize)
 		line := string(buf)
 
 		endInd, streamInd, err = model.DetectKeywords(line)
@@ -2205,14 +2208,16 @@ func readStreamContentBlindly(rd io.Reader) (buf []byte, err error) {
 	// Weak heuristic for reading in stream data for cases where stream length is unknown.
 	// ...data...{eol}endstream{eol}endobj
 
-	if buf, err = growBufBy(buf, defaultBufSize, rd); err != nil {
+	growSize := defaultBufSize
+	if buf, err = growBufBy(buf, growSize, rd); err != nil {
 		return nil, err
 	}
 
 	i := bytes.Index(buf, []byte("endstream"))
 	if i < 0 {
 		for i = -1; i < 0; i = bytes.Index(buf, []byte("endstream")) {
-			buf, err = growBufBy(buf, defaultBufSize, rd)
+			growSize = min(growSize*2, maximumBufSize)
+			buf, err = growBufBy(buf, growSize, rd)
 			if err != nil {
 				return nil, err
 			}
