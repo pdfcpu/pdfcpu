@@ -1319,6 +1319,10 @@ func encryptStringLiteral(sl types.StringLiteral, objNr, genNr int, key []byte, 
 }
 
 func decryptStringLiteral(sl types.StringLiteral, objNr, genNr int, key []byte, needAES bool, r int) (*types.StringLiteral, error) {
+	if sl.Value() == "" {
+		return &sl, nil
+	}
+
 	bb, err := types.Unescape(sl.Value())
 	if err != nil {
 		return nil, err
