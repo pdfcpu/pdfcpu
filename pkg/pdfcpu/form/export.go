@@ -60,6 +60,7 @@ type TextField struct {
 	Name      string `json:"name,omitempty"`
 	Default   string `json:"default,omitempty"`
 	Value     string `json:"value"`
+	MaxLen    int    `json:"maxlen,omitempty"`
 	Multiline bool   `json:"multiline"`
 	Locked    bool   `json:"locked"`
 }
@@ -440,7 +441,13 @@ func extractTextField(page int, d types.Dict, id, name string, ff *int, locked b
 
 	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
 
-	tf := &TextField{Pages: []int{page}, ID: id, Name: name, Multiline: multiLine, Locked: locked}
+	maxLen := 0
+	i := d.IntEntry("MaxLen") // Inheritable!
+	if i != nil {
+		maxLen = *i
+	}
+
+	tf := &TextField{Pages: []int{page}, ID: id, Name: name, Multiline: multiLine, MaxLen: maxLen, Locked: locked}
 
 	if o, found := d.Find("DV"); found {
 		s, err := types.StringOrHexLiteral(o)

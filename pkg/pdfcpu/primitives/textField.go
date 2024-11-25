@@ -55,6 +55,8 @@ type TextField struct {
 	BgCol           *color.SimpleColor `json:"-"`
 	Alignment       string             `json:"align"` // "Left", "Center", "Right"
 	HorAlign        types.HAlignment   `json:"-"`
+	MaxLen          int                `json:"maxlen"`
+	Comb            bool               `json:"comb"`
 	RTL             bool
 	Tab             int
 	Locked          bool
@@ -408,7 +410,21 @@ func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y f
 				f.col.R, f.col.G, f.col.B,
 				f.col.R, f.col.G, f.col.B)
 		}
-		fmt.Fprintf(buf, "%.2f %.2f Td (%s) Tj ET ", x, y, s)
+
+		if tf.Comb && tf.MaxLen > 0 && tf.HorAlign == types.AlignLeft {
+			x = 0.5
+			dx := w / float64(tf.MaxLen)
+			y0 := y
+			for j := 0; j < len(s) && j < tf.MaxLen; j++ {
+				fmt.Fprintf(buf, "%.2f %.2f Td (%c) Tj ", x, y0, s[j])
+				y0 = 0
+				x = dx
+			}
+			fmt.Fprint(buf, "ET ")
+		} else {
+			fmt.Fprintf(buf, "%.2f %.2f Td (%s) Tj ET ", x, y, s)
+		}
+
 		y -= lh
 	}
 }
@@ -561,6 +577,10 @@ func (tf *TextField) prepareFF() FieldFlags {
 		ff += FieldReadOnly
 	}
 
+	if tf.Comb {
+		ff += FieldComb
+	}
+
 	return ff
 }
 
@@ -623,9 +643,16 @@ func (tf *TextField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 		d["TU"] = types.StringLiteral(*tu)
 	}
 
+	if tf.MaxLen > 0 {
+		d["MaxLen"] = types.Integer(tf.MaxLen)
+	}
+
 	tf.handleBorderAndMK(d)
 
 	if tf.Value != "" {
+		if tf.MaxLen > 0 && len(tf.Value) > tf.MaxLen {
+			return nil, errors.Errorf("pdfcpu: field overflow at %s, maxLen = %d", tf.ID, tf.MaxLen)
+		}
 		s, err := types.EscapedUTF16String(tf.Value)
 		if err != nil {
 			return nil, err
@@ -890,10 +917,16 @@ func NewTextField(
 	d types.Dict,
 	v string,
 	multiLine bool,
+	comb bool,
 	fontIndRef *types.IndirectRef,
 	fonts map[string]types.IndirectRef) (*TextField, *types.IndirectRef, error) {
 
-	tf := &TextField{Value: v, Multiline: multiLine}
+	tf := &TextField{Value: v, Multiline: multiLine, Comb: comb}
+
+	i := d.IntEntry("MaxLen") // Inheritable!
+	if i != nil {
+		tf.MaxLen = *i
+	}
 
 	bb, err := ctx.RectForArray(d.ArrayEntry("Rect"))
 	if err != nil {
@@ -930,14 +963,14 @@ func NewTextField(
 	return tf, fontIndRef, nil
 }
 
-func renderTextFieldAP(ctx *model.Context, d types.Dict, v string, multiLine bool, fonts map[string]types.IndirectRef) error {
+func renderTextFieldAP(ctx *model.Context, d types.Dict, v string, multiLine, comb bool, fonts map[string]types.IndirectRef) error {
 	if ap := d.DictEntry("AP"); ap != nil {
 		if err := ctx.DeleteObject(ap); err != nil {
 			return err
 		}
 	}
 
-	tf, fontIndRef, err := NewTextField(ctx, d, v, multiLine, nil, fonts)
+	tf, fontIndRef, err := NewTextField(ctx, d, v, multiLine, comb, nil, fonts)
 	if err != nil {
 		return err
 	}
@@ -1003,15 +1036,15 @@ func fontAttrs(ctx *model.Context, fd types.Dict, fontID, text string, fonts map
 	return fontID, name, lang, fontIndRef, nil
 }
 
-func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine bool, fonts map[string]types.IndirectRef) error {
+func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine, comb bool, fonts map[string]types.IndirectRef) error {
 	ap := d.DictEntry("AP")
 	if ap == nil {
-		return renderTextFieldAP(ctx, d, text, multiLine, fonts)
+		return renderTextFieldAP(ctx, d, text, multiLine, comb, fonts)
 	}
 
 	irN := ap.IndirectRefEntry("N")
 	if irN == nil {
-		return renderTextFieldAP(ctx, d, text, multiLine, fonts)
+		return renderTextFieldAP(ctx, d, text, multiLine, comb, fonts)
 	}
 
 	sd, _, err := ctx.DereferenceStreamDict(*irN)
@@ -1021,7 +1054,7 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine 
 
 	obj, ok := sd.Find("Resources")
 	if !ok {
-		return renderTextFieldAP(ctx, d, text, multiLine, fonts)
+		return renderTextFieldAP(ctx, d, text, multiLine, comb, fonts)
 	}
 
 	d1, err := ctx.DereferenceDict(obj)
@@ -1029,12 +1062,12 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine 
 		return err
 	}
 	if d1 == nil {
-		return renderTextFieldAP(ctx, d, text, multiLine, fonts)
+		return renderTextFieldAP(ctx, d, text, multiLine, comb, fonts)
 	}
 
 	fd := d1.DictEntry("Font")
 	if fd == nil {
-		return renderTextFieldAP(ctx, d, text, multiLine, fonts)
+		return renderTextFieldAP(ctx, d, text, multiLine, comb, fonts)
 	}
 
 	s := d.StringEntry("DA")
@@ -1057,7 +1090,7 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine 
 
 	fillFont := formFontIndRef(ctx.XRefTable, fontID) != nil
 
-	tf, _, err := NewTextField(ctx, d, text, multiLine, fontIndRef, fonts)
+	tf, _, err := NewTextField(ctx, d, text, multiLine, comb, fontIndRef, fonts)
 	if err != nil {
 		return err
 	}
