@@ -540,7 +540,7 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, offExtra int64, xsd *type
 		log.Read.Printf("extractXRefTableEntriesFromXRefStream: begin xrefEntryLen = %d\n", xrefEntryLen)
 	}
 
-	if len(buf)%xrefEntryLen > 0 {
+	if xrefEntryLen != 0 && len(buf)%xrefEntryLen > 0 {
 		return errors.New("pdfcpu: extractXRefTableEntriesFromXRefStream: corrupt xrefstream")
 	}
 
