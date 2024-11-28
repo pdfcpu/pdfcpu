@@ -645,7 +645,7 @@ func processXRefStream(ctx *model.Context, xsd *types.XRefStreamDict, objNr, gen
 
 	*offset += offExtra
 
-	if entry, ok := ctx.Table[*objNr]; ok && *entry.Offset == *offset {
+	if entry, ok := ctx.Table[*objNr]; ok && entry.Offset != nil && *entry.Offset == *offset {
 		entry.Object = *xsd
 	}
 
