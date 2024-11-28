@@ -464,10 +464,10 @@ func parseObjectStream(c context.Context, osd *types.ObjectStreamDict) error {
 	return nil
 }
 
-func createXRefTableEntryFromXRefStream(entry byte, objNr int, c2, c3, offExtra int64, objStreams types.IntSet) model.XRefTableEntry {
+func createXRefTableEntryFromXRefStream(entryType int64, objNr int, c2, c3, offExtra int64, objStreams types.IntSet) model.XRefTableEntry {
 	var xRefTableEntry model.XRefTableEntry
 
-	switch entry {
+	switch entryType {
 
 	case 0x00:
 		// free object
@@ -570,11 +570,18 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, offExtra int64, xsd *type
 	for i := 0; i < len(buf) && j < len(xsd.Objects); i += xrefEntryLen {
 
 		objNr := xsd.Objects[j]
-		i2Start := i + i1
-		c2 := bufToInt64(buf[i2Start : i2Start+i2])
-		c3 := bufToInt64(buf[i2Start+i2 : i2Start+i2+i3])
+		var c1 int64
+		if i1 == 0 {
+			// If the first element is zero, the type field shall not be present,
+			// and shall default to type 1.
+			c1 = 1
+		} else {
+			c1 = bufToInt64(buf[i : i+i1])
+		}
+		c2 := bufToInt64(buf[i+i1 : i+i1+i2])
+		c3 := bufToInt64(buf[i+i1+i2 : i+i1+i2+i3])
 
-		entry := createXRefTableEntryFromXRefStream(buf[i], objNr, c2, c3, offExtra, ctx.Read.ObjectStreams)
+		entry := createXRefTableEntryFromXRefStream(c1, objNr, c2, c3, offExtra, ctx.Read.ObjectStreams)
 
 		if ctx.XRefTable.Exists(objNr) {
 			if log.ReadEnabled() {
