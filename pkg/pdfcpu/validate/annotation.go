@@ -545,10 +545,7 @@ func validateEntryMeasure(xRefTable *model.XRefTable, d types.Dict, dictName str
 
 func validateCP(s string) bool { return s == "Inline" || s == "Top" }
 
-func validateAnnotationDictLine(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
-
-	// see 12.5.6.7
-
+func validateAnnotationDictLinePart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// L, required, array of numbers, len:4
 	_, err := validateNumberArrayEntry(xRefTable, d, dictName, "L", REQUIRED, model.V10, func(a types.Array) bool { return len(a) == 4 })
 	if err != nil {
@@ -603,12 +600,13 @@ func validateAnnotationDictLine(xRefTable *model.XRefTable, d types.Dict, dictNa
 		sinceVersion = model.V14
 	}
 	_, err = validateBooleanEntry(xRefTable, d, dictName, "Cap", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
 
+	return err
+}
+
+func validateAnnotationDictLinePart2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// IT, optional, name, since V1.6
-	_, err = validateNameEntry(xRefTable, d, dictName, "IT", OPTIONAL, model.V16, nil)
+	_, err := validateNameEntry(xRefTable, d, dictName, "IT", OPTIONAL, model.V16, nil)
 	if err != nil {
 		return err
 	}
@@ -635,6 +633,17 @@ func validateAnnotationDictLine(xRefTable *model.XRefTable, d types.Dict, dictNa
 	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "CO", OPTIONAL, model.V17, func(a types.Array) bool { return len(a) == 2 })
 
 	return err
+}
+
+func validateAnnotationDictLine(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+
+	// see 12.5.6.7
+
+	if err := validateAnnotationDictLinePart1(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	return validateAnnotationDictLinePart2(xRefTable, d, dictName)
 }
 
 func validateAnnotationDictCircleOrSquare(xRefTable *model.XRefTable, d types.Dict, dictName string) error {

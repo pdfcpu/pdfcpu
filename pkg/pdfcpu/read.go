@@ -2058,21 +2058,7 @@ func ParseObject(ctx *model.Context, offset int64, objNr, genNr int) (types.Obje
 	return ParseObjectWithContext(context.Background(), ctx, offset, objNr, genNr)
 }
 
-func ParseObjectWithContext(c context.Context, ctx *model.Context, offset int64, objNr, genNr int) (types.Object, error) {
-	if log.ReadEnabled() {
-		log.Read.Printf("ParseObject: begin, obj#%d, offset:%d\n", objNr, offset)
-	}
-
-	obj, endInd, streamInd, streamOffset, err := object(c, ctx, offset, objNr, genNr)
-	if err != nil {
-		if ctx.XRefTable.ValidationMode == model.ValidationRelaxed {
-			if err == io.EOF {
-				err = nil
-			}
-		}
-		return nil, err
-	}
-
+func resolveObject(c context.Context, ctx *model.Context, obj types.Object, offset int64, objNr, genNr, endInd, streamInd int, streamOffset int64) (types.Object, error) {
 	switch o := obj.(type) {
 
 	case types.Dict:
@@ -2086,7 +2072,7 @@ func ParseObjectWithContext(c context.Context, ctx *model.Context, offset int64,
 
 	case types.Array:
 		if ctx.EncKey != nil {
-			if _, err = decryptDeepObject(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
+			if _, err := decryptDeepObject(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
 				return nil, err
 			}
 		}
@@ -2115,6 +2101,24 @@ func ParseObjectWithContext(c context.Context, ctx *model.Context, offset int64,
 	default:
 		return o, nil
 	}
+}
+
+func ParseObjectWithContext(c context.Context, ctx *model.Context, offset int64, objNr, genNr int) (types.Object, error) {
+	if log.ReadEnabled() {
+		log.Read.Printf("ParseObject: begin, obj#%d, offset:%d\n", objNr, offset)
+	}
+
+	obj, endInd, streamInd, streamOffset, err := object(c, ctx, offset, objNr, genNr)
+	if err != nil {
+		if ctx.XRefTable.ValidationMode == model.ValidationRelaxed {
+			if err == io.EOF {
+				err = nil
+			}
+		}
+		return nil, err
+	}
+
+	return resolveObject(c, ctx, obj, offset, objNr, genNr, endInd, streamInd, streamOffset)
 }
 
 func dereferencedObject(c context.Context, ctx *model.Context, objNr int) (types.Object, error) {

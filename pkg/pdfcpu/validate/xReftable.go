@@ -90,6 +90,19 @@ func XRefTable(ctx *model.Context) error {
 	return nil
 }
 
+func fixInfoDict(xRefTable *model.XRefTable, rootDict types.Dict) error {
+	indRef := rootDict.IndirectRefEntry("Metadata")
+	ok, err := model.EqualObjects(*indRef, *xRefTable.Info, xRefTable)
+	if err != nil {
+		return err
+	}
+	if ok {
+		// infoDict indRef falsely points to meta data.
+		xRefTable.Info = nil
+	}
+	return nil
+}
+
 func metaDataModifiedAfterInfoDict(xRefTable *model.XRefTable) (bool, error) {
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {
@@ -103,16 +116,10 @@ func metaDataModifiedAfterInfoDict(xRefTable *model.XRefTable) (bool, error) {
 
 	if xmpMeta != nil {
 		xRefTable.CatalogXMPMeta = xmpMeta
-	}
-
-	if xmpMeta != nil && xRefTable.Info != nil {
-		indRef := rootDict.IndirectRefEntry("Metadata")
-		ok, err := model.EqualObjects(*indRef, *xRefTable.Info, xRefTable)
-		if err != nil {
-			return false, err
-		}
-		if ok {
-			xRefTable.Info = nil
+		if xRefTable.Info != nil {
+			if err := fixInfoDict(xRefTable, rootDict); err != nil {
+				return false, err
+			}
 		}
 	}
 
