@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path"
 	"sort"
@@ -1711,11 +1712,23 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 	}
 
 	if obj, found = pageDict.Find("Rotate"); found {
-		i, err := xRefTable.DereferenceInteger(obj)
-		if err != nil {
-			return err
+		obj, _ = xRefTable.Dereference(obj)
+
+		switch obj := obj.(type) {
+		case types.Integer:
+			pAttrs.Rotate = obj.Value()
+		case types.Float:
+			// Correctly handle values like 89.999999
+			epsilon := 0.000001
+			i, f := math.Modf(math.Abs(math.Round(obj.Value()/epsilon) * epsilon))
+			if f > epsilon {
+				return errors.Errorf("pdfcpu: invalid page rotation value %f", obj.Value())
+			}
+
+			pAttrs.Rotate = int(i)
+		default:
+			return errors.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
 		}
-		pAttrs.Rotate = i.Value()
 	}
 
 	if obj, found = pageDict.Find("Resources"); !found {
