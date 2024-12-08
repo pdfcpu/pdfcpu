@@ -65,7 +65,7 @@ func ExampleSplitFile() {
 	// Create dual page PDFs for in.pdf in outDir using the default configuration.
 	SplitFile("in.pdf", "outDir", 2, nil)
 
-	// Create a sequence of PDFs representing bookmark secions.
+	// Create a sequence of PDFs representing bookmark sections.
 	SplitFile("in.pdf", "outDir", 0, nil)
 }
 

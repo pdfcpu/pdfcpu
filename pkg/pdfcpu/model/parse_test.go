@@ -107,7 +107,7 @@ func TestDetectKeywords(t *testing.T) {
 		t.Errorf("%s failed: want %d, got %d", msg, 59, endInd)
 	}
 
-	// negativ test
+	// negative test
 	s = "1 0 obj\n<<\n /Lang (en-endobject-stream-UK%)  % endobject"
 	endInd, _, err = DetectKeywords(s)
 	if err != nil {

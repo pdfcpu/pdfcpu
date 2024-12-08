@@ -1860,7 +1860,7 @@ func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict ty
 		return err
 	}
 
-	// Compare required resouces (prn) with available resources (pAttrs.resources).
+	// Compare required resources (prn) with available resources (pAttrs.resources).
 	// Remove any resource that's not required.
 	// Return an error for any required resource missing.
 	// TODO Calculate and accumulate resources required by content streams of any present form or type 3 fonts.

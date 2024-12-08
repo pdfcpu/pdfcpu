@@ -5,14 +5,15 @@
 #
 # You cannot rely on all PDF 2.0 processors to successfully open
 # PDF files with non-PDF data beforehand; a PDF 2.0 processor
-# might reject this as invalid any file that does not start with.# a percent sign and then "PDF".
+# might reject this as invalid any file that does not start with.
+# a percent sign and then "PDF".
 #
 # It is not recommended that a PDF producer write any data
 # into a PDF file other than the actual PDF data, unless needed
 # for a specific workflow or use case.
 
 %PDF-2.0
-ÝÌ»ª    
+ï¿½Ì»ï¿½    
 1 0 obj
 <<
   /Type /Catalog
@@ -55,7 +56,7 @@ stream
       </dc:creator>
       <dc:description>
         <rdf:Alt>
-          <rdf:li xml:lang="x-default">Simple PDF 2.0 file that includes commments at the top about where PDF data starts in a PDF file.</rdf:li>
+          <rdf:li xml:lang="x-default">Simple PDF 2.0 file that includes comments at the top about where PDF data starts in a PDF file.</rdf:li>
         </rdf:Alt>
       </dc:description>
       <dc:rights>
