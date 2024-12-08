@@ -293,7 +293,7 @@ func validateOutlines(xRefTable *model.XRefTable, rootDict types.Dict, required 
 
 	count := d.IntEntry("Count")
 	if xRefTable.ValidationMode == model.ValidationStrict && count != nil && *count < 0 {
-		return errors.New("pdfcpu: validateOutlines: corrupted, root \"Count\" can't be negativ")
+		return errors.New("pdfcpu: validateOutlines: corrupted, root \"Count\" can't be negative")
 	}
 
 	total, visible, err := validateOutlineTree(xRefTable, first, last)

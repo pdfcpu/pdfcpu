@@ -1047,7 +1047,7 @@ func addWatermarks(conf *model.Configuration, onTop bool) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	var (
 		wm  *model.Watermark
@@ -1116,7 +1116,7 @@ func updateWatermarks(conf *model.Configuration, onTop bool) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	var (
 		wm  *model.Watermark
@@ -1242,7 +1242,7 @@ func processImportImagesCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	var outFile string
 	outFile = flag.Arg(0)
@@ -1475,7 +1475,7 @@ func processNUpCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -1512,7 +1512,7 @@ func processGridCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -1550,7 +1550,7 @@ func processBookletCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	pages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -1582,7 +1582,7 @@ func processBookletCommand(conf *model.Configuration) {
 	process(cli.BookletCommand(inFiles, outFile, pages, nup, conf))
 }
 
-func processDiplayUnit(conf *model.Configuration) {
+func processDisplayUnit(conf *model.Configuration) {
 	if !types.MemberOf(unit, []string{"", "points", "po", "inches", "in", "cm", "mm"}) {
 		fmt.Fprintf(os.Stderr, "%s\n\n", "supported units: (po)ints, (in)ches, cm, mm")
 		os.Exit(1)
@@ -1629,7 +1629,7 @@ func processInfoCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	if json {
 		log.SetCLILogger(nil)
@@ -1840,7 +1840,7 @@ func processListBoxesCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -1877,7 +1877,7 @@ func processAddBoxesCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	pb, err := api.PageBoundaries(flag.Arg(0), conf.Unit)
 	if err != nil {
@@ -1952,7 +1952,7 @@ func processCropCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	box, err := api.Box(flag.Arg(0), conf.Unit)
 	if err != nil {
@@ -2449,7 +2449,7 @@ func processResizeCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	rc, err := pdfcpu.ParseResizeConfig(flag.Arg(0), conf.Unit)
 	if err != nil {
@@ -2483,7 +2483,7 @@ func processPosterCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	// formsize(=papersize) or dimensions, optionally: scalefactor, border, margin, bgcolor
 	cut, err := pdfcpu.ParseCutConfigForPoster(flag.Arg(0), conf.Unit)
@@ -2519,7 +2519,7 @@ func processNDownCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	selectedPages, err := api.ParsePageSelection(selectedPages)
 	if err != nil {
@@ -2589,7 +2589,7 @@ func processCutCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	// required: at least one of horizontalCut, verticalCut
 	// optionally: border, margin, bgcolor
@@ -2851,7 +2851,7 @@ func processZoomCommand(conf *model.Configuration) {
 		os.Exit(1)
 	}
 
-	processDiplayUnit(conf)
+	processDisplayUnit(conf)
 
 	zc, err := pdfcpu.ParseZoomConfig(flag.Arg(0), conf.Unit)
 	if err != nil {

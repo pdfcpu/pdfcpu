@@ -14,7 +14,7 @@
 <a href="https://pdfcpu.io"><img src="resources/logoSmall.png" width="150"></a>
 <a href="https://pdfa.org"><img src="resources/pdfa.png" width="75"></a>
 
-pdfcpu is a PDF processing library written in [Go](http://golang.org) that supports encryption and offers both an API and a command-line interface (CLI). It is compatible with all PDF versions with basic support and ongoing improvement for PDF 2.0 (ISO-32000-2).
+pdfcpu is a PDF processing library written in [Go](https://go.dev/) that supports encryption and offers both an API and a command-line interface (CLI). It is compatible with all PDF versions with basic support and ongoing improvement for PDF 2.0 (ISO-32000-2).
 
 
 ## Motivation

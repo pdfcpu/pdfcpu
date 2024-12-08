@@ -876,7 +876,7 @@ func validateMovieDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// Aspect, optional, integer array, length 2
-	_, err = validateIntegerArrayEntry(xRefTable, d, dictName, "Ascpect", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 })
+	_, err = validateIntegerArrayEntry(xRefTable, d, dictName, "Aspect", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 })
 	if err != nil {
 		return err
 	}

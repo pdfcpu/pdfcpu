@@ -127,12 +127,12 @@ func ParsePageDim(v string, u types.DisplayUnit) (*types.Dim, string, error) {
 
 	w, err := strconv.ParseFloat(ss[0], 64)
 	if err != nil || w <= 0 {
-		return nil, v, errors.Errorf("pdfcpu: dimension X must be a positiv numeric value: %s\n", ss[0])
+		return nil, v, errors.Errorf("pdfcpu: dimension X must be a positive numeric value: %s\n", ss[0])
 	}
 
 	h, err := strconv.ParseFloat(ss[1], 64)
 	if err != nil || h <= 0 {
-		return nil, v, errors.Errorf("pdfcpu: dimension Y must be a positiv numeric value: %s\n", ss[1])
+		return nil, v, errors.Errorf("pdfcpu: dimension Y must be a positive numeric value: %s\n", ss[1])
 	}
 
 	d := types.Dim{Width: types.ToUserSpace(w, u), Height: types.ToUserSpace(h, u)}

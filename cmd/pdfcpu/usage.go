@@ -677,7 +677,7 @@ description ... dimensions, formsize, orientation
 
     margin:          for n-up content: float >= 0 in given display unit
     
-    backgroundcolor: backgound color for margin > 0.
+    backgroundcolor: background color for margin > 0.
                      "bgcolor" is also accepted.
 
 All configuration string parameters support completion.
@@ -780,7 +780,7 @@ The last signature may be shorter, e.g. for a booklet of 120 pages with signatur
    border:           Print border (on/off, true/false, t/f) 
    guides:           Print folding and cutting lines (on/off, true/false, t/f)
    margin:           Apply content margin (float >= 0 in given display unit)
-   backgroundcolor:  sheet backgound color for margin > 0.
+   backgroundcolor:  sheet background color for margin > 0.
                      "bgcolor" is also accepted.
 
 All configuration string parameters support completion.

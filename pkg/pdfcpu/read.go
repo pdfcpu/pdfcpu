@@ -331,7 +331,7 @@ func parseXRefTableEntry(xRefTable *model.XRefTable, s *bufio.Scanner, objNr int
 	return nil
 }
 
-// Process xRef table subsection and create corrresponding xRef table entries.
+// Process xRef table subsection and create corresponding xRef table entries.
 func parseXRefTableSubSection(xRefTable *model.XRefTable, s *bufio.Scanner, fields []string, offExtra int64, repairOff int) error {
 	if log.ReadEnabled() {
 		log.Read.Println("parseXRefTableSubSection: begin")
@@ -2980,7 +2980,7 @@ func handlePermissions(ctx *model.Context) error {
 
 	// Double check minimum permissions for pdfcpu processing.
 	if !hasNeededPermissions(ctx.Cmd, ctx.E) {
-		return errors.New("pdfcpu: operation restriced via pdfcpu's permission bits setting")
+		return errors.New("pdfcpu: operation restricted via pdfcpu's permission bits setting")
 	}
 
 	return nil
