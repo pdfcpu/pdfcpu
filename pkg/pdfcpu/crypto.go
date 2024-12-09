@@ -1280,7 +1280,7 @@ func encryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int
 		ft = d["Type"]
 	}
 	if ft != nil {
-		if ftv, ok := ft.(types.Name); ok && ftv == "Sig" {
+		if ftv, ok := ft.(types.Name); ok && (ftv == "Sig" || ftv == "DocTimeStamp") {
 			isSig = true
 		}
 	}
@@ -1437,7 +1437,7 @@ func decryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int
 		ft = d["Type"]
 	}
 	if ft != nil {
-		if ftv, ok := ft.(types.Name); ok && ftv == "Sig" {
+		if ftv, ok := ft.(types.Name); ok && (ftv == "Sig" || ftv == "DocTimeStamp") {
 			isSig = true
 		}
 	}
