@@ -1913,7 +1913,19 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, 
 			return nil, nil, err
 		}
 
-		switch *pageNodeDict.Type() {
+		var obType string
+		if t := pageNodeDict.Type(); t != nil {
+			obType = *t
+		} else if xRefTable.ValidationMode == ValidationRelaxed {
+			if _, hasCount := pageNodeDict.Find("Count"); hasCount {
+				if _, hasKids := pageNodeDict.Find("Kids"); hasKids {
+					ShowRepaired(fmt.Sprintf("page tree node %s", indRef))
+					obType = "Pages"
+				}
+			}
+		}
+
+		switch obType {
 
 		case "Pages":
 			// Recurse over sub pagetree.
