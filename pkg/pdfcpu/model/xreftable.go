@@ -1916,9 +1916,10 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, 
 		var obType string
 		if t := pageNodeDict.Type(); t != nil {
 			obType = *t
-		} else {
+		} else if xRefTable.ValidationMode == ValidationRelaxed {
 			if _, hasCount := pageNodeDict.Find("Count"); hasCount {
 				if _, hasKids := pageNodeDict.Find("Kids"); hasKids {
+					ShowRepaired(fmt.Sprintf("page tree node %s", indRef))
 					obType = "Pages"
 				}
 			}
