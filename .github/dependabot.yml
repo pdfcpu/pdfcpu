@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # Enable version updates for GitHub action workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    # Check for updates to GitHub Actions every weekday
+    schedule:
+      interval: "daily"
+      time: "19:00"
+    open-pull-requests-limit: 10
+  # Enable version updates for Go modules
+  - package-ecosystem: gomod
+    directory: /
+    # Check for updates to Go modules every weekday
+    schedule:
+      interval: "daily"
+      time: "20:00"
+    open-pull-requests-limit: 10
