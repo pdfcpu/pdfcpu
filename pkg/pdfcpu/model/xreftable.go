@@ -1943,6 +1943,21 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, 
 				return xRefTable.processPageTreeForPageDict(&indRef, pAttrs, p, page, consolidateRes)
 			}
 
+		case "Template":
+			if xRefTable.ValidationMode == ValidationStrict {
+				return nil, nil, errors.Errorf("Template page tree nodes not supported: %s", indRef)
+			}
+
+		case "":
+			if xRefTable.ValidationMode == ValidationStrict {
+				return nil, nil, errors.Errorf("page tree node without type: %s", indRef)
+			}
+
+		default:
+			if xRefTable.ValidationMode == ValidationStrict {
+				return nil, nil, errors.Errorf("unsupported page tree node: %s", indRef)
+			}
+
 		}
 
 	}
