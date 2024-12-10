@@ -237,7 +237,7 @@ type AnnotationRenderer interface {
 	ContentString() string
 }
 
-// Annotation represents a PDF annnotation.
+// Annotation represents a PDF annotation.
 type Annotation struct {
 	SubType          AnnotationType     // The type of annotation that this dictionary describes.
 	Rect             types.Rectangle    // The annotation rectangle, defining the location of the annotation on the page in default user space units.

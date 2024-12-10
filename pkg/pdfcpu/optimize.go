@@ -186,7 +186,7 @@ func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber 
 		return errors.Errorf("identifyPageContent: obj#:%d corrupt page content array\n", pageObjNumber)
 	}
 
-	// TODO Activate content array opimization as soon as we have a proper test file.
+	// TODO Activate content array optimization as soon as we have a proper test file.
 
 	_ = contentArr
 
