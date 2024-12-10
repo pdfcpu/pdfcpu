@@ -278,7 +278,7 @@ func (rc *ReadContext) ReadFileSize() int {
 	return int(rc.FileSize)
 }
 
-// OptimizationContext represents the context for the optimiziation of a PDF file.
+// OptimizationContext represents the context for the optimization of a PDF file.
 type OptimizationContext struct {
 
 	// Font section
