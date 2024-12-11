@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path"
 	"sort"
@@ -1711,11 +1712,23 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 	}
 
 	if obj, found = pageDict.Find("Rotate"); found {
-		i, err := xRefTable.DereferenceInteger(obj)
+		obj, err := xRefTable.Dereference(obj)
 		if err != nil {
 			return err
 		}
-		pAttrs.Rotate = i.Value()
+
+		switch obj := obj.(type) {
+		case types.Integer:
+			pAttrs.Rotate = obj.Value()
+		case types.Float:
+			if xRefTable.ValidationMode == ValidationStrict {
+				return errors.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+			}
+
+			pAttrs.Rotate = int(math.Round(obj.Value()))
+		default:
+			return errors.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+		}
 	}
 
 	if obj, found = pageDict.Find("Resources"); !found {
@@ -2259,11 +2272,22 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(
 	}
 
 	if obj, found := d.Find("Rotate"); found {
-		i, err := xRefTable.DereferenceInteger(obj)
-		if err != nil {
+		if obj, err = xRefTable.Dereference(obj); err != nil {
 			return err
 		}
-		r = i.Value()
+
+		switch obj := obj.(type) {
+		case types.Integer:
+			r = obj.Value()
+		case types.Float:
+			if xRefTable.ValidationMode == ValidationStrict {
+				return errors.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+			}
+
+			r = int(math.Round(obj.Value()))
+		default:
+			return errors.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+		}
 	}
 
 	if err := xRefTable.collectMediaBoxAndCropBox(d, inhMediaBox, inhCropBox); err != nil {
