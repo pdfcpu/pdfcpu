@@ -1880,6 +1880,47 @@ func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict ty
 	return consolidateResourceDict(resDict, prn, page)
 }
 
+func (xRefTable *XRefTable) pageObjType(indRef types.IndirectRef) (string, error) {
+
+	pageNodeDict, err := xRefTable.DereferenceDict(indRef)
+	if err != nil {
+		return "", err
+	}
+
+	if t := pageNodeDict.Type(); t != nil {
+		return *t, nil
+	}
+
+	objType := ""
+
+	if xRefTable.ValidationMode == ValidationRelaxed {
+		if _, hasCount := pageNodeDict.Find("Count"); hasCount {
+			if _, hasKids := pageNodeDict.Find("Kids"); hasKids {
+				ShowRepaired(fmt.Sprintf("page tree node %s", indRef))
+				objType = "Pages"
+			}
+		}
+	}
+
+	return objType, nil
+}
+
+func errForUnexpectedPageObjectType(validationMode int, objType string, indRef types.IndirectRef) error {
+	if validationMode == ValidationRelaxed {
+		return nil
+	}
+
+	if objType == "Template" {
+		return errors.Errorf("Template page tree nodes not supported: %s", indRef)
+	}
+
+	if objType == "" {
+		return errors.Errorf("page tree node without type: %s", indRef)
+	}
+
+	return errors.Errorf("unsupported page tree node: %s", indRef)
+}
+
 func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool) (types.Dict, *types.IndirectRef, error) {
 	// Walk this page tree all the way down to the leaf node representing page.
 
@@ -1915,30 +1956,19 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, 
 			continue
 		}
 
-		// Dereference next page node dict.
+		// Process next page node dict.
+
 		indRef, ok := o.(types.IndirectRef)
 		if !ok {
 			return nil, nil, errors.Errorf("pdfcpu: processPageTreeForPageDict: corrupt page node dict")
 		}
 
-		pageNodeDict, err := xRefTable.DereferenceDict(indRef)
+		objType, err := xRefTable.pageObjType(indRef)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		var obType string
-		if t := pageNodeDict.Type(); t != nil {
-			obType = *t
-		} else if xRefTable.ValidationMode == ValidationRelaxed {
-			if _, hasCount := pageNodeDict.Find("Count"); hasCount {
-				if _, hasKids := pageNodeDict.Find("Kids"); hasKids {
-					ShowRepaired(fmt.Sprintf("page tree node %s", indRef))
-					obType = "Pages"
-				}
-			}
-		}
-
-		switch obType {
+		switch objType {
 
 		case "Pages":
 			// Recurse over sub pagetree.
@@ -1956,20 +1986,8 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, 
 				return xRefTable.processPageTreeForPageDict(&indRef, pAttrs, p, page, consolidateRes)
 			}
 
-		case "Template":
-			if xRefTable.ValidationMode == ValidationStrict {
-				return nil, nil, errors.Errorf("Template page tree nodes not supported: %s", indRef)
-			}
-
-		case "":
-			if xRefTable.ValidationMode == ValidationStrict {
-				return nil, nil, errors.Errorf("page tree node without type: %s", indRef)
-			}
-
 		default:
-			if xRefTable.ValidationMode == ValidationStrict {
-				return nil, nil, errors.Errorf("unsupported page tree node: %s", indRef)
-			}
+			return nil, nil, errForUnexpectedPageObjectType(xRefTable.ValidationMode, objType, indRef)
 
 		}
 
