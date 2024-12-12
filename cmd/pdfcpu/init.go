@@ -350,7 +350,7 @@ func initFlags() {
 	flag.BoolVar(&links, "links", false, linksUsage)
 	flag.BoolVar(&links, "l", false, linksUsage)
 
-	modeUsage := "validate: strict|relaxed; extract: image|font|content|page|meta; encrypt: rc4|aes, stamp:text|image/pdf"
+	modeUsage := "validate: strict|relaxed; extract: image|font|content|page|meta; encrypt: rc4|aes; stamp:text|image/pdf"
 	flag.StringVar(&mode, "mode", "", modeUsage)
 	flag.StringVar(&mode, "m", "", modeUsage)
 
