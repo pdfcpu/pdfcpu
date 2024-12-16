@@ -50,7 +50,7 @@ func validateDestinationArrayFirstElement(xRefTable *model.XRefTable, a types.Ar
 
 func validateDestinationArrayLength(a types.Array) bool {
 	l := len(a)
-	return l == 2 || l == 3 || l == 5 || l == 6 || l == 4 // 4 = hack! see below
+	return l == 2 || l == 3 || l == 5 || l == 6 || l == 4 || l == 10 // 4 = hack! see below
 }
 
 func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
@@ -101,6 +101,9 @@ func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 
 	case 6:
 		nameErr = name.Value() != "FitR"
+
+	case 10:
+		nameErr = name.Value() != "XYZ"
 
 	default:
 		return errors.Errorf("validateDestinationArray: array length %d not allowed: %v", len(a), a)
