@@ -62,6 +62,11 @@ func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 		return err
 	}
 
+	// XYZ - 5 elements compatible, in wkhtmltopdf maybe multiple times. look like [0 /XYZ 28.5000000 753.500000 0 0 /XYZ 28.5000000 753.500000 0]
+	if len(a) > 5 && a[1] == types.Name("XYZ") {
+		a = a[:5]
+	}
+
 	if !validateDestinationArrayLength(a) {
 		return errors.Errorf("pdfcpu: validateDestinationArray: invalid length: %d", len(a))
 	}
