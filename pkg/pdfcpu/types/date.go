@@ -54,6 +54,10 @@ func prevalidateDate(s string, relaxed bool) (string, bool) {
 	// Remove trailing 0x00
 	s = strings.TrimRight(s, "\x00")
 
+	// Remove "()", dateformat just like (D:20060102150405-07'00')
+	s = strings.TrimPrefix(s, "(")
+	s = strings.TrimSuffix(s, ")")
+
 	if relaxed {
 		// Accept missing "D:" prefix.
 		// "YYYY" is mandatory
