@@ -673,7 +673,7 @@ func validateAnnotationDictCircleOrSquare(xRefTable *model.XRefTable, d types.Di
 	}
 
 	// RD, optional, rectangle, since V1.5
-	_, err = validateRectangleEntry(xRefTable, d, dictName, "RD", OPTIONAL, model.V15, nil)
+	_, err = validateRectangleEntry(xRefTable, d, dictName, "RD", OPTIONAL, sinceVersion, nil)
 
 	return err
 }
