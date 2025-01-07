@@ -672,6 +672,11 @@ func validateAnnotationDictCircleOrSquare(xRefTable *model.XRefTable, d types.Di
 		return err
 	}
 
+	sinceVersion = model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+
 	// RD, optional, rectangle, since V1.5
 	_, err = validateRectangleEntry(xRefTable, d, dictName, "RD", OPTIONAL, sinceVersion, nil)
 
