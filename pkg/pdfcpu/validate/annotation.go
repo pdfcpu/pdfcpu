@@ -18,6 +18,7 @@ package validate
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -117,7 +118,11 @@ func validateBorderStyleDict(xRefTable *model.XRefTable, d types.Dict, dictName,
 	validate := func(s string) bool { return types.MemberOf(s, []string{"S", "D", "B", "I", "U", "A"}) }
 	_, err = validateNameEntry(xRefTable, d1, dictName, "S", OPTIONAL, model.V10, validate)
 	if err != nil {
-		return err
+		if !strings.Contains(err.Error(), "invalid dict entry") {
+			return err
+		}
+		// The PDF spec mandates interpreting undefined values as "S".
+		err = nil
 	}
 
 	// D, optional, dash array
