@@ -1721,7 +1721,7 @@ func buffer(c context.Context, rd io.Reader) (buf []byte, endInd int, streamInd 
 		growSize = min(growSize*2, maximumBufSize)
 		line := string(buf)
 
-		endInd, streamInd, err = model.DetectKeywords(line)
+		endInd, streamInd, err = model.DetectKeywordsWithContext(c, line)
 		if err != nil {
 			return nil, 0, 0, 0, err
 		}
