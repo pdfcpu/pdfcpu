@@ -1244,10 +1244,18 @@ func isComment(commentPos, strLitPos int) bool {
 }
 
 func DetectKeywords(line string) (endInd int, streamInd int, err error) {
+	return DetectKeywordsWithContext(context.Background(), line)
+}
+
+func DetectKeywordsWithContext(c context.Context, line string) (endInd int, streamInd int, err error) {
 	// return endInd or streamInd which ever first encountered.
 	off, i := 0, 0
 	strLitPos, commentPos := 0, 0
 	for {
+		if err := c.Err(); err != nil {
+			return -1, -1, err
+		}
+
 		detectMarkers(line, &endInd, &streamInd)
 
 		if off == 0 && endInd < 0 && streamInd < 0 {
