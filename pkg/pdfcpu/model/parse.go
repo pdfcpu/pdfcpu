@@ -1143,11 +1143,11 @@ func detectMarker(line, marker string) int {
 
 func detectMarkers(line string, endInd, streamInd *int) {
 	//fmt.Printf("buflen=%d\n%s", len(line), hex.Dump([]byte(line)))
-	if *endInd <= 0 {
+	if *endInd == 0 {
 		*endInd = detectMarker(line, "endobj")
 
 	}
-	if *streamInd <= 0 {
+	if *streamInd == 0 {
 		*streamInd = detectMarker(line, "stream")
 	}
 }
@@ -1246,15 +1246,20 @@ func isComment(commentPos, strLitPos int) bool {
 func DetectKeywords(line string) (endInd int, streamInd int, err error) {
 	// return endInd or streamInd which ever first encountered.
 	off, i := 0, 0
+	strLitPos, commentPos := 0, 0
 	for {
-
-		strLitPos := detectNonEscaped(line, "(")
-		commentPos := detectNonEscaped(line, "%")
-
 		detectMarkers(line, &endInd, &streamInd)
 
 		if off == 0 && endInd < 0 && streamInd < 0 {
 			return -1, -1, nil
+		}
+
+		// Don't re-search in partial line if known to be not present.
+		if strLitPos != -1 {
+			strLitPos = detectNonEscaped(line, "(")
+		}
+		if commentPos != -1 {
+			commentPos = detectNonEscaped(line, "%")
 		}
 
 		if strLitPos < 0 && commentPos < 0 {
@@ -1284,8 +1289,20 @@ func DetectKeywords(line string) (endInd int, streamInd int, err error) {
 			if line == "" {
 				return -1, -1, nil
 			}
-			off += commentPos + i
-			endInd, streamInd = 0, 0
+			delta := commentPos + i
+			off += delta
+
+			// Adjust found positions for changed line.
+			if endInd > delta {
+				endInd -= delta
+			} else if endInd != -1 {
+				endInd = 0
+			}
+			if streamInd > delta {
+				streamInd -= delta
+			} else if streamInd != -1 {
+				streamInd = 0
+			}
 			continue
 		}
 
@@ -1294,7 +1311,18 @@ func DetectKeywords(line string) (endInd int, streamInd int, err error) {
 		if err != nil {
 			return -1, -1, err
 		}
-		off += strLitPos + i
-		endInd, streamInd = 0, 0
+		delta := strLitPos + i
+		off += delta
+		// Adjust found positions for changed line.
+		if endInd > delta {
+			endInd -= delta
+		} else if endInd != -1 {
+			endInd = 0
+		}
+		if streamInd > delta {
+			streamInd -= delta
+		} else if streamInd != -1 {
+			streamInd = 0
+		}
 	}
 }
