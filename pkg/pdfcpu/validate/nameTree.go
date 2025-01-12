@@ -633,14 +633,14 @@ func validateNameTreeDictNamesEntry(xRefTable *model.XRefTable, d types.Dict, na
 
 			continue
 		}
+		if o != nil {
+			err = validateNameTreeValue(name, xRefTable, o)
+			if err != nil {
+				return "", "", err
+			}
 
-		err = validateNameTreeValue(name, xRefTable, o)
-		if err != nil {
-			return "", "", err
+			node.AppendToNames(key, o)
 		}
-
-		node.AppendToNames(key, o)
-
 	}
 
 	return firstKey, lastKey, nil
