@@ -48,6 +48,7 @@ func migrateObject(o types.Object, ctxSource, ctxDest *model.Context, migrated m
 	case types.IndirectRef:
 		objNr := o.ObjectNumber.Value()
 		if migrated[objNr] > 0 {
+			// Can this clause ever change migrated[objNr]?  If it is already migrated, shouldn't it have the new objNr?
 			o.ObjectNumber = types.Integer(migrated[objNr])
 			return o, nil
 		}
@@ -55,6 +56,7 @@ func migrateObject(o types.Object, ctxSource, ctxDest *model.Context, migrated m
 		if err != nil {
 			return nil, err
 		}
+		// What is the effect of migrating o1, if it was already migrated by migrateIndRef above?  Won't we just end up at if migrated[objNr] > 0 above?
 		if _, err := migrateObject(o1, ctxSource, ctxDest, migrated); err != nil {
 			return nil, err
 		}
