@@ -59,10 +59,6 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 		return errors.Errorf("pdfcpu: invalid scale factor %.2f: i >= 1.0\n", cut.Scale)
 	}
 
-	if rs == nil {
-		return errors.New("pdfcpu poster: Please provide rs")
-	}
-
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -227,10 +223,6 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 
 	if err := validateCut(cut); err != nil {
 		return err
-	}
-
-	if rs == nil {
-		return errors.New("pdfcpu cut: Please provide rs")
 	}
 
 	if conf == nil {
