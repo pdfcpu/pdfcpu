@@ -18,6 +18,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
@@ -33,6 +34,7 @@ var (
 	errArrayNotTerminated      = errors.New("pdfcpu: parse: unterminated array")
 	errDictionaryCorrupt       = errors.New("pdfcpu: parse: corrupt dictionary")
 	errDictionaryNotTerminated = errors.New("pdfcpu: parse: unterminated dictionary")
+	errDictionaryDuplicateKey  = errors.New("pdfcpu: parse: duplicate key")
 	errHexLiteralCorrupt       = errors.New("pdfcpu: parse: corrupt hex literal")
 	errHexLiteralNotTerminated = errors.New("pdfcpu: parse: hex literal not terminated")
 	errNameObjectCorrupt       = errors.New("pdfcpu: parse: corrupt name object")
@@ -506,18 +508,19 @@ func parseName(line *string) (*types.Name, error) {
 	return &nameObj, nil
 }
 
-func insertKey(d types.Dict, key string, val types.Object) error {
+func insertKey(d types.Dict, key string, val types.Object, relaxed bool) error {
 	if _, found := d[key]; !found {
 		d[key] = val
 	} else {
-		// for now we digest duplicate keys.
-		// TODO
-		// if !validationRelaxed {
-		// 	return errDictionaryDuplicateKey
-		// }
-		// if log.CLIEnabled() {
-		// 	log.CLI.Printf("ParseDict: digesting duplicate key\n")
-		// }
+
+		// was: for now we ignore duplicate keys - config flag ?
+
+		if !relaxed {
+			return errDictionaryDuplicateKey
+		}
+
+		d[key] = val
+		ShowDigestedSpecViolation(fmt.Sprintf("duplicate key \"%s\"", key))
 	}
 
 	if log.ParseEnabled() {
@@ -572,7 +575,7 @@ func processDictKeys(c context.Context, line *string, relaxed bool) (types.Dict,
 		// Specifying the null object as the value of a dictionary entry (7.3.7, "Dictionary Objects")
 		// shall be equivalent to omitting the entry entirely.
 		if val != nil {
-			if err := insertKey(d, string(*keyName), val); err != nil {
+			if err := insertKey(d, string(*keyName), val, relaxed); err != nil {
 				return nil, err
 			}
 		}

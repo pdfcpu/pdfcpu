@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -90,7 +89,7 @@ func catalogMetaData(xRefTable *model.XRefTable, rootDict types.Dict, required b
 		if xRefTable.ValidationMode == model.ValidationStrict {
 			return nil, err
 		}
-		log.CLI.Println("ignoring metadata parse error")
+		model.ShowSkipped("metadata parse error")
 		return nil, nil
 	}
 

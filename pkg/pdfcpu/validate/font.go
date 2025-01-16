@@ -147,7 +147,7 @@ func validateFontDescriptorPart1(xRefTable *model.XRefTable, d types.Dict, dictN
 			if xRefTable.ValidationMode != model.ValidationRelaxed {
 				return err
 			}
-			model.ReportSpecViolation(xRefTable, err)
+			model.ShowDigestedSpecViolationError(xRefTable, err)
 		}
 	}
 
