@@ -56,6 +56,7 @@ type XRefTableEntry struct {
 	ObjectStream    *int
 	ObjectStreamInd *int
 	Valid           bool
+	BeingValidated  bool
 }
 
 // NewXRefTableEntryGen0 returns a cross reference table entry for an object with generation 0.
@@ -898,21 +899,38 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 	return nil
 }
 
-// IsValidObj returns true if the object with objNr and genNr is valid.
-func (xRefTable *XRefTable) IsValidObj(objNr, genNr int) (bool, error) {
+// IsObjValid returns true if the object with objNr and genNr is valid.
+func (xRefTable *XRefTable) IsObjValid(objNr, genNr int) (bool, error) {
 	entry, found := xRefTable.FindTableEntry(objNr, genNr)
 	if !found {
-		return false, errors.Errorf("pdfcpu: IsValid: no entry for obj#%d\n", objNr)
+		return false, errors.Errorf("pdfcpu: IsObjValid: no entry for obj#%d\n", objNr)
 	}
 	if entry.Free {
-		return false, errors.Errorf("pdfcpu: IsValid: unexpected free entry for obj#%d\n", objNr)
+		return false, errors.Errorf("pdfcpu: IsObjValid: unexpected free entry for obj#%d\n", objNr)
 	}
 	return entry.Valid, nil
 }
 
 // IsValid returns true if the object referenced by ir is valid.
 func (xRefTable *XRefTable) IsValid(ir types.IndirectRef) (bool, error) {
-	return xRefTable.IsValidObj(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+	return xRefTable.IsObjValid(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+}
+
+// IsObjBeingValidated returns true if the object with objNr and genNr is being validated.
+func (xRefTable *XRefTable) IsObjBeingValidated(objNr, genNr int) (bool, error) {
+	entry, found := xRefTable.FindTableEntry(objNr, genNr)
+	if !found {
+		return false, errors.Errorf("pdfcpu: IsObjBeingValidated: no entry for obj#%d\n", objNr)
+	}
+	if entry.Free {
+		return false, errors.Errorf("pdfcpu: IsObjBeingValidated: unexpected free entry for obj#%d\n", objNr)
+	}
+	return entry.BeingValidated, nil
+}
+
+// IsBeingValidated returns true if the object referenced by ir is being validated.
+func (xRefTable *XRefTable) IsBeingValidated(ir types.IndirectRef) (bool, error) {
+	return xRefTable.IsObjBeingValidated(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
 }
 
 // SetValid marks the xreftable entry of the object referenced by ir as valid.
@@ -925,6 +943,23 @@ func (xRefTable *XRefTable) SetValid(ir types.IndirectRef) error {
 		return errors.Errorf("pdfcpu: SetValid: unexpected free entry for obj#%d\n", ir.ObjectNumber.Value())
 	}
 	entry.Valid = true
+	entry.BeingValidated = false
+
+	return nil
+}
+
+// SetBeingValidated marks the xreftable entry of the object referenced by ir as being validated.
+func (xRefTable *XRefTable) SetBeingValidated(ir types.IndirectRef) error {
+	entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+	if !found {
+		return errors.Errorf("pdfcpu: SetBeingValidated: no entry for obj#%d\n", ir.ObjectNumber.Value())
+	}
+	if entry.Free {
+		return errors.Errorf("pdfcpu: SetBeingValidated: unexpected free entry for obj#%d\n", ir.ObjectNumber.Value())
+	}
+	entry.BeingValidated = true
+	entry.Valid = false
+
 	return nil
 }
 

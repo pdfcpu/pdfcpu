@@ -972,6 +972,22 @@ func validateType3FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 
 func validateFontDict(xRefTable *model.XRefTable, o types.Object) (err error) {
 
+	indRef, isIndRef := o.(types.IndirectRef)
+	if isIndRef {
+
+		if ok, err := xRefTable.IsValid(indRef); err != nil || ok {
+			return err
+		}
+
+		if ok, err := xRefTable.IsBeingValidated(indRef); err != nil || ok {
+			return err
+		}
+
+		if err := xRefTable.SetBeingValidated(indRef); err != nil {
+			return err
+		}
+	}
+
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil || d == nil {
 		return err
@@ -1012,6 +1028,12 @@ func validateFontDict(xRefTable *model.XRefTable, o types.Object) (err error) {
 	default:
 		return errors.Errorf("pdfcpu: validateFontDict: unknown Subtype: %s\n", *subtype)
 
+	}
+
+	if isIndRef {
+		if err1 := xRefTable.SetValid(indRef); err1 != nil {
+			return err1
+		}
 	}
 
 	return err

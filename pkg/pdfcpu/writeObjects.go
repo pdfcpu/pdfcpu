@@ -576,7 +576,7 @@ func writeNullObject(ctx *model.Context, objNumber, genNumber int) error {
 func writeDeepDict(ctx *model.Context, d types.Dict, objNr, genNr int) error {
 
 	if d.IsPage() {
-		valid, err := ctx.IsValidObj(objNr, genNr)
+		valid, err := ctx.IsObjValid(objNr, genNr)
 		if err != nil {
 			return err
 		}
