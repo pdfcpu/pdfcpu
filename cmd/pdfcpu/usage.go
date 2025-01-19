@@ -90,18 +90,21 @@ common flags: -v(erbose)  ... turn on logging
                                                   cm ... centimetres
                                                   mm ... millimetres`
 
-	usageValidate = "usage: pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile..." + generalFlags
+	usageValidate = "usage: pdfcpu validate [-m(ode) strict|relaxed] [-l(inks) -opt(imize)] inFile..." + generalFlags
 
 	usageLongValidate = `Check inFile for specification compliance.
 
       mode ... validation mode
      links ... check for broken links
+  optimize ... optimize resources (fonts, forms, images)
     inFile ... input PDF file
 		
 The validation modes are:
+    strict ... validates against PDF 32000-1:2008 (PDF 1.7) and rudimentary against PDF 32000:2 (PDF 2.0)
+   relaxed ... (default) like strict but doesn't complain about common seen spec violations.
 
- strict ... validates against PDF 32000-1:2008 (PDF 1.7) and rudimentary against PDF 32000:2 (PDF 2.0)
-relaxed ... (default) like strict but doesn't complain about common seen spec violations.`
+Validation turns off optimization unless in verbose mode.
+You can enforce optimization using -opt=true.`
 
 	usageOptimize     = "usage: pdfcpu optimize [-stats csvFile] inFile [outFile]" + generalFlags
 	usageLongOptimize = `Read inFile, remove redundant page resources like embedded fonts and images and write the result to outFile.

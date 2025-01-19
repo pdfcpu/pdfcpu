@@ -970,6 +970,43 @@ func validateType3FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	return err
 }
 
+func _validateFontDict(xRefTable *model.XRefTable, d types.Dict, isIndRef bool, indRef types.IndirectRef) (err error) {
+	subtype := d.Subtype()
+	if subtype == nil {
+		return errors.New("pdfcpu: validateFontDict: missing Subtype")
+	}
+
+	switch *subtype {
+
+	case "TrueType":
+		err = validateTrueTypeFontDict(xRefTable, d)
+
+	case "Type0":
+		err = validateType0FontDict(xRefTable, d)
+
+	case "Type1":
+		err = validateType1FontDict(xRefTable, d)
+
+	case "MMType1":
+		return validateType1FontDict(xRefTable, d)
+
+	case "Type3":
+		err = validateType3FontDict(xRefTable, d)
+
+	default:
+		return errors.Errorf("pdfcpu: validateFontDict: unknown Subtype: %s\n", *subtype)
+
+	}
+
+	if isIndRef {
+		if err1 := xRefTable.SetValid(indRef); err1 != nil {
+			return err1
+		}
+	}
+
+	return err
+}
+
 func validateFontDict(xRefTable *model.XRefTable, o types.Object) (err error) {
 
 	indRef, isIndRef := o.(types.IndirectRef)
@@ -1003,40 +1040,7 @@ func validateFontDict(xRefTable *model.XRefTable, o types.Object) (err error) {
 		return errors.New("pdfcpu: validateFontDict: corrupt font dict")
 	}
 
-	subtype := d.Subtype()
-	if subtype == nil {
-		return errors.New("pdfcpu: validateFontDict: missing Subtype")
-	}
-
-	switch *subtype {
-
-	case "TrueType":
-		err = validateTrueTypeFontDict(xRefTable, d)
-
-	case "Type0":
-		err = validateType0FontDict(xRefTable, d)
-
-	case "Type1":
-		err = validateType1FontDict(xRefTable, d)
-
-	case "MMType1":
-		err = validateType1FontDict(xRefTable, d)
-
-	case "Type3":
-		err = validateType3FontDict(xRefTable, d)
-
-	default:
-		return errors.Errorf("pdfcpu: validateFontDict: unknown Subtype: %s\n", *subtype)
-
-	}
-
-	if isIndRef {
-		if err1 := xRefTable.SetValid(indRef); err1 != nil {
-			return err1
-		}
-	}
-
-	return err
+	return _validateFontDict(xRefTable, d, isIndRef, indRef)
 }
 
 func validateFontResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {

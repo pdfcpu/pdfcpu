@@ -1425,14 +1425,35 @@ func optimizeResourceDicts(ctx *model.Context) error {
 	return nil
 }
 
+func resolveWidth(ctx *model.Context, sd *types.StreamDict) error {
+	if obj, ok := sd.Find("Width"); ok {
+		w, err := ctx.DereferenceNumber(obj)
+		if err != nil {
+			return err
+		}
+		sd.Dict["Width"] = types.Integer(w)
+	}
+	return nil
+}
+
+func ensureDirectWidthForXObjs(ctx *model.Context) error {
+	for _, imgObjs := range ctx.Optimize.PageImages {
+		for objNr, v := range imgObjs {
+			if v {
+				imageObj := ctx.Optimize.ImageObjects[objNr]
+				if err := resolveWidth(ctx, imageObj.ImageDict); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // OptimizeXRefTable optimizes an xRefTable by locating and getting rid of redundant embedded fonts and images.
 func OptimizeXRefTable(ctx *model.Context) error {
 	if ctx.PageCount == 0 {
 		return nil
-	}
-
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("optimizeXRefTable begin")
 	}
 
 	// Sometimes free objects are used although they are part of the free object list.
@@ -1457,6 +1478,10 @@ func OptimizeXRefTable(ctx *model.Context) error {
 		return err
 	}
 
+	if err := ensureDirectWidthForXObjs(ctx); err != nil {
+		return err
+	}
+
 	// Get rid of PieceInfo dict from root.
 	if err := ctx.DeleteDictEntry(ctx.RootDict, "PieceInfo"); err != nil {
 		return err
@@ -1470,10 +1495,6 @@ func OptimizeXRefTable(ctx *model.Context) error {
 	}
 
 	ctx.Optimized = true
-
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("optimizeXRefTable end")
-	}
 
 	return nil
 }

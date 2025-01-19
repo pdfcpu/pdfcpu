@@ -121,14 +121,22 @@ func createFlateImageObject(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int,
 		}
 	}
 
-	// Create Flate stream dict.
-	sd, _ := xRefTable.NewStreamDictForBuf(buf)
-	sd.InsertName("Type", "XObject")
-	sd.InsertName("Subtype", "Image")
-	sd.InsertInt("Width", w)
-	sd.InsertInt("Height", h)
-	sd.InsertInt("BitsPerComponent", bpc)
-	sd.InsertName("ColorSpace", cs)
+	sd := &types.StreamDict{
+		Dict: types.Dict(
+			map[string]types.Object{
+				"Type":             types.Name("XObject"),
+				"Subtype":          types.Name("Image"),
+				"Width":            types.Integer(w),
+				"Height":           types.Integer(h),
+				"BitsPerComponent": types.Integer(bpc),
+				"ColorSpace":       types.Name(cs),
+			},
+		),
+		Content:        buf,
+		FilterPipeline: []types.PDFFilter{{Name: filter.Flate, DecodeParms: nil}},
+	}
+
+	sd.InsertName("Filter", filter.Flate)
 
 	if softMaskIndRef != nil {
 		sd.Insert("SMask", *softMaskIndRef)
