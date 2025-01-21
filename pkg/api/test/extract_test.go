@@ -318,3 +318,29 @@ func TestExtractMetadataLowLevel(t *testing.T) {
 			md.ObjNr, md.ParentObjNr, md.ParentType, string(bb))
 	}
 }
+
+func TestImageObjNrsDuplicateImage(t *testing.T) {
+	inFile := filepath.Join(inDir, "duplicate-images.pdf")
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx.Conf.OptimizeResourceDicts = true
+	if err := api.OptimizeContext(ctx); err != nil {
+		t.Fatal(err)
+	}
+	objNrExpected := 5
+	rNameExpected := "Im0"
+	objsPg1 := pdfcpu.ImageObjNrs(ctx, 1)
+	objsPg2 := pdfcpu.ImageObjNrs(ctx, 2)
+	if len(objsPg1) != 1 || len(objsPg2) != 1 {
+		t.Errorf("expected one image object on both page one and two, got %d %d", len(objsPg1), len(objsPg2))
+	}
+	imageObj := ctx.Optimize.ImageObjects[objNrExpected]
+	if imageObj.ResourceNames[0] != rNameExpected || imageObj.ResourceNames[1] != rNameExpected {
+		t.Errorf("expected image resource names for both pages, but got '%s' '%s'", imageObj.ResourceNames[0], imageObj.ResourceNames[1])
+	}
+	if len(ctx.Optimize.DuplicateImages) != 1 {
+		t.Errorf("expected one image duplicate image but got %d", len(ctx.Optimize.DuplicateImages))
+	}
+}
