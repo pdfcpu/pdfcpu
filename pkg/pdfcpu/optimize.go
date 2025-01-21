@@ -450,7 +450,7 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 	// Process image dict, check if this is a duplicate.
 	for imageObjNr, imageObject := range ctx.Optimize.ImageObjects {
 
-		if imageObjNr == objNr {
+		if imageObjNr != objNr {
 			continue
 		}
 
