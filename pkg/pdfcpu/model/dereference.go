@@ -396,12 +396,12 @@ func (xRefTable *XRefTable) dereferenceDestArray(o types.Object) (types.Array, e
 		}
 		arr, ok := o1.(types.Array)
 		if !ok {
-			errors.Errorf("pdfcpu: corrupted dest array:\n%s\n", o)
+			errors.Errorf("pdfcpu: invalid dest array:\n%s\n", o)
 		}
 		return arr, nil
 	}
 
-	return nil, errors.Errorf("pdfcpu: corrupted dest array:\n%s\n", o)
+	return nil, errors.Errorf("pdfcpu: invalid dest array:\n%s\n", o)
 }
 
 // DereferenceDestArray resolves the destination for key.
@@ -416,7 +416,7 @@ func (xRefTable *XRefTable) DereferenceDestArray(key string) (types.Array, error
 		return xRefTable.dereferenceDestArray(o)
 	}
 
-	return nil, errors.Errorf("pdfcpu: corrupted named destination for: %s", key)
+	return nil, errors.Errorf("pdfcpu: invalid named destination for: %s", key)
 }
 
 // DereferenceDictEntry returns a dereferenced dict entry.

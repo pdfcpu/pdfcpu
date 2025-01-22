@@ -211,7 +211,7 @@ func offsetLastXRefSection(ctx *model.Context, skip int64) (*int64, error) {
 		p = p[:posEOF]
 		offset, err = strconv.ParseInt(strings.TrimSpace(string(p)), 10, 64)
 		if err != nil {
-			return nil, errors.New("pdfcpu: corrupted last xref section")
+			return nil, errors.New("pdfcpu: invalid last xref section")
 		}
 		if offset >= ctx.Read.FileSize {
 			offset = 0
@@ -2971,7 +2971,7 @@ func handlePermissions(ctx *model.Context) error {
 	}
 
 	if !ok {
-		return errors.New("pdfcpu: corrupted permissions after upw ok")
+		return errors.New("pdfcpu: invalid permissions after upw ok")
 	}
 
 	if ctx.OwnerPW == "" && ctx.UserPW == "" {
@@ -3018,7 +3018,7 @@ func setupEncryptionKey(ctx *model.Context, d types.Dict) (err error) {
 			return err
 		}
 		if !ok {
-			return errors.New("pdfcpu: corrupted permissions after opw ok")
+			return errors.New("pdfcpu: invalid permissions after opw ok")
 		}
 		return nil
 	}

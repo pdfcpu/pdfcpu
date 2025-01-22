@@ -74,7 +74,7 @@ func fileSpecStreamDict(xRefTable *XRefTable, d types.Dict) (*types.StreamDict, 
 	}
 
 	d, err := xRefTable.DereferenceDict(o)
-	if err != nil || o == nil {
+	if err != nil || d == nil {
 		return nil, err
 	}
 

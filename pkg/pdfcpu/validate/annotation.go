@@ -295,26 +295,26 @@ func validateAnnotationDictText(xRefTable *model.XRefTable, d types.Dict, dictNa
 	return nil
 }
 
-func validateActionOrDestination(xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) error {
+func validateActionOrDestination(xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) (string, error) {
 
 	// The action that shall be performed when this item is activated.
 	d1, err := validateDictEntry(xRefTable, d, dictName, "A", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if d1 != nil {
-		return validateActionDict(xRefTable, d1)
+		return "", validateActionDict(xRefTable, d1)
 	}
 
 	// A destination that shall be displayed when this item is activated.
 	obj, err := validateEntry(xRefTable, d, dictName, "Dest", OPTIONAL, sinceVersion)
 	if err != nil || obj == nil {
-		return err
+		return "", err
 	}
 
 	name, err := validateDestination(xRefTable, obj, false)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if len(name) > 0 && xRefTable.IsMerging() {
@@ -322,7 +322,7 @@ func validateActionOrDestination(xRefTable *model.XRefTable, d types.Dict, dictN
 		nm.Add(name, d)
 	}
 
-	return nil
+	return name, nil
 }
 
 func validateURIActionDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
@@ -354,7 +354,7 @@ func validateAnnotationDictLink(xRefTable *model.XRefTable, d types.Dict, dictNa
 	// see 12.5.6.5
 
 	// A or Dest, required either or
-	err := validateActionOrDestination(xRefTable, d, dictName, model.V11)
+	_, err := validateActionOrDestination(xRefTable, d, dictName, model.V11)
 	if err != nil {
 		return err
 	}
@@ -995,7 +995,7 @@ func validateAnnotationDictWidget(xRefTable *model.XRefTable, d types.Dict, dict
 	// BS, optional, border style dict, since V1.2
 	// A border style dictionary specifying the width and dash pattern
 	// that shall be used in drawing the annotation’s border.
-	validateBorderStyleDict(xRefTable, d, dictName, "BS", OPTIONAL, model.V12)
+	err = validateBorderStyleDict(xRefTable, d, dictName, "BS", OPTIONAL, model.V12)
 	if err != nil {
 		return err
 	}
@@ -1813,7 +1813,7 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 	for i, v := range a {
 
 		if hasTrapNet {
-			return errors.New("pdfcpu: validatePageAnnotations: corrupted page annotation list, \"TrapNet\" has to be the last entry")
+			return errors.New("pdfcpu: validatePageAnnotations: invalid page annotation list, \"TrapNet\" has to be the last entry")
 		}
 
 		var (

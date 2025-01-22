@@ -32,9 +32,9 @@ import (
 )
 
 var (
-	errNoBookmarks        = errors.New("pdfcpu: no bookmarks available")
-	errCorruptedBookmarks = errors.New("pdfcpu: corrupt bookmark")
-	errExistingBookmarks  = errors.New("pdfcpu: existing bookmarks")
+	errNoBookmarks       = errors.New("pdfcpu: no bookmarks available")
+	errInvalidBookmark   = errors.New("pdfcpu: invalid bookmark")
+	errExistingBookmarks = errors.New("pdfcpu: existing bookmarks")
 )
 
 type Header struct {
@@ -392,11 +392,11 @@ func createOutlineItemDict(ctx *model.Context, bms []Bookmark, parent *types.Ind
 	for i, bm := range bms {
 
 		if i == 0 && parentPageNr != nil && bm.PageFrom < *parentPageNr {
-			return nil, nil, 0, 0, errCorruptedBookmarks
+			return nil, nil, 0, 0, errInvalidBookmark
 		}
 
 		if i > 0 && bm.PageFrom < bms[i-1].PageFrom {
-			return nil, nil, 0, 0, errCorruptedBookmarks
+			return nil, nil, 0, 0, errInvalidBookmark
 		}
 
 		total++

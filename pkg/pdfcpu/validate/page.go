@@ -1169,7 +1169,7 @@ func validatePages(xRefTable *model.XRefTable, rootDict types.Dict) (types.Dict,
 	}
 
 	if pc != xRefTable.PageCount {
-		return nil, errors.New("pdfcpu: validatePages: page tree corrupted")
+		return nil, errors.New("pdfcpu: validatePages: page tree invalid")
 	}
 
 	return pageRoot, err

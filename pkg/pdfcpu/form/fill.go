@@ -305,7 +305,7 @@ func imageBox(s, src, url string) (*primitives.ImageBox, string, error) {
 
 	s = s[4:]
 	if s[0] != '(' || s[len(s)-1] != ')' {
-		return nil, "", errors.Errorf("pdfcpu: parsing cvs fieldNames: corrupted @img: <%s>", s)
+		return nil, "", errors.Errorf("pdfcpu: parsing cvs fieldNames: invalid @img: <%s>", s)
 	}
 
 	s = s[1 : len(s)-1]
@@ -322,7 +322,7 @@ func imageBox(s, src, url string) (*primitives.ImageBox, string, error) {
 	for _, s := range ss {
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
-			return nil, "", errors.Errorf("pdfcpu: parsing cvs fieldNames: corrupted @img: <%s>", s)
+			return nil, "", errors.Errorf("pdfcpu: parsing cvs fieldNames: invalid @img: <%s>", s)
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
