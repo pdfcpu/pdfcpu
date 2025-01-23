@@ -138,13 +138,29 @@ func skipTJ(l *string) error {
 
 func skipBI(l *string, prn PageResourceNames) error {
 	s := *l
+	//fmt.Printf("skipBI <%s>\n", s)
 	for {
 		s = strings.TrimLeftFunc(s, whitespaceOrEOL)
-		if strings.HasPrefix(s, "EI") && whitespaceOrEOL(rune(s[2])) {
+		if strings.HasPrefix(s, "ID") && whitespaceOrEOL(rune(s[2])) {
 			s = s[2:]
-			break
+			i := strings.Index(s, "EI")
+			if i < 0 {
+				return errBIExpressionCorrupt
+			}
+			if i == len(s)-2 {
+				break
+			}
+			i += 2
+			if whitespaceOrEOL(rune(s[i])) {
+				s = s[i+1:]
+				break
+			} else {
+				return errBIExpressionCorrupt
+			}
 		}
-		// TODO Check len(s) > 0
+		if len(s) == 0 {
+			return errBIExpressionCorrupt
+		}
 		if s[0] == '/' {
 			s = s[1:]
 			i, _ := positionToNextWhitespaceOrChar(s, "/")
@@ -228,12 +244,12 @@ func positionToNextContentToken(line *string, prn PageResourceNames) (bool, erro
 	}
 }
 
-func nextContentToken(line *string, prn PageResourceNames) (string, error) {
+func nextContentToken(pre string, line *string, prn PageResourceNames) (string, error) {
 	// A token is either a name or some chunk terminated by white space or one of /, (, [
 	if noBuf(line) {
 		return "", nil
 	}
-	l := *line
+	l := pre + *line
 	t := ""
 
 	//log.Parse.Printf("nextContentToken: start buf= <%s>\n", *line)
@@ -286,82 +302,135 @@ func nextContentToken(line *string, prn PageResourceNames) (string, error) {
 	return t, nil
 }
 
-func resourceNameAtPos1(s, name string, prn PageResourceNames) bool {
-	switch s {
-	case "cs", "CS":
+func resourceNameAtPos1(s, name string, prn PageResourceNames) (string, bool) {
+	if strings.HasPrefix(s, "cs") || strings.HasPrefix(s, "CS") {
 		if !types.MemberOf(name, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK", "Pattern"}) {
 			prn["ColorSpace"][name] = true
 			if log.ParseEnabled() {
 				log.Parse.Printf("ColorSpace[%s]\n", name)
 			}
 		}
-		return true
+		return s[2:], true
+	}
 
-	case "gs":
+	if strings.HasPrefix(s, "gs") {
 		prn["ExtGState"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("ExtGState[%s]\n", name)
 		}
-		return true
+		return s[2:], true
+	}
 
-	case "Do":
+	if strings.HasPrefix(s, "Do") {
 		prn["XObject"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("XObject[%s]\n", name)
 		}
-		return true
+		return s[2:], true
+	}
 
-	case "sh":
+	if strings.HasPrefix(s, "sh") {
 		prn["Shading"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("Shading[%s]\n", name)
 		}
-		return true
+		return s[2:], true
+	}
 
-	case "scn", "SCN":
+	if strings.HasPrefix(s, "scn") || strings.HasPrefix(s, "SCN") {
 		prn["Pattern"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("Pattern[%s]\n", name)
 		}
-		return true
-
-	case "ri", "BMC", "MP":
-		return true
-
+		return s[3:], true
 	}
 
-	return false
+	if strings.HasPrefix(s, "ri") || strings.HasPrefix(s, "MP") {
+		return s[2:], true
+	}
+
+	if strings.HasPrefix(s, "BMC") {
+		return s[3:], true
+	}
+
+	// switch s {
+	// case "cs", "CS":
+	// 	if !types.MemberOf(name, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK", "Pattern"}) {
+	// 		prn["ColorSpace"][name] = true
+	// 		if log.ParseEnabled() {
+	// 			log.Parse.Printf("ColorSpace[%s]\n", name)
+	// 		}
+	// 	}
+	// 	return "", true
+
+	// case "gs":
+	// 	prn["ExtGState"][name] = true
+	// 	if log.ParseEnabled() {
+	// 		log.Parse.Printf("ExtGState[%s]\n", name)
+	// 	}
+	// 	return "", true
+
+	// case "Do":
+	// 	prn["XObject"][name] = true
+	// 	if log.ParseEnabled() {
+	// 		log.Parse.Printf("XObject[%s]\n", name)
+	// 	}
+	// 	return "", true
+
+	// case "sh":
+	// 	prn["Shading"][name] = true
+	// 	if log.ParseEnabled() {
+	// 		log.Parse.Printf("Shading[%s]\n", name)
+	// 	}
+	// 	return "", true
+
+	// case "scn", "SCN":
+	// 	prn["Pattern"][name] = true
+	// 	if log.ParseEnabled() {
+	// 		log.Parse.Printf("Pattern[%s]\n", name)
+	// 	}
+	// 	return "", true
+
+	// case "ri", "BMC", "MP":
+	// 	return "", true
+
+	// }
+
+	return "", false
 }
 
-func resourceNameAtPos2(s, name string, prn PageResourceNames) bool {
+func resourceNameAtPos2(s, name string, prn PageResourceNames) (string, bool) {
 	switch s {
 	case "Tf":
 		prn["Font"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("Font[%s]\n", name)
 		}
-		return true
+		return "", true
 	case "BDC", "DP":
 		prn["Properties"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("Properties[%s]\n", name)
 		}
-		return true
+		return "", true
 	}
-	return false
+	return "", false
 }
 
 func parseContent(s string) (PageResourceNames, error) {
 	var (
+		pre  string
 		name string
 		n    bool
+		ok   bool
 	)
 	prn := NewPageResourceNames()
 
 	//fmt.Printf("parseContent:\n%s\n", hex.Dump([]byte(s)))
 
 	for pos := 0; ; {
-		t, err := nextContentToken(&s, prn)
+		t, err := nextContentToken(pre, &s, prn)
+		pre = ""
 		if log.ParseEnabled() {
 			log.Parse.Printf("t = <%s>\n", t)
 		}
@@ -395,13 +464,13 @@ func parseContent(s string) (PageResourceNames, error) {
 
 		pos++
 		if pos == 1 {
-			if resourceNameAtPos1(t, name, prn) {
+			if pre, ok = resourceNameAtPos1(t, name, prn); ok {
 				n = false
 			}
 			continue
 		}
 		if pos == 2 {
-			if resourceNameAtPos2(t, name, prn) {
+			if pre, ok = resourceNameAtPos2(t, name, prn); ok {
 				n = false
 			}
 			continue

@@ -1462,7 +1462,8 @@ func OptimizeXRefTable(ctx *model.Context) error {
 		return err
 	}
 
-	if (ctx.Cmd == model.OPTIMIZE ||
+	if (ctx.Cmd == model.VALIDATE ||
+		ctx.Cmd == model.OPTIMIZE ||
 		ctx.Cmd == model.LISTIMAGES ||
 		ctx.Cmd == model.EXTRACTIMAGES ||
 		ctx.Cmd == model.UPDATEIMAGES) &&
