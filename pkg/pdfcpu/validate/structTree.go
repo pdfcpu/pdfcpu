@@ -461,7 +461,11 @@ func validateStructElementDictPart2(xRefTable *model.XRefTable, d types.Dict, di
 	}
 
 	// ActualText: optional, text string, since 1.4
-	_, err = validateStringEntry(xRefTable, d, dictName, "ActualText", OPTIONAL, model.V14, nil)
+	sinceVersion = model.V14
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
+	_, err = validateStringEntry(xRefTable, d, dictName, "ActualText", OPTIONAL, sinceVersion, nil)
 
 	return err
 }
