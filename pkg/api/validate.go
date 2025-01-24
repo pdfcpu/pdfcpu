@@ -58,7 +58,7 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) error {
 	}
 
 	if err == nil {
-		if log.StatsEnabled() || conf.Optimize {
+		if conf.Optimize {
 			if log.CLIEnabled() {
 				log.CLI.Println("optimizing...")
 			}
