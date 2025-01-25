@@ -162,8 +162,12 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (bool, error) {
 	// Document info object is optional.
 	d, err := xRefTable.DereferenceDict(obj)
-	if err != nil || d == nil {
+	if err != nil {
 		return false, err
+	}
+	if d == nil {
+		xRefTable.Info = nil
+		return false, nil
 	}
 
 	hasModDate := false
