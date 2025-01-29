@@ -302,7 +302,7 @@ func nextContentToken(pre string, line *string, prn PageResourceNames) (string, 
 	return t, nil
 }
 
-func resourceNameAtPos1(s, name string, prn PageResourceNames) (string, bool) {
+func colorSpace(s, name string, prn PageResourceNames) bool {
 	if strings.HasPrefix(s, "cs") || strings.HasPrefix(s, "CS") {
 		if !types.MemberOf(name, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK", "Pattern"}) {
 			prn["ColorSpace"][name] = true
@@ -310,6 +310,13 @@ func resourceNameAtPos1(s, name string, prn PageResourceNames) (string, bool) {
 				log.Parse.Printf("ColorSpace[%s]\n", name)
 			}
 		}
+		return true
+	}
+	return false
+}
+
+func resourceNameAtPos1(s, name string, prn PageResourceNames) (string, bool) {
+	if colorSpace(s, name, prn) {
 		return s[2:], true
 	}
 
@@ -352,49 +359,6 @@ func resourceNameAtPos1(s, name string, prn PageResourceNames) (string, bool) {
 	if strings.HasPrefix(s, "BMC") {
 		return s[3:], true
 	}
-
-	// switch s {
-	// case "cs", "CS":
-	// 	if !types.MemberOf(name, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK", "Pattern"}) {
-	// 		prn["ColorSpace"][name] = true
-	// 		if log.ParseEnabled() {
-	// 			log.Parse.Printf("ColorSpace[%s]\n", name)
-	// 		}
-	// 	}
-	// 	return "", true
-
-	// case "gs":
-	// 	prn["ExtGState"][name] = true
-	// 	if log.ParseEnabled() {
-	// 		log.Parse.Printf("ExtGState[%s]\n", name)
-	// 	}
-	// 	return "", true
-
-	// case "Do":
-	// 	prn["XObject"][name] = true
-	// 	if log.ParseEnabled() {
-	// 		log.Parse.Printf("XObject[%s]\n", name)
-	// 	}
-	// 	return "", true
-
-	// case "sh":
-	// 	prn["Shading"][name] = true
-	// 	if log.ParseEnabled() {
-	// 		log.Parse.Printf("Shading[%s]\n", name)
-	// 	}
-	// 	return "", true
-
-	// case "scn", "SCN":
-	// 	prn["Pattern"][name] = true
-	// 	if log.ParseEnabled() {
-	// 		log.Parse.Printf("Pattern[%s]\n", name)
-	// 	}
-	// 	return "", true
-
-	// case "ri", "BMC", "MP":
-	// 	return "", true
-
-	// }
 
 	return "", false
 }

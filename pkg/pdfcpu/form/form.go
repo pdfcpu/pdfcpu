@@ -1425,7 +1425,7 @@ func resetTx(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 		ff := d.IntEntry("Ff")
 		multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
 		comb := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldComb) > 0
-		err = primitives.EnsureTextFieldAP(ctx, d, s, multiLine, comb, fonts)
+		err = primitives.EnsureTextFieldAP(ctx, d, s, multiLine, comb, 0, fonts)
 	}
 
 	return err

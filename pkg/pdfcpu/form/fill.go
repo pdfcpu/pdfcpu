@@ -988,8 +988,16 @@ func fillTextField(
 
 	comb := ff != nil && primitives.FieldFlags(*ff)&primitives.FieldComb > 0
 
+	maxLen := 0
+
 	kids := d.ArrayEntry("Kids")
 	if len(kids) > 0 {
+
+		i := d.IntEntry("MaxLen")
+		if i != nil {
+			maxLen = *i
+		}
+
 		for _, o := range kids {
 
 			d, err := ctx.DereferenceDict(o)
@@ -997,7 +1005,7 @@ func fillTextField(
 				return err
 			}
 
-			if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, fonts); err != nil {
+			if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, maxLen, fonts); err != nil {
 				return err
 			}
 
@@ -1007,7 +1015,7 @@ func fillTextField(
 		return nil
 	}
 
-	if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, fonts); err != nil {
+	if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, maxLen, fonts); err != nil {
 		return err
 	}
 
