@@ -424,7 +424,7 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pag
 }
 
 // handleDuplicateImageObject returns nil or the object number of the registered image if it matches this image.
-func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict, resourceName string, objNr, pageNr int) (*int, error) {
+func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict, resourceName string, objNr, pageNr int) (*int, bool, error) {
 	// Get the set of image object numbers for pageNr.
 	pageImages := ctx.Optimize.PageImages[pageNr]
 
@@ -444,14 +444,16 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 		ctx.Optimize.ImageObjects[newObjNr].AddResourceName(pageNr, resourceName)
 
 		// Return the imageObjectNumber that will be used instead of objNr.
-		return &newObjNr, nil
+		return &newObjNr, false, nil
 	}
 
 	// Process image dict, check if this is a duplicate.
 	for imageObjNr, imageObject := range ctx.Optimize.ImageObjects {
 
 		if imageObjNr == objNr {
-			continue
+			// Add the resource name of this duplicate image to the list of registered resource names.
+			imageObject.AddResourceName(pageNr, resourceName)
+			return nil, true, nil
 		}
 
 		if log.OptimizeEnabled() {
@@ -461,7 +463,7 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 		// Check if the input imageDict matches the imageDict of this imageObject.
 		ok, err := model.EqualStreamDicts(imageObject.ImageDict, imageDict, ctx.XRefTable)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		if !ok {
@@ -485,10 +487,10 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 		ctx.Optimize.DuplicateImages[objNr] = &model.DuplicateImageObject{ImageDict: imageDict, NewObjNr: imageObjNr}
 
 		// Return the imageObjectNumber that will be used instead of objNr.
-		return &imageObjNr, nil
+		return &imageObjNr, false, nil
 	}
 
-	return nil, nil
+	return nil, false, nil
 }
 
 func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rNamePrefix, rName string, rDict types.Dict, objNr, pageNr int, pageImages types.IntSet) error {
@@ -499,7 +501,7 @@ func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rNamePrefix
 	}
 
 	// Check if image is a duplicate and if so return the object number of the original.
-	originalObjNr, err := handleDuplicateImageObject(ctx, osd, qualifiedRName, objNr, pageNr)
+	originalObjNr, alreadyDupl, err := handleDuplicateImageObject(ctx, osd, qualifiedRName, objNr, pageNr)
 	if err != nil {
 		return err
 	}
@@ -516,12 +518,14 @@ func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rNamePrefix
 		return nil
 	}
 
-	// Register new image dict.
-	ctx.Optimize.ImageObjects[objNr] =
-		&model.ImageObject{
-			ResourceNames: map[int]string{pageNr: qualifiedRName},
-			ImageDict:     osd,
-		}
+	if !alreadyDupl {
+		// Register new image dict.
+		ctx.Optimize.ImageObjects[objNr] =
+			&model.ImageObject{
+				ResourceNames: map[int]string{pageNr: qualifiedRName},
+				ImageDict:     osd,
+			}
+	}
 
 	pageImages[objNr] = true
 	return nil
