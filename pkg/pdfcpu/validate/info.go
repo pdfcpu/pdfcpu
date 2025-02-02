@@ -149,7 +149,7 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 		err = validateInfoDictTrapped(xRefTable, v)
 
 	case "AAPL:Keywords":
-		xRefTable.AAPLExtensions = true
+		xRefTable.CustomExtensions = true
 
 	// text string, optional
 	default:

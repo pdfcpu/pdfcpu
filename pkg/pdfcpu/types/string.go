@@ -27,6 +27,17 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+func RemoveControlChars(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '\n', '\r', '\t', '\b', '\f':
+			return -1
+		default:
+			return r
+		}
+	}, s)
+}
+
 // NewStringSet returns a new StringSet for slice.
 func NewStringSet(slice []string) StringSet {
 	strSet := StringSet{}

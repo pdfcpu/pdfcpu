@@ -403,14 +403,9 @@ func validateFormFieldDict(xRefTable *model.XRefTable, ir types.IndirectRef, inF
 	return validateFormFieldParts(xRefTable, d, inFieldType, requiresDA)
 }
 
-func validateFormFields(xRefTable *model.XRefTable, o types.Object, requiresDA bool) error {
+func validateFormFields(xRefTable *model.XRefTable, arr types.Array, requiresDA bool) error {
 
-	a, err := xRefTable.DereferenceArray(o)
-	if err != nil || len(a) == 0 {
-		return err
-	}
-
-	for _, value := range a {
+	for _, value := range arr {
 
 		ir, ok := value.(types.IndirectRef)
 		if !ok {
@@ -433,7 +428,7 @@ func validateFormFields(xRefTable *model.XRefTable, o types.Object, requiresDA b
 	return nil
 }
 
-func validateFormCO(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version, requiresDA bool) error {
+func validateFormCO(xRefTable *model.XRefTable, arr types.Array, sinceVersion model.Version, requiresDA bool) error {
 
 	// see 12.6.3 Trigger Events
 	// Array of indRefs to field dicts with calculation actions, since V1.3
@@ -444,7 +439,7 @@ func validateFormCO(xRefTable *model.XRefTable, o types.Object, sinceVersion mod
 		return err
 	}
 
-	return validateFormFields(xRefTable, o, requiresDA)
+	return validateFormFields(xRefTable, arr, requiresDA)
 }
 
 func validateFormXFA(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
@@ -518,7 +513,12 @@ func validateFormEntryCO(xRefTable *model.XRefTable, d types.Dict, sinceVersion 
 		return nil
 	}
 
-	return validateFormCO(xRefTable, o, sinceVersion, requiresDA)
+	arr, err := xRefTable.DereferenceArray(o)
+	if err != nil || len(arr) == 0 {
+		return err
+	}
+
+	return validateFormCO(xRefTable, arr, sinceVersion, requiresDA)
 }
 
 func validateFormEntryDR(xRefTable *model.XRefTable, d types.Dict) error {
@@ -555,7 +555,7 @@ func validateFormEntries(xRefTable *model.XRefTable, d types.Dict, dictName stri
 		xRefTable.AppendOnly = i&2 > 0
 	}
 
-	// CO: arra
+	// CO: array
 	err = validateFormEntryCO(xRefTable, d, model.V13, requiresDA)
 	if err != nil {
 		return err
@@ -599,6 +599,16 @@ func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool
 		return nil
 	}
 
+	arr, err := xRefTable.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+	if len(arr) == 0 {
+		// Fix empty AcroForm dict.
+		rootDict.Delete("AcroForm")
+		return nil
+	}
+
 	xRefTable.Form = d
 
 	dictName := "acroFormDict"
@@ -619,7 +629,7 @@ func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool
 
 	requiresDA := da == nil || len(*da) == 0
 
-	err = validateFormFields(xRefTable, o, requiresDA)
+	err = validateFormFields(xRefTable, arr, requiresDA)
 	if err != nil {
 		return err
 	}

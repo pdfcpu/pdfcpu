@@ -1001,7 +1001,7 @@ func validateExtGStateDict(xRefTable *model.XRefTable, o types.Object) error {
 		return err
 	}
 	if o != nil {
-		xRefTable.AAPLExtensions = true
+		xRefTable.CustomExtensions = true
 	}
 
 	return nil

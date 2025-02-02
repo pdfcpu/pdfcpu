@@ -79,7 +79,7 @@ func XRefTable(ctx *model.Context) error {
 
 	xRefTable.Valid = true
 
-	if xRefTable.AAPLExtensions && log.CLIEnabled() {
+	if xRefTable.CustomExtensions && log.CLIEnabled() {
 		log.CLI.Println("Note: custom extensions will not be validated.")
 	}
 

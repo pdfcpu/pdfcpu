@@ -71,6 +71,7 @@ const (
 	AnnWatermark
 	Ann3D
 	AnnRedact
+	AnnCustom
 )
 
 var AnnotTypes = map[string]AnnotationType{
@@ -100,6 +101,7 @@ var AnnotTypes = map[string]AnnotationType{
 	"Watermark":      AnnWatermark,
 	"3D":             Ann3D,
 	"Redact":         AnnRedact,
+	"Custom":         AnnCustom,
 }
 
 // AnnotTypeStrings manages string representations for annotation types.
@@ -130,6 +132,7 @@ var AnnotTypeStrings = map[AnnotationType]string{
 	AnnWatermark:      "Watermark",
 	Ann3D:             "3D",
 	AnnRedact:         "Redact",
+	AnnCustom:         "Custom",
 }
 
 // BorderStyle (see table 168)
@@ -235,11 +238,13 @@ type AnnotationRenderer interface {
 	RectString() string
 	ID() string
 	ContentString() string
+	CustomTypeString() string
 }
 
 // Annotation represents a PDF annotation.
 type Annotation struct {
 	SubType          AnnotationType     // The type of annotation that this dictionary describes.
+	CustomSubType    string             // Out of spec annot type.
 	Rect             types.Rectangle    // The annotation rectangle, defining the location of the annotation on the page in default user space units.
 	Contents         string             // Text that shall be displayed for the annotation.
 	NM               string             // (Since V1.4) The annotation name, a text string uniquely identifying it among all the annotations on its page.
@@ -257,6 +262,7 @@ type Annotation struct {
 // NewAnnotation returns a new annotation.
 func NewAnnotation(
 	typ AnnotationType,
+	customTyp string,
 	rect types.Rectangle,
 	contents, id string,
 	modDate string,
@@ -268,6 +274,7 @@ func NewAnnotation(
 
 	return Annotation{
 		SubType:          typ,
+		CustomSubType:    customTyp,
 		Rect:             rect,
 		Contents:         contents,
 		NM:               id,
@@ -292,7 +299,15 @@ func NewAnnotationForRawType(
 	borderRadX float64,
 	borderRadY float64,
 	borderWidth float64) Annotation {
-	return NewAnnotation(AnnotTypes[typ], rect, contents, id, modDate, f, col, borderRadX, borderRadY, borderWidth)
+
+	annType, ok := AnnotTypes[typ]
+	if !ok {
+		annType = AnnotTypes["Custom"]
+	} else {
+		typ = ""
+	}
+
+	return NewAnnotation(annType, typ, rect, contents, id, modDate, f, col, borderRadX, borderRadY, borderWidth)
 }
 
 // ID returns the annotation id.
@@ -303,6 +318,11 @@ func (ann Annotation) ID() string {
 // ContentString returns a string representation of ann's contents.
 func (ann Annotation) ContentString() string {
 	return ann.Contents
+}
+
+// ContentString returns a string representation of ann's contents.
+func (ann Annotation) CustomTypeString() string {
+	return ann.CustomSubType
 }
 
 // RectString returns ann's positioning rectangle.
@@ -389,7 +409,7 @@ func NewPopupAnnotation(
 	parentIndRef *types.IndirectRef,
 	displayOpen bool) PopupAnnotation {
 
-	ann := NewAnnotation(AnnPopup, rect, contents, id, modDate, f, col, borderRadX, borderRadY, borderWidth)
+	ann := NewAnnotation(AnnPopup, "", rect, contents, id, modDate, f, col, borderRadX, borderRadY, borderWidth)
 
 	return PopupAnnotation{
 		Annotation:   ann,
@@ -448,7 +468,7 @@ func NewLinkAnnotation(
 	borderWidth float64,
 	borderStyle BorderStyle) LinkAnnotation {
 
-	ann := NewAnnotation(AnnLink, rect, contents, id, modDate, f, borderCol, 0, 0, 0)
+	ann := NewAnnotation(AnnLink, "", rect, contents, id, modDate, f, borderCol, 0, 0, 0)
 
 	return LinkAnnotation{
 		Annotation:  ann,
@@ -553,7 +573,7 @@ func NewMarkupAnnotation(
 	ca *float64,
 	rc, subject string) MarkupAnnotation {
 
-	ann := NewAnnotation(subType, rect, contents, id, modDate, f, col, borderRadX, borderRadY, borderWidth)
+	ann := NewAnnotation(subType, "", rect, contents, id, modDate, f, col, borderRadX, borderRadY, borderWidth)
 
 	return MarkupAnnotation{
 		Annotation:   ann,

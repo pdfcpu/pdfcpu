@@ -29,42 +29,6 @@ import (
 
 var errInvalidPageAnnotArray = errors.New("pdfcpu: validatePageAnnotations: page annotation array without indirect references.")
 
-func validateAAPLAKExtrasDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
-
-	// No documentation for this PDF-Extension - purely speculative implementation.
-
-	d1, err := validateDictEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
-	if err != nil || d1 == nil {
-		return err
-	}
-
-	// We have identified modifications by Apple.
-
-	xRefTable.AAPLExtensions = true
-
-	// // Validation deactivated
-	// dictName = "AAPLAKExtrasDict"
-
-	// // AAPL:AKAnnotationObject, string
-	// _, err = validateStringEntry(xRefTable, d1, dictName, "AAPL:AKAnnotationObject", OPTIONAL, sinceVersion, nil)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// // AAPL:AKPDFAnnotationDictionary, annotationDict
-	// ad, err := validateDictEntry(xRefTable, d1, dictName, "AAPL:AKPDFAnnotationDictionary", OPTIONAL, sinceVersion, nil)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// _, err = validateAnnotationDict(xRefTable, ad)
-	// if err != nil {
-	// 	return err
-	// }
-
-	return nil
-}
-
 func validateBorderEffectDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
 
 	// see 12.5.4
@@ -1765,15 +1729,9 @@ func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, di
 		}
 	}
 
-	return errors.Errorf("validateAnnotationDictConcrete: unsupported annotation subtype:%s\n", subtype)
-}
+	xRefTable.CustomExtensions = true
 
-func validateAnnotationDictSpecial(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
-
-	// AAPL:AKExtras
-	// No documentation for this PDF-Extension - this is a speculative implementation.
-
-	return validateAAPLAKExtrasDictEntry(xRefTable, d, dictName, "AAPL:AKExtras", OPTIONAL, model.V10)
+	return nil
 }
 
 func validateAnnotationDict(xRefTable *model.XRefTable, d types.Dict) (isTrapNet bool, err error) {
@@ -1790,10 +1748,10 @@ func validateAnnotationDict(xRefTable *model.XRefTable, d types.Dict) (isTrapNet
 		return false, err
 	}
 
-	err = validateAnnotationDictSpecial(xRefTable, d, dictName)
-	if err != nil {
-		return false, err
-	}
+	// err = validateAnnotationDictSpecial(xRefTable, d, dictName)
+	// if err != nil {
+	// 	return false, err
+	// }
 
 	return *subtype == "TrapNet", nil
 }

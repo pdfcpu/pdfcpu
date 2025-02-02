@@ -156,8 +156,8 @@ type XRefTable struct {
 	// Statistics
 	Stats PDFStats
 
-	Tagged         bool // File is using tags. This is important for ???
-	AAPLExtensions bool // File is using Apple extensions for annotations and keywords.
+	Tagged           bool // File is using tags. This is important for ???
+	CustomExtensions bool // File is using custom extensions for annotations and/or keywords.
 
 	// Validation
 	CurPage        int                       // current page during validation
