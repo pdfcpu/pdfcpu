@@ -515,9 +515,9 @@ func insertKey(d types.Dict, key string, val types.Object, relaxed bool) error {
 
 		// was: for now we ignore duplicate keys - config flag ?
 
-		if !relaxed {
-			return errDictionaryDuplicateKey
-		}
+		// if !relaxed {
+		// 	return errDictionaryDuplicateKey
+		// }
 
 		d[key] = val
 		ShowDigestedSpecViolation(fmt.Sprintf("duplicate key \"%s\"", key))

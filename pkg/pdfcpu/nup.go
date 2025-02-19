@@ -477,7 +477,7 @@ func NewNUpPageForImage(xRefTable *model.XRefTable, fileName string, parentIndRe
 	defer f.Close()
 
 	// create image dict.
-	imgIndRef, w, h, err := model.CreateImageResource(xRefTable, f, false, false)
+	imgIndRef, w, h, err := model.CreateImageResource(xRefTable, f)
 	if err != nil {
 		return nil, err
 	}
@@ -739,7 +739,7 @@ func NUpFromMultipleImages(ctx *model.Context, fileNames []string, nup *model.NU
 			return err
 		}
 
-		imgIndRef, w, h, err := model.CreateImageResource(xRefTable, f, false, false)
+		imgIndRef, w, h, err := model.CreateImageResource(xRefTable, f)
 		if err != nil {
 			return err
 		}

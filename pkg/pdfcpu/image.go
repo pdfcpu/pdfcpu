@@ -313,7 +313,7 @@ func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
 // UpdateImagesByObjNr replaces an XObject.
 func UpdateImagesByObjNr(ctx *model.Context, rd io.Reader, objNr int) error {
 
-	sd, w, h, err := model.CreateImageStreamDict(ctx.XRefTable, rd, false, false)
+	sd, w, h, err := model.CreateImageStreamDict(ctx.XRefTable, rd)
 	if err != nil {
 		return err
 	}
@@ -355,7 +355,7 @@ func isInheritedXObjectResource(inhRes types.Dict, id string) bool {
 // UpdateImagesByPageNrAndId replaces the XObject referenced by pageNr and id.
 func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id string) error {
 
-	imgIndRef, w, h, err := model.CreateImageResource(ctx.XRefTable, rd, false, false)
+	imgIndRef, w, h, err := model.CreateImageResource(ctx.XRefTable, rd)
 	if err != nil {
 		return err
 	}

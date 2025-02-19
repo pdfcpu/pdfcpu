@@ -42,6 +42,7 @@ const (
 var (
 	ErrWrongPassword         = errors.New("pdfcpu: please provide the correct password")
 	ErrCorruptHeader         = errors.New("pdfcpu: no header version available")
+	ErrMissingXRefSection    = errors.New("pdfcpu: can't detect last xref section")
 	ErrReferenceDoesNotExist = errors.New("pdfcpu: referenced object does not exist")
 
 	zero int64 = 0
@@ -114,8 +115,9 @@ func ReadWithContext(c context.Context, rs io.ReadSeeker, conf *model.Configurat
 	}
 
 	// Some PDFWriters write an incorrect Size into trailer.
-	if *ctx.XRefTable.Size != ctx.MaxObjNr+1 {
-		*ctx.XRefTable.Size = ctx.MaxObjNr + 1
+	if ctx.XRefTable.Size == nil || *ctx.XRefTable.Size != ctx.MaxObjNr+1 {
+		maxObjNr := ctx.MaxObjNr + 1
+		ctx.XRefTable.Size = &maxObjNr
 		model.ShowRepaired("trailer size")
 	}
 
@@ -178,7 +180,7 @@ func offsetLastXRefSection(ctx *model.Context, skip int64) (*int64, error) {
 
 		off, err := rs.Seek(-int64(i)*bufSize-skip, io.SeekEnd)
 		if err != nil {
-			return nil, errors.New("the file may be damaged.")
+			return nil, ErrMissingXRefSection
 		}
 
 		if log.ReadEnabled() {
@@ -1347,6 +1349,17 @@ func parseAndLoad(c context.Context, ctx *model.Context, line string, offset *in
 		return nil
 	}
 
+	d, ok := o.(types.Dict)
+	if ok && ctx.RootDict == nil {
+		if typ := d.Type(); typ != nil {
+			if *typ == "Catalog" {
+				ctx.RootDict = d
+				ctx.Root = types.NewIndirectRef(*objNr, *generation)
+				model.ShowRepaired("catalog")
+			}
+		}
+	}
+
 	*offset += int64(len(line) + ctx.Read.EolCount)
 
 	return nil
@@ -1607,7 +1620,11 @@ func readXRefTable(c context.Context, ctx *model.Context) (err error) {
 
 	offset, err := offsetLastXRefSection(ctx, 0)
 	if err != nil {
-		return
+		if err != ErrMissingXRefSection {
+			return err
+		}
+		zero := int64(0)
+		offset = &zero
 	}
 
 	ctx.Write.OffsetPrevXRef = offset

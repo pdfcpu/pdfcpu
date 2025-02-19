@@ -746,7 +746,7 @@ func createPDFResForWM(ctx *model.Context, wm *model.Watermark) error {
 }
 
 func createImageResForWM(ctx *model.Context, wm *model.Watermark) (err error) {
-	wm.Img, wm.Width, wm.Height, err = model.CreateImageResource(ctx.XRefTable, wm.Image, false, false)
+	wm.Img, wm.Width, wm.Height, err = model.CreateImageResource(ctx.XRefTable, wm.Image)
 	return err
 }
 

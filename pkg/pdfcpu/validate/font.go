@@ -208,7 +208,11 @@ func validateFontDescriptorPart2(xRefTable *model.XRefTable, d types.Dict, dictN
 		return err
 	}
 
-	_, err = validateNumberEntry(xRefTable, d, dictName, "Descent", fontDictType != "Type3", model.V10, nil)
+	required := fontDictType != "Type3"
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		required = false
+	}
+	_, err = validateNumberEntry(xRefTable, d, dictName, "Descent", required, model.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -228,7 +232,7 @@ func validateFontDescriptorPart2(xRefTable *model.XRefTable, d types.Dict, dictN
 		return err
 	}
 
-	required := fontDictType != "Type3"
+	required = fontDictType != "Type3"
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = false
 	}
