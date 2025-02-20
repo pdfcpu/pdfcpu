@@ -1168,7 +1168,7 @@ func posFloor(pos1, pos2 int) int {
 		return pos2
 	}
 	if pos1 < pos2 {
-		return pos2
+		return pos1
 	}
 	if pos2 < 0 {
 		return pos1
