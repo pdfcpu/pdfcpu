@@ -128,6 +128,16 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 		d.Delete("Contents")
 		model.ShowRepaired("page dict \"Contents\"")
 
+	case types.Dict:
+
+		if len(o) > 0 || xRefTable.ValidationMode == model.ValidationStrict {
+			return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", o)
+		}
+
+		// Digest empty dict.
+		d.Delete("Contents")
+		model.ShowRepaired("page dict \"Contents\"")
+
 	default:
 		return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", o)
 	}

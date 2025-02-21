@@ -1349,13 +1349,14 @@ func parseAndLoad(c context.Context, ctx *model.Context, line string, offset *in
 		return nil
 	}
 
-	d, ok := o.(types.Dict)
-	if ok && ctx.RootDict == nil {
-		if typ := d.Type(); typ != nil {
-			if *typ == "Catalog" {
-				ctx.RootDict = d
-				ctx.Root = types.NewIndirectRef(*objNr, *generation)
-				model.ShowRepaired("catalog")
+	if ctx.RootDict == nil {
+		if d, ok := o.(types.Dict); ok {
+			if typ := d.Type(); typ != nil {
+				if *typ == "Catalog" {
+					ctx.RootDict = d
+					ctx.Root = types.NewIndirectRef(*objNr, *generation)
+					model.ShowRepaired("catalog")
+				}
 			}
 		}
 	}
