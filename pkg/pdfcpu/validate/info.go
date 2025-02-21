@@ -205,7 +205,12 @@ func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 
 	hasModDate, err := validateDocumentInfoDict(xRefTable, *xRefTable.Info)
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode != model.ValidationRelaxed || !strings.Contains(err.Error(), "wrong type") {
+			return err
+		}
+		xRefTable.Info = nil
+		model.ShowSkipped("info dict")
+		return nil
 	}
 
 	hasPieceInfo, err := xRefTable.CatalogHasPieceInfo()
