@@ -526,7 +526,7 @@ func collectCh(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta
 	return collectListBox(xRefTable, multi, d, f, fm)
 }
 
-func collectTx(d types.Dict, f *Field, fm *FieldMeta) error {
+func collectTx(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
 	if o, found := d.Find("V"); found {
 		s1, err := types.StringOrHexLiteral(o)
 		if err != nil {
@@ -548,7 +548,11 @@ func collectTx(d types.Dict, f *Field, fm *FieldMeta) error {
 		f.V = v
 	}
 	if o, found := d.Find("DV"); found {
-		s1, err := types.StringOrHexLiteral(o)
+		o1, err := xRefTable.Dereference(o)
+		if err != nil {
+			return err
+		}
+		s1, err := types.StringOrHexLiteral(o1)
 		if err != nil {
 			return err
 		}
@@ -568,7 +572,7 @@ func collectTx(d types.Dict, f *Field, fm *FieldMeta) error {
 		fm.def = true
 		f.Dv = dv
 	}
-	df, err := extractDateFormat(d)
+	df, err := extractDateFormat(xRefTable, d)
 	if err != nil {
 		return err
 	}
@@ -637,7 +641,7 @@ func collectPageField(
 		err = collectCh(xRefTable, d, &f, fm)
 
 	case "Tx":
-		err = collectTx(d, &f, fm)
+		err = collectTx(xRefTable, d, &f, fm)
 	}
 
 	if err != nil {
@@ -1400,8 +1404,12 @@ func resetTx(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 		err error
 	)
 	if o, found := d.Find("DV"); found {
-		d["V"] = o
-		sl, _ := o.(types.StringLiteral)
+		o1, err := ctx.Dereference(o)
+		if err != nil {
+			return err
+		}
+		d["V"] = o1
+		sl, _ := o1.(types.StringLiteral)
 		s, err = types.StringLiteralToString(sl)
 		if err != nil {
 			return err

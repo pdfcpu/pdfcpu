@@ -1034,7 +1034,7 @@ func fillTx(
 	ff *int,
 	ok *bool) error {
 
-	df, err := extractDateFormat(d)
+	df, err := extractDateFormat(ctx.XRefTable, d)
 	if err != nil {
 		return err
 	}
