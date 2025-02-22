@@ -1022,7 +1022,7 @@ func fontAttrs(ctx *model.Context, fd types.Dict, fontID, text string, fonts map
 			if err != nil {
 				return "", "", "", nil, err
 			}
-			if len(prefix) == 0 && hasUTF(text) {
+			if !font.SupportedFont(name) || (len(prefix) == 0 && hasUTF(text)) {
 				// create utf8 font * save as indRef
 				fontID, name, lang, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
 				if err != nil {
