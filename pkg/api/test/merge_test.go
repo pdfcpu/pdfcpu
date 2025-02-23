@@ -64,8 +64,8 @@ func TestMergeCreateZipped(t *testing.T) {
 
 	// The actual usecase for this is the recombination of 2 PDF files representing even and odd pages of some PDF source.
 	// See #716
-	inFile2 := filepath.Join(inDir, "adobe_errata.pdf")
 	inFile1 := filepath.Join(inDir, "Acroforms2.pdf")
+	inFile2 := filepath.Join(inDir, "adobe_errata.pdf")
 	outFile := filepath.Join(outDir, "out.pdf")
 
 	if err := api.MergeCreateZipFile(inFile1, inFile2, outFile, nil); err != nil {

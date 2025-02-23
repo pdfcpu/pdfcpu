@@ -226,6 +226,8 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 			"URLS", "EmbeddedFiles", "AlternatePresentations", "Renditions"})
 	}
 
+	d1 := types.Dict{}
+
 	for treeName, value := range d {
 
 		if ok := validateNameTreeName(treeName); !ok {
@@ -248,6 +250,8 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 			continue
 		}
 
+		d1.Insert(treeName, value)
+
 		_, _, tree, err := validateNameTree(xRefTable, treeName, d, true)
 		if err != nil {
 			return err
@@ -258,6 +262,11 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 			xRefTable.Names[treeName] = tree
 		}
 
+	}
+
+	delete(rootDict, "Names")
+	if len(d1) > 0 {
+		rootDict["Names"] = d1
 	}
 
 	return nil

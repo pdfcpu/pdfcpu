@@ -414,8 +414,14 @@ func validateOutlines(xRefTable *model.XRefTable, rootDict types.Dict, required 
 	}
 
 	d, err := xRefTable.DereferenceDict(*ir)
-	if err != nil || d == nil {
+	if err != nil {
 		return err
+	}
+
+	if d == nil {
+		xRefTable.Outlines = nil
+		delete(rootDict, "Outlines")
+		return nil
 	}
 
 	xRefTable.Outlines = d
