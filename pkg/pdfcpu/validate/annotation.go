@@ -403,7 +403,7 @@ func validateAnnotationDictFreeTextPart1(xRefTable *model.XRefTable, d types.Dic
 	// RC, optional, text string or text stream, since V1.5
 	sinceVersion = model.V15
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V14
+		sinceVersion = model.V13
 	}
 	err = validateStringOrStreamEntry(xRefTable, d, dictName, "RC", OPTIONAL, sinceVersion)
 	if err != nil {
@@ -413,7 +413,7 @@ func validateAnnotationDictFreeTextPart1(xRefTable *model.XRefTable, d types.Dic
 	// DS, optional, text string, since V1.5
 	sinceVersion = model.V15
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V14
+		sinceVersion = model.V13
 	}
 	_, err = validateStringEntry(xRefTable, d, dictName, "DS", OPTIONAL, sinceVersion, nil)
 	if err != nil {
@@ -1328,7 +1328,7 @@ func validateMarkupAnnotationPart1(xRefTable *model.XRefTable, d types.Dict, dic
 	// RC, optional, text string or stream, since V1.5
 	sinceVersion := model.V15
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V14
+		sinceVersion = model.V13
 	}
 	if err := validateStringOrStreamEntry(xRefTable, d, dictName, "RC", OPTIONAL, sinceVersion); err != nil {
 		return err
@@ -1360,7 +1360,7 @@ func validateMarkupAnnotationPart2(xRefTable *model.XRefTable, d types.Dict, dic
 	// Subj, optional, text string, since V1.5
 	sinceVersion = model.V15
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V14
+		sinceVersion = model.V13
 	}
 	if _, err := validateStringEntry(xRefTable, d, dictName, "Subj", OPTIONAL, sinceVersion, nil); err != nil {
 		return err
