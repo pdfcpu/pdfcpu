@@ -6,6 +6,26 @@ layout: default
 
 This command encrypts `inFile` using the standard security handler as defined in [PDF 32000-1:2008](https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf). If provided the encrypted PDF will be written to `outFile` and `inFile` remains untouched. Have a look at some [examples](#examples).
 
+**Owner Password** <br>
+Opens the document without restricions/permissions, grants full access. <br>
+Also known as permission or master password. 
+
+**User Password** <br>
+Opens the document based on configured restrictions/persmissions. <br>
+Also known as Open Doc password.
+
+
+> [!IMPORTANT]
+>
+> Both passwords are needed to compute the encryption key.
+>
+> While the PDF specification allows an empty owner password, it is generally not recommended because it weakens security. <br>
+> Hence pdfcpu's opinionated approach makes the owner password mandatory for encryption.
+>
+> Setting a user password remains an option, yet it is highly recommended because it adds an extra layer of protection.<br>
+> Without a user password, the PDF is encrypted but openable by anyone, and many tools can remove restrictions using just the owner password.
+> Moreover you may not want users who are authorized to open a document also mess with its security restrictions.
+
 ## Usage
 
 ```
@@ -58,7 +78,7 @@ The [symmetric encryption algorithm](https://en.wikipedia.org/wiki/Symmetric-key
 NOTE: RC4 is considered to be insecure!
 
 The default mode for `pdfcpu` is AES.<br>
-As of 2019 AES is still considered secure and an effective federal US government standard.
+As of 2025 AES is still considered secure and an effective federal US government standard.
 
 NOTE: As AES-256 is the most recent algorithm the PDF 1.7 specification defines, more secure algorithms will be needed and provided in a future release.
 
@@ -86,7 +106,8 @@ Possible values:
 
 * `all` sets all permission bits allowing full access to all operations that may be applied to an open document.
 
-NOTE: These quick primitives will be followed up by finer grained control over the permission bits in a future release.
+> [!NOTE]
+> These quick primitives will be followed up by finer grained control over the permission bits in a future release.
 
 <br>
 

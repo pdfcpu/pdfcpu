@@ -56,9 +56,7 @@ pdfcpu permissions set [-perm n(one)|p(rint)|a(ll)|max4Hex|max12Bits] [-upw user
 
 ## Examples
 
-You have to provide any non empty password in order to change permissions.
-
-For a document encrypted with just the *owner password* you have to provide `opw` to change the permissions:
+You have to provide any non empty password in order to change permissions:
 
 ```
 $ pdfcpu encrypt -opw opw enc.pdf
@@ -76,7 +74,7 @@ Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 
 pdfcpu perm set -perm all enc.pdf
-Please provide all non-empty passwords
+pdfcpu: please provide the owner password with -opw
 
 $ pdfcpu perm set -opw opw -perm all enc.pdf
 adding permissions to enc.pdf ...
@@ -88,89 +86,6 @@ Bit  3: true (print(rev2), print quality(rev>=3))
 Bit  4: true (modify other than controlled by bits 6,9,11)
 Bit  5: true (extract(rev2), extract other than controlled by bit 10(rev>=3))
 Bit  6: true (add or modify annotations)
-Bit  9: true (fill in form fields(rev>=3)
-Bit 10: true (extract(rev>=3))
-Bit 11: true (modify(rev>=3))
-Bit 12: true (print high-level(rev>=3))
-```
-
-<br>
-
-For a document encrypted with just the *user password* you have to provide `upw` to change the permissions:
-```
-$ pdfcpu encrypt -upw upw enc.pdf
-writing enc.pdf ...
-
-$ pdfcpu perm list -upw upw enc.pdf
-permission bits:            0
-Bit  3: false (print(rev2), print quality(rev>=3))
-Bit  4: false (modify other than controlled by bits 6,9,11)
-Bit  5: false (extract(rev2), extract other than controlled by bit 10(rev>=3))
-Bit  6: false (add or modify annotations)
-Bit  9: false (fill in form fields(rev>=3)
-Bit 10: false (extract(rev>=3))
-Bit 11: false (modify(rev>=3))
-Bit 12: false (print high-level(rev>=3))
-
-$ pdfcpu perm set -perm print enc.pdf
-Please provide all non-empty passwords#
-
-$ pdfcpu perm set -upw upw -perm print enc.pdf
-adding permissions to enc.pdf ...
-writing enc.pdf ...
-
-$ pdfcpu perm list enc.pdf
-Please provide the correct password
-
-$ pdfcpu perm list -upw upw enc.pdf
-permission bits: 100000000100 (x804)
-Bit  3: true (print(rev2), print quality(rev>=3))
-Bit  4: false (modify other than controlled by bits 6,9,11)
-Bit  5: false (extract(rev2), extract other than controlled by bit 10(rev>=3))
-Bit  6: false (add or modify annotations)
-Bit  9: false (fill in form fields(rev>=3)
-Bit 10: false (extract(rev>=3))
-Bit 11: false (modify(rev>=3))
-Bit 12: true (print high-level(rev>=3))
-```
-
-<br>
-
-For an encrypted document that has both passwords set you have to provide both `opw` and `upw` to change the permissions:
-```
-$ pdfcpu encrypt -opw opw -upw upw enc.pdf
-writing enc.pdf ...
-
-$ pdfcpu perm list -opw opw enc.pdf
-permission bits:            0
-Bit  3: false (print(rev2), print quality(rev>=3))
-Bit  4: false (modify other than controlled by bits 6,9,11)
-Bit  5: false (extract(rev2), extract other than controlled by bit 10(rev>=3))
-Bit  6: false (add or modify annotations)
-Bit  9: false (fill in form fields(rev>=3)
-Bit 10: false (extract(rev>=3))
-Bit 11: false (modify(rev>=3))
-Bit 12: false (print high-level(rev>=3))
-
-$ pdfcpu perm set -perm 111100001111 enc.pdf
-Please provide all non-empty passwords
-
-$ pdfcpu perm set -opw opw -perm 111100001111 enc.pdf
-Please provide the correct password
-
-$ pdfcpu perm set -upw upw -perm 111100001111 enc.pdf
-Please provide all non-empty passwords
-
-$ pdfcpu perm set -upw upw -opw opw -perm 111100001111 enc.pdf
-adding permissions to enc.pdf ...
-writing enc.pdf ...
-
-$ pdfcpu perm list -upw upw enc.pdf
-permission bits: 111100001100 (xF0C)
-Bit  3: true (print(rev2), print quality(rev>=3))
-Bit  4: true (modify other than controlled by bits 6,9,11)
-Bit  5: false (extract(rev2), extract other than controlled by bit 10(rev>=3))
-Bit  6: false (add or modify annotations)
 Bit  9: true (fill in form fields(rev>=3)
 Bit 10: true (extract(rev>=3))
 Bit 11: true (modify(rev>=3))

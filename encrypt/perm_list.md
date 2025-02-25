@@ -103,26 +103,3 @@ Bit 10: false (extract(rev>=3))
 Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 ```
-
-<br>
-
-If only the *user password* is set then that's also what you need to provide:
-
-```
-$ pdfcpu encrypt -upw upw enc.pdf
-writing enc.pdf ...
-
-$ pdfcpu perm list enc.pdf
-Please provide the correct password
-
-$ pdfcpu perm list -upw upw enc.pdf
-permission bits: 000000000000 (x000)
-Bit  3: false (print(rev2), print quality(rev>=3))
-Bit  4: false (modify other than controlled by bits 6,9,11)
-Bit  5: false (extract(rev2), extract other than controlled by bit 10(rev>=3))
-Bit  6: false (add or modify annotations)
-Bit  9: false (fill in form fields(rev>=3)
-Bit 10: false (extract(rev>=3))
-Bit 11: false (modify(rev>=3))
-Bit 12: false (print high-level(rev>=3))
-```

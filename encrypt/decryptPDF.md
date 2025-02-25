@@ -47,18 +47,6 @@ pdfcpu decrypt [-upw userpw] [-opw ownerpw] inFile [outFile]
 
 <br>
 
-## Matrix
-
-The following matrix is a result of the intrinsics of how PDF encryption works:
-
-| encrypted using | needed for decryption | use case
-|:----------------|:----------------------|:-
-| opw             | -                     | reset permissions
-| upw             | upw                   | remove open doc password & reset permissions
-| opw and upw         | opw or upw            | remove open doc password & reset permissions
-
-<br>
-
 ## Examples
 
 Decrypt a file that has only the *owner password* set. This will also reset all permissions, providing full access. You don't need to provide any password:
@@ -68,21 +56,6 @@ $ pdfcpu encrypt -opw opw test.pdf
 writing test.pdf ...
 
 $ pdfcpu decrypt test.pdf 
-writing test.pdf ...
-```
-
-<br>
-
-Decrypt a file that has only the *user password* set. This will remove the open doc password and also reset all permissions, providing full access. You need to provide the *user password*:
-
-```sh
-$ pdfcpu encrypt -upw upw test.pdf
-writing test.pdf ...
-
-$ pdfcpu decrypt test.pdf
-Please provide the correct password
-
-$ pdfcpu decrypt -upw upw test.pdf 
 writing test.pdf ...
 ```
 

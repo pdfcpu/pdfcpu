@@ -44,8 +44,9 @@ pdfcpu changeupw [-opw ownerpw] inFile upwOld upwNew
 You can set the *user password* either when you `encrypt` a file or later with `changeupw`.
 
 Change the *user password* of a document that already has one:
+
 ```sh
-$ pdfcpu encrypt -upw upw enc.pdf
+$ pdfcpu encrypt -upw upw -opw opw enc.pdf
 writing enc.pdf ...
 
 $ pdfcpu changeupw enc.pdf upw upwNew
@@ -54,7 +55,7 @@ writing enc.pdf ...
 
 <br>
 
-Set the *user password* of a document that has none. Any encrypted PDF file has either one of the two passwords set. Whenever you change the *user password* of a document that has a *owner password* set, you have to provide the current *owner password*:
+Set the *user password* of a document that has none. Whenever you change the *user password* of a document you also have to provide the current *owner password*:
 
 ```sh
 $ pdfcpu encrypt -opw opw enc.pdf
