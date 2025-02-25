@@ -15,7 +15,7 @@ Opens the document based on configured restrictions/persmissions. <br>
 Also known as Open Doc password.
 
 
-> [!IMPORTANT]
+> IMPORTANT
 >
 > Both passwords are needed to compute the encryption key.
 >

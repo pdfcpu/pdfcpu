@@ -73,14 +73,3 @@ Please provide the correct password
 $ pdfcpu decrypt -upw upw test.pdf 
 writing test.pdf ...
 ```
-
-```sh
-$ pdfcpu encrypt -opw opw -upw upw test.pdf
-writing test.pdf ...
-
-$ pdfcpu decrypt test.pdf
-Please provide the correct password
-
-$ pdfcpu decrypt -opw opw test.pdf 
-writing test.pdf ...
-```
