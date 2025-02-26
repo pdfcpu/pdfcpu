@@ -49,65 +49,48 @@ func validateDestinationArrayFirstElement(xRefTable *model.XRefTable, a types.Ar
 }
 
 func validateDestinationArrayLength(a types.Array) bool {
-	l := len(a)
-	return l == 2 || l == 3 || l == 5 || l == 6 || l == 4 // 4 = hack! see below
+	return len(a) >= 2 && len(a) <= 6
 }
 
 func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
+	if !validateDestinationArrayLength(a) {
+		return errors.Errorf("pdfcpu: validateDestinationArray: invalid length: %d", len(a))
+	}
 
 	// Validate first element: indRef of page dict or pageNumber(int) of remote doc for remote Go-to Action or nil.
-
 	o, err := validateDestinationArrayFirstElement(xRefTable, a)
 	if err != nil || o == nil {
 		return err
 	}
 
-	if !validateDestinationArrayLength(a) {
-		return errors.Errorf("pdfcpu: validateDestinationArray: invalid length: %d", len(a))
-	}
-
-	// NOTE if len == 4 we possible have a missing first element, which should be an indRef to the dest page.
-	// TODO Investigate.
-	i := 1
-	if len(a) == 4 {
-		i = 0
-	}
-
-	// Validate rest of array elements.
-
-	name, ok := a[i].(types.Name)
+	name, ok := a[1].(types.Name)
 	if !ok {
-		return errors.Errorf("pdfcpu: validateDestinationArray: second element must be a name %v (%d)", a[i], i)
+		return errors.Errorf("pdfcpu: validateDestinationArray: second element must be a name %v", a[1])
 	}
 
-	var nameErr bool
-
-	switch len(a) {
-
-	case 2:
-		nameErr = !types.MemberOf(name.Value(), []string{"Fit", "FitB", "FitH", "FitV", "FitBH", "FitBV"})
-
-	case 3:
-		nameErr = !types.MemberOf(name.Value(), []string{"FitH", "FitV", "FitBH", "FitBV"})
-
-	case 4:
-		// TODO Cleanup
-		// hack for #381 - possibly zoom == null or 0
-		// eg. [(886 0 R) XYZ 53 303]
-		nameErr = name.Value() != "XYZ"
-
-	case 5:
-		nameErr = name.Value() != "XYZ"
-
-	case 6:
-		nameErr = name.Value() != "FitR"
-
+	switch name {
+	case "Fit":
+	case "FitB":
+		if len(a) > 2 {
+			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", name, len(a))
+		}
+	case "FitH":
+	case "FitV":
+	case "FitBH":
+	case "FitBV":
+		if len(a) > 3 {
+			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", name, len(a))
+		}
+	case "XYZ":
+		if len(a) > 5 {
+			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", name, len(a))
+		}
+	case "FitR":
+		if len(a) > 6 {
+			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", name, len(a))
+		}
 	default:
-		return errors.Errorf("validateDestinationArray: array length %d not allowed: %v", len(a), a)
-	}
-
-	if nameErr {
-		return errors.New("pdfcpu: validateDestinationArray: arr[1] corrupt")
+		return errors.Errorf("pdfcpu: validateDestinationArray     j- invalid mode: %s", name)
 	}
 
 	return nil

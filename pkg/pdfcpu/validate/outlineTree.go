@@ -30,7 +30,12 @@ func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
 	// Title, required, text string
 	_, err := validateStringEntry(xRefTable, d, dictName, "Title", REQUIRED, model.V10, nil)
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return err
+		}
+		if _, err := validateNameEntry(xRefTable, d, dictName, "Title", REQUIRED, model.V10, nil); err != nil {
+			return err
+		}
 	}
 
 	// fmt.Printf("Title: %s\n", *title)
@@ -87,6 +92,10 @@ func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
 
 	if destName != "" {
 		_, err = xRefTable.DereferenceDestArray(destName)
+		if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+			model.ShowDigestedSpecViolation("outlineDict with unresolved destination")
+			return nil
+		}
 	}
 
 	return err

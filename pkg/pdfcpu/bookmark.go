@@ -138,8 +138,8 @@ func destArray(ctx *model.Context, dest types.Object) (types.Array, error) {
 // PageNrFromDestination returns the page number of a destination.
 func PageNrFromDestination(ctx *model.Context, dest types.Object) (int, error) {
 	arr, err := destArray(ctx, dest)
-	if err != nil {
-		return 0, err
+	if err != nil && ctx.XRefTable.ValidationMode == model.ValidationRelaxed {
+		return 0, nil
 	}
 
 	if i, ok := arr[0].(types.Integer); ok {
@@ -161,7 +161,10 @@ func title(ctx *model.Context, d types.Dict) (string, error) {
 
 	s, err := model.Text(obj)
 	if err != nil {
-		return "", err
+		if ctx.XRefTable.ValidationMode == model.ValidationStrict {
+			return "", err
+		}
+		return "", nil
 	}
 
 	return outlineItemTitle(s), nil
@@ -208,6 +211,10 @@ func BookmarksForOutlineItem(ctx *model.Context, item *types.IndirectRef, parent
 		title, err := title(ctx, d)
 		if err != nil {
 			return nil, err
+		}
+
+		if title == "" {
+			continue
 		}
 
 		// Retrieve page number out of a destination via "Dest" or "Goto Action".
@@ -299,7 +306,7 @@ func BookmarkList(ctx *model.Context) ([]string, error) {
 		return nil, err
 	}
 
-	if bms == nil {
+	if len(bms) == 0 {
 		return []string{"no bookmarks available"}, nil
 	}
 
@@ -311,7 +318,7 @@ func ExportBookmarks(ctx *model.Context, source string) (*BookmarkTree, error) {
 	if err != nil {
 		return nil, err
 	}
-	if bms == nil {
+	if len(bms) == 0 {
 		return nil, nil
 	}
 
