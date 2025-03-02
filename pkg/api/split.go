@@ -360,7 +360,7 @@ func SplitByBookmarkFile(inFile, outDir string, bookmark pdfcpu.Bookmark, conf *
 	return SplitByBookmark(f, outDir, filepath.Base(inFile), bookmark, conf)
 }
 
-// SplitByBookmark generates a sequence of PDF files in outDir for rs splitting along the given page range.
+// SplitByPageRange generates a sequence of PDF files in outDir for rs splitting along the given page range.
 func SplitByPageRange(rs io.ReadSeeker, outDir, fileName string, from, thru int, conf *model.Configuration) error {
 	if rs == nil {
 		return errors.New("pdfcpu: SplitByPageRange: missing rs")
@@ -387,7 +387,7 @@ func SplitByPageRange(rs io.ReadSeeker, outDir, fileName string, from, thru int,
 	return writePageSpan(ctx, from, thru, path)
 }
 
-// SplitByBookmarkFile generates a sequence of PDF files in outDir for inFile splitting it along the given bookmark.
+// SplitByPageRangeFile generates a sequence of PDF files in outDir for inFile splitting it along the given page range.
 func SplitByPageRangeFile(inFile, outDir string, from, thru int, conf *model.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
