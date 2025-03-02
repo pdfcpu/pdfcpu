@@ -1077,9 +1077,15 @@ func validateRootObject(ctx *model.Context) error {
 		return err
 	}
 
-	err = checkForBrokenLinks(ctx)
+	// Validate form fields against page annotations.
+	if xRefTable.Form != nil {
+		if err := validateFormFieldsAgainstPageAnnotations(xRefTable); err != nil {
+			return err
+		}
+	}
 
-	if err == nil {
+	// Validate links.
+	if err = checkForBrokenLinks(ctx); err == nil {
 		if log.ValidateEnabled() {
 			log.Validate.Println("*** validateRootObject end ***")
 		}

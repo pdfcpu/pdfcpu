@@ -636,3 +636,86 @@ func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool
 
 	return validateFormEntries(xRefTable, d, dictName, requiresDA, sinceVersion)
 }
+
+func pageAnnotIndRefForAcroField(xRefTable *model.XRefTable, indRef types.IndirectRef) (*types.IndirectRef, error) {
+
+	// The indRef should be part of a page annotation dict.
+
+	for _, m := range xRefTable.PageAnnots {
+		annots, ok := m[model.AnnWidget]
+		if ok {
+			for _, ir := range *annots.IndRefs {
+				if ir == indRef {
+					return &ir, nil
+				}
+			}
+		}
+	}
+
+	// form field is duplicated, retrieve corresponding page annotation for Rect, AP
+
+	d, err := xRefTable.DereferenceDict(indRef)
+	if err != nil {
+		return nil, err
+	}
+
+	arr, err := xRefTable.DereferenceArray(d["Rect"])
+	if err != nil {
+		return nil, err
+	}
+	if arr == nil {
+		// Assumption: There are kids and the kids are allright.
+		return &indRef, nil
+	}
+
+	r, err := xRefTable.RectForArray(arr)
+	if err != nil {
+		return nil, err
+	}
+
+	var apObjNr int
+	indRef1 := d.IndirectRefEntry("AP")
+	if indRef1 != nil {
+		apObjNr = indRef1.ObjectNumber.Value()
+	}
+
+	for _, m := range xRefTable.PageAnnots {
+		annots, ok := m[model.AnnWidget]
+		if ok {
+			for objNr, annRend := range annots.Map {
+				if annRend.RectString() == r.ShortString() && annRend.APObjNrInt() == apObjNr {
+					return types.NewIndirectRef(objNr, 0), nil
+				}
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+func validateFormFieldsAgainstPageAnnotations(xRefTable *model.XRefTable) error {
+	o, _ := xRefTable.Form.Find("Fields")
+	arr, _ := xRefTable.DereferenceArray(o)
+
+	arr1 := types.Array{}
+
+	for _, obj := range arr {
+		indRef, err := pageAnnotIndRefForAcroField(xRefTable, obj.(types.IndirectRef))
+		if err != nil {
+			return err
+		}
+		if indRef == nil {
+			return errors.New("pdfcpu: can't repair form fields")
+		}
+		arr1 = append(arr1, *indRef)
+	}
+
+	indRef, err := xRefTable.IndRefForNewObject(arr1)
+	if err != nil {
+		return err
+	}
+
+	xRefTable.Form["Fields"] = *indRef
+
+	return nil
+}

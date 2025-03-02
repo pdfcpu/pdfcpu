@@ -152,6 +152,12 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 		return nil, err
 	}
 
+	var apObjNr int
+	indRef := d.IndirectRefEntry("AP")
+	if indRef != nil {
+		apObjNr = indRef.ObjectNumber.Value()
+	}
+
 	contents := ""
 	if c, ok := d["Contents"]; ok {
 		contents, err = xRefTable.DereferenceStringOrHexLiteral(c, model.V10, nil)
@@ -179,7 +185,7 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 
 	case "Text":
 		popupIndRef := d.IndirectRefEntry("Popup")
-		ann = model.NewTextAnnotation(*r, contents, nm, "", f, nil, "", popupIndRef, nil, "", "", 0, 0, 0, true, "")
+		ann = model.NewTextAnnotation(*r, apObjNr, contents, nm, "", f, nil, "", popupIndRef, nil, "", "", 0, 0, 0, true, "")
 
 	case "Link":
 		var uri string
@@ -199,16 +205,16 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 			}
 		}
 		dest := (*model.Destination)(nil) // will not collect link dest during validation.
-		ann = model.NewLinkAnnotation(*r, contents, nm, "", f, nil, dest, uri, nil, false, 0, model.BSSolid)
+		ann = model.NewLinkAnnotation(*r, apObjNr, contents, nm, "", f, nil, dest, uri, nil, false, 0, model.BSSolid)
 
 	case "Popup":
 		parentIndRef := d.IndirectRefEntry("Parent")
-		ann = model.NewPopupAnnotation(*r, contents, nm, "", f, nil, 0, 0, 0, parentIndRef, false)
+		ann = model.NewPopupAnnotation(*r, apObjNr, contents, nm, "", f, nil, 0, 0, 0, parentIndRef, false)
 
 	// TODO handle remaining annotation types.
 
 	default:
-		ann = model.NewAnnotationForRawType(*subtype, *r, contents, nm, "", f, nil, 0, 0, 0)
+		ann = model.NewAnnotationForRawType(*subtype, *r, apObjNr, contents, nm, "", f, nil, 0, 0, 0)
 
 	}
 

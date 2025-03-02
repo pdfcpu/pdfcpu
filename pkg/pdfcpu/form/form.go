@@ -144,6 +144,11 @@ func fullyQualifiedFieldName(xRefTable *model.XRefTable, indRef types.IndirectRe
 				return true, nil
 			}
 		}
+		// if xRefTable.ValidationMode == model.ValidationRelaxed {
+		// 	*id = thisID
+		// 	*name = thisName
+		// 	return true, nil
+		// }
 		return false, nil
 	}
 

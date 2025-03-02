@@ -408,6 +408,7 @@ func (ib *ImageBox) createLink(p *model.Page, pageNr int, r *types.Rectangle, m 
 	id := fmt.Sprintf("l%d%d", pageNr, len(p.LinkAnnots))
 	ann := model.NewLinkAnnotation(
 		*ql.EnclosingRectangle(5.0), // rect
+		0,                           // apObjNr
 		"",                          // contents
 		id,                          // id
 		"",                          // modDate

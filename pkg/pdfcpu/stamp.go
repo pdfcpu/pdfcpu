@@ -1342,6 +1342,7 @@ func handleLink(ctx *model.Context, pageIndRef *types.IndirectRef, d types.Dict,
 
 	ann := model.NewLinkAnnotation(
 		*wm.BbTrans.EnclosingRectangle(5.0), // rect
+		0,                                   // apObjNr
 		"",                                  // contents
 		"pdfcpu",                            // id
 		"",                                  // modDate
