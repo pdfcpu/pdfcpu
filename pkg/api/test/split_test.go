@@ -102,3 +102,29 @@ func TestSplitLowLevel(t *testing.T) {
 		t.Fatalf("%s write: %v\n", msg, err)
 	}
 }
+func TestSplitByBookmarkFile(t *testing.T) {
+	msg := "TestSplitByBookmarkFile"
+	fileName := "5116.DCT_Filter.pdf"
+	inFile := filepath.Join(inDir, fileName)
+
+	bookmark := pdfcpu.Bookmark{
+		Title:    "Chapter 1",
+		PageFrom: 1,
+		PageThru: 10,
+	}
+
+	if err := api.SplitByBookmarkFile(inFile, outDir, bookmark, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+func TestSplitByPageRange(t *testing.T) {
+	msg := "TestSplitByPageRange"
+	fileName := "5116.DCT_Filter.pdf"
+	inFile := filepath.Join(inDir, fileName)
+
+	from, thru := 1, 10
+	if err := api.SplitByPageRangeFile(inFile, outDir, from, thru, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
