@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -316,4 +317,93 @@ func SplitByPageNrFile(inFile, outDir string, pageNrs []int, conf *model.Configu
 	}()
 
 	return SplitByPageNr(f, outDir, filepath.Base(inFile), pageNrs, conf)
+}
+
+// SplitByBookmark generates a sequence of PDF files in outDir for rs splitting along the given bookmark.
+func SplitByBookmark(rs io.ReadSeeker, outDir, fileName string, bookmark pdfcpu.Bookmark, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: SplitByBookmark: missing rs")
+	}
+
+	ctx, err := context(rs, conf)
+	if err != nil {
+		return err
+	}
+
+	from, thru := bookmark.PageFrom, bookmark.PageThru
+	if thru == 0 {
+		thru = ctx.PageCount
+	}
+
+	path := splitOutPath(outDir, fileName, true, from, thru)
+	return writePageSpan(ctx, from, thru, path)
+}
+
+// SplitByBookmarkFile generates a sequence of PDF files in outDir for inFile splitting it along the given bookmark.
+func SplitByBookmarkFile(inFile, outDir string, bookmark pdfcpu.Bookmark, conf *model.Configuration) error {
+	f, err := os.Open(inFile)
+	if err != nil {
+		return err
+	}
+	if log.CLIEnabled() {
+		log.CLI.Printf("splitting %s to %s/...\n", inFile, outDir)
+	}
+
+	defer func() {
+		if err != nil {
+			f.Close()
+			return
+		}
+		err = f.Close()
+	}()
+
+	return SplitByBookmark(f, outDir, filepath.Base(inFile), bookmark, conf)
+}
+
+// SplitByBookmark generates a sequence of PDF files in outDir for rs splitting along the given page range.
+func SplitByPageRange(rs io.ReadSeeker, outDir, fileName string, from, thru int, conf *model.Configuration) error {
+	if rs == nil {
+		return errors.New("pdfcpu: SplitByPageRange: missing rs")
+	}
+
+	ctx, err := context(rs, conf)
+	if err != nil {
+		return err
+	}
+
+	if from < 0 || from > ctx.PageCount {
+		return errors.New(fmt.Sprintf("pdfcpu: SplitByPageRange go incorrect starting range. from: %d", from))
+	}
+
+	if from > thru {
+		return errors.New(fmt.Sprintf("pdfcpu: SplitByPageRange go incorrect range. from: %d, thru %d", from, thru))
+	}
+
+	if thru == 0 || thru > ctx.PageCount {
+		thru = ctx.PageCount
+	}
+
+	path := splitOutPath(outDir, fileName, true, from, thru)
+	return writePageSpan(ctx, from, thru, path)
+}
+
+// SplitByBookmarkFile generates a sequence of PDF files in outDir for inFile splitting it along the given bookmark.
+func SplitByPageRangeFile(inFile, outDir string, from, thru int, conf *model.Configuration) error {
+	f, err := os.Open(inFile)
+	if err != nil {
+		return err
+	}
+	if log.CLIEnabled() {
+		log.CLI.Printf("splitting %s to %s/...\n", inFile, outDir)
+	}
+
+	defer func() {
+		if err != nil {
+			f.Close()
+			return
+		}
+		err = f.Close()
+	}()
+
+	return SplitByPageRange(f, outDir, filepath.Base(inFile), from, thru, conf)
 }
