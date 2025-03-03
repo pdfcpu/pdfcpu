@@ -65,14 +65,15 @@ func (ft FieldType) String() string {
 
 // Field represents a form field for s particular page number.
 type Field struct {
-	Pages  []int
-	Locked bool
-	Typ    FieldType
-	ID     string
-	Name   string
-	Dv     string
-	V      string
-	Opts   string
+	Pages   []int
+	Locked  bool
+	Typ     FieldType
+	ID      string
+	Name    string
+	AltName string
+	Dv      string
+	V       string
+	Opts    string
 }
 
 func (f Field) pageString() string {
@@ -88,8 +89,8 @@ func (f Field) pageString() string {
 }
 
 type FieldMeta struct {
-	def, val, opt                           bool
-	pageMax, defMax, valMax, idMax, nameMax int
+	altName, def, val, opt                              bool
+	pageMax, defMax, valMax, idMax, nameMax, altNameMax int
 }
 
 func fields(xRefTable *model.XRefTable) (types.Array, error) {
@@ -144,11 +145,6 @@ func fullyQualifiedFieldName(xRefTable *model.XRefTable, indRef types.IndirectRe
 				return true, nil
 			}
 		}
-		// if xRefTable.ValidationMode == model.ValidationRelaxed {
-		// 	*id = thisID
-		// 	*name = thisName
-		// 	return true, nil
-		// }
 		return false, nil
 	}
 
@@ -636,6 +632,27 @@ func collectPageField(
 		}
 	}
 
+	if o, found := d.Find("TU"); found {
+		s1, err := types.StringOrHexLiteral(o)
+		if err != nil {
+			return err
+		}
+		s := ""
+		if s1 != nil {
+			s = *s1
+		}
+		if len(s) > 80 {
+			s = s[:40]
+		}
+		altName := s
+
+		if w := runewidth.StringWidth(altName); w > fm.altNameMax {
+			fm.altNameMax = w
+		}
+		fm.altName = true
+		f.AltName = altName
+	}
+
 	var err error
 
 	switch *ft {
@@ -754,6 +771,15 @@ func calcListHeader(fm *FieldMeta) (string, []int) {
 		horSep = append(horSep, 6)
 	}
 
+	if fm.altName {
+		s += draw.VBar + " AltName "
+		if fm.altNameMax > 7 {
+			s += strings.Repeat(" ", fm.altNameMax-7)
+			horSep = append(horSep, 9+fm.altNameMax-7)
+		} else {
+			horSep = append(horSep, 9)
+		}
+	}
 	if fm.def {
 		s += draw.VBar + " Default "
 		if fm.defMax > 7 {
@@ -839,6 +865,10 @@ func renderMultiPageFields(m map[string][]Field, fm *FieldMeta) ([]string, error
 			nameFill := strings.Repeat(" ", fm.nameMax-runewidth.StringWidth(f.Name))
 			s := fmt.Sprintf("%s%s %s %-9s %s %s%s %s %s%s ", p, pageFill, l, t, draw.VBar, f.ID, idFill, draw.VBar, f.Name, nameFill)
 			p = strings.Repeat(" ", len(p))
+			if fm.altName {
+				altNameFill := strings.Repeat(" ", fm.altNameMax-runewidth.StringWidth(f.AltName))
+				s += fmt.Sprintf("%s %s%s ", draw.VBar, f.AltName, altNameFill)
+			}
 			if fm.def {
 				dvFill := strings.Repeat(" ", fm.defMax-runewidth.StringWidth(f.Dv))
 				s += fmt.Sprintf("%s %s%s ", draw.VBar, f.Dv, dvFill)
@@ -911,6 +941,10 @@ func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, erro
 		idFill := strings.Repeat(" ", fm.idMax-runewidth.StringWidth(f.ID))
 		nameFill := strings.Repeat(" ", fm.nameMax-runewidth.StringWidth(f.Name))
 		s := fmt.Sprintf("%s%s %s %-9s %s %s%s %s %s%s ", p, pageFill, l, t, draw.VBar, f.ID, idFill, draw.VBar, f.Name, nameFill)
+		if fm.altName {
+			altNameFill := strings.Repeat(" ", fm.altNameMax-runewidth.StringWidth(f.AltName))
+			s += fmt.Sprintf("%s %s%s ", draw.VBar, f.AltName, altNameFill)
+		}
 		if fm.def {
 			dvFill := strings.Repeat(" ", fm.defMax-runewidth.StringWidth(f.Dv))
 			s += fmt.Sprintf("%s %s%s ", draw.VBar, f.Dv, dvFill)
@@ -939,7 +973,7 @@ func FormFields(ctx *model.Context) ([]Field, *FieldMeta, error) {
 		return nil, nil, err
 	}
 
-	fm := &FieldMeta{pageMax: 2, idMax: 3, nameMax: 4, defMax: 7, valMax: 5}
+	fm := &FieldMeta{pageMax: 2, idMax: 3, nameMax: 4, altNameMax: 7, defMax: 7, valMax: 5}
 
 	fs, err := collectFields(xRefTable, fields, fm)
 	if err != nil {

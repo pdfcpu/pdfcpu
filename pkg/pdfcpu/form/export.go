@@ -58,6 +58,7 @@ type TextField struct {
 	Pages     []int  `json:"pages"`
 	ID        string `json:"id"`
 	Name      string `json:"name,omitempty"`
+	AltName   string `json:"altname,omitempty"`
 	Default   string `json:"default,omitempty"`
 	Value     string `json:"value"`
 	MaxLen    int    `json:"maxlen,omitempty"`
@@ -70,6 +71,7 @@ type DateField struct {
 	Pages   []int  `json:"pages"`
 	ID      string `json:"id"`
 	Name    string `json:"name,omitempty"`
+	AltName string `json:"altname,omitempty"`
 	Format  string `json:"format"`
 	Default string `json:"default,omitempty"`
 	Value   string `json:"value"`
@@ -81,6 +83,7 @@ type CheckBox struct {
 	Pages   []int  `json:"pages"`
 	ID      string `json:"id"`
 	Name    string `json:"name,omitempty"`
+	AltName string `json:"altname,omitempty"`
 	Default bool   `json:"default"`
 	Value   bool   `json:"value"`
 	Locked  bool   `json:"locked"`
@@ -91,6 +94,7 @@ type RadioButtonGroup struct {
 	Pages   []int    `json:"pages"`
 	ID      string   `json:"id"`
 	Name    string   `json:"name,omitempty"`
+	AltName string   `json:"altname,omitempty"`
 	Options []string `json:"options"`
 	Default string   `json:"default,omitempty"`
 	Value   string   `json:"value"`
@@ -102,6 +106,7 @@ type ComboBox struct {
 	Pages    []int    `json:"pages"`
 	ID       string   `json:"id"`
 	Name     string   `json:"name,omitempty"`
+	AltName  string   `json:"altname,omitempty"`
 	Editable bool     `json:"editable"`
 	Options  []string `json:"options"`
 	Default  string   `json:"default,omitempty"`
@@ -114,6 +119,7 @@ type ListBox struct {
 	Pages    []int    `json:"pages"`
 	ID       string   `json:"id"`
 	Name     string   `json:"name,omitempty"`
+	AltName  string   `json:"altname,omitempty"`
 	Multi    bool     `json:"multi"`
 	Options  []string `json:"options"`
 	Defaults []string `json:"defaults,omitempty"`
@@ -273,9 +279,9 @@ func resolveOption(s string, opts []string, explicit bool) (string, error) {
 	return n, nil
 }
 
-func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict, id, name string, locked bool) (*RadioButtonGroup, error) {
+func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, locked bool) (*RadioButtonGroup, error) {
 
-	rbg := &RadioButtonGroup{Pages: []int{page}, ID: id, Name: name, Locked: locked}
+	rbg := &RadioButtonGroup{Pages: []int{page}, ID: id, Name: name, AltName: altName, Locked: locked}
 
 	opts, explicit, err := extractRadioButtonGroupOptions(xRefTable, d)
 	if err != nil {
@@ -305,9 +311,9 @@ func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict,
 	return rbg, nil
 }
 
-func extractCheckBox(page int, d types.Dict, id, name string, locked bool) (*CheckBox, error) {
+func extractCheckBox(page int, d types.Dict, id, name, altName string, locked bool) (*CheckBox, error) {
 
-	cb := &CheckBox{Pages: []int{page}, ID: id, Name: name, Locked: locked}
+	cb := &CheckBox{Pages: []int{page}, ID: id, Name: name, AltName: altName, Locked: locked}
 
 	if o, ok := d.Find("DV"); ok {
 		cb.Default = o.(types.Name) != "Off"
@@ -320,9 +326,9 @@ func extractCheckBox(page int, d types.Dict, id, name string, locked bool) (*Che
 	return cb, nil
 }
 
-func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name string, locked bool) (*ComboBox, error) {
+func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, locked bool) (*ComboBox, error) {
 
-	cb := &ComboBox{Pages: []int{page}, ID: id, Name: name, Locked: locked}
+	cb := &ComboBox{Pages: []int{page}, ID: id, Name: name, AltName: altName, Locked: locked}
 
 	if sl := d.StringLiteralEntry("DV"); sl != nil {
 		s, err := types.StringLiteralToString(*sl)
@@ -412,9 +418,9 @@ func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.Da
 	return nil, nil
 }
 
-func extractDateField(xRefTable *model.XRefTable, page int, d types.Dict, id, name string, df *primitives.DateFormat, locked bool) (*DateField, error) {
+func extractDateField(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, df *primitives.DateFormat, locked bool) (*DateField, error) {
 
-	dfield := &DateField{Pages: []int{page}, ID: id, Name: name, Format: df.Ext, Locked: locked}
+	dfield := &DateField{Pages: []int{page}, ID: id, Name: name, AltName: altName, Format: df.Ext, Locked: locked}
 
 	if o, found := d.Find("DV"); found {
 		o1, err := xRefTable.Dereference(o)
@@ -445,7 +451,7 @@ func extractDateField(xRefTable *model.XRefTable, page int, d types.Dict, id, na
 	return dfield, nil
 }
 
-func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, name string, ff *int, locked bool) (*TextField, error) {
+func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, ff *int, locked bool) (*TextField, error) {
 
 	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
 
@@ -455,7 +461,7 @@ func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, na
 		maxLen = *i
 	}
 
-	tf := &TextField{Pages: []int{page}, ID: id, Name: name, Multiline: multiLine, MaxLen: maxLen, Locked: locked}
+	tf := &TextField{Pages: []int{page}, ID: id, Name: name, AltName: altName, Multiline: multiLine, MaxLen: maxLen, Locked: locked}
 
 	if o, found := d.Find("DV"); found {
 		o1, err := xRefTable.Dereference(o)
@@ -486,9 +492,9 @@ func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, na
 	return tf, nil
 }
 
-func extractListBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name string, locked, multi bool) (*ListBox, error) {
+func extractListBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, locked, multi bool) (*ListBox, error) {
 
-	lb := &ListBox{Pages: []int{page}, ID: id, Name: name, Locked: locked, Multi: multi}
+	lb := &ListBox{Pages: []int{page}, ID: id, Name: name, AltName: altName, Locked: locked, Multi: multi}
 
 	if !multi {
 		if sl := d.StringLiteralEntry("DV"); sl != nil {
@@ -581,7 +587,7 @@ func exportBtn(
 	i int,
 	form *Form,
 	d types.Dict,
-	id, name string,
+	id, name, altName string,
 	locked bool,
 	ok *bool) error {
 
@@ -594,7 +600,7 @@ func exportBtn(
 			}
 		}
 
-		rbg, err := extractRadioButtonGroup(xRefTable, i, d, id, name, locked)
+		rbg, err := extractRadioButtonGroup(xRefTable, i, d, id, name, altName, locked)
 		if err != nil {
 			return err
 		}
@@ -611,7 +617,7 @@ func exportBtn(
 		}
 	}
 
-	cb, err := extractCheckBox(i, d, id, name, locked)
+	cb, err := extractCheckBox(i, d, id, name, altName, locked)
 	if err != nil {
 		return err
 	}
@@ -626,7 +632,7 @@ func exportCh(
 	i int,
 	form *Form,
 	d types.Dict,
-	id, name string,
+	id, name, altName string,
 	locked bool,
 	ok *bool) error {
 
@@ -644,7 +650,7 @@ func exportCh(
 			}
 		}
 
-		cb, err := extractComboBox(xRefTable, i, d, id, name, locked)
+		cb, err := extractComboBox(xRefTable, i, d, id, name, altName, locked)
 		if err != nil {
 			return err
 		}
@@ -661,7 +667,7 @@ func exportCh(
 	}
 
 	multi := primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
-	lb, err := extractListBox(xRefTable, i, d, id, name, locked, multi)
+	lb, err := extractListBox(xRefTable, i, d, id, name, altName, locked, multi)
 	if err != nil {
 		return err
 	}
@@ -676,7 +682,7 @@ func exportTx(
 	i int,
 	form *Form,
 	d types.Dict,
-	id, name string,
+	id, name, altName string,
 	ff *int,
 	locked bool,
 	ok *bool) error {
@@ -695,7 +701,7 @@ func exportTx(
 			}
 		}
 
-		df, err := extractDateField(xRefTable, i, d, id, name, df, locked)
+		df, err := extractDateField(xRefTable, i, d, id, name, altName, df, locked)
 		if err != nil {
 			return err
 		}
@@ -712,7 +718,7 @@ func exportTx(
 		}
 	}
 
-	tf, err := extractTextField(xRefTable, i, d, id, name, ff, locked)
+	tf, err := extractTextField(xRefTable, i, d, id, name, altName, ff, locked)
 	if err != nil {
 		return err
 	}
@@ -749,19 +755,30 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 			}
 		}
 
+		altName := ""
+		if o, found := d.Find("TU"); found {
+			s, err := types.StringOrHexLiteral(o)
+			if err != nil {
+				return err
+			}
+			if s != nil {
+				altName = *s
+			}
+		}
+
 		switch *ft {
 		case "Btn":
-			if err := exportBtn(xRefTable, i, form, d, id, name, locked, ok); err != nil {
+			if err := exportBtn(xRefTable, i, form, d, id, name, altName, locked, ok); err != nil {
 				return err
 			}
 
 		case "Ch":
-			if err := exportCh(xRefTable, i, form, d, id, name, locked, ok); err != nil {
+			if err := exportCh(xRefTable, i, form, d, id, name, altName, locked, ok); err != nil {
 				return err
 			}
 
 		case "Tx":
-			if err := exportTx(xRefTable, i, form, d, id, name, ff, locked, ok); err != nil {
+			if err := exportTx(xRefTable, i, form, d, id, name, altName, ff, locked, ok); err != nil {
 				return err
 			}
 		}
