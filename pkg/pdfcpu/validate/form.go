@@ -675,9 +675,12 @@ func pageAnnotIndRefForAcroField(xRefTable *model.XRefTable, indRef types.Indire
 
 	var apObjNr int
 	indRef1 := d.IndirectRefEntry("AP")
-	if indRef1 != nil {
-		apObjNr = indRef1.ObjectNumber.Value()
+	if indRef1 == nil && (r.Width() == 0 && r.Height() == 0) {
+		// Probably a signature field.
+		return &indRef, nil
 	}
+
+	apObjNr = indRef1.ObjectNumber.Value()
 
 	for _, m := range xRefTable.PageAnnots {
 		annots, ok := m[model.AnnWidget]
@@ -690,7 +693,7 @@ func pageAnnotIndRefForAcroField(xRefTable *model.XRefTable, indRef types.Indire
 		}
 	}
 
-	return nil, nil
+	return nil, errors.New("pdfcpu: can't repair form fields")
 }
 
 func validateFormFieldsAgainstPageAnnotations(xRefTable *model.XRefTable) error {
@@ -703,9 +706,6 @@ func validateFormFieldsAgainstPageAnnotations(xRefTable *model.XRefTable) error 
 		indRef, err := pageAnnotIndRefForAcroField(xRefTable, obj.(types.IndirectRef))
 		if err != nil {
 			return err
-		}
-		if indRef == nil {
-			return errors.New("pdfcpu: can't repair form fields")
 		}
 		arr1 = append(arr1, *indRef)
 	}
