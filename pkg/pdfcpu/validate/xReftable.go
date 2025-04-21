@@ -250,16 +250,15 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 			continue
 		}
 
-		d1.Insert(treeName, value)
-
 		_, _, tree, err := validateNameTree(xRefTable, treeName, d, true)
 		if err != nil {
 			return err
 		}
 
-		if tree != nil {
+		if tree != nil && tree.Kmin != "" && tree.Kmax != "" {
 			// Internalize.
 			xRefTable.Names[treeName] = tree
+			d1.Insert(treeName, value)
 		}
 
 	}
