@@ -120,7 +120,10 @@ func validatePrinterPreferences(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 	n, err := validateNameEntry(xRefTable, d, dictName, "PrintScaling", OPTIONAL, sinceVersion, validate)
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return err
+		}
+		// Ignore in relaxed mode.
 	}
 	if n != nil {
 		vp.PrintScaling = model.PrintScalingFor(n.String())
