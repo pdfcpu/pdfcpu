@@ -720,7 +720,10 @@ func validateNameTree(xRefTable *model.XRefTable, name string, d types.Dict, roo
 		}
 
 		if len(a) == 0 {
-			return "", "", nil, errors.New("pdfcpu: validateNameTree: missing \"Kids\" array")
+			if xRefTable.ValidationMode == model.ValidationStrict {
+				return "", "", nil, errors.New("pdfcpu: validateNameTree: missing \"Kids\" array")
+			}
+			return "", "", nil, nil
 		}
 
 		for _, o := range a {
@@ -738,7 +741,6 @@ func validateNameTree(xRefTable *model.XRefTable, name string, d types.Dict, roo
 					return "", "", nil, err
 				}
 				continue
-				//return kmin, kmax, nil, nil
 			}
 			if kmin == "" {
 				kmin = kminKid
