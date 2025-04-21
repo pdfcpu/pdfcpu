@@ -1732,10 +1732,14 @@ Examples:
 
 	usageLongCertificates = `Manage certificates.
 
-           inFile ... .pem file
+           inFile ... .pem or .p7c file
        inFileJSON ... input JSON file
           outFile ... output PDF file
       outFileJSON ... output PDF file
+
+   pdfcpu comes preloaded with certificates approved by the EU Trusted Lists.
+
+   Please import any missing certificates.
 `
 
 	usageSignaturesValidate = "pdfcpu signatures validate [-a(ll) -f(ull)] -- inFile"
@@ -1743,8 +1747,12 @@ Examples:
 
 	usageLongSignatures = `Manage digital signatures.
 
-              all ... validate all signatures (authoritative & cosigner)
-             full ... comprehensive output including certificate chains, revocation status and any problems encountered.
-           inFile ... input PDF file
+         all ... validate all signatures (authoritative/certified, cosigners, usage rights, digital timestamps)
+        full ... comprehensive output including certificate chains, revocation status and any problems encountered.
+      inFile ... input PDF file
+
+      Related configuration parameters: timeoutCRL,
+                                        timeoutOCSP,
+                                        preferredCertRevocationChecker
 `
 )

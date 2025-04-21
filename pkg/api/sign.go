@@ -134,7 +134,7 @@ func digest(signValidResults []*model.SignatureValidationResult, full bool, conf
 	return ss
 }
 
-// ValidateSignaturesFile validates all signatures of inFile.
+// ValidateSignatures validates signatures of inFile and returns the signature validation results.
 func ValidateSignatures(inFile string, all bool, conf *model.Configuration) ([]*model.SignatureValidationResult, error) {
 
 	if conf == nil {
@@ -163,6 +163,9 @@ func ValidateSignatures(inFile string, all bool, conf *model.Configuration) ([]*
 	return pdfcpu.ValidateSignatures(f, ctx, all)
 }
 
+// ValidateSignaturesFile validates signatures of inFile.
+// all: processes all signatures meaning not only the authoritative/certified signature..
+// full: verbose output including cert chain and problems encountered.
 func ValidateSignaturesFile(inFile string, all, full bool, conf *model.Configuration) ([]string, error) {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()

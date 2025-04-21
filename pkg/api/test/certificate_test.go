@@ -17,7 +17,6 @@
 package test
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
@@ -32,18 +31,4 @@ func TestListCertificates(t *testing.T) {
 	}
 
 	t.Logf("Loaded %d certs", n)
-}
-
-func xxxTestImportCertificates(t *testing.T) {
-	msg := "TestImportCertificates"
-	inFile := filepath.Join(inDir, "certs", "at_ascii.p7c")
-
-	ss, err := api.ImportCertificates([]string{inFile})
-	if err != nil {
-		t.Fatalf("%s: %v\n", msg, err)
-	}
-
-	for _, s := range ss {
-		t.Log(s)
-	}
 }

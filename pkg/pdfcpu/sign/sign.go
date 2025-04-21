@@ -329,7 +329,7 @@ func certInfo(cert *x509.Certificate) string {
 }
 
 func processDSS(ctx *model.Context, signer *model.Signer) ([]*x509.Certificate, [][]byte, [][]byte, bool) {
-	var ok bool
+	ok := true
 	dssCerts, err := extractCertsFromDSS(ctx)
 	if err != nil {
 		signer.AddProblem(fmt.Sprintf("DSS: extract certs: %v", err))

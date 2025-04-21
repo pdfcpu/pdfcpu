@@ -72,8 +72,8 @@ timeout: 5
 # http timeout in seconds for CRL revocation checking.
 timeoutCRL: 10
 
-# http timeout in seconds for OSCP revocation checking.
-timeoutOSCP: 10
+# http timeout in seconds for OCSP revocation checking.
+timeoutOCSP: 10
 
 # preferred certificate revocation checking mechanism:
 # crl

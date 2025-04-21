@@ -184,19 +184,11 @@ func verifyRSASHA1Signature(ra io.ReaderAt, sigDict types.Dict, rsaPubKey *rsa.P
 		return model.SignatureReasonInternal, errors.New("invalid signature dict - missing \"Contents\"")
 	}
 
-	// signedData = CMS (typically RSA) signature
-	// signature value is a PKCS #1 object).
 	contents, err := hl.Bytes()
 	if err != nil {
 		return model.SignatureReasonInternal, errors.Errorf("invalid content data: %v", err)
 	}
 
-	// Summary:
-	// 04: Tag for OCTET STRING.
-	// 81: Indicates that the length is in long form and the next byte will specify the length.
-	// 80: The actual length of the OCTET STRING content, which is 128 bytes.
-	// => OCTET STRING with a content length of 128 bytes!
-	//fmt.Println(hex.Dump(contents))
 	var bb []byte
 	if _, err = asn1.Unmarshal(contents, &bb); err != nil {
 		return model.SignatureReasonInternal, errors.Errorf("unmarshal asn1 content: %v", err)
@@ -211,7 +203,6 @@ func verifyRSASHA1Signature(ra io.ReaderAt, sigDict types.Dict, rsaPubKey *rsa.P
 
 	// Hash signed data (extracted using ByteRange) using SHA-1, 160 Bits = 20 bytes
 	hashed := sha1.Sum(data)
-	//fmt.Printf("sha1:\n%s\n", hex.Dump(hashed[:]))
 
 	// Confirm that the signature was created using the private key corresponding to the public key from the certificate.
 	if err := rsa.VerifyPKCS1v15(rsaPubKey, crypto.SHA1, hashed[:], bb); err != nil {

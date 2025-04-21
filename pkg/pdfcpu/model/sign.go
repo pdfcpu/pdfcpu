@@ -48,7 +48,7 @@ const (
 	SigTypeDTS
 )
 
-const TSFormat = "2006-01-02 15:04:05 -0700"
+const SignTSFormat = "2006-01-02 15:04:05 -0700"
 
 type RevocationDetails struct {
 	Status int
@@ -117,8 +117,8 @@ func (cd CertificateDetails) String() string {
 	ss = append(ss, fmt.Sprintf("                             Subject:    %s", cd.Subject))
 	ss = append(ss, fmt.Sprintf("                             Issuer:     %s", cd.Issuer))
 	ss = append(ss, fmt.Sprintf("                             SerialNr:   %s", cd.SerialNumber))
-	ss = append(ss, fmt.Sprintf("                             Valid From: %s", cd.ValidFrom.Format(TSFormat)))
-	ss = append(ss, fmt.Sprintf("                             Valid Thru: %s", cd.ValidThru.Format(TSFormat)))
+	ss = append(ss, fmt.Sprintf("                             Valid From: %s", cd.ValidFrom.Format(SignTSFormat)))
+	ss = append(ss, fmt.Sprintf("                             Valid Thru: %s", cd.ValidThru.Format(SignTSFormat)))
 	ss = append(ss, fmt.Sprintf("                             Expired:    %t", cd.Expired))
 	ss = append(ss, fmt.Sprintf("                             Qualified:  %t", cd.Qualified))
 	ss = append(ss, fmt.Sprintf("                             CA:         %t", cd.CA))
@@ -334,7 +334,7 @@ func (signer Signer) String(dts bool) string {
 		if signer.Timestamp.IsZero() {
 			s = "invalid"
 		} else {
-			s = signer.Timestamp.Format(TSFormat)
+			s = signer.Timestamp.Format(SignTSFormat)
 		}
 	}
 
@@ -413,7 +413,7 @@ func (sd SignatureDetails) String() string {
 		ss = append(ss, fmt.Sprintf("             Location:       %s", sd.Location))
 		ss = append(ss, fmt.Sprintf("             Reason:         %s", sd.Reason))
 	}
-	ss = append(ss, fmt.Sprintf("             SigningTime:    %s", sd.SigningTime.Format(TSFormat)))
+	ss = append(ss, fmt.Sprintf("             SigningTime:    %s", sd.SigningTime.Format(SignTSFormat)))
 	ss = append(ss, fmt.Sprintf("             Field:          %s", sd.FieldName))
 
 	if len(sd.Signers) == 1 {
@@ -452,7 +452,7 @@ func (svr *SignatureValidationResult) Permissions() int {
 
 func (svr *SignatureValidationResult) SigningTime() string {
 	if !svr.Details.SigningTime.IsZero() {
-		return svr.Details.SigningTime.Format(TSFormat)
+		return svr.Details.SigningTime.Format(SignTSFormat)
 	}
 	return "not available"
 }

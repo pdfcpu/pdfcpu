@@ -466,11 +466,6 @@ func checkResponderCert(resp *ocsp.Response, rootCerts *x509.CertPool, client *h
 		return errors.New("OCSP: disabled for cert by responder")
 	}
 
-	// Check if the OCSP signer cert is allowed to sign OCSP responses
-	if err := resp.Certificate.VerifyHostname("ocsp responder"); err != nil {
-		return fmt.Errorf("OCSP signer hostname check failed: %v", err)
-	}
-
 	// Must have OCSP Signing EKU
 	if found := slices.Contains(resp.Certificate.ExtKeyUsage, x509.ExtKeyUsageOCSPSigning); !found {
 		return errors.New("OCSP signer cert missing OCSP Signing EKU")

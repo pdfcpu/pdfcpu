@@ -66,7 +66,7 @@ func ValidateDTS(
 
 	// TODO if DocMDP ignore DTS.
 
-	// Note: perms are disregarded.
+	// Note: perms are disregarded for ETSI.RFC3161.
 
 	if ctx.Configuration.Offline {
 		result.AddProblem("pdfcpu is offline, unable to perform certificate revocation checking")
@@ -109,7 +109,6 @@ func ValidateDTS(
 	// TODO Check
 	// ByteRange shall cover the entire document, including the Document Time-stamp dictionary
 	// but excluding the TimeStampToken itself (the entry with key Contents).
-
 	data, err := signedData(ra, sigDict)
 	if err != nil {
 		result.Reason = model.SignatureReasonInternal

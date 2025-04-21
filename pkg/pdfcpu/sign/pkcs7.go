@@ -41,78 +41,6 @@ func ValidatePKCS7Signatures(
 	result *model.SignatureValidationResult,
 	ctx *model.Context) error {
 
-	// We want to check for B-B, B-T, B-LT, B-LTA!
-
-	// PAdES-E-BES: content-type, message-digest, signing-certificate or signing-certificate-v2
-	// optional: content-time-stamp, signature-time-stamp
-	//           sigDict.Reason or commitment-type-indication
-
-	/*
-		CommitmentTypeIndication ::= SEQUENCE {
-			commitmentTypeId CommitmentTypeIdentifier,
-			commitmentTypeQualifier SEQUENCE SIZE (1..MAX) OF CommitmentTypeQualifier OPTIONAL
-		}
-
-		CommitmentTypeIdentifier ::= OBJECT IDENTIFIER
-
-		CommitmentTypeQualifier ::= SEQUENCE {
-			commitmentQualifierId COMMITMENT-QUALIFIER.&id,
-			qualifier COMMITMENT-QUALIFIER.&Qualifier OPTIONAL
-		}
-
-		DSS and DTS assume:
-
-		<<
-			/ESIC <</BaseVersion /1.7 /ExtensionLevel 1 >>
-		>>
-
-		PAdES-E-BES:
-		<<
-			/ESIC <</BaseVersion /1.7 /ExtensionLevel 2 >>
-		>>
-
-		or for both:
-
-		<<
-			/ADBE <</BaseVersion /1.7 /ExtensionLevel 8 >>
-		>>
-
-			4 Levels (see ETSI EN 319 142-1):
-
-				B-B     Basic: contains the signed data, the signer's certificate, and basic signature info. = PAdES-E-BES
-				B-B + signature policy => PAdES-E-EPES (display policy!)
-
-				B-T		signature-time-stamp attribute or "DTS" = DocTimeStamp signature over the entire document (as PDF increment!)
-						adds a trusted timestamp (DTS) to prove when the document was signed.
-				        to prove that the signature itself actually existed at a certain date and time
-
-				B-LT	"DSS" increment followed by "DTS" increment = Long-Term:
-				         adds certificate chain + revocation info (OCSP/CRL) to validate later.      PAdES-E-LTV
-				        long term availability of the validation material
-				        embedding of revocation information (OCSP/CRL), (
-
-				B-LTA   B-LT + one or more Archive Timestamps (Document TimeStamps (DTS))
-						Long-Term Archive: adds "archive timestamps" to prove integrity over many years.         PAdES-E-LTV
-				        electronic time-stamps that allow validation of the signature long time after its generation.
-				        Requires a timestamp applied to the document, and (requires (trusted timestamp or DTS) and DSS)
-						the signature itself should be timestamped repeatedly to maintain its validity over time.
-	*/
-
-	// PAdES-E-EPES signatures are built on PAdES-E-BES signatures by adding one signature-policy-identifier
-	// sigDict.Reason not allowed! (also ETSI.RFC3161 has to ignore Reason)
-	/*
-		SignaturePolicyIdentifier ::= CHOICE {
-			signaturePolicyId SignaturePolicyId,
-			signaturePolicyImplied SignaturePolicyImplied -- not used in this version
-		}
-
-		SignaturePolicyId ::= SEQUENCE {
-			sigPolicyId SigPolicyId,
-			sigPolicyHash SigPolicyHash,
-			sigPolicyQualifiers SEQUENCE SIZE (1..MAX) OF SigPolicyQualifierInfo OPTIONAL url, notice, id
-		}
-	*/
-
 	if ctx.Configuration.Offline {
 		result.AddProblem("pdfcpu is offline, unable to perform certificate revocation checking")
 	}
@@ -427,8 +355,6 @@ func handleClaimedSigningTime(signerInfo pkcs7.SignerInfo, signer *model.Signer,
 
 	if !signingTime.IsZero() {
 		result.Details.SigningTime = signingTime
-		//signer.Timestamp = signingTime
-		//signer.HasTimestamp = true
 		return &signingTime
 	}
 

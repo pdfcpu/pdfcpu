@@ -32,7 +32,7 @@ var (
 	oidData                    = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 7, 1}         // PAdES-E-BES content-type, signed
 	oidMessageDigest           = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 4}         // PAdES-E-BES, signed
 	oidSigningTime             = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 5}         // PKSC#7, signed
-	oidTSTInfo                 = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 1, 4}  //
+	oidTSTInfo                 = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 1, 4}  // Time Stamp Token Information, ETSI.RFC3161
 	oidSigningCertificate      = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 12} // PAdES-E-BES, signed
 	oidTimestampToken          = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 14} // PAdES-T, unsigned
 	oidSigPolicyID             = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 16, 2, 15} // PAdES-EPES, signed
