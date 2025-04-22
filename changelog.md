@@ -6,7 +6,16 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
-|2025-04-22 | [v0.10.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.10.1)                            | Coming up, please bear with me 💚
+|2025-04-22 | [v0.10.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.10.1)                            | Add signature & cert commands, 
+|           |                                                                                             | Fix #888, #972, #973, #984, #985, 
+|           |                                                                                             | #987, #988, #991, #999, #1001,
+|           |                                                                                             | #1007, #1008, #1010, #1013,
+|           |                                                                                             | #1015-#1017, #1019, #1021, #1025, 
+|           |                                                                                             | #1027, #1029, #1034, #1036, #1041,
+|           |                                                                                             | #1047, #1049, #1058, #1064, #1065,
+|           |                                                                                             | #1066, #1072, #1073, #1076, #1077,  
+|           |                                                                                             | #1080, #1081, #1089, #1090, #1098, 
+|           |                                                                                             | #1099, #1100, #1111, #1114, #1116
 |2024-10-24 | [v0.9.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.9.1)                              | Fix config file handling
 |2024-10-24 | [v0.9.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.9.0)                              | Add images list, extract, update cmds
 |           |                                                                                             | Add config list, reset cmds,
