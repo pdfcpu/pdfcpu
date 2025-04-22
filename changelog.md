@@ -6,7 +6,7 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
-|2025-04-22 | [v0.10.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.10.0)                            | Coming up, please bear with me 💚
+|2025-04-22 | [v0.10.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.10.1)                            | Coming up, please bear with me 💚
 |2024-10-24 | [v0.9.1](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.9.1)                              | Fix config file handling
 |2024-10-24 | [v0.9.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.9.0)                              | Add images list, extract, update cmds
 |           |                                                                                             | Add config list, reset cmds,
