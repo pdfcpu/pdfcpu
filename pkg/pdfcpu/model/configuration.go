@@ -296,7 +296,16 @@ var robotoFontFileBytes []byte
 //go:embed resources/certs/*.p7c
 var certFilesEU embed.FS
 
-func ensureConfigFileAt(path string, override bool) error {
+func ensureConfigFileAt(directory string, override bool) error {
+	if _, err := os.Stat(directory); err != nil {
+		err := os.MkdirAll(directory, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	path := filepath.Join(directory, "config.yml")
+
 	f, err := os.Open(path)
 	if err != nil || override {
 		f.Close()
@@ -411,9 +420,10 @@ func initCertificates() error {
 
 // EnsureDefaultConfigAt tries to load the default configuration from path.
 // If path/pdfcpu/config.yaml is not found, it will be created.
-func EnsureDefaultConfigAt(path string, override bool) error {
-	configDir := filepath.Join(path, "pdfcpu")
-	if err := ensureConfigFileAt(filepath.Join(configDir, "config.yml"), override); err != nil {
+func EnsureDefaultConfigAt(rootConfigDir string, override bool) error {
+	configDir := filepath.Join(rootConfigDir, "pdfcpu")
+
+	if err := ensureConfigFileAt(rootConfigDir, override); err != nil {
 		return err
 	}
 
