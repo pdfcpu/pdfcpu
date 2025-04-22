@@ -161,7 +161,10 @@ func parseConfigFile(r io.Reader, configPath string) error {
 	}
 
 	if !types.MemberOf(c.PreferredCertRevocationChecker, []string{"crl", "ocsp"}) {
-		return errors.Errorf("invalid preferred certificate revocation checker: %s", c.PreferredCertRevocationChecker)
+		if c.PreferredCertRevocationChecker != "" {
+			return errors.Errorf("invalid preferred certificate revocation checker: %s", c.PreferredCertRevocationChecker)
+		}
+		c.PreferredCertRevocationChecker = "crl"
 	}
 
 	loadedDefaultConfig = loadedConfig(c, configPath)

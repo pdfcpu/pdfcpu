@@ -201,6 +201,8 @@ func handlePreferredCertRevocationChecker(v string, c *Configuration) error {
 		c.PreferredCertRevocationChecker = CRL
 	case "ocsp":
 		c.PreferredCertRevocationChecker = OCSP
+	case "":
+		c.PreferredCertRevocationChecker = CRL
 	default:
 		return errors.Errorf("invalid preferredCertRevocationChecker: %s", v)
 	}
