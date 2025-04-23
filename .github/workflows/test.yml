@@ -40,6 +40,8 @@ jobs:
         with:
           flag-name: Go-${{ matrix.go }}
           parallel: true
+        env:
+          CI_OFFLINE: "true"
 
   finish:
     needs: test

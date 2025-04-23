@@ -41,7 +41,7 @@ func TestValidateSignature_X509_RSA_SHA1(t *testing.T) {
 		fmt.Println("\nvalidate signatures of " + inFile)
 		all := true
 		full := false
-		ss, err := api.ValidateSignaturesFile(inFile, all, full, nil)
+		ss, err := api.ValidateSignaturesFile(inFile, all, full, conf)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -60,7 +60,7 @@ func TestValidateSignature_PKCS7_SHA1(t *testing.T) {
 		fmt.Println("validate signatures of " + inFile)
 		all := true
 		full := false
-		ss, err := api.ValidateSignaturesFile(inFile, all, full, nil)
+		ss, err := api.ValidateSignaturesFile(inFile, all, full, conf)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -79,7 +79,7 @@ func TestValidateSignature_PKCS7_Detached(t *testing.T) {
 		fmt.Println("\nvalidate signatures of " + inFile)
 		all := true
 		full := true
-		ss, err := api.ValidateSignaturesFile(inFile, all, full, nil)
+		ss, err := api.ValidateSignaturesFile(inFile, all, full, conf)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -98,7 +98,7 @@ func TestValidateSignature_ETSI_CAdES_Detached(t *testing.T) {
 		fmt.Println("\nvalidate signatures of " + inFile)
 		all := true
 		full := true
-		ss, err := api.ValidateSignaturesFile(inFile, all, full, nil)
+		ss, err := api.ValidateSignaturesFile(inFile, all, full, conf)
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}

@@ -62,6 +62,10 @@ func TestMain(m *testing.M) {
 
 	conf = api.LoadConfiguration()
 
+	if os.Getenv("CI_OFFLINE") == "true" {
+		conf.Offline = true
+	}
+
 	// Install test user fonts from pkg/testdata/fonts.
 	fonts, err := userFonts(filepath.Join(inDir, "fonts"))
 	if err != nil {
