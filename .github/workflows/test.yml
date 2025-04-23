@@ -14,11 +14,16 @@ jobs:
             goarch: arm64
           - goos: linux
             goarch: amd64
+          - goos: linux
+            goarch: arm
+            goarm: 7
+          - goos: linux
+            goarch: arm64
           - goos: windows
             goarch: amd64
         go:
-           - '1.22.x'
            - '1.23.x'
+           - '1.24.x'
     runs-on: ubuntu-latest
 
     steps:
@@ -40,7 +45,7 @@ jobs:
         with:
           flag-name: Go-${{ matrix.go }}
           parallel: true
-
+        
   finish:
     needs: test
     runs-on: ubuntu-latest
