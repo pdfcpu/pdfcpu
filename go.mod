@@ -1,6 +1,7 @@
 module github.com/pdfcpu/pdfcpu
 
-go 1.23.0
+go 1.23
+
 
 require (
 	github.com/hhrutter/lzw v1.0.0
