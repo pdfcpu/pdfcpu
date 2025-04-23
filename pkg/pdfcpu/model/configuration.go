@@ -413,6 +413,9 @@ func initCertificates() error {
 // If path/pdfcpu/config.yaml is not found, it will be created.
 func EnsureDefaultConfigAt(path string, override bool) error {
 	configDir := filepath.Join(path, "pdfcpu")
+	if err := os.MkdirAll(configDir, os.ModePerm); err != nil {
+		return err
+	}
 	if err := ensureConfigFileAt(filepath.Join(configDir, "config.yml"), override); err != nil {
 		return err
 	}
