@@ -21,6 +21,7 @@ The commands are:
    booklet     arrange pages onto larger sheets of paper to make a booklet or zine
    bookmarks   list, import, export, remove bookmarks
    boxes       list, add, remove page boundaries for selected pages
+   certificates  list, import, reset certificates
    changeopw   change owner password
    changeupw   change user password
    collect     create custom PDF page sequence
@@ -53,6 +54,7 @@ The commands are:
    resize      resize selected pages
    rotate      rotate selected pages
    selectedpag print definition of the -pages flag
+   signatures  validate signatures
    split       split multi-page PDF into several PDFs according to split span
    stamp       add, update, remove text, image or PDF stamps to selected pages
    trim        create trimmed version of selected pages

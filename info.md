@@ -9,7 +9,7 @@ Print information about a PDF file and its attachments.
 ## Usage
 
 ```
-pdfcpu info [-pages selectedPages] [-j(son)] inFile...
+pdfcpu info [-pages selectedPages] [-fonts -j(son)] inFile...
 ```
 
 <br>
@@ -19,6 +19,7 @@ pdfcpu info [-pages selectedPages] [-j(son)] inFile...
 | name                                      | description         | required
 |:----------------------------------------  |:--------------------|:--------
 | [p(ages)](getting_started/page_selection) | page selection      | no
+| fonts                                     | include font info   | no
 | j(son)                                    | produce JSON output | no
 
 <br>

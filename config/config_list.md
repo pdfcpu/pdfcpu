@@ -30,10 +30,10 @@ config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 #############################
 
 # Creation date
-created: 2024-10-22 19:25
+created: 2025-04-23 10:30
 
 # version (Do not edit!)
-version: v0.9.1 dev
+version: v0.10.2 dev
 
 # toggle for inFilename extension check (.pdf)
 checkFileNameExt: true
@@ -85,7 +85,7 @@ timestampFormat: 2006-01-02 15:04
 # date format: yyyy-mm-dd
 dateFormat: 2006-01-02
 
-# toggle optimization
+# toggle optimization.
 optimize: true
 
 # optimize page resources via content stream analysis.
@@ -105,4 +105,15 @@ offline: false
 
 # http timeout in seconds.
 timeout: 5
+
+# http timeout in seconds for CRL revocation checking.
+timeoutCRL: 10
+
+# http timeout in seconds for OCSP revocation checking.
+timeoutOCSP: 10
+
+# preferred certificate revocation checking mechanism:
+# crl
+# ocsp
+preferredCertRevocationChecker: crl
 ```
