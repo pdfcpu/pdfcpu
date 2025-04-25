@@ -348,6 +348,12 @@ func DateTime(s string, relaxed bool) (time.Time, bool) {
 
 	var d time.Time
 
+	var err error 
+	s, err = strconv.Unquote("\""+s+"\"")
+	if err != nil {
+		return d, false
+	}
+
 	var ok bool
 	s, ok = prevalidateDate(s, relaxed)
 	if !ok {
