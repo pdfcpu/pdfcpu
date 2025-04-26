@@ -24,6 +24,8 @@ pdfcpu trim -p(ages) selectedPages inFile [outFile]
 
 ### [Common Flags](../getting_started/common_flags)
 
+<br>
+
 ### Arguments
 
 | name         | description         | required | default
