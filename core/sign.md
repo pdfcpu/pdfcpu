@@ -381,7 +381,7 @@ optimizing...
 
 1 usage rights signature (invisible, signed)
    Status: validity of the signature is unknown
-   Reason: signer\'s certificate chain is not in the trusted list of Root CAs
+   Reason: signers certificate chain is not in the trusted list of Root CAs
    Signed: 2022-12-15 17:08:57 +0000
 ```
 
@@ -396,7 +396,7 @@ optimizing...
 1:
        Type: usage rights signature (invisible, signed)
      Status: validity of the signature is unknown
-     Reason: signer\'s certificate chain is not in the trusted list of Root CAs
+     Reason: signers certificate chain is not in the trusted list of Root CAs
      Signed: 2022-12-15 17:08:57 +0000
 DocModified: false
     Details:
