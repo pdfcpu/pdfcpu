@@ -22,6 +22,9 @@ pdfcpu annotations list [-p(ages) selectedPages] inFile
 |:---------------------------------|:----------------|---------
 | [p(ages)](../getting_started/page_selection) | selected pages | no
 
+<br>
+
+### [Common Flags](../getting_started/common_flags)
 
 <br>
 
