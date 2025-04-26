@@ -35,8 +35,8 @@ Has to be the only signature in the document.
 |:----------------------------|:--------------------------------------------------|:-------------------------|
 | **Form Signature**          | Authenticate form data and signer identity        | Visible or invisible     |
 | **Page Signature**          | Authenticate page content and appearance          | Visible or invisible     |
-| **Document Timestamp Signature** | Prove document existence at a point in time      | Always invisible         |
-| **Usage Rights Signature**  | Define locked features, detect tampering     | Always invisible         |
+| **Document Timestamp Signature** | Prove document existence at a point in time      | invisible         |
+| **Usage Rights Signature**  | Define locked features, detect tampering     | invisible         |
 
 <br>
 
