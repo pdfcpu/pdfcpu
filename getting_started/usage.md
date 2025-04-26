@@ -16,53 +16,53 @@ Usage:
 
 The commands are:
 
-   annotations list, remove page annotations
-   attachments list, add, remove, extract embedded file attachments
-   booklet     arrange pages onto larger sheets of paper to make a booklet or zine
-   bookmarks   list, import, export, remove bookmarks
-   boxes       list, add, remove page boundaries for selected pages
-   certificates  list, import, reset certificates
-   changeopw   change owner password
-   changeupw   change user password
-   collect     create custom PDF page sequence
-   config      list, reset configuration
-   create      create PDF content via JSON
-   crop        set crop box for selected pages
-   cut         custom cut pages horizontally or vertically
-   decrypt     remove password protection
-   encrypt     set password protection
-   extract     extract images, fonts, content, pages, metadata
-   fonts       install, list supported fonts
-   form        list, remove fields, lock, unlock, reset, export, fill form via JSON or CSV
-   grid        rearrange pages or images for enhanced browsing experience
-   images      list, extract, update images for selected pages
-   import      import/convert images to PDF
-   info        print file info
-   keywords    list, add, remove document keywords
-   merge       concatenate 2 or more PDFs
-   ndown       cut selected pages into n pages symmetrically
-   nup         rearrange pages or images for reduced number of pages
-   optimize    optimize PDF by getting rid of redundant page resources
-   pagelayout  list, set, reset page layout for opened document
-   pagemode    list, set, reset page mode for opened document
-   pages       insert, remove selected pages
-   paper       print list of supported paper sizes
-   permissions list, set user access permissions
-   portfolio   list, add, remove, extract portfolio entries
-   poster      cut selected pages into poster using paper size or dimensions
-   properties  list, add, remove document properties
-   resize      resize selected pages
-   rotate      rotate selected pages
-   selectedpag print definition of the -pages flag
-   signatures  validate signatures
-   split       split multi-page PDF into several PDFs according to split span
-   stamp       add, update, remove text, image or PDF stamps to selected pages
-   trim        create trimmed version of selected pages
-   validate    validate PDF against PDF 32000-1:2008 (PDF 1.7) + basic validation version PDF 2.0
-   version     print version
-   viewerpref  list, set, reset viewer preferences for opened document
-   watermark   add, update, remove text, image or PDF watermarks to selected pages
-   zoom        zoom in/out of selected pages by magnification factor or corresponding margin
+   annotations  list, remove page annotations
+   attachments  list, add, remove, extract embedded file attachments
+   booklet      arrange pages onto larger sheets of paper to make a booklet or zine
+   bookmarks    list, import, export, remove bookmarks
+   boxes        list, add, remove page boundaries for selected pages
+   certificates list, import, reset certificates
+   changeopw    change owner password
+   changeupw    change user password
+   collect      create custom PDF page sequence
+   config       list, reset configuration
+   create       create PDF content via JSON
+   crop         set crop box for selected pages
+   cut          custom cut pages horizontally or vertically
+   decrypt      remove password protection
+   encrypt      set password protection
+   extract      extract images, fonts, content, pages, metadata
+   fonts        install, list supported fonts
+   form         list, remove fields, lock, unlock, reset, export, fill form via JSON or CSV
+   grid         rearrange pages or images for enhanced browsing experience
+   images       list, extract, update images for selected pages
+   import       import/convert images to PDF
+   info         print file info
+   keywords     list, add, remove document keywords
+   merge        concatenate 2 or more PDFs
+   ndown        cut selected pages into n pages symmetrically
+   nup          rearrange pages or images for reduced number of pages
+   optimize     optimize PDF by getting rid of redundant page resources
+   pagelayout   list, set, reset page layout for opened document
+   pagemode     list, set, reset page mode for opened document
+   pages        insert, remove selected pages
+   paper        print list of supported paper sizes
+   permissions  list, set user access permissions
+   portfolio    list, add, remove, extract portfolio entries
+   poster       cut selected pages into poster using paper size or dimensions
+   properties   list, add, remove document properties
+   resize       resize selected pages
+   rotate       rotate selected pages
+   selectedpage print definition of the -pages flag
+   signatures   validate signatures
+   split        split multi-page PDF into several PDFs according to split span
+   stamp        add, update, remove text, image or PDF stamps to selected pages
+   trim         create trimmed version of selected pages
+   validate     validate PDF against PDF 32000-1:2008 (PDF 1.7) + basic validation version PDF 2.0
+   version      print version
+   viewerpref   list, set, reset viewer preferences for opened document
+   watermark    add, update, remove text, image or PDF watermarks to selected pages
+   zoom         zoom in/out of selected pages by magnification factor or corresponding margin
 
    Completion supported for all commands.
    One letter Unix style abbreviations supported for flags.
