@@ -10,20 +10,20 @@ PDF supports several types of signatures, each with a distinct purpose:
 
 ### Form Signature
 A digital signature associated with a form field within the document.  
-It is primarily intended to authenticate the person who filled out the form and confirm the integrity of the entered data.  
+It is primarily intended to authenticate the person who filled out the form and confirms the integrity of the entered data.  
 
 ### Page Signature
-A digital signature applied directly onto a page, often as an annotation or widget.  
+A digital signature applied directly onto a page, often as an annotation or widget.
 Its purpose is to authenticate the visible content of the page, ensuring that it has not been altered.  
 
 ### Document Timestamp Signature
-A signature based on an [RFC 3161](https://datatracker.ietf.org/doc/html/rfc3161) `TimeStampToken` issued by a trusted timestamp authority (TSA).  
+A signature based on an [RFC 3161](https://datatracker.ietf.org/doc/html/rfc3161) `TimeStampToken` issued by a trusted timestamp authority (TSA).
 A DTS proves the existence of the document at a specific point in time, without binding it to a particular signer.   
 Usually associated with PDFs enabled for long term validation.
 
 ### Usage Rights Signature
-A special signature used to enable extended features (such as form filling, commenting, and saving) in PDF viewers like Adobe Reader.  
-It also detects unauthorized changes that would invalidate these usage rights.  
+A special signature used to enable extended features (such as form filling, commenting, and saving) in PDF viewers like Adobe Reader.
+It also detects unauthorized changes that would invalidate these usage rights.
 Has to be the only signature in the document.
 
 ---
@@ -101,11 +101,12 @@ pdfcpu signatures validate [-a(ll) -f(ull)] -- inFile
 
 A **certified signature** is a special type of signature that locks the document at a certain point, allowing only certain permitted changes afterward. It proves that the document was approved in its original form by the certifying party.
 
-An **authoritative signature** is the first signature encountered in the document, used when no certified signature is present. It represents the most trusted signature in the absence of certification.
+An **authoritative signature** is the first signature encountered in the document when no certified signature is present. It represents the most trusted signature in the absence of certification.
 
 Any number of **approval signatures** may be applied after a certified signature.
 
-By default, validation focuses only on the certified signature, if available, or otherwise the authoritative signature.    
+By default, validation focuses only on the certified signature, if available, or otherwise the authoritative signature.
+
 If the `-all` option is set, **all** signatures in the PDF are validated.
 
 
@@ -155,7 +156,7 @@ Current limitations mostly involve either older encryption standards restricted 
 
 ## PAdES Level
 
-While the PDF specification mainly focuses on PAdES-E-BES and PAdES-E-EPES for processing ETSI.CAdES.detached signatures, pdfcpu instead detects and reports the PAdES Basic level:
+While the PDF specification mainly focuses on PAdES-E-BES and PAdES-E-EPES for processing ETSI.CAdES.detached signatures, pdfcpu instead detects and reports the PAdES Baseline level:
 * B-B
 * B-T
 * B-LT
@@ -165,7 +166,7 @@ PAdES-B levels (Basic, Timestamp, Long-Term, Long-Term-Archival) are more compre
 
 Focusing on these levels improves compatibility with modern signature validation workflows and future-proofs pdfcpu for evolving standards.
 
-The PAdES levels(baseline profiles) are defined in [ETSI EN 319 142-1 V1.2.1 (2024-01)](https://www.etsi.org/deliver/etsi_en/319100_319199/31914201/01.02.01_60/en_31914201v010201p.pdf) 6.1.
+The PAdES baseline levels(profiles) are defined in [ETSI EN 319 142-1 V1.2.1 (2024-01)](https://www.etsi.org/deliver/etsi_en/319100_319199/31914201/01.02.01_60/en_31914201v010201p.pdf) 6.1.
 
 
 | PAdES Level | Description                         | Supported |
@@ -175,14 +176,13 @@ The PAdES levels(baseline profiles) are defined in [ETSI EN 319 142-1 V1.2.1 (20
 | B-LT        | B-T with embedded CRL and OCSP data | ☑️ |
 | B-LTA       | BLT with DTS                        | ☑️ |
 
-pdfcpu is currently not concerned with 
-
+> **Note:**  
+> pdfcpu currently focuses primarily on PAdES-B and is not extensively concerned with other PAdES standards.
 
 
 ## Examples
 
-
-We start with a valid PAdES B-B conform ETSI.CAdES.detached signature:
+We start with a valid PAdES-B-B conforming ETSI CAdES-detached signature:
 
 ```sh
 $ pdfcpu sig val sample1.pdf
@@ -258,8 +258,8 @@ DocModified: false
 
 ```
 
-We can see the PAdES level and the trusted certificate certificate chain.  
-The output also shows that the is not expired and passed the online revocation check.
+We can see the PAdES level and the trusted certificate chain.  
+The output also shows that the certificate is not expired and passed the online revocation check.
 
 <br>
 
@@ -340,17 +340,16 @@ DocModified: false
                                          Reason: CA
 ```
 
-Using `-all` reveals there is only one signature.  
-The signature contains a single signer which is how it should be for ETSI.CAdES.detached signatures.  
+Using `-all` reveals that there is only one signature.   
+The signature contains a single signer, which is the expected behavior for ETSI CAdES-detached signatures.
 
-We see the trusted certificate chain, also that the certificate is not expired and considered **not revoked** after contacting the corresponding OSCP responder via http.
+We see the trusted certificate chain, and also that the certificate is not expired and is considered **not revoked** after contacting the corresponding OCSP responder via HTTP.
 
-We can see the validated and therefore trusted timestamp which elevates the PAdES level from B-B to B-T. This could also be due to a separate valid DTS (document timestamp signature).
+We can see the validated and therefore trusted timestamp, which elevates the PAdES level from B-B to B-T. This could also be due to a separate valid DTS (Document Timestamp Signature).
 
 <br>
 
-Next we have an example that uses a document timestamp signature to prove that the
-signature existed at a certain time.
+Next, we have an example that uses a Document Timestamp Signature to prove that the signature existed at a certain time.
 
 ```sh
 
@@ -372,15 +371,15 @@ optimizing...
    Signed: 2024-03-04 12:24:31 +0000
 ```
 
-In order to see the details for both signatures you need to supply -all and -full.
-There is a good chance that this form signature is B-T or even higer vB-LT or B-LTA compliant.
-We skip this because it is a rather long output.
+In order to see the details for both signatures, you need to supply `-all` and `-full`.  
+There is a good chance that this form signature is B-T or even higher, such as B-LT or B-LTA compliant.  
+We skip this because it produces a rather long output.
 
 <br>
 
-At last we take a look at a PDF with a usage rights signature.  
-This is not a signature in the traditional sense but rather about a trusted definition of permissions PDF processors should obey.  
-Eg. you can use usage rights to explicitly allow saving a filled form.
+At last, we take a look at a PDF with a usage rights signature.  
+This is not a signature in the traditional sense, but rather a trusted definition of permissions that PDF processors should obey.  
+For example, you can use usage rights to explicitly allow saving a filled form.
 
 ```sh
 $ pdfcpu sig val -all usageRights.pdf
@@ -394,8 +393,8 @@ optimizing...
 
 <br>
 
-Using `-all` reveals there is only one signature.  
-Let's take a detailed look at what is going on here: 
+Using `-all` reveals that there is only one signature.  
+Let's take a detailed look at what is going on here:
 
 ```sh
 $ pdfcpu sig val -full usageRights.pdf
@@ -424,7 +423,7 @@ DocModified: false
              Certificate:
                              Subject:    ARE Production V8.1 G3 P24 1007685
                              Issuer:     Adobe Product Services G3
-                             SerialNr:   901357a46c30d17b2f7d64b453c0818
+                             SerialNr:   101357a46c30d17b2f7d64b453c0818
                              Valid From: 2022-02-11 00:00:00 +0000
                              Valid Thru: 2035-12-31 23:59:59 +0000
                              Expired:    false
@@ -442,7 +441,7 @@ DocModified: false
              IntermediateCA:
                              Subject:    Adobe Product Services G3
                              Issuer:     Adobe Root CA G2
-                             SerialNr:   ca8b6547b89e6d2068975cd8b9b89e2
+                             SerialNr:   fa8b6547b89e6d2068975cd8b9b89e2
                              Valid From: 2016-11-29 00:00:00 +0000
                              Valid Thru: 2041-11-28 23:59:59 +0000
                              Expired:    false
@@ -458,7 +457,7 @@ DocModified: false
              RootCA:
                              Subject:    Adobe Root CA G2
                              Issuer:     Adobe Root CA G2
-                             SerialNr:   5df12f5f57a7c3e1b002d893270cdde1
+                             SerialNr:   0df12f5f57a7c3e1b002d893270cdde1
                              Valid From: 2016-11-29 00:00:00 +0000
                              Valid Thru: 2046-11-28 23:59:59 +0000
                              Expired:    false
@@ -471,12 +470,12 @@ DocModified: false
                              SelfSigned: true
                              Trust:      Status: ok
                                          Reason: self signed
-             Problems:       certificate verification failed for serial="901357a46c30d17b2f7d64b453c0818": x509: certificate signed by unknown authority
+             Problems:       certificate verification failed for serial="101357a46c30d17b2f7d64b453c0818": x509: certificate signed by unknown authority
 ```
 
-In addition to a problem that hints to missing intermediate or root certificates we can also see that the certificate is not expired and could not be found in any certificate revocation list and is therefore considered **not revoked**.  
+In addition to a problem that points to missing intermediate or root certificates, we can also see that the certificate is not expired, could not be found in any certificate revocation list, and is therefore considered **not revoked**.  
 
-If you import the missing certificates using `pdfcpu cert import` validation should succeed.
+If you import the missing certificates using `pdfcpu cert import`, validation should succeed.
 
 > **Note:**  
 > This command only checks if the **usage rights signature** is valid.    
