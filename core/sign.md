@@ -106,6 +106,18 @@ pdfcpu signatures validate [-a(ll) -f(ull)] -- inFile
 
 <br>
 
+### [Common Flags](../getting_started/common_flags)
+
+<br>
+
+### Arguments
+
+| name         | description         | required 
+|:-------------|:--------------------|:--------
+| inFile       | PDF input file      | yes
+
+<br>
+
 ### Certified and Authoritative Signatures
 
 A **certified signature** is a special type of signature that locks the document at a certain point, allowing only certain permitted changes afterward. It proves that the document was approved in its original form by the certifying party.
@@ -117,33 +129,6 @@ Any number of **approval signatures** may be applied after a certified signature
 By default, validation focuses only on the certified signature, if available, or otherwise the authoritative signature.
 
 If the `-all` option is set, **all** signatures in the PDF are validated.
-
-
-
-<br>
-
-
-### Common Flags
-
-| name                                            | description     | values
-|:------------------------------------------------|:----------------|:-------
-| [v(erbose)](../getting_started/common_flags.md) | turn on logging |
-| [vv](../getting_started/common_flags.md)        | verbose logging |
-| [q(uiet)](../getting_started/common_flags.md)   | quiet mode      |
-| [-o(ffline)](../getting_started/common_flags.md)| disable http traffic |                                 | 
-| [c(onf)](../getting_started/common_flags.md)    | config dir      | $path, disable
-| [opw](../getting_started/common_flags.md)       | owner password  |
-| [upw](../getting_started/common_flags.md)       | user password   |
-| [u(nit)](../getting_started/common_flags.md)    | display unit    | po(ints),in(ches),cm,mm
-
-<br>
-
-### Arguments
-
-| name         | description         | required 
-|:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
-
 
 <br>
 
