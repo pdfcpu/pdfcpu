@@ -4,13 +4,80 @@ layout: default
 
 # Signatures
 
+Validate digital signatures present in a PDF.
 
-Usage Rights Signature
+PDF supports several types of signatures, each with a distinct purpose:
 
- to detect changes to a document that
-shall invalidate a usage rights signature,
+### Form Signature
+A digital signature associated with a form field within the document.  
+It is primarily intended to authenticate the person who filled out the form and confirm the integrity of the entered data.  
 
-* Have a look at some [examples](#examples).
+### Page Signature
+A digital signature applied directly onto a page, often as an annotation or widget.  
+Its purpose is to authenticate the visible content of the page, ensuring that it has not been altered.  
+
+### Document Timestamp Signature
+A signature based on an [RFC 3161](https://datatracker.ietf.org/doc/html/rfc3161) `TimeStampToken` issued by a trusted timestamp authority (TSA).  
+A DTS proves the existence of the document at a specific point in time, without binding it to a particular signer.   
+Usually associated with PDFs enabled for long term validation.
+
+### Usage Rights Signature
+A special signature used to enable extended features (such as form filling, commenting, and saving) in PDF viewers like Adobe Reader.  
+It also detects unauthorized changes that would invalidate these usage rights.  
+Has to be the only signature in the document.
+
+---
+
+## Summary of Signature Intentions
+
+
+| **Type**         | **Intention**                             | **Visibility**          |
+|:----------------------------|:--------------------------------------------------|:-------------------------|
+| **Form Signature**          | Authenticate form data and signer identity        | Visible or invisible     |
+| **Page Signature**          | Authenticate page content and appearance          | Visible or invisible     |
+| **Document Timestamp Signature** | Prove document existence at a point in time      | Always invisible         |
+| **Usage Rights Signature**  | Define locked features, detect tampering     | Always invisible         |
+
+<br>
+
+> **Note:**  
+> This is not intended as an in-depth introduction to PDF digital signatures.  
+> For complete details, please refer to the [PDF 2.0 specification (ISO 32000-2)](https://www.iso.org/standard/75839.html).
+
+<br>
+
+> **Note:**  
+> It may not be immediately obvious whether a PDF contains signatures.  
+> You can check for existing signatures using `pdfcpu info` on the command line.
+
+<br>
+
+The validation steps are:
+
+### 1. Check Hash of signed bytes
+Compare the hash from the signature with a computed hash to detect any document modifications.
+
+### 2. Verify Crypto Signature
+Check that the signature was created using the correct private key and matches the data.
+
+### 3. Validate Certificate
+Check if the certificate is trustworthy and valid.  
+This includes verifying that it chains up to a trusted root certificate, is properly signed, has not expired, and has not been revoked.
+<br>
+
+### Checking Revocation
+Certificates may be revoked for various reasons.  
+Checking the revocation status may require online access.  
+You can configure your timeout values for [CRL](https://en.wikipedia.org/wiki/Certificate_revocation_list) and [OCSP](https://en.wikipedia.org/wiki/Online_Certificate_Status_Protocol) responders with these configuration parameters:
+
+- `timeoutCRL`
+- `timeoutOCSP`
+
+
+
+<br>
+
+Have a look at some [examples](#examples).
 
 
 ## Usage
@@ -23,10 +90,25 @@ pdfcpu signatures validate [-a(ll) -f(ull)] -- inFile
 
 ### Flags
 
-| name   | description             | default | required
-|:-------|:------------------------|-------------------
-| a(ll)  | validate all signatures | false   |no
-| f(ull) | comprehensive output    | false   |no
+| **Name** | **Description**          | **Default** | **Required** |
+|:---------|:--------------------------|:------------|:-------------|
+| a(ll)    | Validate all signatures    | false       | no           |
+| f(ull)   | Comprehensive output       | false       | no           |
+
+<br>
+
+### Certified and Authoritative Signatures
+
+A **certified signature** is a special type of signature that locks the document at a certain point, allowing only certain permitted changes afterward. It proves that the document was approved in its original form by the certifying party.
+
+An **authoritative signature** is the first signature encountered in the document, used when no certified signature is present. It represents the most trusted signature in the absence of certification.
+
+Any number of **approval signatures** may be applied after a certified signature.
+
+By default, validation focuses only on the certified signature, if available, or otherwise the authoritative signature.    
+If the `-all` option is set, **all** signatures in the PDF are validated.
+
+
 
 <br>
 
@@ -52,35 +134,251 @@ pdfcpu signatures validate [-a(ll) -f(ull)] -- inFile
 |:-------------|:--------------------|:--------
 | inFile       | PDF input file      | yes
 
+
 <br>
+
+## Limitations
+
+Current limitations mostly involve either older encryption standards restricted by the Go runtime for security reasons, or missing checks for permission violations after successful signature validation.
+
+- **Permissions Handling**:
+  - **DocMDP**: Missing document checks for permissions levels 2 and 3.
+  - **FieldMDP**: Not yet processed.
+  - **UR3**: Missing document checks for permissions defined by the UR transform method in the UR3 reference dictionary.
+
+- **Catalog DSS**: Missing processing of the VRI (Validation-Related Information) structure.
+
+- **Elliptic Curve Encryption Algorithms**: support needs to be extended as standards keep evolving.
+
+- **Go Runtime Restrictions**: No support for SHA-1, which is considered insecure.
+
+- **Archive Timestamps (PAdES-LTA)**: Missing support for archive timestamps used for long-term archival beyond PAdES-LT.
+
+## PAdES Level
+
+While the PDF specification mainly focuses on PAdES-E-BES and PAdES-E-EPES for processing ETSI.CAdES.detached signatures, pdfcpu instead detects and reports the PAdES level:
+* B-B
+* B-T
+* B-LT
+
+PAdES-B levels (Basic, Timestamp, Long-Term) are more comprehensive, widely adopted, and better suited for ensuring long-term validity and document integrity.  
+
+Focusing on these levels improves compatibility with modern signature validation workflows and future-proofs pdfcpu for evolving standards.
+
+The PAdES levels(baseline profiles) are defined in [ETSI EN 319 142-1 V1.2.1 (2024-01)](https://www.etsi.org/deliver/etsi_en/319100_319199/31914201/01.02.01_60/en_31914201v010201p.pdf) 6.1.
+
+
+| PAdES Level | Description                         | Supported |
+|:------------|:------------------------------------|:--------------------|
+| B-B         | Basic electronic signature          | ☑️                  |
+| B-T         | B-B with trusted timestamp          | ☑️                  |
+| B-LT        | B-T with embedded CRL and OCSP data | ☑️          |
+| B-LTA       | BLT with archive timestamps | ⬜ |
+
+
 
 ## Examples
 
-unsupported:
-* limited support for DocMDP entry
-* limited support for DSS entry
-* limited support for UR
-* archive timestamps
 
-restrictions imposed by Go ecosystem:
-* no support for SHA-1 as considered unsafe
+We start with a valid PAdES B-B conform ETSI.CAdES.detached signature:
 
-supported PDF signature dict subfilters:
-All subfilters as defined by the PDF specification are supported.
-Beware you will likely hit roadblocks when trying to validate
-signatures of type `adbe.x509.rsa.sha1` and `adbe.pkcs7.sha1` since SHA-1 is considered unsafe by the Go runtime.
+```sh
+$ pdfcpu sig val sample1.pdf
+optimizing...
 
-explain when using all may make sense in the context of authorative and certified
+1 form signature (authoritative, visible, signed) on page 1
+   Status: signature is valid
+   Reason: document has not been modified
+   Signed: 2025-03-18 10:07:18 +0000
+```
 
-ETSI-sample without timestamp compact vs. full
+By using *-full* we can look at all the details: 
 
-ETSI-sample with timestamp B-B compact vs. full
+```sh
+$ pdfcpu sig val -full sample1.pdf
+optimizing...
 
-B-LTA sample with DTS compact vs. full
+1:
+       Type: form signature (authoritative, visible, signed) on page 1
+     Status: signature is valid
+     Reason: document has not been modified
+     Signed: 2025-03-18 10:07:18 +0000
+DocModified: false
+    Details:
+             SubFilter:      ETSI.CAdES.detached
+             SignerIdentity: John Doe
+             SignerName:     John Doe
+             ContactInfo:
+             Location:       oesterreich.gv.at PDF Signatur
+             Reason:         Signatur
+             SigningTime:    2025-03-18 10:07:18 +0000
+             Field:          Signature15430ca9-5df6-4b11-b423-ab48ec2439d6
+     Signer:
+             Timestamp:      false
+             LTVEnabled:     false
+             PAdES:          B-B
+             Certified:      false
+             Authoritative:  true
+             Certificate:
+                             Subject:    John Doe
+                             Issuer:     a-sign-premium-mobile-05
+                             SerialNr:   614a81f67
+                             Valid From: 2023-01-04 10:39:36 +0000
+                             Valid Thru: 2028-01-04 10:39:36 +0000
+                             Expired:    false
+                             Qualified:  true
+                             CA:         false
+                             Usage:
+                             Version:    3
+                             SignAlg:    ECDSA
+                             Key Size:   256 bits
+                             SelfSigned: false
+                             Trust:      Status: ok
+                                         Reason: cert chain up to root CA is trusted
+                             Revocation: Status: ok
+                                         Reason: not revoked (CRL check ok)
+             RootCA:
+                             Subject:    a-sign-premium-mobile-05
+                             Issuer:     A-Trust-Root-05
+                             SerialNr:   36a009c2
+                             Valid From: 2022-12-19 09:15:01 +0000
+                             Valid Thru: 2029-07-10 07:15:01 +0000
+                             Expired:    false
+                             Qualified:  false
+                             CA:         true
+                             Usage:
+                             Version:    3
+                             SignAlg:    RSA
+                             Key Size:   4096 bits
+                             SelfSigned: false
+                             Trust:      Status: ok
+                                         Reason: CA
 
-usage rights sample compact vs. full
+```
 
+We can see the PAdES level and the trusted certificate certificate chain.  
+The output also shows that the is not expired and passed the online revocation check.
 
+<br>
+
+Next we take a look at a signature that in addition to being PAdES B-B compliant also comes with an embedded trusted timestamp.
+
+```sh
+$ pdfcpu sig val sample2.pdf
+optimizing...
+
+1 form signature (authoritative, visible, signed) on page 1
+   Status: signature is valid
+   Reason: document has not been modified
+   Signed: 2024-09-19 13:09:06 +0000
+```
+
+Now let's look at the validation result details.  
+In addition to -full we are also going to supply -all to check for other signatures:
+
+```sh
+$ pdfcpu sig val -all -full sample2.pdf
+repaired: trailer size
+optimizing...
+
+1:
+       Type: form signature (authoritative, visible, signed) on page 1
+     Status: signature is valid
+     Reason: document has not been modified
+     Signed: 2024-09-19 13:09:06 +0000
+DocModified: false
+    Details:
+             SubFilter:      ETSI.CAdES.detached
+             SignerIdentity: John Doe
+             SignerName:     John Doe
+             ContactInfo:
+             Location:       Signature Box
+             Reason:         Signature
+             SigningTime:    2024-09-19 13:09:06 +0000
+             Field:          Signature1
+     Signer:
+             Timestamp:      2024-09-19 13:10:03 +0000
+             LTVEnabled:     false
+             PAdES:          B-T
+             Certified:      false
+             Authoritative:  true
+             Certificate:
+                             Subject:    John Doe
+                             Issuer:     a-sign-premium-mobile-05
+                             SerialNr:   614a81f67
+                             Valid From: 2023-01-04 10:39:36 +0000
+                             Valid Thru: 2028-01-04 10:39:36 +0000
+                             Expired:    false
+                             Qualified:  true
+                             CA:         false
+                             Usage:
+                             Version:    3
+                             SignAlg:    ECDSA
+                             Key Size:   256 bits
+                             SelfSigned: false
+                             Trust:      Status: ok
+                                         Reason: cert chain up to root CA is trusted
+                             Revocation: Status: ok
+                                         Reason: not revoked (OCSP check ok)
+             RootCA:
+                             Subject:    a-sign-premium-mobile-05
+                             Issuer:     A-Trust-Root-05
+                             SerialNr:   36a009c2
+                             Valid From: 2022-12-19 09:15:01 +0000
+                             Valid Thru: 2029-07-10 07:15:01 +0000
+                             Expired:    false
+                             Qualified:  false
+                             CA:         true
+                             Usage:
+                             Version:    3
+                             SignAlg:    RSA
+                             Key Size:   4096 bits
+                             SelfSigned: false
+                             Trust:      Status: ok
+                                         Reason: CA
+```
+
+Using `-all` reveals there is only one signature.  
+The signature contains a single signer which is how it should be for ETSI.CAdES.detached signatures.  
+
+We see the trusted certificate chain, also that the certificate is not expired and considered **not revoked** after contacting the corresponding OSCP responder via http.
+
+We can see the validated and therefore trusted timestamp which elevates the PAdES level from B-B to B-T. This could also be due to a separate valid DTS (document timestamp signature).
+
+<br>
+
+Next we have an example that uses a document timestamp signature to prove that the
+signature existed at a certain time.
+
+```sh
+
+$ pdfcpu sig val sample3.pdf
+optimizing...
+
+2 signatures present:
+
+1:
+     Type: document timestamp (trusted, invisible, signed)
+   Status: signature is valid
+   Reason: document has not been modified
+   Signed: 2024-03-04 12:24:33 +0000
+
+2:
+     Type: form signature (authoritative, visible, signed) on page 1
+   Status: signature is valid
+   Reason: document has not been modified
+   Signed: 2024-03-04 12:24:31 +0000
+```
+
+In order to see the details for both signatures you need to supply -all and -full.
+There is a good chance that this form signature is B-T or even B-LT or B-LTA compliant.
+We skip this because it is a rather long output.
+
+<br>
+
+At last we take a look at a PDF with a usage rights signature.  
+This is not a signature in the traditional sense but rather about a trusted definition of permissions PDF processors should obey.  
+Eg. you can use usage rights to explicitly allow saving a filled form.
 
 ```sh
 $ pdfcpu sig val -all usageRights.pdf
@@ -94,8 +392,8 @@ optimizing...
 
 <br>
 
-Using `-all` reveals there is only one signature.
-Let's take a detailed look at what is going on here:
+Using `-all` reveals there is only one signature.  
+Let's take a detailed look at what is going on here: 
 
 ```sh
 $ pdfcpu sig val -full usageRights.pdf
@@ -173,3 +471,11 @@ DocModified: false
                                          Reason: self signed
              Problems:       certificate verification failed for serial="901357a46c30d17b2f7d64b453c0818": x509: certificate signed by unknown authority
 ```
+
+In addition to a problem that hints to missing intermediate or root certificates we can also see that the certificate is not expired and could not be found in any certificate revocation list and is therefore considered **not revoked**.  
+
+If you import the missing certificates using `pdfcpu cert import` validation should succeed.
+
+> **Note:**  
+> This command only checks if the **usage rights signature** is valid.    
+> Any violation of **usage rights** defined as UR3 transform parameters are not checked at the moment (see [limitations](#limitations)).
