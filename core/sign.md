@@ -471,7 +471,7 @@ The certificate is therefore **not trusted**.
 
 We can also see that the certificate is not expired, could not be found in any certificate revocation list, and is therefore considered **not revoked**.  
 
-Conclusion: If you import the missing certificates using `pdfcpu cert import`, the usage rights signature validation should succeed.
+Conclusion: If you import the missing certificates using [pdfcpu cert import](certs), the usage rights signature validation should succeed.
 
 > **Note:**  
 > This command only checks if the **usage rights signature** is valid.    
