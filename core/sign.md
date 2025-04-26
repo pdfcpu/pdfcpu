@@ -80,7 +80,7 @@ You may also configure your preferred certificate revocation checking mechanism 
 <br>
 
 > **Note:**  
-> Right now, pdfcpu will try to validate as much as possible even without the `-full` option.  
+> pdfcpu will try to validate as much as possible even without the `-full` option.
 > A *fast mode* is conceivable.
 
 
@@ -400,9 +400,8 @@ optimizing...
    Signed: 2022-12-15 17:08:57 +0000
 ```
 
-<br>
-
 Using `-all` reveals that there is only one signature.  
+
 Let's take a detailed look at what is going on here:
 
 ```sh
@@ -482,9 +481,12 @@ DocModified: false
              Problems:       certificate verification failed for serial="101357a46c30d17b2f7d64b453c0818": x509: certificate signed by unknown authority
 ```
 
-In addition to a problem that points to missing intermediate or root certificates, we can also see that the certificate is not expired, could not be found in any certificate revocation list, and is therefore considered **not revoked**.  
+A problem points to missing intermediate or root certificates. 
+The certificate is therefore **not trusted**.
 
-If you import the missing certificates using `pdfcpu cert import`, the usage rights signature validation should succeed.
+We can also see that the certificate is not expired, could not be found in any certificate revocation list, and is therefore considered **not revoked**.  
+
+Conclusion: If you import the missing certificates using `pdfcpu cert import`, the usage rights signature validation should succeed.
 
 > **Note:**  
 > This command only checks if the **usage rights signature** is valid.    
