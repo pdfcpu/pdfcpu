@@ -152,17 +152,16 @@ Current limitations mostly involve either older encryption standards restricted 
 
 - **Go Runtime Restrictions**: No support for SHA-1, which is considered insecure.
 
-- **Archive Timestamps (PAdES-LTA)**: Missing support for archive timestamps used for long-term archival beyond PAdES-LT.
 
 ## PAdES Level
 
-While the PDF specification mainly focuses on PAdES-E-BES and PAdES-E-EPES for processing ETSI.CAdES.detached signatures, pdfcpu instead detects and reports the PAdES level:
+While the PDF specification mainly focuses on PAdES-E-BES and PAdES-E-EPES for processing ETSI.CAdES.detached signatures, pdfcpu instead detects and reports the PAdES Basic level:
 * B-B
 * B-T
 * B-LT
 * B-LTA
 
-PAdES-B levels (Basic, Timestamp, Long-Term) are more comprehensive, widely adopted, and better suited for ensuring long-term validity and document integrity.  
+PAdES-B levels (Basic, Timestamp, Long-Term, Long-Term-Archival) are more comprehensive, widely adopted, and better suited for ensuring long-term validity and document integrity.  
 
 Focusing on these levels improves compatibility with modern signature validation workflows and future-proofs pdfcpu for evolving standards.
 
@@ -174,7 +173,9 @@ The PAdES levels(baseline profiles) are defined in [ETSI EN 319 142-1 V1.2.1 (20
 | B-B         | Basic electronic signature          | ☑️ |
 | B-T         | B-B with trusted timestamp or DTS   | ☑️ |
 | B-LT        | B-T with embedded CRL and OCSP data | ☑️ |
-| B-LTA       | BLT with DTS or archive timestamps  | ⬜ supported with DTS only|
+| B-LTA       | BLT with DTS                        | ☑️ |
+
+pdfcpu is currently not concerned with 
 
 
 
