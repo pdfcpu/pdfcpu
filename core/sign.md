@@ -160,6 +160,7 @@ While the PDF specification mainly focuses on PAdES-E-BES and PAdES-E-EPES for p
 * B-B
 * B-T
 * B-LT
+* B-LTA
 
 PAdES-B levels (Basic, Timestamp, Long-Term) are more comprehensive, widely adopted, and better suited for ensuring long-term validity and document integrity.  
 
@@ -169,11 +170,11 @@ The PAdES levels(baseline profiles) are defined in [ETSI EN 319 142-1 V1.2.1 (20
 
 
 | PAdES Level | Description                         | Supported |
-|:------------|:------------------------------------|:--------------------|
-| B-B         | Basic electronic signature          | ☑️                  |
-| B-T         | B-B with trusted timestamp          | ☑️                  |
-| B-LT        | B-T with embedded CRL and OCSP data | ☑️          |
-| B-LTA       | BLT with archive timestamps | ⬜ |
+|:------------|:------------------------------------|:----------|
+| B-B         | Basic electronic signature          | ☑️ |
+| B-T         | B-B with trusted timestamp or DTS   | ☑️ |
+| B-LT        | B-T with embedded CRL and OCSP data | ☑️ |
+| B-LTA       | BLT with DTS or archive timestamps  | ⬜ supported with DTS only|
 
 
 
@@ -371,7 +372,7 @@ optimizing...
 ```
 
 In order to see the details for both signatures you need to supply -all and -full.
-There is a good chance that this form signature is B-T or even B-LT or B-LTA compliant.
+There is a good chance that this form signature is B-T or even higer vB-LT or B-LTA compliant.
 We skip this because it is a rather long output.
 
 <br>
