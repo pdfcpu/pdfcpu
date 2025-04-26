@@ -16,7 +16,7 @@ It is primarily intended to authenticate the person who filled out the form and 
 A digital signature applied directly onto a page, often as an annotation or widget.
 Its purpose is to authenticate the visible content of the page, ensuring that it has not been altered.  
 
-### Document Timestamp Signature
+### Document Timestamp Signature (DTS)
 A signature based on an [RFC 3161](https://datatracker.ietf.org/doc/html/rfc3161) `TimeStampToken` issued by a trusted timestamp authority (TSA).
 A DTS proves the existence of the document at a specific point in time, without binding it to a particular signer.   
 Usually associated with PDFs enabled for long term validation.
@@ -73,6 +73,15 @@ You can configure your timeout values for [CRL](https://en.wikipedia.org/wiki/Ce
 - `timeoutCRL`
 - `timeoutOCSP`
 
+You may also configure your preferred certificate revocation checking mechanism (crl or ocsp) with the configuration parameter:
+
+- `preferredCertRevocationChecker`
+
+<br>
+
+> **Note:**  
+> Right now, pdfcpu will try to validate as much as possible even without the `-full` option.  
+> A *fast mode* is conceivable.
 
 
 <br>
@@ -174,7 +183,7 @@ The PAdES baseline levels(profiles) are defined in [ETSI EN 319 142-1 V1.2.1 (20
 | B-B         | Basic electronic signature          | ☑️ |
 | B-T         | B-B with trusted timestamp or DTS   | ☑️ |
 | B-LT        | B-T with embedded CRL and OCSP data | ☑️ |
-| B-LTA       | BLT with DTS                        | ☑️ |
+| B-LTA       | B-LT with DTS                       | ☑️ |
 
 > **Note:**  
 > pdfcpu currently focuses primarily on PAdES-B and is not extensively concerned with other PAdES standards.
@@ -371,14 +380,14 @@ optimizing...
    Signed: 2024-03-04 12:24:31 +0000
 ```
 
-In order to see the details for both signatures, you need to supply `-all` and `-full`.  
+In order to see the details for both signatures, you need to supply `-all` and `-full`.
 There is a good chance that this form signature is B-T or even higher, such as B-LT or B-LTA compliant.  
 We skip this because it produces a rather long output.
 
 <br>
 
-At last, we take a look at a PDF with a usage rights signature.  
-This is not a signature in the traditional sense, but rather a trusted definition of permissions that PDF processors should obey.  
+At last, we take a look at a PDF with a usage rights signature.
+This is not a signature in the traditional sense, but rather a trusted definition of permissions that PDF processors should obey.
 For example, you can use usage rights to explicitly allow saving a filled form.
 
 ```sh
@@ -387,7 +396,7 @@ optimizing...
 
 1 usage rights signature (invisible, signed)
    Status: validity of the signature is unknown
-   Reason: signer's certificate chain is not in the trusted list of Root CAs
+   Reason: signer\'s certificate chain is not in the trusted list of Root CAs
    Signed: 2022-12-15 17:08:57 +0000
 ```
 
@@ -403,7 +412,7 @@ optimizing...
 1:
        Type: usage rights signature (invisible, signed)
      Status: validity of the signature is unknown
-     Reason: signer's certificate chain is not in the trusted list of Root CAs
+     Reason: signer\'s certificate chain is not in the trusted list of Root CAs
      Signed: 2022-12-15 17:08:57 +0000
 DocModified: false
     Details:
@@ -475,7 +484,7 @@ DocModified: false
 
 In addition to a problem that points to missing intermediate or root certificates, we can also see that the certificate is not expired, could not be found in any certificate revocation list, and is therefore considered **not revoked**.  
 
-If you import the missing certificates using `pdfcpu cert import`, validation should succeed.
+If you import the missing certificates using `pdfcpu cert import`, the usage rights signature validation should succeed.
 
 > **Note:**  
 > This command only checks if the **usage rights signature** is valid.    
