@@ -104,6 +104,27 @@ func (xRefTable *XRefTable) NewFileSpecDictForAttachment(a Attachment) (types.Di
 	return xRefTable.NewFileSpecDict(a.ID, a.ID, a.Desc, *sd)
 }
 
+func getModDate(xRefTable *XRefTable, obj types.Object) (*time.Time, error) {
+	errInvalidModDate := errors.New("pdfcpu: invalid date ModDate")
+	o, err := xRefTable.Dereference(obj)
+	if err != nil || o == nil {
+		return nil, errInvalidModDate
+	}
+	sl, ok := o.(types.StringLiteral)
+	if !ok {
+		return nil, errInvalidModDate
+	}
+	s, err := types.StringLiteralToString(sl)
+	if err != nil {
+		return nil, errInvalidModDate
+	}
+	md, ok := types.DateTime(s, xRefTable.ValidationMode == ValidationRelaxed)
+	if !ok {
+		return nil, errInvalidModDate
+	}
+	return &md, nil
+}
+
 func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o types.Object, decode bool) (*types.StreamDict, string, string, *time.Time, error) {
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil {
@@ -131,12 +152,12 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o types.Object, dec
 
 	var modDate *time.Time
 	if d = sd.DictEntry("Params"); d != nil {
-		if s := d.StringEntry("ModDate"); s != nil {
-			dt, ok := types.DateTime(*s, xRefTable.ValidationMode == ValidationRelaxed)
-			if !ok {
-				return nil, desc, "", nil, errors.New("pdfcpu: invalid date ModDate")
+		obj, ok := d.Find("ModDate")
+		if ok {
+			modDate, err = getModDate(xRefTable, obj)
+			if err != nil {
+				return nil, desc, "", nil, err
 			}
-			modDate = &dt
 		}
 	}
 
