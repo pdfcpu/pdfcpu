@@ -209,7 +209,7 @@ func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 			return err
 		}
 		xRefTable.Info = nil
-		model.ShowSkipped("info dict")
+		model.ShowSkipped("invalid info dict")
 		return nil
 	}
 
@@ -219,7 +219,10 @@ func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 	}
 
 	if hasPieceInfo && !hasModDate {
-		return errors.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return errors.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
+		}
+		model.ShowDigestedSpecViolation("infoDict with \"PieceInfo\" but missing \"ModDate\"")
 	}
 
 	if log.ValidateEnabled() {
