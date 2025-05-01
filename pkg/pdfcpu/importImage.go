@@ -255,7 +255,7 @@ func ParseImportDetails(s string, u types.DisplayUnit) (*Import, error) {
 	return imp, nil
 }
 
-func importImagePDFBytes(wr io.Writer, pageDim *types.Dim, imp *Import) {
+func importImagePDFBytes(wr io.Writer, pageDim *types.Dim, imgWidth, imgHeight float64, imp *Import) {
 
 	vpw := float64(pageDim.Width)
 	vph := float64(pageDim.Height)
@@ -270,14 +270,13 @@ func importImagePDFBytes(wr io.Writer, pageDim *types.Dim, imp *Import) {
 		return
 	}
 
-	w, h := vpw, vph
 	if imp.DPI > 0 {
 		// NOTE: We could also set "UserUnit" in the page dict.
-		w *= float64(72) / float64(imp.DPI)
-		h *= float64(72) / float64(imp.DPI)
+		imgWidth *= float64(72) / float64(imp.DPI)
+		imgHeight *= float64(72) / float64(imp.DPI)
 	}
 
-	bb := types.RectForDim(w, h)
+	bb := types.RectForDim(imgWidth, imgHeight)
 	ar := bb.AspectRatio()
 
 	if imp.ScaleAbs {
@@ -362,7 +361,7 @@ func NewPagesForImage(xRefTable *model.XRefTable, r io.Reader, parentIndRef *typ
 		mediaBox := types.RectForDim(dim.Width, dim.Height)
 
 		var buf bytes.Buffer
-		importImagePDFBytes(&buf, dim, imp)
+		importImagePDFBytes(&buf, dim, float64(imgRes.Width), float64(imgRes.Height), imp)
 		sd, err := xRefTable.NewStreamDictForBuf(buf.Bytes())
 		if err != nil {
 			return nil, err
