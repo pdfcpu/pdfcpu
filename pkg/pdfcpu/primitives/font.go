@@ -338,3 +338,40 @@ func fontFromDA(s string) (string, FormFont, error) {
 
 	return fontID, f, nil
 }
+
+func calcFontDetailsFromDA(ctx *model.Context, d types.Dict, da *string, needUTF8 bool, fonts map[string]types.IndirectRef) (string, *FormFont, bool, *types.IndirectRef, error) {
+	s := locateDA(ctx, d, da)
+	if s == nil {
+		return "", nil, false, nil, errors.New("pdfcpu: missing \"DA\"")
+	}
+
+	fontID, f, err := fontFromDA(*s)
+	if err != nil {
+		return "", nil, false, nil, err
+	}
+
+	id, name, lang, fontIndRef, err := extractFormFontDetails(ctx, fontID, fonts)
+	if err != nil {
+		return "", nil, false, nil, err
+	}
+	if fontIndRef == nil {
+		return "", nil, false, nil, errors.New("pdfcpu: unable to detect indirect reference for font")
+	}
+
+	fillFont := formFontIndRef(ctx.XRefTable, fontID) != nil
+
+	if needUTF8 && font.IsCoreFont(name) {
+		id, name, lang, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
+		if err != nil {
+			return "", nil, false, nil, err
+		}
+	}
+
+	f.Name = name
+	f.Lang = lang
+	f.FillFont = fillFont
+
+	rtl := pdffont.RTL(lang)
+
+	return id, &f, rtl, fontIndRef, nil
+}

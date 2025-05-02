@@ -226,44 +226,26 @@ func (tf *TextField) validate() error {
 	return tf.validateTab()
 }
 
-func (tf *TextField) calcFontFromDA(ctx *model.Context, d types.Dict, needUTF8 bool, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
+func locateDA(ctx *model.Context, d types.Dict, inhDA *string) *string {
 	s := d.StringEntry("DA")
-	if s == nil {
-		s = ctx.Form.StringEntry("DA")
-		if s == nil {
-			return nil, errors.New("pdfcpu: textfield missing \"DA\"")
-		}
+	if s != nil {
+		return s
 	}
+	if inhDA != nil {
+		return inhDA
+	}
+	return ctx.Form.StringEntry("DA")
+}
 
-	fontID, f, err := fontFromDA(*s)
+func (tf *TextField) calcFontFromDA(ctx *model.Context, d types.Dict, da *string, needUTF8 bool, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
+	id, font, rtl, fontIndRef, err := calcFontDetailsFromDA(ctx, d, da, needUTF8, fonts)
 	if err != nil {
 		return nil, err
-	}
-
-	tf.Font, tf.fontID = &f, fontID
-
-	id, name, lang, fontIndRef, err := extractFormFontDetails(ctx, tf.fontID, fonts)
-	if err != nil {
-		return nil, err
-	}
-	if fontIndRef == nil {
-		return nil, errors.New("pdfcpu: unable to detect indirect reference for font")
-	}
-
-	fillFont := formFontIndRef(ctx.XRefTable, fontID) != nil
-
-	if needUTF8 && font.IsCoreFont(name) {
-		id, name, lang, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	tf.fontID = id
-	tf.Font.Name = name
-	tf.Font.Lang = lang
-	tf.Font.FillFont = fillFont
-	tf.RTL = pdffont.RTL(lang)
+	tf.Font = font
+	tf.RTL = rtl
 
 	return fontIndRef, nil
 }
@@ -919,6 +901,7 @@ func NewTextField(
 	multiLine bool,
 	comb bool,
 	maxLen int,
+	da *string,
 	fontIndRef *types.IndirectRef,
 	fonts map[string]types.IndirectRef) (*TextField, *types.IndirectRef, error) {
 
@@ -938,7 +921,7 @@ func NewTextField(
 	tf.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
 
 	if fontIndRef == nil {
-		if fontIndRef, err = tf.calcFontFromDA(ctx, d, hasUTF(v), fonts); err != nil {
+		if fontIndRef, err = tf.calcFontFromDA(ctx, d, da, hasUTF(v), fonts); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -965,14 +948,14 @@ func NewTextField(
 	return tf, fontIndRef, nil
 }
 
-func renderTextFieldAP(ctx *model.Context, d types.Dict, v string, multiLine, comb bool, maxLen int, fonts map[string]types.IndirectRef) error {
+func renderTextFieldAP(ctx *model.Context, d types.Dict, v string, multiLine, comb bool, maxLen int, da *string, fonts map[string]types.IndirectRef) error {
 	if ap := d.DictEntry("AP"); ap != nil {
 		if err := ctx.DeleteObject(ap); err != nil {
 			return err
 		}
 	}
 
-	tf, fontIndRef, err := NewTextField(ctx, d, v, multiLine, comb, maxLen, nil, fonts)
+	tf, fontIndRef, err := NewTextField(ctx, d, v, multiLine, comb, maxLen, da, nil, fonts)
 	if err != nil {
 		return err
 	}
@@ -1038,15 +1021,15 @@ func fontAttrs(ctx *model.Context, fd types.Dict, fontID, text string, fonts map
 	return fontID, name, lang, fontIndRef, nil
 }
 
-func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine, comb bool, maxLen int, fonts map[string]types.IndirectRef) error {
+func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine, comb bool, maxLen int, da *string, fonts map[string]types.IndirectRef) error {
 	ap := d.DictEntry("AP")
 	if ap == nil {
-		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, fonts)
+		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, da, fonts)
 	}
 
 	irN := ap.IndirectRefEntry("N")
 	if irN == nil {
-		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, fonts)
+		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, da, fonts)
 	}
 
 	sd, _, err := ctx.DereferenceStreamDict(*irN)
@@ -1056,7 +1039,7 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine,
 
 	obj, ok := sd.Find("Resources")
 	if !ok {
-		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, fonts)
+		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, da, fonts)
 	}
 
 	d1, err := ctx.DereferenceDict(obj)
@@ -1064,20 +1047,17 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine,
 		return err
 	}
 	if d1 == nil {
-		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, fonts)
+		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, da, fonts)
 	}
 
 	fd := d1.DictEntry("Font")
 	if fd == nil {
-		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, fonts)
+		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, da, fonts)
 	}
 
-	s := d.StringEntry("DA")
+	s := locateDA(ctx, d, da)
 	if s == nil {
-		s = ctx.Form.StringEntry("DA")
-		if s == nil {
-			return errors.New("pdfcpu: textfield missing \"DA\"")
-		}
+		return errors.New("pdfcpu: textfield missing \"DA\"")
 	}
 
 	fontID, f, err := fontFromDA(*s)
@@ -1092,7 +1072,7 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine,
 
 	fillFont := formFontIndRef(ctx.XRefTable, fontID) != nil
 
-	tf, _, err := NewTextField(ctx, d, text, multiLine, comb, maxLen, fontIndRef, fonts)
+	tf, _, err := NewTextField(ctx, d, text, multiLine, comb, maxLen, da, fontIndRef, fonts)
 	if err != nil {
 		return err
 	}

@@ -61,8 +61,6 @@ func TestMain(m *testing.M) {
 	samplesDir = filepath.Join("..", "..", "samples")
 
 	conf = api.LoadConfiguration()
-
-	fmt.Printf("GITHUB_ACTIONS = <%s>", os.Getenv("GITHUB_ACTIONS"))
 	if os.Getenv("GITHUB_ACTIONS") == "true" {
 		conf.Offline = true
 	}

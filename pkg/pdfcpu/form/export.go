@@ -466,7 +466,7 @@ func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, na
 	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
 
 	maxLen := 0
-	i := d.IntEntry("MaxLen") // Inheritable!
+	i := d.IntEntry("MaxLen")
 	if i != nil {
 		maxLen = *i
 	}

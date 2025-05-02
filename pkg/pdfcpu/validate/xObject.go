@@ -430,7 +430,7 @@ func validateImageStreamDictPart1(xRefTable *model.XRefTable, sd *types.StreamDi
 		return false, err
 	}
 
-	isImageMask = (imageMask != nil) && *imageMask == true
+	isImageMask = (imageMask != nil) && *imageMask
 
 	// ColorSpace, name or array, required unless used filter is JPXDecode; not allowed for imagemasks.
 	if !isImageMask {

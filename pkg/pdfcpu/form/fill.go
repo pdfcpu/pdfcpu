@@ -700,6 +700,8 @@ func fillComboBox(
 		return nil
 	}
 
+	da := d.StringEntry("DA")
+
 	vNew := vv[0]
 	if locked {
 		if !lock {
@@ -709,7 +711,7 @@ func fillComboBox(
 		}
 	} else if lock {
 		lockFormField(d)
-		if err := primitives.EnsureComboBoxAP(ctx, d, vNew, fonts); err != nil {
+		if err := primitives.EnsureComboBoxAP(ctx, d, vNew, da, fonts); err != nil {
 			return err
 		}
 		*ok = true
@@ -856,7 +858,9 @@ func fillListBox(
 		return err
 	}
 
-	if err := primitives.EnsureListBoxAP(ctx, d, opts, ind, fonts); err != nil {
+	da := d.StringEntry("DA")
+
+	if err := primitives.EnsureListBoxAP(ctx, d, opts, ind, da, fonts); err != nil {
 		return err
 	}
 
@@ -924,6 +928,7 @@ func fillDateField(
 	}
 
 	vNew := vv[0]
+
 	if vNew == vOld {
 		return nil
 	}
@@ -932,15 +937,35 @@ func fillDateField(
 	if err != nil {
 		return err
 	}
-
 	d["V"] = types.StringLiteral(*s)
 
-	if err := primitives.EnsureDateFieldAP(ctx, d, vNew, fonts); err != nil {
+	da := d.StringEntry("DA")
+
+	kids := d.ArrayEntry("Kids")
+	if len(kids) > 0 {
+
+		for _, o := range kids {
+
+			d, err := ctx.DereferenceDict(o)
+			if err != nil {
+				return err
+			}
+
+			if err := primitives.EnsureDateFieldAP(ctx, d, vNew, da, fonts); err != nil {
+				return err
+			}
+
+			*ok = true
+		}
+
+		return nil
+	}
+
+	if err := primitives.EnsureDateFieldAP(ctx, d, vNew, da, fonts); err != nil {
 		return err
 	}
 
 	*ok = true
-
 	return nil
 }
 
@@ -989,14 +1014,15 @@ func fillTextField(
 	comb := ff != nil && primitives.FieldFlags(*ff)&primitives.FieldComb > 0
 
 	maxLen := 0
+	i := d.IntEntry("MaxLen")
+	if i != nil {
+		maxLen = *i
+	}
+
+	da := d.StringEntry("DA")
 
 	kids := d.ArrayEntry("Kids")
 	if len(kids) > 0 {
-
-		i := d.IntEntry("MaxLen")
-		if i != nil {
-			maxLen = *i
-		}
 
 		for _, o := range kids {
 
@@ -1005,7 +1031,7 @@ func fillTextField(
 				return err
 			}
 
-			if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, maxLen, fonts); err != nil {
+			if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, maxLen, da, fonts); err != nil {
 				return err
 			}
 
@@ -1015,7 +1041,7 @@ func fillTextField(
 		return nil
 	}
 
-	if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, maxLen, fonts); err != nil {
+	if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, maxLen, da, fonts); err != nil {
 		return err
 	}
 
@@ -1038,6 +1064,7 @@ func fillTx(
 	if err != nil {
 		return err
 	}
+
 	vOld := ""
 	if o, found := d.Find("V"); found {
 		s, err := types.StringOrHexLiteral(o)

@@ -296,7 +296,36 @@ func cacheSig(xRefTable *model.XRefTable, d types.Dict, dictName string, form bo
 	return nil
 }
 
-func validateFormFieldDictEntries(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, terminalNode bool, inFieldType *types.Name, requiresDA bool) (outFieldType *types.Name, hasDA bool, err error) {
+func isTextField(ft *types.Name) bool {
+	return ft != nil && *ft == "Tx"
+}
+
+func validateV(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, dictName string, terminalNode, textField, oneKid bool) error {
+	v, err := validateEntry(xRefTable, d, dictName, "V", OPTIONAL, model.V10)
+	if err != nil {
+		return err
+	}
+	if textField && v != nil && !terminalNode && !oneKid {
+		return errors.New("\"V\" not allowed in non terminal text fields with more than one kid")
+	}
+	if err := cacheSig(xRefTable, d, dictName, true, objNr, incr); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateDV(xRefTable *model.XRefTable, d types.Dict, dictName string, terminalNode, textField, oneKid bool) error {
+	dv, err := validateEntry(xRefTable, d, dictName, "DV", OPTIONAL, model.V10)
+	if err != nil {
+		return err
+	}
+	if textField && dv != nil && !terminalNode && !oneKid {
+		return errors.New("\"DV\" not allowed in non terminal text fields with more than one kid")
+	}
+	return nil
+}
+
+func validateFormFieldDictEntries(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, terminalNode, oneKid bool, inFieldType *types.Name, requiresDA bool) (outFieldType *types.Name, hasDA bool, err error) {
 
 	dictName := "formFieldDict"
 
@@ -311,6 +340,8 @@ func validateFormFieldDictEntries(xRefTable *model.XRefTable, objNr, incr int, d
 	if fieldType != nil {
 		outFieldType = fieldType
 	}
+
+	textField := isTextField(outFieldType)
 
 	// Parent, required if this is a child in the field hierarchy.
 	_, err = validateIndRefEntry(xRefTable, d, dictName, "Parent", OPTIONAL, model.V10)
@@ -343,17 +374,12 @@ func validateFormFieldDictEntries(xRefTable *model.XRefTable, objNr, incr int, d
 	}
 
 	// V, optional, various
-	_, err = validateEntry(xRefTable, d, dictName, "V", OPTIONAL, model.V10)
-	if err != nil {
-		return nil, false, err
-	}
-	if err := cacheSig(xRefTable, d, dictName, true, objNr, incr); err != nil {
+	if err := validateV(xRefTable, objNr, incr, d, dictName, terminalNode, textField, oneKid); err != nil {
 		return nil, false, err
 	}
 
 	// DV, optional, various
-	_, err = validateEntry(xRefTable, d, dictName, "DV", OPTIONAL, model.V10)
-	if err != nil {
+	if err := validateDV(xRefTable, d, dictName, terminalNode, textField, oneKid); err != nil {
 		return nil, false, err
 	}
 
@@ -377,7 +403,7 @@ func validateFormFieldParts(xRefTable *model.XRefTable, objNr, incr int, d types
 	}
 
 	// Validate field dict entries.
-	if _, _, err := validateFormFieldDictEntries(xRefTable, objNr, incr, d, true, inFieldType, requiresDA); err != nil {
+	if _, _, err := validateFormFieldDictEntries(xRefTable, objNr, incr, d, true, false, inFieldType, requiresDA); err != nil {
 		return err
 	}
 
@@ -393,22 +419,26 @@ func validateFormFieldKids(xRefTable *model.XRefTable, objNr, incr int, d types.
 		return errors.New("pdfcpu: validateFormFieldKids: non terminal field can not be widget annotation")
 	}
 
+	a, err := xRefTable.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+
 	// Validate field entries.
 	var xInFieldType *types.Name
 	var hasDA bool
-	if xInFieldType, hasDA, err = validateFormFieldDictEntries(xRefTable, objNr, incr, d, false, inFieldType, requiresDA); err != nil {
+	if xInFieldType, hasDA, err = validateFormFieldDictEntries(xRefTable, objNr, incr, d, false, len(a) == 1, inFieldType, requiresDA); err != nil {
 		return err
 	}
 	if requiresDA && hasDA {
 		requiresDA = false
 	}
 
-	// Recurse over kids.
-	a, err := xRefTable.DereferenceArray(o)
-	if err != nil || a == nil {
-		return err
+	if len(a) == 0 {
+		return nil
 	}
 
+	// Recurse over kids.
 	for _, value := range a {
 		ir, ok := value.(types.IndirectRef)
 		if !ok {
@@ -469,7 +499,6 @@ func validateFormFields(xRefTable *model.XRefTable, arr types.Array, requiresDA 
 		}
 
 		if !valid {
-			// TODO Locate sig dicts in chronol. order.
 			if err = validateFormFieldDict(xRefTable, ir, nil, requiresDA); err != nil {
 				return err
 			}
