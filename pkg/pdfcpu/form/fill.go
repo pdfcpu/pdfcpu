@@ -588,7 +588,6 @@ func fillCheckBox(
 	ctx *model.Context,
 	d types.Dict,
 	id, name string,
-	opts []string,
 	locked bool,
 	format DataFormat,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
@@ -676,7 +675,7 @@ func fillBtn(
 			return err
 		}
 	} else {
-		if err := fillCheckBox(ctx, d, id, name, opts, locked, format, fillDetails, ok); err != nil {
+		if err := fillCheckBox(ctx, d, id, name, locked, format, fillDetails, ok); err != nil {
 			return err
 		}
 	}
@@ -1170,7 +1169,7 @@ func setupFillFonts(xRefTable *model.XRefTable) error {
 
 	for k, v := range d {
 		indRef := v.(types.IndirectRef)
-		fontName, _, err := primitives.FormFontNameAndLangForID(xRefTable, indRef)
+		fontName, _, _, err := primitives.FormFontDetails(xRefTable, indRef)
 		if err != nil {
 			return err
 		}

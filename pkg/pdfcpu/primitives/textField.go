@@ -975,41 +975,41 @@ func renderTextFieldAP(ctx *model.Context, d types.Dict, v string, multiLine, co
 	return nil
 }
 
-func fontAttrs(ctx *model.Context, fd types.Dict, fontID, text string, fonts map[string]types.IndirectRef) (string, string, string, *types.IndirectRef, error) {
-	var prefix, name, lang string
+func fontAttrs(ctx *model.Context, fd types.Dict, fontID, text string, fonts map[string]types.IndirectRef) (string, string, string, string, *types.IndirectRef, error) {
+	var prefix, name, lang, script string
 	var err error
 
 	fontIndRef := fd.IndirectRefEntry(fontID)
 	if fontIndRef == nil {
 		// create utf8 font * save as indRef
-		fontID, name, lang, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
+		fontID, name, lang, script, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
 		if err != nil {
-			return "", "", "", nil, err
+			return "", "", "", "", nil, err
 		}
 		fd[fontID] = *fontIndRef
 	} else {
 		objNr := int(fontIndRef.ObjectNumber)
 		fontDict, err := ctx.DereferenceDict(*fontIndRef)
 		if err != nil {
-			return "", "", "", nil, err
+			return "", "", "", "", nil, err
 		}
 		if fontDict == nil {
 			// create utf8 font * save as indRef
-			fontID, name, lang, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
+			fontID, name, lang, script, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
 			if err != nil {
-				return "", "", "", nil, err
+				return "", "", "", "", nil, err
 			}
 			fd[fontID] = *fontIndRef
 		} else {
 			prefix, name, err = pdffont.Name(ctx.XRefTable, fontDict, objNr)
 			if err != nil {
-				return "", "", "", nil, err
+				return "", "", "", "", nil, err
 			}
 			if !font.SupportedFont(name) || (len(prefix) == 0 && hasUTF(text)) {
 				// create utf8 font * save as indRef
-				fontID, name, lang, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
+				fontID, name, lang, script, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
 				if err != nil {
-					return "", "", "", nil, err
+					return "", "", "", "", nil, err
 				}
 				fd[fontID] = *fontIndRef
 			} else {
@@ -1018,7 +1018,7 @@ func fontAttrs(ctx *model.Context, fd types.Dict, fontID, text string, fonts map
 		}
 	}
 
-	return fontID, name, lang, fontIndRef, nil
+	return fontID, name, lang, script, fontIndRef, nil
 }
 
 func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine, comb bool, maxLen int, da *string, fonts map[string]types.IndirectRef) error {
@@ -1065,7 +1065,7 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine,
 		return err
 	}
 
-	fontID, name, lang, fontIndRef, err := fontAttrs(ctx, fd, fontID, text, fonts)
+	fontID, name, lang, script, fontIndRef, err := fontAttrs(ctx, fd, fontID, text, fonts)
 	if err != nil {
 		return err
 	}
@@ -1077,11 +1077,13 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine,
 		return err
 	}
 
-	tf.Font = &f
+	f.Name = name
+	f.Lang = lang
+	f.Script = script
+	f.FillFont = fillFont
+
 	tf.fontID = fontID
-	tf.Font.Name = name
-	tf.Font.Lang = lang
-	tf.Font.FillFont = fillFont
+	tf.Font = &f
 	tf.RTL = pdffont.RTL(lang)
 
 	if !font.SupportedFont(name) {

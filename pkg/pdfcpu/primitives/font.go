@@ -138,28 +138,33 @@ func (f FormFont) RTL() bool {
 	return types.MemberOf(f.Script, []string{"Arab", "Hebr"}) || types.MemberOf(f.Lang, []string{"ar", "fa", "he"})
 }
 
-func FormFontNameAndLangForID(xRefTable *model.XRefTable, indRef types.IndirectRef) (string, string, error) {
+func FormFontDetails(xRefTable *model.XRefTable, indRef types.IndirectRef) (string, string, string, error) {
 
 	objNr := int(indRef.ObjectNumber)
 	fontDict, err := xRefTable.DereferenceDict(indRef)
 	if err != nil || fontDict == nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	_, fName, err := pdffont.Name(xRefTable, fontDict, objNr)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	var fLang string
 	if font.IsUserFont(fName) {
 		fLang, err = pdffont.Lang(xRefTable, fontDict)
 		if err != nil {
-			return "", "", err
+			return "", "", "", err
 		}
 	}
 
-	return fName, fLang, nil
+	fScript := ""
+	if enc := fontDict.NameEntry("Encoding"); enc != nil {
+		fScript = pdffont.ScriptForEncoding(*enc)
+	}
+
+	return fName, fLang, fScript, nil
 }
 
 // FormFontResDict returns form dict's font resource dict.
@@ -234,57 +239,57 @@ func FontIndRef(fName string, ctx *model.Context, fonts map[string]types.Indirec
 	return nil, nil
 }
 
-func ensureUTF8FormFont(ctx *model.Context, fonts map[string]types.IndirectRef) (string, string, string, *types.IndirectRef, error) {
+func ensureUTF8FormFont(ctx *model.Context, fonts map[string]types.IndirectRef) (string, string, string, string, *types.IndirectRef, error) {
 
 	// TODO Make name of UTF-8 userfont part of pdfcpu configs.
 
 	fontID, fontName := "F0", "Roboto-Regular"
 
 	if indRef, ok := fonts[fontName]; ok {
-		return fontID, fontName, "", &indRef, nil
+		return fontID, fontName, "", "", &indRef, nil
 	}
 
 	for objNr, fo := range ctx.Optimize.FontObjects {
 		if fo.FontName == fontName && fo.Prefix != "" {
 			indRef := types.NewIndirectRef(objNr, 0)
 			fonts[fontName] = *indRef
-			return fontID, fontName, "", indRef, nil
+			return fontID, fontName, "", "", indRef, nil
 		}
 	}
 
 	indRef, err := pdffont.EnsureFontDict(ctx.XRefTable, fontName, "", "", false, nil)
 	if err != nil {
-		return "", "", "", nil, err
+		return "", "", "", "", nil, err
 	}
 	fonts[fontName] = *indRef
 
-	return fontID, fontName, "", indRef, nil
+	return fontID, fontName, "", "", indRef, nil
 }
 
 func extractFormFontDetails(
 	ctx *model.Context,
 	fontID string,
-	fonts map[string]types.IndirectRef) (string, string, string, *types.IndirectRef, error) {
+	fonts map[string]types.IndirectRef) (string, string, string, string, *types.IndirectRef, error) {
 
 	xRefTable := ctx.XRefTable
 
 	var (
-		fName, fLang string
-		fontIndRef   *types.IndirectRef
-		err          error
+		fName, fLang, fScript string
+		fontIndRef            *types.IndirectRef
+		err                   error
 	)
 
 	if len(fontID) > 0 {
 
 		fontIndRef = formFontIndRef(xRefTable, fontID)
 		if fontIndRef != nil {
-			fName, fLang, err = FormFontNameAndLangForID(xRefTable, *fontIndRef)
+			fName, fLang, fScript, err = FormFontDetails(xRefTable, *fontIndRef)
 			if err != nil {
-				return "", "", "", nil, err
+				return "", "", "", "", nil, err
 			}
 
 			if fName == "" {
-				return "", "", "", nil, errors.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
+				return "", "", "", "", nil, errors.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
 			}
 		}
 
@@ -294,7 +299,7 @@ func extractFormFontDetails(
 		return ensureUTF8FormFont(ctx, fonts)
 	}
 
-	return fontID, fName, fLang, fontIndRef, err
+	return fontID, fName, fLang, fScript, fontIndRef, err
 }
 
 func fontFromDA(s string) (string, FormFont, error) {
@@ -350,7 +355,7 @@ func calcFontDetailsFromDA(ctx *model.Context, d types.Dict, da *string, needUTF
 		return "", nil, false, nil, err
 	}
 
-	id, name, lang, fontIndRef, err := extractFormFontDetails(ctx, fontID, fonts)
+	id, name, lang, script, fontIndRef, err := extractFormFontDetails(ctx, fontID, fonts)
 	if err != nil {
 		return "", nil, false, nil, err
 	}
@@ -361,7 +366,7 @@ func calcFontDetailsFromDA(ctx *model.Context, d types.Dict, da *string, needUTF
 	fillFont := formFontIndRef(ctx.XRefTable, fontID) != nil
 
 	if needUTF8 && font.IsCoreFont(name) {
-		id, name, lang, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
+		id, name, lang, script, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
 		if err != nil {
 			return "", nil, false, nil, err
 		}
@@ -369,6 +374,7 @@ func calcFontDetailsFromDA(ctx *model.Context, d types.Dict, da *string, needUTF
 
 	f.Name = name
 	f.Lang = lang
+	f.Script = script
 	f.FillFont = fillFont
 
 	rtl := pdffont.RTL(lang)
