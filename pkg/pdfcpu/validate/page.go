@@ -308,8 +308,14 @@ func validatePageEntryThumb(xRefTable *model.XRefTable, d types.Dict, required b
 	}
 
 	indRef := d.IndirectRefEntry("Thumb")
+	//fmt.Printf("adding thumb page:%d obj#:%d %v\n", xRefTable.CurPage, indRef.ObjectNumber.Value(), xRefTable.PageThumbs)
+
+	// Ensure PageThumbs map is initialized
+	if xRefTable.PageThumbs == nil {
+		xRefTable.PageThumbs = map[int]types.IndirectRef{}
+	}
+
 	xRefTable.PageThumbs[xRefTable.CurPage] = *indRef
-	//fmt.Printf("adding thumb page:%d obj#:%d\n", xRefTable.CurPage, indRef.ObjectNumber.Value())
 
 	return nil
 }
