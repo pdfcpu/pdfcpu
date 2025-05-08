@@ -34,13 +34,25 @@ var (
 )
 
 func CreateXRefTableWithRootDict() (*model.XRefTable, error) {
+	// TODO
+	//xRefTable := model.NewXRefTable(nil)
 	xRefTable := &model.XRefTable{
-		Table:      map[int]*model.XRefTableEntry{},
-		Names:      map[string]*model.Node{},
-		PageAnnots: map[int]model.PgAnnots{},
-		Stats:      model.NewPDFStats(),
-		URIs:       map[int]map[string]string{},
-		UsedGIDs:   map[string]map[uint16]bool{},
+		Table:             map[int]*model.XRefTableEntry{},
+		Names:             map[string]*model.Node{},
+		NameRefs:          map[string]model.NameMap{},
+		KeywordList:       types.StringSet{},
+		Properties:        map[string]string{},
+		LinearizationObjs: types.IntSet{},
+		PageAnnots:        map[int]model.PgAnnots{},
+		PageThumbs:        map[int]types.IndirectRef{},
+		Signatures:        map[int]map[int]model.Signature{},
+		Stats:             model.NewPDFStats(),
+		ValidationMode:    model.ValidationRelaxed,
+		ValidateLinks:     false,
+		URIs:              map[int]map[string]string{},
+		UsedGIDs:          map[string]map[uint16]bool{},
+		FillFonts:         map[string]types.IndirectRef{},
+		Conf:              nil,
 	}
 
 	xRefTable.Table[0] = model.NewFreeHeadXRefTableEntry()

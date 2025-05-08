@@ -188,6 +188,7 @@ type XRefTable struct {
 }
 
 // NewXRefTable creates a new XRefTable.
+// TODO Export
 func newXRefTable(conf *Configuration) (xRefTable *XRefTable) {
 	return &XRefTable{
 		Table:             map[int]*XRefTableEntry{},
