@@ -761,17 +761,31 @@ func (cb *CheckBox) render(p *model.Page, pageNr int, fonts model.FontMap) error
 	return cb.doRender(p, fonts)
 }
 
-func CalcCheckBoxASNames(d types.Dict) (types.Name, types.Name) {
-	apDict := d.DictEntry("AP")
-	d1 := apDict.DictEntry("D")
-	if d1 == nil {
-		d1 = apDict.DictEntry("N")
+func CalcCheckBoxASNames(ctx *model.Context, d types.Dict) (types.Name, types.Name, error) {
+	obj, found := d.Find("AP")
+	if !found {
+		return "", "", errors.New("pdfcpu: corrupt form field: missing entry \"AP\"")
+	}
+	d, err := ctx.DereferenceDict(obj)
+	if err != nil {
+		return "", "", err
+	}
+	obj, found = d.Find("D")
+	if !found {
+		obj, found = d.Find("N")
+	}
+	if !found {
+		return "", "", errors.New("pdfcpu: corrupt form field: missing entries \"N\" and \"N\"")
+	}
+	d, err = ctx.DereferenceDict(obj)
+	if err != nil {
+		return "", "", err
 	}
 	offName, yesName := "Off", "Yes"
-	for k := range d1 {
+	for k := range d {
 		if k != "Off" {
 			yesName = k
 		}
 	}
-	return types.Name(offName), types.Name(yesName)
+	return types.Name(offName), types.Name(yesName), nil
 }

@@ -794,26 +794,52 @@ func pageAnnotIndRefForAcroField(xRefTable *model.XRefTable, indRef types.Indire
 	//return nil, errors.Errorf("pdfcpu: can't repair form field: %d\n", indRef.ObjectNumber.Value())
 }
 
-func validateFormFieldsAgainstPageAnnotations(xRefTable *model.XRefTable) error {
-	o, _ := xRefTable.Form.Find("Fields")
-	arr, _ := xRefTable.DereferenceArray(o)
-
+func fixFormFieldsArray(xRefTable *model.XRefTable, arr types.Array) (types.Array, error) {
 	arr1 := types.Array{}
-
 	for _, obj := range arr {
 		indRef, err := pageAnnotIndRefForAcroField(xRefTable, obj.(types.IndirectRef))
 		if err != nil {
-			return err
+			return nil, err
 		}
 		arr1 = append(arr1, *indRef)
 	}
+	return arr1, nil
+}
 
-	indRef, err := xRefTable.IndRefForNewObject(arr1)
+func validateFormFieldsAgainstPageAnnotations(xRefTable *model.XRefTable) error {
+	o, found := xRefTable.Form.Find("Fields")
+	if !found {
+		return nil
+	}
+
+	indRef, ok := o.(types.IndirectRef)
+	if !ok {
+		arr, ok := o.(types.Array)
+		if !ok {
+			return errors.New("pdfcpu: invalid array object")
+		}
+		arr, err := fixFormFieldsArray(xRefTable, arr)
+		if err != nil {
+			return err
+		}
+		indRef, err := xRefTable.IndRefForNewObject(arr)
+		if err != nil {
+			return err
+		}
+		xRefTable.Form["Fields"] = *indRef
+		return nil
+	}
+
+	arr, err := xRefTable.DereferenceArray(o)
 	if err != nil {
 		return err
 	}
-
-	xRefTable.Form["Fields"] = *indRef
+	arr, err = fixFormFieldsArray(xRefTable, arr)
+	if err != nil {
+		return err
+	}
+	entry, _ := xRefTable.FindTableEntryForIndRef(&indRef)
+	entry.Object = arr
 
 	return nil
 }

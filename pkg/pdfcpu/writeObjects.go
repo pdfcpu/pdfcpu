@@ -329,15 +329,6 @@ func writeHexLiteralObject(ctx *model.Context, objNumber, genNumber int, hl type
 }
 
 func writeIntegerObject(ctx *model.Context, objNumber, genNumber int, integer types.Integer) error {
-	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
-	if err != nil {
-		return err
-	}
-
-	if ok {
-		return nil
-	}
-
 	return writeObject(ctx, objNumber, genNumber, integer.PDFString())
 }
 
