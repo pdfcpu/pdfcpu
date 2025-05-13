@@ -328,6 +328,16 @@ func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict) error {
 		return err
 	}
 
+	// UF, optional, text string
+	sinceVersion := model.V17
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
+	uf, err := validateStringEntry(xRefTable, d, dictName, "UF", OPTIONAL, sinceVersion, validateFileSpecString)
+	if err != nil {
+		return err
+	}
+
 	// DOS, byte string, optional, obsolescent.
 	_, dosFound := d.Find("DOS")
 
@@ -343,17 +353,11 @@ func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict) error {
 		validate = validateURLString
 	}
 
-	_, err = validateStringEntry(xRefTable, d, dictName, "F", requiredF(dosFound, macFound, unixFound), model.V10, validate)
-	if err != nil {
-		return err
+	required := requiredF(dosFound, macFound, unixFound)
+	if xRefTable.ValidationMode == model.ValidationRelaxed && uf != nil {
+		required = OPTIONAL
 	}
-
-	// UF, optional, text string
-	sinceVersion := model.V17
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
-	}
-	_, err = validateStringEntry(xRefTable, d, dictName, "UF", OPTIONAL, sinceVersion, validateFileSpecString)
+	_, err = validateStringEntry(xRefTable, d, dictName, "F", required, model.V10, validate)
 	if err != nil {
 		return err
 	}
