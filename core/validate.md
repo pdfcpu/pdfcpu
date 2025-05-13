@@ -8,9 +8,9 @@ Any PDF file you would like to process with pdfcpu needs to pass validation.
 
 This command validates `inFile` against:
 
-* PDF 1.7: [PDF 32000-1:2008](https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf)
+* PDF 1.7: [PDF 32000-1:2008](https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf)
 
-* PDF 2.0: [PDF 32000:2](https://www.loc.gov/preservation/digital/formats/fdd/fdd000474.shtml) (ongoing task!)
+* PDF 2.0: [PDF 32000-2:2020](https://www.pdfa-inc.org/product/iso-32000-2-pdf-2-0-bundle-sponsored-access/) (ongoing task!)
 
 
 <br>

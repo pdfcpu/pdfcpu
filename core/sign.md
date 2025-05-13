@@ -42,7 +42,7 @@ Has to be the only signature in the document.
 
 > **Note:**  
 > This is not intended as an in-depth introduction to PDF digital signatures.  
-> For complete details, please refer to the [PDF 2.0 specification (ISO 32000-2)](https://www.iso.org/standard/75839.html).
+> For complete details, please refer to the [PDF 2.0 specification (ISO 32000-2:2020)](https://www.pdfa-inc.org/product/iso-32000-2-pdf-2-0-bundle-sponsored-access/).
 
 <br>
 

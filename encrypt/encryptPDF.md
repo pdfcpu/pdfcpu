@@ -4,7 +4,7 @@ layout: default
 
 # Encrypt
 
-This command encrypts `inFile` using the standard security handler as defined in [PDF 32000-1:2008](https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf). If provided the encrypted PDF will be written to `outFile` and `inFile` remains untouched. Have a look at some [examples](#examples).
+This command encrypts `inFile` using the standard security handler as defined in [PDF 32000-2:2020](https://www.pdfa-inc.org/product/iso-32000-2-pdf-2-0-bundle-sponsored-access/). If provided the encrypted PDF will be written to `outFile` and `inFile` remains untouched. Have a look at some [examples](#examples).
 
 **Owner Password** <br>
 Opens the document without restricions/permissions, grants full access. <br>
