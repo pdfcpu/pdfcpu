@@ -1230,7 +1230,7 @@ func scanForVersion(rs io.ReadSeeker, prefix string) ([]byte, int, error) {
 			i := bytes.IndexByte(curBuf, '%')
 			if i < 0 {
 				// no match, check next block
-				off += bufSize
+				off += len(curBuf)
 				break
 			}
 
@@ -1238,6 +1238,7 @@ func scanForVersion(rs io.ReadSeeker, prefix string) ([]byte, int, error) {
 			if i < len(curBuf)-18 {
 				if !bytes.HasPrefix(curBuf[i:], []byte(prefix)) {
 					// No match, keep checking
+					off += i + 1
 					curBuf = curBuf[i+1:]
 					continue
 				}
@@ -1258,8 +1259,8 @@ func scanForVersion(rs io.ReadSeeker, prefix string) ([]byte, int, error) {
 			buf3 := append(curBuf[i:], buf2[:n]...)
 			if !bytes.HasPrefix(buf3, []byte(prefix)) {
 				// No match, keep checking
+				off += len(curBuf)
 				curBuf = buf2
-				off += bufSize
 				continue
 			}
 			off += i
