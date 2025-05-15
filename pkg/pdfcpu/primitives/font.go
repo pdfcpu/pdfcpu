@@ -370,6 +370,7 @@ func calcFontDetailsFromDA(ctx *model.Context, d types.Dict, da *string, needUTF
 		if err != nil {
 			return "", nil, false, nil, err
 		}
+		fillFont = false
 	}
 
 	f.Name = name
