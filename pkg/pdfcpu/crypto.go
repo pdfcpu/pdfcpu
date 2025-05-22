@@ -737,24 +737,64 @@ func validateOwnerPassword(ctx *model.Context) (ok bool, err error) {
 	return ok, err
 }
 
-// SupportedCFEntry returns true if all entries found are supported.
+func validateCFLength(len int, cfm *string) bool {
+	// See table 25 Length
+
+	if cfm != nil {
+		if (*cfm == "AESV2" && len != 16) || (*cfm == "AESV3" && len != 32) {
+			return false
+		}
+	}
+
+	// Standard security handler expresses in bytes.
+	minBytes, maxBytes := 5, 32
+	if len < minBytes {
+		return false
+	}
+	if len <= maxBytes {
+		return true
+	}
+
+	// Public security handler expresses in bits.
+	minBits, maxBits := 40, 256
+	if len < minBits || len > maxBits {
+		return false
+	}
+
+	if len%8 > 0 {
+		return false
+	}
+
+	return true
+}
+
 func supportedCFEntry(d types.Dict) (bool, error) {
 	cfm := d.NameEntry("CFM")
 	if cfm != nil && *cfm != "V2" && *cfm != "AESV2" && *cfm != "AESV3" {
 		return false, errors.New("pdfcpu: supportedCFEntry: invalid entry \"CFM\"")
 	}
 
+	aes := cfm != nil && (*cfm == "AESV2" || *cfm == "AESV3")
+
 	ae := d.NameEntry("AuthEvent")
 	if ae != nil && *ae != "DocOpen" {
-		return false, errors.New("pdfcpu: supportedCFEntry: invalid entry \"AuthEvent\"")
+		return aes, errors.New("pdfcpu: supportedCFEntry: invalid entry \"AuthEvent\"")
 	}
 
-	l := d.IntEntry("Length")
-	if l != nil && (*l < 5 || *l > 16) && *l != 32 && *l != 256 {
-		return false, errors.New("pdfcpu: supportedCFEntry: invalid entry \"Length\"")
+	len := d.IntEntry("Length")
+	if len == nil {
+		return aes, nil
 	}
 
-	return cfm != nil && (*cfm == "AESV2" || *cfm == "AESV3"), nil
+	if !validateCFLength(*len, cfm) {
+		s := ""
+		if cfm != nil {
+			s = *cfm
+		}
+		return false, errors.Errorf("pdfcpu: supportedCFEntry: invalid entry \"Length\" %d %s", *len, s)
+	}
+
+	return aes, nil
 }
 
 func perms(p int) (list []string) {
