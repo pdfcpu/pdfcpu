@@ -376,7 +376,11 @@ func validateFileSpecDictPart2(xRefTable *model.XRefTable, d types.Dict, dictNam
 	validateAFRelationship := func(s string) bool {
 		return types.MemberOf(s, []string{"Source", "Data", "Alternative", "Supplement", "EncryptedPayload", "FormData", "Schema", "Unspecified"})
 	}
-	if _, err := validateNameEntry(xRefTable, d, dictName, "AFRelationship", OPTIONAL, model.V20, validateAFRelationship); err != nil {
+	sinceVersion = model.V20
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	if _, err := validateNameEntry(xRefTable, d, dictName, "AFRelationship", OPTIONAL, sinceVersion, validateAFRelationship); err != nil {
 		return err
 	}
 

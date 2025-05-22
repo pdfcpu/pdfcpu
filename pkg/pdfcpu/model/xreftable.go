@@ -1794,7 +1794,7 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 }
 
 // PageContent returns the content in PDF syntax for page dict d.
-func (xRefTable *XRefTable) PageContent(d types.Dict) ([]byte, error) {
+func (xRefTable *XRefTable) PageContent(d types.Dict, pageNr int) ([]byte, error) {
 	o, _ := d.Find("Contents")
 	if o == nil {
 		return nil, ErrNoContent
@@ -1816,7 +1816,7 @@ func (xRefTable *XRefTable) PageContent(d types.Dict) ([]byte, error) {
 			return nil, errors.New("pdfcpu: unsupported filter: unable to decode content")
 		}
 		if err != nil {
-			return nil, err
+			return nil, errors.Errorf("page %d content decode: %v", pageNr, err)
 		}
 
 		bb = append(bb, o.Content...)
@@ -1829,7 +1829,7 @@ func (xRefTable *XRefTable) PageContent(d types.Dict) ([]byte, error) {
 			}
 			o, _, err := xRefTable.DereferenceStreamDict(o)
 			if err != nil {
-				return nil, err
+				return nil, errors.Errorf("page %d content decode: %v", pageNr, err)
 			}
 			if o == nil {
 				continue
@@ -1839,7 +1839,7 @@ func (xRefTable *XRefTable) PageContent(d types.Dict) ([]byte, error) {
 				return nil, errors.New("pdfcpu: unsupported filter: unable to decode content")
 			}
 			if err != nil {
-				return nil, err
+				return nil, errors.Errorf("page %d content decode: %v", pageNr, err)
 			}
 			bb = append(bb, o.Content...)
 		}
@@ -1898,12 +1898,12 @@ func consolidateResourceDict(d types.Dict, prn PageResourceNames, pageNr int) er
 	return nil
 }
 
-func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict types.Dict, page int, consolidateRes bool) error {
+func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict types.Dict, pageNr int, consolidateRes bool) error {
 	if !consolidateRes {
 		return nil
 	}
 
-	bb, err := xRefTable.PageContent(pageDict)
+	bb, err := xRefTable.PageContent(pageDict, pageNr)
 	if err != nil {
 		if err == ErrNoContent {
 			return nil
@@ -1921,7 +1921,7 @@ func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict ty
 	// Remove any resource that's not required.
 	// Return an error for any required resource missing.
 	// TODO Calculate and accumulate resources required by content streams of any present form or type 3 fonts.
-	return consolidateResourceDict(resDict, prn, page)
+	return consolidateResourceDict(resDict, prn, pageNr)
 }
 
 func (xRefTable *XRefTable) pageObjType(indRef types.IndirectRef) (string, error) {
@@ -2056,6 +2056,10 @@ func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (types.Dic
 	pageRootDictIndRef, err := xRefTable.Pages()
 	if err != nil {
 		return nil, nil, nil, err
+	}
+
+	if consolidateRes {
+		consolidateRes = xRefTable.Conf.OptimizeResourceDicts
 	}
 
 	// Calculate and return only resources that are really needed by

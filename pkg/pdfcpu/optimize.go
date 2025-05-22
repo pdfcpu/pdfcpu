@@ -77,7 +77,7 @@ func removeEmptyContentStreams(ctx *model.Context, pageDict types.Dict, obj type
 		contentStreamDict, ok := entry.Object.(types.StreamDict)
 		if ok {
 			if err := contentStreamDict.Decode(); err != nil {
-				return err
+				return errors.Errorf("invalid content stream obj#%d: %v", pageObjNumber, err)
 			}
 			if len(contentStreamDict.Content) == 0 {
 				pageDict.Delete("Contents")
@@ -139,10 +139,6 @@ func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber 
 
 	o, found = pageDict.Find("Contents")
 	if !found {
-		return nil
-	}
-
-	if !ctx.OptimizeDuplicateContentStreams {
 		return nil
 	}
 
@@ -790,13 +786,9 @@ func parseResourcesDict(ctx *model.Context, pageDict types.Dict, pageNr, pageObj
 func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNr int) (int, error) {
 	// TODO Integrate resource consolidation based on content stream requirements.
 
-	count, found := pagesDict.Find("Count")
+	_, found := pagesDict.Find("Count")
 	if !found {
 		return pageNr, errors.New("pdfcpu: parsePagesDict: missing Count")
-	}
-
-	if log.OptimizeEnabled() {
-		log.Optimize.Printf("parsePagesDict begin (next page=%d has %s pages): %s\n", pageNr+1, count.(types.Integer), pagesDict)
 	}
 
 	ctx.Optimize.Cache = map[int]bool{}
@@ -843,8 +835,10 @@ func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNr int) (int, 
 
 		// Process page dict.
 
-		if err = optimizePageContent(ctx, d, int(ir.ObjectNumber)); err != nil {
-			return 0, err
+		if ctx.OptimizeDuplicateContentStreams {
+			if err = optimizePageContent(ctx, d, int(ir.ObjectNumber)); err != nil {
+				return 0, err
+			}
 		}
 
 		if err := ctx.DeleteDictEntry(d, "PieceInfo"); err != nil {
