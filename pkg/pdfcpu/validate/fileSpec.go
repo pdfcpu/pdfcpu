@@ -286,11 +286,7 @@ func validateFileSpecDictEFAndRF(xRefTable *model.XRefTable, d types.Dict, dictN
 	return err
 }
 
-func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict) error {
-	// See 7.11.3
-
-	dictName := "fileSpecDict"
-
+func validateFileSpecDictPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// FS, optional, name
 	fsName, err := validateNameEntry(xRefTable, d, dictName, "FS", OPTIONAL, model.V10, nil)
 	if err != nil {
@@ -330,13 +326,17 @@ func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict) error {
 		return err
 	}
 
+	return nil
+}
+
+func validateFileSpecDictPart2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// ID, optional, array of strings
-	if _, err = validateStringArrayEntry(xRefTable, d, dictName, "ID", OPTIONAL, model.V11, func(a types.Array) bool { return len(a) == 2 }); err != nil {
+	if _, err := validateStringArrayEntry(xRefTable, d, dictName, "ID", OPTIONAL, model.V11, func(a types.Array) bool { return len(a) == 2 }); err != nil {
 		return err
 	}
 
 	// V, optional, boolean, since V1.2
-	if _, err = validateBooleanEntry(xRefTable, d, dictName, "V", OPTIONAL, model.V12, nil); err != nil {
+	if _, err := validateBooleanEntry(xRefTable, d, dictName, "V", OPTIONAL, model.V12, nil); err != nil {
 		return err
 	}
 
@@ -350,7 +350,7 @@ func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// Desc, optional, text string, since V1.6
-	sinceVersion = model.V16
+	sinceVersion := model.V16
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V10
 	}
@@ -380,7 +380,23 @@ func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict) error {
 		return err
 	}
 
-	return err
+	return nil
+}
+
+func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict) error {
+	// See 7.11.3
+
+	dictName := "fileSpecDict"
+
+	if err := validateFileSpecDictPart1(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	if err := validateFileSpecDictPart2(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func validateFileSpecification(xRefTable *model.XRefTable, o types.Object) (types.Object, error) {

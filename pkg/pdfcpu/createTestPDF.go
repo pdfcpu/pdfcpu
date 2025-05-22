@@ -234,7 +234,7 @@ func CreateResourceDictInheritanceDemoXRef() (*model.XRefTable, error) {
 	return xRefTable, nil
 }
 
-func createFunctionalShadingDict(xRefTable *model.XRefTable) types.Dict {
+func createFunctionalShadingDict() types.Dict {
 	f := types.Dict(
 		map[string]types.Object{
 			"FunctionType": types.Integer(2),
@@ -253,7 +253,7 @@ func createFunctionalShadingDict(xRefTable *model.XRefTable) types.Dict {
 	return d
 }
 
-func createRadialShadingDict(xRefTable *model.XRefTable) types.Dict {
+func createRadialShadingDict() types.Dict {
 	f := types.Dict(
 		map[string]types.Object{
 			"FunctionType": types.Integer(2),
@@ -359,9 +359,9 @@ func addResources(xRefTable *model.XRefTable, pageDict types.Dict, fontName stri
 		return err
 	}
 
-	functionalBasedShDict := createFunctionalShadingDict(xRefTable)
+	functionalBasedShDict := createFunctionalShadingDict()
 
-	radialShDict := createRadialShadingDict(xRefTable)
+	radialShDict := createRadialShadingDict()
 
 	f := types.Dict(
 		map[string]types.Object{
@@ -1163,7 +1163,7 @@ func addThreads(xRefTable *model.XRefTable, rootDict types.Dict, pageIndRef type
 	return nil
 }
 
-func addOpenAction(xRefTable *model.XRefTable, rootDict types.Dict) error {
+func addOpenAction(rootDict types.Dict) error {
 	nextActionDict := types.Dict(
 		map[string]types.Object{
 			"Type": types.Name("Action"),
@@ -1188,7 +1188,7 @@ func addOpenAction(xRefTable *model.XRefTable, rootDict types.Dict) error {
 	return nil
 }
 
-func addURI(xRefTable *model.XRefTable, rootDict types.Dict) {
+func addURI(rootDict types.Dict) {
 	d := types.NewDict()
 	d.InsertString("Base", "http://www.adobe.com")
 
@@ -1226,7 +1226,7 @@ func addSpiderInfo(xRefTable *model.XRefTable, rootDict types.Dict) error {
 	return nil
 }
 
-func addOCProperties(xRefTable *model.XRefTable, rootDict types.Dict) error {
+func addOCProperties(rootDict types.Dict) error {
 	usageAppDict := types.Dict(
 		map[string]types.Object{
 			"Event":    types.Name("View"),
@@ -1263,7 +1263,7 @@ func addOCProperties(xRefTable *model.XRefTable, rootDict types.Dict) error {
 	return nil
 }
 
-func addRequirements(xRefTable *model.XRefTable, rootDict types.Dict) {
+func addRequirements(rootDict types.Dict) {
 	d := types.NewDict()
 	d.InsertName("Type", "Requirement")
 	d.InsertName("S", "EnableJavaScripts")
@@ -1295,24 +1295,24 @@ func CreateAnnotationDemoXRef() (*model.XRefTable, error) {
 		return nil, err
 	}
 
-	err = addOpenAction(xRefTable, rootDict)
+	err = addOpenAction(rootDict)
 	if err != nil {
 		return nil, err
 	}
 
-	addURI(xRefTable, rootDict)
+	addURI(rootDict)
 
 	err = addSpiderInfo(xRefTable, rootDict)
 	if err != nil {
 		return nil, err
 	}
 
-	err = addOCProperties(xRefTable, rootDict)
+	err = addOCProperties(rootDict)
 	if err != nil {
 		return nil, err
 	}
 
-	addRequirements(xRefTable, rootDict)
+	addRequirements(rootDict)
 
 	return xRefTable, nil
 }
@@ -1961,7 +1961,7 @@ func CreateContextWithXRefTable(conf *model.Configuration, pageDim *types.Dim) (
 	return CreateContext(xRefTable, conf), nil
 }
 
-func createDemoContentStreamDict(xRefTable *model.XRefTable, pageDict types.Dict, b []byte) (*types.IndirectRef, error) {
+func createDemoContentStreamDict(xRefTable *model.XRefTable, b []byte) (*types.IndirectRef, error) {
 	sd, _ := xRefTable.NewStreamDictForBuf(b)
 	if err := sd.Encode(); err != nil {
 		return nil, err
@@ -1992,7 +1992,7 @@ func createDemoPage(xRefTable *model.XRefTable, parentPageIndRef types.IndirectR
 		pageDict.Insert("Resources", resDict)
 	}
 
-	ir, err := createDemoContentStreamDict(xRefTable, pageDict, p.Buf.Bytes())
+	ir, err := createDemoContentStreamDict(xRefTable, p.Buf.Bytes())
 	if err != nil {
 		return nil, err
 	}

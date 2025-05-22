@@ -341,7 +341,7 @@ func registerFontDictObjNr(ctx *model.Context, fName string, objNr int) {
 }
 
 // Get rid of redundant fonts for given fontResources dictionary.
-func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pageObjNumber int, rNamePrefix string) error {
+func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int, rNamePrefix string) error {
 	pageFonts := pageFonts(ctx, pageNr)
 
 	// Iterate over font resource dict.
@@ -717,7 +717,7 @@ func optimizeResources(ctx *model.Context, resourcesDict types.Dict, pageNr, pag
 			return errors.Errorf("pdfcpu: optimizeResources: font resource dict is null for page %d pageObj %d\n", pageNr, pageObjNumber)
 		}
 
-		if err = optimizeFontResourcesDict(ctx, d, pageNr, pageObjNumber, rNamePrefix); err != nil {
+		if err = optimizeFontResourcesDict(ctx, d, pageNr, rNamePrefix); err != nil {
 			return err
 		}
 
