@@ -474,11 +474,8 @@ func validateImageStreamDictPart2(xRefTable *model.XRefTable, sd *types.StreamDi
 		return err
 	}
 
-	// Intent, name, optional, since V1.0
-	validate := func(s string) bool {
-		return types.MemberOf(s, []string{"AbsoluteColorimetric", "RelativeColorimetric", "Saturation", "Perceptual"})
-	}
-	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Intent", OPTIONAL, model.V11, validate)
+	// Note 8.6.5.8: If a PDF processor does not recognise the specified name, it shall use the RelativeColorimetric intent by default.
+	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Intent", OPTIONAL, model.V11, nil)
 	if err != nil {
 		return err
 	}
