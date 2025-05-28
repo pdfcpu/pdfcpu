@@ -250,7 +250,7 @@ func validateVisibleOutlineCount(xRefTable *model.XRefTable, total, visible int,
 	return nil
 }
 
-func validateInvisibleOutlineCount(xRefTable *model.XRefTable, total, visible int, count *int) error {
+func validateInvisibleOutlineCount(xRefTable *model.XRefTable, total int, count *int) error {
 	if count != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict && *count == 0 {
 			return errors.New("pdfcpu: validateOutlines: invalid, root \"Count\" shall be omitted if there are no open outline items")
@@ -265,7 +265,7 @@ func validateInvisibleOutlineCount(xRefTable *model.XRefTable, total, visible in
 
 func validateOutlineCount(xRefTable *model.XRefTable, total, visible int, count *int) error {
 	if visible == 0 {
-		return validateInvisibleOutlineCount(xRefTable, total, visible, count)
+		return validateInvisibleOutlineCount(xRefTable, total, count)
 	}
 
 	if visible > 0 {

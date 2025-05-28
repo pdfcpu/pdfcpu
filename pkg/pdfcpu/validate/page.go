@@ -148,7 +148,7 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict) (hasContents
 	return validateContents(o, xRefTable, d)
 }
 
-func validatePageResources(xRefTable *model.XRefTable, d types.Dict, hasResources, hasContents bool) error {
+func validatePageResources(xRefTable *model.XRefTable, d types.Dict) error {
 
 	if o, found := d.Find("Resources"); found {
 		_, err := validateResourceDict(xRefTable, o)
@@ -330,7 +330,7 @@ func validatePageEntryDur(xRefTable *model.XRefTable, d types.Dict, required boo
 	return err
 }
 
-func validateTransitionDictEntryDi(xRefTable *model.XRefTable, d types.Dict) error {
+func validateTransitionDictEntryDi(d types.Dict) error {
 
 	o, found := d.Find("Di")
 	if !found {
@@ -420,7 +420,7 @@ func validateTransitionDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// Di, optional, number or name
-	err = validateTransitionDictEntryDi(xRefTable, d)
+	err = validateTransitionDictEntryDi(d)
 	if err != nil {
 		return err
 	}
@@ -802,7 +802,7 @@ func validatePageEntryVP(xRefTable *model.XRefTable, d types.Dict, required bool
 	return nil
 }
 
-func validatePageDict(xRefTable *model.XRefTable, d types.Dict, objNumber int, hasResources, hasMediaBox bool) error {
+func validatePageDict(xRefTable *model.XRefTable, d types.Dict, hasMediaBox bool) error {
 
 	dictName := "pageDict"
 
@@ -811,13 +811,13 @@ func validatePageDict(xRefTable *model.XRefTable, d types.Dict, objNumber int, h
 	}
 
 	// Contents
-	hasContents, err := validatePageContents(xRefTable, d)
+	_, err := validatePageContents(xRefTable, d)
 	if err != nil {
 		return err
 	}
 
 	// Resources
-	err = validatePageResources(xRefTable, d, hasResources, hasContents)
+	err = validatePageResources(xRefTable, d)
 	if err != nil {
 		return err
 	}
@@ -1024,7 +1024,7 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, objNr int, h
 		case "Page":
 			*curPage++
 			xRefTable.CurPage = *curPage
-			if err = validatePageDict(xRefTable, pageNodeDict, objNumber, hasResources, hasMediaBox); err != nil {
+			if err = validatePageDict(xRefTable, pageNodeDict, hasMediaBox); err != nil {
 				return nil, err
 			}
 			if err := xRefTable.SetValid(ir); err != nil {

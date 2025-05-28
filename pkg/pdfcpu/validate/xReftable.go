@@ -72,10 +72,10 @@ func XRefTable(ctx *model.Context) error {
 	}
 
 	// Validate offspec additional streams as declared in pdf trailer.
-	err = validateAdditionalStreams(xRefTable)
-	if err != nil {
-		return err
-	}
+	// err = validateAdditionalStreams(xRefTable)
+	// if err != nil {
+	// 	return err
+	// }
 
 	xRefTable.Valid = true
 
@@ -1159,9 +1159,4 @@ func validateRootObject(ctx *model.Context) error {
 	}
 
 	return err
-}
-
-func validateAdditionalStreams(xRefTable *model.XRefTable) error {
-	// Out of spec scope.
-	return nil
 }

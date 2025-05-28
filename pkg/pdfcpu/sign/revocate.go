@@ -323,7 +323,7 @@ func processArchivedOCSPResponses(
 			return nil, err
 		}
 
-		if err := checkResponderCert(resp, rootCerts, client); err != nil {
+		if err := checkResponderCert(resp, rootCerts); err != nil {
 			return nil, err
 		}
 
@@ -406,7 +406,7 @@ func processCurrentOCSPResponses(
 		return nil, err
 	}
 
-	if err := checkResponderCert(ocspResponse, rootCerts, client); err != nil {
+	if err := checkResponderCert(ocspResponse, rootCerts); err != nil {
 		return nil, err
 	}
 
@@ -450,7 +450,7 @@ func checkCurrentOCSPResponse(resp *ocsp.Response) error {
 	return nil
 }
 
-func checkResponderCert(resp *ocsp.Response, rootCerts *x509.CertPool, client *http.Client) error {
+func checkResponderCert(resp *ocsp.Response, rootCerts *x509.CertPool) error {
 	cert, err := findOCSPResponderCert(resp, rootCerts)
 	if err != nil {
 		return errors.Errorf("OCSP: failed to find responder certificate: %v", err)

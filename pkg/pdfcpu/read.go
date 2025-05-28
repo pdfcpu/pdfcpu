@@ -1034,14 +1034,14 @@ func scanLine(s *bufio.Scanner) (s1 string, err error) {
 	return s1, nil
 }
 
-func isDict(s string) (bool, error) {
-	o, err := model.ParseObject(&s)
-	if err != nil {
-		return false, err
-	}
-	_, ok := o.(types.Dict)
-	return ok, nil
-}
+// func isDict(s string) (bool, error) {
+// 	o, err := model.ParseObject(&s)
+// 	if err != nil {
+// 		return false, err
+// 	}
+// 	_, ok := o.(types.Dict)
+// 	return ok, nil
+// }
 
 func scanTrailerDictStart(s *bufio.Scanner, line *string) error {
 	l := *line

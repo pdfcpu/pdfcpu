@@ -81,7 +81,7 @@ func statsCounter(stats model.SignatureStats, ss *[]string) {
 	}
 }
 
-func digest(signValidResults []*model.SignatureValidationResult, full bool, conf *model.Configuration) []string {
+func digest(signValidResults []*model.SignatureValidationResult, full bool) []string {
 	var ss []string
 
 	if full {
@@ -176,5 +176,5 @@ func ValidateSignaturesFile(inFile string, all, full bool, conf *model.Configura
 		return nil, err
 	}
 
-	return digest(signValidResults, full, conf), nil
+	return digest(signValidResults, full), nil
 }
