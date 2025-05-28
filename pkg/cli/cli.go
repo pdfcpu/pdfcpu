@@ -451,12 +451,12 @@ func ImportCertificates(cmd *Command) ([]string, error) {
 	return api.ImportCertificates(cmd.InFiles)
 }
 
-// // ResetCertificates ensures a clean cert pool containing system root certificates only.
-// func ResetCertificates(cmd *Command) ([]string, error) {
-// 	return ResetCertificates(cmd.Conf)
-// }
+// InspectCertificates prints the certificate details.
+func InspectCertificates(cmd *Command) ([]string, error) {
+	return api.InspectCertificates(cmd.InFiles)
+}
 
+// ValidateSignatures validates contained digital signatures.
 func ValidateSignatures(cmd *Command) ([]string, error) {
 	return api.ValidateSignaturesFile(*cmd.InFile, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
-	//return api.ValidateSignatures(cmd.InFiles, cmd.Conf)
 }

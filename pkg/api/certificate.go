@@ -72,3 +72,32 @@ func ImportCertificates(inFiles []string) ([]string, error) {
 	ss = append(ss, fmt.Sprintf("imported %d certificates", count))
 	return ss, nil
 }
+
+func InspectCertificates(inFiles []string) ([]string, error) {
+	count := 0
+	ss := []string{}
+
+	for _, inFile := range inFiles {
+
+		certs, err := pdfcpu.LoadCertificates(inFile)
+		if err != nil {
+			return nil, err
+		}
+
+		ss = append(ss, fmt.Sprintf("%s: %d certificates\n", inFile, len(certs)))
+
+		for i, cert := range certs {
+			s, err := pdfcpu.InspectCertificate(cert)
+			if err != nil {
+				return nil, err
+			}
+			ss = append(ss, fmt.Sprintf("%d:", i+1))
+			ss = append(ss, s)
+			count++
+		}
+
+	}
+
+	ss = append(ss, fmt.Sprintf("inspected %d certificates", count))
+	return ss, nil
+}

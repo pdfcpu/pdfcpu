@@ -9,7 +9,7 @@ The commands are:
 	booklet       arrange pages onto larger sheets of paper to make a booklet or zine
 	bookmarks     list, import, export, remove bookmarks
 	boxes         list, add, remove page boundaries for selected pages
-	certificates  list, import, reset certificates
+	certificates  list, inspect, import, reset certificates
 	changeopw     change owner password
 	changeupw     change user password
 	collect       create custom sequence of selected pages

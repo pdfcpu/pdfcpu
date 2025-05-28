@@ -30,7 +30,7 @@ The commands are:
    booklet       arrange pages onto larger sheets of paper to make a booklet or zine
    bookmarks     list, import, export, remove bookmarks
    boxes         list, add, remove page boundaries for selected pages
-   certificates  list, import, reset certificates
+   certificates  list, inspect, import, reset certificates
    changeopw     change owner password
    changeupw     change user password
    collect       create custom sequence of selected pages
@@ -1722,17 +1722,19 @@ Examples:
 
 	usageLongConfig = `Manage your pdfcpu configuration.`
 
-	usageCertificatesList   = "pdfcpu certificates list"
-	usageCertificatesImport = "pdfcpu certificates import inFile.."
-	usageCertificatesReset  = "pdfcpu certificates reset"
+	usageCertificatesList    = "pdfcpu certificates list"
+	usageCertificatesInspect = "pdfcpu certificates inspect inFile"
+	usageCertificatesImport  = "pdfcpu certificates import inFile.."
+	usageCertificatesReset   = "pdfcpu certificates reset"
 
 	usageCertificates = "usage: " + usageCertificatesList +
+		"\n       " + usageCertificatesInspect +
 		"\n       " + usageCertificatesImport +
 		"\n       " + usageCertificatesReset + generalFlags
 
 	usageLongCertificates = `Manage certificates.
 
-           inFile ... .pem or .p7c file
+           inFile ... .pem, .p7c, .cer, .crt file
        inFileJSON ... input JSON file
           outFile ... output PDF file
       outFileJSON ... output PDF file

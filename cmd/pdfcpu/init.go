@@ -74,9 +74,10 @@ func initBoxesCmdMap() commandMap {
 func initCertificatesCmdMap() commandMap {
 	m := newCommandMap()
 	for k, v := range map[string]command{
-		"list":   {processListCertificatesCommand, nil, "", ""},
-		"import": {processImportCertificatesCommand, nil, "", ""},
-		"reset":  {resetCertificates, nil, "", ""},
+		"list":    {processListCertificatesCommand, nil, "", ""},
+		"inspect": {processInspectCertificatesCommand, nil, "", ""},
+		"import":  {processImportCertificatesCommand, nil, "", ""},
+		"reset":   {resetCertificates, nil, "", ""},
 	} {
 		m.register(k, v)
 	}

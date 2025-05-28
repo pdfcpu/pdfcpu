@@ -141,9 +141,9 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.RESETVIEWERPREFERENCES:  processViewerPreferences,
 	model.ZOOM:                    Zoom,
 	model.LISTCERTIFICATES:        processCertificates,
+	model.INSPECTCERTIFICATES:     processCertificates,
 	model.IMPORTCERTIFICATES:      processCertificates,
-	//model.RESETCERTIFICATES:       processCertificates,
-	model.VALIDATESIGNATURES: processSignatures,
+	model.VALIDATESIGNATURES:      processSignatures,
 }
 
 // ValidateCommand creates a new command to validate a file.
@@ -1263,7 +1263,19 @@ func ListCertificatesCommand(json bool, conf *model.Configuration) *Command {
 		Conf:     conf}
 }
 
-// ImportCertificatesCommand creates a new command to import certificates from PEM files.
+// InspectCertificatesCommand creates a new command to inspect certificates.
+func InspectCertificatesCommand(inFiles []string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.INSPECTCERTIFICATES
+	return &Command{
+		Mode:    model.INSPECTCERTIFICATES,
+		InFiles: inFiles,
+		Conf:    conf}
+}
+
+// ImportCertificatesCommand creates a new command to import certificates.
 func ImportCertificatesCommand(inFiles []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()

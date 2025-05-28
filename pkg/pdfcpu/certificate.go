@@ -31,7 +31,24 @@ import (
 	"github.com/pkg/errors"
 )
 
-func loadCertificatesFromPEM(filename string) ([]*x509.Certificate, error) {
+var ErrUnknownFileType = errors.New("pdfcpu: unsupported file type")
+
+func loadSingleCertFile(filename string) (*x509.Certificate, error) {
+	bb, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	block, _ := pem.Decode(bb)
+	if block != nil && block.Type == "CERTIFICATE" {
+		return x509.ParseCertificate(block.Bytes)
+	}
+
+	// DER
+	return x509.ParseCertificate(bb)
+}
+
+func loadCertsFromPEM(filename string) ([]*x509.Certificate, error) {
 	bb, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -80,7 +97,7 @@ func decodePKCS7Block(s string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(s)
 }
 
-func loadCertificatesFromP7C(filename string) ([]*x509.Certificate, error) {
+func loadCertsFromP7C(filename string) ([]*x509.Certificate, error) {
 	bb, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -103,24 +120,35 @@ func loadCertificatesFromP7C(filename string) ([]*x509.Certificate, error) {
 }
 
 func LoadCertificates(filename string) ([]*x509.Certificate, error) {
-	f := loadCertificatesFromP7C
-	if model.IsPEM(filename) {
-		f = loadCertificatesFromPEM
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".crt", ".cer":
+		cert, err := loadSingleCertFile(filename)
+		if err != nil {
+			return nil, err
+		}
+		return []*x509.Certificate{cert}, nil
+	case ".p7c":
+		return loadCertsFromP7C(filename)
+	case ".pem":
+		return loadCertsFromPEM(filename)
+	default:
+		return nil, ErrUnknownFileType
 	}
-	return f(filename)
 }
 
-func loadCertificatesToCertPool(path string, certPool *x509.CertPool, n *int, load func(string) ([]*x509.Certificate, error)) error {
-	certs, err := load(path)
+func loadCertificatesToCertPool(path string, certPool *x509.CertPool, n *int) error {
+	certs, err := LoadCertificates(path)
 	if err != nil {
+		if err == ErrUnknownFileType {
+			return nil
+		}
 		return err
 	}
 	for _, cert := range certs {
 		certPool.AddCert(cert)
 	}
-
 	*n += len(certs)
-
 	return nil
 }
 
@@ -133,14 +161,7 @@ func LoadCertificatesToCertPool(dir string, certPool *x509.CertPool) (int, error
 		if d.IsDir() {
 			return nil
 		}
-		if !model.IsPEM(path) && !model.IsP7C(path) {
-			return nil
-		}
-		f := loadCertificatesFromP7C
-		if model.IsPEM(path) {
-			f = loadCertificatesFromPEM
-		}
-		return loadCertificatesToCertPool(path, certPool, &n, f)
+		return loadCertificatesToCertPool(path, certPool, &n)
 	})
 	return n, err
 }
@@ -229,4 +250,8 @@ func ImportCertificate(inFile string, overwrite bool) (int, bool, error) {
 		return 0, false, err
 	}
 	return len(certs), ok, nil
+}
+
+func InspectCertificate(cert *x509.Certificate) (string, error) {
+	return model.CertString(cert), nil
 }

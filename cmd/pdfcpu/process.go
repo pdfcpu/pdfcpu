@@ -2909,6 +2909,47 @@ func processListCertificatesCommand(conf *model.Configuration) {
 	process(cli.ListCertificatesCommand(json, conf))
 }
 
+func processInspectCertificatesCommand(conf *model.Configuration) {
+	if len(flag.Args()) < 1 || selectedPages != "" {
+		fmt.Fprintf(os.Stderr, "%s\n\n", usageCertificatesInspect)
+		os.Exit(1)
+	}
+	inFiles := []string{}
+	for _, arg := range flag.Args() {
+		if strings.Contains(arg, "*") {
+			matches, err := filepath.Glob(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%s", err)
+				os.Exit(1)
+			}
+			for _, inFile := range matches {
+				if !isCertificateFile(inFile) {
+					fmt.Fprintf(os.Stderr, "skipping %s - allowed extensions: .pem, .p7c, .cer, .crt\n", inFile)
+				} else {
+					inFiles = append(inFiles, inFile)
+				}
+			}
+			continue
+		}
+		if !isCertificateFile(arg) {
+			fmt.Fprintf(os.Stderr, "%s - allowed extensions: .pem, .p7c, .cer, .crt\n", arg)
+			os.Exit(1)
+		}
+		inFiles = append(inFiles, arg)
+	}
+
+	process(cli.InspectCertificatesCommand(inFiles, conf))
+}
+
+func isCertificateFile(fName string) bool {
+	for _, ext := range []string{".p7c", ".pem", ".cer", ".crt"} {
+		if strings.HasSuffix(strings.ToLower(fName), ext) {
+			return true
+		}
+	}
+	return false
+}
+
 func processImportCertificatesCommand(conf *model.Configuration) {
 	if len(flag.Args()) < 1 || selectedPages != "" {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageCertificatesImport)
@@ -2923,15 +2964,16 @@ func processImportCertificatesCommand(conf *model.Configuration) {
 				os.Exit(1)
 			}
 			for _, inFile := range matches {
-				if !model.IsPEM(inFile) && !model.IsP7C(inFile) {
-					fmt.Fprintf(os.Stderr, "skipping %s - needs extension \".pem\" or \".p7c\".\n", inFile)
+				if !isCertificateFile(inFile) {
+					fmt.Fprintf(os.Stderr, "skipping %s - allowed extensions: .pem, .p7c, .cer, .crt\n", inFile)
+				} else {
+					inFiles = append(inFiles, inFile)
 				}
-				inFiles = append(inFiles, inFile)
 			}
 			continue
 		}
-		if !model.IsPEM(arg) && !model.IsP7C(arg) {
-			fmt.Fprintf(os.Stderr, "%s needs extension \".pem\" or \".p7c\".\n", arg)
+		if !isCertificateFile(arg) {
+			fmt.Fprintf(os.Stderr, "%s - allowed extensions: .pem, .p7c, .cer, .crt\n", arg)
 			os.Exit(1)
 		}
 		inFiles = append(inFiles, arg)

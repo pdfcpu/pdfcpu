@@ -285,11 +285,12 @@ func processCertificates(cmd *Command) (out []string, err error) {
 	case model.LISTCERTIFICATES:
 		return ListCertificates(cmd)
 
+	case model.INSPECTCERTIFICATES:
+		return InspectCertificates(cmd)
+
 	case model.IMPORTCERTIFICATES:
 		return ImportCertificates(cmd)
 
-		// case model.RESETCERTIFICATES:
-		// 	return ResetCertificates(cmd)
 	}
 
 	return nil, nil
