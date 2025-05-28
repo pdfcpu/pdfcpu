@@ -6,6 +6,7 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
+|2025-05-28 | [v0.11.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.11.0)                            | Add cert inspect command
 |2025-04-23 | [v0.10.2](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.10.2)                            | Add signature & cert commands, 
 |           |                                                                                             | Fix #888, #972, #973, #984, #985, 
 |           |                                                                                             | #987, #988, #991, #999, #1001,
