@@ -13,6 +13,7 @@ layout: default
 
 ```
 pdfcpu certificates list
+pdfcpu certificates inspect inFile
 pdfcpu certificates import inFile..
 pdfcpu certificates reset
 ```
@@ -27,7 +28,7 @@ pdfcpu certificates reset
 
 | name         | description                | required 
 |:-------------|:---------------------------|:--------
-| inFile       | certificate(s) .pem or .p7c|   yes
+| inFile       | certificate(s) .pem, .p7c, .cer, .crt|   yes
 
 <br>
 
@@ -242,6 +243,32 @@ Are you ready to reset your certificates to your system root certificates?
 resetting..
 Finished
 ```
+
+<br>
+
+You may also inspect your certificate file(s) before importing:
+
+```sh
+$ pdfcpu cert inspect root.crt
+1:
+    Subject:
+             org       : A-Trust GmbH
+             unit      : a-sign-premium-mobile-seal-09
+             name      : a-sign-premium-mobile-seal-09
+             country   : AT
+     Issuer:
+             org       : A-Trust GmbH
+             unit      : A-Trust-Root-09
+             name      : A-Trust-Root-09
+             country   : AT
+       from: 2023-02-21
+       thru: 2036-07-14
+         CA: true
+
+inspected 1 certificates
+```
+
+
 
 
 
