@@ -482,6 +482,9 @@ func validateIndRefArrayEntry(xRefTable *model.XRefTable, d types.Dict, dictName
 	}
 
 	for i, o := range a {
+		if o == nil {
+			continue
+		}
 		if _, ok := o.(types.IndirectRef); !ok {
 			return nil, errors.Errorf("pdfcpu: validateIndRefArrayEntry: invalid type at index %d\n", i)
 		}
