@@ -489,7 +489,7 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 	return nil, false, nil
 }
 
-func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rNamePrefix, rName string, rDict types.Dict, objNr, pageNr int, pageImages types.IntSet) error {
+func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rNamePrefix, rName string, rDict types.Dict, objNr, pageNr, pageObjNumber int, pageImages types.IntSet) error {
 
 	qualifiedRName := rName
 	if rNamePrefix != "" {
@@ -623,6 +623,139 @@ func optimizeForm(ctx *model.Context, osd *types.StreamDict, rNamePrefix, rName 
 	return optimizeFormResources(ctx, o, pageNr, pageObjNumber, qualifiedRName, vis)
 }
 
+
+func optimizeExtGStateResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pageObjNumber int, rNamePrefix string, vis []types.Object) error {
+	if log.OptimizeEnabled() {
+		log.Optimize.Printf("optimizeExtGStateResourcesDict page#%dbegin: %s\n", pageObjNumber, rDict)
+	}
+
+	for rName, v := range rDict {
+
+		indRef, ok := v.(types.IndirectRef)
+		if !ok {
+			continue
+		}
+
+		if visited(indRef, vis) {
+			continue
+		}
+
+		vis = append(vis, indRef)
+
+		objNr := int(indRef.ObjectNumber)
+
+		qualifiedRName := rName
+		if rNamePrefix != "" {
+			qualifiedRName = rNamePrefix + "." + rName
+		}
+
+		if log.OptimizeEnabled() {
+			log.Optimize.Printf("optimizeXObjectResourcesDict: processing XObject: %s, obj#=%d\n", qualifiedRName, objNr)
+		}
+
+		rDict, err := ctx.DereferenceDict(indRef)
+		if err != nil {
+			continue
+		}
+		if rDict == nil {
+			continue
+		}
+
+		if err := ctx.DeleteDictEntry(rDict, "PieceInfo"); err != nil {
+			return err
+		}
+		if err := optimizeExtGStateResources(ctx, rDict, pageNr, pageObjNumber, qualifiedRName, vis); err != nil {
+			return err
+		}
+
+	}
+
+	if log.OptimizeEnabled() {
+		log.Optimize.Println("optimizeXObjectResourcesDict end")
+	}
+
+	return nil
+}
+
+
+func optimizeExtGStateResources(ctx *model.Context, rDict types.Dict, pageNr, pageObjNumber int, rNamePrefix string, vis []types.Object) error {
+	if log.OptimizeEnabled() {
+		log.Optimize.Printf("optimizeExtGStateResources page#%dbegin: %s\n", pageObjNumber, rDict)
+	}
+
+	pageImages := pageImages(ctx, pageNr)
+
+	s, found := rDict.Find("SMask")
+	if (found) {
+		dict, ok := s.(types.Dict)
+		if ok {				
+			if err := optimizeSMaskResources(dict, vis, rNamePrefix, ctx, rDict, pageNr, pageImages, pageObjNumber); err != nil {
+				return err
+			}
+		}
+	}
+
+	if log.OptimizeEnabled() {
+		log.Optimize.Println("optimizeExtGStateResources end")
+	}
+
+	return nil
+}
+
+func optimizeSMaskResources(dict types.Dict, vis []types.Object, rNamePrefix string, ctx *model.Context, rDict types.Dict, pageNr int, pageImages types.IntSet, pageObjNumber int) error {
+	for rName, v := range dict {
+		if rName == "G" {
+			indRef, ok := v.(types.IndirectRef)
+			if !ok {
+				continue
+			}
+
+			if visited(indRef, vis) {
+				continue
+			}
+
+			vis = append(vis, indRef)
+
+			objNr := int(indRef.ObjectNumber)
+
+			qualifiedRName := rName
+			if rNamePrefix != "" {
+				qualifiedRName = rNamePrefix + "." + rName
+			}
+
+			if log.OptimizeEnabled() {
+				log.Optimize.Printf("optimizeXObjectResourcesDict: processing XObject: %s, obj#=%d\n", qualifiedRName, objNr)
+			}
+
+			sd, err := ctx.DereferenceXObjectDict(indRef)
+			if err != nil {
+				return err
+			}
+			if sd == nil {
+				continue
+			}
+
+			if err := ctx.DeleteDictEntry(sd.Dict, "PieceInfo"); err != nil {
+				return err
+			}
+
+			if *sd.Subtype() == "Image" {
+				if err := optimizeXObjectImage(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, pageImages); err != nil {
+					return err
+				}
+			}
+
+			if *sd.Subtype() == "Form" {
+				if err := optimizeForm(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, vis); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+
 func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pageObjNumber int, rNamePrefix string, vis []types.Object) error {
 	if log.OptimizeEnabled() {
 		log.Optimize.Printf("optimizeXObjectResourcesDict page#%dbegin: %s\n", pageObjNumber, rDict)
@@ -667,7 +800,7 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, 
 		}
 
 		if *sd.Subtype() == "Image" {
-			if err := optimizeXObjectImage(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageImages); err != nil {
+			if err := optimizeXObjectImage(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, pageImages); err != nil {
 				return err
 			}
 		}
@@ -738,6 +871,22 @@ func optimizeResources(ctx *model.Context, resourcesDict types.Dict, pageNr, pag
 			return err
 		}
 
+	}
+
+	o, found = resourcesDict.Find("ExtGState")
+	if found {
+		d, err := ctx.DereferenceDict(o)
+		if err != nil {
+			return err
+		}
+
+		if d == nil {
+			return errors.Errorf("pdfcpu: optimizeResources: extGState resource dict is null for page %d pageObj %d\n", pageNr, pageObjNumber)
+		}
+
+		if err = optimizeExtGStateResourcesDict(ctx, d, pageNr, pageObjNumber, rNamePrefix, visitedRes); err != nil {
+			return err
+		}
 	}
 
 	if log.OptimizeEnabled() {
