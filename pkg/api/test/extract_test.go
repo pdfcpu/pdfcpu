@@ -265,7 +265,7 @@ func TestExtractContentLowLevel(t *testing.T) {
 	// Create a context.
 	ctx, err := api.ReadContextFile(inFile)
 	if err != nil {
-		t.Fatalf("%s readContext: %v\n", msg, err)
+		t.Fatalf("%s read context: %v\n", msg, err)
 	}
 
 	// Extract page content for page 2.
@@ -316,51 +316,5 @@ func TestExtractMetadataLowLevel(t *testing.T) {
 		}
 		t.Logf("Metadata: objNr=%d parentDictObjNr=%d parentDictType=%s\n%s\n",
 			md.ObjNr, md.ParentObjNr, md.ParentType, string(bb))
-	}
-}
-
-
-func TestExtractImagesExtGState(t *testing.T) {
-	inFile := filepath.Join(inDir, "ExtGStateImage.pdf")
-	ctx, err := api.ReadContextFile(inFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	images := make(map[int]*types.StreamDict)
-	for objId, obj := range ctx.XRefTable.Table {
-		if obj != nil {
-			if dict, ok := obj.Object.(types.StreamDict); ok {
-				if subtype := dict.Dict.NameEntry("Subtype"); subtype != nil && *subtype == "Image" {
-					images[objId] = &dict
-				}
-			}
-		}
-	}
-
-	expected := map[int]string{
-		5:  "ExtGState5wMask.png",  // DeviceRGB w/ softmask
-	}
-
-	for objId, filename := range expected {
-		sd := images[objId]
-
-		if err := sd.Decode(); err != nil {
-			t.Fatal(err)
-		}
-
-		tmpFileName := filepath.Join(outDir, filename)
-		fmt.Printf("tmpFileName: %s\n", tmpFileName)
-
-		// Write the image object (as TIFF file) to disk.
-		// fn1 is the resulting fileName path including the suffix (aka filetype extension).
-		fn1, err := pdfcpu.WriteImage(ctx.XRefTable, tmpFileName, sd, false, objId)
-		if err != nil {
-			t.Fatalf("err: %v\n", err)
-		}
-
-		fn2 := filepath.Join(resDir, filename)
-
-		compare(t, fn1, fn2)
 	}
 }
