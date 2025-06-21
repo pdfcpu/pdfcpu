@@ -664,9 +664,10 @@ func startParseNumericOrIndRef(l string) (string, string, int) {
 			0.000000000
 	*/
 	if len(str) > 1 && str[0] == '0' {
-		if str[1] == '+' || str[1] == '-' {
+		switch str[1] {
+		case '+', '-':
 			str = str[1:]
-		} else if str[1] == '.' {
+		case '.':
 			var i int
 			for i = 2; len(str) > i && str[i] == '0'; i++ {
 			}
@@ -687,8 +688,7 @@ func isRangeError(err error) bool {
 	return false
 }
 
-func parseIndRef(s, l, l1 string, line *string, i, i2 int, rangeErr bool) (types.Object, error) {
-
+func parseIndRef(s, l, l1 string, line *string, i, i2 int) (types.Object, error) {
 	g, err := strconv.Atoi(s)
 	if err != nil {
 		// 2nd int(generation number) not available.
@@ -704,9 +704,6 @@ func parseIndRef(s, l, l1 string, line *string, i, i2 int, rangeErr bool) (types
 	l, _ = trimLeftSpace(l, false)
 
 	if len(l) == 0 {
-		if rangeErr {
-			return nil, err
-		}
 		// only whitespace
 		*line = l1
 		return types.Integer(i), nil
@@ -714,15 +711,8 @@ func parseIndRef(s, l, l1 string, line *string, i, i2 int, rangeErr bool) (types
 
 	if l[0] == 'R' {
 		*line = forwardParseBuf(l, 1)
-		if rangeErr {
-			return nil, nil
-		}
 		// We have all 3 components to create an indirect reference.
 		return *types.NewIndirectRef(i, g), nil
-	}
-
-	if rangeErr {
-		return nil, err
 	}
 
 	// 'R' not available.
@@ -765,29 +755,22 @@ func parseNumericOrIndRef(line *string) (types.Object, error) {
 	s, l1, i1 := startParseNumericOrIndRef(l)
 
 	// Try int
-	var rangeErr bool
 	i, err := strconv.Atoi(s)
 	if err != nil {
-		rangeErr = isRangeError(err)
-		if !rangeErr {
-			// Try float
+		if isRangeError(err) {
+			// #407
+			i = 0
 			*line = l1
-			return parseFloat(s)
+			return types.Integer(i), nil
 		}
-
-		// #407
-		i = 0
+		*line = l1
+		return parseFloat(s)
 	}
 
 	// We have an Int!
 
 	// if not followed by whitespace return sole integer value.
 	if i1 <= 0 || delimiter(l[i1]) {
-
-		if rangeErr {
-			return nil, err
-		}
-
 		if log.ParseEnabled() {
 			log.Parse.Printf("parseNumericOrIndRef: value is numeric int: %d\n", i)
 		}
@@ -802,9 +785,6 @@ func parseNumericOrIndRef(line *string) (types.Object, error) {
 	l, _ = trimLeftSpace(l, false)
 	if len(l) == 0 {
 		// only whitespace
-		if rangeErr {
-			return nil, err
-		}
 		*line = l1
 		return types.Integer(i), nil
 	}
@@ -814,9 +794,6 @@ func parseNumericOrIndRef(line *string) (types.Object, error) {
 	// if only 2 token, can't be indirect reference.
 	// if not followed by whitespace return sole integer value.
 	if i2 <= 0 || delimiter(l[i2]) {
-		if rangeErr {
-			return nil, err
-		}
 		if log.ParseEnabled() {
 			log.Parse.Printf("parseNumericOrIndRef: 2 objects => value is numeric int: %d\n", i)
 		}
@@ -829,7 +806,7 @@ func parseNumericOrIndRef(line *string) (types.Object, error) {
 		s = l[:i2]
 	}
 
-	return parseIndRef(s, l, l1, line, i, i2, rangeErr)
+	return parseIndRef(s, l, l1, line, i, i2)
 }
 
 func parseHexLiteralOrDict(c context.Context, l *string) (val types.Object, err error) {
