@@ -203,6 +203,36 @@ func (f Form) listBoxValuesAndLock(id, name string) ([]string, bool, bool) {
 	return nil, false, false
 }
 
+func locateAPN(xRefTable *model.XRefTable, d types.Dict) (types.Dict, error) {
+
+	obj, ok := d.Find("AP")
+	if !ok {
+		return nil, errors.New("corrupt form field: missing entry \"AP\"")
+	}
+	d1, err := xRefTable.DereferenceDict(obj)
+	if err != nil {
+		return nil, err
+	}
+	if len(d1) == 0 {
+		return nil, errors.New("corrupt form field: missing entry \"AP\"")
+	}
+
+	obj, ok = d1.Find("N")
+	if !ok {
+		return nil, errors.New("corrupt AP field: missing entry \"N\"")
+	}
+	d2, err := xRefTable.DereferenceDict(obj)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(d2) == 0 {
+		return nil, errors.New("corrupt AP field: missing entry \"N\"")
+	}
+
+	return d2, nil
+}
+
 func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, bool, error) {
 
 	var opts []string
@@ -232,15 +262,12 @@ func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 			}
 		}
 
-		d1 := d.DictEntry("AP")
-		if d1 == nil {
-			return nil, false, errors.New("corrupt form field: missing entry AP")
+		d1, err := locateAPN(xRefTable, d)
+		if err != nil {
+			return nil, false, err
 		}
-		d2 := d1.DictEntry("N")
-		if d2 == nil {
-			return nil, false, errors.New("corrupt AP field: missing entry N")
-		}
-		for k := range d2 {
+
+		for k := range d1 {
 			k, err := types.DecodeName(k)
 			if err != nil {
 				return nil, false, err
@@ -320,7 +347,8 @@ func extractCheckBox(page int, d types.Dict, id, name, altName string, locked bo
 	}
 
 	if o, ok := d.Find("V"); ok {
-		cb.Value = o.(types.Name) != "Off"
+		n := o.(types.Name)
+		cb.Value = len(n) > 0 && n != "Off"
 	}
 
 	return cb, nil

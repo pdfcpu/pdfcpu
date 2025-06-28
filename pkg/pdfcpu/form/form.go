@@ -303,19 +303,18 @@ func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 	}
 
 	for _, o := range d.ArrayEntry("Kids") {
+
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
 			return nil, err
 		}
-		d1 := d.DictEntry("AP")
-		if d1 == nil {
-			return nil, errors.New("corrupt form field: missing entry \"AP\"")
+
+		d1, err := locateAPN(xRefTable, d)
+		if err != nil {
+			return nil, err
 		}
-		d2 := d1.DictEntry("N")
-		if d2 == nil {
-			return nil, errors.New("corrupt AP field: missing entry \"N\"")
-		}
-		for k := range d2 {
+
+		for k := range d1 {
 			k, err := types.DecodeName(k)
 			if err != nil {
 				return nil, err
@@ -411,7 +410,8 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 
 	f.Typ = FTCheckBox
 	if o, found := d.Find("V"); found {
-		if o.(types.Name) != "Off" {
+		n := o.(types.Name)
+		if len(n) > 0 && n != "Off" {
 			v := "Yes"
 			if len(v) > fm.valMax {
 				fm.valMax = len(v)
@@ -1313,19 +1313,18 @@ func resetBtn(xRefTable *model.XRefTable, d types.Dict) error {
 	// RadiobuttonGroup
 
 	for _, o := range d.ArrayEntry("Kids") {
+
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
 			return err
 		}
-		d1 := d.DictEntry("AP")
-		if d1 == nil {
-			return errors.New("corrupt form field: missing entry \"AP\"")
+
+		d1, err := locateAPN(xRefTable, d)
+		if err != nil {
+			return err
 		}
-		d2 := d1.DictEntry("N")
-		if d2 == nil {
-			return errors.New("corrupt AP field: missing entry \"N\"")
-		}
-		for k := range d2 {
+
+		for k := range d1 {
 			k, err := types.DecodeName(k)
 			if err != nil {
 				return err

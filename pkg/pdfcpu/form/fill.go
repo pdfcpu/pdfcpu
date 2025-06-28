@@ -462,17 +462,12 @@ func fillRadioButtons(ctx *model.Context, d types.Dict, vNew string, v types.Nam
 			return err
 		}
 
-		d1 := d.DictEntry("AP")
-		if d1 == nil {
-			return errors.New("pdfcpu: corrupt form field: missing entry AP")
+		d1, err := locateAPN(ctx.XRefTable, d)
+		if err != nil {
+			return err
 		}
 
-		d2 := d1.DictEntry("N")
-		if d2 == nil {
-			return errors.New("pdfcpu: corrupt AP field: missing entry N")
-		}
-
-		for k := range d2 {
+		for k := range d1 {
 			k, err := types.DecodeName(k)
 			if err != nil {
 				return err
@@ -561,17 +556,12 @@ func fillCheckBoxKid(ctx *model.Context, kids types.Array, off bool) (*types.Nam
 		return nil, err
 	}
 
-	d1 := d.DictEntry("AP")
-	if d1 == nil {
-		return nil, errors.New("pdfcpu: corrupt form field: missing entry AP")
+	d1, err := locateAPN(ctx.XRefTable, d)
+	if err != nil {
+		return nil, err
 	}
 
-	d2 := d1.DictEntry("N")
-	if d2 == nil {
-		return nil, errors.New("pdfcpu: corrupt AP field: missing entry N")
-	}
-
-	offName, yesName, err := primitives.CalcCheckBoxASNames(ctx, d2)
+	offName, yesName, err := primitives.CalcCheckBoxASNames(ctx, d1)
 	if err != nil {
 		return nil, err
 	}
@@ -618,7 +608,8 @@ func fillCheckBox(
 	vNew := strings.HasPrefix(s, "t") // true
 	vOld := false
 	if o, found := d.Find("V"); found {
-		vOld = o.(types.Name) != "Off"
+		n := o.(types.Name)
+		vOld = len(n) > 0 && n != "Off"
 	}
 	if vNew == vOld {
 		return nil
