@@ -913,7 +913,12 @@ func NewTextField(
 	}
 	tf.MaxLen = maxLen
 
-	bb, err := ctx.RectForArray(d.ArrayEntry("Rect"))
+	rect, err := resolveArray(ctx, d, "Rect")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	bb, err := ctx.RectForArray(rect)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -946,6 +951,36 @@ func NewTextField(
 	tf.Border = &b
 
 	return tf, fontIndRef, nil
+}
+
+// resolveArray attempts to resolve an array from a dictionary entry.
+// If the entry is an indirect reference, it will be dereferenced and returned if it's an array.
+func resolveArray(ctx *model.Context, d types.Dict, key string) (types.Array, error) {
+	rect, found := d.Find(key)
+	if !found {
+		return nil, errors.Errorf("pdfcpu: resolveArray: key not found: key=%s", key)
+	}
+
+	// If it's an array, return it
+	array, ok := rect.(types.Array)
+	if ok {
+		return array, nil
+	}
+
+	// Otherwise, check if it's an indirect reference. If so, dereference it and confirm it's an array.
+	indirectRef, ok := rect.(types.IndirectRef)
+	if ok {
+		rect, err := ctx.Dereference(indirectRef)
+		if err != nil {
+			return nil, err
+		}
+		rectArray, ok := rect.(types.Array)
+		if ok {
+			return rectArray, nil
+		}
+	}
+
+	return nil, errors.Errorf("failed to resolve array: key=%s", key)
 }
 
 func renderTextFieldAP(ctx *model.Context, d types.Dict, v string, multiLine, comb bool, maxLen int, da *string, fonts map[string]types.IndirectRef) error {

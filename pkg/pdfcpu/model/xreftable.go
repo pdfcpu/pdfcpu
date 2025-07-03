@@ -2908,6 +2908,10 @@ func (xRefTable *XRefTable) BindViewerPreferences() {
 
 // RectForArray returns a new rectangle for given Array.
 func (xRefTable *XRefTable) RectForArray(a types.Array) (*types.Rectangle, error) {
+	if len(a) != 4 {
+		return nil, errors.Errorf("pdfcpu: RectForArray: invalid array length %d", len(a))
+	}
+
 	llx, err := xRefTable.DereferenceNumber(a[0])
 	if err != nil {
 		return nil, err
