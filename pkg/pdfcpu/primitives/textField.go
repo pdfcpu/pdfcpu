@@ -953,7 +953,8 @@ func NewTextField(
 	return tf, fontIndRef, nil
 }
 
-// resolveArray attempts to resolve an array from a dictionary entry. This perform s
+// resolveArray attempts to resolve an array from a dictionary entry.
+// If the entry is an indirect reference, it will be dereferenced and returned if it's an array.
 func resolveArray(ctx *model.Context, d types.Dict, key string) (types.Array, error) {
 	rect, found := d.Find(key)
 	if !found {
