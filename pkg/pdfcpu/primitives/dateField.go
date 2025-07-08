@@ -844,7 +844,9 @@ func NewDateField(
 
 	df := &DateField{Value: v}
 
-	bb, err := ctx.RectForArray(d.ArrayEntry("Rect"))
+	obj, _ := d.Find("Rect")
+	arr, _ := ctx.DereferenceArray(obj)
+	bb, err := ctx.RectForArray(arr)
 	if err != nil {
 		return nil, nil, err
 	}
