@@ -912,8 +912,8 @@ func validateAnnotationDictScreen(xRefTable *model.XRefTable, d types.Dict, dict
 
 	// see 12.5.6.18
 
-	// T, optional, name
-	if _, err := validateNameEntry(xRefTable, d, dictName, "T", OPTIONAL, model.V10, nil); err != nil {
+	// T, optional, text string
+	if _, err := validateStringEntry(xRefTable, d, dictName, "T", OPTIONAL, model.V10, nil); err != nil {
 		return err
 	}
 
