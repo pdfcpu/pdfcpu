@@ -34,7 +34,7 @@
   </head>
   <body>
     <div class="wrapper">
-      <header>
+      <header style="max-height: calc(100vh - 58px); overflow: auto;">
         <h1><a href="{{ "/" | absolute_url }}">{{ site.title | default: site.github.repository_name }}</a></h1>
         
         {% if site.logo %}
