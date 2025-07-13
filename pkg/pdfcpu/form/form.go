@@ -527,43 +527,91 @@ func collectCh(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta
 	return collectListBox(xRefTable, multi, d, f, fm)
 }
 
-func collectTx(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
+func inheritedV(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 	if o, found := d.Find("V"); found {
 		s1, err := types.StringOrHexLiteral(o)
 		if err != nil {
-			return err
+			return "", err
 		}
-		s := ""
 		if s1 != nil {
-			s = *s1
+			return *s1, nil
 		}
-		v := strings.ReplaceAll(s, "\x0A", "\\n")
+	}
+	indRef := d.IndirectRefEntry("Parent")
+	if indRef == nil {
+		return "", nil
+	}
+	d, err := xRefTable.DereferenceDict(*indRef)
+	if err != nil {
+		return "", err
+	}
+	return inheritedV(xRefTable, d)
+}
+
+func getV(xRefTable *model.XRefTable, d types.Dict) (string, error) {
+	v, err := inheritedV(xRefTable, d)
+	if err != nil {
+		return "", err
+	}
+	return v, nil
+}
+
+func inheritedDV(xRefTable *model.XRefTable, d types.Dict) (string, error) {
+	if o, found := d.Find("DV"); found {
+		s1, err := types.StringOrHexLiteral(o)
+		if err != nil {
+			return "", err
+		}
+		if s1 != nil {
+			return *s1, nil
+		}
+	}
+	indRef := d.IndirectRefEntry("Parent")
+	if indRef == nil {
+		return "", nil
+	}
+	d, err := xRefTable.DereferenceDict(*indRef)
+	if err != nil {
+		return "", err
+	}
+	return inheritedDV(xRefTable, d)
+}
+
+func getDV(xRefTable *model.XRefTable, d types.Dict) (string, error) {
+	dv, err := inheritedDV(xRefTable, d)
+	if err != nil {
+		return "", err
+	}
+	return dv, nil
+}
+
+func collectTx(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
+	v, err := getV(xRefTable, d)
+	if err != nil {
+		return err
+	}
+	if v != "" {
+		v = strings.ReplaceAll(v, "\x0A", "\\n")
 		if w := runewidth.StringWidth(v); w > fm.valMax {
 			fm.valMax = w
 		}
 		fm.val = true
 		f.V = v
 	}
-	if o, found := d.Find("DV"); found {
-		o1, err := xRefTable.Dereference(o)
-		if err != nil {
-			return err
-		}
-		s1, err := types.StringOrHexLiteral(o1)
-		if err != nil {
-			return err
-		}
-		s := ""
-		if s1 != nil {
-			s = *s1
-		}
-		dv := strings.ReplaceAll(s, "\x0A", "\\n")
-		if w := runewidth.StringWidth(dv); w > fm.defMax {
-			fm.defMax = w
+
+	dv, err := getDV(xRefTable, d)
+	if err != nil {
+		return err
+	}
+	if dv != "" {
+		dv = strings.ReplaceAll(dv, "\x0A", "\\n")
+		if w := runewidth.StringWidth(dv); w > fm.valMax {
+			fm.valMax = w
 		}
 		fm.def = true
 		f.Dv = dv
 	}
+
 	df, err := extractDateFormat(xRefTable, d)
 	if err != nil {
 		return err

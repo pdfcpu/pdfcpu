@@ -366,7 +366,7 @@ func validateFileSpecDictPart2(xRefTable *model.XRefTable, d types.Dict, dictNam
 	// Thumb, optional, thumbnail image, since V2.0
 	sinceVersion = model.V20
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V17
+		sinceVersion = model.V16
 	}
 	if _, err := validateStreamDictEntry(xRefTable, d, dictName, "Thumb", OPTIONAL, sinceVersion, nil); err != nil {
 		return err

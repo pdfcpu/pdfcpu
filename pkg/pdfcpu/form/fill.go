@@ -1062,16 +1062,9 @@ func fillTx(
 		return err
 	}
 
-	vOld := ""
-	if o, found := d.Find("V"); found {
-		s, err := types.StringOrHexLiteral(o)
-		if err != nil {
-			return err
-		}
-		vOld = ""
-		if s != nil {
-			vOld = *s
-		}
+	vOld, err := getV(ctx.XRefTable, d)
+	if err != nil {
+		return err
 	}
 
 	if df != nil {

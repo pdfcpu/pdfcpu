@@ -301,13 +301,14 @@ func isTextField(ft *types.Name) bool {
 }
 
 func validateV(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, dictName string, terminalNode, textField, oneKid bool) error {
-	v, err := validateEntry(xRefTable, d, dictName, "V", OPTIONAL, model.V10)
+	_, err := validateEntry(xRefTable, d, dictName, "V", OPTIONAL, model.V10)
 	if err != nil {
 		return err
 	}
-	if textField && v != nil && !terminalNode && !oneKid {
-		return errors.New("\"V\" not allowed in non terminal text fields with more than one kid")
-	}
+	// Ignore kids if V is present
+	// if textField && v != nil && !terminalNode && !oneKid {
+	// 	return errors.New("\"V\" not allowed in non terminal text fields with more than one kid")
+	// }
 	if err := cacheSig(xRefTable, d, dictName, true, objNr, incr); err != nil {
 		return err
 	}
@@ -315,13 +316,14 @@ func validateV(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, dictNa
 }
 
 func validateDV(xRefTable *model.XRefTable, d types.Dict, dictName string, terminalNode, textField, oneKid bool) error {
-	dv, err := validateEntry(xRefTable, d, dictName, "DV", OPTIONAL, model.V10)
+	_, err := validateEntry(xRefTable, d, dictName, "DV", OPTIONAL, model.V10)
 	if err != nil {
 		return err
 	}
-	if textField && dv != nil && !terminalNode && !oneKid {
-		return errors.New("\"DV\" not allowed in non terminal text fields with more than one kid")
-	}
+	// Ignore kids if DV is present.
+	// if textField && dv != nil && !terminalNode && !oneKid {
+	// 	return errors.New("\"DV\" not allowed in non terminal text fields with more than one kid")
+	// }
 	return nil
 }
 

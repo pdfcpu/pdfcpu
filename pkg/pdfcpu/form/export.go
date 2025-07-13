@@ -460,31 +460,17 @@ func extractDateField(xRefTable *model.XRefTable, page int, d types.Dict, id, na
 
 	dfield := &DateField{Pages: []int{page}, ID: id, Name: name, AltName: altName, Format: df.Ext, Locked: locked}
 
-	if o, found := d.Find("DV"); found {
-		o1, err := xRefTable.Dereference(o)
-		if err != nil {
-			return nil, err
-		}
-		sl, err := types.StringOrHexLiteral(o1)
-		if err != nil {
-			return nil, err
-		}
-		dfield.Default = ""
-		if sl != nil {
-			dfield.Default = *sl
-		}
+	v, err := getV(xRefTable, d)
+	if err != nil {
+		return nil, err
 	}
+	dfield.Value = v
 
-	if o, found := d.Find("V"); found {
-		sl, err := types.StringOrHexLiteral(o)
-		if err != nil {
-			return nil, err
-		}
-		dfield.Value = ""
-		if sl != nil {
-			dfield.Value = *sl
-		}
+	dv, err := getDV(xRefTable, d)
+	if err != nil {
+		return nil, err
 	}
+	dfield.Default = dv
 
 	return dfield, nil
 }
@@ -501,31 +487,17 @@ func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, na
 
 	tf := &TextField{Pages: []int{page}, ID: id, Name: name, AltName: altName, Multiline: multiLine, MaxLen: maxLen, Locked: locked}
 
-	if o, found := d.Find("DV"); found {
-		o1, err := xRefTable.Dereference(o)
-		if err != nil {
-			return nil, err
-		}
-		s, err := types.StringOrHexLiteral(o1)
-		if err != nil {
-			return nil, err
-		}
-		tf.Default = ""
-		if s != nil {
-			tf.Default = *s
-		}
+	v, err := getV(xRefTable, d)
+	if err != nil {
+		return nil, err
 	}
+	tf.Value = v
 
-	if o, found := d.Find("V"); found {
-		s, err := types.StringOrHexLiteral(o)
-		if err != nil {
-			return nil, err
-		}
-		tf.Value = ""
-		if s != nil {
-			tf.Value = *s
-		}
+	dv, err := getDV(xRefTable, d)
+	if err != nil {
+		return nil, err
 	}
+	tf.Default = dv
 
 	return tf, nil
 }
