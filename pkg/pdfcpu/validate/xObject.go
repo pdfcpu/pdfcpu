@@ -756,6 +756,10 @@ func validateXObjectStreamDict(xRefTable *model.XRefTable, o types.Object) error
 
 	// see 8.8 External Objects
 
+	if o == nil {
+		return nil
+	}
+
 	// Dereference stream dict and ensure it is validated exactly once in order
 	// to handle XObjects(forms) with recursive structures like produced by Microsoft.
 	sd, valid, err := xRefTable.DereferenceStreamDict(o)

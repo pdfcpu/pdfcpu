@@ -28,7 +28,7 @@ import (
 
 func validateMetadataStream(xRefTable *model.XRefTable, d types.Dict, required bool, sinceVersion model.Version) (*types.StreamDict, error) {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V12
+		sinceVersion = model.V10
 	}
 
 	sd, err := validateStreamDictEntry(xRefTable, d, "dict", "Metadata", required, sinceVersion, nil)

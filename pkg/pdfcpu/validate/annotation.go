@@ -250,6 +250,9 @@ func validateActionOrDestination(xRefTable *model.XRefTable, d types.Dict, dictN
 	}
 
 	// A destination that shall be displayed when this item is activated.
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V10
+	}
 	obj, err := validateEntry(xRefTable, d, dictName, "Dest", OPTIONAL, sinceVersion)
 	if err != nil || obj == nil {
 		return "", err

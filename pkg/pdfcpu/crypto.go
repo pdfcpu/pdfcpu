@@ -1117,30 +1117,50 @@ func validateAES256Parameters(d types.Dict) (oe, ue, perms []byte, err error) {
 	return oe, ue, perms, nil
 }
 
-func validateOAndU(ctx *model.Context, d types.Dict) (o, u []byte, err error) {
-	// O
+func validateOAndU(ctx *model.Context, d types.Dict, r int) (o, u []byte, err error) {
+	// O, 32 bytes long if the value of R is 4 or less and 48 bytes long if the value of R is 6.
 	o, err = d.StringEntryBytes("O")
 	if err != nil {
 		return nil, nil, err
 	}
-	if l := len(o); l != 32 && l != 48 {
-		if ctx.XRefTable.ValidationMode == model.ValidationStrict || l < 48 {
+
+	if ctx.XRefTable.ValidationMode == model.ValidationStrict {
+		if r == 6 && len(o) < 48 {
 			return nil, nil, errors.New("pdfcpu: unsupported encryption: missing or invalid required entry \"O\"")
 		}
-		o = o[:48] // len(o) > 48, truncate
+		if r <= 4 && len(o) < 32 {
+			return nil, nil, errors.New("pdfcpu: unsupported encryption: missing or invalid required entry \"O\"")
+		}
 	}
 
-	// U
+	// if l := len(o); l != 32 && l != 48 {
+	// 	if ctx.XRefTable.ValidationMode == model.ValidationStrict || l < 48 {
+	// 		return nil, nil, errors.New("pdfcpu: unsupported encryption: missing or invalid required entry \"O\"")
+	// 	}
+	// 	o = o[:48] // len(o) > 48, truncate
+	// }
+
+	// U, 32 bytes long if the value of R is 4 or less and 48 bytes long if the value of R is 6.
 	u, err = d.StringEntryBytes("U")
 	if err != nil {
 		return nil, nil, err
 	}
-	if l := len(u); l != 32 && l != 48 {
-		if ctx.XRefTable.ValidationMode == model.ValidationStrict || l < 48 {
-			return nil, nil, errors.New("pdfcpu: unsupported encryption: missing or invalid required entry \"U\"")
+
+	if ctx.XRefTable.ValidationMode == model.ValidationStrict {
+		if r == 6 && len(u) < 48 {
+			return nil, nil, errors.New("pdfcpu: unsupported encryption: missing or invalid required entry \"O\"")
 		}
-		u = u[:48]
+		if r <= 4 && len(u) < 32 {
+			return nil, nil, errors.New("pdfcpu: unsupported encryption: missing or invalid required entry \"O\"")
+		}
 	}
+
+	// if l := len(u); l != 32 && l != 48 {
+	// 	if ctx.XRefTable.ValidationMode == model.ValidationStrict || l < 48 { // Fix 1163
+	// 		return nil, nil, errors.New("pdfcpu: unsupported encryption: missing or invalid required entry \"U\"")
+	// 	}
+	// 	u = u[:48]
+	// }
 
 	return o, u, nil
 }
@@ -1176,7 +1196,7 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 		return nil, err
 	}
 
-	o, u, err := validateOAndU(ctx, d)
+	o, u, err := validateOAndU(ctx, d, r)
 	if err != nil {
 		return nil, err
 	}

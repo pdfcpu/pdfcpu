@@ -22,35 +22,40 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 )
 
-func showMessage(topic, msg string) {
-	msg = topic + ": " + msg
+func ShowMsg(msg string) {
+	s := "pdfcpu " + msg
 	if log.DebugEnabled() {
-		log.Debug.Println("pdfcpu " + msg)
+		log.Debug.Println(s)
 	}
 	if log.ReadEnabled() {
-		log.Read.Println("pdfcpu " + msg)
+		log.Read.Println(s)
 	}
 	if log.ValidateEnabled() {
-		log.Validate.Println("pdfcpu " + msg)
+		log.Validate.Println(s)
 	}
 	if log.CLIEnabled() {
-		log.CLI.Println(msg)
+		log.CLI.Println(s)
 	}
+}
+
+func ShowMsgTopic(topic, msg string) {
+	msg = topic + ": " + msg
+	ShowMsg(msg)
 }
 
 func ShowRepaired(msg string) {
-	showMessage("repaired", msg)
+	ShowMsgTopic("repaired", msg)
 }
 
 func ShowSkipped(msg string) {
-	showMessage("skipped", msg)
+	ShowMsgTopic("skipped", msg)
 }
 
 func ShowDigestedSpecViolation(msg string) {
-	showMessage("digested", msg)
+	ShowMsgTopic("digested", msg)
 }
 
 func ShowDigestedSpecViolationError(xRefTable *XRefTable, err error) {
 	msg := fmt.Sprintf("spec violation around obj#(%d): %v\n", xRefTable.CurObj, err)
-	showMessage("digested", msg)
+	ShowMsgTopic("digested", msg)
 }

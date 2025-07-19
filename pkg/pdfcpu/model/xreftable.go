@@ -1855,7 +1855,7 @@ func (xRefTable *XRefTable) PageContent(d types.Dict, pageNr int) ([]byte, error
 	return bb, nil
 }
 
-func consolidateResourceSubDict(d types.Dict, key string, prn PageResourceNames, pageNr int) error {
+func (xRefTable *XRefTable) consolidateResourceSubDict(d types.Dict, key string, prn PageResourceNames, pageNr int) error {
 	o := d[key]
 	if o == nil {
 		if prn.HasResources(key) {
@@ -1882,16 +1882,20 @@ func consolidateResourceSubDict(d types.Dict, key string, prn PageResourceNames,
 	// Check for missing resource sub dict entries.
 	for k := range res {
 		if !set[k] {
-			return errors.Errorf("pdfcpu: page %d: missing required %s: %s", pageNr, key, k)
+			s := fmt.Sprintf("page %d: missing required %s: %s", pageNr, key, k)
+			if xRefTable.ValidationMode == ValidationStrict {
+				return errors.Errorf("pdfcpu: " + s)
+			}
+			ShowSkipped(s)
 		}
 	}
 	d[key] = d1
 	return nil
 }
 
-func consolidateResourceDict(d types.Dict, prn PageResourceNames, pageNr int) error {
+func (xRefTable *XRefTable) consolidateResourceDict(d types.Dict, prn PageResourceNames, pageNr int) error {
 	for k := range resourceTypes {
-		if err := consolidateResourceSubDict(d, k, prn, pageNr); err != nil {
+		if err := xRefTable.consolidateResourceSubDict(d, k, prn, pageNr); err != nil {
 			return err
 		}
 	}
@@ -1921,7 +1925,7 @@ func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict ty
 	// Remove any resource that's not required.
 	// Return an error for any required resource missing.
 	// TODO Calculate and accumulate resources required by content streams of any present form or type 3 fonts.
-	return consolidateResourceDict(resDict, prn, pageNr)
+	return xRefTable.consolidateResourceDict(resDict, prn, pageNr)
 }
 
 func (xRefTable *XRefTable) pageObjType(indRef types.IndirectRef) (string, error) {

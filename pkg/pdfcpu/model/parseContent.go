@@ -136,27 +136,46 @@ func skipTJ(l *string) error {
 	return nil
 }
 
+func lookupEI(l *string) (int, error) {
+	s := *l
+	//fmt.Printf("\n%s\n", hex.Dump([]byte(s)))
+	for i := 2; i <= len(s)-2; i++ {
+		if s[i:i+2] != "EI" {
+			continue
+		}
+		j := i + 2
+		ws := 0
+		for j < len(s) && unicode.IsSpace(rune(s[j])) && ws < 2 {
+			j++
+			ws++
+		}
+		switch {
+		case j == len(s) && ws <= 2:
+			// "EI" at end or followed by 1–2 spaces till end
+			return i, nil
+		case ws >= 1 && ws <= 2 && j < len(s) && s[j] == 'Q':
+			// "EI" followed by 1–2 spaces, then 'Q'
+			return i, nil
+		case ws == 0 && j == len(s):
+			// suffix "EI"
+			return i, nil
+		}
+	}
+	return 0, errBIExpressionCorrupt
+}
+
 func skipBI(l *string, prn PageResourceNames) error {
 	s := *l
 	//fmt.Printf("skipBI <%s>\n", s)
 	for {
 		s = strings.TrimLeftFunc(s, whitespaceOrEOL)
 		if strings.HasPrefix(s, "ID") && whitespaceOrEOL(rune(s[2])) {
-			s = s[2:]
-			i := strings.Index(s, "EI")
-			if i < 0 {
-				return errBIExpressionCorrupt
+			i, err := lookupEI(&s)
+			if err != nil {
+				return err
 			}
-			if i == len(s)-2 {
-				break
-			}
-			i += 2
-			if whitespaceOrEOL(rune(s[i])) {
-				s = s[i+1:]
-				break
-			} else {
-				return errBIExpressionCorrupt
-			}
+			s = s[i+2:]
+			break
 		}
 		if len(s) == 0 {
 			return errBIExpressionCorrupt

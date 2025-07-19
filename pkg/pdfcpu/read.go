@@ -292,7 +292,7 @@ func parseXRefTableEntry(xRefTable *model.XRefTable, s *bufio.Scanner, objNr int
 		log.Read.Println("parseXRefTableEntry: begin")
 	}
 
-	line, err := scanLine(s)
+	line, _, err := scanLine(s)
 	if err != nil {
 		return err
 	}
@@ -415,6 +415,11 @@ func parseObjectStream(c context.Context, osd *types.ObjectStreamDict) error {
 		}
 	}
 	prolog := decodedContent[:osd.FirstObjOffset]
+
+	// Remove inline comment.
+	if i := bytes.Index(prolog, []byte("%%")); i != -1 {
+		prolog = prolog[:i]
+	}
 
 	// The separator used in the prolog shall be white space
 	// but some PDF writers use 0x00.
@@ -1010,38 +1015,38 @@ func parseTrailerDict(c context.Context, ctx *model.Context, trailerDict types.D
 	return offset, nil
 }
 
-func scanLineRaw(s *bufio.Scanner) (string, error) {
+func scanLineRaw(s *bufio.Scanner) (string, int, error) {
 	if ok := s.Scan(); !ok {
 		if s.Err() != nil {
-			return "", s.Err()
+			return "", -1, s.Err()
 		}
-		return "", errors.New("pdfcpu: scanLineRaw: returning nothing")
+		return "", -1, errors.New("pdfcpu: scanLineRaw: returning nothing")
 	}
-	return s.Text(), nil
+
+	line := s.Text()
+	length := len(line)
+
+	// Remove comment.
+	if i := strings.Index(line, "%%"); i != -1 {
+		line = line[:i]
+	}
+
+	return line, length, nil
 }
 
-func scanLine(s *bufio.Scanner) (s1 string, err error) {
+func scanLine(s *bufio.Scanner) (s1 string, length int, err error) {
 	for i := 0; i <= 1; i++ {
-		s1, err = scanLineRaw(s)
+		s1, length, err = scanLineRaw(s)
 		if err != nil {
-			return "", err
+			return "", -1, err
 		}
 		if len(s1) > 0 {
 			break
 		}
 	}
 
-	return s1, nil
+	return s1, length, nil
 }
-
-// func isDict(s string) (bool, error) {
-// 	o, err := model.ParseObject(&s)
-// 	if err != nil {
-// 		return false, err
-// 	}
-// 	_, ok := o.(types.Dict)
-// 	return ok, nil
-// }
 
 func scanTrailerDictStart(s *bufio.Scanner, line *string) error {
 	l := *line
@@ -1052,7 +1057,7 @@ func scanTrailerDictStart(s *bufio.Scanner, line *string) error {
 			*line = l[i:]
 			return nil
 		}
-		l, err = scanLine(s)
+		l, _, err = scanLine(s)
 		if log.ReadEnabled() {
 			log.Read.Printf("line: <%s>\n", l)
 		}
@@ -1074,7 +1079,7 @@ func scanTrailerDictRemainder(s *bufio.Scanner, line string, buf bytes.Buffer) (
 		}
 		buf.WriteString(line)
 		buf.WriteString("\x0a")
-		if line, err = scanLine(s); err != nil {
+		if line, _, err = scanLine(s); err != nil {
 			return "", err
 		}
 		i = strings.Index(line, "startxref")
@@ -1156,7 +1161,7 @@ func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, f
 
 	if len(fields) == 0 {
 
-		line, err = scanLine(s)
+		line, _, err = scanLine(s)
 		if err != nil {
 			return nil, err
 		}
@@ -1177,13 +1182,13 @@ func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, f
 		*ssCount++
 
 		// trailer or another xref table subsection ?
-		if line, err = scanLine(s); err != nil {
+		if line, _, err = scanLine(s); err != nil {
 			return nil, err
 		}
 
 		// if empty line try next line for trailer
 		if len(line) == 0 {
-			if line, err = scanLine(s); err != nil {
+			if line, _, err = scanLine(s); err != nil {
 				return nil, err
 			}
 		}
@@ -1194,6 +1199,8 @@ func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, f
 	if log.ReadEnabled() {
 		log.Read.Println("parseXRefSection: All subsections read!")
 	}
+
+	line = strings.TrimLeft(line, " ")
 
 	if !strings.HasPrefix(line, "trailer") {
 		return nil, errors.Errorf("xrefsection: missing trailer dict, line = <%s>", line)
@@ -1385,6 +1392,11 @@ func processObject(c context.Context, ctx *model.Context, line string, offset *i
 	return s, nil
 }
 
+func objCandidate(line string) bool {
+	i := strings.Index(line, "obj")
+	return i > 2 && strings.Index(line, "endobj") != i-3
+}
+
 // bypassXrefSection is a fix for digesting corrupt xref sections.
 // It populates the xRefTable by reading in all indirect objects line by line
 // and works on the assumption of a single xref section - meaning no incremental updates.
@@ -1416,15 +1428,20 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 	var (
 		withinXref    bool
 		withinTrailer bool
+		prevLine      string
 	)
 
 	for {
-		line, err := scanLineRaw(s)
+		line, length, err := scanLineRaw(s)
 		if err != nil {
 			break
 		}
+		if len(prevLine) > 0 {
+			line = prevLine + line
+			prevLine = ""
+		}
 		if withinXref {
-			offset += int64(len(line) + eolCount)
+			offset += int64(length + eolCount)
 			if withinTrailer {
 				bb = append(bb, '\n')
 				bb = append(bb, line...)
@@ -1447,21 +1464,24 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 		}
 		i := strings.Index(line, "xref")
 		if i >= 0 {
-			offset += int64(len(line) + eolCount)
+			offset += int64(length + eolCount)
 			withinXref = true
 			continue
 		}
-		i = strings.Index(line, "obj")
-		if i >= 0 {
-			if i > 2 && strings.Index(line, "endobj") != i-3 {
+		if objCandidate(line) {
+			if !strings.HasSuffix(line, "obj") {
 				s, err = processObject(c, ctx, line, &offset, incr)
 				if err != nil {
 					return err
 				}
 				continue
 			}
+			// append next line
+			prevLine = line
+			continue
 		}
-		offset += int64(len(line) + eolCount)
+
+		offset += int64(length + eolCount)
 		continue
 	}
 	return nil
@@ -1498,14 +1518,14 @@ func tryXRefSection(c context.Context, ctx *model.Context, rs io.ReadSeeker, off
 	s.Buffer(buf, 1024*1024)
 	s.Split(scan.Lines)
 
-	line, err := scanLine(s)
+	line, length, err := scanLine(s)
 	if err != nil {
 		return nil, err
 	}
 	if log.ReadEnabled() {
 		log.Read.Printf("xref line 1: <%s>\n", line)
 	}
-	repairOff := len(line)
+	repairOff := length
 
 	if strings.TrimSpace(line) == "xref" {
 		if log.ReadEnabled() {
@@ -1523,7 +1543,7 @@ func tryXRefSection(c context.Context, ctx *model.Context, rs io.ReadSeeker, off
 	}
 
 	// Repair fix for #326
-	if line, err = scanLine(s); err != nil {
+	if line, _, err = scanLine(s); err != nil {
 		return nil, err
 	}
 	if log.ReadEnabled() {

@@ -754,7 +754,11 @@ func validateType1FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// ToUnicode, optional, stream
-	_, err = validateStreamDictEntry(xRefTable, d, dictName, "ToUnicode", OPTIONAL, model.V12, nil)
+	sinceVersion := model.V12
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V10
+	}
+	_, err = validateStreamDictEntry(xRefTable, d, dictName, "ToUnicode", OPTIONAL, sinceVersion, nil)
 
 	return err
 }

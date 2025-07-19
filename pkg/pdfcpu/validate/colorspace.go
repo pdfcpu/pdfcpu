@@ -17,6 +17,8 @@ limitations under the License.
 package validate
 
 import (
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
@@ -646,7 +648,10 @@ func validateColorSpaceEntry(xRefTable *model.XRefTable, d types.Dict, dictName 
 
 	case types.Name:
 		if ok := validateDeviceColorSpaceName(o.Value()); !ok {
-			err = errors.Errorf("pdfcpu: validateColorSpaceEntry: Name:%s\n", o.Value())
+			if xRefTable.ValidationMode == model.ValidationStrict {
+				return errors.Errorf("pdfcpu: invalid colorSpaceEntry: Name:%s\n", o.Value())
+			}
+			model.ShowSkipped(fmt.Sprintf("invalid colorSpaceEntry: %s", o.Value()))
 		}
 
 	case types.Array:
