@@ -17,12 +17,16 @@ limitations under the License.
 package validate
 
 import (
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
+
+var ErrMissingFont = errors.New("pdfcpu: missing font dict")
 
 func validateStandardType1Font(s string) bool {
 
@@ -205,7 +209,11 @@ func validateFontDescriptorPart2(xRefTable *model.XRefTable, d types.Dict, dictN
 
 	_, err := validateNumberEntry(xRefTable, d, dictName, "Ascent", fontDictType != "Type3", model.V10, nil)
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode != model.ValidationRelaxed {
+			return err
+		}
+		err = nil
+		model.ShowSkipped("missing font descriptor \"Ascent\"")
 	}
 
 	required := fontDictType != "Type3"
@@ -1020,8 +1028,12 @@ func validateFontDict(xRefTable *model.XRefTable, o types.Object) (err error) {
 	indRef, isIndRef := o.(types.IndirectRef)
 	if isIndRef {
 
-		if ok, err := xRefTable.IsValid(indRef); err != nil || ok {
-			return err
+		ok, err := xRefTable.IsValid(indRef)
+		if err != nil {
+			return ErrMissingFont
+		}
+		if ok {
+			return nil
 		}
 
 		if ok, err := xRefTable.IsBeingValidated(indRef); err != nil || ok {
@@ -1065,11 +1077,15 @@ func validateFontResourceDict(xRefTable *model.XRefTable, o types.Object, sinceV
 	}
 
 	// Iterate over font resource dict
-	for _, obj := range d {
+	for id, obj := range d {
 
 		// Process fontDict
 		err = validateFontDict(xRefTable, obj)
 		if err != nil {
+			if err == ErrMissingFont && xRefTable.ValidationMode == model.ValidationRelaxed {
+				err = nil
+				model.ShowSkipped(fmt.Sprintf("missing font: %s", id))
+			}
 			return err
 		}
 

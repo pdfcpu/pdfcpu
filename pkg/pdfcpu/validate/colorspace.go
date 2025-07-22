@@ -630,8 +630,10 @@ func validateColorSpace(xRefTable *model.XRefTable, o types.Object, excludePatte
 		err = validateColorSpaceArray(xRefTable, o, excludePatternCS)
 
 	default:
-		err = errors.New("pdfcpu: validateColorSpace: corrupt obj typ, must be Name or Array")
-
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return errors.Errorf("pdfcpu: validateColorSpace: corrupt obj type(%T), must be Name or Array", o)
+		}
+		model.ShowSkipped(fmt.Sprintf("invalid color space type: %s", o))
 	}
 
 	return err

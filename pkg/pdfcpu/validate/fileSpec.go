@@ -265,7 +265,11 @@ func validateFileSpecDictEFAndRF(xRefTable *model.XRefTable, d types.Dict, dictN
 	}
 
 	// EF, required if RF present, dict of embedded file streams, since 1.3
-	efDict, err := validateDictEntry(xRefTable, d, dictName, "EF", rfDict != nil, model.V13, nil)
+	sinceVersion := model.V13
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V11
+	}
+	efDict, err := validateDictEntry(xRefTable, d, dictName, "EF", rfDict != nil, sinceVersion, nil)
 	if err != nil {
 		return err
 	}

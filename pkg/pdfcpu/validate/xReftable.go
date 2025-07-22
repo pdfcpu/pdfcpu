@@ -291,7 +291,8 @@ func validateNamedDestinations(xRefTable *model.XRefTable, rootDict types.Dict, 
 }
 
 func pageLayoutValidator(v model.Version) func(s string) bool {
-	layouts := []string{"SinglePage", "OneColumn", "TwoColumnLeft", "TwoColumnRight"}
+	// "UseNone" is out of spec.
+	layouts := []string{"SinglePage", "OneColumn", "TwoColumnLeft", "TwoColumnRight", "UseNone"}
 	if v >= model.V15 {
 		layouts = append(layouts, "TwoPageLeft", "TwoPageRight")
 	}
@@ -315,8 +316,8 @@ func validatePageLayout(xRefTable *model.XRefTable, rootDict types.Dict, require
 }
 
 func pageModeValidator(v model.Version) func(s string) bool {
-	// "None" is out of spec - but no need to repair.
-	modes := []string{"UseNone", "UseOutlines", "UseThumbs", "FullScreen", "None"}
+	// "None" and "none" are out of spec.
+	modes := []string{"UseNone", "UseOutlines", "UseThumbs", "FullScreen", "None", "none"}
 	if v >= model.V15 {
 		modes = append(modes, "UseOC")
 	}
@@ -832,7 +833,7 @@ func validateCollectionSortDict(xRefTable *model.XRefTable, d types.Dict) error 
 	return err
 }
 
-func validateInitialView(s string) bool { return s == "D" || s == "T" || s == "H" }
+func validateInitialView(s string) bool { return s == "D" || s == "T" || s == "H" || s == "C" }
 
 func validateCollection(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 12.3.5 Collections
@@ -1100,7 +1101,7 @@ func validateRootObject(ctx *model.Context) error {
 		{validateRootVersion, OPTIONAL, model.V14},
 		{validateExtensions, OPTIONAL, model.V10},
 		{validatePageLabels, OPTIONAL, model.V13},
-		{validateNames, OPTIONAL, model.V12},
+		{validateNames, OPTIONAL, model.V11}, //model.V12},
 		{validateNamedDestinations, OPTIONAL, model.V11},
 		{validateViewerPreferences, OPTIONAL, model.V12},
 		{validatePageLayout, OPTIONAL, model.V10},

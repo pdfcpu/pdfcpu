@@ -802,6 +802,30 @@ func validatePageEntryVP(xRefTable *model.XRefTable, d types.Dict, required bool
 	return nil
 }
 
+func handlePieceInfo(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	sinceVersion := model.V13
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V10
+	}
+
+	hasPieceInfo, err := validatePieceInfo(xRefTable, d, dictName, "PieceInfo", OPTIONAL, sinceVersion)
+	if err != nil {
+		return err
+	}
+
+	// LastModified
+	lm, err := validateDateEntry(xRefTable, d, dictName, "LastModified", OPTIONAL, model.V13)
+	if err != nil {
+		return err
+	}
+
+	if hasPieceInfo && lm == nil && xRefTable.ValidationMode == model.ValidationStrict {
+		return errors.New("pdfcpu: validatePageDict: missing \"LastModified\" (required by \"PieceInfo\")")
+	}
+
+	return nil
+}
+
 func validatePageDict(xRefTable *model.XRefTable, d types.Dict, hasMediaBox bool) error {
 
 	dictName := "pageDict"
@@ -829,64 +853,55 @@ func validatePageDict(xRefTable *model.XRefTable, d types.Dict, hasMediaBox bool
 	}
 
 	// PieceInfo
-	if xRefTable.ValidationMode != model.ValidationRelaxed {
-		sinceVersion := model.V13
-		if xRefTable.ValidationMode == model.ValidationRelaxed {
-			sinceVersion = model.V10
-		}
-
-		hasPieceInfo, err := validatePieceInfo(xRefTable, d, dictName, "PieceInfo", OPTIONAL, sinceVersion)
-		if err != nil {
-			return err
-		}
-
-		// LastModified
-		lm, err := validateDateEntry(xRefTable, d, dictName, "LastModified", OPTIONAL, model.V13)
-		if err != nil {
-			return err
-		}
-
-		if hasPieceInfo && lm == nil && xRefTable.ValidationMode == model.ValidationStrict {
-			return errors.New("pdfcpu: validatePageDict: missing \"LastModified\" (required by \"PieceInfo\")")
-		}
+	if err := handlePieceInfo(xRefTable, d, dictName); err != nil {
+		return err
 	}
 
 	// AA
-	err = validateAdditionalActions(xRefTable, d, dictName, "AA", OPTIONAL, model.V14, "page")
+	sinceVersion := model.V14
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V11
+	}
+	err = validateAdditionalActions(xRefTable, d, dictName, "AA", OPTIONAL, sinceVersion, "page")
 	if err != nil {
 		return err
 	}
 
 	type v struct {
-		validate     func(xRefTable *model.XRefTable, d types.Dict, required bool, sinceVersion model.Version) (err error)
-		required     bool
-		sinceVersion model.Version
+		validate            func(xRefTable *model.XRefTable, d types.Dict, required bool, sinceVersion model.Version) (err error)
+		required            bool
+		sinceVersion        model.Version
+		sinceVersionRelaxed model.Version
 	}
 
 	for _, f := range []v{
-		{validatePageEntryCropBox, OPTIONAL, model.V10},
-		{validatePageEntryBleedBox, OPTIONAL, model.V13},
-		{validatePageEntryTrimBox, OPTIONAL, model.V13},
-		{validatePageEntryArtBox, OPTIONAL, model.V13},
-		{validatePageBoxColorInfo, OPTIONAL, model.V14},
-		{validatePageEntryRotate, OPTIONAL, model.V10},
-		{validatePageEntryGroup, OPTIONAL, model.V14},
-		{validatePageEntryThumb, OPTIONAL, model.V10},
-		{validatePageEntryB, OPTIONAL, model.V11},
-		{validatePageEntryDur, OPTIONAL, model.V11},
-		{validatePageEntryTrans, OPTIONAL, model.V11},
-		{validateMetadata, OPTIONAL, model.V14},
-		{validatePageEntryStructParents, OPTIONAL, model.V10},
-		{validatePageEntryID, OPTIONAL, model.V13},
-		{validatePageEntryPZ, OPTIONAL, model.V13},
-		{validatePageEntrySeparationInfo, OPTIONAL, model.V13},
-		{validatePageEntryTabs, OPTIONAL, model.V15},
-		{validatePageEntryTemplateInstantiated, OPTIONAL, model.V15},
-		{validatePageEntryPresSteps, OPTIONAL, model.V15},
-		{validatePageEntryUserUnit, OPTIONAL, model.V16},
-		{validatePageEntryVP, OPTIONAL, model.V16},
+		{validatePageEntryCropBox, OPTIONAL, model.V10, model.V10},
+		{validatePageEntryBleedBox, OPTIONAL, model.V13, model.V12},
+		{validatePageEntryTrimBox, OPTIONAL, model.V13, model.V12},
+		{validatePageEntryArtBox, OPTIONAL, model.V13, model.V12},
+		{validatePageBoxColorInfo, OPTIONAL, model.V14, model.V14},
+		{validatePageEntryRotate, OPTIONAL, model.V10, model.V10},
+		{validatePageEntryGroup, OPTIONAL, model.V14, model.V14},
+		{validatePageEntryThumb, OPTIONAL, model.V10, model.V10},
+		{validatePageEntryB, OPTIONAL, model.V11, model.V11},
+		{validatePageEntryDur, OPTIONAL, model.V11, model.V11},
+		{validatePageEntryTrans, OPTIONAL, model.V11, model.V11},
+		{validateMetadata, OPTIONAL, model.V14, model.V14},
+		{validatePageEntryStructParents, OPTIONAL, model.V10, model.V10},
+		{validatePageEntryID, OPTIONAL, model.V13, model.V13},
+		{validatePageEntryPZ, OPTIONAL, model.V13, model.V13},
+		{validatePageEntrySeparationInfo, OPTIONAL, model.V13, model.V13},
+		{validatePageEntryTabs, OPTIONAL, model.V15, model.V15},
+		{validatePageEntryTemplateInstantiated, OPTIONAL, model.V15, model.V15},
+		{validatePageEntryPresSteps, OPTIONAL, model.V15, model.V15},
+		{validatePageEntryUserUnit, OPTIONAL, model.V16, model.V16},
+		{validatePageEntryVP, OPTIONAL, model.V16, model.V16},
 	} {
-		err = f.validate(xRefTable, d, f.required, f.sinceVersion)
+		sinceVersion := f.sinceVersion
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			sinceVersion = f.sinceVersionRelaxed
+		}
+		err = f.validate(xRefTable, d, f.required, sinceVersion)
 		if err != nil {
 			return err
 		}

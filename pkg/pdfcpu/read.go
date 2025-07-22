@@ -1392,9 +1392,22 @@ func processObject(c context.Context, ctx *model.Context, line string, offset *i
 	return s, nil
 }
 
-func objCandidate(line string) bool {
+func objCandidate(withinObj bool, line string) bool {
+	if withinObj {
+		return false
+	}
 	i := strings.Index(line, "obj")
 	return i > 2 && strings.Index(line, "endobj") != i-3
+}
+
+func checkEndObj(withinObj *bool, line *string) {
+	if *withinObj {
+		i := strings.Index(*line, "endobj")
+		if i >= 0 {
+			*line = (*line)[i:]
+			*withinObj = false
+		}
+	}
 }
 
 // bypassXrefSection is a fix for digesting corrupt xref sections.
@@ -1426,6 +1439,7 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 
 	bb := []byte{}
 	var (
+		withinObj     bool
 		withinXref    bool
 		withinTrailer bool
 		prevLine      string
@@ -1445,14 +1459,15 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 			if withinTrailer {
 				bb = append(bb, '\n')
 				bb = append(bb, line...)
-				i := strings.Index(line, "startxref")
-				if i >= 0 {
-					_, err = processTrailer(c, ctx, s, string(bb), nil, offExtra, incr)
-					if err == nil {
-						model.ShowRepaired("xreftable")
-					}
+				_, err = processTrailer(c, ctx, s, string(bb), nil, offExtra, incr)
+				if err == nil {
+					model.ShowRepaired("xreftable")
+				}
+				if err != nil {
 					return err
 				}
+				withinXref = false
+				withinTrailer = false
 				continue
 			}
 			i := strings.Index(line, "trailer")
@@ -1468,15 +1483,16 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 			withinXref = true
 			continue
 		}
-		if objCandidate(line) {
+		checkEndObj(&withinObj, &line)
+		if objCandidate(withinObj, line) {
 			if !strings.HasSuffix(line, "obj") {
+				withinObj = true
 				s, err = processObject(c, ctx, line, &offset, incr)
 				if err != nil {
 					return err
 				}
 				continue
 			}
-			// append next line
 			prevLine = line
 			continue
 		}
