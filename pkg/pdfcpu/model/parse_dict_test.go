@@ -76,7 +76,7 @@ func doTestParseDictHexLiteral(t *testing.T) {
 	doTestParseDictFail("<</Key<ade>", t)
 	doTestParseDictFail("<</Key<ABG>>>", t)
 	doTestParseDictFail("<</Key<   ABG>>>", t)
-	doTestParseDictFail("<</Key<0ab><bcf098>", t)
+	doTestParseDictOK("<</Key<0ab><bcf098>", t) // Skip junk
 	doTestParseDictOK("<</Key1<abc>/Key2<def>>>", t)
 	doTestParseDictOK("<< /Key1 <abc> /Key2 <def> >>", t)
 	doTestParseDictOK("<</Key1<AB>>>", t)

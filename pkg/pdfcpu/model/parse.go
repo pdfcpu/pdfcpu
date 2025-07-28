@@ -19,6 +19,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -530,12 +531,16 @@ func insertKey(d types.Dict, key string, val types.Object, relaxed bool) error {
 	return nil
 }
 
+func dictString(l string) bool {
+	return len(l) > 0 && !strings.HasPrefix(l, ">>")
+}
+
 func processDictKeys(c context.Context, line *string, relaxed bool) (types.Dict, error) {
 	l := *line
 	var eol bool
 	d := types.NewDict()
 
-	for !strings.HasPrefix(l, ">>") {
+	for dictString(l) {
 
 		if err := c.Err(); err != nil {
 			return nil, err
@@ -543,7 +548,11 @@ func processDictKeys(c context.Context, line *string, relaxed bool) (types.Dict,
 
 		keyName, err := parseName(&l)
 		if err != nil {
-			return nil, err
+			if !relaxed {
+				return nil, err
+			}
+			// Skip junk.
+			l = forwardParseBuf(l, 1)
 		}
 
 		if log.ParseEnabled() {
@@ -553,10 +562,12 @@ func processDictKeys(c context.Context, line *string, relaxed bool) (types.Dict,
 		// Position to first non whitespace after key.
 		l, eol = trimLeftSpace(l, relaxed)
 
+		if err != nil && relaxed {
+			// Skip junk.
+			continue
+		}
+
 		if len(l) == 0 {
-			if log.ParseEnabled() {
-				log.Parse.Println("ParseDict: only whitespace after key")
-			}
 			// Only whitespace after key.
 			return nil, errDictionaryNotTerminated
 		}
@@ -581,7 +592,7 @@ func processDictKeys(c context.Context, line *string, relaxed bool) (types.Dict,
 		}
 
 		// We are positioned on the char behind the last parsed dict value.
-		if len(l) == 0 {
+		if len(l) < 2 {
 			return nil, errDictionaryNotTerminated
 		}
 
@@ -726,7 +737,12 @@ func parseIndRef(s, l, l1 string, line *string, i, i2 int) (types.Object, error)
 }
 
 func parseFloat(s string) (types.Object, error) {
-	f, err := strconv.ParseFloat(s, 64)
+	re := regexp.MustCompile(`^[+-]?(?:\d*\.\d+|\d+)(?:[eE][+-]?\d+)?`)
+	match := re.FindString(s)
+	if match == "" {
+		return nil, errors.Errorf("parseFloat: value is no float: %s\n", s)
+	}
+	f, err := strconv.ParseFloat(match, 64)
 	if err != nil {
 		s = strings.Replace(s, ".-", ".", 1)
 		f, err = strconv.ParseFloat(s, 64)
@@ -1217,7 +1233,7 @@ func applyOffStreamIndFirst(endInd, streamInd, off, floor int) (int, int, error)
 }
 
 func isComment(commentPos, strLitPos int) bool {
-	return commentPos > 0 && (strLitPos < 0 || commentPos < strLitPos)
+	return commentPos >= 0 && (strLitPos < 0 || commentPos < strLitPos)
 }
 
 func DetectKeywords(line string) (endInd int, streamInd int, err error) {

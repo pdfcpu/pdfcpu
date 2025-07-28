@@ -17,6 +17,7 @@ limitations under the License.
 package validate
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -418,7 +419,9 @@ func validateFormFieldKids(xRefTable *model.XRefTable, objNr, incr int, d types.
 	var err error
 	// dict represents a non terminal field.
 	if d.Subtype() != nil && *d.Subtype() == "Widget" {
-		return errors.New("pdfcpu: validateFormFieldKids: non terminal field can not be widget annotation")
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return errors.New("pdfcpu: validateFormFieldKids: non terminal field can not be widget annotation")
+		}
 	}
 
 	a, err := xRefTable.DereferenceArray(o)
@@ -448,7 +451,11 @@ func validateFormFieldKids(xRefTable *model.XRefTable, objNr, incr int, d types.
 		}
 		valid, err := xRefTable.IsValid(ir)
 		if err != nil {
-			return err
+			if xRefTable.ValidationMode == model.ValidationStrict {
+				return err
+			}
+			model.ShowSkipped(fmt.Sprintf("missing form field kid obj #%s", ir.ObjectNumber.String()))
+			valid = true
 		}
 
 		if !valid {
@@ -497,7 +504,11 @@ func validateFormFields(xRefTable *model.XRefTable, arr types.Array, requiresDA 
 
 		valid, err := xRefTable.IsValid(ir)
 		if err != nil {
-			return err
+			if xRefTable.ValidationMode == model.ValidationStrict {
+				return err
+			}
+			model.ShowSkipped(fmt.Sprintf("missing form field obj #%s", ir.ObjectNumber.String()))
+			valid = true
 		}
 
 		if !valid {

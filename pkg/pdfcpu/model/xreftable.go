@@ -1793,6 +1793,23 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 	return xRefTable.consolidateResources(obj, pAttrs)
 }
 
+func (xRefTable *XRefTable) decodeContentStream(sd *types.StreamDict, pageNr int) error {
+	err := sd.Decode()
+	if err == filter.ErrUnsupportedFilter {
+		return errors.New("pdfcpu: unsupported filter: unable to decode content")
+	}
+	if err != nil {
+		if xRefTable.ValidationMode == ValidationStrict {
+			return errors.Errorf("page %d content decode: %v", pageNr, err)
+		}
+		if !strings.HasPrefix(err.Error(), "flate: corrupt input before offset") {
+			return errors.Errorf("page %d content decode: %v", pageNr, err)
+		}
+		ShowSkipped(fmt.Sprintf("page %d: corrupt content stream (flate)", pageNr))
+	}
+	return nil
+}
+
 // PageContent returns the content in PDF syntax for page dict d.
 func (xRefTable *XRefTable) PageContent(d types.Dict, pageNr int) ([]byte, error) {
 	o, _ := d.Find("Contents")
@@ -1811,14 +1828,9 @@ func (xRefTable *XRefTable) PageContent(d types.Dict, pageNr int) ([]byte, error
 
 	case types.StreamDict:
 		// no further processing.
-		err := o.Decode()
-		if err == filter.ErrUnsupportedFilter {
-			return nil, errors.New("pdfcpu: unsupported filter: unable to decode content")
+		if err := xRefTable.decodeContentStream(&o, pageNr); err != nil {
+			return nil, err
 		}
-		if err != nil {
-			return nil, errors.Errorf("page %d content decode: %v", pageNr, err)
-		}
-
 		bb = append(bb, o.Content...)
 
 	case types.Array:
@@ -1834,12 +1846,8 @@ func (xRefTable *XRefTable) PageContent(d types.Dict, pageNr int) ([]byte, error
 			if o == nil {
 				continue
 			}
-			err = o.Decode()
-			if err == filter.ErrUnsupportedFilter {
-				return nil, errors.New("pdfcpu: unsupported filter: unable to decode content")
-			}
-			if err != nil {
-				return nil, errors.Errorf("page %d content decode: %v", pageNr, err)
+			if err := xRefTable.decodeContentStream(o, pageNr); err != nil {
+				return nil, err
 			}
 			bb = append(bb, o.Content...)
 		}

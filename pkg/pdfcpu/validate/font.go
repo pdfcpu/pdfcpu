@@ -388,7 +388,7 @@ func validateFontEncoding(xRefTable *model.XRefTable, d types.Dict, dictName str
 
 	encodings := []string{"MacRomanEncoding", "MacExpertEncoding", "WinAnsiEncoding"}
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		encodings = append(encodings, "FontSpecific", "StandardEncoding", "SymbolSetEncoding")
+		encodings = append(encodings, "FontSpecific", "StandardEncoding", "SymbolSetEncoding", "PDFDocEncoding")
 	}
 
 	switch o := o.(type) {
@@ -1057,7 +1057,10 @@ func validateFontDict(xRefTable *model.XRefTable, o types.Object) (err error) {
 	}
 
 	if d.Type() == nil || *d.Type() != "Font" {
-		return errors.New("pdfcpu: validateFontDict: corrupt font dict")
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return errors.New("pdfcpu: validateFontDict: corrupt font dict")
+		}
+		model.ShowDigestedSpecViolation("missing fontDict entry \"Type\"")
 	}
 
 	return _validateFontDict(xRefTable, d, isIndRef, indRef)

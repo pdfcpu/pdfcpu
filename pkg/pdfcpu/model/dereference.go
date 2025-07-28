@@ -381,12 +381,14 @@ func (xRefTable *XRefTable) DereferenceFontDict(indRef types.IndirectRef) (types
 		return nil, nil
 	}
 
-	if d.Type() == nil {
-		return nil, errors.Errorf("pdfcpu: DereferenceFontDict: missing dict type %s\n", indRef)
-	}
+	if xRefTable.ValidationMode == ValidationStrict {
+		if d.Type() == nil {
+			return nil, errors.Errorf("pdfcpu: DereferenceFontDict: missing dict type %s\n", indRef)
+		}
 
-	if *d.Type() != "Font" {
-		return nil, errors.Errorf("pdfcpu: DereferenceFontDict: expected Type=Font, unexpected Type: %s", *d.Type())
+		if *d.Type() != "Font" {
+			return nil, errors.Errorf("pdfcpu: DereferenceFontDict: expected Type=Font, unexpected Type: %s", *d.Type())
+		}
 	}
 
 	return d, nil

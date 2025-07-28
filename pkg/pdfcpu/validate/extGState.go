@@ -40,12 +40,14 @@ func validateLineDashPatternEntry(xRefTable *model.XRefTable, d types.Dict, dict
 		return err
 	}
 
-	_, err = validateIntegerArray(xRefTable, a[0])
+	// We are dealing with integers which may be represented by Integer or Float objects.
+
+	_, err = validateNumberArray(xRefTable, a[0])
 	if err != nil {
 		return err
 	}
 
-	_, err = validateInteger(xRefTable, a[1], nil)
+	_, err = validateNumber(xRefTable, a[1])
 
 	return err
 }
@@ -874,7 +876,11 @@ func validateExtGStateDictPart2(xRefTable *model.XRefTable, d types.Dict, dictNa
 
 	// HT, dict, stream or name, optional
 	// half tone dictionary or stream or /Default, see 10.5
-	err = validateHalfToneEntry(xRefTable, d, dictName, "HT", OPTIONAL, model.V12)
+	sinceVersion := model.V12
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V11
+	}
+	err = validateHalfToneEntry(xRefTable, d, dictName, "HT", OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -886,7 +892,7 @@ func validateExtGStateDictPart2(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// SM, number, optional, since V1.3, smoothness tolerance
-	sinceVersion := model.V13
+	sinceVersion = model.V13
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V12
 	}

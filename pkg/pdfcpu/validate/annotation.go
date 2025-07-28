@@ -1483,7 +1483,9 @@ func validateAnnotationDictGeneralPart1(xRefTable *model.XRefTable, d types.Dict
 
 	// Rect, required, rectangle
 	if _, err = validateRectangleEntry(xRefTable, d, dictName, "Rect", REQUIRED, model.V10, nil); err != nil {
-		return nil, err
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return nil, err
+		}
 	}
 
 	// Contents, optional, text string

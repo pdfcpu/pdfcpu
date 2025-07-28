@@ -141,15 +141,20 @@ func linkAnnotation(xRefTable *model.XRefTable, d types.Dict, r *types.Rectangle
 	if found && o != nil {
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
-			return nil, err
-		}
+			if xRefTable.ValidationMode == model.ValidationStrict {
+				return nil, err
+			}
+			model.ShowSkipped("invalid link annotation entry \"A\"")
 
-		bb, err := xRefTable.DereferenceStringEntryBytes(d, "URI")
-		if err != nil {
-			return nil, err
 		}
-		if len(bb) > 0 {
-			uri = string(bb)
+		if d != nil {
+			bb, err := xRefTable.DereferenceStringEntryBytes(d, "URI")
+			if err != nil {
+				return nil, err
+			}
+			if len(bb) > 0 {
+				uri = string(bb)
+			}
 		}
 	}
 	dest := (*model.Destination)(nil) // will not collect link dest during validation.
@@ -167,9 +172,15 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 		return nil, err
 	}
 
-	r, err := xRefTable.RectForArray(arr)
-	if err != nil {
-		return nil, err
+	var r *types.Rectangle
+
+	if len(arr) == 4 {
+		r, err = xRefTable.RectForArray(arr)
+		if err != nil {
+			return nil, err
+		}
+	} else if xRefTable.ValidationMode == model.ValidationRelaxed {
+		r = types.NewRectangle(0, 0, 0, 0)
 	}
 
 	var apObjNr int
