@@ -730,7 +730,11 @@ func validateAnnotationDictInk(xRefTable *model.XRefTable, d types.Dict, dictNam
 	// see 12.5.6.13
 
 	// InkList, required, array of stroked path arrays
-	if _, err := validateArrayArrayEntry(xRefTable, d, dictName, "InkList", REQUIRED, model.V10, nil); err != nil {
+	required := REQUIRED
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		required = OPTIONAL
+	}
+	if _, err := validateArrayArrayEntry(xRefTable, d, dictName, "InkList", required, model.V10, nil); err != nil {
 		return err
 	}
 
