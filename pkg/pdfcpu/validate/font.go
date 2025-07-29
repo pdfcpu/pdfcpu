@@ -720,11 +720,11 @@ func validateType1FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	fn := (*fontName).Value()
-	required := xRefTable.Version() >= model.V15 || !validateStandardType1Font(fn)
+	required := xRefTable.Version() >= model.V17 || !validateStandardType1Font(fn)
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = false
 	}
-	// FirstChar,  required except for standard 14 fonts. since 1.5 always required, integer
+	// FirstChar,  required except for standard 14 fonts. since 2.0 always required, integer
 	fc, err := validateIntegerEntry(xRefTable, d, dictName, "FirstChar", required, model.V10, nil)
 	if err != nil {
 		return err
@@ -737,19 +737,19 @@ func validateType1FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 		}
 	}
 
-	// LastChar, required except for standard 14 fonts. since 1.5 always required, integer
+	// LastChar, required except for standard 14 fonts. since 2.0 always required, integer
 	_, err = validateIntegerEntry(xRefTable, d, dictName, "LastChar", required, model.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	// Widths, required except for standard 14 fonts. since 1.5 always required, array of numbers
+	// Widths, required except for standard 14 fonts. since 2.0 always required, array of numbers
 	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Widths", required, model.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	// FontDescriptor, required since version 1.5; required unless standard font for version < 1.5, dict
+	// FontDescriptor, required since version 2.0; required unless standard font for version <= 1.7, dict
 	err = validateFontDescriptor(xRefTable, d, dictName, "Type1", required, model.V10)
 	if err != nil {
 		return err
