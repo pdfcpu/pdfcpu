@@ -66,7 +66,7 @@ $ pdfcpu merge -b=f out.pdf *.pdf
 
 <br>
 
-Merge some PDF files into an existing PDF file `out.pdf` and create divider pages between the merged docuements:
+Merge some PDF files into an existing PDF file `out.pdf` and create divider pages between the merged documents:
 
 ```sh
 $ pdfcpu merge -mode append -divider out.pdf in1.pdf in2.pdf in3.pdf
