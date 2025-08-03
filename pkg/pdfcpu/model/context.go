@@ -183,17 +183,18 @@ type ReadContext struct {
 	FileSize            int64         // Input file size.
 	RS                  io.ReadSeeker // Input read seeker.
 	EolCount            int           // 1 or 2 characters used for eol.
-	BinaryTotalSize     int64         // total stream data
-	BinaryImageSize     int64         // total image stream data
-	BinaryFontSize      int64         // total font stream data (fontfiles)
-	BinaryImageDuplSize int64         // total obsolet image stream data after optimization
-	BinaryFontDuplSize  int64         // total obsolet font stream data after optimization
-	Linearized          bool          // File is linearized.
-	Hybrid              bool          // File is a hybrid PDF file.
-	UsingObjectStreams  bool          // File is using object streams.
-	ObjectStreams       types.IntSet  // All object numbers of any object streams found which need to be decoded.
-	UsingXRefStreams    bool          // File is using xref streams.
-	XRefStreams         types.IntSet  // All object numbers of any xref streams found.
+	RepairOffset        int64
+	BinaryTotalSize     int64        // total stream data
+	BinaryImageSize     int64        // total image stream data
+	BinaryFontSize      int64        // total font stream data (fontfiles)
+	BinaryImageDuplSize int64        // total obsolet image stream data after optimization
+	BinaryFontDuplSize  int64        // total obsolet font stream data after optimization
+	Linearized          bool         // File is linearized.
+	Hybrid              bool         // File is a hybrid PDF file.
+	UsingObjectStreams  bool         // File is using object streams.
+	ObjectStreams       types.IntSet // All object numbers of any object streams found which need to be decoded.
+	UsingXRefStreams    bool         // File is using xref streams.
+	XRefStreams         types.IntSet // All object numbers of any xref streams found.
 }
 
 func newReadContext(rs io.ReadSeeker) (*ReadContext, error) {

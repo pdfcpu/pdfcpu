@@ -24,7 +24,7 @@ import (
 
 var ErrBookmarksRepair = errors.New("pdfcpu: bookmarks repair failed")
 
-func validateTitle(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateOutlineItemDictTitle(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	_, err := validateStringEntry(xRefTable, d, dictName, "Title", REQUIRED, model.V10, nil)
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
@@ -37,15 +37,7 @@ func validateTitle(xRefTable *model.XRefTable, d types.Dict, dictName string) er
 	return nil
 }
 
-func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
-	dictName := "outlineItemDict"
-
-	// Title, required, text string
-	if err := validateTitle(xRefTable, d, dictName); err != nil {
-		return err
-	}
-
-	// Parent, required, dict indRef
+func validateOutlineItemDictParent(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	required := REQUIRED
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = OPTIONAL
@@ -55,20 +47,28 @@ func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
 		return err
 	}
 	if ir != nil {
-		_, err = xRefTable.DereferenceDict(*ir)
-		if err != nil {
+		if _, err = xRefTable.DereferenceDict(*ir); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
-	// // Count, optional, int
-	// _, err = validateIntegerEntry(xRefTable, d, dictName, "Count", OPTIONAL, model.V10, nil)
-	// if err != nil {
-	// 	return err
-	// }
+func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
+	dictName := "outlineItemDict"
+
+	// Title, required, text string
+	if err := validateOutlineItemDictTitle(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	// Parent, required, dict indRef
+	if err := validateOutlineItemDictParent(xRefTable, d, dictName); err != nil {
+		return err
+	}
 
 	// SE, optional, dict indRef, since V1.3
-	ir, err = validateIndRefEntry(xRefTable, d, dictName, "SE", OPTIONAL, model.V13)
+	ir, err := validateIndRefEntry(xRefTable, d, dictName, "SE", OPTIONAL, model.V13)
 	if err != nil {
 		return err
 	}
@@ -84,14 +84,12 @@ func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		version = model.V13
 	}
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, version, func(a types.Array) bool { return len(a) == 3 })
-	if err != nil {
+	if _, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, version, func(a types.Array) bool { return len(a) == 3 }); err != nil {
 		return err
 	}
 
 	// F, optional integer, since V1.4
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "F", OPTIONAL, model.V14, nil)
-	if err != nil {
+	if _, err = validateIntegerEntry(xRefTable, d, dictName, "F", OPTIONAL, model.V14, nil); err != nil {
 		return err
 	}
 
@@ -100,10 +98,8 @@ func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
 	if err != nil {
 		return err
 	}
-
 	if destName != "" {
-		_, err = xRefTable.DereferenceDestArray(destName)
-		if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+		if _, err = xRefTable.DereferenceDestArray(destName); err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
 			model.ShowDigestedSpecViolation("outlineDict with unresolved destination")
 			return nil
 		}

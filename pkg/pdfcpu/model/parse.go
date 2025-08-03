@@ -19,7 +19,6 @@ package model
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -450,7 +449,10 @@ func parseHexLiteral(line *string) (types.Object, error) {
 
 	hexStr, ok := hexString(strings.TrimSpace(l[:eov]))
 	if !ok {
-		return nil, errHexLiteralCorrupt
+		// Skip junk
+		*line = forwardParseBuf(l[eov:], 1)
+		return nil, nil
+		//return nil, errHexLiteralCorrupt
 	}
 
 	// position behind '>'
@@ -737,24 +739,27 @@ func parseIndRef(s, l, l1 string, line *string, i, i2 int) (types.Object, error)
 }
 
 func parseFloat(s string) (types.Object, error) {
-	re := regexp.MustCompile(`^[+-]?(?:\d*\.\d+|\d+)(?:[eE][+-]?\d+)?`)
-	match := re.FindString(s)
-	if match == "" {
-		return nil, errors.Errorf("parseFloat: value is no float: %s\n", s)
-	}
-	f, err := strconv.ParseFloat(match, 64)
-	if err != nil {
+	// Replace ',' with '.' to accept comma as decimal separator
+	s = strings.Replace(s, ",", ".", 1)
+
+	f, n := strconv.ParseFloat(s, 64)
+	if n != nil {
+		// Fallback: handle ".-" case (e.g., ".-5")
 		s = strings.Replace(s, ".-", ".", 1)
-		f, err = strconv.ParseFloat(s, 64)
+		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			return nil, err
+			// Skip junk
+			return nil, nil
 		}
+		if log.ParseEnabled() {
+			log.Parse.Printf("parseFloat: value is: %f\n", f)
+		}
+		return types.Float(f), nil
 	}
 
 	if log.ParseEnabled() {
 		log.Parse.Printf("parseFloat: value is: %f\n", f)
 	}
-
 	return types.Float(f), nil
 }
 
@@ -858,9 +863,16 @@ func parseHexLiteralOrDict(c context.Context, l *string) (val types.Object, err 
 	return val, nil
 }
 
-func parseBooleanOrNull(l string) (val types.Object, s string, ok bool) {
+func parseBooleanOrNull(l string) (types.Object, string, bool) {
+
+	if len(l) < 4 {
+		return nil, "", false
+	}
+
+	s := strings.ToLower(l[:4])
+
 	// null, absent object
-	if strings.HasPrefix(l, "null") {
+	if strings.HasPrefix(s, "null") {
 		if log.ParseEnabled() {
 			log.Parse.Println("parseBoolean: value = null")
 		}
@@ -868,15 +880,21 @@ func parseBooleanOrNull(l string) (val types.Object, s string, ok bool) {
 	}
 
 	// boolean true
-	if strings.HasPrefix(l, "true") {
+	if strings.HasPrefix(s, "true") {
 		if log.ParseEnabled() {
 			log.Parse.Println("parseBoolean: value = true")
 		}
 		return types.Boolean(true), "true", true
 	}
 
+	if len(l) < 5 {
+		return nil, "", false
+	}
+
+	s += strings.ToLower(l[4:5])
+
 	// boolean false
-	if strings.HasPrefix(l, "false") {
+	if strings.HasPrefix(s, "false") {
 		if log.ParseEnabled() {
 			log.Parse.Println("parseBoolean: value = false")
 		}

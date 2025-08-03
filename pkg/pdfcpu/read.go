@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"sort"
@@ -266,14 +267,19 @@ func createXRefTableEntry(entryType string, objNr int, offset, offExtra int64, g
 	return entry, true
 }
 
-func decodeSubsection(fields []string, repairOff int) (int64, int, string, error) {
+func decodeSubsection(fields []string) (int64, int, string, error) {
 	offset, err := strconv.ParseInt(fields[0], 10, 64)
 	if err != nil {
 		return 0, 0, "", err
 	}
-	offset += int64(repairOff)
+	//offset += int64(repairOff)
 
-	generation, err := strconv.Atoi(fields[1])
+	s := "00000"
+	// model.ShowRepaired
+	if len(fields[1]) <= 5 {
+		s = fields[1]
+	}
+	generation, err := strconv.Atoi(s)
 	if err != nil {
 		return 0, 0, "", err
 	}
@@ -287,7 +293,7 @@ func decodeSubsection(fields []string, repairOff int) (int64, int, string, error
 }
 
 // Read next subsection entry and generate corresponding xref table entry.
-func parseXRefTableEntry(xRefTable *model.XRefTable, s *bufio.Scanner, objNr int, offExtra int64, repairOff, incr int) error {
+func parseXRefTableEntry(xRefTable *model.XRefTable, s *bufio.Scanner, objNr int, offExtra int64, incr int) error {
 	if log.ReadEnabled() {
 		log.Read.Println("parseXRefTableEntry: begin")
 	}
@@ -305,12 +311,15 @@ func parseXRefTableEntry(xRefTable *model.XRefTable, s *bufio.Scanner, objNr int
 	}
 
 	fields := strings.Fields(line)
-	if len(fields) != 3 ||
-		len(fields[0]) != 10 || len(fields[1]) != 5 || len(fields[2]) != 1 {
+	if len(fields) != 3 {
 		return errors.New("pdfcpu: parseXRefTableEntry: corrupt xref subsection header")
 	}
 
-	offset, generation, entryType, err := decodeSubsection(fields, repairOff)
+	if len(fields[0]) == 1 { // should be 10
+		return nil
+	}
+
+	offset, generation, entryType, err := decodeSubsection(fields)
 	if err != nil {
 		return err
 	}
@@ -334,7 +343,7 @@ func parseXRefTableEntry(xRefTable *model.XRefTable, s *bufio.Scanner, objNr int
 }
 
 // Process xRef table subsection and create corresponding xRef table entries.
-func parseXRefTableSubSection(xRefTable *model.XRefTable, s *bufio.Scanner, fields []string, offExtra int64, repairOff, incr int) error {
+func parseXRefTableSubSection(xRefTable *model.XRefTable, s *bufio.Scanner, fields []string, offExtra int64, incr int) error {
 	if log.ReadEnabled() {
 		log.Read.Println("parseXRefTableSubSection: begin")
 	}
@@ -355,7 +364,7 @@ func parseXRefTableSubSection(xRefTable *model.XRefTable, s *bufio.Scanner, fiel
 
 	// Process all entries of this subsection into xRefTable entries.
 	for i := 0; i < objCount; i++ {
-		if err = parseXRefTableEntry(xRefTable, s, startObjNumber+i, offExtra, repairOff, incr); err != nil {
+		if err = parseXRefTableEntry(xRefTable, s, startObjNumber+i, offExtra, incr); err != nil {
 			return err
 		}
 	}
@@ -1149,7 +1158,7 @@ func processTrailer(c context.Context, ctx *model.Context, s *bufio.Scanner, lin
 }
 
 // Parse xRef section into corresponding number of xRef table entries.
-func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, fields []string, ssCount *int, offCurXRef *int64, offExtra int64, repairOff, incr int) (*int64, error) {
+func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, fields []string, ssCount *int, offCurXRef *int64, offExtra int64, incr int) (*int64, error) {
 	if log.ReadEnabled() {
 		log.Read.Println("parseXRefSection begin")
 	}
@@ -1176,7 +1185,7 @@ func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, f
 	// Process all sub sections of this xRef section.
 	for !strings.HasPrefix(line, "trailer") && len(fields) == 2 {
 
-		if err = parseXRefTableSubSection(ctx.XRefTable, s, fields, offExtra, repairOff, incr); err != nil {
+		if err = parseXRefTableSubSection(ctx.XRefTable, s, fields, offExtra, incr); err != nil {
 			return nil, err
 		}
 		*ssCount++
@@ -1341,11 +1350,16 @@ func parseAndLoad(c context.Context, ctx *model.Context, line string, offset *in
 		Generation: generation,
 		Incr:       incr}
 
-	if !ctx.XRefTable.Exists(*objNr) {
+	off := *entry.Offset
+
+	e, found := ctx.Table[*objNr]
+	if found {
+		off = *e.Offset
+	} else {
 		ctx.Table[*objNr] = &entry
 	}
 
-	o, err := ParseObjectWithContext(c, ctx, *entry.Offset, *objNr, *entry.Generation)
+	o, err := ParseObjectWithContext(c, ctx, off, *objNr, *entry.Generation)
 	if err != nil {
 		return err
 	}
@@ -1374,7 +1388,7 @@ func parseAndLoad(c context.Context, ctx *model.Context, line string, offset *in
 		}
 	}
 
-	*offset += int64(len(line) + ctx.Read.EolCount)
+	*offset += int64(len(line))
 
 	return nil
 }
@@ -1388,7 +1402,7 @@ func processObject(c context.Context, ctx *model.Context, line string, offset *i
 		return nil, err
 	}
 	s := bufio.NewScanner(rd)
-	s.Split(scan.Lines)
+	s.Split(scan.LinesSingleEOL)
 	return s, nil
 }
 
@@ -1426,7 +1440,6 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 		Generation: &g}
 
 	rs := ctx.Read.RS
-	eolCount := ctx.Read.EolCount
 	var offset int64
 
 	rd, err := newPositionedReader(rs, &offset)
@@ -1435,7 +1448,8 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 	}
 
 	s := bufio.NewScanner(rd)
-	s.Split(scan.Lines)
+	s.Split(scan.LinesSingleEOL)
+	eolCount := 1
 
 	bb := []byte{}
 	var (
@@ -1547,14 +1561,14 @@ func tryXRefSection(c context.Context, ctx *model.Context, rs io.ReadSeeker, off
 		if log.ReadEnabled() {
 			log.Read.Println("tryXRefSection: found xref section")
 		}
-		return parseXRefSection(c, ctx, s, nil, xrefSectionCount, offset, offExtra, 0, incr)
+		return parseXRefSection(c, ctx, s, nil, xrefSectionCount, offset, offExtra, incr)
 	}
 
 	// Repair fix for #823
 	if strings.HasPrefix(line, "xref") {
 		fields := strings.Fields(line)
 		if len(fields) == 3 {
-			return parseXRefSection(c, ctx, s, fields[1:], xrefSectionCount, offset, offExtra, 0, incr)
+			return parseXRefSection(c, ctx, s, fields[1:], xrefSectionCount, offset, offExtra, incr)
 		}
 	}
 
@@ -1575,7 +1589,8 @@ func tryXRefSection(c context.Context, ctx *model.Context, rs io.ReadSeeker, off
 		if log.ReadEnabled() {
 			log.Read.Printf("Repair offset: %d\n", repairOff)
 		}
-		return parseXRefSection(c, ctx, s, nil, xrefSectionCount, offset, offExtra, repairOff, incr)
+		ctx.Read.RepairOffset = int64(repairOff)
+		return parseXRefSection(c, ctx, s, nil, xrefSectionCount, offset, offExtra, incr)
 	}
 
 	return &zero, nil
@@ -2366,38 +2381,36 @@ func ensureStreamLength(sd *types.StreamDict, fixLength bool) {
 
 // loadEncodedStreamContent loads the encoded stream content into sd.
 func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.StreamDict, fixLength bool) error {
+	if sd.Raw != nil {
+		return nil
+	}
+
 	if log.ReadEnabled() {
 		log.Read.Printf("loadEncodedStreamContent: begin\n%v\n", sd)
 	}
 
 	var err error
 
-	if sd.Raw != nil {
-		if log.ReadEnabled() {
-			log.Read.Println("loadEncodedStreamContent: end, already in memory.")
-		}
-		return nil
-	}
-
 	// Read stream content encoded at offset with stream length.
 
 	// Dereference stream length if stream length is an indirect object.
 	if !fixLength && sd.StreamLength == nil {
 		if sd.StreamLengthObjNr == nil {
-			return errors.New("pdfcpu: loadEncodedStreamContent: missing streamLength")
-		}
-		if sd.StreamLength, err = int64Object(c, ctx, *sd.StreamLengthObjNr); err != nil {
-			if err != ErrReferenceDoesNotExist {
-				return err
+			if ctx.XRefTable.ValidationMode == model.ValidationStrict {
+				return errors.New("pdfcpu: loadEncodedStreamContent: missing streamLength")
 			}
+			model.ShowSkipped("missing stream length")
 		}
-		if log.ReadEnabled() {
-			log.Read.Printf("loadEncodedStreamContent: new indirect streamLength:%d\n", *sd.StreamLength)
+		if sd.StreamLengthObjNr != nil {
+			if sd.StreamLength, err = int64Object(c, ctx, *sd.StreamLengthObjNr); err != nil {
+				if err != ErrReferenceDoesNotExist {
+					return err
+				}
+			}
 		}
 	}
 
-	newOffset := sd.StreamOffset
-	rd, err := newPositionedReader(ctx.Read.RS, &newOffset)
+	rd, err := newPositionedReader(ctx.Read.RS, &sd.StreamOffset)
 	if err != nil {
 		return err
 	}
@@ -2406,12 +2419,10 @@ func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.S
 	if !fixLength && sd.StreamLength != nil {
 		l1 = int(*sd.StreamLength)
 	}
-	rawContent, err := readStreamContent(rd, l1)
+	sd.Raw, err = readStreamContent(rd, l1)
 	if err != nil {
 		return err
 	}
-
-	sd.Raw = rawContent
 
 	ensureStreamLength(sd, fixLength)
 
@@ -2752,7 +2763,16 @@ func dereferenceAndLoad(c context.Context, ctx *model.Context, objNr int, entry 
 	// Parse object from ctx: anything goes dict, array, integer, float, streamdict...
 	o, err := ParseObjectWithContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
 	if err != nil {
-		return errors.Wrapf(err, "dereferenceAndLoad: problem dereferencing object %d", objNr)
+		if ctx.XRefTable.ValidationMode == model.ValidationStrict {
+			return errors.Wrapf(err, "dereferenceAndLoad: problem dereferencing object %d", objNr)
+		}
+		if ctx.Read.RepairOffset > 0 {
+			o, err = ParseObjectWithContext(c, ctx, *entry.Offset+ctx.Read.RepairOffset, objNr, *entry.Generation)
+		}
+		if err != nil {
+			model.ShowSkipped(fmt.Sprintf("missing obj #%d", objNr))
+		}
+		err = nil
 	}
 	if o == nil {
 		return nil

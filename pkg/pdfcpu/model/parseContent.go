@@ -458,6 +458,11 @@ func parseContent(s string) (PageResourceNames, error) {
 			}
 			continue
 		}
-		return nil, errPageContentCorrupt
+		ShowSkipped("corrupt page content")
+		n = false
+		if log.ParseEnabled() {
+			log.Parse.Printf("skip:%s\n", t)
+		}
+		//return nil, errPageContentCorrupt
 	}
 }
