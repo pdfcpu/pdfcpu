@@ -290,7 +290,7 @@ func UpdateImages(cmd *Command) ([]string, error) {
 			objNr = cmd.IntVal
 		}
 	}
-	return nil, api.UpdateImagesFile(cmd.InFiles[0], cmd.InFiles[1], *cmd.OutFile, objNr, pageNr, id, cmd.Conf)
+	return nil, api.UpdateImagesFile(cmd.InFiles[0], cmd.InFiles[1], *cmd.OutFile, objNr, pageNr, id, cmd.Update, cmd.Conf)
 }
 
 // Dump known object to stdout.

@@ -107,7 +107,7 @@ func streamDictForImageFile(xRefTable *model.XRefTable, fileName string) (*types
 	}
 	defer f.Close()
 
-	sd, _, _, err := model.CreateImageStreamDict(xRefTable, f)
+	sd, _, _, err := model.CreateImageStreamDict(xRefTable, f, false)
 	return sd, err
 }
 

@@ -329,7 +329,7 @@ func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int)
 
 	if ib.pdf.Update() {
 
-		sd, w, h, err = model.CreateImageStreamDict(pdf.XRefTable, f)
+		sd, w, h, err = model.CreateImageStreamDict(pdf.XRefTable, f, false)
 		if err != nil {
 			return nil, err
 		}
@@ -360,7 +360,7 @@ func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int)
 			}
 			id = imgResIDs.NewIDForPrefix("Im", len(pageImages))
 		} else {
-			indRef, w, h, err = model.CreateImageResource(pdf.XRefTable, f)
+			indRef, w, h, err = model.CreateImageResource(pdf.XRefTable, f, false)
 			if err != nil {
 				return nil, err
 			}
