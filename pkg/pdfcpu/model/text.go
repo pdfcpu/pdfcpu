@@ -630,7 +630,7 @@ func SplitMultilineStr(s string) []string {
 
 // Wrap text at unicode whitespace to fit within a specified width using the given font and font size.
 // Explicit newlines are honored, and whitespace at the beginning of a line is preserved (unless it
-// would cause a word to overrun the line).  Amounts and types of whitespace are preserved.
+// would cause a word to overrun the line).  Amounts and types of whitespace are preserved within lines.
 func WordWrap(wrap string, fontName string, fontSize int, width float64) []string {
 	if wrap == "" || width <= 0 {
 		return []string{wrap}
@@ -671,23 +671,24 @@ func WordWrap(wrap string, fontName string, fontSize int, width float64) []strin
 			case inWord:
 				if unicode.IsSpace(c) {
 					// End of a word - does it fit on the line?
-					if font.TextWidth(line+space+word, fontName, fontSize) < width {
+					tw := font.TextWidth(line+space+word, fontName, fontSize)
+					if tw < width {
 						line = line + space + word
+						space = string(c)
 					} else {
-						// No, but is there a word already?
+						// No - going to add a line and start on the next
+						// but is there a line waiting to append?
 						if len(line) > 0 {
 							lines = append(lines, line)
 							line = word
 						} else {
-							if len(line) > 0 {
-								lines = append(lines, line)
-							}
 							// No, it is too big so add the word on its own line
+							space = ""
 							lines = append(lines, word)
 						}
 					}
 					wrapState = inSpace
-					space = string(c)
+
 				} else {
 					word += string(c)
 				}
@@ -717,6 +718,10 @@ func WordWrap(wrap string, fontName string, fontSize int, width float64) []strin
 		}
 	}
 
+	if len(lines) == 0 {
+		// Can happen if lines only contain whitespace
+		lines = append(lines, "")
+	}
 	return lines
 }
 
