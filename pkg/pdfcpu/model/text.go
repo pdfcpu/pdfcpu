@@ -22,6 +22,7 @@ import (
 	"io"
 	"math"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
@@ -625,6 +626,98 @@ func SplitMultilineStr(s string) []string {
 	s = strings.ReplaceAll(s, "\\n", "\n")
 	var lines []string
 	return append(lines, fieldsFunc(s, func(c rune) bool { return c == 0x0a })...)
+}
+
+// Wrap text at unicode whitespace to fit within a specified width using the given font and font size.
+// Explicit newlines are honored, and whitespace at the beginning of a line is preserved (unless it
+// would cause a word to overrun the line).  Amounts and types of whitespace are preserved.
+func WordWrap(wrap string, fontName string, fontSize int, width float64) []string {
+	if wrap == "" || width <= 0 {
+		return []string{wrap}
+	}
+
+	// Prefer any explicit newline
+	newlines := SplitMultilineStr(wrap)
+
+	var wrapState int
+	const (
+		beginLine = iota
+		inWord
+		leadingSpace
+		inSpace
+	)
+
+	var lines []string
+	for _, s := range newlines {
+		wrapState = beginLine
+		var word, space, line string
+		for _, c := range s {
+			switch wrapState {
+			case beginLine:
+				if unicode.IsSpace(c) {
+					line = string(c)
+					wrapState = leadingSpace
+				} else {
+					word = string(c)
+					wrapState = inWord
+				}
+			case leadingSpace:
+				if unicode.IsSpace(c) {
+					line += string(c)
+				} else {
+					word += string(c)
+					wrapState = inWord
+				}
+			case inWord:
+				if unicode.IsSpace(c) {
+					// End of a word - does it fit on the line?
+					if font.TextWidth(line+space+word, fontName, fontSize) < width {
+						line = line + space + word
+					} else {
+						// No, but is there a word already?
+						if len(line) > 0 {
+							lines = append(lines, line)
+							line = word
+						} else {
+							if len(line) > 0 {
+								lines = append(lines, line)
+							}
+							// No, it is too big so add the word on its own line
+							lines = append(lines, word)
+						}
+					}
+					wrapState = inSpace
+					space = string(c)
+				} else {
+					word += string(c)
+				}
+			case inSpace:
+				if unicode.IsSpace(c) {
+					// Still in a space, so just add it.
+					space += string(c)
+				} else {
+					// start of a new word.
+					word = string(c)
+					wrapState = inWord
+				}
+			}
+		}
+		// End of the line.  Is there a word that hasn't been added?
+		if wrapState == inWord {
+			if font.TextWidth(line+space+word, fontName, fontSize) < width {
+				line = line + space + word
+				lines = append(lines, line)
+			} else {
+				if len(line) > 0 {
+					lines = append(lines, line)
+				}
+				// No, it is too big so add the word on its own line
+				lines = append(lines, word)
+			}
+		}
+	}
+
+	return lines
 }
 
 // WriteColumn writes a text column using s at position x/y using a certain font, fontsize and a desired horizontal and vertical alignment.
