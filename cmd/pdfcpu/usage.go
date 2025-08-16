@@ -30,6 +30,7 @@ The commands are:
    booklet       arrange pages onto larger sheets of paper to make a booklet or zine
    bookmarks     list, import, export, remove bookmarks
    boxes         list, add, remove page boundaries for selected pages
+   certificates  list, inspect, import, reset certificates
    changeopw     change owner password
    changeupw     change user password
    collect       create custom sequence of selected pages
@@ -62,6 +63,7 @@ The commands are:
    resize        scale selected pages
    rotate        rotate selected pages
    selectedpages print definition of the -pages flag
+   signatures    validate signatures
    split         split up a PDF by span or bookmark
    stamp         add, remove, update Unicode text, image or PDF stamps for selected pages
    trim          create trimmed version of selected pages
@@ -90,20 +92,23 @@ common flags: -v(erbose)  ... turn on logging
                                                   cm ... centimetres
                                                   mm ... millimetres`
 
-	usageValidate = "usage: pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile..." + generalFlags
+	usageValidate = "usage: pdfcpu validate [-m(ode) strict|relaxed] [-l(inks) -opt(imize)] -- inFile..." + generalFlags
 
 	usageLongValidate = `Check inFile for specification compliance.
 
       mode ... validation mode
      links ... check for broken links
+  optimize ... optimize resources (fonts, forms, images)
     inFile ... input PDF file
 		
 The validation modes are:
+    strict ... validates against PDF 32000-1:2008 (PDF 1.7) and rudimentary against PDF 32000:2 (PDF 2.0)
+   relaxed ... (default) like strict but doesn't complain about common seen spec violations.
 
- strict ... validates against PDF 32000-1:2008 (PDF 1.7) and rudimentary against PDF 32000:2 (PDF 2.0)
-relaxed ... (default) like strict but doesn't complain about common seen spec violations.`
+Validation turns off optimization unless in verbose mode.
+You can enforce optimization using -opt=true.`
 
-	usageOptimize     = "usage: pdfcpu optimize [-stats csvFile] inFile [outFile]" + generalFlags
+	usageOptimize     = "usage: pdfcpu optimize [-stats csvFile] -- inFile [outFile]" + generalFlags
 	usageLongOptimize = `Read inFile, remove redundant page resources like embedded fonts and images and write the result to outFile.
 
      stats ... appends a stats line to a csv file with information about the usage of root and page entries.
@@ -111,7 +116,7 @@ relaxed ... (default) like strict but doesn't complain about common seen spec vi
     inFile ... input PDF file
    outFile ... output PDF file`
 
-	usageSplit     = "usage: pdfcpu split [-m(ode) span|bookmark|page] inFile outDir [span|pageNr...]" + generalFlags
+	usageSplit     = "usage: pdfcpu split [-m(ode) span|bookmark|page] -- inFile outDir [span|pageNr...]" + generalFlags
 	usageLongSplit = `Generate a set of PDFs for the input file in outDir according to given span value or along bookmarks or page numbers.
 
       mode ... split mode (defaults to span)
@@ -155,7 +160,7 @@ Eg. pdfcpu split test.pdf .      (= pdfcpu split -m span test.pdf . 1)
          test_4-9.pdf
          test_10-20.pdf`
 
-	usageMerge     = "usage: pdfcpu merge [-m(ode) create|append|zip] [ -s(ort) -b(ookmarks) -d(ivider) -opt(imize)] outFile inFile..." + generalFlags
+	usageMerge     = "usage: pdfcpu merge [-m(ode) create|append|zip] [ -s(ort) -b(ookmarks) -d(ivider) -opt(imize)] -- outFile inFile..." + generalFlags
 	usageLongMerge = `Concatenate a sequence of PDFs/inFiles into outFile.
 
       mode ... merge mode (defaults to create)
@@ -199,7 +204,7 @@ Skip optimization before writing: -opt(imize)=false`
 
         e.g. -3,5,7- or 4-7,!6 or 1-,!5 or odd,n1`
 
-	usageExtract     = "usage: pdfcpu extract -m(ode) i(mage)|f(ont)|c(ontent)|p(age)|m(eta) [-p(ages) selectedPages] inFile outDir" + generalFlags
+	usageExtract     = "usage: pdfcpu extract -m(ode) i(mage)|f(ont)|c(ontent)|p(age)|m(eta) [-p(ages) selectedPages] -- inFile outDir" + generalFlags
 	usageLongExtract = `Export inFile's images, fonts, content or pages into outDir.
 
       mode ... extraction mode
@@ -217,7 +222,7 @@ content ... extract raw page content
    
 `
 
-	usageTrim     = "usage: pdfcpu trim -p(ages) selectedPages inFile [outFile]" + generalFlags
+	usageTrim     = "usage: pdfcpu trim -p(ages) selectedPages -- inFile [outFile]" + generalFlags
 	usageLongTrim = `Generate a trimmed version of inFile for selected pages.
 
      pages ... Please refer to "pdfcpu selectedpages"
@@ -269,8 +274,8 @@ content ... extract raw page content
            pdfcpu portfolio add test.pdf "test.mp3, Test sound file" "test.mkv, Test video file"
     `
 
-	usagePermList = "pdfcpu permissions list [-upw userpw] [-opw ownerpw] inFile..."
-	usagePermSet  = "pdfcpu permissions set [-perm none|print|all|max4Hex|max12Bits] [-upw userpw] -opw ownerpw inFile"
+	usagePermList = "pdfcpu permissions list [-upw userpw] [-opw ownerpw] -- inFile..."
+	usagePermSet  = "pdfcpu permissions set [-perm none|print|all|max4Hex|max12Bits] [-upw userpw] -opw ownerpw -- inFile"
 
 	usagePerm = "usage: " + usagePermList +
 		"\n       " + usagePermSet + generalFlags
@@ -303,7 +308,7 @@ content ... extract raw page content
      11: Assemble document (security handlers >= rev.3)
      12: Print (security handlers >= rev.3)`
 
-	usageEncrypt     = "usage: pdfcpu encrypt [-m(ode) rc4|aes] [-key 40|128|256] [-perm none|print|all] [-upw userpw] -opw ownerpw inFile [outFile]" + generalFlags
+	usageEncrypt     = "usage: pdfcpu encrypt [-m(ode) rc4|aes] [-key 40|128|256] [-perm none|print|all] [-upw userpw] -opw ownerpw  -- inFile [outFile]" + generalFlags
 	usageLongEncrypt = `Setup password protection based on user and owner password.
 
       mode ... algorithm (default=aes)
@@ -314,13 +319,13 @@ content ... extract raw page content
    
    PDF 2.0 files have to be encrypted using aes/256.`
 
-	usageDecrypt     = "usage: pdfcpu decrypt [-upw userpw] [-opw ownerpw] inFile [outFile]" + generalFlags
+	usageDecrypt     = "usage: pdfcpu decrypt [-upw userpw] [-opw ownerpw] -- inFile [outFile]" + generalFlags
 	usageLongDecrypt = `Remove password protection and reset permissions.
 
     inFile ... input PDF file
    outFile ... output PDF file`
 
-	usageChangeUserPW     = "usage: pdfcpu changeupw [-opw ownerpw] inFile upwOld upwNew" + generalFlags
+	usageChangeUserPW     = "usage: pdfcpu changeupw [-opw ownerpw] -- inFile upwOld upwNew" + generalFlags
 	usageLongChangeUserPW = `Change the user password also known as the open doc password.
 
        opw ... owner password, required unless = ""
@@ -328,7 +333,7 @@ content ... extract raw page content
     upwOld ... old user password
     upwNew ... new user password`
 
-	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-upw userpw] inFile opwOld opwNew" + generalFlags
+	usageChangeOwnerPW     = "usage: pdfcpu changeopw [-upw userpw] -- inFile opwOld opwNew" + generalFlags
 	usageLongChangeOwnerPW = `Change the owner password also known as the set permissions password.
 
        upw ... user password, required unless = ""
@@ -482,7 +487,7 @@ e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, scale:0.5 abs, rot:
 
 	usageStampAdd    = "pdfcpu stamp add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
 	usageStampUpdate = "pdfcpu stamp update [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
-	usageStampRemove = "pdfcpu stamp remove [-p(ages) selectedPages] inFile [outFile]"
+	usageStampRemove = "pdfcpu stamp remove [-p(ages) selectedPages] -- inFile [outFile]"
 
 	usageStamp = "usage: " + usageStampAdd +
 		"\n       " + usageStampUpdate +
@@ -505,7 +510,7 @@ description ... fontname, points, position, offset, scalefactor, aligntext, rota
 
 	usageWatermarkAdd    = "pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
 	usageWatermarkUpdate = "pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]"
-	usageWatermarkRemove = "pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]"
+	usageWatermarkRemove = "pdfcpu watermark remove [-p(ages) selectedPages] -- inFile [outFile]"
 
 	usageWatermark = "usage: " + usageWatermarkAdd +
 		"\n       " + usageWatermarkUpdate +
@@ -576,8 +581,8 @@ description ... dimensions, formsize, position, offset, scale factor, boxes
        "pos:full"                                   ... render the image to a page with corresponding dimensions.
        "f:A4, pos:c, dpi:300"                       ... render the image centered on A4 respecting a destination resolution of 300 dpi.`
 
-	usagePagesInsert = "pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] [description] inFile [outFile]"
-	usagePagesRemove = "pdfcpu pages remove  -p(ages) selectedPages  inFile [outFile]"
+	usagePagesInsert = "pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] -- [description] inFile [outFile]"
+	usagePagesRemove = "pdfcpu pages remove  -p(ages) selectedPages -- inFile [outFile]"
 	usagePages       = "usage: " + usagePagesInsert +
 		"\n       " + usagePagesRemove + generalFlags
 
@@ -619,7 +624,7 @@ description ... dimensions, formsize
                   Remove all odd pages.
 `
 
-	usageRotate     = "usage: pdfcpu rotate [-p(ages) selectedPages] inFile rotation [outFile]" + generalFlags
+	usageRotate     = "usage: pdfcpu rotate [-p(ages) selectedPages] -- inFile rotation [outFile]" + generalFlags
 	usageLongRotate = `Rotate selected pages by a multiple of 90 degrees. 
 
       pages ... Please refer to "pdfcpu selectedpages"
@@ -943,7 +948,7 @@ Examples: pdfcpu grid out.pdf 1 10 in.pdf
 	usageSelectedPages     = "usage: pdfcpu selectedpages"
 	usageLongSelectedPages = "Print definition of the -pages flag."
 
-	usageInfo     = "usage: pdfcpu info [-p(ages) selectedPages] [-f(onts) -j(son)] inFile..." + generalFlags
+	usageInfo     = "usage: pdfcpu info [-p(ages) selectedPages] [-fonts -j(son)] -- inFile..." + generalFlags
 	usageLongInfo = `Print info about a PDF file.
    
    pages ... Please refer to "pdfcpu selectedpages"
@@ -1001,7 +1006,7 @@ nameValuePair ... 'name = value'
 
          remove all properties: pdfcpu properties remove test.pdf
      `
-	usageCollect     = "usage: pdfcpu collect -p(ages) selectedPages inFile [outFile]" + generalFlags
+	usageCollect     = "usage: pdfcpu collect -p(ages) selectedPages -- inFile [outFile]" + generalFlags
 	usageLongCollect = `Create custom sequence of selected pages. 
 
         pages ... Please refer to "pdfcpu selectedpages"
@@ -1100,8 +1105,8 @@ Examples:
      
 ` + usageBoxDescription
 
-	usageAnnotsList   = "pdfcpu annotations list   [-p(ages) selectedPages] inFile"
-	usageAnnotsRemove = "pdfcpu annotations remove [-p(ages) selectedPages] inFile [outFile] [objNr|annotId|annotType]..."
+	usageAnnotsList   = "pdfcpu annotations list   [-p(ages) selectedPages] -- inFile"
+	usageAnnotsRemove = "pdfcpu annotations remove [-p(ages) selectedPages] -- inFile [outFile] [objNr|annotId|annotType]..."
 
 	usageAnnots = "usage: " + usageAnnotsList +
 		"\n       " + usageAnnotsRemove + generalFlags
@@ -1226,7 +1231,7 @@ For more info on json syntax & samples please refer to :
 	usageFormReset        = "pdfcpu form reset  inFile [outFile] [fieldID|fieldName]..."
 	usageFormExport       = "pdfcpu form export inFile [outFileJSON]"
 	usageFormFill         = "pdfcpu form fill inFile inFileJSON [outFile]"
-	usageFormMultiFill    = "pdfcpu form multifill [-m(ode) single|merge] inFile inFileData outDir [outName]"
+	usageFormMultiFill    = "pdfcpu form multifill [-m(ode) single|merge] -- inFile inFileData outDir [outName]"
 
 	usageForm = "usage: " + usageFormListFields +
 		"\n       " + usageFormRemoveFields +
@@ -1509,7 +1514,7 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
    See also the related commands: poster, ndown`
 
 	usageBookmarksList   = "pdfcpu bookmarks list   inFile"
-	usageBookmarksImport = "pdfcpu bookmarks import [-r(eplace)] inFile inFileJSON [outFile]"
+	usageBookmarksImport = "pdfcpu bookmarks import [-r(eplace)] -- inFile inFileJSON [outFile]"
 	usageBookmarksExport = "pdfcpu bookmarks export inFile [outFileJSON]"
 	usageBookmarksRemove = "pdfcpu bookmarks remove inFile [outFile]"
 
@@ -1579,9 +1584,9 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
            pdfcpu pagemode reset test.pdf
     `
 
-	usageViewerPreferencesList  = "pdfcpu viewerpref list [-a(ll)] [-j(son)] inFile"
-	usageViewerPreferencesSet   = "pdfcpu viewerpref set                     inFile (inFileJSON | JSONstring)"
-	usageViewerPreferencesReset = "pdfcpu viewerpref reset                   inFile"
+	usageViewerPreferencesList  = "pdfcpu viewerpref list [-a(ll) -j(son)] -- inFile"
+	usageViewerPreferencesSet   = "pdfcpu viewerpref set                      inFile (inFileJSON | JSONstring)"
+	usageViewerPreferencesReset = "pdfcpu viewerpref reset                    inFile"
 
 	usageViewerPreferences = "usage: " + usageViewerPreferencesList +
 		"\n       " + usageViewerPreferencesSet +
@@ -1716,4 +1721,40 @@ Examples:
 		"\n       " + usageConfigReset + generalFlags
 
 	usageLongConfig = `Manage your pdfcpu configuration.`
+
+	usageCertificatesList    = "pdfcpu certificates list"
+	usageCertificatesInspect = "pdfcpu certificates inspect inFile"
+	usageCertificatesImport  = "pdfcpu certificates import inFile.."
+	usageCertificatesReset   = "pdfcpu certificates reset"
+
+	usageCertificates = "usage: " + usageCertificatesList +
+		"\n       " + usageCertificatesInspect +
+		"\n       " + usageCertificatesImport +
+		"\n       " + usageCertificatesReset + generalFlags
+
+	usageLongCertificates = `Manage certificates.
+
+           inFile ... .pem, .p7c, .cer, .crt file
+       inFileJSON ... input JSON file
+          outFile ... output PDF file
+      outFileJSON ... output PDF file
+
+   pdfcpu comes preloaded with certificates approved by the EU Trusted Lists.
+
+   Please import any missing certificates.
+`
+
+	usageSignaturesValidate = "pdfcpu signatures validate [-a(ll) -f(ull)] -- inFile"
+	usageSignatures         = "usage: " + usageSignaturesValidate + generalFlags
+
+	usageLongSignatures = `Manage digital signatures.
+
+         all ... validate all signatures (authoritative/certified, cosigners, usage rights, digital timestamps)
+        full ... comprehensive output including certificate chains, revocation status and any problems encountered.
+      inFile ... input PDF file
+
+      Related configuration parameters: timeoutCRL,
+                                        timeoutOCSP,
+                                        preferredCertRevocationChecker
+`
 )

@@ -520,6 +520,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return err
 	}
 
+	// TODO not necessarily so
 	ctx.RemoveSignature()
 
 	var buf bytes.Buffer

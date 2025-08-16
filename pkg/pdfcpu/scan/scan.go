@@ -63,3 +63,40 @@ func Lines(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	// Request more data.
 	return 0, nil, nil
 }
+
+func LinesSingleEOL(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+
+	indCR := bytes.IndexByte(data, '\r')
+	indLF := bytes.IndexByte(data, '\n')
+
+	switch {
+
+	case indCR >= 0 && indLF >= 0:
+		if indCR < indLF {
+			// \r
+			return indCR + 1, data[0:indCR], nil
+		}
+		// \n
+		return indLF + 1, data[0:indLF], nil
+
+	case indCR >= 0:
+		// \r
+		return indCR + 1, data[0:indCR], nil
+
+	case indLF >= 0:
+		// \n
+		return indLF + 1, data[0:indLF], nil
+
+	}
+
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	// Request more data.
+	return 0, nil, nil
+}

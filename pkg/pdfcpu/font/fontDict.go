@@ -67,6 +67,15 @@ func CJKEncoding(s string) bool {
 	return types.MemberOf(s, []string{"UniGB-UTF16-H", "UniCNS-UTF16-H", "UniJIS-UTF16-H", "UniKS-UTF16-H"})
 }
 
+func ScriptForEncoding(enc string) string {
+	for k, v := range cjkParms {
+		if v.encoding == enc {
+			return k
+		}
+	}
+	return ""
+}
+
 func fontDescriptorIndRefs(fd types.Dict, lang string, font *model.FontResource) error {
 	if lang != "" {
 		if s := fd.NameEntry("Lang"); s != nil {
@@ -148,7 +157,7 @@ func flateEncodedStreamIndRef(xRefTable *model.XRefTable, data []byte) (*types.I
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func ttfFontFile(xRefTable *model.XRefTable, ttf font.TTFLight, fontName string) (*types.IndirectRef, error) {
+func ttfFontFile(xRefTable *model.XRefTable, fontName string) (*types.IndirectRef, error) {
 	bb, err := font.Read(fontName)
 	if err != nil {
 		return nil, err
@@ -156,7 +165,7 @@ func ttfFontFile(xRefTable *model.XRefTable, ttf font.TTFLight, fontName string)
 	return flateEncodedStreamIndRef(xRefTable, bb)
 }
 
-func ttfSubFontFile(xRefTable *model.XRefTable, ttf font.TTFLight, fontName string, indRef *types.IndirectRef) (*types.IndirectRef, error) {
+func ttfSubFontFile(xRefTable *model.XRefTable, fontName string, indRef *types.IndirectRef) (*types.IndirectRef, error) {
 	bb, err := font.Subset(fontName, xRefTable.UsedGIDs[fontName])
 	if err != nil {
 		return nil, err
@@ -293,11 +302,11 @@ func ttfFontDescriptorFlags(ttf font.TTFLight) uint32 {
 }
 
 // CIDFontFile returns a TrueType font file or subfont file for fontName.
-func CIDFontFile(xRefTable *model.XRefTable, ttf font.TTFLight, fontName string, subFont bool) (*types.IndirectRef, error) {
+func CIDFontFile(xRefTable *model.XRefTable, fontName string, subFont bool) (*types.IndirectRef, error) {
 	if subFont {
-		return ttfSubFontFile(xRefTable, ttf, fontName, nil)
+		return ttfSubFontFile(xRefTable, fontName, nil)
 	}
-	return ttfFontFile(xRefTable, ttf, fontName)
+	return ttfFontFile(xRefTable, fontName)
 }
 
 // CIDFontDescriptor returns a font descriptor describing the CIDFont’s default metrics other than its glyph widths.
@@ -322,7 +331,7 @@ func CIDFontDescriptor(xRefTable *model.XRefTable, ttf font.TTFLight, fontName, 
 	)
 
 	if embed {
-		fontFile, err = CIDFontFile(xRefTable, ttf, fontName, true)
+		fontFile, err = CIDFontFile(xRefTable, fontName, true)
 		if err != nil {
 			return nil, err
 		}
@@ -353,7 +362,7 @@ func CIDFontDescriptor(xRefTable *model.XRefTable, ttf font.TTFLight, fontName, 
 
 // FontDescriptor returns a TrueType font descriptor describing font’s default metrics other than its glyph widths.
 func NewFontDescriptor(xRefTable *model.XRefTable, ttf font.TTFLight, fontName, fontLang string) (*types.IndirectRef, error) {
-	fontFile, err := ttfFontFile(xRefTable, ttf, fontName)
+	fontFile, err := ttfFontFile(xRefTable, fontName)
 	if err != nil {
 		return nil, err
 	}
@@ -739,7 +748,7 @@ func UpdateUserfont(xRefTable *model.XRefTable, fontName string, f model.FontRes
 		return err
 	}
 
-	if _, err := ttfSubFontFile(xRefTable, ttf, fontName, f.FontFile); err != nil {
+	if _, err := ttfSubFontFile(xRefTable, fontName, f.FontFile); err != nil {
 		return err
 	}
 

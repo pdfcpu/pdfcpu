@@ -17,6 +17,7 @@ limitations under the License.
 package validate
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -243,11 +244,19 @@ func processStructElementDictPgEntry(xRefTable *model.XRefTable, ir types.Indire
 
 	pageDict, ok := o.(types.Dict)
 	if !ok {
-		return errors.Errorf("pdfcpu: processStructElementDictPgEntry: Pg object corrupt dict: %s\n", o)
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			model.ShowSkipped(fmt.Sprintf("invalid structElementDict Pg entry, objNr: %d ", ir.ObjectNumber))
+			return nil
+		}
+		return errors.Errorf("pdfcpu: processStructElementDictPgEntry: Pg object corrupt dict: %s objNr:%d\n", o, ir.ObjectNumber)
 	}
 
 	if t := pageDict.Type(); t == nil || *t != "Page" {
-		return errors.Errorf("pdfcpu: processStructElementDictPgEntry: Pg object no pageDict: %s\n", pageDict)
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			model.ShowSkipped(fmt.Sprintf("invalid structElementDict Pg entry, objNr: %d ", ir.ObjectNumber))
+			return nil
+		}
+		return errors.Errorf("pdfcpu: processStructElementDictPgEntry: Pg object no pageDict: %s objNr:%d\n", pageDict, ir.ObjectNumber)
 	}
 
 	return nil
@@ -461,7 +470,11 @@ func validateStructElementDictPart2(xRefTable *model.XRefTable, d types.Dict, di
 	}
 
 	// ActualText: optional, text string, since 1.4
-	_, err = validateStringEntry(xRefTable, d, dictName, "ActualText", OPTIONAL, model.V14, nil)
+	sinceVersion = model.V14
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
+	_, err = validateStringEntry(xRefTable, d, dictName, "ActualText", OPTIONAL, sinceVersion, nil)
 
 	return err
 }

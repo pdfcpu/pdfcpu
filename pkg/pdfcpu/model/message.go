@@ -22,35 +22,40 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 )
 
-func ReportSpecViolation(xRefTable *XRefTable, err error) {
-	// TODO Apply across code base.
-	pre := fmt.Sprintf("digesting spec violation around obj#(%d)", xRefTable.CurObj)
+func ShowMsg(msg string) {
+	s := "pdfcpu " + msg
 	if log.DebugEnabled() {
-		log.Debug.Printf("%s: %v\n", pre, err)
+		log.Debug.Println(s)
 	}
 	if log.ReadEnabled() {
-		log.Read.Printf("%s: %v\n", pre, err)
+		log.Read.Println(s)
 	}
 	if log.ValidateEnabled() {
-		log.Validate.Printf("%s: %v\n", pre, err)
+		log.Validate.Println(s)
 	}
 	if log.CLIEnabled() {
-		log.CLI.Printf("%s: %v\n", pre, err)
+		log.CLI.Println(s)
 	}
 }
 
+func ShowMsgTopic(topic, msg string) {
+	msg = topic + ": " + msg
+	ShowMsg(msg)
+}
+
 func ShowRepaired(msg string) {
-	msg = "repaired: " + msg
-	if log.DebugEnabled() {
-		log.Debug.Println("pdfcpu " + msg)
-	}
-	if log.ReadEnabled() {
-		log.Read.Println("pdfcpu " + msg)
-	}
-	if log.ValidateEnabled() {
-		log.Validate.Println("pdfcpu " + msg)
-	}
-	if log.CLIEnabled() {
-		log.CLI.Println(msg)
-	}
+	ShowMsgTopic("repaired", msg)
+}
+
+func ShowSkipped(msg string) {
+	ShowMsgTopic("skipped", msg)
+}
+
+func ShowDigestedSpecViolation(msg string) {
+	ShowMsgTopic("digested", msg)
+}
+
+func ShowDigestedSpecViolationError(xRefTable *XRefTable, err error) {
+	msg := fmt.Sprintf("spec violation around obj#(%d): %v\n", xRefTable.CurObj, err)
+	ShowMsgTopic("digested", msg)
 }

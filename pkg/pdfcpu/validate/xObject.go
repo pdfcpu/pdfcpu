@@ -430,7 +430,7 @@ func validateImageStreamDictPart1(xRefTable *model.XRefTable, sd *types.StreamDi
 		return false, err
 	}
 
-	isImageMask = (imageMask != nil) && *imageMask == true
+	isImageMask = (imageMask != nil) && *imageMask
 
 	// ColorSpace, name or array, required unless used filter is JPXDecode; not allowed for imagemasks.
 	if !isImageMask {
@@ -474,11 +474,8 @@ func validateImageStreamDictPart2(xRefTable *model.XRefTable, sd *types.StreamDi
 		return err
 	}
 
-	// Intent, name, optional, since V1.0
-	validate := func(s string) bool {
-		return types.MemberOf(s, []string{"AbsoluteColorimetric", "RelativeColorimetric", "Saturation", "Perceptual"})
-	}
-	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Intent", OPTIONAL, model.V11, validate)
+	// Note 8.6.5.8: If a PDF processor does not recognise the specified name, it shall use the RelativeColorimetric intent by default.
+	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Intent", OPTIONAL, model.V11, nil)
 	if err != nil {
 		return err
 	}
@@ -758,6 +755,10 @@ func validateXObjectType(xRefTable *model.XRefTable, sd *types.StreamDict) error
 func validateXObjectStreamDict(xRefTable *model.XRefTable, o types.Object) error {
 
 	// see 8.8 External Objects
+
+	if o == nil {
+		return nil
+	}
 
 	// Dereference stream dict and ensure it is validated exactly once in order
 	// to handle XObjects(forms) with recursive structures like produced by Microsoft.

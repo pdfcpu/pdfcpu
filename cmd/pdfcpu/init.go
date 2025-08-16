@@ -71,6 +71,19 @@ func initBoxesCmdMap() commandMap {
 	return m
 }
 
+func initCertificatesCmdMap() commandMap {
+	m := newCommandMap()
+	for k, v := range map[string]command{
+		"list":    {processListCertificatesCommand, nil, "", ""},
+		"inspect": {processInspectCertificatesCommand, nil, "", ""},
+		"import":  {processImportCertificatesCommand, nil, "", ""},
+		"reset":   {resetCertificates, nil, "", ""},
+	} {
+		m.register(k, v)
+	}
+	return m
+}
+
 func initConfigCmdMap() commandMap {
 	m := newCommandMap()
 	for k, v := range map[string]command{
@@ -230,6 +243,17 @@ func initPageLayoutCmdMap() commandMap {
 	return m
 }
 
+func initSignaturesCmdMap() commandMap {
+	m := newCommandMap()
+	for k, v := range map[string]command{
+		"validate": {processValidateSignaturesCommand, nil, "", ""},
+		//"add":      {processAddSignatureCommand, nil, "", ""},
+	} {
+		m.register(k, v)
+	}
+	return m
+}
+
 func initViewerPreferencesCmdMap() commandMap {
 	m := newCommandMap()
 	for k, v := range map[string]command{
@@ -247,6 +271,7 @@ func initCommandMap() {
 	attachCmdMap := initAttachCmdMap()
 	bookmarksCmdMap := initBookmarksCmdMap()
 	boxesCmdMap := initBoxesCmdMap()
+	certificatesCmdMap := initCertificatesCmdMap()
 	configCmdMap := initConfigCmdMap()
 	fontsCmdMap := initFontsCmdMap()
 	formCmdMap := initFormCmdMap()
@@ -256,6 +281,7 @@ func initCommandMap() {
 	permissionsCmdMap := initPermissionsCmdMap()
 	portfolioCmdMap := initPortfolioCmdMap()
 	propertiesCmdMap := initPropertiesCmdMap()
+	signaturesCmdMap := initSignaturesCmdMap()
 	stampCmdMap := initStampCmdMap()
 	watermarkCmdMap := initWatermarkCmdMap()
 	pageModeCmdMap := initPageModeCmdMap()
@@ -270,6 +296,7 @@ func initCommandMap() {
 		"bookmarks":     {nil, bookmarksCmdMap, usageBookmarks, usageLongBookmarks},
 		"booklet":       {processBookletCommand, nil, usageBooklet, usageLongBooklet},
 		"boxes":         {nil, boxesCmdMap, usageBoxes, usageLongBoxes},
+		"certificates":  {nil, certificatesCmdMap, usageCertificates, usageLongCertificates},
 		"changeopw":     {processChangeOwnerPasswordCommand, nil, usageChangeOwnerPW, usageLongChangeOwnerPW},
 		"changeupw":     {processChangeUserPasswordCommand, nil, usageChangeUserPW, usageLongChangeUserPW},
 		"collect":       {processCollectCommand, nil, usageCollect, usageLongCollect},
@@ -304,6 +331,7 @@ func initCommandMap() {
 		"resize":        {processResizeCommand, nil, usageResize, usageLongResize},
 		"rotate":        {processRotateCommand, nil, usageRotate, usageLongRotate},
 		"selectedpages": {printSelectedPages, nil, usageSelectedPages, usageLongSelectedPages},
+		"signatures":    {nil, signaturesCmdMap, usageSignatures, usageLongSignatures},
 		"split":         {processSplitCommand, nil, usageSplit, usageLongSplit},
 		"stamp":         {nil, stampCmdMap, usageStamp, usageLongStamp},
 		"trim":          {processTrimCommand, nil, usageTrim, usageLongTrim},
@@ -336,7 +364,9 @@ func initFlags() {
 
 	fontsUsage := "include font info"
 	flag.BoolVar(&fonts, "fonts", false, fontsUsage)
-	flag.BoolVar(&fonts, "f", false, fontsUsage)
+
+	flag.BoolVar(&full, "full", false, "")
+	flag.BoolVar(&full, "f", false, "")
 
 	jsonUsage := "produce JSON output"
 	flag.BoolVar(&json, "json", false, jsonUsage)

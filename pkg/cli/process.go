@@ -278,3 +278,30 @@ func processViewerPreferences(cmd *Command) (out []string, err error) {
 
 	return nil, nil
 }
+
+func processCertificates(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.LISTCERTIFICATES:
+		return ListCertificates(cmd)
+
+	case model.INSPECTCERTIFICATES:
+		return InspectCertificates(cmd)
+
+	case model.IMPORTCERTIFICATES:
+		return ImportCertificates(cmd)
+
+	}
+
+	return nil, nil
+}
+
+func processSignatures(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.VALIDATESIGNATURES:
+		return ValidateSignatures(cmd)
+	}
+
+	return nil, nil
+}

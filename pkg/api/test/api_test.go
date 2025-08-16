@@ -61,6 +61,10 @@ func TestMain(m *testing.M) {
 	samplesDir = filepath.Join("..", "..", "samples")
 
 	conf = api.LoadConfiguration()
+	if os.Getenv("GITHUB_ACTIONS") == "true" {
+		conf.Offline = true
+	}
+	fmt.Printf("conf.Offline: %t\n", conf.Offline)
 
 	// Install test user fonts from pkg/testdata/fonts.
 	fonts, err := userFonts(filepath.Join(inDir, "fonts"))

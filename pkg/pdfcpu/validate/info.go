@@ -149,7 +149,7 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 		err = validateInfoDictTrapped(xRefTable, v)
 
 	case "AAPL:Keywords":
-		xRefTable.AAPLExtensions = true
+		xRefTable.CustomExtensions = true
 
 	// text string, optional
 	default:
@@ -162,8 +162,12 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (bool, error) {
 	// Document info object is optional.
 	d, err := xRefTable.DereferenceDict(obj)
-	if err != nil || d == nil {
+	if err != nil {
 		return false, err
+	}
+	if d == nil {
+		xRefTable.Info = nil
+		return false, nil
 	}
 
 	hasModDate := false
@@ -201,7 +205,12 @@ func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 
 	hasModDate, err := validateDocumentInfoDict(xRefTable, *xRefTable.Info)
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode != model.ValidationRelaxed || !strings.Contains(err.Error(), "wrong type") {
+			return err
+		}
+		xRefTable.Info = nil
+		model.ShowSkipped("invalid info dict")
+		return nil
 	}
 
 	hasPieceInfo, err := xRefTable.CatalogHasPieceInfo()
@@ -210,7 +219,10 @@ func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 	}
 
 	if hasPieceInfo && !hasModDate {
-		return errors.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return errors.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
+		}
+		model.ShowDigestedSpecViolation("infoDict with \"PieceInfo\" but missing \"ModDate\"")
 	}
 
 	if log.ValidateEnabled() {

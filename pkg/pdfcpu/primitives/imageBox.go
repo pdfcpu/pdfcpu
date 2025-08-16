@@ -291,7 +291,7 @@ func (ib *ImageBox) resource() (io.ReadCloser, error) {
 			}
 			return nil, err
 		}
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			if log.CLIEnabled() {
 				log.CLI.Printf("http status %d: %s\n", resp.StatusCode, ib.Src)
 			}
@@ -329,7 +329,7 @@ func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int)
 
 	if ib.pdf.Update() {
 
-		sd, w, h, err = model.CreateImageStreamDict(pdf.XRefTable, f, false, false)
+		sd, w, h, err = model.CreateImageStreamDict(pdf.XRefTable, f)
 		if err != nil {
 			return nil, err
 		}
@@ -360,7 +360,7 @@ func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int)
 			}
 			id = imgResIDs.NewIDForPrefix("Im", len(pageImages))
 		} else {
-			indRef, w, h, err = model.CreateImageResource(pdf.XRefTable, f, false, false)
+			indRef, w, h, err = model.CreateImageResource(pdf.XRefTable, f)
 			if err != nil {
 				return nil, err
 			}
@@ -408,6 +408,7 @@ func (ib *ImageBox) createLink(p *model.Page, pageNr int, r *types.Rectangle, m 
 	id := fmt.Sprintf("l%d%d", pageNr, len(p.LinkAnnots))
 	ann := model.NewLinkAnnotation(
 		*ql.EnclosingRectangle(5.0), // rect
+		0,                           // apObjNr
 		"",                          // contents
 		id,                          // id
 		"",                          // modDate

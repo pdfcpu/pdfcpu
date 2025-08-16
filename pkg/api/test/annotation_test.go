@@ -30,6 +30,7 @@ import (
 
 var textAnn model.AnnotationRenderer = model.NewTextAnnotation(
 	*types.NewRectangle(0, 0, 100, 100), // rect
+	0,                                   // apObjNr
 	"Text Annotation",                   // contents
 	"ID1",                               // id
 	"",                                  // modDate
@@ -48,6 +49,7 @@ var textAnn model.AnnotationRenderer = model.NewTextAnnotation(
 
 var textAnnCJK model.AnnotationRenderer = model.NewTextAnnotation(
 	*types.NewRectangle(0, 100, 100, 200), // rect
+	0,                                     // apObjNr
 	"文字注释",                                // contents
 	"ID1CJK",                              // id
 	"",                                    // modDate
@@ -66,6 +68,7 @@ var textAnnCJK model.AnnotationRenderer = model.NewTextAnnotation(
 
 var freeTextAnn model.AnnotationRenderer = model.NewFreeTextAnnotation(
 	*types.NewRectangle(200, 300, 400, 500), // rect
+	0,                                       // apObjNr
 	`Mac Preview shows "Contents"
 line 2
 line 3`, // contents
@@ -103,6 +106,7 @@ line 3`,
 
 var linkAnn model.AnnotationRenderer = model.NewLinkAnnotation(
 	*types.NewRectangle(200, 0, 300, 100), // rect
+	0,                                     // apObjNr
 	"",                                    // contents
 	"ID2",                                 // id
 	"",                                    // modDate
@@ -118,6 +122,7 @@ var linkAnn model.AnnotationRenderer = model.NewLinkAnnotation(
 
 var squareAnn model.AnnotationRenderer = model.NewSquareAnnotation(
 	*types.NewRectangle(300, 0, 350, 50), // rect
+	0,                                    // apObjNr
 	"Square Annotation",                  // contents
 	"ID3",                                // id
 	"",                                   // modDate
@@ -141,6 +146,7 @@ var squareAnn model.AnnotationRenderer = model.NewSquareAnnotation(
 
 var squareAnnCJK model.AnnotationRenderer = model.NewSquareAnnotation(
 	*types.NewRectangle(300, 50, 350, 100), // rect
+	0,                                      // apObjNr
 	"方形注释",                                 // contents
 	"ID3CJK",                               // id
 	"",                                     // modDate
@@ -164,6 +170,7 @@ var squareAnnCJK model.AnnotationRenderer = model.NewSquareAnnotation(
 
 var circleAnn model.AnnotationRenderer = model.NewCircleAnnotation(
 	*types.NewRectangle(400, 0, 450, 50), // rect
+	0,                                    // apObjNr
 	"Circle Annotation",                  // contents
 	"ID4",                                // id
 	"",                                   // modDate
@@ -187,6 +194,7 @@ var circleAnn model.AnnotationRenderer = model.NewCircleAnnotation(
 
 var circleAnnCJK model.AnnotationRenderer = model.NewCircleAnnotation(
 	*types.NewRectangle(400, 50, 450, 100), // rect
+	0,                                      // apObjNr
 	"圆圈注释",                                 // contents
 	"ID4CJK",                               // id
 	"",                                     // modDate
@@ -575,6 +583,7 @@ func TestAddLinkAnnotationWithDest(t *testing.T) {
 
 	internalLink := model.NewLinkAnnotation(
 		*types.NewRectangle(0, 0, 100, 100), // rect
+		0,                                   // apObjNr
 		"",                                  // contents
 		"ID2",                               // id
 		"",                                  // modDate
@@ -704,6 +713,7 @@ func TestPopupAnnotation(t *testing.T) {
 	// Add Markup annotation as parent of Popup annotation.
 	popupAnn := model.NewPopupAnnotation(
 		*types.NewRectangle(0, 0, 100, 100), // rect
+		0,                                   // apObjNr
 		"Popup content",                     // contents
 		"IDPopup",                           // id
 		"",                                  // modDate
@@ -744,6 +754,7 @@ func TestInkAnnotation(t *testing.T) {
 
 	inkAnn := model.NewInkAnnotation(
 		*types.NewRectangle(0, 0, 100, 100), // rect
+		0,                                   // apObjNr
 		"Ink content",                       // contents
 		"IDInk",                             // id
 		"",                                  // modDate
@@ -779,6 +790,7 @@ func TestHighlightAnnotation(t *testing.T) {
 
 	inkAnn := model.NewHighlightAnnotation(
 		*r,                    // rect
+		0,                     // apObjNr
 		"Highlight content",   // contents
 		"IDHighlight",         // id
 		"",                    // modDate
@@ -815,6 +827,7 @@ func TestUnderlineAnnotation(t *testing.T) {
 
 	underlineAnn := model.NewUnderlineAnnotation(
 		*r,                    // rect
+		0,                     // apObjNr
 		"Underline content",   // contents
 		"IDUnderline",         // id
 		"",                    // modDate
@@ -851,6 +864,7 @@ func TestSquigglyAnnotation(t *testing.T) {
 
 	squigglyAnn := model.NewSquigglyAnnotation(
 		*r,                    // rect
+		0,                     // apObjNr
 		"Squiggly content",    // contents
 		"IDSquiggly",          // id
 		"",                    // modDate
@@ -887,6 +901,7 @@ func TestStrikeOutAnnotation(t *testing.T) {
 
 	strikeOutAnn := model.NewStrikeOutAnnotation(
 		*r,                    // rect
+		0,                     // apObjNr
 		"StrikeOut content",   // contents
 		"IDStrikeOut",         // id
 		"",                    // modDate
@@ -936,6 +951,7 @@ func TestPolyLineAnnotation(t *testing.T) {
 
 	polyLineAnn := model.NewPolyLineAnnotation(
 		*types.NewRectangle(30, 30, 110, 110), // rect
+		0,                                     // apObjNr
 		"PolyLine Annotation",                 // contents
 		"IDPolyLine",                          // id
 		"",                                    // modDate
@@ -973,6 +989,7 @@ func TestPolygonAnnotation(t *testing.T) {
 
 	polygonAnn := model.NewPolygonAnnotation(
 		*types.NewRectangle(30, 30, 110, 110), // rect
+		0,                                     // apObjNr
 		"Polygon Annotation",                  // contents
 		"IDPolygon",                           // id
 		"",                                    // modDate
@@ -1011,6 +1028,7 @@ func TestLineAnnotation(t *testing.T) {
 
 	lineAnn := model.NewLineAnnotation(
 		*types.NewRectangle(30, 30, 110, 110), // rect
+		0,                                     // apObjNr
 		"Diagonal",                            // contents
 		"IDLine",                              // id
 		"",                                    // modDate
@@ -1054,6 +1072,7 @@ func TestCaretAnnotation(t *testing.T) {
 
 	caretAnn := model.NewCaretAnnotation(
 		*types.NewRectangle(30, 30, 110, 110), // rect
+		0,                                     // apObjNr
 		"Caret Annotation",                    // contents
 		"IDCaret",                             // id
 		"",                                    // modDate

@@ -27,7 +27,6 @@ import (
 // See 7.11.4
 
 func validateFileSpecString(s string) bool {
-
 	// see 7.11.2
 	// The standard format for representing a simple file specification in string form divides the string into component substrings
 	// separated by the SOLIDUS character (2Fh) (/). The SOLIDUS is a generic component separator that shall be mapped to the appropriate
@@ -44,7 +43,6 @@ func validateFileSpecString(s string) bool {
 }
 
 func validateURLString(s string) bool {
-
 	// RFC1738 compliant URL, see 7.11.5
 
 	_, err := url.ParseRequestURI(s)
@@ -53,32 +51,30 @@ func validateURLString(s string) bool {
 }
 
 func validateEmbeddedFileStreamMacParameterDict(xRefTable *model.XRefTable, d types.Dict) error {
-
 	dictName := "embeddedFileStreamMacParameterDict"
 
 	// Subtype, optional integer
 	// The embedded file's file type integer encoded according to Mac OS conventions.
-	_, err := validateIntegerEntry(xRefTable, d, dictName, "Subtype", OPTIONAL, model.V10, nil)
-	if err != nil {
+	if _, err := validateIntegerEntry(xRefTable, d, dictName, "Subtype", OPTIONAL, model.V10, nil); err != nil {
 		return err
 	}
 
 	// Creator, optional integer
 	// The embedded file's creator signature integer encoded according to Mac OS conventions.
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "Creator", OPTIONAL, model.V10, nil)
-	if err != nil {
+	if _, err := validateIntegerEntry(xRefTable, d, dictName, "Creator", OPTIONAL, model.V10, nil); err != nil {
 		return err
 	}
 
 	// ResFork, optional stream dict
 	// The binary contents of the embedded file's resource fork.
-	_, err = validateStreamDictEntry(xRefTable, d, dictName, "ResFork", OPTIONAL, model.V10, nil)
+	if _, err := validateStreamDictEntry(xRefTable, d, dictName, "ResFork", OPTIONAL, model.V10, nil); err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }
 
 func validateEmbeddedFileStreamParameterDict(xRefTable *model.XRefTable, o types.Object) error {
-
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil || d == nil {
 		return err
@@ -87,20 +83,17 @@ func validateEmbeddedFileStreamParameterDict(xRefTable *model.XRefTable, o types
 	dictName := "embeddedFileStreamParmDict"
 
 	// Size, optional integer
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "Size", OPTIONAL, model.V10, nil)
-	if err != nil {
+	if _, err = validateIntegerEntry(xRefTable, d, dictName, "Size", OPTIONAL, model.V10, nil); err != nil {
 		return err
 	}
 
 	// CreationDate, optional date
-	_, err = validateDateEntry(xRefTable, d, dictName, "CreationDate", OPTIONAL, model.V10)
-	if err != nil {
+	if _, err = validateDateEntry(xRefTable, d, dictName, "CreationDate", OPTIONAL, model.V10); err != nil {
 		return err
 	}
 
 	// ModDate, optional date
-	_, err = validateDateEntry(xRefTable, d, dictName, "ModDate", OPTIONAL, model.V10)
-	if err != nil {
+	if _, err = validateDateEntry(xRefTable, d, dictName, "ModDate", OPTIONAL, model.V10); err != nil {
 		return err
 	}
 
@@ -110,8 +103,7 @@ func validateEmbeddedFileStreamParameterDict(xRefTable *model.XRefTable, o types
 		return err
 	}
 	if macDict != nil {
-		err = validateEmbeddedFileStreamMacParameterDict(xRefTable, macDict)
-		if err != nil {
+		if err = validateEmbeddedFileStreamMacParameterDict(xRefTable, macDict); err != nil {
 			return err
 		}
 	}
@@ -123,55 +115,54 @@ func validateEmbeddedFileStreamParameterDict(xRefTable *model.XRefTable, o types
 }
 
 func validateEmbeddedFileStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {
-
 	dictName := "embeddedFileStreamDict"
 
 	// Type, optional, name
-	_, err := validateNameEntry(xRefTable, sd.Dict, dictName, "Type", OPTIONAL, model.V10, func(s string) bool { return s == "EmbeddedFile" })
-	if err != nil {
+	if _, err := validateNameEntry(xRefTable, sd.Dict, dictName, "Type", OPTIONAL, model.V10, func(s string) bool { return s == "EmbeddedFile" }); err != nil {
 		return err
 	}
 
 	// Subtype, optional, name
-	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Subtype", OPTIONAL, model.V10, nil)
-	if err != nil {
+	if _, err := validateNameEntry(xRefTable, sd.Dict, dictName, "Subtype", OPTIONAL, model.V10, nil); err != nil {
 		return err
 	}
 
 	// Params, optional, dict
 	// parameter dict containing additional file-specific information.
 	if o, found := sd.Dict.Find("Params"); found && o != nil {
-		err = validateEmbeddedFileStreamParameterDict(xRefTable, o)
+		if err := validateEmbeddedFileStreamParameterDict(xRefTable, o); err != nil {
+			return err
+		}
 	}
 
-	return err
+	return nil
 }
 
 func validateFileSpecDictEntriesEFAndRFKeys(k string) bool {
-	return k == "F" || k == "UF" || k == "DOS" || k == "Mac" || k == "Unix"
+	return k == "F" || k == "UF" || k == "DOS" || k == "Mac" || k == "Unix" || k == "Subtype"
 }
 
 func validateFileSpecDictEntryEFDict(xRefTable *model.XRefTable, d types.Dict) error {
-
 	for k, obj := range d {
 
 		if !validateFileSpecDictEntriesEFAndRFKeys(k) {
 			return errors.Errorf("validateFileSpecEntriesEFAndRF: invalid key: %s", k)
 		}
 
-		// value must be embedded file stream dict
-		// see 7.11.4
-		sd, err := validateStreamDict(xRefTable, obj)
-		if err != nil {
-			return err
-		}
-		if sd == nil {
-			continue
-		}
+		if k == "F" || k == "UF" {
+			// value must be embedded file stream dict
+			// see 7.11.4
+			sd, err := validateStreamDict(xRefTable, obj)
+			if err != nil {
+				return err
+			}
+			if sd == nil {
+				continue
+			}
 
-		err = validateEmbeddedFileStreamDict(xRefTable, sd)
-		if err != nil {
-			return err
+			if err = validateEmbeddedFileStreamDict(xRefTable, sd); err != nil {
+				return err
+			}
 		}
 
 	}
@@ -180,7 +171,6 @@ func validateFileSpecDictEntryEFDict(xRefTable *model.XRefTable, d types.Dict) e
 }
 
 func validateRFDictFilesArray(xRefTable *model.XRefTable, a types.Array) error {
-
 	if len(a)%2 > 0 {
 		return errors.New("pdfcpu: validateRFDictFilesArray: rfDict array corrupt")
 	}
@@ -216,8 +206,7 @@ func validateRFDictFilesArray(xRefTable *model.XRefTable, a types.Array) error {
 				return err
 			}
 
-			err = validateEmbeddedFileStreamDict(xRefTable, sd)
-			if err != nil {
+			if err = validateEmbeddedFileStreamDict(xRefTable, sd); err != nil {
 				return err
 			}
 
@@ -228,15 +217,13 @@ func validateRFDictFilesArray(xRefTable *model.XRefTable, a types.Array) error {
 }
 
 func validateFileSpecDictEntriesEFAndRF(xRefTable *model.XRefTable, efDict, rfDict types.Dict) error {
-
 	// EF only or EF and RF
 
 	if efDict == nil {
 		return errors.Errorf("pdfcpu: validateFileSpecEntriesEFAndRF: missing required efDict.")
 	}
 
-	err := validateFileSpecDictEntryEFDict(xRefTable, efDict)
-	if err != nil {
+	if err := validateFileSpecDictEntryEFDict(xRefTable, efDict); err != nil {
 		return err
 	}
 
@@ -257,20 +244,10 @@ func validateFileSpecDictEntriesEFAndRF(xRefTable *model.XRefTable, efDict, rfDi
 			continue
 		}
 
-		err = validateRFDictFilesArray(xRefTable, a)
-		if err != nil {
+		if err = validateRFDictFilesArray(xRefTable, a); err != nil {
 			return err
 		}
 
-	}
-
-	return nil
-}
-
-func validateFileSpecDictType(xRefTable *model.XRefTable, d types.Dict) error {
-
-	if d.Type() == nil || (*d.Type() != "Filespec" && (xRefTable.ValidationMode == model.ValidationRelaxed && *d.Type() != "F")) {
-		return errors.New("pdfcpu: validateFileSpecDictType: missing type: FileSpec")
 	}
 
 	return nil
@@ -280,8 +257,7 @@ func requiredF(dosFound, macFound, unixFound bool) bool {
 	return !dosFound && !macFound && !unixFound
 }
 
-func validateFileSpecDictEFAndRF(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
-
+func validateFileSpecDictEFAndRF(xRefTable *model.XRefTable, d types.Dict, dictName string, hasEP bool) error {
 	// RF, optional, dict of related files arrays, since V1.3
 	rfDict, err := validateDictEntry(xRefTable, d, dictName, "RF", OPTIONAL, model.V13, nil)
 	if err != nil {
@@ -289,41 +265,44 @@ func validateFileSpecDictEFAndRF(xRefTable *model.XRefTable, d types.Dict, dictN
 	}
 
 	// EF, required if RF present, dict of embedded file streams, since 1.3
-	efDict, err := validateDictEntry(xRefTable, d, dictName, "EF", rfDict != nil, model.V13, nil)
+	sinceVersion := model.V13
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V11
+	}
+	efDict, err := validateDictEntry(xRefTable, d, dictName, "EF", rfDict != nil, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
 
-	// Type, required if EF present, name
+	// Type, required if EF, EP or RF present, name
 	validate := func(s string) bool {
 		return s == "Filespec" || (xRefTable.ValidationMode == model.ValidationRelaxed && s == "F")
 	}
-	_, err = validateNameEntry(xRefTable, d, dictName, "Type", efDict != nil, model.V10, validate)
-	if err != nil {
+	required := rfDict != nil || efDict != nil || hasEP
+	if _, err = validateNameEntry(xRefTable, d, dictName, "Type", required, model.V10, validate); err != nil {
 		return err
 	}
 
-	// if EF present, Type "FileSpec" is required
 	if efDict != nil {
-
-		err = validateFileSpecDictType(xRefTable, d)
-		if err != nil {
-			return err
-		}
-
 		err = validateFileSpecDictEntriesEFAndRF(xRefTable, efDict, rfDict)
-
 	}
 
 	return err
 }
 
-func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict) error {
-
-	dictName := "fileSpecDict"
-
+func validateFileSpecDictPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// FS, optional, name
 	fsName, err := validateNameEntry(xRefTable, d, dictName, "FS", OPTIONAL, model.V10, nil)
+	if err != nil {
+		return err
+	}
+
+	// UF, optional, text string
+	sinceVersion := model.V17
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
+	uf, err := validateStringEntry(xRefTable, d, dictName, "UF", OPTIONAL, sinceVersion, validateFileSpecString)
 	if err != nil {
 		return err
 	}
@@ -343,57 +322,93 @@ func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict) error {
 		validate = validateURLString
 	}
 
-	_, err = validateStringEntry(xRefTable, d, dictName, "F", requiredF(dosFound, macFound, unixFound), model.V10, validate)
-	if err != nil {
+	required := requiredF(dosFound, macFound, unixFound)
+	if xRefTable.ValidationMode == model.ValidationRelaxed && uf != nil {
+		required = OPTIONAL
+	}
+	if _, err = validateStringEntry(xRefTable, d, dictName, "F", required, model.V10, validate); err != nil {
 		return err
 	}
 
-	// UF, optional, text string
-	sinceVersion := model.V17
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
-	}
-	_, err = validateStringEntry(xRefTable, d, dictName, "UF", OPTIONAL, sinceVersion, validateFileSpecString)
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
+func validateFileSpecDictPart2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// ID, optional, array of strings
-	_, err = validateStringArrayEntry(xRefTable, d, dictName, "ID", OPTIONAL, model.V11, func(a types.Array) bool { return len(a) == 2 })
-	if err != nil {
+	if _, err := validateStringArrayEntry(xRefTable, d, dictName, "ID", OPTIONAL, model.V11, func(a types.Array) bool { return len(a) == 2 }); err != nil {
 		return err
 	}
 
 	// V, optional, boolean, since V1.2
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "V", OPTIONAL, model.V12, nil)
-	if err != nil {
+	if _, err := validateBooleanEntry(xRefTable, d, dictName, "V", OPTIONAL, model.V12, nil); err != nil {
 		return err
 	}
 
-	err = validateFileSpecDictEFAndRF(xRefTable, d, dictName)
+	// EP, optional, encrypted payload dict, since V2.0
+	epDict, err := validateDictEntry(xRefTable, d, dictName, "EP", OPTIONAL, model.V20, nil)
 	if err != nil {
+		return err
+	}
+	if err = validateFileSpecDictEFAndRF(xRefTable, d, dictName, len(epDict) > 0); err != nil {
 		return err
 	}
 
 	// Desc, optional, text string, since V1.6
-	sinceVersion = model.V16
+	sinceVersion := model.V16
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V10
 	}
-	_, err = validateStringEntry(xRefTable, d, dictName, "Desc", OPTIONAL, sinceVersion, nil)
-	if err != nil {
+	if _, err = validateStringEntry(xRefTable, d, dictName, "Desc", OPTIONAL, sinceVersion, nil); err != nil {
 		return err
 	}
 
 	// CI, optional, collection item dict, since V1.7
-	_, err = validateDictEntry(xRefTable, d, dictName, "CI", OPTIONAL, model.V17, nil)
+	if _, err = validateDictEntry(xRefTable, d, dictName, "CI", OPTIONAL, model.V17, nil); err != nil {
+		return err
+	}
 
-	return err
+	// Thumb, optional, thumbnail image, since V2.0
+	sinceVersion = model.V20
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V16
+	}
+	if _, err := validateStreamDictEntry(xRefTable, d, dictName, "Thumb", OPTIONAL, sinceVersion, nil); err != nil {
+		return err
+	}
+
+	// AFRelationship, optional, associated file semantics, since V2.0
+	validateAFRelationship := func(s string) bool {
+		return types.MemberOf(s, []string{"Source", "Data", "Alternative", "Supplement", "EncryptedPayload", "FormData", "Schema", "Unspecified"})
+	}
+	sinceVersion = model.V20
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	if _, err := validateNameEntry(xRefTable, d, dictName, "AFRelationship", OPTIONAL, sinceVersion, validateAFRelationship); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict) error {
+	// See 7.11.3
+
+	dictName := "fileSpecDict"
+
+	if err := validateFileSpecDictPart1(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	if err := validateFileSpecDictPart2(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func validateFileSpecification(xRefTable *model.XRefTable, o types.Object) (types.Object, error) {
-
-	// See 7.11.4
+	// See 7.11
 
 	o, err := xRefTable.Dereference(o)
 	if err != nil {
@@ -402,21 +417,14 @@ func validateFileSpecification(xRefTable *model.XRefTable, o types.Object) (type
 
 	switch o := o.(type) {
 
-	case types.StringLiteral:
-		s := o.Value()
-		if !validateFileSpecString(s) {
-			return nil, errors.Errorf("pdfcpu: validateFileSpecification: invalid file spec string: %s", s)
-		}
-
-	case types.HexLiteral:
-		s := o.Value()
+	case types.StringLiteral, types.HexLiteral:
+		s := o.(interface{ Value() string }).Value()
 		if !validateFileSpecString(s) {
 			return nil, errors.Errorf("pdfcpu: validateFileSpecification: invalid file spec string: %s", s)
 		}
 
 	case types.Dict:
-		err = validateFileSpecDict(xRefTable, o)
-		if err != nil {
+		if err = validateFileSpecDict(xRefTable, o); err != nil {
 			return nil, err
 		}
 
@@ -429,7 +437,6 @@ func validateFileSpecification(xRefTable *model.XRefTable, o types.Object) (type
 }
 
 func validateURLSpecification(xRefTable *model.XRefTable, o types.Object) (types.Object, error) {
-
 	// See 7.11.4
 
 	d, err := xRefTable.DereferenceDict(o)
@@ -444,8 +451,7 @@ func validateURLSpecification(xRefTable *model.XRefTable, o types.Object) (types
 	dictName := "urlSpec"
 
 	// FS, required, name
-	_, err = validateNameEntry(xRefTable, d, dictName, "FS", REQUIRED, model.V10, func(s string) bool { return s == "URL" })
-	if err != nil {
+	if _, err = validateNameEntry(xRefTable, d, dictName, "FS", REQUIRED, model.V10, func(s string) bool { return s == "URL" }); err != nil {
 		return nil, err
 	}
 
@@ -456,14 +462,12 @@ func validateURLSpecification(xRefTable *model.XRefTable, o types.Object) (types
 }
 
 func validateFileSpecEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (types.Object, error) {
-
 	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
 	if err != nil || o == nil {
 		return nil, err
 	}
 
-	err = xRefTable.ValidateVersion("fileSpec", sinceVersion)
-	if err != nil {
+	if err = xRefTable.ValidateVersion("fileSpec", sinceVersion); err != nil {
 		return nil, err
 	}
 
@@ -471,14 +475,12 @@ func validateFileSpecEntry(xRefTable *model.XRefTable, d types.Dict, dictName st
 }
 
 func validateURLSpecEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (types.Object, error) {
-
 	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
 	if err != nil || o == nil {
 		return nil, err
 	}
 
-	err = xRefTable.ValidateVersion("URLSpec", sinceVersion)
-	if err != nil {
+	if err = xRefTable.ValidateVersion("URLSpec", sinceVersion); err != nil {
 		return nil, err
 	}
 
@@ -486,7 +488,6 @@ func validateURLSpecEntry(xRefTable *model.XRefTable, d types.Dict, dictName str
 }
 
 func validateFileSpecificationOrFormObject(xRefTable *model.XRefTable, obj types.Object) error {
-
 	sd, ok := obj.(types.StreamDict)
 	if ok {
 		return validateFormStreamDict(xRefTable, &sd)

@@ -175,6 +175,30 @@ func NewRectangle(llx, lly, urx, ury float64) *Rectangle {
 	return &Rectangle{LL: Point{llx, lly}, UR: Point{urx, ury}}
 }
 
+func decodeFloat(number Object) float64 {
+	var f float64
+	switch v := number.(type) {
+	case Float:
+		f = v.Value()
+	case Integer:
+		f = float64(v.Value())
+	}
+	return f
+}
+
+func RectForArray(arr Array) *Rectangle {
+	if len(arr) != 4 {
+		return nil
+	}
+
+	llx := decodeFloat(arr[0])
+	lly := decodeFloat(arr[1])
+	urx := decodeFloat(arr[2])
+	ury := decodeFloat(arr[3])
+
+	return NewRectangle(llx, lly, urx, ury)
+}
+
 // RectForDim returns a new rectangle for given dimensions.
 func RectForDim(width, height float64) *Rectangle {
 	return NewRectangle(0.0, 0.0, width, height)
@@ -208,6 +232,10 @@ func (r Rectangle) Equals(r2 Rectangle) bool {
 // FitsWithin returns true if rectangle r fits within rectangle r2.
 func (r Rectangle) FitsWithin(r2 *Rectangle) bool {
 	return r.Width() <= r2.Width() && r.Height() <= r2.Height()
+}
+
+func (r Rectangle) Visible() bool {
+	return r.Width() != 0 && r.Height() != 0
 }
 
 // AspectRatio returns the relation between width and height of a rectangle.

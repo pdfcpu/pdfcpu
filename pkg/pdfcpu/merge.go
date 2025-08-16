@@ -217,7 +217,7 @@ func handleCO(ctxSrc, ctxDest *model.Context, dSrc, dDest types.Dict) error {
 	return nil
 }
 
-func handleDR(ctxSrc, ctxDest *model.Context, dSrc, dDest types.Dict) error {
+func handleDR(ctxSrc *model.Context, dSrc, dDest types.Dict) error {
 	o, found := dSrc.Find("DR")
 	if !found {
 		return nil
@@ -312,7 +312,7 @@ func handleFormAttributes(ctxSrc, ctxDest *model.Context, dSrc, dDest types.Dict
 	}
 
 	// DR: default resource dict
-	if err := handleDR(ctxSrc, ctxDest, dSrc, dDest); err != nil {
+	if err := handleDR(ctxSrc, dSrc, dDest); err != nil {
 		return err
 	}
 

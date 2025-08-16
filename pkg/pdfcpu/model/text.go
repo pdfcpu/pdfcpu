@@ -174,7 +174,7 @@ func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, font
 }
 
 func PrepBytes(xRefTable *XRefTable, s, fontName string, embed, rtl, fillFont bool) string {
-	if font.IsUserFont(fontName) && !fillFont {
+	if font.IsUserFont(fontName) && (!fillFont || !embed) {
 		if rtl {
 			s = types.Reverse(s)
 		}

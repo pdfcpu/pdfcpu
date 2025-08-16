@@ -18,15 +18,20 @@ limitations under the License.
 package cli
 
 import (
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/hhrutter/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -540,4 +545,129 @@ func ListBookmarksFile(inFile string, conf *model.Configuration) ([]string, erro
 	defer f.Close()
 
 	return listBookmarks(f, conf)
+}
+
+func listPEM(fName string) (int, error) {
+	bb, err := os.ReadFile(fName)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return 0, err
+	}
+
+	if len(bb) == 0 {
+		//return 0, errors.Errorf("%s is empty\n", filepath.Base(fName))
+		return 0, errors.New("is empty\n")
+	}
+
+	ss := []string{}
+	for len(bb) > 0 {
+		var block *pem.Block
+		block, bb = pem.Decode(bb)
+		if block == nil {
+			break
+		}
+		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+			continue
+		}
+
+		certBytes := block.Bytes
+		cert, err := x509.ParseCertificate(certBytes)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			continue
+		}
+		ss = append(ss, model.CertString(cert))
+	}
+
+	sort.Strings(ss)
+	for i, s := range ss {
+		fmt.Printf("%03d:\n%s\n", i+1, s)
+	}
+
+	return len(ss), nil
+}
+
+func listP7C(fName string) (int, error) {
+	bb, err := os.ReadFile(fName)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return 0, err
+	}
+
+	if len(bb) == 0 {
+		//return 0, errors.Errorf("%s is empty\n", filepath.Base(fName))
+		return 0, errors.New("is empty\n")
+	}
+
+	// // Check if the data starts with PEM markers (for Base64 encoding)
+	// if isPEM(data) {
+	// 	// If the file is Base64 encoded (PEM format), decode it
+	// 	decodedData, err := base64.StdEncoding.DecodeString(string(data))
+	// 	if err != nil {
+	// 		log.Fatalf("Error decoding Base64: %v", err)
+	// 	}
+	// 	data = decodedData
+	// }
+
+	p7, err := pkcs7.Parse(bb)
+	if err != nil {
+		return 0, err
+	}
+
+	ss := []string{}
+	for _, cert := range p7.Certificates {
+		ss = append(ss, model.CertString(cert))
+	}
+
+	sort.Strings(ss)
+	for i, s := range ss {
+		fmt.Printf("%03d:\n%s\n", i+1, s)
+	}
+
+	return len(ss), nil
+}
+
+// ListCertificatesAll returns formatted information about installed certificates.
+func ListCertificatesAll(json bool, conf *model.Configuration) ([]string, error) {
+	// Process *.pem and *.p7c
+	fmt.Printf("certDir: %s\n", model.CertDir)
+
+	if err := os.MkdirAll(model.CertDir, os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	count := 0
+
+	err := filepath.WalkDir(model.CertDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !model.IsPEM(path) && !model.IsP7C(path) {
+			return nil
+		}
+
+		fmt.Printf("\n%s:\n", strings.TrimPrefix(path, model.CertDir))
+
+		if model.IsPEM(path) {
+			c, err := listPEM(path)
+			if err != nil {
+				fmt.Printf("%v\n", err)
+			}
+			count += c
+			return nil
+		}
+		c, err := listP7C(path)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+		}
+		count += c
+		return nil
+	})
+
+	fmt.Printf("total installed certs: %d\n", count)
+
+	return nil, err
 }

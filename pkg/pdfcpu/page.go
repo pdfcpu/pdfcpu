@@ -195,6 +195,10 @@ func addPages(
 
 func migrateNamedDests(ctxSrc *model.Context, n *model.Node, migrated map[int]int) error {
 	patchValues := func(xRefTable *model.XRefTable, k string, v *types.Object) error {
+		if *v == nil {
+			// Skip corrupt node.
+			return nil
+		}
 		arr, err := xRefTable.DereferenceArray(*v)
 		if err == nil {
 			arr[0] = patchObject(arr[0], migrated)

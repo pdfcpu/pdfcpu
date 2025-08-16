@@ -150,6 +150,24 @@ func handleTimeout(v string, c *Configuration) error {
 	return nil
 }
 
+func handleTimeoutCRL(v string, c *Configuration) error {
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return errors.Errorf("timeoutCRL is numeric > 0, got: %s", v)
+	}
+	c.TimeoutCRL = i
+	return nil
+}
+
+func handleTimeoutOCSP(v string, c *Configuration) error {
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return errors.Errorf("timeoutOCSP is numeric > 0, got: %s", v)
+	}
+	c.TimeoutOCSP = i
+	return nil
+}
+
 func handleConfPermissions(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
 	if err != nil {
@@ -172,6 +190,21 @@ func handleConfUnit(v string, c *Configuration) error {
 		c.Unit = types.MILLIMETRES
 	default:
 		return errors.Errorf("invalid unit: %s", v)
+	}
+	return nil
+}
+
+func handlePreferredCertRevocationChecker(v string, c *Configuration) error {
+	v1 := strings.ToLower(v)
+	switch v1 {
+	case "crl":
+		c.PreferredCertRevocationChecker = CRL
+	case "ocsp":
+		c.PreferredCertRevocationChecker = OCSP
+	case "":
+		c.PreferredCertRevocationChecker = CRL
+	default:
+		return errors.Errorf("invalid preferredCertRevocationChecker: %s", v)
 	}
 	return nil
 }
@@ -231,26 +264,45 @@ func parseKeysPart1(k, v string, c *Configuration) (bool, error) {
 	return false, nil
 }
 
-func parseKeysPart2(k, v string, c *Configuration) (err error) {
+func parseKeysPart2(k, v string, c *Configuration) (bool, error) {
 	switch k {
 
 	case "encryptUsingAES":
-		err = handleConfEncryptUsingAES(k, v, c)
+		return true, handleConfEncryptUsingAES(k, v, c)
 
 	case "encryptKeyLength":
-		err = handleConfEncryptKeyLength(v, c)
+		return true, handleConfEncryptKeyLength(v, c)
 
 	case "permissions":
-		err = handleConfPermissions(v, c)
+		return true, handleConfPermissions(v, c)
 
 	case "unit", "units":
-		err = handleConfUnit(v, c)
+		return true, handleConfUnit(v, c)
 
 	case "timestampFormat":
-		err = handleTimestampFormat(v, c)
+		return true, handleTimestampFormat(v, c)
 
 	case "dateFormat":
-		err = handleDateFormat(v, c)
+		return true, handleDateFormat(v, c)
+
+	case "timeout":
+		return true, handleTimeout(v, c)
+
+	case "timeoutCRL":
+		return true, handleTimeoutCRL(v, c)
+
+	case "timeoutOCSP":
+		return true, handleTimeoutOCSP(v, c)
+
+	case "preferredCertRevocationChecker":
+		return true, handlePreferredCertRevocationChecker(v, c)
+	}
+
+	return false, nil
+}
+
+func parseKeysPart3(k, v string, c *Configuration) (err error) {
+	switch k {
 
 	case "optimize":
 		c.Optimize, err = boolean(k, v)
@@ -269,9 +321,6 @@ func parseKeysPart2(k, v string, c *Configuration) (err error) {
 
 	case "offline":
 		c.Offline, err = boolean(k, v)
-
-	case "timeout":
-		handleTimeout(v, c)
 	}
 
 	return err
@@ -285,7 +334,16 @@ func parseKeyValue(k, v string, c *Configuration) error {
 	if ok {
 		return nil
 	}
-	return parseKeysPart2(k, v, c)
+
+	ok, err = parseKeysPart2(k, v, c)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+
+	return parseKeysPart3(k, v, c)
 }
 
 func parseConfigFile(r io.Reader, configPath string) error {

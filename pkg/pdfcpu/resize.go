@@ -181,7 +181,7 @@ func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
 	var trans bytes.Buffer
 	fmt.Fprintf(&trans, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
-	bb, err := ctx.PageContent(d)
+	bb, err := ctx.PageContent(d, pageNr)
 	if err == model.ErrNoContent {
 		return nil
 	}

@@ -140,6 +140,10 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.SETVIEWERPREFERENCES:    processViewerPreferences,
 	model.RESETVIEWERPREFERENCES:  processViewerPreferences,
 	model.ZOOM:                    Zoom,
+	model.LISTCERTIFICATES:        processCertificates,
+	model.INSPECTCERTIFICATES:     processCertificates,
+	model.IMPORTCERTIFICATES:      processCertificates,
+	model.VALIDATESIGNATURES:      processSignatures,
 }
 
 // ValidateCommand creates a new command to validate a file.
@@ -1245,4 +1249,54 @@ func ZoomCommand(inFile, outFile string, pageSelection []string, zoom *model.Zoo
 		PageSelection: pageSelection,
 		Zoom:          zoom,
 		Conf:          conf}
+}
+
+// ListCertificatesCommand creates a new command to list installed certificates.
+func ListCertificatesCommand(json bool, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.LISTCERTIFICATES
+	return &Command{
+		Mode:     model.LISTCERTIFICATES,
+		BoolVal1: json,
+		Conf:     conf}
+}
+
+// InspectCertificatesCommand creates a new command to inspect certificates.
+func InspectCertificatesCommand(inFiles []string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.INSPECTCERTIFICATES
+	return &Command{
+		Mode:    model.INSPECTCERTIFICATES,
+		InFiles: inFiles,
+		Conf:    conf}
+}
+
+// ImportCertificatesCommand creates a new command to import certificates.
+func ImportCertificatesCommand(inFiles []string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.IMPORTCERTIFICATES
+	return &Command{
+		Mode:    model.IMPORTCERTIFICATES,
+		InFiles: inFiles,
+		Conf:    conf}
+}
+
+// ValidateSignaturesCommand creates a new command to validate encountered digital signatures.
+func ValidateSignaturesCommand(inFile string, all, full bool, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.VALIDATESIGNATURES
+	return &Command{
+		Mode:     model.VALIDATESIGNATURES,
+		InFile:   &inFile,
+		BoolVal1: all,
+		BoolVal2: full,
+		Conf:     conf}
 }

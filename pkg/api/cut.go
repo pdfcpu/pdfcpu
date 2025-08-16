@@ -74,16 +74,16 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 		return nil
 	}
 
-	for i, v := range pages {
+	for pageNr, v := range pages {
 		if !v {
 			continue
 		}
-		ctxDest, err := pdfcpu.PosterPage(ctxSrc, i, cut)
+		ctxDest, err := pdfcpu.PosterPage(ctxSrc, pageNr, cut)
 		if err != nil {
 			return err
 		}
 
-		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
+		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, pageNr))
 		logWritingTo(outFile)
 
 		if conf.PostProcessValidate {
@@ -140,11 +140,11 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 		return nil
 	}
 
-	for i, v := range pages {
+	for pageNr, v := range pages {
 		if !v {
 			continue
 		}
-		ctxDest, err := pdfcpu.NDownPage(ctxSrc, i, n, cut)
+		ctxDest, err := pdfcpu.NDownPage(ctxSrc, pageNr, n, cut)
 		if err != nil {
 			return err
 		}
@@ -155,7 +155,7 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 			}
 		}
 
-		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
+		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, pageNr))
 		if log.CLIEnabled() {
 			log.CLI.Printf("writing %s\n", outFile)
 		}
@@ -240,11 +240,11 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 		return nil
 	}
 
-	for i, v := range pages {
+	for pageNr, v := range pages {
 		if !v {
 			continue
 		}
-		ctxDest, err := pdfcpu.CutPage(ctxSrc, i, cut)
+		ctxDest, err := pdfcpu.CutPage(ctxSrc, pageNr, cut)
 		if err != nil {
 			return err
 		}
@@ -255,7 +255,7 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 			}
 		}
 
-		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, i))
+		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, pageNr))
 		logWritingTo(outFile)
 
 		if err := WriteContextFile(ctxDest, outFile); err != nil {

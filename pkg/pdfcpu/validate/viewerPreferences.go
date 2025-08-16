@@ -120,7 +120,10 @@ func validatePrinterPreferences(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 	n, err := validateNameEntry(xRefTable, d, dictName, "PrintScaling", OPTIONAL, sinceVersion, validate)
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return err
+		}
+		// Ignore in relaxed mode.
 	}
 	if n != nil {
 		vp.PrintScaling = model.PrintScalingFor(n.String())
@@ -212,8 +215,12 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 		return err
 	}
 
+	vv := []string{"UseNone", "UseOutlines", "UseThumbs", "UseOC"}
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		vv = append(vv, "PageOnly")
+	}
 	validate := func(s string) bool {
-		return types.MemberOf(s, []string{"UseNone", "UseOutlines", "UseThumbs", "UseOC"})
+		return types.MemberOf(s, vv)
 	}
 	n, err := validateNameEntry(xRefTable, d, dictName, "NonFullScreenPageMode", OPTIONAL, model.V10, validate)
 	if err != nil {

@@ -430,7 +430,7 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *model.XRefTable, o types.Obje
 
 	// Version check
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
+		sinceVersion = model.V11
 	}
 	err := xRefTable.ValidateVersion("EmbeddedFilesNameTreeValue", sinceVersion)
 	if err != nil {
@@ -559,23 +559,28 @@ func validateNameTreeValue(name string, xRefTable *model.XRefTable, o types.Obje
 	// Other PDF objects (nulls, numbers, booleans, and names) should be specified as direct objects.
 
 	for k, v := range map[string]struct {
-		validate     func(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error
-		sinceVersion model.Version
+		validate            func(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error
+		sinceVersion        model.Version
+		sinceVersionRelaxed model.Version
 	}{
-		"Dests":                  {validateDestsNameTreeValue, model.V12},
-		"AP":                     {validateAPNameTreeValue, model.V13},
-		"JavaScript":             {validateJavaScriptNameTreeValue, model.V13},
-		"Pages":                  {validatePagesNameTreeValue, model.V13},
-		"Templates":              {validateTemplatesNameTreeValue, model.V13},
-		"IDS":                    {validateIDSNameTreeValue, model.V13},
-		"URLS":                   {validateURLSNameTreeValue, model.V13},
-		"EmbeddedFiles":          {validateEmbeddedFilesNameTreeValue, model.V14},
-		"AlternatePresentations": {validateAlternatePresentationsNameTreeValue, model.V14},
-		"Renditions":             {validateRenditionsNameTreeValue, model.V15},
-		"IDTree":                 {validateIDTreeValue, model.V13},
+		"Dests":                  {validateDestsNameTreeValue, model.V12, model.V12},
+		"AP":                     {validateAPNameTreeValue, model.V13, model.V13},
+		"JavaScript":             {validateJavaScriptNameTreeValue, model.V13, model.V13},
+		"Pages":                  {validatePagesNameTreeValue, model.V13, model.V13},
+		"Templates":              {validateTemplatesNameTreeValue, model.V13, model.V13},
+		"IDS":                    {validateIDSNameTreeValue, model.V13, model.V13},
+		"URLS":                   {validateURLSNameTreeValue, model.V13, model.V13},
+		"EmbeddedFiles":          {validateEmbeddedFilesNameTreeValue, model.V14, model.V11},
+		"AlternatePresentations": {validateAlternatePresentationsNameTreeValue, model.V14, model.V14},
+		"Renditions":             {validateRenditionsNameTreeValue, model.V15, model.V15},
+		"IDTree":                 {validateIDTreeValue, model.V13, model.V13},
 	} {
 		if name == k {
-			return v.validate(xRefTable, o, v.sinceVersion)
+			sinceVersion := v.sinceVersion
+			if xRefTable.ValidationMode == model.ValidationRelaxed {
+				sinceVersion = v.sinceVersionRelaxed
+			}
+			return v.validate(xRefTable, o, sinceVersion)
 		}
 	}
 
@@ -688,7 +693,7 @@ func validateNameTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict, f
 	}
 
 	if firstKey != fkv || lastKey != lkv {
-		return errors.Errorf("pdfcpu: validateNameTreeDictLimitsEntry: leaf node corrupted (firstKey: %s vs %s) (lastKey: %s vs %s)\n", firstKey, fkv, lastKey, lkv)
+		return errors.Errorf("pdfcpu: validateNameTreeDictLimitsEntry: invalid leaf node (firstKey: %s vs %s) (lastKey: %s vs %s)\n", firstKey, fkv, lastKey, lkv)
 	}
 
 	return nil
@@ -719,8 +724,11 @@ func validateNameTree(xRefTable *model.XRefTable, name string, d types.Dict, roo
 			return "", "", nil, err
 		}
 
-		if a == nil {
-			return "", "", nil, errors.New("pdfcpu: validateNameTree: missing \"Kids\" array")
+		if len(a) == 0 {
+			if xRefTable.ValidationMode == model.ValidationStrict {
+				return "", "", nil, errors.New("pdfcpu: validateNameTree: missing \"Kids\" array")
+			}
+			return "", "", nil, nil
 		}
 
 		for _, o := range a {
@@ -734,7 +742,10 @@ func validateNameTree(xRefTable *model.XRefTable, name string, d types.Dict, roo
 			var kidNode *model.Node
 			kminKid, kmax, kidNode, err = validateNameTree(xRefTable, name, d, false)
 			if err != nil {
-				return "", "", nil, err
+				if xRefTable.ValidationMode == model.ValidationStrict {
+					return "", "", nil, err
+				}
+				continue
 			}
 			if kmin == "" {
 				kmin = kminKid

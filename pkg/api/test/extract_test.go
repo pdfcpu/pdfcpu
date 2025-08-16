@@ -265,7 +265,7 @@ func TestExtractContentLowLevel(t *testing.T) {
 	// Create a context.
 	ctx, err := api.ReadContextFile(inFile)
 	if err != nil {
-		t.Fatalf("%s readContext: %v\n", msg, err)
+		t.Fatalf("%s read context: %v\n", msg, err)
 	}
 
 	// Extract page content for page 2.

@@ -676,7 +676,7 @@ func createPDFRes(ctx, otherCtx *model.Context, pageNrSrc, pageNrDest int, migra
 	}
 
 	// Retrieve content stream bytes of page dict.
-	pdfRes.Content, err = otherXRefTable.PageContent(d)
+	pdfRes.Content, err = otherXRefTable.PageContent(d, pageNrSrc)
 	if err != nil && err != model.ErrNoContent {
 		return err
 	}
@@ -746,7 +746,7 @@ func createPDFResForWM(ctx *model.Context, wm *model.Watermark) error {
 }
 
 func createImageResForWM(ctx *model.Context, wm *model.Watermark) (err error) {
-	wm.Img, wm.Width, wm.Height, err = model.CreateImageResource(ctx.XRefTable, wm.Image, false, false)
+	wm.Img, wm.Width, wm.Height, err = model.CreateImageResource(ctx.XRefTable, wm.Image)
 	return err
 }
 
@@ -1100,7 +1100,7 @@ func createExtGStateForStamp(ctx *model.Context, opacity float64) (*types.Indire
 	return ctx.IndRefForNewObject(d)
 }
 
-func insertPageResourcesForWM(ctx *model.Context, pageDict types.Dict, wm model.Watermark, gsID, xoID string) error {
+func insertPageResourcesForWM(pageDict types.Dict, wm model.Watermark, gsID, xoID string) error {
 	resourceDict := types.Dict(
 		map[string]types.Object{
 			"ExtGState": types.Dict(map[string]types.Object{gsID: *wm.ExtGState}),
@@ -1342,6 +1342,7 @@ func handleLink(ctx *model.Context, pageIndRef *types.IndirectRef, d types.Dict,
 
 	ann := model.NewLinkAnnotation(
 		*wm.BbTrans.EnclosingRectangle(5.0), // rect
+		0,                                   // apObjNr
 		"",                                  // contents
 		"pdfcpu",                            // id
 		"",                                  // modDate
@@ -1416,7 +1417,7 @@ func addPageWatermark(ctx *model.Context, pageNr int, wm model.Watermark) error 
 		err = updatePageResourcesForWM(ctx, inhPAttrs.Resources, wm, &gsID, &xoID)
 		d.Update("Resources", inhPAttrs.Resources)
 	} else {
-		err = insertPageResourcesForWM(ctx, d, wm, gsID, xoID)
+		err = insertPageResourcesForWM(d, wm, gsID, xoID)
 	}
 	if err != nil {
 		return err
@@ -1563,16 +1564,49 @@ func AddWatermarksMap(ctx *model.Context, m map[int]*model.Watermark) error {
 	return nil
 }
 
+func resolveFonts(fm map[string]types.IntSet, xRefTable *model.XRefTable, m1 map[int][]*model.Watermark) error {
+	// TODO Take existing font dicts in xref into account.
+	for fontName, pageSet := range fm {
+		ir, err := pdffont.EnsureFontDict(xRefTable, fontName, "", "", false, nil)
+		if err != nil {
+			return err
+		}
+		for pageNr, v := range pageSet {
+			if !v {
+				continue
+			}
+			for _, wm := range m1[pageNr] {
+				if wm.IsText() && wm.FontName == fontName {
+					wm.Font = ir
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // AddWatermarksSliceMap adds watermarks in m to corresponding pages.
 func AddWatermarksSliceMap(ctx *model.Context, m map[int][]*model.Watermark) error {
 	var (
 		onTop   bool
 		opacity float64
 	)
-	for _, wms := range m {
-		onTop = wms[0].OnTop
-		opacity = wms[0].Opacity
-		break
+	m1 := map[int][]*model.Watermark{}
+	gotParms := false
+	for p, wms := range m {
+		if len(wms) == 0 {
+			continue
+		}
+		m1[p] = wms
+		if !gotParms {
+			onTop = wms[0].OnTop
+			opacity = wms[0].Opacity
+			gotParms = true
+		}
+	}
+
+	if len(m1) == 0 {
+		errors.Errorf("pdfcpu: no watermarks available")
 	}
 
 	ocgIndRef, err := prepareOCPropertiesInRoot(ctx, onTop)
@@ -1585,30 +1619,16 @@ func AddWatermarksSliceMap(ctx *model.Context, m map[int][]*model.Watermark) err
 		return err
 	}
 
-	fm, err := createResourcesForWMSliceMap(ctx, m, ocgIndRef, extGStateIndRef, onTop, opacity)
+	fm, err := createResourcesForWMSliceMap(ctx, m1, ocgIndRef, extGStateIndRef, onTop, opacity)
 	if err != nil {
 		return err
 	}
 
-	// TODO Take existing font dicts in xref into account.
-	for fontName, pageSet := range fm {
-		ir, err := pdffont.EnsureFontDict(ctx.XRefTable, fontName, "", "", false, nil)
-		if err != nil {
-			return err
-		}
-		for pageNr, v := range pageSet {
-			if !v {
-				continue
-			}
-			for _, wm := range m[pageNr] {
-				if wm.IsText() && wm.FontName == fontName {
-					wm.Font = ir
-				}
-			}
-		}
+	if err := resolveFonts(fm, ctx.XRefTable, m1); err != nil {
+		return err
 	}
 
-	for k, wms := range m {
+	for k, wms := range m1 {
 		for _, wm := range wms {
 			if err := addPageWatermark(ctx, k, *wm); err != nil {
 				return err

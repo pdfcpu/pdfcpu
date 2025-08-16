@@ -327,56 +327,72 @@ func importImagePDFBytes(wr io.Writer, pageDim *types.Dim, imgWidth, imgHeight f
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 }
 
-// NewPageForImage creates a new page dict in xRefTable for given image reader r.
-func NewPageForImage(xRefTable *model.XRefTable, r io.Reader, parentIndRef *types.IndirectRef, imp *Import) (*types.IndirectRef, error) {
+// NewPagesForImage creates a new page dicts in xRefTable for given image reader r.
+func NewPagesForImage(xRefTable *model.XRefTable, r io.Reader, parentIndRef *types.IndirectRef, imp *Import) ([]*types.IndirectRef, error) {
 
 	// create image dict.
-	imgIndRef, w, h, err := model.CreateImageResource(xRefTable, r, imp.Gray, imp.Sepia)
+	imgResources, err := model.CreateImageResources(xRefTable, r, imp.Gray, imp.Sepia)
 	if err != nil {
 		return nil, err
 	}
 
-	// create resource dict for XObject.
-	d := types.Dict(
-		map[string]types.Object{
-			"ProcSet": types.NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
-			"XObject": types.Dict(map[string]types.Object{"Im0": *imgIndRef}),
-		},
-	)
+	indRefs := []*types.IndirectRef{}
 
-	resIndRef, err := xRefTable.IndRefForNewObject(d)
-	if err != nil {
-		return nil, err
+	for _, imgRes := range imgResources {
+
+		// create resource dict for XObject.
+		d := types.Dict(
+			map[string]types.Object{
+				"ProcSet": types.NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
+				"XObject": types.Dict(map[string]types.Object{imgRes.Res.ID: *imgRes.Res.IndRef}),
+			},
+		)
+
+		resIndRef, err := xRefTable.IndRefForNewObject(d)
+		if err != nil {
+			return nil, err
+		}
+
+		dim := &types.Dim{Width: float64(imgRes.Width), Height: float64(imgRes.Height)}
+		if imp.Pos != types.Full {
+			dim = imp.PageDim
+		}
+		// mediabox = physical page dimensions
+		mediaBox := types.RectForDim(dim.Width, dim.Height)
+
+		var buf bytes.Buffer
+		importImagePDFBytes(&buf, dim, float64(imgRes.Width), float64(imgRes.Height), imp)
+		sd, err := xRefTable.NewStreamDictForBuf(buf.Bytes())
+		if err != nil {
+			return nil, err
+		}
+
+		if err = sd.Encode(); err != nil {
+			return nil, err
+		}
+
+		contentsIndRef, err := xRefTable.IndRefForNewObject(*sd)
+		if err != nil {
+			return nil, err
+		}
+
+		pageDict := types.Dict(
+			map[string]types.Object{
+				"Type":      types.Name("Page"),
+				"Parent":    *parentIndRef,
+				"MediaBox":  mediaBox.Array(),
+				"Resources": *resIndRef,
+				"Contents":  *contentsIndRef,
+			},
+		)
+
+		indRef, err := xRefTable.IndRefForNewObject(pageDict)
+		if err != nil {
+			return nil, err
+		}
+
+		indRefs = append(indRefs, indRef)
 	}
 
-	dim := &types.Dim{Width: float64(w), Height: float64(h)}
-	if imp.Pos != types.Full {
-		dim = imp.PageDim
-	}
-	// mediabox = physical page dimensions
-	mediaBox := types.RectForDim(dim.Width, dim.Height)
-
-	var buf bytes.Buffer
-	importImagePDFBytes(&buf, dim, float64(w), float64(h), imp)
-	sd, _ := xRefTable.NewStreamDictForBuf(buf.Bytes())
-	if err = sd.Encode(); err != nil {
-		return nil, err
-	}
-
-	contentsIndRef, err := xRefTable.IndRefForNewObject(*sd)
-	if err != nil {
-		return nil, err
-	}
-
-	pageDict := types.Dict(
-		map[string]types.Object{
-			"Type":      types.Name("Page"),
-			"Parent":    *parentIndRef,
-			"MediaBox":  mediaBox.Array(),
-			"Resources": *resIndRef,
-			"Contents":  *contentsIndRef,
-		},
-	)
-
-	return xRefTable.IndRefForNewObject(pageDict)
+	return indRefs, nil
 }
