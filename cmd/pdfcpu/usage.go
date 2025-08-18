@@ -1149,7 +1149,7 @@ Examples:
 
 	usageImagesList    = "pdfcpu images list    [-p(ages) selectedPages] -- inFile..."
 	usageImagesExtract = "pdfcpu images extract [-p(ages) selectedPages] -- inFile outDir"
-	usageImagesUpdate  = "pdfcpu images update inFile imageFile [outFile] [ objNr | (pageNr Id) ]"
+	usageImagesUpdate  = "pdfcpu images update [description] inFile imageFile [outFile] [ objNr | (pageNr Id) ]"
 
 	usageImages = "usage: " + usageImagesList +
 		"\n       " + usageImagesExtract +
@@ -1157,13 +1157,23 @@ Examples:
 
 	usageLongImages = `Manage images.
 
-     pages ... Please refer to "pdfcpu selectedpages"
-    inFile ... input PDF file
- imageFile ... image file
-   outFile ... output PDF file
-     objNr ... obj# from "pdfcpu images list"
-    pageNr ... Page from "pdfcpu images list"
-        Id ... Id from "pdfcpu images list"
+     pages  ... Please refer to "pdfcpu selectedpages"
+    inFile  ... input PDF file
+    outDir  ... output directory for extracted images
+description ... gray
+ imageFile  ... image file
+   outFile  ... output PDF file
+     objNr  ... obj# from "pdfcpu images list"
+    pageNr  ... Page from "pdfcpu images list"
+        Id  ... Id from "pdfcpu images list"
+    
+  <description> is a comma separated configuration string containing:
+
+  optional entries:
+
+      (defaults: "gray:off")
+
+   gray:            Convert to grayscale (on/off, true/false, t/f)
     
     Example: pdfcpu images list gallery.pdf
              gallery.pdf:

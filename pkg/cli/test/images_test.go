@@ -21,12 +21,17 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
-func testUpdateImages(t *testing.T, msg string, inFile, imgFile, outFile string, objNrOrPageNr int, id string) {
+func testUpdateImages(t *testing.T, msg string, inFile, imgFile, outFile string, objNrOrPageNr int, id string, upConfStr string) {
 	t.Helper()
 
-	cmd := cli.UpdateImagesCommand(inFile, imgFile, outFile, objNrOrPageNr, id, conf)
+	upConf, err := pdfcpu.ParseUpdateDetails(upConfStr)
+	if err != nil {
+		t.Fatalf("%s %s: %v\n", msg, upConfStr, err)
+	}
+	cmd := cli.UpdateImagesCommand(inFile, imgFile, outFile, objNrOrPageNr, id, upConf, conf)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
@@ -46,12 +51,14 @@ func TestUpdateImages(t *testing.T) {
 		outFile       string
 		objNrOrPageNr int
 		id            string
+		upConfStr     string
 	}{
 		{"TestUpdateByObjNr",
 			"test.pdf",
 			"test_1_Im1.png",
 			"ImageUpdatedByObjNr.pdf",
 			8,
+			"",
 			""},
 
 		{"TestUpdateByPageNrAndId",
@@ -59,20 +66,23 @@ func TestUpdateImages(t *testing.T) {
 			"test_1_Im1.png",
 			"imageUpdatedByPageNrAndIdPage1.pdf",
 			1,
-			"Im1"},
+			"Im1",
+			""},
 
 		{"TestUpdateByPageNrAndId",
 			"test.pdf",
 			"test_1_Im1.png",
 			"imageUpdatedByPageNrAndIdPage2.pdf",
 			2,
-			"Im1"},
+			"Im1",
+			""},
 
 		{"TestUpdateByImageFileName",
 			"test.pdf",
 			"test_1_Im1.png",
 			"imageUpdatedByFileName.pdf",
 			0,
+			"",
 			""},
 
 		{"TestUpdateByPageNrAndId",
@@ -80,20 +90,22 @@ func TestUpdateImages(t *testing.T) {
 			"any.png",
 			"imageUpdatedByPageNrAndIdAny.pdf",
 			1,
-			"Im1"},
+			"Im1",
+			""},
 
 		{"TestUpdateByObjNrPNG",
 			"test.pdf",
 			"any.png",
 			"imageUpdatedByObjNrPNG.pdf",
 			8,
+			"",
 			""},
-
 		{"TestUpdateByObjNrJPG",
 			"test.pdf",
 			"any.jpg",
 			"imageUpdatedByObjNrJPG.pdf",
 			8,
+			"",
 			""},
 
 		{"TestUpdateByObjNrTIFF",
@@ -101,6 +113,7 @@ func TestUpdateImages(t *testing.T) {
 			"any.tiff",
 			"imageUpdatedByObjNrTIFF.pdf",
 			8,
+			"",
 			""},
 
 		{"TestUpdateByObjNrWEBP",
@@ -108,13 +121,22 @@ func TestUpdateImages(t *testing.T) {
 			"any.webp",
 			"imageUpdatedByObjNrWEBP.pdf",
 			8,
+			"",
 			""},
+		{"TestUpdateByObjNrPNGGray",
+			"test.pdf",
+			"any.png",
+			"imageUpdatedByObjNrPNGGray.pdf",
+			8,
+			"",
+			"gray:true"},
 	} {
 		testUpdateImages(t, tt.msg,
 			filepath.Join(inDir, tt.inFile),
 			filepath.Join(inDir, tt.imgFile),
 			filepath.Join(outDir, tt.outFile),
 			tt.objNrOrPageNr,
-			tt.id)
+			tt.id,
+			tt.upConfStr)
 	}
 }

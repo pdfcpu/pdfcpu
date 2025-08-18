@@ -31,6 +31,86 @@ import (
 	"github.com/pkg/errors"
 )
 
+type UpdateConfiguration struct {
+	Gray bool // true for rendering in Gray
+}
+
+type updateParamMap map[string]func(string, *UpdateConfiguration) error
+
+// Handle applies parameter completion and if successful
+// parses the parameter values into configuration
+func (m updateParamMap) Handle(paramPrefix, paramValueStr string, conf *UpdateConfiguration) error {
+
+	var param string
+
+	// Completion support
+	for k := range m {
+		if !strings.HasPrefix(k, strings.ToLower(paramPrefix)) {
+			continue
+		}
+		if len(param) > 0 {
+			return errors.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
+		}
+		param = k
+	}
+
+	if param == "" {
+		return errors.Errorf("pdfcpu: unknown parameter prefix \"%s\"", paramPrefix)
+	}
+
+	return m[param](paramValueStr, conf)
+}
+
+var upParamMap = updateParamMap{
+	"gray": parseUpdateGray,
+}
+
+func parseUpdateGray(s string, conf *UpdateConfiguration) error {
+	switch strings.ToLower(s) {
+	case "on", "true", "t":
+		conf.Gray = true
+	case "off", "false", "f":
+		conf.Gray = false
+	default:
+		return errors.New("pdfcpu: import image gray, please provide one of: on/off true/false")
+	}
+
+	return nil
+}
+
+// DefaultUpdateConfig returns the default configuration.
+func DefaultUpdateConfig() *UpdateConfiguration {
+	return &UpdateConfiguration{}
+}
+
+// ParseUpdateDetails parses an Image command string into an internal structure.
+func ParseUpdateDetails(s string) (*UpdateConfiguration, error) {
+
+	conf := DefaultUpdateConfig()
+	if s == "" {
+		return conf, nil
+	}
+
+	ss := strings.Split(s, ",")
+
+	for _, s := range ss {
+
+		ss1 := strings.Split(s, ":")
+		if len(ss1) != 2 {
+			return nil, errors.New("pdfcpu: Invalid import configuration string. Please consult pdfcpu help import")
+		}
+
+		paramPrefix := strings.TrimSpace(ss1[0])
+		paramValueStr := strings.TrimSpace(ss1[1])
+
+		if err := upParamMap.Handle(paramPrefix, paramValueStr, conf); err != nil {
+			return nil, err
+		}
+	}
+
+	return conf, nil
+}
+
 // Images returns all embedded images of ctx.
 func Images(ctx *model.Context, selectedPages types.IntSet) ([]map[int]model.Image, *ImageListMaxLengths, error) {
 	pageNrs := []int{}
@@ -311,9 +391,9 @@ func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
 }
 
 // UpdateImagesByObjNr replaces an XObject.
-func UpdateImagesByObjNr(ctx *model.Context, rd io.Reader, objNr int) error {
+func UpdateImagesByObjNr(ctx *model.Context, rd io.Reader, objNr int, gray bool) error {
 
-	sd, w, h, err := model.CreateImageStreamDict(ctx.XRefTable, rd)
+	sd, w, h, err := model.CreateImageStreamDict(ctx.XRefTable, rd, gray)
 	if err != nil {
 		return err
 	}
@@ -353,9 +433,9 @@ func isInheritedXObjectResource(inhRes types.Dict, id string) bool {
 }
 
 // UpdateImagesByPageNrAndId replaces the XObject referenced by pageNr and id.
-func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id string) error {
+func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id string, gray bool) error {
 
-	imgIndRef, w, h, err := model.CreateImageResource(ctx.XRefTable, rd)
+	imgIndRef, w, h, err := model.CreateImageResource(ctx.XRefTable, rd, gray)
 	if err != nil {
 		return err
 	}
