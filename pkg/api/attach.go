@@ -17,10 +17,11 @@
 package api
 
 import (
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
+    "io"
+    "os"
+    "path"
+    "path/filepath"
+    "strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -238,29 +239,31 @@ func ExtractAttachmentsRaw(rs io.ReadSeeker, outDir string, fileNames []string, 
 
 // ExtractAttachments extracts embedded files from a PDF context read from rs into outDir.
 func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, conf *model.Configuration) error {
-	aa, err := ExtractAttachmentsRaw(rs, outDir, fileNames, conf)
-	if err != nil {
-		return err
-	}
+    aa, err := ExtractAttachmentsRaw(rs, outDir, fileNames, conf)
+    if err != nil {
+        return err
+    }
 
-	for _, a := range aa {
-		fileName := filepath.Join(outDir, a.FileName)
-		f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
-		if err != nil {
-			fileName = filepath.Base(a.FileName)
-			f, err = os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
-			if err != nil {
-				return err
-			}
-		}
-		logWritingTo(fileName)
-		if _, err = io.Copy(f, a); err != nil {
-			return err
-		}
-		if err := f.Close(); err != nil {
-			return err
-		}
-	}
+    for _, a := range aa {
+        // Sanitize untrusted attachment filename: strip any path components and separators.
+        name := strings.ReplaceAll(a.FileName, "\\", "/")
+        name = path.Base(name)
+        if name == "." || name == ".." || name == "" {
+            name = "attachment"
+        }
+        fileName := filepath.Join(outDir, name)
+        f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+        if err != nil {
+            return err
+        }
+        logWritingTo(fileName)
+        if _, err = io.Copy(f, a); err != nil {
+            return err
+        }
+        if err := f.Close(); err != nil {
+            return err
+        }
+    }
 
 	return nil
 }
