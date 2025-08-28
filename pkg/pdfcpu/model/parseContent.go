@@ -48,23 +48,31 @@ func skipDict(l *string) error {
 			return errDictionaryCorrupt
 		}
 		if s[i] == '<' {
-			j++
+			if i == len(s)-1 {
+				return errDictionaryCorrupt
+			}
+			if s[i+1] == '<' {
+				j++
+				s = s[i+2:]
+				continue
+			}
 			s = s[i+1:]
 			continue
 		}
 		if s[i] == '>' {
-			if j > 0 {
-				j--
-				s = s[i+1:]
-				continue
-			}
-			// >> ?
-			s = s[i:]
-			if !strings.HasPrefix(s, ">>") {
+			if i == len(s)-1 {
 				return errDictionaryCorrupt
 			}
-			*l = s[2:]
-			break
+			if s[i+1] == '>' {
+				if j > 0 {
+					j--
+					s = s[i+2:]
+					continue
+				}
+				*l = s[i+2:]
+				break
+			}
+			s = s[i+1:]
 		}
 	}
 	return nil

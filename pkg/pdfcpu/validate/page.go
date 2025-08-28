@@ -877,7 +877,7 @@ func validatePageDict(xRefTable *model.XRefTable, d types.Dict, hasMediaBox bool
 	for _, f := range []v{
 		{validatePageEntryCropBox, OPTIONAL, model.V10, model.V10},
 		{validatePageEntryBleedBox, OPTIONAL, model.V13, model.V12},
-		{validatePageEntryTrimBox, OPTIONAL, model.V13, model.V12},
+		{validatePageEntryTrimBox, OPTIONAL, model.V13, model.V10},
 		{validatePageEntryArtBox, OPTIONAL, model.V13, model.V12},
 		{validatePageBoxColorInfo, OPTIONAL, model.V14, model.V14},
 		{validatePageEntryRotate, OPTIONAL, model.V10, model.V10},

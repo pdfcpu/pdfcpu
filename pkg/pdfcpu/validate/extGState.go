@@ -28,7 +28,7 @@ func validateBlendMode(s string) bool {
 
 	// see 11.3.5; table 136
 
-	return types.MemberOf(s, []string{"None", "Normal", "Compatible", "Multiply", "Screen", "Overlay", "Darken", "Lighten",
+	return types.MemberOf(s, []string{"None", "Normal", "Compatible", "Multiply", "Mult", "Screen", "Overlay", "Darken", "Lighten",
 		"ColorDodge", "ColorBurn", "HardLight", "SoftLight", "Difference", "Exclusion",
 		"Hue", "Saturation", "Color", "Luminosity"})
 }

@@ -211,7 +211,9 @@ func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.Indirect
 		}
 		if ok {
 			if count != 0 {
-				return 0, 0, errors.New("pdfcpu: validateOutlineTree: empty outline item dict \"Count\" must be 0")
+				if xRefTable.ValidationMode == model.ValidationStrict {
+					return 0, 0, errors.New("pdfcpu: validateOutlineTree: empty outline item dict \"Count\" must be 0")
+				}
 			}
 			continue
 		}

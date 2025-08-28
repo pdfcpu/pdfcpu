@@ -321,7 +321,7 @@ func validateDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entry
 	}
 
 	// Validation
-	if validate != nil && !validate(d) {
+	if validate != nil && len(d) > 0 && !validate(d) {
 		return nil, errors.Errorf("validateDictEntry: dict=%s entry=%s invalid dict entry", dictName, entryName)
 	}
 

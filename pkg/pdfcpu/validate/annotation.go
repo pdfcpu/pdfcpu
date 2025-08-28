@@ -512,10 +512,12 @@ func validateAnnotationDictLinePart1(xRefTable *model.XRefTable, d types.Dict, d
 
 	// LLE, optional, number, since V1.6, > 0
 	sinceVersion = model.V16
+	validateLLE := func(f float64) bool { return f > 0 }
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V14
+		validateLLE = func(f float64) bool { return f >= 0 }
 	}
-	lle, err := validateNumberEntry(xRefTable, d, dictName, "LLE", OPTIONAL, sinceVersion, func(f float64) bool { return f > 0 })
+	lle, err := validateNumberEntry(xRefTable, d, dictName, "LLE", OPTIONAL, sinceVersion, validateLLE)
 	if err != nil {
 		return err
 	}
@@ -1595,41 +1597,47 @@ func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, di
 	// see table 169
 
 	for k, v := range map[string]struct {
-		validate     func(xRefTable *model.XRefTable, d types.Dict, dictName string) error
-		sinceVersion model.Version
-		markup       bool
+		validate            func(xRefTable *model.XRefTable, d types.Dict, dictName string) error
+		sinceVersion        model.Version
+		sinceVersionRelaxed model.Version
+		markup              bool
 	}{
-		"Text":           {validateAnnotationDictText, model.V10, true},
-		"Link":           {validateAnnotationDictLink, model.V10, false},
-		"FreeText":       {validateAnnotationDictFreeText, model.V12, true}, // model.V13
-		"Line":           {validateAnnotationDictLine, model.V13, true},
-		"Polygon":        {validateAnnotationDictPolyLine, model.V14, true}, // model.V15
-		"PolyLine":       {validateAnnotationDictPolyLine, model.V14, true}, // model.V15
-		"Highlight":      {validateTextMarkupAnnotation, model.V13, true},
-		"Underline":      {validateTextMarkupAnnotation, model.V13, true},
-		"Squiggly":       {validateTextMarkupAnnotation, model.V14, true},
-		"StrikeOut":      {validateTextMarkupAnnotation, model.V13, true},
-		"Square":         {validateAnnotationDictCircleOrSquare, model.V13, true},
-		"Circle":         {validateAnnotationDictCircleOrSquare, model.V13, true},
-		"Stamp":          {validateAnnotationDictStamp, model.V13, true},
-		"Caret":          {validateAnnotationDictCaret, model.V14, true}, // model.V15
-		"Ink":            {validateAnnotationDictInk, model.V13, true},
-		"Popup":          {validateAnnotationDictPopup, model.V12, false}, // model.V13
-		"FileAttachment": {validateAnnotationDictFileAttachment, model.V13, true},
-		"Sound":          {validateAnnotationDictSound, model.V12, true},
-		"Movie":          {validateAnnotationDictMovie, model.V12, false},
-		"Widget":         {validateAnnotationDictWidget, model.V12, false},
-		"Screen":         {validateAnnotationDictScreen, model.V14, false}, //  model.V15
-		"PrinterMark":    {validateAnnotationDictPrinterMark, model.V14, false},
-		"TrapNet":        {validateAnnotationDictTrapNet, model.V13, false},
-		"Watermark":      {validateAnnotationDictWatermark, model.V16, false},
-		"3D":             {validateAnnotationDict3D, model.V16, false},
-		"Redact":         {validateAnnotationDictRedact, model.V17, true},
-		"RichMedia":      {validateRichMediaAnnotation, model.V17, false},
+		"Text":           {validateAnnotationDictText, model.V10, model.V10, true},
+		"Link":           {validateAnnotationDictLink, model.V10, model.V10, false},
+		"FreeText":       {validateAnnotationDictFreeText, model.V13, model.V12, true},
+		"Line":           {validateAnnotationDictLine, model.V13, model.V13, true},
+		"Polygon":        {validateAnnotationDictPolyLine, model.V15, model.V14, true},
+		"PolyLine":       {validateAnnotationDictPolyLine, model.V15, model.V14, true},
+		"Highlight":      {validateTextMarkupAnnotation, model.V13, model.V13, true},
+		"Underline":      {validateTextMarkupAnnotation, model.V13, model.V13, true},
+		"Squiggly":       {validateTextMarkupAnnotation, model.V14, model.V14, true},
+		"StrikeOut":      {validateTextMarkupAnnotation, model.V13, model.V13, true},
+		"Square":         {validateAnnotationDictCircleOrSquare, model.V13, model.V13, true},
+		"Circle":         {validateAnnotationDictCircleOrSquare, model.V13, model.V13, true},
+		"Stamp":          {validateAnnotationDictStamp, model.V13, model.V13, true},
+		"Caret":          {validateAnnotationDictCaret, model.V15, model.V14, true},
+		"Ink":            {validateAnnotationDictInk, model.V13, model.V13, true},
+		"Popup":          {validateAnnotationDictPopup, model.V13, model.V12, false},
+		"FileAttachment": {validateAnnotationDictFileAttachment, model.V13, model.V13, true},
+		"Sound":          {validateAnnotationDictSound, model.V12, model.V12, true},
+		"Movie":          {validateAnnotationDictMovie, model.V12, model.V12, false},
+		"Widget":         {validateAnnotationDictWidget, model.V12, model.V12, false},
+		"Screen":         {validateAnnotationDictScreen, model.V15, model.V14, false},
+		"PrinterMark":    {validateAnnotationDictPrinterMark, model.V14, model.V14, false},
+		"TrapNet":        {validateAnnotationDictTrapNet, model.V13, model.V13, false},
+		"Watermark":      {validateAnnotationDictWatermark, model.V16, model.V16, false},
+		"3D":             {validateAnnotationDict3D, model.V16, model.V16, false},
+		"Redact":         {validateAnnotationDictRedact, model.V17, model.V17, true},
+		"RichMedia":      {validateRichMediaAnnotation, model.V17, model.V14, false},
 	} {
 		if subtype.Value() == k {
 
-			err := xRefTable.ValidateVersion(k, v.sinceVersion)
+			sinceVersion := v.sinceVersion
+			if xRefTable.ValidationMode == model.ValidationRelaxed {
+				sinceVersion = v.sinceVersionRelaxed
+			}
+
+			err := xRefTable.ValidateVersion(k, sinceVersion)
 			if err != nil {
 				return err
 			}

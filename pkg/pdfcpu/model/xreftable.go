@@ -242,7 +242,7 @@ func (xRefTable *XRefTable) ParseRootVersion() (v *string, err error) {
 // ValidateVersion validates against the xRefTable's version.
 func (xRefTable *XRefTable) ValidateVersion(element string, sinceVersion Version) error {
 	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("%s: unsupported in version %s\n", element, xRefTable.VersionString())
+		return errors.Errorf("%s: unsupported in version %s", element, xRefTable.VersionString())
 	}
 
 	return nil
@@ -1688,7 +1688,9 @@ func (xRefTable *XRefTable) consolidateResources(obj types.Object, pAttrs *Inher
 			if err != nil {
 				return err
 			}
-			pAttrs.Resources[k] = o.Clone()
+			if o != nil {
+				pAttrs.Resources[k] = o.Clone()
+			}
 		}
 		if log.WriteEnabled() {
 			log.Write.Printf("pA:\n%s\n", pAttrs.Resources)

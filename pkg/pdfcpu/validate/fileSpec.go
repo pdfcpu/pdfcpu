@@ -276,7 +276,7 @@ func validateFileSpecDictEFAndRF(xRefTable *model.XRefTable, d types.Dict, dictN
 
 	// Type, required if EF, EP or RF present, name
 	validate := func(s string) bool {
-		return s == "Filespec" || (xRefTable.ValidationMode == model.ValidationRelaxed && s == "F")
+		return s == "Filespec" || s == "FileSpec" || (xRefTable.ValidationMode == model.ValidationRelaxed && s == "F")
 	}
 	required := rfDict != nil || efDict != nil || hasEP
 	if _, err = validateNameEntry(xRefTable, d, dictName, "Type", required, model.V10, validate); err != nil {

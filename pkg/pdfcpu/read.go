@@ -1471,15 +1471,16 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 		if withinXref {
 			offset += int64(length + eolCount)
 			if withinTrailer {
+				if length == 0 {
+					continue
+				}
 				bb = append(bb, '\n')
 				bb = append(bb, line...)
 				_, err = processTrailer(c, ctx, s, string(bb), nil, offExtra, incr)
-				if err == nil {
-					model.ShowRepaired("xreftable")
-				}
 				if err != nil {
 					return err
 				}
+				model.ShowRepaired("xreftable")
 				withinXref = false
 				withinTrailer = false
 				continue
@@ -1581,7 +1582,7 @@ func tryXRefSection(c context.Context, ctx *model.Context, rs io.ReadSeeker, off
 	}
 
 	i := strings.Index(line, "xref")
-	if i >= 0 {
+	if i == 0 || (i > 0 && line[i-1] != 't') { // Don't confuse with "startxref".
 		if log.ReadEnabled() {
 			log.Read.Println("tryXRefSection: found xref section")
 		}

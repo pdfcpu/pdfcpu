@@ -581,7 +581,7 @@ func validateNamedActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 		}
 
 		// Some known non standard named actions
-		if types.MemberOf(s, []string{"GoToPage", "GoBack", "GoForward", "Find", "Print", "SaveAs", "Quit", "FullScreen"}) {
+		if types.MemberOf(s, []string{"AcroSrch:Query", "Find", "FindAgain", "FindAgainDoc", "FindPrevious", "FindPreviousDoc", "FullScreen", "GoBack", "GoBackDoc", "GoForward", "GoToPage", "Print", "Quit", "SaveAs"}) {
 			return true
 		}
 
@@ -952,7 +952,7 @@ func validateAdditionalActions(xRefTable *model.XRefTable, dict types.Dict, dict
 		case "fieldOrAnnot":
 			// A terminal form field may be merged with a widget annotation.
 			fieldOptions := []string{"K", "F", "V", "C"}
-			annotOptions := []string{"E", "X", "D", "U", "Fo", "Bl", "PO", "PC", "PV", "Pl"}
+			annotOptions := []string{"E", "X", "D", "U", "Fo", "Bl", "PO", "PC", "PV", "PI"}
 			options := append(fieldOptions, annotOptions...)
 			if types.MemberOf(s, options) {
 				return true
