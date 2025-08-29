@@ -236,6 +236,36 @@ func ExtractAttachmentsRaw(rs io.ReadSeeker, outDir string, fileNames []string, 
 	return ctx.ExtractAttachments(fileNames)
 }
 
+func SanitizePath(path string) string {
+
+	// Do not process "'" and "..".
+
+	if path == "" || path == "." || path == ".." {
+		return "attachment"
+	}
+
+	path = strings.TrimPrefix(path, string(filepath.Separator))
+
+	parts := strings.Split(path, string(filepath.Separator))
+
+	cleanParts := []string{}
+	for i := 0; i < len(parts); i++ {
+		if parts[i] != "" && parts[i] != "." && parts[i] != ".." {
+			cleanParts = append(cleanParts, parts[i])
+			continue
+		}
+		if i == len(parts)-1 {
+			cleanParts = append(cleanParts, "attachment")
+		}
+	}
+
+	if len(cleanParts) == 0 {
+		return "attachment"
+	}
+
+	return filepath.Join(cleanParts...)
+}
+
 // ExtractAttachments extracts embedded files from a PDF context read from rs into outDir.
 func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, conf *model.Configuration) error {
 	aa, err := ExtractAttachmentsRaw(rs, outDir, fileNames, conf)
@@ -244,7 +274,10 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 	}
 
 	for _, a := range aa {
-		fileName := filepath.Join(outDir, a.FileName)
+
+		fn := SanitizePath(a.FileName)
+		fileName := filepath.Join(outDir, fn)
+
 		f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 		if err != nil {
 			fileName = filepath.Base(a.FileName)

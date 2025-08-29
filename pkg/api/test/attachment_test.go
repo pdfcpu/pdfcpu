@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -259,4 +260,36 @@ func TestAttachmentsLowLevel(t *testing.T) {
 	// Process gotBytes..
 
 	removeAttachment(t, msg, outFile, a, ctx)
+}
+
+func TestSanitizePath(t *testing.T) {
+
+	msg := "TestSanitizePath"
+
+	testPaths := []string{
+		"",
+		".",
+		"..",
+		"../..",
+		"foo/.",
+		"bar/..",
+		"foo/bar/.",
+		"foo/bar/",
+		"foo/./bar/..",
+		"foo/./bar/./..",
+		"foo/./bar/../.",
+		"foo/./bar/../..",
+		"foo/./bar/",
+		"foo/../bar/..",
+		"docs/report.pdf",
+		"../../etc/passwd",
+		"/etc/passwd",
+		"subdir/../bar//../file.txt",
+	}
+
+	for _, path := range testPaths {
+		result := api.SanitizePath(path)
+		fmt.Printf("%s: %q -> %q \n", msg, path, result)
+	}
+
 }
