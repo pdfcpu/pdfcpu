@@ -297,6 +297,11 @@ func pageLayoutValidator(v model.Version) func(s string) bool {
 		layouts = append(layouts, "TwoPageLeft", "TwoPageRight")
 	}
 	validate := func(s string) bool {
+		// Always allow TwoPageLeft and TwoPageRight for compatibility
+		// even if the PDF version is < 1.5
+		if s == "TwoPageLeft" || s == "TwoPageRight" {
+			return true
+		}
 		return types.MemberOf(s, layouts)
 	}
 	return validate
