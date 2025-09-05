@@ -109,6 +109,10 @@ func ReadWithContext(c context.Context, rs io.ReadSeeker, conf *model.Configurat
 		return nil, errors.Wrap(err, "Read: xRefTable failed")
 	}
 
+	if conf.FastCover {
+		coverShrinkTable(c, ctx)
+	}
+
 	// Make all objects explicitly available (load into memory) in corresponding xRefTable entries.
 	// Also decode any involved object streams.
 	if err = dereferenceXRefTable(c, ctx); err != nil {

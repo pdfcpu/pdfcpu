@@ -17,11 +17,13 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 func TestCollect(t *testing.T) {
@@ -68,5 +70,36 @@ func TestCollectLowLevel(t *testing.T) {
 	// Write context to file.
 	if err := api.WriteContextFile(ctxNew, outFile); err != nil {
 		t.Fatalf("%s write: %v\n", msg, err)
+	}
+}
+
+func TestFastCoverCollect(t *testing.T) {
+	conf = model.NewDefaultConfiguration()
+	// conf.Optimize = false
+	// conf.WriteObjectStream = false
+	// conf.WriteXRefStream = false
+	conf.FastCover = true
+
+	outDir := "./tmp"
+	os.Mkdir(outDir, 0755)
+	defer func() {
+		os.RemoveAll(outDir)
+	}()
+
+	testdata := []string{
+		"pike-stanford.pdf",
+	}
+
+	for _, item := range testdata {
+		outFile := filepath.Join(outDir, item)
+		os.Remove(outFile)
+		inFile := filepath.Join(inDir, item)
+		// Start with all odd pages but page 1, then append pages 8-11 and the last page.
+		if err := api.CollectFile(inFile, outFile, []string{"1"}, conf); err != nil {
+			t.Fatalf("err: %v\n", err)
+		}
+		if err := api.ValidateFile(outFile, conf); err != nil {
+			t.Fatalf("err: %v\n", err)
+		}
 	}
 }
