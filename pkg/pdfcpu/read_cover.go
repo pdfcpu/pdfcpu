@@ -233,7 +233,6 @@ func coverShrinkTable(c context.Context, ctx *model.Context) {
 		Table[k] = entry
 	}
 
-	// 记录优化效果
 	originalCount := len(ctx.Table)
 	optimizedCount := len(Table)
 	log.Info.Printf("FastCover optimization: %d -> %d objects (%.1f%% reduction)",
