@@ -55,7 +55,7 @@ func Images(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration)
 }
 
 // UpdateImages replaces the XObject identified by objNr or (pageNr and resourceId).
-func UpdateImages(rs io.ReadSeeker, rd io.Reader, w io.Writer, objNr, pageNr int, id string, conf *model.Configuration) error {
+func UpdateImages(rs io.ReadSeeker, rd io.Reader, w io.Writer, objNr, pageNr int, id string, conf *model.Configuration, gray bool) error {
 
 	if rs == nil {
 		return errors.New("pdfcpu: UpdateImages: missing rs")
@@ -72,7 +72,7 @@ func UpdateImages(rs io.ReadSeeker, rd io.Reader, w io.Writer, objNr, pageNr int
 	}
 
 	if objNr > 0 {
-		if err := pdfcpu.UpdateImagesByObjNr(ctx, rd, objNr); err != nil {
+		if err := pdfcpu.UpdateImagesByObjNr(ctx, rd, objNr, gray); err != nil {
 			return err
 		}
 
@@ -83,7 +83,7 @@ func UpdateImages(rs io.ReadSeeker, rd io.Reader, w io.Writer, objNr, pageNr int
 		return errors.New("pdfcpu: UpdateImages: missing pageNr or id ")
 	}
 
-	if err := pdfcpu.UpdateImagesByPageNrAndId(ctx, rd, pageNr, id); err != nil {
+	if err := pdfcpu.UpdateImagesByPageNrAndId(ctx, rd, pageNr, id, gray); err != nil {
 		return err
 	}
 
@@ -117,7 +117,7 @@ func ensurePageNrAndId(pageNr *int, id *string, imageFile string) (err error) {
 }
 
 // UpdateImagesFile replaces the XObject identified by objNr or (pageNr and resourceId).
-func UpdateImagesFile(inFile, imageFile, outFile string, objNr, pageNr int, id string, conf *model.Configuration) (err error) {
+func UpdateImagesFile(inFile, imageFile, outFile string, objNr, pageNr int, id string, upConf *pdfcpu.UpdateConfiguration, conf *model.Configuration) (err error) {
 
 	if objNr < 1 {
 		if err = ensurePageNrAndId(&pageNr, &id, imageFile); err != nil {
@@ -169,5 +169,5 @@ func UpdateImagesFile(inFile, imageFile, outFile string, objNr, pageNr int, id s
 		}
 	}()
 
-	return UpdateImages(f0, f1, f2, objNr, pageNr, id, conf)
+	return UpdateImages(f0, f1, f2, objNr, pageNr, id, conf, upConf.Gray)
 }

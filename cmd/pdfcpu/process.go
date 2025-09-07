@@ -2120,27 +2120,47 @@ func processExtractImagesCommand(conf *model.Configuration) {
 
 func processUpdateImagesCommand(conf *model.Configuration) {
 	argCount := len(flag.Args())
-	if argCount < 2 || argCount > 5 {
+	if argCount < 2 || argCount > 6 {
 		fmt.Fprintf(os.Stderr, "%s\n\n", usageImagesUpdate)
 		os.Exit(1)
 	}
 
+	// check if first arg is option list or filename
+
 	inFile := flag.Arg(0)
+	argOffset := 0
+	upConf := pdfcpu.DefaultUpdateConfig()
+	if !hasPDFExtension(inFile) {
+		// Might be import description
+		var err error
+		upConf, err = pdfcpu.ParseUpdateDetails(inFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		if upConf == nil {
+			fmt.Fprintf(os.Stderr, "missing import description\n")
+			os.Exit(1)
+		}
+		argOffset = 1
+		inFile = flag.Arg(1)
+	}
+
 	if conf.CheckFileNameExt {
 		ensurePDFExtension(inFile)
 	}
 
-	imageFile := flag.Arg(1)
+	imageFile := flag.Arg(1 + argOffset)
 	ensureImageExtension(imageFile)
 
 	outFile := ""
 	objNrOrPageNr := 0
 	id := ""
 
-	if argCount > 2 {
-		c := 2
-		if hasPDFExtension(flag.Arg(2)) {
-			outFile = flag.Arg(2)
+	if argCount > (2 + argOffset) {
+		c := (2 + argOffset)
+		if hasPDFExtension(flag.Arg(c)) {
+			outFile = flag.Arg(c)
 			c++
 		}
 		if argCount > c {
@@ -2162,7 +2182,7 @@ func processUpdateImagesCommand(conf *model.Configuration) {
 
 	//fmt.Printf("inFile:%s imgFile:%s outFile:%s, objPageNr:%d, id:%s\n", inFile, imageFile, outFile, objNrOrPageNr, id)
 
-	process(cli.UpdateImagesCommand(inFile, imageFile, outFile, objNrOrPageNr, id, conf))
+	process(cli.UpdateImagesCommand(inFile, imageFile, outFile, objNrOrPageNr, id, upConf, conf))
 }
 
 func processDumpCommand(conf *model.Configuration) {
