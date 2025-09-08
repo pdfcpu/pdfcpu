@@ -1,6 +1,6 @@
 module github.com/pdfcpu/pdfcpu
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.2
 
@@ -12,7 +12,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	golang.org/x/crypto v0.41.0
 	golang.org/x/image v0.30.0
-	golang.org/x/text v0.28.0
+	golang.org/x/text v0.29.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
