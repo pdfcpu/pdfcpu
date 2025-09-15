@@ -424,7 +424,7 @@ func validateOutlinesGeneral(xRefTable *model.XRefTable, rootDict types.Dict) (*
 
 	// Type, optional, name
 	_, err := validateNameEntry(xRefTable, d, "outlineDict", "Type", OPTIONAL, model.V10, func(s string) bool {
-		return s == "Outlines" || (xRefTable.ValidationMode == model.ValidationRelaxed && s == "Outline")
+		return s == "Outlines" || (xRefTable.ValidationMode == model.ValidationRelaxed && (s == "Outline" || s == "BMoutlines"))
 	})
 	if err != nil {
 		return nil, nil, nil, err
@@ -440,7 +440,7 @@ func validateOutlinesGeneral(xRefTable *model.XRefTable, rootDict types.Dict) (*
 		removeOutlines(xRefTable, rootDict)
 		return nil, nil, nil, nil
 	}
-	if last == nil {
+	if last == nil && xRefTable.ValidationMode == model.ValidationStrict {
 		return nil, nil, nil, errors.New("pdfcpu: validateOutlines: invalid, root missing \"Last\"")
 	}
 

@@ -942,7 +942,7 @@ func validateExtGStateDictPart3(xRefTable *model.XRefTable, d types.Dict, dictNa
 	// ca, number, optional, since V1.4, same as CA but for nonstroking operations.
 	sinceVersion = model.V14
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
+		sinceVersion = model.V11
 	}
 	_, err = validateNumberEntry(xRefTable, d, dictName, "ca", OPTIONAL, sinceVersion, nil)
 	if err != nil {

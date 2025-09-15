@@ -413,13 +413,21 @@ func validateAlternateImageStreamDicts(xRefTable *model.XRefTable, d types.Dict,
 func validateImageStreamDictPart1(xRefTable *model.XRefTable, sd *types.StreamDict, dictName string) (isImageMask bool, err error) {
 
 	// Width, integer, required
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "Width", REQUIRED, model.V10, nil)
+	required := true
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		required = false
+	}
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "Width", required, model.V10, nil)
 	if err != nil {
 		return false, err
 	}
 
 	// Height, integer, required
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "Height", REQUIRED, model.V10, nil)
+	required = true
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		required = false
+	}
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "Height", required, model.V10, nil)
 	if err != nil {
 		return false, err
 	}
@@ -435,7 +443,10 @@ func validateImageStreamDictPart1(xRefTable *model.XRefTable, sd *types.StreamDi
 	// ColorSpace, name or array, required unless used filter is JPXDecode; not allowed for imagemasks.
 	if !isImageMask {
 
-		required := REQUIRED
+		required = REQUIRED
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			required = OPTIONAL
+		}
 
 		if sd.HasSoleFilterNamed(filter.JPX) {
 			required = OPTIONAL
@@ -459,9 +470,10 @@ func validateImageStreamDictPart2(xRefTable *model.XRefTable, sd *types.StreamDi
 
 	// BitsPerComponent, integer
 	required := REQUIRED
-	if sd.HasSoleFilterNamed(filter.JPX) || isImageMask {
+	if sd.HasSoleFilterNamed(filter.JPX) || isImageMask || xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = OPTIONAL
 	}
+
 	// For imageMasks BitsPerComponent must be 1.
 	var validateBPC func(i int) bool
 	if isImageMask {
@@ -785,7 +797,7 @@ func validateXObjectStreamDict(xRefTable *model.XRefTable, o types.Object) error
 		return err
 	}
 
-	if subtype == nil {
+	if subtype == nil || len(*subtype) == 0 {
 		// relaxed
 		_, found := sd.Find("BBox")
 		if found {

@@ -438,6 +438,12 @@ func (xRefTable *XRefTable) InsertObject(obj types.Object) (objNr int, err error
 	return xRefTable.InsertNew(*xRefTableEntry), nil
 }
 
+// IndRefForNewObject inserts object at objNr into the xRefTable and returns an indirect reference to it.
+func (xRefTable *XRefTable) IndRefForObject(objNr int, obj types.Object) (*types.IndirectRef, error) {
+	xRefTable.Table[objNr] = NewXRefTableEntryGen0(obj)
+	return types.NewIndirectRef(objNr, 0), nil
+}
+
 // IndRefForNewObject inserts an object into the xRefTable and returns an indirect reference to it.
 func (xRefTable *XRefTable) IndRefForNewObject(obj types.Object) (*types.IndirectRef, error) {
 	xRefTableEntry := NewXRefTableEntryGen0(obj)
@@ -1014,7 +1020,10 @@ func (xRefTable *XRefTable) DereferenceXObjectDict(indRef types.IndirectRef) (*t
 	}
 
 	subType := sd.Dict.Subtype()
-	if subType == nil {
+	if subType == nil || len(*subType) == 0 {
+		if xRefTable.ValidationMode == ValidationRelaxed {
+			return sd, nil
+		}
 		return nil, errors.Errorf("pdfcpu: DereferenceXObjectDict: missing stream dict Subtype %s\n", indRef)
 	}
 
@@ -1894,7 +1903,7 @@ func (xRefTable *XRefTable) consolidateResourceSubDict(d types.Dict, key string,
 		if !set[k] {
 			s := fmt.Sprintf("page %d: missing required %s: %s", pageNr, key, k)
 			if xRefTable.ValidationMode == ValidationStrict {
-				return errors.Errorf("pdfcpu: " + s)
+				return errors.New("pdfcpu: " + s)
 			}
 			ShowSkipped(s)
 		}
@@ -2431,11 +2440,16 @@ func (xRefTable *XRefTable) PageDims() ([]types.Dim, error) {
 	return dims, nil
 }
 
-func (xRefTable *XRefTable) EmptyPage(parentIndRef *types.IndirectRef, mediaBox *types.Rectangle) (*types.IndirectRef, error) {
+func (xRefTable *XRefTable) EmptyPage(parentIndRef *types.IndirectRef, mediaBox *types.Rectangle, objNr int) (*types.IndirectRef, error) {
 	sd, _ := xRefTable.NewStreamDictForBuf(nil)
 
 	if err := sd.Encode(); err != nil {
 		return nil, err
+	}
+
+	arr := types.RectForFormat("A4").Array()
+	if mediaBox != nil {
+		arr = mediaBox.Array()
 	}
 
 	contentsIndRef, err := xRefTable.IndRefForNewObject(*sd)
@@ -2448,10 +2462,14 @@ func (xRefTable *XRefTable) EmptyPage(parentIndRef *types.IndirectRef, mediaBox 
 			"Type":      types.Name("Page"),
 			"Parent":    *parentIndRef,
 			"Resources": types.NewDict(),
-			"MediaBox":  mediaBox.Array(),
+			"MediaBox":  arr,
 			"Contents":  *contentsIndRef,
 		},
 	)
+
+	if objNr > 0 {
+		return xRefTable.IndRefForObject(objNr, pageDict)
+	}
 
 	return xRefTable.IndRefForNewObject(pageDict)
 }
@@ -2471,8 +2489,9 @@ func (xRefTable *XRefTable) pageMediaBox(d types.Dict) (*types.Rectangle, error)
 }
 
 func (xRefTable *XRefTable) emptyPage(parent *types.IndirectRef, d types.Dict, dim *types.Dim, pAttrs *InheritedPageAttrs) (*types.IndirectRef, error) {
+	// TODO cache empty page
 	if dim != nil {
-		return xRefTable.EmptyPage(parent, types.RectForDim(dim.Width, dim.Height))
+		return xRefTable.EmptyPage(parent, types.RectForDim(dim.Width, dim.Height), 0)
 	}
 
 	mediaBox, err := pAttrs.MediaBox, error(nil)
@@ -2483,8 +2502,7 @@ func (xRefTable *XRefTable) emptyPage(parent *types.IndirectRef, d types.Dict, d
 		}
 	}
 
-	// TODO cache empty page
-	return xRefTable.EmptyPage(parent, mediaBox)
+	return xRefTable.EmptyPage(parent, mediaBox, 0)
 }
 
 func (xRefTable *XRefTable) insertBlankPages(

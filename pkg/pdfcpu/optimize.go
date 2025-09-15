@@ -18,7 +18,9 @@ package pdfcpu
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
@@ -336,12 +338,35 @@ func registerFontDictObjNr(ctx *model.Context, fName string, objNr int) {
 	}
 }
 
+func checkForEmbeddedFont(ctx *model.Context) bool {
+	return log.StatsEnabled() || ctx.Cmd == model.LISTINFO || ctx.Cmd == model.EXTRACTFONTS
+}
+
+func qualifiedRName(rNamePrefix, rName string) string {
+	s := rName
+	if rNamePrefix != "" {
+		s = rNamePrefix + "." + rName
+	}
+	return s
+}
+
 // Get rid of redundant fonts for given fontResources dictionary.
 func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int, rNamePrefix string) error {
 	pageFonts := pageFonts(ctx, pageNr)
 
+	recordedCorrupt := false
+
 	// Iterate over font resource dict.
 	for rName, v := range rDict {
+
+		if v == nil {
+			if !recordedCorrupt {
+				// fontId with missing fontDict indRef.
+				ctx.Optimize.CorruptFontResDicts = append(ctx.Optimize.CorruptFontResDicts, rDict)
+				recordedCorrupt = true
+			}
+			continue
+		}
 
 		indRef, ok := v.(types.IndirectRef)
 		if !ok {
@@ -350,14 +375,10 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int,
 
 		objNr := int(indRef.ObjectNumber)
 
-		qualifiedRName := rName
-		if rNamePrefix != "" {
-			qualifiedRName = rNamePrefix + "." + rName
-		}
+		qualifiedRName := qualifiedRName(rNamePrefix, rName)
 
 		if _, found := ctx.Optimize.FontObjects[objNr]; found {
 			// This font has already been registered.
-			//log.Optimize.Printf("optimizeFontResourcesDict: Fontobject %d already registered\n", objectNumber)
 			pageFonts[objNr] = true
 			continue
 		}
@@ -365,7 +386,11 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int,
 		// We are dealing with a new font.
 		fontDict, err := ctx.DereferenceFontDict(indRef)
 		if err != nil {
-			return err
+			if ctx.XRefTable.ValidationMode == model.ValidationStrict {
+				return err
+			}
+
+			fontDict = nil
 		}
 		if fontDict == nil {
 			continue
@@ -404,7 +429,7 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int,
 			FontDict:      fontDict,
 		}
 
-		if log.StatsEnabled() || ctx.Cmd == model.LISTINFO || ctx.Cmd == model.EXTRACTFONTS {
+		if checkForEmbeddedFont(ctx) {
 			fontObj.Embedded, err = pdffont.Embedded(ctx.XRefTable, fontDict, objNr)
 			if err != nil {
 				return err
@@ -1096,6 +1121,28 @@ func calcRedundantObjects(ctx *model.Context) error {
 	return nil
 }
 
+func fixCorruptFontResDicts(ctx *model.Context) error {
+	// TODO: hacky, also because we don't reall y take the fontDict type into account.
+	for _, d := range ctx.Optimize.CorruptFontResDicts {
+		for k, v := range d {
+			if v == nil {
+				for fn, objNrs := range ctx.Optimize.Fonts {
+
+					if strings.HasPrefix(fn, "Arial") && (len(fn) == 5 || fn[5] != '-') {
+						model.ShowRepaired(fmt.Sprintf("font %s mapped to objNr %d", k, objNrs[0]))
+						d[k] = *types.NewIndirectRef(objNrs[0], 0)
+						break
+					}
+				}
+			}
+			// if d[k] == nil {
+			// 	d[k] = *types.NewIndirectRef(objNrs[0], 0)
+			// }
+		}
+	}
+	return nil
+}
+
 // Iterate over all pages and optimize resources.
 // Get rid of duplicate embedded fonts and images.
 func optimizeFontAndImages(ctx *model.Context) error {
@@ -1122,6 +1169,10 @@ func optimizeFontAndImages(ctx *model.Context) error {
 	// Iterate over page dicts and optimize resources.
 	_, err = parsePagesDict(ctx, pageTreeRootDict, 0)
 	if err != nil {
+		return err
+	}
+
+	if err := fixCorruptFontResDicts(ctx); err != nil {
 		return err
 	}
 

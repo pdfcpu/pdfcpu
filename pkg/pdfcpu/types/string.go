@@ -315,3 +315,17 @@ func DecodeName(s string) (string, error) {
 	}
 	return sb.String(), nil
 }
+
+func TrimLeadingComment(s string) string {
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case ' ', '\t', '\r', '\n', '\f':
+			continue
+		case '%':
+			return ""
+		default:
+			return s
+		}
+	}
+	return ""
+}

@@ -194,3 +194,19 @@ func (a Array) PDFString() string {
 
 	return strings.Join(logstr, "")
 }
+
+func (a Array) RemoveNulls() Array {
+	if len(a) == 0 {
+		return a
+	}
+
+	a1 := Array{}
+
+	for _, v := range a {
+		if v != nil {
+			a1 = append(a1, v)
+		}
+	}
+
+	return a1
+}

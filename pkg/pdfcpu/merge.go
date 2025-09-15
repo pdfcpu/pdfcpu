@@ -753,7 +753,7 @@ func createDividerPagesDict(ctx *model.Context, parentIndRef types.IndirectRef) 
 	last := len(dims) - 1
 	mediaBox := types.NewRectangle(0, 0, dims[last].Width, dims[last].Height)
 
-	indRefPageDict, err := ctx.EmptyPage(indRef, mediaBox)
+	indRefPageDict, err := ctx.EmptyPage(indRef, mediaBox, 0)
 	if err != nil {
 		return nil, err
 	}

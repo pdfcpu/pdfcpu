@@ -87,7 +87,7 @@ func handleProperties(xRefTable *model.XRefTable, key string, val types.Object) 
 }
 
 func validateKeywords(xRefTable *model.XRefTable, v types.Object) (err error) {
-	xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V11, nil)
+	xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 
 	// text string, opt, since V1.1
 	case "Title":
-		xRefTable.Title, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V11, nil)
+		xRefTable.Title, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V10, nil)
 
 	// text string, optional
 	case "Author":
@@ -119,7 +119,7 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 
 	// text string, optional, since V1.1
 	case "Subject":
-		xRefTable.Subject, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V11, nil)
+		xRefTable.Subject, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V10, nil)
 
 	// text string, optional, since V1.1
 	case "Keywords":

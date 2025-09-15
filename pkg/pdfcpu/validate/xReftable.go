@@ -318,7 +318,7 @@ func validatePageLayout(xRefTable *model.XRefTable, rootDict types.Dict, require
 func pageModeValidator(v model.Version) func(s string) bool {
 	// "None" and "none" are out of spec.
 	modes := []string{"UseNone", "UseOutlines", "UseThumbs", "FullScreen", "None", "none"}
-	if v >= model.V15 {
+	if v >= model.V14 {
 		modes = append(modes, "UseOC")
 	}
 	if v >= model.V16 {
@@ -1086,7 +1086,11 @@ func validateRootObject(ctx *model.Context) error {
 	}
 
 	// Type
-	_, err = validateNameEntry(xRefTable, d, "rootDict", "Type", REQUIRED, model.V10, func(s string) bool { return s == "Catalog" })
+	required := true
+	if ctx.XRefTable.ValidationMode == model.ValidationRelaxed {
+		required = false
+	}
+	_, err = validateNameEntry(xRefTable, d, "rootDict", "Type", required, model.V10, func(s string) bool { return s == "Catalog" })
 	if err != nil {
 		return err
 	}
