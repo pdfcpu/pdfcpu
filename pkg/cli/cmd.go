@@ -48,6 +48,7 @@ type Command struct {
 	Output            io.Writer
 	Box               *model.Box
 	Import            *pdfcpu.Import
+	Update            *pdfcpu.UpdateConfiguration
 	NUp               *model.NUp
 	Cut               *model.Cut
 	PageBoundaries    *model.PageBoundaries
@@ -844,7 +845,7 @@ func ListImagesCommand(inFiles []string, pageSelection []string, conf *model.Con
 }
 
 // UpdateImagesCommand creates a new command to update images.
-func UpdateImagesCommand(inFile, imageFile, outFile string, objNrOrPageNr int, id string, conf *model.Configuration) *Command {
+func UpdateImagesCommand(inFile, imageFile, outFile string, objNrOrPageNr int, id string, upConf *pdfcpu.UpdateConfiguration, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -856,6 +857,7 @@ func UpdateImagesCommand(inFile, imageFile, outFile string, objNrOrPageNr int, i
 		OutFile:   &outFile,
 		IntVal:    objNrOrPageNr,
 		StringVal: id,
+		Update:    upConf,
 		Conf:      conf}
 }
 
