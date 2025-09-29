@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 
 	"unicode/utf8"
 
@@ -433,7 +434,14 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	if font.IsCoreFont(f.Name) && utf8.ValidString(s) {
 		s = model.DecodeUTF8ToByte(s)
 	}
-	lines := model.SplitMultilineStr(s)
+	//lines := model.SplitMultilineStr(s)
+	var lines []string
+	if tf.Multiline {
+		lines = model.WordWrap(s, f.Name, f.Size, w-2*boWidth)
+	} else {
+		ll := strings.ReplaceAll(s, "\\n", "\n")
+		lines = append(lines, strings.ReplaceAll(ll, "\n", " "))
+	}
 
 	fmt.Fprint(buf, "/Tx BMC ")
 
