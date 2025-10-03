@@ -1020,7 +1020,7 @@ func parseTrailerDict(c context.Context, ctx *model.Context, trailerDict types.D
 	offsetXRefStream := trailerDict.Int64Entry("XRefStm")
 	if offsetXRefStream == nil || repairing {
 		// No cross reference stream.
-		if !ctx.Reader15 && xRefTable.Version() >= model.V14 && !ctx.Read.Hybrid {
+		if !ctx.Reader15 && xRefTable.Version() >= model.V15 && !ctx.Read.Hybrid {
 			return nil, errors.Errorf("parseTrailerDict: PDF1.4 conformant reader: found incompatible version: %s", xRefTable.VersionString())
 		}
 		if log.ReadEnabled() {
