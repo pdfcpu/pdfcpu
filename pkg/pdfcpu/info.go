@@ -343,6 +343,7 @@ type PDFInfo struct {
 	Names              bool                            `json:"names"`
 	Encrypted          bool                            `json:"encrypted"`
 	Permissions        int                             `json:"permissions"`
+	PDFA               *model.PDFAInfo                 `json:"pdfa,omitempty"`
 	Attachments        []model.Attachment              `json:"attachments,omitempty"`
 	Unit               types.DisplayUnit               `json:"-"`
 	UnitString         string                          `json:"unit"`
@@ -471,6 +472,41 @@ func (info *PDFInfo) renderPermissions(ss *[]string) {
 	} else {
 		*ss = append(*ss, fmt.Sprintf("%20s:", "Permissions"))
 		*ss = append(*ss, l...)
+	}
+}
+
+func (info *PDFInfo) renderPDFA(ss *[]string) {
+	if info.PDFA == nil || !info.PDFA.ClaimsPDFA {
+		return
+	}
+
+	*ss = append(*ss, fmt.Sprintf("%20s: %s", "PDF/A", info.PDFA.String()))
+
+	// Add detailed PDF/A information
+	if info.PDFA.Part != nil {
+		*ss = append(*ss, fmt.Sprintf("%20s  Part: %d", "", *info.PDFA.Part))
+	}
+	if info.PDFA.Conformance != nil {
+		*ss = append(*ss, fmt.Sprintf("%20s  Conformance: %s", "", *info.PDFA.Conformance))
+	}
+	if info.PDFA.Revision != nil && *info.PDFA.Revision > 0 {
+		*ss = append(*ss, fmt.Sprintf("%20s  Revision: %d", "", *info.PDFA.Revision))
+	}
+	if info.PDFA.OutputIntentSubtype != "" {
+		*ss = append(*ss, fmt.Sprintf("%20s  OutputIntent: %s", "", info.PDFA.OutputIntentSubtype))
+	}
+
+	// Add status indicators
+	if info.PDFA.MetadataPresent {
+		*ss = append(*ss, fmt.Sprintf("%20s  Metadata: Present", ""))
+	}
+	if info.PDFA.OutputIntentFound {
+		*ss = append(*ss, fmt.Sprintf("%20s  OutputIntent: Found", ""))
+	}
+	if info.PDFA.Consistent {
+		*ss = append(*ss, fmt.Sprintf("%20s  Status: ✓ Consistent", ""))
+	} else if info.PDFA.MetadataPresent && info.PDFA.OutputIntentFound {
+		*ss = append(*ss, fmt.Sprintf("%20s  Status: ⚠ Inconsistent", ""))
 	}
 }
 
@@ -612,6 +648,9 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet, fonts
 		info.Permissions = ctx.E.P
 	}
 
+	// Include PDF/A information if present
+	info.PDFA = ctx.XRefTable.PDFA
+
 	aa, err := ctx.ListAttachments()
 	if err != nil {
 		return nil, err
@@ -669,6 +708,7 @@ func ListInfo(info *PDFInfo, selectedPages types.IntSet, fonts bool) ([]string, 
 	info.renderProperties(&ss)
 	info.renderFlags(&ss, separator)
 	info.renderPermissions(&ss)
+	info.renderPDFA(&ss)
 	info.renderAttachments(&ss)
 
 	if fonts {
