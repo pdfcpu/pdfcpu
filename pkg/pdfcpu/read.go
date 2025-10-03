@@ -1610,6 +1610,89 @@ func tryXRefSection(c context.Context, ctx *model.Context, rs io.ReadSeeker, off
 	return &zero, nil
 }
 
+// locateMissingRoot scans the file for the Root/Catalog object if it's missing from the xref table.
+// This handles cases where the xref stream doesn't include all objects referenced in the trailer.
+func locateMissingRoot(c context.Context, ctx *model.Context, offExtra int64, incr int) error {
+	if ctx.Root == nil {
+		return nil
+	}
+
+	// Check if root object exists in xref table
+	objNr := int(ctx.Root.ObjectNumber)
+	if ctx.Exists(objNr) {
+		return nil
+	}
+
+	if log.ReadEnabled() {
+		log.Read.Printf("locateMissingRoot: Root object %d not found in xref table, scanning file\n", objNr)
+	}
+
+	// Scan file for the missing object
+	rs := ctx.Read.RS
+	var offset int64
+	rd, err := newPositionedReader(rs, &offset)
+	if err != nil {
+		return err
+	}
+
+	s := bufio.NewScanner(rd)
+	s.Split(scan.LinesSingleEOL)
+
+	// Search for "<objNr> <gen> obj"
+	searchStr := fmt.Sprintf("%d %d obj", objNr, ctx.Root.GenerationNumber)
+
+	for {
+		line, err := scanLineRaw(s)
+		if err != nil {
+			break
+		}
+
+		offset += int64(len(line) + 1) // +1 for newline
+
+		if strings.Contains(line, searchStr) {
+			// Found the object, now parse it
+			if log.ReadEnabled() {
+				log.Read.Printf("locateMissingRoot: Found Root object %d at offset %d\n", objNr, offset-int64(len(line)+1))
+			}
+
+			// Parse the object
+			objOffset := offset - int64(len(line)+1)
+			obj, err := ParseObjectWithContext(c, ctx, objOffset, objNr, int(ctx.Root.GenerationNumber))
+			if err != nil {
+				return err
+			}
+
+			// Add to xref table
+			gen := int(ctx.Root.GenerationNumber)
+			entry := model.XRefTableEntry{
+				Free:       false,
+				Generation: &gen,
+				Offset:     &objOffset,
+				Object:     obj,
+				Incr:       incr,
+			}
+			ctx.Table[objNr] = &entry
+
+			// If it's a dict with /Pages, set it as RootDict even without /Type
+			if d, ok := obj.(types.Dict); ok {
+				if _, found := d.Find("Pages"); found {
+					ctx.RootDict = d
+				}
+			}
+
+			model.ShowRepaired("catalog")
+			return nil
+		}
+	}
+
+	// Object not found in file
+	if log.ReadEnabled() {
+		log.Read.Printf("locateMissingRoot: Root object %d not found in file\n", objNr)
+	}
+
+	return nil
+}
+
 // Build XRefTable by reading XRef streams or XRef sections.
 func buildXRefTableStartingAt(c context.Context, ctx *model.Context, offset *int64) error {
 	if log.ReadEnabled() {
@@ -1676,6 +1759,11 @@ func buildXRefTableStartingAt(c context.Context, ctx *model.Context, offset *int
 	}
 
 	postProcess(ctx, xrefSectionCount)
+
+	// Fix for #401: Locate missing root object if it's not in the xref table
+	if err := locateMissingRoot(c, ctx, offExtra, incr); err != nil {
+		return err
+	}
 
 	if log.ReadEnabled() {
 		log.Read.Println("buildXRefTableStartingAt: end")
