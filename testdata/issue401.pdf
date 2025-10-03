@@ -1,0 +1,52 @@
+%PDF-1.5
+%����
+1 0 obj
+<<
+/Type /Pages
+/Count 1
+/Kids [2 0 R]
+>>
+endobj
+2 0 obj
+<<
+/Type /Page
+/Parent 1 0 R
+/MediaBox [0 0 612 792]
+/Resources <<
+/Font <<
+/F1 <<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+>>
+>>
+/Contents 3 0 R
+>>
+endobj
+3 0 obj
+<<
+/Length 44
+>>
+stream
+BT
+/F1 12 Tf
+100 700 Td
+(Hello World) Tj
+ET
+endstream
+endobj
+63 0 obj
+<<
+/Pages 1 0 R
+>>
+endobj
+4 0 obj
+<</Type/XRef/Size 67/W[0 3 0]/Root 63 0 R/Index[0 4]/Length 12>>
+stream
+000000000001
+endstream
+endobj
+startxref
+383
+%%EOF
