@@ -135,6 +135,7 @@ type XRefTable struct {
 	KeywordList    types.StringSet
 	Properties     map[string]string
 	CatalogXMPMeta *XMPMeta
+	PDFA           *PDFAInfo // PDF/A identification and conformance information
 
 	PageLayout *PageLayout
 	PageMode   *PageMode
