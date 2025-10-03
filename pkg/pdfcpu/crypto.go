@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"sort"
 	"strconv"
 	"time"
 
@@ -1679,7 +1680,14 @@ func fileID(ctx *model.Context) (types.HexLiteral, error) {
 		if err != nil {
 			return "", err
 		}
-		for _, v := range d {
+		var keys []string
+		for k := range d {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			v := d[k]
 			o, err := ctx.Dereference(v)
 			if err != nil {
 				return "", err

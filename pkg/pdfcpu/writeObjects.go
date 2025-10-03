@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -518,7 +519,14 @@ func writeDirectObject(ctx *model.Context, o types.Object) error {
 	switch o := o.(type) {
 
 	case types.Dict:
-		for k, v := range o {
+		var keys []string
+		for k := range o {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			v := o[k]
 			if ctx.WritingPages && (k == "Dest" || k == "D") {
 				ctx.Dest = true
 			}
@@ -580,7 +588,14 @@ func writeDeepDict(ctx *model.Context, d types.Dict, objNr, genNr int) error {
 		return err
 	}
 
-	for k, v := range d {
+	var keys []string
+	for k := range d {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		v := d[k]
 		if ctx.WritingPages && (k == "Dest" || k == "D") {
 			ctx.Dest = true
 		}
@@ -604,7 +619,14 @@ func writeDeepStreamDict(ctx *model.Context, sd *types.StreamDict, objNr, genNr 
 		return err
 	}
 
-	for _, v := range sd.Dict {
+	var keys []string
+	for k := range sd.Dict {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		v := sd.Dict[k]
 		if _, _, err := writeDeepObject(ctx, v); err != nil {
 			return err
 		}
