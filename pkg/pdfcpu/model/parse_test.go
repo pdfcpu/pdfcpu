@@ -109,11 +109,6 @@ func TestBalancedParenthesesPrefix(t *testing.T) {
 		// 明(U+660E): 0x66 0x0E
 		{"(\xfe\xff\x4f\x7f\x75\x28\x8b\xf4\x66\x0e)", 11},
 
-		// UTF-16LE cases
-		// UTF-16LE BOM: 0xFF 0xFE
-		// Same text in UTF-16LE: 0x7F 0x4F 0x28 0x75 0xF4 0x8B 0x0E 0x66
-		{"(\xff\xfe\x7f\x4f\x28\x75\xf4\x8b\x0e\x66)", 11},
-
 		// UTF-16BE with actual parentheses (0x00 0x28 and 0x00 0x29)
 		{"(\xfe\xff\x00\x28\x00\x29)", 7},
 

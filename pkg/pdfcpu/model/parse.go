@@ -183,11 +183,9 @@ func balancedParenthesesPrefix(s string) int {
 	var j int
 	escaped := false
 
-	// Check for UTF-16 BOM after the opening '('
-	// UTF-16BE: 0xFE 0xFF, UTF-16LE: 0xFF 0xFE
+	// Check for UTF-16BE BOM after the opening '('
+	// Per PDF spec (7.9.2.2), only UTF-16BE is supported: 0xFE 0xFF
 	isUTF16BE := len(s) > 2 && s[1] == '\xfe' && s[2] == '\xff'
-	isUTF16LE := len(s) > 2 && s[1] == '\xff' && s[2] == '\xfe'
-	isUTF16 := isUTF16BE || isUTF16LE
 
 	for i := 0; i < len(s); i++ {
 
@@ -203,13 +201,12 @@ func balancedParenthesesPrefix(s string) int {
 			continue
 		}
 
-		// For UTF-16 strings, we need to distinguish between:
+		// For UTF-16BE strings, we need to distinguish between:
 		// 1. Parentheses that are part of UTF-16 encoded characters (should be counted)
 		// 2. Parentheses that are just bytes within UTF-16 character codes (should NOT be counted)
 		// 3. The opening and closing delimiters (should be counted)
 		//
 		// In UTF-16BE, an actual '(' or ')' character is encoded as 0x00 0x28 or 0x00 0x29
-		// In UTF-16LE, an actual '(' or ')' character is encoded as 0x28 0x00 or 0x29 0x00
 		//
 		// After the BOM, UTF-16BE has pairs at positions: (3,4), (5,6), (7,8), ...
 		// where odd positions are high bytes and even positions are low bytes.
@@ -220,10 +217,10 @@ func balancedParenthesesPrefix(s string) int {
 		if i == 0 {
 			// Always count the opening delimiter
 			shouldCount = (c == '(' || c == ')')
-		} else if !isUTF16 {
-			// Normal processing for non-UTF-16 strings
+		} else if !isUTF16BE {
+			// Normal processing for non-UTF-16BE strings
 			shouldCount = (c == '(' || c == ')')
-		} else if isUTF16BE {
+		} else {
 			// UTF-16BE: After BOM at positions 1-2, data starts at position 3
 			// Positions 3,5,7,9... are high bytes; 4,6,8,10... are low bytes
 			// Only count 0x28/0x29 if it's at an even position preceded by 0x00,
@@ -232,18 +229,6 @@ func balancedParenthesesPrefix(s string) int {
 				// Check if this is a UTF-16 encoded parenthesis (preceded by 0x00)
 				if i > 0 && s[i-1] == 0x00 {
 					shouldCount = true
-				} else if c == ')' && j == 1 {
-					// This is likely the closing delimiter
-					shouldCount = true
-				}
-			}
-		} else {
-			// UTF-16LE: only count 0x28/0x29 if followed by 0x00, or if it's the closing delimiter
-			if c == '(' || c == ')' {
-				if i+1 < len(s) && s[i+1] == 0x00 {
-					shouldCount = true
-					// Skip the next byte (the 0x00)
-					i++
 				} else if c == ')' && j == 1 {
 					// This is likely the closing delimiter
 					shouldCount = true
