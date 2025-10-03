@@ -277,12 +277,28 @@ func cacheSig(xRefTable *model.XRefTable, d types.Dict, dictName string, form bo
 		}
 	}
 
-	arr, err := validateRectangleEntry(xRefTable, d, dictName, "Rect", REQUIRED, model.V10, nil)
+	// Rect is only required for terminal fields (fields without Kids).
+	// Non-terminal fields (fields with Kids array) don't need Rect on the parent.
+	// Per PDF spec ISO 32000-1:2008, Section 12.7.3.1 (Field Dictionaries):
+	// - Terminal fields can be merged with widget annotations and must have Rect
+	// - Non-terminal fields are parents in the field hierarchy and Rect is optional
+	// Per PDF spec ISO 32000-1:2008, Section 12.5.6.19 (Widget Annotations):
+	// - Widget annotations (terminal fields) require a Rect entry
+	required := REQUIRED
+	if _, hasKids := d.Find("Kids"); hasKids {
+		required = OPTIONAL
+	}
+
+	arr, err := validateRectangleEntry(xRefTable, d, dictName, "Rect", required, model.V10, nil)
 	if err != nil {
 		return err
 	}
-	r := types.RectForArray(arr)
-	sig.Visible = r.Visible() && !dts
+
+	var r *types.Rectangle
+	if arr != nil {
+		r = types.RectForArray(arr)
+		sig.Visible = r.Visible() && !dts
+	}
 
 	if _, ok := xRefTable.Signatures[incr]; !ok {
 		xRefTable.Signatures[incr] = map[int]model.Signature{}
