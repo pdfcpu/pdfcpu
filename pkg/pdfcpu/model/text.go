@@ -679,6 +679,20 @@ func WriteColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rect
 
 	lines := SplitMultilineStr(s)
 
+	// Filter out empty lines to prevent panic in bounding box calculation
+	hasNonEmptyLine := false
+	for _, line := range lines {
+		if len(line) > 0 {
+			hasNonEmptyLine = true
+			break
+		}
+	}
+
+	// If all lines are empty, return a minimal bounding box without rendering
+	if !hasNonEmptyLine {
+		return types.NewRectangle(x, y, x, y)
+	}
+
 	if !td.ScaleAbs {
 		if td.Scale > 1 {
 			td.Scale = 1

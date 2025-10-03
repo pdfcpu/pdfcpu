@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -353,4 +354,57 @@ func TestReadFormAndUpdateFormViaJson(t *testing.T) {
 	inFileJSON = filepath.Join(jsonDir, "updateFormCJK.json")
 	outFile = filepath.Join(outDir, "readFormAndUpdateFormCJK.pdf")
 	createPDF(t, "pass1", inFile, inFileJSON, outFile, conf)
+}
+
+func TestCreateWithEmptyTextValue(t *testing.T) {
+	// Test for issue #1235 - empty text value should not panic
+
+	outDir := filepath.Join(samplesDir, "create")
+	outFile := filepath.Join(outDir, "emptyTextValue.pdf")
+
+	jsonContent := `{
+		"pages": {
+			"1": {
+				"content": {
+					"text": [
+						{
+							"value":"",
+							"anchor":"topright",
+							"font": {
+								"name":"Helvetica",
+								"size":10
+							}
+						},
+						{
+							"value":"This text should appear",
+							"anchor":"center",
+							"font": {
+								"name":"Helvetica",
+								"size":12
+							}
+						},
+						{
+							"value":"",
+							"anchor":"bottomleft",
+							"font": {
+								"name":"Helvetica",
+								"size":10
+							}
+						}
+					]
+				}
+			}
+		}
+	}`
+
+	inFileJSON := filepath.Join(outDir, "emptyTextValue.json")
+
+	// Write JSON content to file
+	if err := os.WriteFile(inFileJSON, []byte(jsonContent), 0644); err != nil {
+		t.Fatalf("Failed to write JSON: %v\n", err)
+	}
+	defer os.RemoveAll(inFileJSON)
+
+	// This should not panic
+	createPDF(t, "TestEmptyTextValue", "", inFileJSON, outFile, conf)
 }
