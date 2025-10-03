@@ -17,6 +17,7 @@
 package primitives
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -364,6 +365,32 @@ func fontFromDA(s string) (string, FormFont, error) {
 	}
 
 	return fontID, f, nil
+}
+
+// ReconstructDA rebuilds a DA string with a new font ID while preserving size and color from the original.
+func ReconstructDA(originalDA, newFontID string) (string, error) {
+	_, formFont, err := fontFromDA(originalDA)
+	if err != nil {
+		return "", err
+	}
+
+	col := formFont.col
+	if col == nil {
+		col = &color.SimpleColor{R: 0, G: 0, B: 0}
+	}
+
+	// Reconstruct DA: /<fontID> <size> Tf <r> <g> <b> rg
+	newDA := fmt.Sprintf("/%s %d Tf %.2f %.2f %.2f rg",
+		newFontID, formFont.Size, col.R, col.G, col.B)
+
+	return newDA, nil
+}
+
+// ExtractFormFontDetailsForOverride returns font details when override is active.
+// It's specifically designed for updating DA strings with the override font.
+func ExtractFormFontDetailsForOverride(ctx *model.Context, fonts map[string]types.IndirectRef) (string, string, string, string, *types.IndirectRef, error) {
+	// Pass empty fontID to trigger the override logic in extractFormFontDetails
+	return extractFormFontDetails(ctx, "", fonts)
 }
 
 func calcFontDetailsFromDA(ctx *model.Context, d types.Dict, da *string, needUTF8 bool, fonts map[string]types.IndirectRef) (string, *FormFont, bool, *types.IndirectRef, error) {
