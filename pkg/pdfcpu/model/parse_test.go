@@ -88,6 +88,47 @@ func TestDetectNonEscaped(t *testing.T) {
 	}
 }
 
+func TestBalancedParenthesesPrefix(t *testing.T) {
+	testcases := []struct {
+		input string
+		want  int
+	}{
+		// Basic cases
+		{"()", 1},
+		{"(abc)", 4},
+		{"(a(b)c)", 6},
+		{"(escaped \\) paren)", 17},
+		{"(unbalanced", -1},
+
+		// UTF-16BE cases - issue #1210
+		// UTF-16BE BOM: 0xFE 0xFF
+		// Chinese text "使用说明" encoded in UTF-16BE
+		// 使(U+4F7F): 0x4F 0x7F
+		// 用(U+7528): 0x75 0x28 <- contains 0x28 which looks like '(' but isn't
+		// 说(U+8BF4): 0x8B 0xF4
+		// 明(U+660E): 0x66 0x0E
+		{"(\xfe\xff\x4f\x7f\x75\x28\x8b\xf4\x66\x0e)", 11},
+
+		// UTF-16LE cases
+		// UTF-16LE BOM: 0xFF 0xFE
+		// Same text in UTF-16LE: 0x7F 0x4F 0x28 0x75 0xF4 0x8B 0x0E 0x66
+		{"(\xff\xfe\x7f\x4f\x28\x75\xf4\x8b\x0e\x66)", 11},
+
+		// UTF-16BE with actual parentheses (0x00 0x28 and 0x00 0x29)
+		{"(\xfe\xff\x00\x28\x00\x29)", 7},
+
+		// Mixed ASCII and UTF-16BE
+		{"(\xfe\xff\x00\x48\x00\x65\x00\x6c\x00\x6c\x00\x6f)", 13}, // "Hello" in UTF-16BE
+	}
+
+	for _, tc := range testcases {
+		got := balancedParenthesesPrefix(tc.input)
+		if tc.want != got {
+			t.Errorf("balancedParenthesesPrefix(%q), want: %d, got: %d", tc.input, tc.want, got)
+		}
+	}
+}
+
 func TestDetectKeywords(t *testing.T) {
 	msg := "detectKeywords"
 
