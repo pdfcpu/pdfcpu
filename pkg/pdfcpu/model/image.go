@@ -327,6 +327,174 @@ func writeNRGBA64ImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte
 	return buf, sm
 }
 
+// getPNGColorType reads the PNG header to determine the color type.
+// Returns: colorType, bitDepth, error
+// PNG color types: 0=Gray, 2=RGB, 3=Palette, 4=Gray+Alpha, 6=RGB+Alpha
+func getPNGColorType(data []byte) (byte, byte, error) {
+	// PNG signature is 8 bytes
+	if len(data) < 26 {
+		return 0, 0, errors.New("pdfcpu: data too short for PNG header")
+	}
+
+	// Check PNG signature
+	pngSig := []byte{137, 80, 78, 71, 13, 10, 26, 10}
+	for i := 0; i < 8; i++ {
+		if data[i] != pngSig[i] {
+			return 0, 0, errors.New("pdfcpu: not a valid PNG file")
+		}
+	}
+
+	// IHDR chunk starts at byte 8
+	// Bytes 12-15 should be "IHDR"
+	if string(data[12:16]) != "IHDR" {
+		return 0, 0, errors.New("pdfcpu: invalid PNG IHDR chunk")
+	}
+
+	// Byte 24 is bit depth, byte 25 is color type
+	bitDepth := data[24]
+	colorType := data[25]
+
+	return colorType, bitDepth, nil
+}
+
+// isGrayscaleNRGBA checks if an NRGBA image is actually grayscale by checking if R==G==B for all pixels
+func isGrayscaleNRGBA(img *image.NRGBA) bool {
+	bounds := img.Bounds()
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			c := img.NRGBAAt(x, y)
+			if c.R != c.G || c.R != c.B {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// isGrayscaleNRGBA64 checks if an NRGBA64 image is actually grayscale
+func isGrayscaleNRGBA64(img *image.NRGBA64) bool {
+	bounds := img.Bounds()
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			c := img.NRGBA64At(x, y)
+			if c.R != c.G || c.R != c.B {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// convertNRGBAToGrayAndAlpha converts an NRGBA image to separate Gray and Alpha images
+func convertNRGBAToGrayAndAlpha(img *image.NRGBA) (*image.Gray, *image.Alpha) {
+	bounds := img.Bounds()
+	gray := image.NewGray(bounds)
+	alpha := image.NewAlpha(bounds)
+
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			c := img.NRGBAAt(x, y)
+			gray.SetGray(x, y, color.Gray{Y: c.R}) // Use R channel as grayscale (R==G==B for grayscale)
+			alpha.SetAlpha(x, y, color.Alpha{A: c.A})
+		}
+	}
+
+	return gray, alpha
+}
+
+// convertNRGBA64ToGrayAndAlpha converts an NRGBA64 image to separate Gray16 and Alpha16 images
+func convertNRGBA64ToGrayAndAlpha(img *image.NRGBA64) (*image.Gray16, *image.Alpha16) {
+	bounds := img.Bounds()
+	gray := image.NewGray16(bounds)
+	alpha := image.NewAlpha16(bounds)
+
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			c := img.NRGBA64At(x, y)
+			gray.SetGray16(x, y, color.Gray16{Y: c.R}) // Use R channel as grayscale
+			alpha.SetAlpha16(x, y, color.Alpha16{A: c.A})
+		}
+	}
+
+	return gray, alpha
+}
+
+// writeGrayWithAlphaImageBuf writes grayscale image data with a separate alpha mask
+func writeGrayWithAlphaImageBuf(xRefTable *XRefTable, grayImg *image.Gray, alphaImg *image.Alpha) ([]byte, []byte) {
+	w := grayImg.Bounds().Dx()
+	h := grayImg.Bounds().Dy()
+
+	buf := make([]byte, w*h)
+	var sm []byte
+	var softMask bool
+	i := 0
+
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			gray := grayImg.GrayAt(x, y)
+			alpha := alphaImg.AlphaAt(x, y)
+
+			buf[i] = gray.Y
+			i++
+
+			if !softMask {
+				if xRefTable != nil && alpha.A != 0xFF {
+					softMask = true
+					sm = []byte{}
+					for j := 0; j < y*w+x; j++ {
+						sm = append(sm, 0xFF)
+					}
+					sm = append(sm, alpha.A)
+				}
+			} else {
+				sm = append(sm, alpha.A)
+			}
+		}
+	}
+
+	return buf, sm
+}
+
+// writeGray16WithAlphaImageBuf writes 16-bit grayscale image data with a separate alpha mask
+func writeGray16WithAlphaImageBuf(xRefTable *XRefTable, grayImg *image.Gray16, alphaImg *image.Alpha16) ([]byte, []byte) {
+	w := grayImg.Bounds().Dx()
+	h := grayImg.Bounds().Dy()
+
+	buf := make([]byte, w*h*2)
+	var sm []byte
+	var softMask bool
+	i := 0
+
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			gray := grayImg.Gray16At(x, y)
+			alpha := alphaImg.Alpha16At(x, y)
+
+			buf[i] = uint8(gray.Y >> 8)
+			buf[i+1] = uint8(gray.Y & 0x00FF)
+			i += 2
+
+			if !softMask {
+				if xRefTable != nil && alpha.A != 0xFFFF {
+					softMask = true
+					sm = []byte{}
+					for j := 0; j < y*w+x; j++ {
+						sm = append(sm, 0xFF)
+						sm = append(sm, 0xFF)
+					}
+					sm = append(sm, uint8(alpha.A>>8))
+					sm = append(sm, uint8(alpha.A&0x00FF))
+				}
+			} else {
+				sm = append(sm, uint8(alpha.A>>8))
+				sm = append(sm, uint8(alpha.A&0x00FF))
+			}
+		}
+	}
+
+	return buf, sm
+}
+
 func writeGrayImageBuf(img image.Image) []byte {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
@@ -798,9 +966,74 @@ func CreateImageStreamDict(xRefTable *XRefTable, r io.Reader) (*types.StreamDict
 		return sd, c.Width, c.Height, nil
 	}
 
+	// Check if this is a grayscale PNG by reading the PNG header
+	var pngGrayscale bool
+	if format == "png" {
+		pngData := bb.Bytes()
+		colorType, _, err := getPNGColorType(pngData)
+		if err == nil {
+			// PNG color types: 0=Grayscale, 4=Grayscale+Alpha
+			pngGrayscale = (colorType == 0 || colorType == 4)
+		}
+	}
+
 	img, format, err := image.Decode(&bb)
 	if err != nil {
 		return nil, 0, 0, err
+	}
+
+	// If this is a grayscale PNG that was decoded as NRGBA/NRGBA64,
+	// convert it to Gray+Alpha for proper DeviceGray color space
+	if pngGrayscale {
+		switch nrgba := img.(type) {
+		case *image.NRGBA:
+			if isGrayscaleNRGBA(nrgba) {
+				grayImg, alphaImg := convertNRGBAToGrayAndAlpha(nrgba)
+				var imgBuf, softMask []byte
+				var bpc int
+				var cs string
+
+				// Write grayscale with alpha
+				imgBuf, softMask = writeGrayWithAlphaImageBuf(xRefTable, grayImg, alphaImg)
+				cs = DeviceGrayCS
+				bpc = 8
+
+				w, h := img.Bounds().Dx(), img.Bounds().Dy()
+				if w != c.Width || h != c.Height {
+					return nil, 0, 0, errors.New("pdfcpu: unexpected width or height")
+				}
+
+				sd, err := createImageStreamDict(xRefTable, imgBuf, softMask, w, h, bpc, format, cs)
+				if err != nil {
+					return nil, 0, 0, err
+				}
+				return sd, c.Width, c.Height, nil
+			}
+
+		case *image.NRGBA64:
+			if isGrayscaleNRGBA64(nrgba) {
+				grayImg, alphaImg := convertNRGBA64ToGrayAndAlpha(nrgba)
+				var imgBuf, softMask []byte
+				var bpc int
+				var cs string
+
+				// Write grayscale with alpha
+				imgBuf, softMask = writeGray16WithAlphaImageBuf(xRefTable, grayImg, alphaImg)
+				cs = DeviceGrayCS
+				bpc = 16
+
+				w, h := img.Bounds().Dx(), img.Bounds().Dy()
+				if w != c.Width || h != c.Height {
+					return nil, 0, 0, errors.New("pdfcpu: unexpected width or height")
+				}
+
+				sd, err := createImageStreamDict(xRefTable, imgBuf, softMask, w, h, bpc, format, cs)
+				if err != nil {
+					return nil, 0, 0, err
+				}
+				return sd, c.Width, c.Height, nil
+			}
+		}
 	}
 
 	imgBuf, softMask, bpc, cs, err := createImageBuf(xRefTable, img, format)
