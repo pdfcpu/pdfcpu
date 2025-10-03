@@ -134,6 +134,7 @@ type Page struct {
 
 // Form represents a PDF form (aka. Acroform).
 type Form struct {
+	Font              string              `json:"font,omitempty"`
 	TextFields        []*TextField        `json:"textfield,omitempty"`
 	DateFields        []*DateField        `json:"datefield,omitempty"`
 	CheckBoxes        []*CheckBox         `json:"checkbox,omitempty"`

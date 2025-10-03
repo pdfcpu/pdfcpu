@@ -550,6 +550,11 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return err
 	}
 
+	// Set font override if specified in the form
+	if f.Font != "" {
+		ctx.XRefTable.FillFontOverride = f.Font
+	}
+
 	if log.CLIEnabled() {
 		log.CLI.Println("filling...")
 	}
@@ -680,6 +685,11 @@ func multiFillFormJSON(inFilePDF string, rd io.Reader, outDir, fileName string, 
 		ctx, err := ReadValidateAndOptimize(rs, conf)
 		if err != nil {
 			return err
+		}
+
+		// Set font override if specified in the form
+		if f.Font != "" {
+			ctx.XRefTable.FillFontOverride = f.Font
 		}
 
 		ok, pp, err := form.FillForm(ctx, form.FillDetails(&f, nil), f.Pages, form.JSON)

@@ -699,6 +699,20 @@ func fillComboBox(
 
 	da := d.StringEntry("DA")
 
+	// Update DA if font override is active (PDF spec compliance)
+	if ctx.XRefTable.FillFontOverride != "" && da != nil {
+		// Get the override font resource ID
+		fontID, _, _, _, _, err := primitives.ExtractFormFontDetailsForOverride(ctx, fonts)
+		if err == nil && fontID != "" {
+			// Reconstruct DA with new font while preserving size and color
+			newDA, err := primitives.ReconstructDA(*da, fontID)
+			if err == nil {
+				d["DA"] = types.StringLiteral(newDA)
+				da = &newDA
+			}
+		}
+	}
+
 	vNew := vv[0]
 	if locked {
 		if !lock {
@@ -857,6 +871,20 @@ func fillListBox(
 
 	da := d.StringEntry("DA")
 
+	// Update DA if font override is active (PDF spec compliance)
+	if ctx.XRefTable.FillFontOverride != "" && da != nil {
+		// Get the override font resource ID
+		fontID, _, _, _, _, err := primitives.ExtractFormFontDetailsForOverride(ctx, fonts)
+		if err == nil && fontID != "" {
+			// Reconstruct DA with new font while preserving size and color
+			newDA, err := primitives.ReconstructDA(*da, fontID)
+			if err == nil {
+				d["DA"] = types.StringLiteral(newDA)
+				da = &newDA
+			}
+		}
+	}
+
 	if err := primitives.EnsureListBoxAP(ctx, d, opts, ind, da, fonts); err != nil {
 		return err
 	}
@@ -938,6 +966,20 @@ func fillDateField(
 
 	da := d.StringEntry("DA")
 
+	// Update DA if font override is active (PDF spec compliance)
+	if ctx.XRefTable.FillFontOverride != "" && da != nil {
+		// Get the override font resource ID
+		fontID, _, _, _, _, err := primitives.ExtractFormFontDetailsForOverride(ctx, fonts)
+		if err == nil && fontID != "" {
+			// Reconstruct DA with new font while preserving size and color
+			newDA, err := primitives.ReconstructDA(*da, fontID)
+			if err == nil {
+				d["DA"] = types.StringLiteral(newDA)
+				da = &newDA
+			}
+		}
+	}
+
 	kids := d.ArrayEntry("Kids")
 	if len(kids) > 0 {
 
@@ -946,6 +988,11 @@ func fillDateField(
 			d, err := ctx.DereferenceDict(o)
 			if err != nil {
 				return err
+			}
+
+			// Update kid's DA if present and override is active
+			if ctx.XRefTable.FillFontOverride != "" && da != nil {
+				d["DA"] = types.StringLiteral(*da)
 			}
 
 			if err := primitives.EnsureDateFieldAP(ctx, d, vNew, da, fonts); err != nil {
@@ -1018,17 +1065,36 @@ func fillTextField(
 
 	da := d.StringEntry("DA")
 
+	// Update DA if font override is active (PDF spec compliance)
+	if ctx.XRefTable.FillFontOverride != "" && da != nil {
+		// Get the override font resource ID
+		fontID, _, _, _, _, err := primitives.ExtractFormFontDetailsForOverride(ctx, fonts)
+		if err == nil && fontID != "" {
+			// Reconstruct DA with new font while preserving size and color
+			newDA, err := primitives.ReconstructDA(*da, fontID)
+			if err == nil {
+				d["DA"] = types.StringLiteral(newDA)
+				da = &newDA
+			}
+		}
+	}
+
 	kids := d.ArrayEntry("Kids")
 	if len(kids) > 0 {
 
 		for _, o := range kids {
 
-			d, err := ctx.DereferenceDict(o)
+			kidDict, err := ctx.DereferenceDict(o)
 			if err != nil {
 				return err
 			}
 
-			if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, maxLen, da, fonts); err != nil {
+			// Update kid's DA if present and override is active
+			if ctx.XRefTable.FillFontOverride != "" && da != nil {
+				kidDict["DA"] = types.StringLiteral(*da)
+			}
+
+			if err := primitives.EnsureTextFieldAP(ctx, kidDict, vNew, multiLine, comb, maxLen, da, fonts); err != nil {
 				return err
 			}
 
