@@ -60,10 +60,9 @@ func (f ascii85Decode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error
 
 	// fmt.Printf("dump:\n%s", hex.Dump(bb))
 
-	l := len(bb)
-	if bb[l-1] == 0x0A || bb[l-1] == 0x0D {
-		bb = bb[:l-1]
-	}
+	// Strip trailing whitespace (CR, LF, CRLF, etc.)
+	// Per PDF spec, whitespace should be ignored in ASCII85 encoding
+	bb = bytes.TrimRight(bb, "\r\n")
 
 	if !bytes.HasSuffix(bb, []byte(eodASCII85)) {
 		return nil, errors.New("pdfcpu: Decode: missing eod marker")
