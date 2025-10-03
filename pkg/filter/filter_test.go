@@ -271,3 +271,59 @@ func TestEncodeDecodeFilterPipeline(t *testing.T) {
 		encodeDecodeFilterPipeline(t, filename, []string{filter.ASCII85, filter.Flate})
 	}
 }
+
+// TestASCII85DecodeWithCRLF tests that ASCII85 decoding works correctly
+// when the encoded data has CRLF line endings (issue #1112)
+func TestASCII85DecodeWithCRLF(t *testing.T) {
+	f, err := filter.NewFilter(filter.ASCII85, nil)
+	if err != nil {
+		t.Fatalf("Failed to create ASCII85 filter: %v", err)
+	}
+
+	testCases := []struct {
+		name     string
+		input    string
+		ending   string
+		expected string
+	}{
+		{"LF ending", "Hello, Gopher!", "\n", "Hello, Gopher!"},
+		{"CR ending", "Hello, Gopher!", "\r", "Hello, Gopher!"},
+		{"CRLF ending", "Hello, Gopher!", "\r\n", "Hello, Gopher!"},
+		{"No ending", "Hello, Gopher!", "", "Hello, Gopher!"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Encode the input
+			encoded, err := f.Encode(strings.NewReader(tc.input))
+			if err != nil {
+				t.Fatalf("Encoding failed: %v", err)
+			}
+
+			// Read encoded data
+			encodedBytes, err := io.ReadAll(encoded)
+			if err != nil {
+				t.Fatalf("Reading encoded data failed: %v", err)
+			}
+
+			// Add the specified line ending
+			encodedWithEnding := append(encodedBytes, []byte(tc.ending)...)
+
+			// Decode
+			decoded, err := f.Decode(strings.NewReader(string(encodedWithEnding)))
+			if err != nil {
+				t.Fatalf("Decoding failed with %q ending: %v", tc.ending, err)
+			}
+
+			// Verify result
+			result, err := io.ReadAll(decoded)
+			if err != nil {
+				t.Fatalf("Reading decoded data failed: %v", err)
+			}
+
+			if string(result) != tc.expected {
+				t.Errorf("Mismatch: got %q, want %q", string(result), tc.expected)
+			}
+		})
+	}
+}
