@@ -360,6 +360,29 @@ func initUserFonts() error {
 	return font.LoadUserFonts()
 }
 
+// ensureFontDirInitialized sets up the font directory without loading fonts.
+// Font loading is deferred until fonts are actually needed.
+func ensureFontDirInitialized() error {
+	files, err := os.ReadDir(font.UserFontDir)
+	if err != nil {
+		return err
+	}
+
+	if onlyHidden(files) {
+		// Ensure Roboto font for form filling.
+		fontname := "Roboto-Regular"
+		if log.CLIEnabled() {
+			log.CLI.Printf("installing user font:")
+		}
+		if err := font.InstallFontFromBytes(font.UserFontDir, fontname, robotoFontFileBytes); err != nil {
+			return err
+		}
+	}
+
+	// Don't load fonts here - they will be loaded lazily when first accessed
+	return nil
+}
+
 func initCertificates() error {
 	// NOTE
 	// Load certs managed by The European Union Trusted Lists (EUTL) (https://eidas.ec.europa.eu/efda/trust-services/browse/eidas/tls).
@@ -425,7 +448,8 @@ func EnsureDefaultConfigAt(path string, override bool) error {
 	if err := os.MkdirAll(font.UserFontDir, os.ModePerm); err != nil {
 		return err
 	}
-	if err := initUserFonts(); err != nil {
+	// Initialize font directory and install Roboto if needed, but defer actual loading
+	if err := ensureFontDirInitialized(); err != nil {
 		return err
 	}
 
