@@ -881,13 +881,14 @@ func fillCh(
 		return errors.New("pdfcpu: corrupt form field: missing entry Ff")
 	}
 
-	opts, err := parseOptions(ctx.XRefTable, d, REQUIRED)
+	opts, err := parseOptions(ctx.XRefTable, d, OPTIONAL)
 	if err != nil {
 		return err
 	}
 
-	if len(opts) == 0 {
-		return errors.New("pdfcpu: missing Opts")
+	if opts == nil || len(opts) == 0 {
+		// No options to fill, skip this field
+		return nil
 	}
 
 	if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
