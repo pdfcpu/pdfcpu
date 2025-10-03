@@ -118,3 +118,32 @@ func TestDetectKeywords(t *testing.T) {
 	}
 
 }
+
+func TestParseEmptyName(t *testing.T) {
+	// Test parsing empty name (bare "/")
+	// According to PDF spec ISO 32000-1:2008 Section 7.3.5, empty names are valid
+	testcases := []struct {
+		input    string
+		expected string
+		rest     string
+	}{
+		{"/", "", ""},
+		{"/ ", "", " "},
+		{"/<<", "", "<<"},
+		{"/>>/Type", "", ">>/Type"},
+	}
+	for _, tc := range testcases {
+		line := tc.input
+		nameObj, err := parseName(&line)
+		if err != nil {
+			t.Errorf("parsing %q failed: %v", tc.input, err)
+			continue
+		}
+		if string(*nameObj) != tc.expected {
+			t.Errorf("parsing %q: expected name %q, got %q", tc.input, tc.expected, string(*nameObj))
+		}
+		if line != tc.rest {
+			t.Errorf("parsing %q: expected rest %q, got %q", tc.input, tc.rest, line)
+		}
+	}
+}

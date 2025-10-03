@@ -512,7 +512,7 @@ func parseName(line *string) (*types.Name, error) {
 	if log.ParseEnabled() {
 		log.Parse.Printf("parseNameObject: %s\n", l)
 	}
-	if len(l) < 2 || !strings.HasPrefix(l, "/") {
+	if !strings.HasPrefix(l, "/") {
 		return nil, errNameObjectCorrupt
 	}
 
