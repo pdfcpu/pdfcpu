@@ -374,15 +374,13 @@ func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, nam
 		cb.Value = strings.TrimSpace(s)
 	}
 
-	opts, err := parseOptions(xRefTable, d, REQUIRED)
+	opts, err := parseOptions(xRefTable, d, OPTIONAL)
 	if err != nil {
 		return nil, err
 	}
-	if len(opts) == 0 {
-		return nil, errors.New("pdfcpu: combobox missing Opts")
+	if opts != nil {
+		cb.Options = opts
 	}
-
-	cb.Options = opts
 
 	return cb, nil
 }
@@ -534,15 +532,13 @@ func extractListBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name
 		lb.Values = ss
 	}
 
-	opts, err := parseOptions(xRefTable, d, REQUIRED)
+	opts, err := parseOptions(xRefTable, d, OPTIONAL)
 	if err != nil {
 		return nil, err
 	}
-	if len(opts) == 0 {
-		return nil, errors.New("pdfcpu: listbox missing Opts")
+	if opts != nil {
+		lb.Options = opts
 	}
-
-	lb.Options = opts
 
 	return lb, nil
 }

@@ -508,14 +508,16 @@ func collectListBox(xRefTable *model.XRefTable, multi bool, d types.Dict, f *Fie
 func collectCh(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
 	ff := d.IntEntry("Ff")
 
-	vv, err := parseOptions(xRefTable, d, REQUIRED)
+	vv, err := parseOptions(xRefTable, d, OPTIONAL)
 	if err != nil {
 		return err
 	}
 
-	f.Opts = strings.Join(vv, ",")
-	if len(f.Opts) > 0 {
-		fm.opt = true
+	if vv != nil {
+		f.Opts = strings.Join(vv, ",")
+		if len(f.Opts) > 0 {
+			fm.opt = true
+		}
 	}
 
 	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
@@ -1452,12 +1454,15 @@ func resetCh(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 		return errors.New("pdfcpu: corrupt form field: missing entry \"Ff\"")
 	}
 
-	opts, err := parseOptions(ctx.XRefTable, d, REQUIRED)
+	opts, err := parseOptions(ctx.XRefTable, d, OPTIONAL)
 	if err != nil {
 		return err
 	}
-	if len(opts) == 0 {
-		return errors.New("pdfcpu: missing Opts")
+	if opts == nil || len(opts) == 0 {
+		// No options to reset to, clear any existing values
+		d.Delete("I")
+		d.Delete("V")
+		return nil
 	}
 
 	var ind types.Array
