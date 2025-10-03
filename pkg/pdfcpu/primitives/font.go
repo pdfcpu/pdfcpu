@@ -279,6 +279,28 @@ func extractFormFontDetails(
 		err                   error
 	)
 
+	// Check for font override first
+	if xRefTable.FillFontOverride != "" {
+		// Try to use the override font
+		overrideFontIndRef, err := FontIndRef(xRefTable.FillFontOverride, ctx, fonts)
+		if err != nil {
+			return "", "", "", "", nil, err
+		}
+		if overrideFontIndRef != nil {
+			// Override font found, use it
+			return "F0", xRefTable.FillFontOverride, "", "", overrideFontIndRef, nil
+		}
+		// Override font not found in existing fonts, try to ensure it
+		if font.IsUserFont(xRefTable.FillFontOverride) || font.IsCoreFont(xRefTable.FillFontOverride) {
+			indRef, err := pdffont.EnsureFontDict(xRefTable, xRefTable.FillFontOverride, "", "", false, nil)
+			if err == nil && indRef != nil {
+				fonts[xRefTable.FillFontOverride] = *indRef
+				return "F0", xRefTable.FillFontOverride, "", "", indRef, nil
+			}
+		}
+		// If we get here, the override font couldn't be used, fall back to original logic
+	}
+
 	if len(fontID) > 0 {
 
 		fontIndRef = formFontIndRef(xRefTable, fontID)

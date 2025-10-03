@@ -183,8 +183,9 @@ type XRefTable struct {
 	AppendOnly     bool
 
 	// Fonts
-	UsedGIDs  map[string]map[uint16]bool
-	FillFonts map[string]types.IndirectRef
+	UsedGIDs         map[string]map[uint16]bool
+	FillFonts        map[string]types.IndirectRef
+	FillFontOverride string // Optional font name to use for form filling instead of the form's default font
 }
 
 // NewXRefTable creates a new XRefTable.
