@@ -66,7 +66,8 @@ func TestParseObject(t *testing.T) {
 	doTestParseObjectOK("/Na#20me", t)
 	doTestParseObjectOK("[null]abc", t)
 
-	doTestParseObjectFail("/", t)
+	// Empty names are valid according to PDF spec ISO 32000-1:2008 Section 7.3.5
+	doTestParseObjectOK("/", t)
 	doTestParseObjectOK("/(", t)
 	doTestParseObjectOK("//", t)
 	doTestParseObjectOK("/abc/", t)
