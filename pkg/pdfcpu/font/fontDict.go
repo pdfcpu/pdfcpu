@@ -85,15 +85,13 @@ func fontDescriptorIndRefs(fd types.Dict, lang string, font *model.FontResource)
 		}
 	}
 
+	// CIDSet is optional per ISO 32000 (only required for PDF/A-1).
+	// If nil, UpdateUserfont will create a new one.
 	font.CIDSet = fd.IndirectRefEntry("CIDSet")
-	if font.CIDSet == nil {
-		return ErrCorruptFontDict
-	}
 
+	// FontFile2 is optional per ISO 32000 (font might not be embedded).
+	// If nil, UpdateUserfont will create and embed a new font file.
 	font.FontFile = fd.IndirectRefEntry("FontFile2")
-	if font.FontFile == nil {
-		return ErrCorruptFontDict
-	}
 
 	return nil
 }
