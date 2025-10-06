@@ -728,7 +728,7 @@ func (c *Content) calcBorder(bb map[string]*Border) {
 	if c.Regions != nil {
 		if c.Regions.horizontal {
 			c.Regions.Left.calcBorder(bbb)
-			c.Regions.Right.calcBorder(bb)
+			c.Regions.Right.calcBorder(bbb)
 		} else {
 			c.Regions.Top.calcBorder(bbb)
 			c.Regions.Bottom.calcBorder(bbb)
