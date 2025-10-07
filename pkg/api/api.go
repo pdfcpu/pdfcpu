@@ -54,7 +54,7 @@ func logDisclaimerPDF20() {
 * At the moment pdfcpu ships with basic PDF 2.0 support.            *
 * Please let us know which feature you would like to see supported, *
 * provide a sample PDF file and create an issue:                    *
-* https://github.com/pdfcpu/pdfcpu/issues/new/choose                *
+* https://github.com/angel-one/pdfcpu/issues/new/choose                *
 * Thank you for using pdfcpu <3                                     *
 *********************************************************************`
 

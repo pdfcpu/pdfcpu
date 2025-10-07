@@ -117,7 +117,7 @@ func (fd TTFLight) unicodeRangeBits(id string) []int {
 	// Returns a slice of relevant unicodeRangeBits.
 	//
 	// This mapping is incomplete as we only cover unicode blocks of the most popular scripts.
-	// Please go to https://github.com/pdfcpu/pdfcpu/issues/new/choose for an extension request.
+	// Please go to https://github.com/angel-one/pdfcpu/issues/new/choose for an extension request.
 	//
 	//  0 Basic Latin						0000-007F
 	//  1 Latin-1 Supplement				0080-00FF

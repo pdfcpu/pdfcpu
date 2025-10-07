@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/angel-one/pdfcpu/pkg/cli"
+	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
 )
 
 func listKeywords(t *testing.T, msg, fileName string, want []string) []string {

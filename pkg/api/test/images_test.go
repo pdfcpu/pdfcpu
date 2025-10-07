@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/angel-one/pdfcpu/pkg/api"
 )
 
 func testUpdateImages(t *testing.T, msg string, inFile, imgFile, outFile string, objNr, pageNr int, id string) {
