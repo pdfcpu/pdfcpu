@@ -181,7 +181,7 @@ func processBox(b **Box, boxID, paramValueStr string, unit types.DisplayUnit) er
 	boxVal, err := resolveBoxType(paramValueStr)
 	if err == nil {
 		if boxVal == boxID {
-			return errors.Errorf("pdfcpu: invalid box self assigment: %s", boxID)
+			return errors.Errorf("pdfcpu: invalid box self assignment: %s", boxID)
 		}
 		*b = &Box{RefBox: boxVal}
 		return nil

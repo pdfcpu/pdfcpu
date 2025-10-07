@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -264,21 +265,33 @@ func (ib *ImageBox) resource() (io.ReadCloser, error) {
 	pdf := ib.pdf
 	var f io.ReadCloser
 	if strings.HasPrefix(ib.Src, "http") {
+		if pdf.Offline {
+			if log.CLIEnabled() {
+				log.CLI.Printf("pdfcpu is offline, can't get %s\n", ib.Src)
+			}
+			return nil, nil
+		}
 		client := pdf.httpClient
 		if client == nil {
 			pdf.httpClient = &http.Client{
-				Timeout: 10 * time.Second,
+				Timeout: time.Duration(pdf.Timeout) * time.Second,
 			}
 			client = pdf.httpClient
 		}
 		resp, err := client.Get(ib.Src)
 		if err != nil {
-			if log.CLIEnabled() {
-				log.CLI.Printf("%v: %s\n", err, ib.Src)
+			if e, ok := err.(net.Error); ok && e.Timeout() {
+				if log.CLIEnabled() {
+					log.CLI.Printf("timeout: %s\n", ib.Src)
+				}
+			} else {
+				if log.CLIEnabled() {
+					log.CLI.Printf("%v: %s\n", err, ib.Src)
+				}
 			}
 			return nil, err
 		}
-		if resp.StatusCode != 200 {
+		if resp.StatusCode != http.StatusOK {
 			if log.CLIEnabled() {
 				log.CLI.Printf("http status %d: %s\n", resp.StatusCode, ib.Src)
 			}
@@ -316,7 +329,7 @@ func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int)
 
 	if ib.pdf.Update() {
 
-		sd, w, h, err = model.CreateImageStreamDict(pdf.XRefTable, f, false, false)
+		sd, w, h, err = model.CreateImageStreamDict(pdf.XRefTable, f)
 		if err != nil {
 			return nil, err
 		}
@@ -347,7 +360,7 @@ func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int)
 			}
 			id = imgResIDs.NewIDForPrefix("Im", len(pageImages))
 		} else {
-			indRef, w, h, err = model.CreateImageResource(pdf.XRefTable, f, false, false)
+			indRef, w, h, err = model.CreateImageResource(pdf.XRefTable, f)
 			if err != nil {
 				return nil, err
 			}
@@ -394,16 +407,20 @@ func (ib *ImageBox) createLink(p *model.Page, pageNr int, r *types.Rectangle, m 
 
 	id := fmt.Sprintf("l%d%d", pageNr, len(p.LinkAnnots))
 	ann := model.NewLinkAnnotation(
-		*ql.EnclosingRectangle(5.0),
-		types.QuadPoints{ql},
-		nil,
-		ib.Url,
-		id,
-		0,
-		0,
-		model.BSSolid,
-		nil,
-		false)
+		*ql.EnclosingRectangle(5.0), // rect
+		0,                           // apObjNr
+		"",                          // contents
+		id,                          // id
+		"",                          // modDate
+		0,                           // f
+		&color.Red,                  // borderCol
+		nil,                         // dest
+		ib.Url,                      // uri
+		types.QuadPoints{ql},        // quad
+		false,                       // border
+		0,                           // borderWidth
+		model.BSSolid,               // borderStyle
+	)
 
 	p.LinkAnnots = append(p.LinkAnnots, ann)
 }

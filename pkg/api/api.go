@@ -51,7 +51,7 @@ func logDisclaimerPDF20() {
 ***************************** Disclaimer ****************************
 * PDF 2.0 features are supported on a need basis.                   *
 * (See ISO 32000:2 6.3.2 Conformance of PDF processors)             *
-* At the moment pdfcpu comes with basic PDF 2.0 support.            *
+* At the moment pdfcpu ships with basic PDF 2.0 support.            *
 * Please let us know which feature you would like to see supported, *
 * provide a sample PDF file and create an issue:                    *
 * https://github.com/pdfcpu/pdfcpu/issues/new/choose                *
@@ -87,11 +87,15 @@ func ReadContextFile(inFile string) (*model.Context, error) {
 		return nil, err
 	}
 
-	if ctx.Version() == model.V20 {
+	if ctx.Conf.Version != model.VersionStr {
+		model.CheckConfigVersion(ctx.Conf.Version)
+	}
+
+	if ctx.XRefTable.Version() == model.V20 {
 		logDisclaimerPDF20()
 	}
 
-	if err = validate.XRefTable(ctx.XRefTable); err != nil {
+	if err = validate.XRefTable(ctx); err != nil {
 		return nil, err
 	}
 
@@ -100,10 +104,10 @@ func ReadContextFile(inFile string) (*model.Context, error) {
 
 // ValidateContext validates ctx.
 func ValidateContext(ctx *model.Context) error {
-	if ctx.Version() == model.V20 {
+	if ctx.XRefTable.Version() == model.V20 {
 		logDisclaimerPDF20()
 	}
-	return validate.XRefTable(ctx.XRefTable)
+	return validate.XRefTable(ctx)
 }
 
 // OptimizeContext optimizes ctx.
@@ -122,7 +126,7 @@ func WriteContext(ctx *model.Context, w io.Writer) error {
 	}
 	ctx.Write.Writer = bufio.NewWriter(w)
 	defer ctx.Write.Flush()
-	return pdfcpu.Write(ctx)
+	return pdfcpu.WriteContext(ctx)
 }
 
 // WriteIncrement writes a PDF increment for ctx to w.
@@ -155,14 +159,39 @@ func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Co
 	return ctx, nil
 }
 
-// ReadValidateAndOptimize returns an optimized model.Context of rs ready for processing.
+func cmdAssumingOptimization(cmd model.CommandMode) bool {
+	return cmd == model.OPTIMIZE ||
+		cmd == model.FILLFORMFIELDS ||
+		cmd == model.RESETFORMFIELDS ||
+		cmd == model.LISTIMAGES ||
+		cmd == model.UPDATEIMAGES ||
+		cmd == model.EXTRACTIMAGES ||
+		cmd == model.EXTRACTFONTS
+}
+
+// ReadValidateAndOptimize returns an optimized model.Context of rs ready for processing a specific command.
+// conf.Cmd is expected to be configured properly.
 func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
+	if conf == nil {
+		return nil, errors.New("pdfcpu: ReadValidateAndOptimize: missing conf")
+	}
+
 	ctx, err = ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = OptimizeContext(ctx); err != nil {
+	// With the exception of commands utilizing structs provided the Optimize step
+	// command optimization of the cross reference table is optional but usually recommended.
+	// For large or complex files it may make sense to skip optimization and set conf.Optimize = false.
+	if cmdAssumingOptimization(conf.Cmd) || conf.Optimize {
+		if err = OptimizeContext(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	// TODO move to form related commands.
+	if err := pdfcpu.CacheFormFonts(ctx); err != nil {
 		return nil, err
 	}
 
@@ -180,17 +209,17 @@ func Write(ctx *model.Context, w io.Writer, conf *model.Configuration) error {
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
 
-	if conf.PostProcessValidate {
-		if err := ValidateContext(ctx); err != nil {
-			return err
-		}
-	}
+	// Note side effects of validation before writing!
+	// if conf.PostProcessValidate {
+	// 	if err := ValidateContext(ctx); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return WriteContext(ctx, w)
 }
 
 func WriteIncr(ctx *model.Context, rws io.ReadWriteSeeker, conf *model.Configuration) error {
-
 	if log.StatsEnabled() {
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
@@ -212,7 +241,7 @@ func WriteIncr(ctx *model.Context, rws io.ReadWriteSeeker, conf *model.Configura
 // If path/pdfcpu is not existent, it will be created including config.yml
 func EnsureDefaultConfigAt(path string) error {
 	// Call if you have specific requirements regarding the location of the pdfcpu config dir.
-	return model.EnsureDefaultConfigAt(path)
+	return model.EnsureDefaultConfigAt(path, false)
 }
 
 var (

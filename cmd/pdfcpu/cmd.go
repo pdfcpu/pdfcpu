@@ -75,6 +75,18 @@ func parseFlags(cmd *command) {
 		}
 		initLogging(verbose, veryVerbose)
 	}
+
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "bookmarks" || f.Name == "b" {
+			bookmarksSet = true
+		}
+		if f.Name == "offline" || f.Name == "off" || f.Name == "o" {
+			offlineSet = true
+		}
+		if f.Name == "optimize" || f.Name == "opt" {
+			optimizeSet = true
+		}
+	})
 }
 
 func validateConfigDirFlag() {
@@ -103,7 +115,7 @@ func validateConfigDirFlag() {
 func ensureDefaultConfig() (*model.Configuration, error) {
 	validateConfigDirFlag()
 	if !types.MemberOf(model.ConfigPath, []string{"default", "disable"}) {
-		if err := model.EnsureDefaultConfigAt(model.ConfigPath); err != nil {
+		if err := model.EnsureDefaultConfigAt(model.ConfigPath, false); err != nil {
 			return nil, err
 		}
 	}
@@ -139,7 +151,16 @@ func (m commandMap) process(cmdPrefix string, command string) (string, error) {
 	conf.OwnerPW = opw
 	conf.UserPW = upw
 
+	if offlineSet {
+		conf.Offline = offline
+	}
+
 	if m[cmdStr].handler != nil {
+
+		if conf.Version != model.VersionStr && cmdStr != "reset" {
+			model.CheckConfigVersion(conf.Version)
+		}
+
 		m[cmdStr].handler(conf)
 		return command, nil
 	}

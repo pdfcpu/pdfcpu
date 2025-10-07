@@ -25,7 +25,7 @@ import (
 )
 
 // PDFInfo returns information about rs.
-func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, conf *model.Configuration) (*pdfcpu.PDFInfo, error) {
+func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, fonts bool, conf *model.Configuration) (*pdfcpu.PDFInfo, error) {
 	if rs == nil {
 		return nil, errors.New("pdfcpu: PDFInfo: missing rs")
 	}
@@ -42,6 +42,12 @@ func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, conf *mo
 		return nil, err
 	}
 
+	if fonts {
+		if err = OptimizeContext(ctx); err != nil {
+			return nil, err
+		}
+	}
+
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false, true)
 	if err != nil {
 		return nil, err
@@ -51,5 +57,5 @@ func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, conf *mo
 		return nil, err
 	}
 
-	return pdfcpu.Info(ctx, fileName, pages)
+	return pdfcpu.Info(ctx, fileName, pages, fonts)
 }

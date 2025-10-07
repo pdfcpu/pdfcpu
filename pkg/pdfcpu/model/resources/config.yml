@@ -1,7 +1,3 @@
-#############################
-#   Default configuration   #
-#############################
-
 # toggle for inFilename extension check (.pdf) 
 checkFileNameExt: true
 
@@ -14,7 +10,7 @@ decodeAllStreams: false
 # ValidationRelaxed,
 validationMode: ValidationRelaxed
 
-# validate cross reference table right before writing
+# validate cross reference table right before writing.
 postProcessValidate: true
 
 # eol for writing:
@@ -46,17 +42,40 @@ unit: points
 
 # timestamp format: yyyy-mm-dd hh:mm
 # Switch month and year by using: 2006-02-01 15:04
-# See more at https://pkg.go.dev/time@go1.17.1#pkg-constants
+# See more at https://pkg.go.dev/time@go1.22#pkg-constants
 timestampFormat: 2006-01-02 15:04
 
 # date format: yyyy-mm-dd
 dateFormat: 2006-01-02
 
-# optimize duplicate content streams across pages
+# toggle optimization.
+optimize: true
+
+# optimize page resources via content stream analysis.
+optimizeResourceDicts: true
+
+# optimize duplicate content streams across pages.
 optimizeDuplicateContentStreams: false
 
-# merge creates bookmarks
+# merge creates bookmarks.
 createBookmarks: true
 
-# Viewer is expected to supply appearance streams for form fields.
+# viewer is expected to supply appearance streams for form fields.
 needAppearances: false
+
+# internet availability.
+offline: false
+
+# http timeout in seconds.
+timeout: 5
+
+# http timeout in seconds for CRL revocation checking.
+timeoutCRL: 10
+
+# http timeout in seconds for OCSP revocation checking.
+timeoutOCSP: 10
+
+# preferred certificate revocation checking mechanism:
+# crl
+# ocsp
+preferredCertRevocationChecker: crl

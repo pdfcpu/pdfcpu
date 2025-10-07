@@ -22,11 +22,10 @@ import (
 	"io"
 	"unicode/utf8"
 
-	"github.com/angel-one/pdfcpu/pkg/font"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/color"
-	pdffont "github.com/angel-one/pdfcpu/pkg/pdfcpu/font"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
@@ -302,35 +301,15 @@ func (lb *ListBox) validate() error {
 	return lb.validateTab()
 }
 
-func (lb *ListBox) calcFontFromDA(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
-
-	s := d.StringEntry("DA")
-	if s == nil {
-		s = ctx.Form.StringEntry("DA")
-		if s == nil {
-			return nil, errors.New("pdfcpu: listbox missing \"DA\"")
-		}
-	}
-
-	fontID, f, err := fontFromDA(*s)
+func (lb *ListBox) calcFontFromDA(ctx *model.Context, d types.Dict, da *string, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
+	id, font, rtl, fontIndRef, err := calcFontDetailsFromDA(ctx, d, da, false, fonts)
 	if err != nil {
 		return nil, err
-	}
-
-	lb.Font, lb.fontID = &f, fontID
-
-	id, name, lang, fontIndRef, err := extractFormFontDetails(ctx, lb.fontID, fonts)
-	if err != nil {
-		return nil, err
-	}
-	if fontIndRef == nil {
-		return nil, errors.New("pdfcpu: unable to detect indirect reference for font")
 	}
 
 	lb.fontID = id
-	lb.Font.Name = name
-	lb.Font.Lang = lang
-	lb.RTL = pdffont.RTL(lang)
+	lb.Font = font
+	lb.RTL = rtl
 
 	return fontIndRef, nil
 }
@@ -481,7 +460,7 @@ func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 			s = model.DecodeUTF8ToByte(s)
 		}
 		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
-		s = model.PrepBytes(xRefTable, s, f.Name, true, lb.RTL)
+		s = model.PrepBytes(xRefTable, s, f.Name, true, lb.RTL, f.FillFont)
 		x := 2 * boWidth
 		if x == 0 {
 			x = 2
@@ -615,7 +594,7 @@ func (lb *ListBox) handleVAndDV(d types.Dict) error {
 				ind = append(ind, types.Integer(i))
 			}
 		}
-		s, err := types.EscapeUTF16String(v)
+		s, err := types.EscapedUTF16String(v)
 		if err != nil {
 			return err
 		}
@@ -634,7 +613,7 @@ func (lb *ListBox) handleVAndDV(d types.Dict) error {
 
 	arr = types.Array{}
 	for _, v := range lb.Defaults {
-		s, err := types.EscapeUTF16String(v)
+		s, err := types.EscapedUTF16String(v)
 		if err != nil {
 			return err
 		}
@@ -653,14 +632,14 @@ func (lb *ListBox) handleVAndDV(d types.Dict) error {
 func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	pdf := lb.pdf
 
-	id, err := types.EscapeUTF16String(lb.ID)
+	id, err := types.EscapedUTF16String(lb.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	opt := types.Array{}
 	for _, s := range lb.Options {
-		s1, err := types.EscapeUTF16String(s)
+		s1, err := types.EscapedUTF16String(s)
 		if err != nil {
 			return nil, err
 		}
@@ -684,7 +663,7 @@ func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	)
 
 	if lb.Tip != "" {
-		tu, err := types.EscapeUTF16String(lb.Tip)
+		tu, err := types.EscapedUTF16String(lb.Tip)
 		if err != nil {
 			return nil, err
 		}
@@ -871,18 +850,21 @@ func NewListBox(
 	d types.Dict,
 	opts []string,
 	ind types.Array,
+	da *string,
 	fonts map[string]types.IndirectRef) (*ListBox, *types.IndirectRef, error) {
 
 	lb := &ListBox{Options: opts, Ind: ind}
 
-	bb, err := ctx.RectForArray(d.ArrayEntry("Rect"))
+	obj, _ := d.Find("Rect")
+	arr, _ := ctx.DereferenceArray(obj)
+	bb, err := ctx.RectForArray(arr)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	lb.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
 
-	fontIndRef, err := lb.calcFontFromDA(ctx, d, fonts)
+	fontIndRef, err := lb.calcFontFromDA(ctx, d, da, fonts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -962,9 +944,9 @@ func updateForm(xRefTable *model.XRefTable, bb []byte, indRef *types.IndirectRef
 	return nil
 }
 
-func renderListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types.Array, fonts map[string]types.IndirectRef) error {
+func renderListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types.Array, da *string, fonts map[string]types.IndirectRef) error {
 
-	lb, fontIndRef, err := NewListBox(ctx, d, opts, ind, fonts)
+	lb, fontIndRef, err := NewListBox(ctx, d, opts, ind, da, fonts)
 	if err != nil {
 		return err
 	}
@@ -984,9 +966,9 @@ func renderListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types.
 	return nil
 }
 
-func refreshListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types.Array, fonts map[string]types.IndirectRef, irN *types.IndirectRef) error {
+func refreshListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types.Array, da *string, fonts map[string]types.IndirectRef, irN *types.IndirectRef) error {
 
-	lb, _, err := NewListBox(ctx, d, opts, ind, fonts)
+	lb, _, err := NewListBox(ctx, d, opts, ind, da, fonts)
 	if err != nil {
 		return err
 	}
@@ -999,11 +981,11 @@ func refreshListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types
 	return updateForm(ctx.XRefTable, bb, irN)
 }
 
-func EnsureListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types.Array, fonts map[string]types.IndirectRef) error {
+func EnsureListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types.Array, da *string, fonts map[string]types.IndirectRef) error {
 
 	apd := d.DictEntry("AP")
 	if apd == nil {
-		return renderListBoxAP(ctx, d, opts, ind, fonts)
+		return renderListBoxAP(ctx, d, opts, ind, da, fonts)
 	}
 
 	irN := apd.IndirectRefEntry("N")
@@ -1011,5 +993,5 @@ func EnsureListBoxAP(ctx *model.Context, d types.Dict, opts []string, ind types.
 		return nil
 	}
 
-	return refreshListBoxAP(ctx, d, opts, ind, fonts, irN)
+	return refreshListBoxAP(ctx, d, opts, ind, da, fonts, irN)
 }

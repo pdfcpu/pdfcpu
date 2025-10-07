@@ -48,7 +48,7 @@ func ViewerPreferences(rs io.ReadSeeker, conf *model.Configuration) (*model.View
 		return nil, nil, err
 	}
 
-	v := ctx.Version()
+	v := ctx.XRefTable.Version()
 
 	return ctx.ViewerPref, &v, nil
 }
@@ -98,7 +98,7 @@ func ListViewerPreferences(rs io.ReadSeeker, all bool, conf *model.Configuration
 		return []string{"No viewer preferences available."}, nil
 	}
 
-	vp1, err := model.ViewerPreferencesWithDefaults(ctx.ViewerPref, ctx.Version())
+	vp1, err := model.ViewerPreferencesWithDefaults(ctx.ViewerPref, ctx.XRefTable.Version())
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 		return err
 	}
 
-	version := ctx.Version()
+	version := ctx.XRefTable.Version()
 
 	if err := vp.Validate(version); err != nil {
 		return err

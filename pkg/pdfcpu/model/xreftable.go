@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path"
 	"sort"
@@ -49,12 +50,14 @@ type XRefTableEntry struct {
 	Free            bool
 	Offset          *int64
 	Generation      *int
+	Incr            int
 	RefCount        int
 	Object          types.Object
 	Compressed      bool
 	ObjectStream    *int
 	ObjectStreamInd *int
 	Valid           bool
+	BeingValidated  bool
 }
 
 // NewXRefTableEntryGen0 returns a cross reference table entry for an object with generation 0.
@@ -99,11 +102,13 @@ type PgAnnots map[AnnotationType]Annot
 // XRefTable represents a PDF cross reference table plus stats for a PDF file.
 type XRefTable struct {
 	Table               map[int]*XRefTableEntry
-	Size                *int               // Object count from PDF trailer dict.
+	Size                *int               // from trailer dict.
+	MaxObjNr            int                // after reading in all objects from xRef table.
 	PageCount           int                // Number of pages.
 	Root                *types.IndirectRef // Pointer to catalog (reference to root object).
 	RootDict            types.Dict         // Catalog
 	Names               map[string]*Node   // Cache for name trees as found in catalog.
+	Dests               types.Dict         // Named destinations
 	NameRefs            map[string]NameMap // Name refs for merging only
 	Encrypt             *types.IndirectRef // Encrypt dict.
 	E                   *Enc
@@ -117,17 +122,19 @@ type XRefTable struct {
 	RootVersion   *Version // Optional PDF version taking precedence over the header version.
 
 	// Document information section
-	ID           types.Array        // from trailer
-	Info         *types.IndirectRef // Infodict (reference to info dict object)
-	Title        string
-	Subject      string
-	Keywords     string
-	Author       string
-	Creator      string
-	Producer     string
-	CreationDate string
-	ModDate      string
-	Properties   map[string]string
+	ID             types.Array        // from trailer
+	Info           *types.IndirectRef // Infodict (reference to info dict object)
+	Title          string
+	Subject        string
+	Author         string
+	Creator        string
+	Producer       string
+	CreationDate   string
+	ModDate        string
+	Keywords       string
+	KeywordList    types.StringSet
+	Properties     map[string]string
+	CatalogXMPMeta *XMPMeta
 
 	PageLayout *PageLayout
 	PageMode   *PageMode
@@ -144,13 +151,20 @@ type XRefTable struct {
 	// Thumbnail images
 	PageThumbs map[int]types.IndirectRef
 
+	Signatures        map[int]map[int]Signature // form signatures and signatures located via page annotations only keyed by increment #.
+	URSignature       types.Dict                // usage rights signature
+	CertifiedSigObjNr int                       // authoritative signature
+	DSS               types.Dict                // document security store, currently unsupported
+	DTS               time.Time                 // trusted digital timestamp
+
 	// Offspec section
 	AdditionalStreams *types.Array // array of IndirectRef - trailer :e.g., Oasis "Open Doc"
 
 	// Statistics
 	Stats PDFStats
 
-	Tagged bool // File is using tags. This is important for ???
+	Tagged           bool // File is using tags.
+	CustomExtensions bool // File is using custom extensions for annotations and/or keywords.
 
 	// Validation
 	CurPage        int                       // current page during validation
@@ -169,24 +183,29 @@ type XRefTable struct {
 	AppendOnly     bool
 
 	// Fonts
-	UsedGIDs map[string]map[uint16]bool
+	UsedGIDs  map[string]map[uint16]bool
+	FillFonts map[string]types.IndirectRef
 }
 
 // NewXRefTable creates a new XRefTable.
+// TODO Export
 func newXRefTable(conf *Configuration) (xRefTable *XRefTable) {
 	return &XRefTable{
 		Table:             map[int]*XRefTableEntry{},
 		Names:             map[string]*Node{},
 		NameRefs:          map[string]NameMap{},
+		KeywordList:       types.StringSet{},
 		Properties:        map[string]string{},
 		LinearizationObjs: types.IntSet{},
 		PageAnnots:        map[int]PgAnnots{},
 		PageThumbs:        map[int]types.IndirectRef{},
+		Signatures:        map[int]map[int]Signature{},
 		Stats:             NewPDFStats(),
 		ValidationMode:    conf.ValidationMode,
 		ValidateLinks:     conf.ValidateLinks,
 		URIs:              map[int]map[string]string{},
 		UsedGIDs:          map[string]map[uint16]bool{},
+		FillFonts:         map[string]types.IndirectRef{},
 		Conf:              conf,
 	}
 }
@@ -223,7 +242,7 @@ func (xRefTable *XRefTable) ParseRootVersion() (v *string, err error) {
 // ValidateVersion validates against the xRefTable's version.
 func (xRefTable *XRefTable) ValidateVersion(element string, sinceVersion Version) error {
 	if xRefTable.Version() < sinceVersion {
-		return errors.Errorf("%s: unsupported in version %s\n", element, xRefTable.VersionString())
+		return errors.Errorf("%s: unsupported in version %s", element, xRefTable.VersionString())
 	}
 
 	return nil
@@ -417,6 +436,12 @@ func (xRefTable *XRefTable) InsertObject(obj types.Object) (objNr int, err error
 	xRefTableEntry := NewXRefTableEntryGen0(obj)
 	xRefTableEntry.RefCount = 1
 	return xRefTable.InsertNew(*xRefTableEntry), nil
+}
+
+// IndRefForNewObject inserts object at objNr into the xRefTable and returns an indirect reference to it.
+func (xRefTable *XRefTable) IndRefForObject(objNr int, obj types.Object) (*types.IndirectRef, error) {
+	xRefTable.Table[objNr] = NewXRefTableEntryGen0(obj)
+	return types.NewIndirectRef(objNr, 0), nil
 }
 
 // IndRefForNewObject inserts an object into the xRefTable and returns an indirect reference to it.
@@ -652,13 +677,13 @@ func (xRefTable *XRefTable) NewFileSpecDict(f, uf, desc string, indRefStreamDict
 	d := types.NewDict()
 	d.InsertName("Type", "Filespec")
 
-	s, err := types.EscapeUTF16String(f)
+	s, err := types.EscapedUTF16String(f)
 	if err != nil {
 		return nil, err
 	}
 	d.InsertString("F", *s)
 
-	if s, err = types.EscapeUTF16String(uf); err != nil {
+	if s, err = types.EscapedUTF16String(uf); err != nil {
 		return nil, err
 	}
 	d.InsertString("UF", *s)
@@ -669,7 +694,7 @@ func (xRefTable *XRefTable) NewFileSpecDict(f, uf, desc string, indRefStreamDict
 	d.Insert("EF", efDict)
 
 	if desc != "" {
-		if s, err = types.EscapeUTF16String(desc); err != nil {
+		if s, err = types.EscapedUTF16String(desc); err != nil {
 			return nil, err
 		}
 		d.InsertString("Desc", *s)
@@ -889,21 +914,38 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 	return nil
 }
 
-// IsValidObj returns true if the object with objNr and genNr is valid.
-func (xRefTable *XRefTable) IsValidObj(objNr, genNr int) (bool, error) {
+// IsObjValid returns true if the object with objNr and genNr is valid.
+func (xRefTable *XRefTable) IsObjValid(objNr, genNr int) (bool, error) {
 	entry, found := xRefTable.FindTableEntry(objNr, genNr)
 	if !found {
-		return false, errors.Errorf("pdfcpu: IsValid: no entry for obj#%d\n", objNr)
+		return false, errors.Errorf("pdfcpu: IsObjValid: no entry for obj#%d\n", objNr)
 	}
 	if entry.Free {
-		return false, errors.Errorf("pdfcpu: IsValid: unexpected free entry for obj#%d\n", objNr)
+		return false, errors.Errorf("pdfcpu: IsObjValid: unexpected free entry for obj#%d\n", objNr)
 	}
 	return entry.Valid, nil
 }
 
 // IsValid returns true if the object referenced by ir is valid.
 func (xRefTable *XRefTable) IsValid(ir types.IndirectRef) (bool, error) {
-	return xRefTable.IsValidObj(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+	return xRefTable.IsObjValid(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+}
+
+// IsObjBeingValidated returns true if the object with objNr and genNr is being validated.
+func (xRefTable *XRefTable) IsObjBeingValidated(objNr, genNr int) (bool, error) {
+	entry, found := xRefTable.FindTableEntry(objNr, genNr)
+	if !found {
+		return false, errors.Errorf("pdfcpu: IsObjBeingValidated: no entry for obj#%d\n", objNr)
+	}
+	if entry.Free {
+		return false, errors.Errorf("pdfcpu: IsObjBeingValidated: unexpected free entry for obj#%d\n", objNr)
+	}
+	return entry.BeingValidated, nil
+}
+
+// IsBeingValidated returns true if the object referenced by ir is being validated.
+func (xRefTable *XRefTable) IsBeingValidated(ir types.IndirectRef) (bool, error) {
+	return xRefTable.IsObjBeingValidated(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
 }
 
 // SetValid marks the xreftable entry of the object referenced by ir as valid.
@@ -916,6 +958,23 @@ func (xRefTable *XRefTable) SetValid(ir types.IndirectRef) error {
 		return errors.Errorf("pdfcpu: SetValid: unexpected free entry for obj#%d\n", ir.ObjectNumber.Value())
 	}
 	entry.Valid = true
+	entry.BeingValidated = false
+
+	return nil
+}
+
+// SetBeingValidated marks the xreftable entry of the object referenced by ir as being validated.
+func (xRefTable *XRefTable) SetBeingValidated(ir types.IndirectRef) error {
+	entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+	if !found {
+		return errors.Errorf("pdfcpu: SetBeingValidated: no entry for obj#%d\n", ir.ObjectNumber.Value())
+	}
+	if entry.Free {
+		return errors.Errorf("pdfcpu: SetBeingValidated: unexpected free entry for obj#%d\n", ir.ObjectNumber.Value())
+	}
+	entry.BeingValidated = true
+	entry.Valid = false
+
 	return nil
 }
 
@@ -961,7 +1020,10 @@ func (xRefTable *XRefTable) DereferenceXObjectDict(indRef types.IndirectRef) (*t
 	}
 
 	subType := sd.Dict.Subtype()
-	if subType == nil {
+	if subType == nil || len(*subType) == 0 {
+		if xRefTable.ValidationMode == ValidationRelaxed {
+			return sd, nil
+		}
 		return nil, errors.Errorf("pdfcpu: DereferenceXObjectDict: missing stream dict Subtype %s\n", indRef)
 	}
 
@@ -982,7 +1044,7 @@ func (xRefTable *XRefTable) Catalog() (types.Dict, error) {
 		return nil, errors.New("pdfcpu: Catalog: missing root dict")
 	}
 
-	o, err := xRefTable.indRefToObject(xRefTable.Root)
+	o, _, err := xRefTable.indRefToObject(xRefTable.Root, true)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -999,7 +1061,7 @@ func (xRefTable *XRefTable) Catalog() (types.Dict, error) {
 
 // EncryptDict returns a pointer to the root object / catalog.
 func (xRefTable *XRefTable) EncryptDict() (types.Dict, error) {
-	o, err := xRefTable.indRefToObject(xRefTable.Encrypt)
+	o, _, err := xRefTable.indRefToObject(xRefTable.Encrypt, true)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -1635,7 +1697,9 @@ func (xRefTable *XRefTable) consolidateResources(obj types.Object, pAttrs *Inher
 			if err != nil {
 				return err
 			}
-			pAttrs.Resources[k] = o.Clone()
+			if o != nil {
+				pAttrs.Resources[k] = o.Clone()
+			}
 		}
 		if log.WriteEnabled() {
 			log.Write.Printf("pA:\n%s\n", pAttrs.Resources)
@@ -1703,11 +1767,23 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 	}
 
 	if obj, found = pageDict.Find("Rotate"); found {
-		i, err := xRefTable.DereferenceInteger(obj)
+		obj, err := xRefTable.Dereference(obj)
 		if err != nil {
 			return err
 		}
-		pAttrs.Rotate = i.Value()
+
+		switch obj := obj.(type) {
+		case types.Integer:
+			pAttrs.Rotate = obj.Value()
+		case types.Float:
+			if xRefTable.ValidationMode == ValidationStrict {
+				return errors.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+			}
+
+			pAttrs.Rotate = int(math.Round(obj.Value()))
+		default:
+			return errors.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+		}
 	}
 
 	if obj, found = pageDict.Find("Resources"); !found {
@@ -1728,9 +1804,29 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 	return xRefTable.consolidateResources(obj, pAttrs)
 }
 
+func (xRefTable *XRefTable) decodeContentStream(sd *types.StreamDict, pageNr int) error {
+	err := sd.Decode()
+	if err == filter.ErrUnsupportedFilter {
+		return errors.New("pdfcpu: unsupported filter: unable to decode content")
+	}
+	if err != nil {
+		if xRefTable.ValidationMode == ValidationStrict {
+			return errors.Errorf("page %d content decode: %v", pageNr, err)
+		}
+		if !strings.HasPrefix(err.Error(), "flate: corrupt input before offset") {
+			return errors.Errorf("page %d content decode: %v", pageNr, err)
+		}
+		ShowSkipped(fmt.Sprintf("page %d: corrupt content stream (flate)", pageNr))
+	}
+	return nil
+}
+
 // PageContent returns the content in PDF syntax for page dict d.
-func (xRefTable *XRefTable) PageContent(d types.Dict) ([]byte, error) {
+func (xRefTable *XRefTable) PageContent(d types.Dict, pageNr int) ([]byte, error) {
 	o, _ := d.Find("Contents")
+	if o == nil {
+		return nil, ErrNoContent
+	}
 
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {
@@ -1743,14 +1839,9 @@ func (xRefTable *XRefTable) PageContent(d types.Dict) ([]byte, error) {
 
 	case types.StreamDict:
 		// no further processing.
-		err := o.Decode()
-		if err == filter.ErrUnsupportedFilter {
-			return nil, errors.New("pdfcpu: unsupported filter: unable to decode content")
-		}
-		if err != nil {
+		if err := xRefTable.decodeContentStream(&o, pageNr); err != nil {
 			return nil, err
 		}
-
 		bb = append(bb, o.Content...)
 
 	case types.Array:
@@ -1761,16 +1852,12 @@ func (xRefTable *XRefTable) PageContent(d types.Dict) ([]byte, error) {
 			}
 			o, _, err := xRefTable.DereferenceStreamDict(o)
 			if err != nil {
-				return nil, err
+				return nil, errors.Errorf("page %d content decode: %v", pageNr, err)
 			}
 			if o == nil {
 				continue
 			}
-			err = o.Decode()
-			if err == filter.ErrUnsupportedFilter {
-				return nil, errors.New("pdfcpu: unsupported filter: unable to decode content")
-			}
-			if err != nil {
+			if err := xRefTable.decodeContentStream(o, pageNr); err != nil {
 				return nil, err
 			}
 			bb = append(bb, o.Content...)
@@ -1787,7 +1874,7 @@ func (xRefTable *XRefTable) PageContent(d types.Dict) ([]byte, error) {
 	return bb, nil
 }
 
-func consolidateResourceSubDict(d types.Dict, key string, prn PageResourceNames, pageNr int) error {
+func (xRefTable *XRefTable) consolidateResourceSubDict(d types.Dict, key string, prn PageResourceNames, pageNr int) error {
 	o := d[key]
 	if o == nil {
 		if prn.HasResources(key) {
@@ -1814,28 +1901,32 @@ func consolidateResourceSubDict(d types.Dict, key string, prn PageResourceNames,
 	// Check for missing resource sub dict entries.
 	for k := range res {
 		if !set[k] {
-			return errors.Errorf("pdfcpu: page %d: missing required %s: %s", pageNr, key, k)
+			s := fmt.Sprintf("page %d: missing required %s: %s", pageNr, key, k)
+			if xRefTable.ValidationMode == ValidationStrict {
+				return errors.New("pdfcpu: " + s)
+			}
+			ShowSkipped(s)
 		}
 	}
 	d[key] = d1
 	return nil
 }
 
-func consolidateResourceDict(d types.Dict, prn PageResourceNames, pageNr int) error {
+func (xRefTable *XRefTable) consolidateResourceDict(d types.Dict, prn PageResourceNames, pageNr int) error {
 	for k := range resourceTypes {
-		if err := consolidateResourceSubDict(d, k, prn, pageNr); err != nil {
+		if err := xRefTable.consolidateResourceSubDict(d, k, prn, pageNr); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict types.Dict, page int, consolidateRes bool) error {
+func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict types.Dict, pageNr int, consolidateRes bool) error {
 	if !consolidateRes {
 		return nil
 	}
 
-	bb, err := xRefTable.PageContent(pageDict)
+	bb, err := xRefTable.PageContent(pageDict, pageNr)
 	if err != nil {
 		if err == ErrNoContent {
 			return nil
@@ -1849,11 +1940,52 @@ func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict ty
 		return err
 	}
 
-	// Compare required resouces (prn) with available resources (pAttrs.resources).
+	// Compare required resources (prn) with available resources (pAttrs.resources).
 	// Remove any resource that's not required.
 	// Return an error for any required resource missing.
 	// TODO Calculate and accumulate resources required by content streams of any present form or type 3 fonts.
-	return consolidateResourceDict(resDict, prn, page)
+	return xRefTable.consolidateResourceDict(resDict, prn, pageNr)
+}
+
+func (xRefTable *XRefTable) pageObjType(indRef types.IndirectRef) (string, error) {
+
+	pageNodeDict, err := xRefTable.DereferenceDict(indRef)
+	if err != nil {
+		return "", err
+	}
+
+	if t := pageNodeDict.Type(); t != nil {
+		return *t, nil
+	}
+
+	objType := ""
+
+	if xRefTable.ValidationMode == ValidationRelaxed {
+		if _, hasCount := pageNodeDict.Find("Count"); hasCount {
+			if _, hasKids := pageNodeDict.Find("Kids"); hasKids {
+				ShowRepaired(fmt.Sprintf("page tree node %s", indRef))
+				objType = "Pages"
+			}
+		}
+	}
+
+	return objType, nil
+}
+
+func errForUnexpectedPageObjectType(validationMode int, objType string, indRef types.IndirectRef) error {
+	if validationMode == ValidationRelaxed {
+		return nil
+	}
+
+	if objType == "Template" {
+		return errors.Errorf("Template page tree nodes not supported: %s", indRef)
+	}
+
+	if objType == "" {
+		return errors.Errorf("page tree node without type: %s", indRef)
+	}
+
+	return errors.Errorf("unsupported page tree node: %s", indRef)
 }
 
 func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool) (types.Dict, *types.IndirectRef, error) {
@@ -1891,18 +2023,19 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, 
 			continue
 		}
 
-		// Dereference next page node dict.
+		// Process next page node dict.
+
 		indRef, ok := o.(types.IndirectRef)
 		if !ok {
 			return nil, nil, errors.Errorf("pdfcpu: processPageTreeForPageDict: corrupt page node dict")
 		}
 
-		pageNodeDict, err := xRefTable.DereferenceDict(indRef)
+		objType, err := xRefTable.pageObjType(indRef)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		switch *pageNodeDict.Type() {
+		switch objType {
 
 		case "Pages":
 			// Recurse over sub pagetree.
@@ -1920,6 +2053,9 @@ func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, 
 				return xRefTable.processPageTreeForPageDict(&indRef, pAttrs, p, page, consolidateRes)
 			}
 
+		default:
+			return nil, nil, errForUnexpectedPageObjectType(xRefTable.ValidationMode, objType, indRef)
+
 		}
 
 	}
@@ -1935,7 +2071,7 @@ func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (types.Dic
 		pageCount int
 	)
 
-	if pageNr < 0 || pageNr > xRefTable.PageCount {
+	if pageNr <= 0 || pageNr > xRefTable.PageCount {
 		return nil, nil, nil, errors.New("pdfcpu: page not found")
 	}
 
@@ -1943,6 +2079,10 @@ func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (types.Dic
 	pageRootDictIndRef, err := xRefTable.Pages()
 	if err != nil {
 		return nil, nil, nil, err
+	}
+
+	if consolidateRes {
+		consolidateRes = xRefTable.Conf.OptimizeResourceDicts
 	}
 
 	// Calculate and return only resources that are really needed by
@@ -2221,11 +2361,22 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(
 	}
 
 	if obj, found := d.Find("Rotate"); found {
-		i, err := xRefTable.DereferenceInteger(obj)
-		if err != nil {
+		if obj, err = xRefTable.Dereference(obj); err != nil {
 			return err
 		}
-		r = i.Value()
+
+		switch obj := obj.(type) {
+		case types.Integer:
+			r = obj.Value()
+		case types.Float:
+			if xRefTable.ValidationMode == ValidationStrict {
+				return errors.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+			}
+
+			r = int(math.Round(obj.Value()))
+		default:
+			return errors.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+		}
 	}
 
 	if err := xRefTable.collectMediaBoxAndCropBox(d, inhMediaBox, inhCropBox); err != nil {
@@ -2289,11 +2440,16 @@ func (xRefTable *XRefTable) PageDims() ([]types.Dim, error) {
 	return dims, nil
 }
 
-func (xRefTable *XRefTable) EmptyPage(parentIndRef *types.IndirectRef, mediaBox *types.Rectangle) (*types.IndirectRef, error) {
+func (xRefTable *XRefTable) EmptyPage(parentIndRef *types.IndirectRef, mediaBox *types.Rectangle, objNr int) (*types.IndirectRef, error) {
 	sd, _ := xRefTable.NewStreamDictForBuf(nil)
 
 	if err := sd.Encode(); err != nil {
 		return nil, err
+	}
+
+	arr := types.RectForFormat("A4").Array()
+	if mediaBox != nil {
+		arr = mediaBox.Array()
 	}
 
 	contentsIndRef, err := xRefTable.IndRefForNewObject(*sd)
@@ -2306,10 +2462,14 @@ func (xRefTable *XRefTable) EmptyPage(parentIndRef *types.IndirectRef, mediaBox 
 			"Type":      types.Name("Page"),
 			"Parent":    *parentIndRef,
 			"Resources": types.NewDict(),
-			"MediaBox":  mediaBox.Array(),
+			"MediaBox":  arr,
 			"Contents":  *contentsIndRef,
 		},
 	)
+
+	if objNr > 0 {
+		return xRefTable.IndRefForObject(objNr, pageDict)
+	}
 
 	return xRefTable.IndRefForNewObject(pageDict)
 }
@@ -2328,7 +2488,12 @@ func (xRefTable *XRefTable) pageMediaBox(d types.Dict) (*types.Rectangle, error)
 	return rect(xRefTable, a)
 }
 
-func (xRefTable *XRefTable) emptyPage(parent *types.IndirectRef, d types.Dict, pAttrs *InheritedPageAttrs) (*types.IndirectRef, error) {
+func (xRefTable *XRefTable) emptyPage(parent *types.IndirectRef, d types.Dict, dim *types.Dim, pAttrs *InheritedPageAttrs) (*types.IndirectRef, error) {
+	// TODO cache empty page
+	if dim != nil {
+		return xRefTable.EmptyPage(parent, types.RectForDim(dim.Width, dim.Height), 0)
+	}
+
 	mediaBox, err := pAttrs.MediaBox, error(nil)
 	if mediaBox == nil {
 		mediaBox, err = xRefTable.pageMediaBox(d)
@@ -2337,11 +2502,16 @@ func (xRefTable *XRefTable) emptyPage(parent *types.IndirectRef, d types.Dict, p
 		}
 	}
 
-	// TODO cache empty page
-	return xRefTable.EmptyPage(parent, mediaBox)
+	return xRefTable.EmptyPage(parent, mediaBox, 0)
 }
 
-func (xRefTable *XRefTable) insertBlankPages(parent *types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, selectedPages types.IntSet, before bool) (int, error) {
+func (xRefTable *XRefTable) insertBlankPages(
+	parent *types.IndirectRef,
+	pAttrs *InheritedPageAttrs,
+	p *int, selectedPages types.IntSet,
+	dim *types.Dim,
+	before bool) (int, error) {
+
 	d, err := xRefTable.DereferenceDict(*parent)
 	if err != nil {
 		return 0, err
@@ -2381,7 +2551,7 @@ func (xRefTable *XRefTable) insertBlankPages(parent *types.IndirectRef, pAttrs *
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			j, err := xRefTable.insertBlankPages(&ir, pAttrs, p, selectedPages, before)
+			j, err := xRefTable.insertBlankPages(&ir, pAttrs, p, selectedPages, dim, before)
 			if err != nil {
 				return 0, err
 			}
@@ -2396,7 +2566,7 @@ func (xRefTable *XRefTable) insertBlankPages(parent *types.IndirectRef, pAttrs *
 			}
 			if selectedPages[*p] {
 				// Insert empty page.
-				indRef, err := xRefTable.emptyPage(parent, pageNodeDict, pAttrs)
+				indRef, err := xRefTable.emptyPage(parent, pageNodeDict, dim, pAttrs)
 				if err != nil {
 					return 0, err
 				}
@@ -2419,7 +2589,7 @@ func (xRefTable *XRefTable) insertBlankPages(parent *types.IndirectRef, pAttrs *
 }
 
 // InsertBlankPages inserts a blank page before or after each selected page.
-func (xRefTable *XRefTable) InsertBlankPages(pages types.IntSet, before bool) error {
+func (xRefTable *XRefTable) InsertBlankPages(pages types.IntSet, dim *types.Dim, before bool) error {
 	root, err := xRefTable.Pages()
 	if err != nil {
 		return err
@@ -2428,7 +2598,7 @@ func (xRefTable *XRefTable) InsertBlankPages(pages types.IntSet, before bool) er
 	var inhPAttrs InheritedPageAttrs
 	p := 0
 
-	_, err = xRefTable.insertBlankPages(root, &inhPAttrs, &p, pages, before)
+	_, err = xRefTable.insertBlankPages(root, &inhPAttrs, &p, pages, dim, before)
 
 	return err
 }
@@ -2639,14 +2809,12 @@ func (xRefTable *XRefTable) AppendContent(pageDict types.Dict, bb []byte) error 
 	switch o := obj.(type) {
 
 	case types.StreamDict:
-
 		if err := appendToContentStream(&o, bb); err != nil {
 			return err
 		}
 		entry.Object = o
 
 	case types.Array:
-
 		// Get stream dict for last array element.
 		o1 := o[len(o)-1]
 		indRef, _ = o1.(types.IndirectRef)
@@ -2654,15 +2822,13 @@ func (xRefTable *XRefTable) AppendContent(pageDict types.Dict, bb []byte) error 
 		genNr := indRef.GenerationNumber.Value()
 		entry, _ = xRefTable.FindTableEntry(objNr, genNr)
 		sd, _ := (entry.Object).(types.StreamDict)
-
 		if err := appendToContentStream(&sd, bb); err != nil {
 			return err
 		}
-		entry.Object = o
+		entry.Object = sd
 
 	default:
 		return errors.Errorf("pdfcpu: corrupt page \"Content\"")
-
 	}
 
 	return nil

@@ -22,8 +22,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/angel-one/pdfcpu/pkg/log"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 
@@ -54,6 +55,15 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) error {
 			s = " (try -mode=relaxed)"
 		}
 		err = errors.Wrap(err, fmt.Sprintf("validation error (obj#:%d)%s", ctx.CurObj, s))
+	}
+
+	if err == nil {
+		if conf.Optimize {
+			if log.CLIEnabled() {
+				log.CLI.Println("optimizing...")
+			}
+			err = pdfcpu.OptimizeXRefTable(ctx)
+		}
 	}
 
 	dur2 := time.Since(from2).Seconds()

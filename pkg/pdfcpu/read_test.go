@@ -17,11 +17,17 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func TestReadFileContext(t *testing.T) {
@@ -53,5 +59,146 @@ func TestReadContext(t *testing.T) {
 		t.Errorf("reading should have failed, got %+v", doc)
 	} else if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("should have failed with timeout, got %s", err)
+	}
+}
+
+func TestReadLargeDictObject(t *testing.T) {
+	// Test with "stream" and "endobj" inside the dictionary.
+	var fp bytes.Buffer
+	fp.WriteString("123 0 obj\n")
+	data := make([]byte, 10*1024*1024)
+	fp.WriteString("<<")
+	fp.WriteString("/Foo <")
+	fp.WriteString(hex.EncodeToString(data))
+	fp.WriteString(">\n")
+	fp.WriteString("/Bar (stream)\n")
+	fp.WriteString("/Baz (endobj)\n")
+	fp.WriteString("/Test <")
+	fp.WriteString(hex.EncodeToString(data))
+	fp.WriteString(">\n")
+	fp.WriteString(">>\n")
+	fp.WriteString("stream\n")
+	fp.WriteString("Hello world!\n")
+	fp.WriteString("endstream\n")
+	fp.WriteString("endobj\n")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Dummy pdfcpu context to be used for parsing a single object.
+	c := &model.Context{
+		Read: &model.ReadContext{
+			RS: bytes.NewReader(fp.Bytes()),
+		},
+		XRefTable: &model.XRefTable{},
+	}
+	o, err := ParseObjectWithContext(ctx, c, 0, 123, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d, ok := o.(types.StreamDict)
+	if !ok {
+		t.Fatalf("expected StreamDict, got %T", o)
+	}
+
+	if err := loadEncodedStreamContent(ctx, c, &d, true); err != nil {
+		t.Fatal(err)
+	}
+
+	if foo := d.HexLiteralEntry("Foo"); foo == nil {
+		t.Error("expected Foo entry")
+	} else if expected := hex.EncodeToString(data); foo.Value() != expected {
+		t.Errorf("Foo value mismatch, expected %d bytes, got %d", len(expected), len(foo.Value()))
+	}
+
+	if bar := d.StringEntry("Bar"); bar == nil {
+		t.Error("expected Bar entry")
+	} else if expected := "stream"; *bar != expected {
+		t.Errorf("expected %s for Bar, got %s", expected, *bar)
+	}
+
+	if baz := d.StringEntry("Baz"); baz == nil {
+		t.Error("expected Baz entry")
+	} else if expected := "endobj"; *baz != expected {
+		t.Errorf("expected %s for Baz, got %s", expected, *baz)
+	}
+
+	if err := d.Decode(); err != nil {
+		t.Fatal(err)
+	}
+
+	if expected := "Hello world!"; string(d.Content) != expected {
+		t.Errorf("expected stream content %s, got %s", expected, string(d.Content))
+	}
+}
+
+func TestReadLargeDictObjectStream(t *testing.T) {
+	// Test without "stream" and "endobj" inside the dictionary.
+	var fp bytes.Buffer
+	fp.WriteString("123 0 obj\n")
+	data := make([]byte, 10*1024*1024)
+	fp.WriteString("<<")
+	fp.WriteString("/Foo <")
+	fp.WriteString(hex.EncodeToString(data))
+	fp.WriteString(">\n")
+	fp.WriteString("/Bar (Test)\n")
+	fp.WriteString("/Baz <")
+	fp.WriteString(hex.EncodeToString(data))
+	fp.WriteString(">\n")
+	fp.WriteString(">>\n")
+	fp.WriteString("stream\n")
+	fp.WriteString("Hello world!\n")
+	fp.WriteString("endstream\n")
+	fp.WriteString("endobj\n")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Dummy pdfcpu context to be used for parsing a single object.
+	c := &model.Context{
+		Read: &model.ReadContext{
+			RS: bytes.NewReader(fp.Bytes()),
+		},
+		XRefTable: &model.XRefTable{},
+	}
+	o, err := ParseObjectWithContext(ctx, c, 0, 123, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d, ok := o.(types.StreamDict)
+	if !ok {
+		t.Fatalf("expected StreamDict, got %T", o)
+	}
+
+	if err := loadEncodedStreamContent(ctx, c, &d, true); err != nil {
+		t.Fatal(err)
+	}
+
+	if foo := d.HexLiteralEntry("Foo"); foo == nil {
+		t.Error("expected Foo entry")
+	} else if expected := hex.EncodeToString(data); foo.Value() != expected {
+		t.Errorf("Foo value mismatch, expected %d bytes, got %d", len(expected), len(foo.Value()))
+	}
+
+	if bar := d.StringEntry("Bar"); bar == nil {
+		t.Error("expected Bar entry")
+	} else if expected := "Test"; *bar != expected {
+		t.Errorf("expected %s for Bar, got %s", expected, *bar)
+	}
+
+	if baz := d.HexLiteralEntry("Baz"); baz == nil {
+		t.Error("expected Baz entry")
+	} else if expected := hex.EncodeToString(data); baz.Value() != expected {
+		t.Errorf("Foo value mismatch, expected %d bytes, got %d", len(expected), len(baz.Value()))
+	}
+
+	if err := d.Decode(); err != nil {
+		t.Fatal(err)
+	}
+
+	if expected := "Hello world!"; string(d.Content) != expected {
+		t.Errorf("expected stream content %s, got %s", expected, string(d.Content))
 	}
 }

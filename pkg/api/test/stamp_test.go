@@ -540,8 +540,8 @@ func hasWatermarks(inFile string, t *testing.T) bool {
 	return ok
 }
 
-func TestStampingLifecyle(t *testing.T) {
-	msg := "TestStampingLifecyle"
+func TestStampingLifecycle(t *testing.T) {
+	msg := "TestStampingLifecycle"
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
 	outFile := filepath.Join(outDir, "stampLC.pdf")
 	onTop := true // we are testing stamps

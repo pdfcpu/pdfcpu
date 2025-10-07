@@ -1,15 +1,19 @@
 module github.com/angel-one/pdfcpu
 
-go 1.20
+go 1.24.0
+
+toolchain go1.24.2
 
 require (
 	github.com/hhrutter/lzw v1.0.0
-	github.com/hhrutter/tiff v1.0.1
-	github.com/mattn/go-runewidth v0.0.15
+	github.com/hhrutter/pkcs7 v0.2.0
+	github.com/hhrutter/tiff v1.0.2
+	github.com/mattn/go-runewidth v0.0.16
 	github.com/pkg/errors v0.9.1
-	golang.org/x/image v0.12.0
-	golang.org/x/text v0.13.0
+	golang.org/x/crypto v0.42.0
+	golang.org/x/image v0.31.0
+	golang.org/x/text v0.29.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-require github.com/rivo/uniseg v0.4.4 // indirect
+require github.com/rivo/uniseg v0.4.7 // indirect

@@ -38,19 +38,6 @@ func Process(cmd *Command) (out []string, err error) {
 	return nil, errors.Errorf("pdfcpu: process: Unknown command mode %d\n", cmd.Mode)
 }
 
-func processPageAnnotations(cmd *Command) (out []string, err error) {
-	switch cmd.Mode {
-
-	case model.LISTANNOTATIONS:
-		out, err = ListAnnotations(cmd)
-
-	case model.REMOVEANNOTATIONS:
-		out, err = RemoveAnnotations(cmd)
-	}
-
-	return out, err
-}
-
 func processAttachments(cmd *Command) (out []string, err error) {
 	switch cmd.Mode {
 
@@ -70,38 +57,23 @@ func processAttachments(cmd *Command) (out []string, err error) {
 	return out, err
 }
 
-func processKeywords(cmd *Command) (out []string, err error) {
+func processBookmarks(cmd *Command) (out []string, err error) {
 	switch cmd.Mode {
 
-	case model.LISTKEYWORDS:
-		out, err = ListKeywords(cmd)
+	case model.LISTBOOKMARKS:
+		return ListBookmarks(cmd)
 
-	case model.ADDKEYWORDS:
-		out, err = AddKeywords(cmd)
+	case model.EXPORTBOOKMARKS:
+		return ExportBookmarks(cmd)
 
-	case model.REMOVEKEYWORDS:
-		out, err = RemoveKeywords(cmd)
+	case model.IMPORTBOOKMARKS:
+		return ImportBookmarks(cmd)
 
+	case model.REMOVEBOOKMARKS:
+		return RemoveBookmarks(cmd)
 	}
 
-	return out, err
-}
-
-func processProperties(cmd *Command) (out []string, err error) {
-	switch cmd.Mode {
-
-	case model.LISTPROPERTIES:
-		out, err = ListProperties(cmd)
-
-	case model.ADDPROPERTIES:
-		out, err = AddProperties(cmd)
-
-	case model.REMOVEPROPERTIES:
-		out, err = RemoveProperties(cmd)
-
-	}
-
-	return out, err
+	return nil, nil
 }
 
 func processEncryption(cmd *Command) (out []string, err error) {
@@ -118,61 +90,6 @@ func processEncryption(cmd *Command) (out []string, err error) {
 
 	case model.CHANGEOPW:
 		return ChangeOwnerPassword(cmd)
-	}
-
-	return nil, nil
-}
-
-func processPermissions(cmd *Command) (out []string, err error) {
-	switch cmd.Mode {
-
-	case model.LISTPERMISSIONS:
-		return ListPermissions(cmd)
-
-	case model.SETPERMISSIONS:
-		return SetPermissions(cmd)
-	}
-
-	return nil, nil
-}
-
-func processPages(cmd *Command) (out []string, err error) {
-	switch cmd.Mode {
-
-	case model.INSERTPAGESBEFORE, model.INSERTPAGESAFTER:
-		return InsertPages(cmd)
-
-	case model.REMOVEPAGES:
-		return RemovePages(cmd)
-	}
-
-	return nil, nil
-}
-
-func processPageBoundaries(cmd *Command) (out []string, err error) {
-	switch cmd.Mode {
-
-	case model.LISTBOXES:
-		return ListBoxes(cmd)
-
-	case model.ADDBOXES:
-		return AddBoxes(cmd)
-
-	case model.REMOVEBOXES:
-		return RemoveBoxes(cmd)
-
-	case model.CROP:
-		return Crop(cmd)
-	}
-
-	return nil, nil
-}
-
-func processImages(cmd *Command) (out []string, err error) {
-	switch cmd.Mode {
-
-	case model.LISTIMAGES:
-		return ListImages(cmd)
 	}
 
 	return nil, nil
@@ -209,20 +126,63 @@ func processForm(cmd *Command) (out []string, err error) {
 	return nil, nil
 }
 
-func processBookmarks(cmd *Command) (out []string, err error) {
+func processImages(cmd *Command) (out []string, err error) {
 	switch cmd.Mode {
 
-	case model.LISTBOOKMARKS:
-		return ListBookmarks(cmd)
+	case model.LISTIMAGES:
+		return ListImages(cmd)
 
-	case model.EXPORTBOOKMARKS:
-		return ExportBookmarks(cmd)
+	case model.UPDATEIMAGES:
+		return UpdateImages(cmd)
+	}
 
-	case model.IMPORTBOOKMARKS:
-		return ImportBookmarks(cmd)
+	return nil, nil
+}
 
-	case model.REMOVEBOOKMARKS:
-		return RemoveBookmarks(cmd)
+func processKeywords(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.LISTKEYWORDS:
+		out, err = ListKeywords(cmd)
+
+	case model.ADDKEYWORDS:
+		out, err = AddKeywords(cmd)
+
+	case model.REMOVEKEYWORDS:
+		out, err = RemoveKeywords(cmd)
+
+	}
+
+	return out, err
+}
+
+func processPageAnnotations(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.LISTANNOTATIONS:
+		out, err = ListAnnotations(cmd)
+
+	case model.REMOVEANNOTATIONS:
+		out, err = RemoveAnnotations(cmd)
+	}
+
+	return out, err
+}
+
+func processPageBoundaries(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.LISTBOXES:
+		return ListBoxes(cmd)
+
+	case model.ADDBOXES:
+		return AddBoxes(cmd)
+
+	case model.REMOVEBOXES:
+		return RemoveBoxes(cmd)
+
+	case model.CROP:
+		return Crop(cmd)
 	}
 
 	return nil, nil
@@ -260,6 +220,49 @@ func processPageMode(cmd *Command) (out []string, err error) {
 	return nil, nil
 }
 
+func processPages(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.INSERTPAGESBEFORE, model.INSERTPAGESAFTER:
+		return InsertPages(cmd)
+
+	case model.REMOVEPAGES:
+		return RemovePages(cmd)
+	}
+
+	return nil, nil
+}
+
+func processPermissions(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.LISTPERMISSIONS:
+		return ListPermissions(cmd)
+
+	case model.SETPERMISSIONS:
+		return SetPermissions(cmd)
+	}
+
+	return nil, nil
+}
+
+func processProperties(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.LISTPROPERTIES:
+		out, err = ListProperties(cmd)
+
+	case model.ADDPROPERTIES:
+		out, err = AddProperties(cmd)
+
+	case model.REMOVEPROPERTIES:
+		out, err = RemoveProperties(cmd)
+
+	}
+
+	return out, err
+}
+
 func processViewerPreferences(cmd *Command) (out []string, err error) {
 	switch cmd.Mode {
 
@@ -271,6 +274,33 @@ func processViewerPreferences(cmd *Command) (out []string, err error) {
 
 	case model.RESETVIEWERPREFERENCES:
 		return ResetViewerPreferences(cmd)
+	}
+
+	return nil, nil
+}
+
+func processCertificates(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.LISTCERTIFICATES:
+		return ListCertificates(cmd)
+
+	case model.INSPECTCERTIFICATES:
+		return InspectCertificates(cmd)
+
+	case model.IMPORTCERTIFICATES:
+		return ImportCertificates(cmd)
+
+	}
+
+	return nil, nil
+}
+
+func processSignatures(cmd *Command) (out []string, err error) {
+	switch cmd.Mode {
+
+	case model.VALIDATESIGNATURES:
+		return ValidateSignatures(cmd)
 	}
 
 	return nil, nil

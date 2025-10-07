@@ -173,8 +173,8 @@ func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, font
 	return box, maxLine
 }
 
-func PrepBytes(xRefTable *XRefTable, s, fontName string, embed, rtl bool) string {
-	if font.IsUserFont(fontName) {
+func PrepBytes(xRefTable *XRefTable, s, fontName string, embed, rtl, fillFont bool) string {
+	if font.IsUserFont(fontName) && (!fillFont || !embed) {
 		if rtl {
 			s = types.Reverse(s)
 		}
@@ -213,7 +213,7 @@ func PrepBytes(xRefTable *XRefTable, s, fontName string, embed, rtl bool) string
 }
 
 func writeStringToBuf(xRefTable *XRefTable, w io.Writer, s string, x, y float64, td TextDescriptor) {
-	s = PrepBytes(xRefTable, s, td.FontName, td.Embed, td.RTL)
+	s = PrepBytes(xRefTable, s, td.FontName, td.Embed, td.RTL, false)
 	fmt.Fprintf(w, "BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr (%s) Tj ET ",
 		td.StrokeCol.R, td.StrokeCol.G, td.StrokeCol.B, td.FillCol.R, td.FillCol.G, td.FillCol.B, x, y, td.RMode, s)
 }
@@ -251,7 +251,7 @@ func horAdjustBoundingBoxForLines(r, box *types.Rectangle, dx, dy float64, x, y 
 }
 
 func prepJustifiedLine(xRefTable *XRefTable, lines *[]string, strbuf []string, strWidth, w float64, fontSize int, fontName string, embed, rtl bool) {
-	blank := PrepBytes(xRefTable, " ", fontName, embed, false)
+	blank := PrepBytes(xRefTable, " ", fontName, embed, true, false)
 	var sb strings.Builder
 	sb.WriteString("[")
 	wc := len(strbuf)
@@ -261,7 +261,7 @@ func prepJustifiedLine(xRefTable *XRefTable, lines *[]string, strbuf []string, s
 		if rtl {
 			j = wc - 1 - i
 		}
-		s := PrepBytes(xRefTable, strbuf[j], fontName, embed, rtl)
+		s := PrepBytes(xRefTable, strbuf[j], fontName, embed, rtl, false)
 		sb.WriteString(fmt.Sprintf(" (%s)", s))
 		if i < wc-1 {
 			sb.WriteString(fmt.Sprintf(" %d (%s)", -int(dx), blank))
@@ -294,7 +294,7 @@ func newPrepJustifiedString(
 
 		if len(s) == 0 {
 			if len(strbuf) > 0 {
-				s1 := PrepBytes(xRefTable, strings.Join(strbuf, " "), fontName, embed, rtl)
+				s1 := PrepBytes(xRefTable, strings.Join(strbuf, " "), fontName, embed, rtl, false)
 				if rtl {
 					dx := font.GlyphSpaceUnits(w-strWidth, *fontSize)
 					s = fmt.Sprintf("[ %d (%s) ] TJ ", -int(dx), s1)

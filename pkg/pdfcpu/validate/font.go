@@ -17,11 +17,17 @@ limitations under the License.
 package validate
 
 import (
-	"github.com/angel-one/pdfcpu/pkg/log"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
+	"fmt"
+	"strings"
+
+	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
+
+var ErrMissingFont = errors.New("pdfcpu: missing font dict")
 
 func validateStandardType1Font(s string) bool {
 
@@ -31,7 +37,7 @@ func validateStandardType1Font(s string) bool {
 		"Symbol", "ZapfDingbats"})
 }
 
-func validateFontFile3SubType(sd *types.StreamDict, fontType string) error {
+func validateFontFile3SubType(sd *types.StreamDict, fontType string, relaxed bool) error {
 
 	// Hint about used font program.
 	dictSubType := sd.Subtype()
@@ -43,7 +49,10 @@ func validateFontFile3SubType(sd *types.StreamDict, fontType string) error {
 	switch fontType {
 	case "Type1":
 		if *dictSubType != "Type1C" && *dictSubType != "OpenType" {
-			return errors.Errorf("pdfcpu: validateFontFile3SubType: Type1: unexpected Subtype %s", *dictSubType)
+			if !relaxed {
+				return errors.Errorf("pdfcpu: validateFontFile3SubType: Type1: unexpected Subtype %s", *dictSubType)
+			}
+			model.ShowSkipped(fmt.Sprintf("validateFontFile3SubType: Type1: unexpected Subtype %s", *dictSubType))
 		}
 
 	case "MMType1":
@@ -76,7 +85,7 @@ func validateFontFile(xRefTable *model.XRefTable, d types.Dict, dictName string,
 
 	// SubType
 	if entryName == "FontFile3" {
-		err = validateFontFile3SubType(sd, fontType)
+		err = validateFontFile3SubType(sd, fontType, xRefTable.ValidationMode == model.ValidationRelaxed)
 		if err != nil {
 			return err
 		}
@@ -128,82 +137,155 @@ func validateFontDescriptorType(xRefTable *model.XRefTable, d types.Dict) (err e
 	return nil
 }
 
-func validateFontDescriptorPart1(xRefTable *model.XRefTable, d types.Dict, dictName, fontDictType string) error {
-
-	err := validateFontDescriptorType(xRefTable, d)
-	if err != nil {
-		return err
-	}
-
+func validateFontDescriptorFontName(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	required := true
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = false
 	}
-	_, err = validateNameEntry(xRefTable, d, dictName, "FontName", required, model.V10, nil)
+	_, err := validateNameEntry(xRefTable, d, dictName, "FontName", required, model.V10, nil)
 	if err != nil {
-		_, err = validateStringEntry(xRefTable, d, dictName, "FontName", required, model.V10, nil)
-		if err != nil {
-			if xRefTable.ValidationMode != model.ValidationRelaxed {
-				return err
+		if _, err = validateStringEntry(xRefTable, d, dictName, "FontName", required, model.V10, nil); err != nil {
+			if xRefTable.ValidationMode == model.ValidationRelaxed {
+				model.ShowDigestedSpecViolationError(xRefTable, err)
+				return nil
 			}
-			reportSpecViolation(xRefTable, err)
 		}
 	}
+	return err
+}
 
+func validateFontDescriptorFontFamily(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	required := true
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		required = false
+	}
 	sinceVersion := model.V15
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V13
 	}
-	_, err = validateStringEntry(xRefTable, d, dictName, "FontFamily", OPTIONAL, sinceVersion, nil)
+	_, err := validateNameEntry(xRefTable, d, dictName, "FontFamily", required, sinceVersion, nil)
 	if err != nil {
-		// Repair
-		_, err = validateNameEntry(xRefTable, d, dictName, "FontFamily", OPTIONAL, sinceVersion, nil)
-		return err
+		if _, err = validateStringEntry(xRefTable, d, dictName, "FontFamily", required, sinceVersion, nil); err != nil {
+			if xRefTable.ValidationMode == model.ValidationRelaxed {
+				model.ShowDigestedSpecViolationError(xRefTable, err)
+				return nil
+			}
+		}
 	}
-
-	sinceVersion = model.V15
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
-	}
-	_, err = validateNameEntry(xRefTable, d, dictName, "FontStretch", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
-
-	sinceVersion = model.V15
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
-	}
-	_, err = validateNumberEntry(xRefTable, d, dictName, "FontWeight", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
-
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "Flags", REQUIRED, model.V10, nil)
-	if err != nil {
-		return err
-	}
-
-	_, err = validateRectangleEntry(xRefTable, d, dictName, "FontBBox", fontDictType != "Type3", model.V10, nil)
-	if err != nil {
-		return err
-	}
-
-	_, err = validateNumberEntry(xRefTable, d, dictName, "ItalicAngle", REQUIRED, model.V10, nil)
-
 	return err
+}
+
+func validateFontDescriptorFontStretch(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	sinceVersion := model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
+	_, err := validateNameEntry(xRefTable, d, dictName, "FontStretch", OPTIONAL, sinceVersion, nil)
+	return err
+}
+
+func validateFontDescriptorFontWeight(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	sinceVersion := model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V11
+	}
+	_, err := validateNumberEntry(xRefTable, d, dictName, "FontWeight", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			validateFontWeight := func(s string) bool {
+				return types.MemberOf(s, []string{"Regular", "Bold", "Italic"})
+			}
+			_, err = validateNameEntry(xRefTable, d, dictName, "FontWeight", OPTIONAL, sinceVersion, validateFontWeight)
+		}
+	}
+	return err
+}
+
+func validateFontDescriptorFontFlags(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	_, err := validateIntegerEntry(xRefTable, d, dictName, "Flags", REQUIRED, model.V10, nil)
+	if err != nil {
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			model.ShowSkipped("missing font descriptor \"Flags\"")
+			return nil
+		}
+	}
+	return err
+}
+
+func validateFontDescriptorFontBox(xRefTable *model.XRefTable, d types.Dict, dictName, fontDictType string) error {
+	_, err := validateRectangleEntry(xRefTable, d, dictName, "FontBBox", fontDictType != "Type3", model.V10, nil)
+	if err != nil {
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			model.ShowSkipped("missing font descriptor \"FontBBox\"")
+			return nil
+		}
+	}
+	return err
+}
+
+func validateFontDescriptorItalicAngle(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	required := true
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		required = false
+	}
+	_, err := validateNumberEntry(xRefTable, d, dictName, "ItalicAngle", required, model.V10, nil)
+	return err
+}
+
+func validateFontDescriptorPart1(xRefTable *model.XRefTable, d types.Dict, dictName, fontDictType string) error {
+	if err := validateFontDescriptorType(xRefTable, d); err != nil {
+		return err
+	}
+
+	if err := validateFontDescriptorFontName(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	if err := validateFontDescriptorFontFamily(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	if err := validateFontDescriptorFontStretch(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	if err := validateFontDescriptorFontWeight(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	if err := validateFontDescriptorFontFlags(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	if err := validateFontDescriptorFontBox(xRefTable, d, dictName, fontDictType); err != nil {
+		return err
+	}
+
+	if err := validateFontDescriptorItalicAngle(xRefTable, d, dictName); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func validateFontDescriptorPart2(xRefTable *model.XRefTable, d types.Dict, dictName, fontDictType string) error {
 
 	_, err := validateNumberEntry(xRefTable, d, dictName, "Ascent", fontDictType != "Type3", model.V10, nil)
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode != model.ValidationRelaxed {
+			return err
+		}
+		err = nil
+		model.ShowSkipped("missing font descriptor \"Ascent\"")
 	}
 
 	_, err = validateNumberEntry(xRefTable, d, dictName, "Descent", fontDictType != "Type3", model.V10, nil)
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode != model.ValidationRelaxed {
+			return err
+		}
+		err = nil
+		model.ShowSkipped("missing font descriptor \"Descent\"")
 	}
 
 	_, err = validateNumberEntry(xRefTable, d, dictName, "Leading", OPTIONAL, model.V10, nil)
@@ -221,13 +303,13 @@ func validateFontDescriptorPart2(xRefTable *model.XRefTable, d types.Dict, dictN
 		return err
 	}
 
-	required := fontDictType != "Type3"
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		required = false
-	}
-	_, err = validateNumberEntry(xRefTable, d, dictName, "StemV", required, model.V10, nil)
+	_, err = validateNumberEntry(xRefTable, d, dictName, "StemV", fontDictType != "Type3", model.V10, nil)
 	if err != nil {
-		return err
+		if xRefTable.ValidationMode != model.ValidationRelaxed {
+			return err
+		}
+		err = nil
+		model.ShowSkipped("missing font descriptor \"StemV\"")
 	}
 
 	_, err = validateNumberEntry(xRefTable, d, dictName, "StemH", OPTIONAL, model.V10, nil)
@@ -369,7 +451,7 @@ func validateFontEncoding(xRefTable *model.XRefTable, d types.Dict, dictName str
 
 	encodings := []string{"MacRomanEncoding", "MacExpertEncoding", "WinAnsiEncoding"}
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		encodings = append(encodings, "StandardEncoding", "SymbolSetEncoding")
+		encodings = append(encodings, "FontSpecific", "StandardEncoding", "SymbolSetEncoding", "PDFDocEncoding")
 	}
 
 	switch o := o.(type) {
@@ -394,7 +476,7 @@ func validateFontEncoding(xRefTable *model.XRefTable, d types.Dict, dictName str
 	return nil
 }
 
-func validateTrueTypeFontDict(xRefTable *model.XRefTable, d types.Dict) error {
+func validateTrueTypeFontDict(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 
 	// see 9.6.3
 	dictName := "trueTypeFontDict"
@@ -402,9 +484,13 @@ func validateTrueTypeFontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	// Name, name, obsolet and should not be used.
 
 	// BaseFont, required, name
-	_, err := validateNameEntry(xRefTable, d, dictName, "BaseFont", REQUIRED, model.V10, nil)
+	bf, err := validateNameEntry(xRefTable, d, dictName, "BaseFont", REQUIRED, model.V10, nil)
 	if err != nil {
-		return err
+		return "", err
+	}
+	fontName := ""
+	if bf != nil {
+		fontName = bf.String()
 	}
 
 	// FirstChar, required, integer
@@ -412,9 +498,8 @@ func validateTrueTypeFontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = OPTIONAL
 	}
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "FirstChar", required, model.V10, nil)
-	if err != nil {
-		return err
+	if _, err = validateIntegerEntry(xRefTable, d, dictName, "FirstChar", required, model.V10, nil); err != nil {
+		return "", err
 	}
 
 	// LastChar, required, integer
@@ -422,9 +507,8 @@ func validateTrueTypeFontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = OPTIONAL
 	}
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "LastChar", required, model.V10, nil)
-	if err != nil {
-		return err
+	if _, err = validateIntegerEntry(xRefTable, d, dictName, "LastChar", required, model.V10, nil); err != nil {
+		return "", err
 	}
 
 	// Widths, array of numbers.
@@ -432,9 +516,8 @@ func validateTrueTypeFontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = OPTIONAL
 	}
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Widths", required, model.V10, nil)
-	if err != nil {
-		return err
+	if _, err = validateNumberArrayEntry(xRefTable, d, dictName, "Widths", required, model.V10, nil); err != nil {
+		return "", err
 	}
 
 	// FontDescriptor, required, dictionary
@@ -442,21 +525,19 @@ func validateTrueTypeFontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = OPTIONAL
 	}
-	err = validateFontDescriptor(xRefTable, d, dictName, "TrueType", required, model.V10)
-	if err != nil {
-		return err
+	if err = validateFontDescriptor(xRefTable, d, dictName, "TrueType", required, model.V10); err != nil {
+		return "", err
 	}
 
 	// Encoding, optional, name or dict
-	err = validateFontEncoding(xRefTable, d, dictName, OPTIONAL)
-	if err != nil {
-		return err
+	if err = validateFontEncoding(xRefTable, d, dictName, OPTIONAL); err != nil {
+		return "", err
 	}
 
 	// ToUnicode, optional, stream
 	_, err = validateStreamDictEntry(xRefTable, d, dictName, "ToUnicode", OPTIONAL, model.V12, nil)
 
-	return err
+	return fontName, err
 }
 
 func validateCIDToGIDMap(xRefTable *model.XRefTable, o types.Object) error {
@@ -636,6 +717,10 @@ func validateDescendantFonts(xRefTable *model.XRefTable, d types.Dict, fontDictN
 		return err
 	}
 
+	if len(a) != 1 {
+		return font.ErrCorruptFontDict
+	}
+
 	d1, err := xRefTable.DereferenceDict(a[0])
 	if err != nil {
 		return err
@@ -651,38 +736,48 @@ func validateDescendantFonts(xRefTable *model.XRefTable, d types.Dict, fontDictN
 	return validateCIDFontDict(xRefTable, d1)
 }
 
-func validateType0FontDict(xRefTable *model.XRefTable, d types.Dict) error {
+func validateType0FontDict(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 
 	dictName := "type0FontDict"
 
 	// BaseFont, required, name
-	_, err := validateNameEntry(xRefTable, d, dictName, "BaseFont", REQUIRED, model.V10, nil)
+	bf, err := validateNameEntry(xRefTable, d, dictName, "BaseFont", REQUIRED, model.V10, nil)
 	if err != nil {
-		return err
+		return "", err
+	}
+
+	fontName := ""
+	if bf != nil {
+		fontName = bf.String()
 	}
 
 	// Encoding, required,  name or CMap stream dict
-	err = validateType0FontEncoding(xRefTable, d, dictName, REQUIRED)
-	if err != nil {
-		return err
+	if err = validateType0FontEncoding(xRefTable, d, dictName, REQUIRED); err != nil {
+		return "", err
 	}
 
 	// DescendantFonts: one-element array specifying the CIDFont dictionary that is the descendant of this Type 0 font, required.
-	err = validateDescendantFonts(xRefTable, d, dictName, REQUIRED)
-	if err != nil {
-		return err
+	if err = validateDescendantFonts(xRefTable, d, dictName, REQUIRED); err != nil {
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			err = ErrMissingFont
+		}
+		return fontName, err
 	}
 
 	// ToUnicode, optional, CMap stream dict
-	_, err = validateStreamDictEntry(xRefTable, d, dictName, "ToUnicode", OPTIONAL, model.V12, nil)
+	sinceVersion := model.V12
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V11
+	}
+	_, err = validateStreamDictEntry(xRefTable, d, dictName, "ToUnicode", OPTIONAL, sinceVersion, nil)
 	if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
-		_, err = validateNameEntry(xRefTable, d, dictName, "ToUnicode", REQUIRED, model.V12, func(s string) bool { return s == "Identity-H" })
+		_, err = validateNameEntry(xRefTable, d, dictName, "ToUnicode", REQUIRED, sinceVersion, func(s string) bool { return s == "Identity-H" })
 	}
 
-	return err
+	return fontName, err
 }
 
-func validateType1FontDict(xRefTable *model.XRefTable, d types.Dict) error {
+func validateType1FontDict(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 
 	// see 9.6.2
 
@@ -691,20 +786,20 @@ func validateType1FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	// Name, name, obsolet and should not be used.
 
 	// BaseFont, required, name
-	fontName, err := validateNameEntry(xRefTable, d, dictName, "BaseFont", REQUIRED, model.V10, nil)
+	bf, err := validateNameEntry(xRefTable, d, dictName, "BaseFont", REQUIRED, model.V10, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	fn := (*fontName).Value()
-	required := xRefTable.Version() >= model.V15 || !validateStandardType1Font(fn)
+	fontName := bf.String()
+	required := xRefTable.Version() >= model.V17 || !validateStandardType1Font(fontName)
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = false
 	}
-	// FirstChar,  required except for standard 14 fonts. since 1.5 always required, integer
+	// FirstChar,  required except for standard 14 fonts. since 2.0 always required, integer
 	fc, err := validateIntegerEntry(xRefTable, d, dictName, "FirstChar", required, model.V10, nil)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if !required && fc != nil {
@@ -714,41 +809,54 @@ func validateType1FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 		}
 	}
 
-	// LastChar, required except for standard 14 fonts. since 1.5 always required, integer
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "LastChar", required, model.V10, nil)
-	if err != nil {
-		return err
+	// LastChar, required except for standard 14 fonts. since 2.0 always required, integer
+	if _, err = validateIntegerEntry(xRefTable, d, dictName, "LastChar", required, model.V10, nil); err != nil {
+		return "", err
 	}
 
-	// Widths, required except for standard 14 fonts. since 1.5 always required, array of numbers
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Widths", required, model.V10, nil)
-	if err != nil {
-		return err
+	// Widths, required except for standard 14 fonts. since 2.0 always required, array of numbers
+	if _, err = validateNumberArrayEntry(xRefTable, d, dictName, "Widths", required, model.V10, nil); err != nil {
+		return "", err
 	}
 
-	// FontDescriptor, required since version 1.5; required unless standard font for version < 1.5, dict
-	err = validateFontDescriptor(xRefTable, d, dictName, "Type1", required, model.V10)
-	if err != nil {
-		return err
+	// FontDescriptor, required since version 2.0; required unless standard font for version <= 1.7, dict
+	if err = validateFontDescriptor(xRefTable, d, dictName, "Type1", required, model.V10); err != nil {
+		return "", err
 	}
 
 	// Encoding, optional, name or dict
-	err = validateFontEncoding(xRefTable, d, dictName, OPTIONAL)
-	if err != nil {
-		return err
+	if err = validateFontEncoding(xRefTable, d, dictName, OPTIONAL); err != nil {
+		return "", err
 	}
 
 	// ToUnicode, optional, stream
-	_, err = validateStreamDictEntry(xRefTable, d, dictName, "ToUnicode", OPTIONAL, model.V12, nil)
+	sinceVersion := model.V12
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V10
+	}
+	_, err = validateStreamDictEntry(xRefTable, d, dictName, "ToUnicode", OPTIONAL, sinceVersion, nil)
 
-	return err
+	return fontName, err
 }
 
 func validateCharProcsDict(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version) error {
 
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		required = false
+	}
 	d1, err := validateDictEntry(xRefTable, d, dictName, "CharProcs", required, sinceVersion, nil)
-	if err != nil || d1 == nil {
-		return err
+	if d1 == nil {
+		return nil
+	}
+	if err != nil {
+		if xRefTable.ValidationMode != model.ValidationRelaxed {
+			return err
+		}
+		if !strings.Contains(err.Error(), "invalid type") {
+			return err
+		}
+		model.ShowDigestedSpecViolation("\"CharProcs\" with invalid type")
+		return nil
 	}
 
 	for _, v := range d1 {
@@ -959,51 +1067,100 @@ func validateType3FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	return err
 }
 
-func validateFontDict(xRefTable *model.XRefTable, o types.Object) (err error) {
-
-	d, err := xRefTable.DereferenceDict(o)
-	if err != nil || d == nil {
-		return err
-	}
-
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		if len(d) == 0 {
-			return nil
-		}
-	}
-
-	if d.Type() == nil || *d.Type() != "Font" {
-		return errors.New("pdfcpu: validateFontDict: corrupt font dict")
-	}
-
+func _validateFontDict(xRefTable *model.XRefTable, d types.Dict, isIndRef bool, indRef types.IndirectRef) (fontName string, err error) {
 	subtype := d.Subtype()
 	if subtype == nil {
-		return errors.New("pdfcpu: validateFontDict: missing Subtype")
+		return "", errors.New("pdfcpu: validateFontDict: missing Subtype")
 	}
 
 	switch *subtype {
 
 	case "TrueType":
-		err = validateTrueTypeFontDict(xRefTable, d)
+		fontName, err = validateTrueTypeFontDict(xRefTable, d)
 
 	case "Type0":
-		err = validateType0FontDict(xRefTable, d)
+		fontName, err = validateType0FontDict(xRefTable, d)
 
-	case "Type1":
-		err = validateType1FontDict(xRefTable, d)
+	case "Type1", "Type1C":
+		fontName, err = validateType1FontDict(xRefTable, d)
 
 	case "MMType1":
-		err = validateType1FontDict(xRefTable, d)
+		return validateType1FontDict(xRefTable, d)
 
 	case "Type3":
 		err = validateType3FontDict(xRefTable, d)
 
 	default:
-		return errors.Errorf("pdfcpu: validateFontDict: unknown Subtype: %s\n", *subtype)
+		return "", errors.Errorf("pdfcpu: validateFontDict: unknown Subtype: %s", *subtype)
 
 	}
 
-	return err
+	if isIndRef {
+		if err1 := xRefTable.SetValid(indRef); err1 != nil {
+			return "", err1
+		}
+	}
+
+	return fontName, err
+}
+
+func validateFontDict(xRefTable *model.XRefTable, isIndRef bool, indRef types.IndirectRef) (string, error) {
+
+	if isIndRef {
+
+		ok, err := xRefTable.IsValid(indRef)
+		if err != nil {
+			return "", ErrMissingFont
+		}
+		if ok {
+			return "", nil
+		}
+
+		if ok, err := xRefTable.IsBeingValidated(indRef); err != nil || ok {
+			return "", err
+		}
+
+		if err := xRefTable.SetBeingValidated(indRef); err != nil {
+			return "", err
+		}
+	}
+
+	d, err := xRefTable.DereferenceDict(indRef)
+	if err != nil || d == nil {
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			err = ErrMissingFont
+		}
+		return "", err
+	}
+
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		if len(d) == 0 {
+			return "", nil
+		}
+	}
+
+	if d.Type() == nil || *d.Type() != "Font" {
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return "", errors.New("pdfcpu: validateFontDict: corrupt font dict")
+		}
+		model.ShowDigestedSpecViolation("missing fontDict entry \"Type\"")
+	}
+
+	return _validateFontDict(xRefTable, d, isIndRef, indRef)
+}
+
+func fixFontObjNr(m1 map[string]string, m2 map[string]types.IndirectRef, d types.Dict) {
+	for k, v := range m1 {
+		if v != "" {
+			indRef, ok := m2[v]
+			if ok {
+				model.ShowRepaired(fmt.Sprintf("font %s mapped to objNr %d", k, indRef.ObjectNumber))
+				d[k] = indRef
+				continue
+			}
+		}
+		d[k] = nil
+	}
 }
 
 func validateFontResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
@@ -1019,15 +1176,42 @@ func validateFontResourceDict(xRefTable *model.XRefTable, o types.Object, sinceV
 		return err
 	}
 
+	// fontid, fontname
+	m1 := map[string]string{}
+
+	// fontname, objNr
+	m2 := map[string]types.IndirectRef{}
+
+	var defFontName string
+
 	// Iterate over font resource dict
-	for _, obj := range d {
+	for id, obj := range d {
+
+		indRef, indRefOk := obj.(types.IndirectRef)
 
 		// Process fontDict
-		err = validateFontDict(xRefTable, obj)
+		fn, err := validateFontDict(xRefTable, indRefOk, indRef)
 		if err != nil {
+			if err == ErrMissingFont {
+				if xRefTable.ValidationMode == model.ValidationRelaxed {
+					err = nil
+					model.ShowSkipped(fmt.Sprintf("missing font: %s %s", id, fn))
+					m1[id] = fn
+					continue
+				}
+			}
 			return err
 		}
+		if xRefTable.ValidationMode == model.ValidationRelaxed && indRefOk {
+			m2[fn] = indRef
+			if defFontName == "" {
+				defFontName = fn
+			}
+		}
+	}
 
+	if len(m1) > 0 && xRefTable.ValidationMode == model.ValidationRelaxed {
+		fixFontObjNr(m1, m2, d)
 	}
 
 	return nil

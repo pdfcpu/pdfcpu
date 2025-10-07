@@ -55,6 +55,7 @@ type Command struct {
 	Zoom              *model.Zoom
 	Watermark         *model.Watermark
 	ViewerPreferences *model.ViewerPreferences
+	PageConf          *pdfcpu.PageConfiguration
 	Conf              *model.Configuration
 }
 
@@ -110,6 +111,7 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.LISTANNOTATIONS:         processPageAnnotations,
 	model.REMOVEANNOTATIONS:       processPageAnnotations,
 	model.LISTIMAGES:              processImages,
+	model.UPDATEIMAGES:            processImages,
 	model.DUMP:                    Dump,
 	model.CREATE:                  Create,
 	model.LISTFORMFIELDS:          processForm,
@@ -138,6 +140,10 @@ var cmdMap = map[model.CommandMode]func(cmd *Command) ([]string, error){
 	model.SETVIEWERPREFERENCES:    processViewerPreferences,
 	model.RESETVIEWERPREFERENCES:  processViewerPreferences,
 	model.ZOOM:                    Zoom,
+	model.LISTCERTIFICATES:        processCertificates,
+	model.INSPECTCERTIFICATES:     processCertificates,
+	model.IMPORTCERTIFICATES:      processCertificates,
+	model.VALIDATESIGNATURES:      processSignatures,
 }
 
 // ValidateCommand creates a new command to validate a file.
@@ -515,7 +521,7 @@ func ImportImagesCommand(imageFiles []string, outFile string, imp *pdfcpu.Import
 }
 
 // InsertPagesCommand creates a new command to insert a blank page before or after selected pages.
-func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration, mode string) *Command {
+func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration, mode string, pageConf *pdfcpu.PageConfiguration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -529,6 +535,7 @@ func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *mo
 		InFile:        &inFile,
 		OutFile:       &outFile,
 		PageSelection: pageSelection,
+		PageConf:      pageConf,
 		Conf:          conf}
 }
 
@@ -592,7 +599,7 @@ func BookletCommand(inFiles []string, outFile string, pageSelection []string, nu
 }
 
 // InfoCommand creates a new command to output information about inFile.
-func InfoCommand(inFiles []string, pageSelection []string, json bool, conf *model.Configuration) *Command {
+func InfoCommand(inFiles []string, pageSelection []string, fonts, json bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -601,7 +608,8 @@ func InfoCommand(inFiles []string, pageSelection []string, json bool, conf *mode
 		Mode:          model.LISTINFO,
 		InFiles:       inFiles,
 		PageSelection: pageSelection,
-		BoolVal1:      json,
+		BoolVal1:      fonts,
+		BoolVal2:      json,
 		Conf:          conf}
 }
 
@@ -833,6 +841,22 @@ func ListImagesCommand(inFiles []string, pageSelection []string, conf *model.Con
 		InFiles:       inFiles,
 		PageSelection: pageSelection,
 		Conf:          conf}
+}
+
+// UpdateImagesCommand creates a new command to update images.
+func UpdateImagesCommand(inFile, imageFile, outFile string, objNrOrPageNr int, id string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.UPDATEIMAGES
+
+	return &Command{
+		Mode:      model.UPDATEIMAGES,
+		InFiles:   []string{inFile, imageFile},
+		OutFile:   &outFile,
+		IntVal:    objNrOrPageNr,
+		StringVal: id,
+		Conf:      conf}
 }
 
 // DumpCommand creates a new command to dump objects on stdout.
@@ -1225,4 +1249,54 @@ func ZoomCommand(inFile, outFile string, pageSelection []string, zoom *model.Zoo
 		PageSelection: pageSelection,
 		Zoom:          zoom,
 		Conf:          conf}
+}
+
+// ListCertificatesCommand creates a new command to list installed certificates.
+func ListCertificatesCommand(json bool, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.LISTCERTIFICATES
+	return &Command{
+		Mode:     model.LISTCERTIFICATES,
+		BoolVal1: json,
+		Conf:     conf}
+}
+
+// InspectCertificatesCommand creates a new command to inspect certificates.
+func InspectCertificatesCommand(inFiles []string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.INSPECTCERTIFICATES
+	return &Command{
+		Mode:    model.INSPECTCERTIFICATES,
+		InFiles: inFiles,
+		Conf:    conf}
+}
+
+// ImportCertificatesCommand creates a new command to import certificates.
+func ImportCertificatesCommand(inFiles []string, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.IMPORTCERTIFICATES
+	return &Command{
+		Mode:    model.IMPORTCERTIFICATES,
+		InFiles: inFiles,
+		Conf:    conf}
+}
+
+// ValidateSignaturesCommand creates a new command to validate encountered digital signatures.
+func ValidateSignaturesCommand(inFile string, all, full bool, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.VALIDATESIGNATURES
+	return &Command{
+		Mode:     model.VALIDATESIGNATURES,
+		InFile:   &inFile,
+		BoolVal1: all,
+		BoolVal2: full,
+		Conf:     conf}
 }

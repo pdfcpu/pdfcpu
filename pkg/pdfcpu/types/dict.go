@@ -132,17 +132,23 @@ func (d Dict) NewIDForPrefix(prefix string, i int) string {
 	return id
 }
 
-// Entry returns the value for given key.
-func (d Dict) Entry(dictName, key string, required bool) (Object, error) {
+// Entry returns the value for a given key and if the entry was found.
+func (d Dict) Entry(dictName, key string, required bool) (Object, bool, error) {
 	obj, found := d.Find(key)
-	if !found || obj == nil {
+	if !found {
 		if required {
-			return nil, errors.Errorf("dict=%s required entry=%s missing", dictName, key)
+			return nil, false, errors.Errorf("dict=%s required entry=%s missing", dictName, key)
 		}
-		//log.Trace.Printf("dict=%s entry %s is nil\n", dictName, key)
-		return nil, nil
+		return nil, false, nil
 	}
-	return obj, nil
+
+	if obj == nil {
+		if required {
+			return nil, true, errors.Errorf("dict=%s required entry=%s corrupt", dictName, key)
+		}
+	}
+
+	return obj, found, nil
 }
 
 // BooleanEntry expects and returns a BooleanEntry for given key.

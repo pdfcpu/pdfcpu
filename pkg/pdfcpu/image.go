@@ -18,15 +18,17 @@ package pdfcpu
 
 import (
 	"fmt"
+	"io"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/angel-one/pdfcpu/pkg/log"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/draw"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/pkg/errors"
 )
 
 // Images returns all embedded images of ctx.
@@ -42,10 +44,17 @@ func Images(ctx *model.Context, selectedPages types.IntSet) ([]map[int]model.Ima
 
 	mm := []map[int]model.Image{}
 	var (
-		maxLenObjNr, maxLenID, maxLenSize, maxLenFilters int
+		maxLenPageNr, maxLenObjNr, maxLenID, maxLenSize, maxLenFilters int
 	)
 
+	maxPageNr := 0
+
 	for _, i := range pageNrs {
+
+		if i > maxPageNr {
+			maxPageNr = i
+		}
+
 		m, err := ExtractPageImages(ctx, i, true)
 		if err != nil {
 			return nil, nil, err
@@ -72,18 +81,28 @@ func Images(ctx *model.Context, selectedPages types.IntSet) ([]map[int]model.Ima
 		mm = append(mm, m)
 	}
 
-	maxLen := &ImageListMaxLengths{ObjNr: maxLenObjNr, ID: maxLenID, Size: maxLenSize, Filters: maxLenFilters}
+	maxLenPageNr = len(strconv.Itoa(maxPageNr))
+
+	maxLen := &ImageListMaxLengths{PageNr: maxLenPageNr, ObjNr: maxLenObjNr, ID: maxLenID, Size: maxLenSize, Filters: maxLenFilters}
 
 	return mm, maxLen, nil
 }
 
 func prepHorSep(horSep *[]int, maxLen *ImageListMaxLengths) string {
-	s := "Page Obj# "
+	s := "Page "
+	if maxLen.PageNr > 4 {
+		s += strings.Repeat(" ", maxLen.PageNr-4)
+		*horSep = append(*horSep, 5+maxLen.PageNr-4)
+	} else {
+		*horSep = append(*horSep, 5)
+	}
+
+	s += draw.VBar + " Obj# "
 	if maxLen.ObjNr > 4 {
 		s += strings.Repeat(" ", maxLen.ObjNr-4)
-		*horSep = append(*horSep, 10+maxLen.ObjNr-4)
+		*horSep = append(*horSep, 6+maxLen.ObjNr-4)
 	} else {
-		*horSep = append(*horSep, 10)
+		*horSep = append(*horSep, 6)
 	}
 
 	s += draw.VBar + " Id "
@@ -126,7 +145,39 @@ func sortedObjNrs(ii map[int]model.Image) []int {
 	return objNrs
 }
 
-func listImages(ctx *model.Context, mm []map[int]model.Image, maxLen *ImageListMaxLengths) ([]string, int, int64, error) {
+func attrs(img model.Image) (string, string, string, string, string) {
+	t := "image"
+	if img.IsImgMask {
+		t = "imask"
+	}
+	if img.Thumb {
+		t = "thumb"
+	}
+
+	sm := " "
+	if img.HasSMask {
+		sm = "*"
+	}
+
+	im := " "
+	if img.HasImgMask {
+		im = "*"
+	}
+
+	bpc := "-"
+	if img.Bpc > 0 {
+		bpc = strconv.Itoa(img.Bpc)
+	}
+
+	interp := " "
+	if img.Interpol {
+		interp = "*"
+	}
+
+	return t, sm, im, bpc, interp
+}
+
+func listImages(mm []map[int]model.Image, maxLen *ImageListMaxLengths) ([]string, int, int64) {
 	ss := []string{}
 	first := true
 	j, size := 0, int64(0)
@@ -144,40 +195,22 @@ func listImages(ctx *model.Context, mm []map[int]model.Image, maxLen *ImageListM
 
 		for _, objNr := range sortedObjNrs(ii) {
 			img := ii[objNr]
-			pageNr := ""
-			if newPage {
-				pageNr = strconv.Itoa(img.PageNr)
+			pageNr := strconv.Itoa(img.PageNr)
+			if !newPage {
+				pageNr = strings.Repeat(" ", len(pageNr))
+			} else {
 				newPage = false
 			}
-			t := "image"
-			if img.IsImgMask {
-				t = "imask"
-			}
-			if img.Thumb {
-				t = "thumb"
+
+			t, sm, im, bpc, interp := attrs(img)
+
+			s := strconv.Itoa(img.PageNr)
+			fill0 := strings.Repeat(" ", maxLen.PageNr-len(s))
+			if maxLen.PageNr < 4 {
+				fill0 += strings.Repeat(" ", 4-maxLen.PageNr)
 			}
 
-			sm := " "
-			if img.HasSMask {
-				sm = "*"
-			}
-
-			im := " "
-			if img.HasImgMask {
-				im = "*"
-			}
-
-			bpc := "-"
-			if img.Bpc > 0 {
-				bpc = strconv.Itoa(img.Bpc)
-			}
-
-			interp := " "
-			if img.Interpol {
-				interp = "*"
-			}
-
-			s := strconv.Itoa(img.ObjNr)
+			s = strconv.Itoa(img.ObjNr)
 			fill1 := strings.Repeat(" ", maxLen.ObjNr-len(s))
 			if maxLen.ObjNr < 4 {
 				fill1 += strings.Repeat(" ", 4-maxLen.ObjNr)
@@ -194,8 +227,9 @@ func listImages(ctx *model.Context, mm []map[int]model.Image, maxLen *ImageListM
 				fill3 = strings.Repeat(" ", 4-maxLen.Size)
 			}
 
-			ss = append(ss, fmt.Sprintf("%4s %s%s %s %s%s %s %s    %s        %s    %s %5d %s  %5d %s %10s    %d   %s    %s   %s %s%s %s %s",
-				pageNr, fill1, strconv.Itoa(img.ObjNr), draw.VBar,
+			ss = append(ss, fmt.Sprintf("%s%s %s %s%s %s %s%s %s %s    %s        %s    %s %5d %s  %5d %s %10s    %d   %s    %s   %s %s%s %s %s",
+				fill0, pageNr, draw.VBar,
+				fill1, strconv.Itoa(img.ObjNr), draw.VBar,
 				fill2, img.Name, draw.VBar,
 				t, sm, im, draw.VBar,
 				img.Width, draw.VBar,
@@ -210,11 +244,11 @@ func listImages(ctx *model.Context, mm []map[int]model.Image, maxLen *ImageListM
 			}
 		}
 	}
-	return ss, j, size, nil
+	return ss, j, size
 }
 
 type ImageListMaxLengths struct {
-	ObjNr, ID, Size, Filters int
+	PageNr, ObjNr, ID, Size, Filters int
 }
 
 // ListImages returns a formatted list of embedded images.
@@ -225,12 +259,15 @@ func ListImages(ctx *model.Context, selectedPages types.IntSet) ([]string, error
 		return nil, err
 	}
 
-	ss, j, size, err := listImages(ctx, mm, maxLen)
-	if err != nil {
-		return nil, err
+	ss, j, size := listImages(mm, maxLen)
+
+	s := fmt.Sprintf("%d images available", j)
+
+	if j > 0 {
+		s += fmt.Sprintf(" (%s)", types.ByteSize(size))
 	}
 
-	return append([]string{fmt.Sprintf("%d images available(%s)", j, types.ByteSize(size))}, ss...), nil
+	return append([]string{s}, ss...), nil
 }
 
 // WriteImageToDisk returns a closure for writing img to disk.
@@ -245,14 +282,140 @@ func WriteImageToDisk(outDir, fileName string) func(model.Image, bool, int) erro
 			qual = "thumb"
 		}
 		f := fmt.Sprintf(s+"_%s.%s", fileName, img.PageNr, qual, img.FileType)
-		// if singleImgPerPage {
-		// 	if img.thumb {
-		// 		s += "_" + qual
-		// 	}
-		// 	f = fmt.Sprintf(s+".%s", fileName, img.pageNr, img.FileType)
-		// }
 		outFile := filepath.Join(outDir, f)
 		log.CLI.Printf("writing %s\n", outFile)
 		return WriteReader(outFile, img)
 	}
+}
+
+func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
+	imgObj := ctx.Optimize.ImageObjects[objNr]
+	if imgObj == nil {
+		return errors.Errorf("pdfcpu: unknown image object for objNr=%d", objNr)
+	}
+
+	d := imgObj.ImageDict
+
+	width := d.IntEntry("Width")
+	height := d.IntEntry("Height")
+
+	if width == nil || height == nil {
+		return errors.New("pdfcpu: corrupt image dict")
+	}
+
+	if *width != w || *height != h {
+		return errors.Errorf("pdfcpu: invalid image dimensions, want(%d,%d), got(%d,%d)", w, h, *width, *height)
+	}
+
+	return nil
+}
+
+// UpdateImagesByObjNr replaces an XObject.
+func UpdateImagesByObjNr(ctx *model.Context, rd io.Reader, objNr int) error {
+
+	sd, w, h, err := model.CreateImageStreamDict(ctx.XRefTable, rd)
+	if err != nil {
+		return err
+	}
+
+	if err := validateImageDimensions(ctx, objNr, w, h); err != nil {
+		return err
+	}
+
+	genNr := 0
+	entry, ok := ctx.FindTableEntry(objNr, genNr)
+	if !ok {
+		errors.Errorf("pdfcpu: invalid objNr=%d", objNr)
+	}
+
+	entry.Object = *sd
+
+	return nil
+}
+
+func isInheritedXObjectResource(inhRes types.Dict, id string) bool {
+	if inhRes == nil {
+		return false
+	}
+
+	d := inhRes.DictEntry("XObject")
+	if d == nil {
+		return false
+	}
+
+	for resId := range d {
+		if resId == id {
+			return true
+		}
+	}
+
+	return false
+}
+
+// UpdateImagesByPageNrAndId replaces the XObject referenced by pageNr and id.
+func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id string) error {
+
+	imgIndRef, w, h, err := model.CreateImageResource(ctx.XRefTable, rd)
+	if err != nil {
+		return err
+	}
+
+	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
+	if err != nil {
+		return err
+	}
+
+	obj, found := d.Find("Resources")
+	if !found {
+		if isInheritedXObjectResource(inhPAttrs.Resources, id) {
+			d1 := types.NewDict()
+			d1[id] = *imgIndRef
+			d2 := types.NewDict()
+			d2["XObject"] = d1
+			d["Resources"] = d2
+			return nil
+		}
+		return errors.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
+	}
+
+	resDict, err := ctx.DereferenceDict(obj)
+	if err != nil {
+		return err
+	}
+
+	obj1, ok := resDict.Find("XObject")
+	if !ok {
+		if isInheritedXObjectResource(inhPAttrs.Resources, id) {
+			d := types.NewDict()
+			d[id] = *imgIndRef
+			resDict["XObject"] = d
+			return nil
+		}
+		return errors.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
+	}
+
+	imgResDict, err := ctx.DereferenceDict(obj1)
+	if err != nil {
+		return err
+	}
+
+	for resId, indRef := range imgResDict {
+		if resId == id {
+
+			ir := indRef.(types.IndirectRef)
+			if err := validateImageDimensions(ctx, ir.ObjectNumber.Value(), w, h); err != nil {
+				return err
+			}
+
+			imgResDict[id] = *imgIndRef
+			return nil
+		}
+	}
+
+	if isInheritedXObjectResource(inhPAttrs.Resources, id) {
+		imgResDict[id] = *imgIndRef
+		return nil
+	}
+
+	return errors.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
 }

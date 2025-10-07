@@ -18,21 +18,26 @@ limitations under the License.
 package cli
 
 import (
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/angel-one/pdfcpu/pkg/api"
-	"github.com/angel-one/pdfcpu/pkg/log"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/form"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
+	"github.com/hhrutter/pkcs7"
+	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/form"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
@@ -211,7 +216,7 @@ func listImages(rs io.ReadSeeker, selectedPages []string, conf *model.Configurat
 	}
 	conf.Cmd = model.LISTIMAGES
 
-	ctx, err := api.ReadAndValidate(rs, conf)
+	ctx, err := api.ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -260,14 +265,14 @@ func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Config
 }
 
 // ListInfoFile returns formatted information about inFile.
-func ListInfoFile(inFile string, selectedPages []string, conf *model.Configuration) ([]string, error) {
+func ListInfoFile(inFile string, selectedPages []string, fonts bool, conf *model.Configuration) ([]string, error) {
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	info, err := api.PDFInfo(f, inFile, selectedPages, conf)
+	info, err := api.PDFInfo(f, inFile, selectedPages, fonts, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +282,7 @@ func ListInfoFile(inFile string, selectedPages []string, conf *model.Configurati
 		return nil, err
 	}
 
-	ss, err := pdfcpu.ListInfo(info, pages)
+	ss, err := pdfcpu.ListInfo(info, pages, fonts)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +357,7 @@ func jsonInfo(info *pdfcpu.PDFInfo, pages types.IntSet) (map[string]model.PageBo
 	return nil, dims
 }
 
-func listInfoFilesJSON(inFiles []string, selectedPages []string, conf *model.Configuration) ([]string, error) {
+func listInfoFilesJSON(inFiles []string, selectedPages []string, fonts bool, conf *model.Configuration) ([]string, error) {
 	var infos []*pdfcpu.PDFInfo
 
 	for _, fn := range inFiles {
@@ -363,7 +368,7 @@ func listInfoFilesJSON(inFiles []string, selectedPages []string, conf *model.Con
 		}
 		defer f.Close()
 
-		info, err := api.PDFInfo(f, fn, selectedPages, conf)
+		info, err := api.PDFInfo(f, fn, selectedPages, fonts, conf)
 		if err != nil {
 			return nil, err
 		}
@@ -395,10 +400,10 @@ func listInfoFilesJSON(inFiles []string, selectedPages []string, conf *model.Con
 }
 
 // ListInfoFiles returns formatted information about inFiles.
-func ListInfoFiles(inFiles []string, selectedPages []string, json bool, conf *model.Configuration) ([]string, error) {
+func ListInfoFiles(inFiles []string, selectedPages []string, fonts, json bool, conf *model.Configuration) ([]string, error) {
 
 	if json {
-		return listInfoFilesJSON(inFiles, selectedPages, conf)
+		return listInfoFilesJSON(inFiles, selectedPages, fonts, conf)
 	}
 
 	var ss []string
@@ -407,7 +412,7 @@ func ListInfoFiles(inFiles []string, selectedPages []string, json bool, conf *mo
 		if i > 0 {
 			ss = append(ss, "")
 		}
-		ssx, err := ListInfoFile(fn, selectedPages, conf)
+		ssx, err := ListInfoFile(fn, selectedPages, fonts, conf)
 		if err != nil {
 			if len(inFiles) == 1 {
 				return nil, err
@@ -444,10 +449,6 @@ func listPermissions(rs io.ReadSeeker, conf *model.Configuration) ([]string, err
 	ctx, err := api.ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
-	}
-
-	if ctx.Version() == model.V20 {
-		return nil, pdfcpu.ErrUnsupportedVersion
 	}
 
 	return pdfcpu.Permissions(ctx), nil
@@ -544,4 +545,129 @@ func ListBookmarksFile(inFile string, conf *model.Configuration) ([]string, erro
 	defer f.Close()
 
 	return listBookmarks(f, conf)
+}
+
+func listPEM(fName string) (int, error) {
+	bb, err := os.ReadFile(fName)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return 0, err
+	}
+
+	if len(bb) == 0 {
+		//return 0, errors.Errorf("%s is empty\n", filepath.Base(fName))
+		return 0, errors.New("is empty\n")
+	}
+
+	ss := []string{}
+	for len(bb) > 0 {
+		var block *pem.Block
+		block, bb = pem.Decode(bb)
+		if block == nil {
+			break
+		}
+		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+			continue
+		}
+
+		certBytes := block.Bytes
+		cert, err := x509.ParseCertificate(certBytes)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+			continue
+		}
+		ss = append(ss, model.CertString(cert))
+	}
+
+	sort.Strings(ss)
+	for i, s := range ss {
+		fmt.Printf("%03d:\n%s\n", i+1, s)
+	}
+
+	return len(ss), nil
+}
+
+func listP7C(fName string) (int, error) {
+	bb, err := os.ReadFile(fName)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return 0, err
+	}
+
+	if len(bb) == 0 {
+		//return 0, errors.Errorf("%s is empty\n", filepath.Base(fName))
+		return 0, errors.New("is empty\n")
+	}
+
+	// // Check if the data starts with PEM markers (for Base64 encoding)
+	// if isPEM(data) {
+	// 	// If the file is Base64 encoded (PEM format), decode it
+	// 	decodedData, err := base64.StdEncoding.DecodeString(string(data))
+	// 	if err != nil {
+	// 		log.Fatalf("Error decoding Base64: %v", err)
+	// 	}
+	// 	data = decodedData
+	// }
+
+	p7, err := pkcs7.Parse(bb)
+	if err != nil {
+		return 0, err
+	}
+
+	ss := []string{}
+	for _, cert := range p7.Certificates {
+		ss = append(ss, model.CertString(cert))
+	}
+
+	sort.Strings(ss)
+	for i, s := range ss {
+		fmt.Printf("%03d:\n%s\n", i+1, s)
+	}
+
+	return len(ss), nil
+}
+
+// ListCertificatesAll returns formatted information about installed certificates.
+func ListCertificatesAll(json bool, conf *model.Configuration) ([]string, error) {
+	// Process *.pem and *.p7c
+	fmt.Printf("certDir: %s\n", model.CertDir)
+
+	if err := os.MkdirAll(model.CertDir, os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	count := 0
+
+	err := filepath.WalkDir(model.CertDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !model.IsPEM(path) && !model.IsP7C(path) {
+			return nil
+		}
+
+		fmt.Printf("\n%s:\n", strings.TrimPrefix(path, model.CertDir))
+
+		if model.IsPEM(path) {
+			c, err := listPEM(path)
+			if err != nil {
+				fmt.Printf("%v\n", err)
+			}
+			count += c
+			return nil
+		}
+		c, err := listP7C(path)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+		}
+		count += c
+		return nil
+	})
+
+	fmt.Printf("total installed certs: %d\n", count)
+
+	return nil, err
 }

@@ -45,6 +45,10 @@ var ErrUnsupportedFilter = errors.New("pdfcpu: filter not supported")
 type Filter interface {
 	Encode(r io.Reader) (io.Reader, error)
 	Decode(r io.Reader) (io.Reader, error)
+	// DecodeLength will decode at least maxLen bytes. For filters where decoding
+	// parts doesn't make sense (e.g. DCT), the whole stream is decoded.
+	// If maxLen < 0 is passed, the whole stream is decoded.
+	DecodeLength(r io.Reader, maxLen int64) (io.Reader, error)
 }
 
 // NewFilter returns a filter for given filterName and an optional parameter dictionary.
@@ -98,6 +102,10 @@ func List() []string {
 
 type baseFilter struct {
 	parms map[string]int
+}
+
+func SupportsDecodeParms(f string) bool {
+	return f == CCITTFax || f == LZW || f == Flate
 }
 
 func getReaderBytes(r io.Reader) ([]byte, error) {

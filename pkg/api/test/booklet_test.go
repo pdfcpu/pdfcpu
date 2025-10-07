@@ -156,7 +156,7 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "bookletTest.pdf")},
 			filepath.Join(outDir, "BookletFromPDFLetter_2Up_perfectbound.pdf"),
 			[]string{"1-24"},
-			"p:LetterP, g:on, btype:perfectbound",
+			"p:LetterP, g:on, btype:perfectbound, ma:10, bgcol:#f7e6c7",
 			"points",
 			2,
 			false,
@@ -165,18 +165,9 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "bookletTest.pdf")},
 			filepath.Join(outDir, "BookletFromPDFLedger_6Up.pdf"),
 			[]string{"1-24"},
-			"p:LedgerP, g:on",
+			"p:LedgerP, g:on, ma:10, bgcol:#f7e6c7",
 			"points",
 			6,
-			false,
-		},
-		{"TestBookletFromPDF_8up",
-			[]string{filepath.Join(inDir, "bookletTest.pdf")},
-			filepath.Join(outDir, "BookletFromPDFLedger_8Up.pdf"),
-			[]string{"1-32"},
-			"p:LedgerP, g:on",
-			"points",
-			8,
 			false,
 		},
 
@@ -185,7 +176,7 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "bookletTest.pdf")},
 			filepath.Join(outDir, "BookletFromPDFLedger_4Up_portrait_short.pdf"),
 			[]string{"1-24"},
-			"p:LedgerP, g:on, binding:short",
+			"p:LedgerP, g:on, binding:short, ma:10, bgcol:#f7e6c7",
 			"points",
 			4,
 			false,
@@ -194,7 +185,7 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "bookletTestLandscape.pdf")},
 			filepath.Join(outDir, "BookletFromPDFLedger_4Up_landscape_long.pdf"),
 			[]string{"1-24"},
-			"p:LedgerL, g:on",
+			"p:LedgerL, g:on, ma:10, bgcol:#f7e6c7",
 			"points",
 			4,
 			false,
@@ -203,7 +194,7 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "bookletTestLandscape.pdf")},
 			filepath.Join(outDir, "BookletFromPDFLedger_4Up_landscape_short.pdf"),
 			[]string{"1-24"},
-			"p:LedgerL, g:on, binding:short",
+			"p:LedgerL, g:on, binding:short, ma:10, bgcol:#f7e6c7",
 			"points",
 			4,
 			false,
@@ -212,7 +203,7 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "bookletTest.pdf")},
 			filepath.Join(outDir, "BookletFromPDFLedger_4Up_portrait_long_advanced.pdf"),
 			[]string{"1-24"},
-			"p:LedgerP, g:on, btype:bookletadvanced",
+			"p:LedgerP, g:on, btype:bookletadvanced, ma:10, bgcol:#f7e6c7",
 			"points",
 			4,
 			false,
@@ -221,7 +212,7 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "bookletTestLandscape.pdf")},
 			filepath.Join(outDir, "BookletFromPDFLedger_4Up_landscape_short_advanced.pdf"),
 			[]string{"1-24"},
-			"p:LedgerL, g:on, binding:short, btype:bookletadvanced",
+			"p:LedgerL, g:on, binding:short, btype:bookletadvanced, ma:10, bgcol:#f7e6c7",
 			"points",
 			4,
 			false,
@@ -230,16 +221,53 @@ func TestBooklet(t *testing.T) {
 			[]string{filepath.Join(inDir, "bookletTest.pdf")},
 			filepath.Join(outDir, "BookletFromPDFLedger_4Up_perfectbound.pdf"),
 			[]string{"1-24"},
-			"p:LedgerP, g:on, btype:perfectbound",
+			"p:LedgerP, g:on, btype:perfectbound, ma:10, bgcol:#f7e6c7",
 			"points",
 			4,
+			false,
+		},
+
+		// 8up
+		{"TestBookletFromPDF8Up",
+			[]string{filepath.Join(inDir, "bookletTestA6.pdf")},
+			filepath.Join(outDir, "BookletFromPDF8Up.pdf"),
+			nil,
+			"p:A3, g:on, ma:10, bgcol:#f7e6c7",
+			"points",
+			8,
+			false,
+		},
+		{"TestBookletFromPDF8UpPortraitShort",
+			[]string{filepath.Join(inDir, "bookletTestA6.pdf")},
+			filepath.Join(outDir, "BookletFromPDF8UpPortraitShort.pdf"),
+			nil,
+			"p:A3, binding:short, g:on, ma:10, bgcol:#f7e6c7",
+			"points",
+			8,
+			false,
+		},
+		{"TestBookletFromPDF8UpLandscapeLong",
+			[]string{filepath.Join(inDir, "bookletTestA6L.pdf")},
+			filepath.Join(outDir, "BookletFromPDF8UpLandscapeLong.pdf"),
+			nil,
+			"p:A3, binding:long, g:on, ma:10, bgcol:#f7e6c7",
+			"points",
+			8,
+			false,
+		},
+		{"TestBookletFromPDF8UpLandscapeShort",
+			[]string{filepath.Join(inDir, "bookletTestA6L.pdf")},
+			filepath.Join(outDir, "BookletFromPDF8UpLandscapeShort.pdf"),
+			nil,
+			"p:A3, binding:short, g:on, ma:10, bgcol:#f7e6c7",
+			"points",
+			8,
 			false,
 		},
 
 		// 2-up multi folio booklet from PDF on A4 using 8 sheets per folio
 		// using the default foliosize:8
 		// Here we print 2 complete folios (2 x 8 sheets) + 1 partial folio
-		// multi folio only makes sense for n = 2
 		// See also  https://www.instructables.com/How-to-bind-your-own-Hardback-Book/
 		{"TestHardbackBookFromPDF",
 			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
@@ -251,8 +279,10 @@ func TestBooklet(t *testing.T) {
 			false,
 		},
 	} {
-		conf := model.NewDefaultConfiguration()
-		conf.SetUnit(tt.unit)
-		testBooklet(t, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.n, tt.isImg, conf)
+		t.Run(tt.msg, func(subTest *testing.T) {
+			conf := model.NewDefaultConfiguration()
+			conf.SetUnit(tt.unit)
+			testBooklet(subTest, tt.msg, tt.inFiles, tt.outFile, tt.selectedPages, tt.desc, tt.n, tt.isImg, conf)
+		})
 	}
 }

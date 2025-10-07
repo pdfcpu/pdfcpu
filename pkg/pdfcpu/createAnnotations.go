@@ -537,7 +537,7 @@ func createFileAttachmentAnnotation(xRefTable *model.XRefTable, pageIndRef types
 
 	fn := filepath.Base(fileName)
 
-	s, err := types.EscapeUTF16String(fn)
+	s, err := types.EscapedUTF16String(fn)
 	if err != nil {
 		return nil, err
 	}
@@ -583,7 +583,7 @@ func createFileSpecDict(xRefTable *model.XRefTable, fileName string) (types.Dict
 	}
 	fn := filepath.Base(fileName)
 
-	s, err := types.EscapeUTF16String(fn)
+	s, err := types.EscapedUTF16String(fn)
 	if err != nil {
 		return nil, err
 	}
@@ -682,9 +682,9 @@ func createMovieAnnotation(xRefTable *model.XRefTable, pageIndRef types.Indirect
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createMediaRenditionAction(xRefTable *model.XRefTable, mediaClipDataDict *types.IndirectRef) types.Dict {
+func createMediaRenditionAction(mediaClipDataDict *types.IndirectRef) types.Dict {
 
-	r := createMediaRendition(xRefTable, mediaClipDataDict)
+	r := createMediaRendition(mediaClipDataDict)
 
 	return types.Dict(
 		map[string]types.Object{
@@ -717,7 +717,7 @@ func createScreenAnnotation(xRefTable *model.XRefTable, pageIndRef types.Indirec
 		return nil, err
 	}
 
-	mediaRenditionAction := createMediaRenditionAction(xRefTable, ir)
+	mediaRenditionAction := createMediaRenditionAction(ir)
 
 	selectorRenditionAction := createSelectorRenditionAction(ir)
 

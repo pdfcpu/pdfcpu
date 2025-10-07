@@ -21,11 +21,10 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	"github.com/angel-one/pdfcpu/pkg/font"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/color"
-	pdffont "github.com/angel-one/pdfcpu/pkg/pdfcpu/font"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
@@ -232,35 +231,15 @@ func (cb *ComboBox) validate() error {
 	return cb.validateTab()
 }
 
-func (cb *ComboBox) calcFontFromDA(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
-
-	s := d.StringEntry("DA")
-	if s == nil {
-		s = ctx.Form.StringEntry("DA")
-		if s == nil {
-			return nil, errors.New("pdfcpu: combobox missing \"DA\"")
-		}
-	}
-
-	fontID, f, err := fontFromDA(*s)
+func (cb *ComboBox) calcFontFromDA(ctx *model.Context, d types.Dict, da *string, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
+	id, font, rtl, fontIndRef, err := calcFontDetailsFromDA(ctx, d, da, false, fonts)
 	if err != nil {
 		return nil, err
-	}
-
-	cb.Font, cb.fontID = &f, fontID
-
-	id, name, lang, fontIndRef, err := extractFormFontDetails(ctx, cb.fontID, fonts)
-	if err != nil {
-		return nil, err
-	}
-	if fontIndRef == nil {
-		return nil, errors.New("pdfcpu: unable to detect indirect reference for font")
 	}
 
 	cb.fontID = id
-	cb.Font.Name = name
-	cb.Font.Lang = lang
-	cb.RTL = pdffont.RTL(lang)
+	cb.Font = font
+	cb.RTL = rtl
 
 	return fontIndRef, nil
 }
@@ -386,7 +365,7 @@ func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		v = model.DecodeUTF8ToByte(v)
 	}
 	lineBB := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
-	s := model.PrepBytes(xRefTable, v, f.Name, true, cb.RTL)
+	s := model.PrepBytes(xRefTable, v, f.Name, true, cb.RTL, f.FillFont)
 	x := 2 * boWidth
 	if x == 0 {
 		x = 2
@@ -467,14 +446,14 @@ func (cb *ComboBox) handleBorderAndMK(d types.Dict) {
 func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	pdf := cb.pdf
 
-	id, err := types.EscapeUTF16String(cb.ID)
+	id, err := types.EscapedUTF16String(cb.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	opt := types.Array{}
 	for _, s := range cb.Options {
-		s, err := types.EscapeUTF16String(s)
+		s, err := types.EscapedUTF16String(s)
 		if err != nil {
 			return nil, err
 		}
@@ -498,7 +477,7 @@ func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	)
 
 	if cb.Tip != "" {
-		tu, err := types.EscapeUTF16String(cb.Tip)
+		tu, err := types.EscapedUTF16String(cb.Tip)
 		if err != nil {
 			return nil, err
 		}
@@ -509,7 +488,7 @@ func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 
 	v := cb.Value
 	if cb.Default != "" {
-		s, err := types.EscapeUTF16String(cb.Default)
+		s, err := types.EscapedUTF16String(cb.Default)
 		if err != nil {
 			return nil, err
 		}
@@ -526,7 +505,7 @@ func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 			break
 		}
 	}
-	s, err := types.EscapeUTF16String(v)
+	s, err := types.EscapedUTF16String(v)
 	if err != nil {
 		return nil, err
 	}
@@ -720,18 +699,21 @@ func NewComboBox(
 	ctx *model.Context,
 	d types.Dict,
 	v string,
+	da *string,
 	fonts map[string]types.IndirectRef) (*ComboBox, *types.IndirectRef, error) {
 
 	cb := &ComboBox{Value: v}
 
-	bb, err := ctx.RectForArray(d.ArrayEntry("Rect"))
+	obj, _ := d.Find("Rect")
+	arr, _ := ctx.DereferenceArray(obj)
+	bb, err := ctx.RectForArray(arr)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	cb.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
 
-	fontIndRef, err := cb.calcFontFromDA(ctx, d, fonts)
+	fontIndRef, err := cb.calcFontFromDA(ctx, d, da, fonts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -758,9 +740,9 @@ func NewComboBox(
 	return cb, fontIndRef, nil
 }
 
-func renderComboBoxAP(ctx *model.Context, d types.Dict, v string, fonts map[string]types.IndirectRef) error {
+func renderComboBoxAP(ctx *model.Context, d types.Dict, v string, da *string, fonts map[string]types.IndirectRef) error {
 
-	cb, fontIndRef, err := NewComboBox(ctx, d, v, fonts)
+	cb, fontIndRef, err := NewComboBox(ctx, d, v, da, fonts)
 	if err != nil {
 		return err
 	}
@@ -780,9 +762,9 @@ func renderComboBoxAP(ctx *model.Context, d types.Dict, v string, fonts map[stri
 	return nil
 }
 
-func refreshComboBoxAP(ctx *model.Context, d types.Dict, v string, fonts map[string]types.IndirectRef, irN *types.IndirectRef) error {
+func refreshComboBoxAP(ctx *model.Context, d types.Dict, v string, da *string, fonts map[string]types.IndirectRef, irN *types.IndirectRef) error {
 
-	cb, _, err := NewComboBox(ctx, d, v, fonts)
+	cb, _, err := NewComboBox(ctx, d, v, da, fonts)
 	if err != nil {
 		return err
 	}
@@ -795,11 +777,11 @@ func refreshComboBoxAP(ctx *model.Context, d types.Dict, v string, fonts map[str
 	return updateForm(ctx.XRefTable, bb, irN)
 }
 
-func EnsureComboBoxAP(ctx *model.Context, d types.Dict, v string, fonts map[string]types.IndirectRef) error {
+func EnsureComboBoxAP(ctx *model.Context, d types.Dict, v string, da *string, fonts map[string]types.IndirectRef) error {
 
 	apd := d.DictEntry("AP")
 	if apd == nil {
-		return renderComboBoxAP(ctx, d, v, fonts)
+		return renderComboBoxAP(ctx, d, v, da, fonts)
 	}
 
 	irN := apd.IndirectRefEntry("N")
@@ -807,5 +789,5 @@ func EnsureComboBoxAP(ctx *model.Context, d types.Dict, v string, fonts map[stri
 		return nil
 	}
 
-	return refreshComboBoxAP(ctx, d, v, fonts, irN)
+	return refreshComboBoxAP(ctx, d, v, da, fonts, irN)
 }

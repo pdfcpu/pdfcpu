@@ -23,9 +23,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/angel-one/pdfcpu/pkg/filter"
-	"github.com/angel-one/pdfcpu/pkg/log"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
@@ -42,7 +41,7 @@ func (a Attachment) String() string {
 	return fmt.Sprintf("Attachment: id:%s desc:%s modTime:%s", a.ID, a.Desc, a.ModTime)
 }
 
-func decodeFileSpecStreamDict(sd *types.StreamDict, id string) error {
+func decodeFileSpecStreamDict(sd *types.StreamDict) error {
 	fpl := sd.FilterPipeline
 
 	if fpl == nil {
@@ -50,23 +49,6 @@ func decodeFileSpecStreamDict(sd *types.StreamDict, id string) error {
 		return nil
 	}
 
-	// Ignore filter chains with length > 1
-	if len(fpl) > 1 {
-		if log.DebugEnabled() {
-			log.Debug.Printf("decodedFileSpecStreamDict: ignore %s, more than 1 filter.\n", id)
-		}
-		return nil
-	}
-
-	// Only FlateDecode supported.
-	if fpl[0].Name != filter.Flate {
-		if log.DebugEnabled() {
-			log.Debug.Printf("decodedFileSpecStreamDict: ignore %s, %s filter unsupported.\n", id, fpl[0].Name)
-		}
-		return nil
-	}
-
-	// Decode streamDict for supported filters only.
 	return sd.Decode()
 }
 
@@ -92,7 +74,7 @@ func fileSpecStreamDict(xRefTable *XRefTable, d types.Dict) (*types.StreamDict, 
 	}
 
 	d, err := xRefTable.DereferenceDict(o)
-	if err != nil || o == nil {
+	if err != nil || d == nil {
 		return nil, err
 	}
 
@@ -122,6 +104,27 @@ func (xRefTable *XRefTable) NewFileSpecDictForAttachment(a Attachment) (types.Di
 	return xRefTable.NewFileSpecDict(a.ID, a.ID, a.Desc, *sd)
 }
 
+func getModDate(xRefTable *XRefTable, obj types.Object) (*time.Time, error) {
+	errInvalidModDate := errors.New("pdfcpu: invalid date ModDate")
+	o, err := xRefTable.Dereference(obj)
+	if err != nil || o == nil {
+		return nil, errInvalidModDate
+	}
+	sl, ok := o.(types.StringLiteral)
+	if !ok {
+		return nil, errInvalidModDate
+	}
+	s, err := types.StringLiteralToString(sl)
+	if err != nil {
+		return nil, errInvalidModDate
+	}
+	md, ok := types.DateTime(s, xRefTable.ValidationMode == ValidationRelaxed)
+	if !ok {
+		return nil, errInvalidModDate
+	}
+	return &md, nil
+}
+
 func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o types.Object, decode bool) (*types.StreamDict, string, string, *time.Time, error) {
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil {
@@ -149,16 +152,16 @@ func fileSpecStreamDictInfo(xRefTable *XRefTable, id string, o types.Object, dec
 
 	var modDate *time.Time
 	if d = sd.DictEntry("Params"); d != nil {
-		if s := d.StringEntry("ModDate"); s != nil {
-			dt, ok := types.DateTime(*s, xRefTable.ValidationMode == ValidationRelaxed)
-			if !ok {
-				return nil, desc, "", nil, errors.New("pdfcpu: invalid date ModDate")
+		obj, ok := d.Find("ModDate")
+		if ok {
+			modDate, err = getModDate(xRefTable, obj)
+			if err != nil {
+				return nil, desc, "", nil, err
 			}
-			modDate = &dt
 		}
 	}
 
-	err = decodeFileSpecStreamDict(sd, id)
+	err = decodeFileSpecStreamDict(sd)
 
 	return sd, desc, fileName, modDate, err
 }

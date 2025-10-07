@@ -21,8 +21,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/angel-one/pdfcpu/pkg/api"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func listKeywordsFile(t *testing.T, fileName string, conf *model.Configuration) ([]string, error) {
@@ -51,8 +52,9 @@ func listKeywords(t *testing.T, msg, fileName string, want []string) []string {
 	if len(got) != len(want) {
 		t.Fatalf("%s: list keywords %s: want %d got %d\n", msg, fileName, len(want), len(got))
 	}
-	for i, v := range got {
-		if v != want[i] {
+
+	for _, v := range got {
+		if !types.MemberOf(v, want) {
 			t.Fatalf("%s: list keywords %s: want %v got %v\n", msg, fileName, want, got)
 		}
 	}
@@ -70,19 +72,22 @@ func TestKeywords(t *testing.T) {
 	// # of keywords must be 0
 	listKeywords(t, msg, fileName, nil)
 
-	keywords := []string{"Ö", "keyword2"}
-
+	keywords := []string{"Ö", "你好"}
 	if err := api.AddKeywordsFile(fileName, "", keywords, nil); err != nil {
 		t.Fatalf("%s add keywords: %v\n", msg, err)
 	}
-
 	listKeywords(t, msg, fileName, keywords)
 
-	if err := api.RemoveKeywordsFile(fileName, "", []string{"keyword2"}, nil); err != nil {
+	keywords = []string{"world"}
+	if err := api.AddKeywordsFile(fileName, "", keywords, nil); err != nil {
+		t.Fatalf("%s add keywords: %v\n", msg, err)
+	}
+	listKeywords(t, msg, fileName, []string{"Ö", "你好", "world"})
+
+	if err := api.RemoveKeywordsFile(fileName, "", []string{"你好"}, nil); err != nil {
 		t.Fatalf("%s remove 1 keyword: %v\n", msg, err)
 	}
-
-	listKeywords(t, msg, fileName, []string{"Ö"})
+	listKeywords(t, msg, fileName, []string{"Ö", "world"})
 
 	if err := api.RemoveKeywordsFile(fileName, "", nil, nil); err != nil {
 		t.Fatalf("%s remove all keywords: %v\n", msg, err)

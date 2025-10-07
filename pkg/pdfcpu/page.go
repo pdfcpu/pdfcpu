@@ -17,10 +17,114 @@ limitations under the License.
 package pdfcpu
 
 import (
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/model"
-	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
+	"fmt"
+	"strings"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
+
+type pagesParamMap map[string]func(string, *PageConfiguration) error
+
+// Handle applies parameter completion and if successful
+// parses the parameter values into pages.
+func (m pagesParamMap) Handle(paramPrefix, paramValueStr string, pageConf *PageConfiguration) error {
+
+	var param string
+
+	// Completion support
+	for k := range m {
+		if !strings.HasPrefix(k, strings.ToLower(paramPrefix)) {
+			continue
+		}
+		if len(param) > 0 {
+			return errors.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
+		}
+		param = k
+	}
+
+	if param == "" {
+		return errors.Errorf("pdfcpu: unknown parameter prefix \"%s\"", paramPrefix)
+	}
+
+	return m[param](paramValueStr, pageConf)
+}
+
+var pParamMap = pagesParamMap{
+	"dimensions": parseDimensions,
+	"formsize":   parsePageFormat,
+	"papersize":  parsePageFormat,
+}
+
+// PageConfiguration represents the page config for the "pages insert" command.
+type PageConfiguration struct {
+	PageDim  *types.Dim        // page dimensions in display unit.
+	PageSize string            // one of A0,A1,A2,A3,A4(=default),A5,A6,A7,A8,Letter,Legal,Ledger,Tabloid,Executive,ANSIC,ANSID,ANSIE.
+	UserDim  bool              // true if one of dimensions or paperSize provided overriding the default.
+	InpUnit  types.DisplayUnit // input display unit.
+}
+
+// DefaultPageConfiguration returns the default configuration.
+func DefaultPageConfiguration() *PageConfiguration {
+	return &PageConfiguration{
+		PageDim:  types.PaperSize["A4"],
+		PageSize: "A4",
+		InpUnit:  types.POINTS,
+	}
+}
+
+func (p PageConfiguration) String() string {
+	return fmt.Sprintf("Page config: %s %s\n", p.PageSize, p.PageDim)
+}
+
+func parsePageFormat(s string, p *PageConfiguration) (err error) {
+	if p.UserDim {
+		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
+	}
+	p.PageDim, p.PageSize, err = types.ParsePageFormat(s)
+	p.UserDim = true
+	return err
+}
+
+func parseDimensions(s string, p *PageConfiguration) (err error) {
+	if p.UserDim {
+		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
+	}
+	p.PageDim, p.PageSize, err = ParsePageDim(s, p.InpUnit)
+	p.UserDim = true
+	return err
+}
+
+// ParsePageConfiguration parses a page configuration string into an internal structure.
+func ParsePageConfiguration(s string, u types.DisplayUnit) (*PageConfiguration, error) {
+
+	if s == "" {
+		return nil, nil
+	}
+
+	pageConf := DefaultPageConfiguration()
+	pageConf.InpUnit = u
+
+	ss := strings.Split(s, ",")
+
+	for _, s := range ss {
+
+		ss1 := strings.Split(s, ":")
+		if len(ss1) != 2 {
+			return nil, errors.New("pdfcpu: Invalid page configuration string. Please consult pdfcpu help pages")
+		}
+
+		paramPrefix := strings.TrimSpace(ss1[0])
+		paramValueStr := strings.TrimSpace(ss1[1])
+
+		if err := pParamMap.Handle(paramPrefix, paramValueStr, pageConf); err != nil {
+			return nil, err
+		}
+	}
+
+	return pageConf, nil
+}
 
 func addPages(
 	ctxSrc, ctxDest *model.Context,
@@ -46,7 +150,7 @@ func addPages(
 			}
 		}
 
-		d, _, inhPAttrs, err := ctxSrc.PageDict(i, true)
+		d, pageIndRef, inhPAttrs, err := ctxSrc.PageDict(i, true)
 		if err != nil {
 			return err
 		}
@@ -54,17 +158,17 @@ func addPages(
 			return errors.Errorf("pdfcpu: unknown page number: %d\n", i)
 		}
 
-		d = d.Clone().(types.Dict)
+		obj, err := migrateIndRef(pageIndRef, ctxSrc, ctxDest, migrated)
+		if err != nil {
+			return err
+		}
+
+		d = obj.(types.Dict)
 		d["Resources"] = inhPAttrs.Resources.Clone()
 		d["Parent"] = pagesIndRef
 		d["MediaBox"] = inhPAttrs.MediaBox.Array()
 		if inhPAttrs.Rotate%360 > 0 {
 			d["Rotate"] = types.Integer(inhPAttrs.Rotate)
-		}
-
-		pageIndRef, err := ctxDest.IndRefForNewObject(d)
-		if err != nil {
-			return err
 		}
 
 		if err := migratePageDict(d, *pageIndRef, ctxSrc, ctxDest, migrated); err != nil {
@@ -87,6 +191,31 @@ func addPages(
 	}
 
 	return nil
+}
+
+func migrateNamedDests(ctxSrc *model.Context, n *model.Node, migrated map[int]int) error {
+	patchValues := func(xRefTable *model.XRefTable, k string, v *types.Object) error {
+		if *v == nil {
+			// Skip corrupt node.
+			return nil
+		}
+		arr, err := xRefTable.DereferenceArray(*v)
+		if err == nil {
+			arr[0] = patchObject(arr[0], migrated)
+			*v = arr
+			return nil
+		}
+		d, err := xRefTable.DereferenceDict(*v)
+		if err != nil {
+			return err
+		}
+		arr = d.ArrayEntry("D")
+		arr[0] = patchObject(arr[0], migrated)
+		*v = d
+		return nil
+	}
+
+	return n.Process(ctxSrc.XRefTable, patchValues)
 }
 
 // AddPages adds pages and corresponding resources from ctxSrc to ctxDest.
@@ -124,6 +253,14 @@ func AddPages(ctxSrc, ctxDest *model.Context, pageNrs []int, usePgCache bool) er
 			return err
 		}
 		ctxDest.RootDict["AcroForm"] = d
+	}
+
+	if n, ok := ctxSrc.Names["Dests"]; ok {
+		// Carry over used named destinations.
+		if err := migrateNamedDests(ctxSrc, n, migrated); err != nil {
+			return err
+		}
+		ctxDest.Names = map[string]*model.Node{"Dests": n}
 	}
 
 	return nil

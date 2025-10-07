@@ -147,6 +147,7 @@ func createOutline(
 	ctxSrc, ctxDest *model.Context,
 	pagesIndRef types.IndirectRef,
 	pagesDict, d types.Dict,
+	pageNr int,
 	cropBox *types.Rectangle,
 	migrated map[int]int,
 	cut *model.Cut) error {
@@ -177,7 +178,7 @@ func createOutline(
 
 	drawOutlineCuts(&buf, cropBox, cb, cut)
 
-	bb, err := ctxSrc.PageContent(d1)
+	bb, err := ctxSrc.PageContent(d1, pageNr)
 	if err != nil {
 		return err
 	}
@@ -223,7 +224,7 @@ func createOutline(
 	return nil
 }
 
-func prepForCut(ctxSrc *model.Context, i int) (
+func prepForCut(ctxSrc *model.Context, pageNr int) (
 	*model.Context,
 	*types.Rectangle,
 	*types.IndirectRef,
@@ -247,12 +248,12 @@ func prepForCut(ctxSrc *model.Context, i int) (
 		return nil, nil, nil, nil, nil, nil, err
 	}
 
-	d, _, inhPAttrs, err := ctxSrc.PageDict(i, false)
+	d, _, inhPAttrs, err := ctxSrc.PageDict(pageNr, false)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, err
 	}
 	if d == nil {
-		return nil, nil, nil, nil, nil, nil, errors.Errorf("pdfcpu: unknown page number: %d\n", i)
+		return nil, nil, nil, nil, nil, nil, errors.Errorf("pdfcpu: unknown page number: %d\n", pageNr)
 	}
 	d.Delete("Annots")
 
@@ -264,8 +265,8 @@ func prepForCut(ctxSrc *model.Context, i int) (
 	return ctxDest, cropBox, pagesIndRef, pagesDict, d, inhPAttrs, nil
 }
 
-func internPageRot(ctxSrc *model.Context, rotate int, cropBox *types.Rectangle, d types.Dict, trans []byte) error {
-	bb, err := ctxSrc.PageContent(d)
+func internPageRot(ctxSrc *model.Context, rotate int, cropBox *types.Rectangle, d types.Dict, pageNr int, trans []byte) error {
+	bb, err := ctxSrc.PageContent(d, pageNr)
 	if err != nil {
 		return err
 	}
@@ -297,7 +298,7 @@ func internPageRot(ctxSrc *model.Context, rotate int, cropBox *types.Rectangle, 
 	return nil
 }
 
-func handleCutMargin(ctxSrc *model.Context, d, d1 types.Dict, cropBox, cb *types.Rectangle, i, j int, w, h float64, sc *float64, cut *model.Cut) error {
+func handleCutMargin(ctxSrc *model.Context, d, d1 types.Dict, pageNr int, cropBox, cb *types.Rectangle, i, j int, w, h float64, sc *float64, cut *model.Cut) error {
 	ar := cb.AspectRatio()
 	mv := cut.Margin / ar
 
@@ -355,7 +356,7 @@ func handleCutMargin(ctxSrc *model.Context, d, d1 types.Dict, cropBox, cb *types
 	var trans bytes.Buffer
 	fmt.Fprintf(&trans, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
-	bbOrig, err := ctxSrc.PageContent(d)
+	bbOrig, err := ctxSrc.PageContent(d, pageNr)
 	if err != nil {
 		return err
 	}
@@ -383,6 +384,7 @@ func createTiles(
 	ctxSrc, ctxDest *model.Context,
 	pagesIndRef types.IndirectRef,
 	pagesDict, d types.Dict,
+	pageNr int,
 	cropBox *types.Rectangle,
 	inhPAttrs *model.InheritedPageAttrs,
 	migrated map[int]int,
@@ -422,7 +424,7 @@ func createTiles(
 			d1["CropBox"] = cb.Array()
 
 			if cut.Margin > 0 {
-				if err := handleCutMargin(ctxSrc, d, d1, cropBox, cb, i, j, w, h, &sc, cut); err != nil {
+				if err := handleCutMargin(ctxSrc, d, d1, pageNr, cropBox, cb, i, j, w, h, &sc, cut); err != nil {
 					return err
 				}
 			}
@@ -449,12 +451,12 @@ func createTiles(
 	return nil
 }
 
-func CutPage(ctxSrc *model.Context, i int, cut *model.Cut) (*model.Context, error) {
+func CutPage(ctxSrc *model.Context, pageNr int, cut *model.Cut) (*model.Context, error) {
 
 	// required: at least one of horizontalCut, verticalCut
 	// optionally: border, margin, bgcolor
 
-	ctxDest, cropBox, pagesIndRef, pagesDict, d, inhPAttrs, err := prepForCut(ctxSrc, i)
+	ctxDest, cropBox, pagesIndRef, pagesDict, d, inhPAttrs, err := prepForCut(ctxSrc, pageNr)
 	if err != nil {
 		return nil, err
 	}
@@ -470,17 +472,17 @@ func CutPage(ctxSrc *model.Context, i int, cut *model.Cut) (*model.Context, erro
 		d.Delete("Rotate")
 	}
 
-	if err := internPageRot(ctxSrc, rotate, cropBox, d, nil); err != nil {
+	if err := internPageRot(ctxSrc, rotate, cropBox, d, pageNr, nil); err != nil {
 		return nil, err
 	}
 
 	migrated := map[int]int{}
 
-	if err := createOutline(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, migrated, cut); err != nil {
+	if err := createOutline(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, pageNr, cropBox, migrated, cut); err != nil {
 		return nil, err
 	}
 
-	if err := createTiles(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, inhPAttrs, migrated, cut); err != nil {
+	if err := createTiles(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, pageNr, cropBox, inhPAttrs, migrated, cut); err != nil {
 		return nil, err
 	}
 
@@ -524,11 +526,11 @@ func createNDownCuts(n int, cropBox *types.Rectangle, cut *model.Cut) {
 	}
 }
 
-func NDownPage(ctxSrc *model.Context, i, n int, cut *model.Cut) (*model.Context, error) {
+func NDownPage(ctxSrc *model.Context, pageNr, n int, cut *model.Cut) (*model.Context, error) {
 
 	// Optionally: border, margin, bgcolor
 
-	ctxDest, cropBox, pagesIndRef, pagesDict, d, inhPAttrs, err := prepForCut(ctxSrc, i)
+	ctxDest, cropBox, pagesIndRef, pagesDict, d, inhPAttrs, err := prepForCut(ctxSrc, pageNr)
 	if err != nil {
 		return nil, err
 	}
@@ -544,7 +546,7 @@ func NDownPage(ctxSrc *model.Context, i, n int, cut *model.Cut) (*model.Context,
 		d.Delete("Rotate")
 	}
 
-	if err := internPageRot(ctxSrc, rotate, cropBox, d, nil); err != nil {
+	if err := internPageRot(ctxSrc, rotate, cropBox, d, pageNr, nil); err != nil {
 		return nil, err
 	}
 
@@ -552,11 +554,11 @@ func NDownPage(ctxSrc *model.Context, i, n int, cut *model.Cut) (*model.Context,
 
 	migrated := map[int]int{}
 
-	if err := createOutline(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, migrated, cut); err != nil {
+	if err := createOutline(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, pageNr, cropBox, migrated, cut); err != nil {
 		return nil, err
 	}
 
-	if err := createTiles(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, inhPAttrs, migrated, cut); err != nil {
+	if err := createTiles(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, pageNr, cropBox, inhPAttrs, migrated, cut); err != nil {
 		return nil, err
 	}
 
@@ -591,12 +593,12 @@ func createPosterCuts(cropBox *types.Rectangle, cut *model.Cut) {
 	}
 }
 
-func PosterPage(ctxSrc *model.Context, i int, cut *model.Cut) (*model.Context, error) {
+func PosterPage(ctxSrc *model.Context, pageNr int, cut *model.Cut) (*model.Context, error) {
 
 	// required: formsize(=papersize) or dimensions
 	// optionally: scalefactor, border, margin, bgcolor
 
-	ctxDest, cropBox, pagesIndRef, pagesDict, d, inhPAttrs, err := prepForCut(ctxSrc, i)
+	ctxDest, cropBox, pagesIndRef, pagesDict, d, inhPAttrs, err := prepForCut(ctxSrc, pageNr)
 	if err != nil {
 		return nil, err
 	}
@@ -630,7 +632,7 @@ func PosterPage(ctxSrc *model.Context, i int, cut *model.Cut) (*model.Context, e
 	var trans bytes.Buffer
 	fmt.Fprintf(&trans, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
-	if err := internPageRot(ctxSrc, rotate, cropBox, d, trans.Bytes()); err != nil {
+	if err := internPageRot(ctxSrc, rotate, cropBox, d, pageNr, trans.Bytes()); err != nil {
 		return nil, err
 	}
 
@@ -638,11 +640,11 @@ func PosterPage(ctxSrc *model.Context, i int, cut *model.Cut) (*model.Context, e
 
 	migrated := map[int]int{}
 
-	if err := createOutline(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, migrated, cut); err != nil {
+	if err := createOutline(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, pageNr, cropBox, migrated, cut); err != nil {
 		return nil, err
 	}
 
-	if err := createTiles(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, cropBox, inhPAttrs, migrated, cut); err != nil {
+	if err := createTiles(ctxSrc, ctxDest, *pagesIndRef, pagesDict, d, pageNr, cropBox, inhPAttrs, migrated, cut); err != nil {
 		return nil, err
 	}
 

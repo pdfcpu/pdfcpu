@@ -17,15 +17,53 @@ limitations under the License.
 package model
 
 import (
+	"context"
 	"strings"
 
 	"github.com/angel-one/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
-func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef) (types.Object, error) {
+func processDictRefCounts(xRefTable *XRefTable, d types.Dict) {
+	for _, e := range d {
+		switch o1 := e.(type) {
+		case types.IndirectRef:
+			xRefTable.IncrementRefCount(&o1)
+		case types.Dict:
+			ProcessRefCounts(xRefTable, o1)
+		case types.Array:
+			ProcessRefCounts(xRefTable, o1)
+		}
+	}
+}
+
+func processArrayRefCounts(xRefTable *XRefTable, a types.Array) {
+	for _, e := range a {
+		switch o1 := e.(type) {
+		case types.IndirectRef:
+			xRefTable.IncrementRefCount(&o1)
+		case types.Dict:
+			ProcessRefCounts(xRefTable, o1)
+		case types.Array:
+			ProcessRefCounts(xRefTable, o1)
+		}
+	}
+}
+
+func ProcessRefCounts(xRefTable *XRefTable, o types.Object) {
+	switch o := o.(type) {
+	case types.Dict:
+		processDictRefCounts(xRefTable, o)
+	case types.StreamDict:
+		processDictRefCounts(xRefTable, o.Dict)
+	case types.Array:
+		processArrayRefCounts(xRefTable, o)
+	}
+}
+
+func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef, decodeLazy bool) (types.Object, int, error) {
 	if ir == nil {
-		return nil, errors.New("pdfcpu: indRefToObject: input argument is nil")
+		return nil, 0, errors.New("pdfcpu: indRefToObject: input argument is nil")
 	}
 
 	// 7.3.10
@@ -33,13 +71,23 @@ func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef) (types.Object,
 	// it shall be treated as a reference to the null object.
 	entry, found := xRefTable.FindTableEntryForIndRef(ir)
 	if !found || entry.Free {
-		return nil, nil
+		return nil, 0, nil
 	}
 
 	xRefTable.CurObj = int(ir.ObjectNumber)
 
-	// return dereferenced object
-	return entry.Object, nil
+	if l, ok := entry.Object.(types.LazyObjectStreamObject); ok && decodeLazy {
+		ob, err := l.DecodedObject(context.TODO())
+		if err != nil {
+			return nil, 0, err
+		}
+
+		ProcessRefCounts(xRefTable, ob)
+		entry.Object = ob
+	}
+
+	// return dereferenced object and increment nr.
+	return entry.Object, entry.Incr, nil
 }
 
 // Dereference resolves an indirect object and returns the resulting PDF object.
@@ -50,7 +98,32 @@ func (xRefTable *XRefTable) Dereference(o types.Object) (types.Object, error) {
 		return o, nil
 	}
 
-	return xRefTable.indRefToObject(&ir)
+	obj, _, err := xRefTable.indRefToObject(&ir, true)
+	return obj, err
+}
+
+// Dereference resolves an indirect object and returns the resulting PDF object.
+// It also returns the number of the written PDF Increment this object is part of.
+// The higher the increment number the older the object.
+func (xRefTable *XRefTable) DereferenceWithIncr(o types.Object) (types.Object, int, error) {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		// Nothing do dereference.
+		return o, 0, nil
+	}
+
+	return xRefTable.indRefToObject(&ir, true)
+}
+
+func (xRefTable *XRefTable) DereferenceForWrite(o types.Object) (types.Object, error) {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		// Nothing do dereference.
+		return o, nil
+	}
+
+	obj, _, err := xRefTable.indRefToObject(&ir, false)
+	return obj, err
 }
 
 // DereferenceBoolean resolves and validates a boolean object, which may be an indirect reference.
@@ -280,6 +353,24 @@ func (xRefTable *XRefTable) DereferenceDict(o types.Object) (types.Dict, error) 
 	return d, nil
 }
 
+// DereferenceDictWithIncr resolves and validates a dictionary object, which may be an indirect reference.
+// It also returns the number of the written PDF Increment this object is part of.
+// The higher the increment number the older the object.
+func (xRefTable *XRefTable) DereferenceDictWithIncr(o types.Object) (types.Dict, int, error) {
+
+	o, incr, err := xRefTable.DereferenceWithIncr(o)
+	if err != nil || o == nil {
+		return nil, 0, err
+	}
+
+	d, ok := o.(types.Dict)
+	if !ok {
+		return nil, 0, errors.Errorf("pdfcpu: dereferenceDictWithIncr: wrong type %T <%v>", o, o)
+	}
+
+	return d, incr, nil
+}
+
 // DereferenceFontDict returns the font dict referenced by indRef.
 func (xRefTable *XRefTable) DereferenceFontDict(indRef types.IndirectRef) (types.Dict, error) {
 	d, err := xRefTable.DereferenceDict(indRef)
@@ -290,12 +381,14 @@ func (xRefTable *XRefTable) DereferenceFontDict(indRef types.IndirectRef) (types
 		return nil, nil
 	}
 
-	if d.Type() == nil {
-		return nil, errors.Errorf("pdfcpu: DereferenceFontDict: missing dict type %s\n", indRef)
-	}
+	if xRefTable.ValidationMode == ValidationStrict {
+		if d.Type() == nil {
+			return nil, errors.Errorf("pdfcpu: DereferenceFontDict: missing dict type %s\n", indRef)
+		}
 
-	if *d.Type() != "Font" {
-		return nil, errors.Errorf("pdfcpu: DereferenceFontDict: expected Type=Font, unexpected Type: %s", *d.Type())
+		if *d.Type() != "Font" {
+			return nil, errors.Errorf("pdfcpu: DereferenceFontDict: expected Type=Font, unexpected Type: %s", *d.Type())
+		}
 	}
 
 	return d, nil
@@ -338,21 +431,27 @@ func (xRefTable *XRefTable) dereferenceDestArray(o types.Object) (types.Array, e
 		}
 		arr, ok := o1.(types.Array)
 		if !ok {
-			errors.Errorf("pdfcpu: corrupted dest array:\n%s\n", o)
+			errors.Errorf("pdfcpu: invalid dest array:\n%s\n", o)
 		}
 		return arr, nil
 	}
 
-	return nil, errors.Errorf("pdfcpu: corrupted dest array:\n%s\n", o)
+	return nil, errors.Errorf("pdfcpu: invalid dest array:\n%s\n", o)
 }
 
 // DereferenceDestArray resolves the destination for key.
 func (xRefTable *XRefTable) DereferenceDestArray(key string) (types.Array, error) {
-	o, ok := xRefTable.Names["Dests"].Value(key)
-	if !ok {
-		return nil, errors.Errorf("pdfcpu: corrupted named destination for: %s", key)
+	if dNames := xRefTable.Names["Dests"]; dNames != nil {
+		if o, ok := dNames.Value(key); ok {
+			return xRefTable.dereferenceDestArray(o)
+		}
 	}
-	return xRefTable.dereferenceDestArray(o)
+
+	if o, ok := xRefTable.Dests[key]; ok {
+		return xRefTable.dereferenceDestArray(o)
+	}
+
+	return nil, errors.Errorf("pdfcpu: invalid named destination for: %s", key)
 }
 
 // DereferenceDictEntry returns a dereferenced dict entry.
