@@ -109,6 +109,12 @@ func TestUpdateImages(t *testing.T) {
 			"imageUpdatedByObjNrWEBP.pdf",
 			8,
 			""},
+		{"TestUpdateByObjNrPNGGray",
+			"test.pdf",
+			"any_gray.png",
+			"imageUpdatedByObjNrPNGGray.pdf",
+			8,
+			""},
 	} {
 		testUpdateImages(t, tt.msg,
 			filepath.Join(inDir, tt.inFile),
