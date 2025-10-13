@@ -12,7 +12,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	golang.org/x/crypto v0.42.0
 	golang.org/x/image v0.31.0
-	golang.org/x/text v0.29.0
+	golang.org/x/text v0.30.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
