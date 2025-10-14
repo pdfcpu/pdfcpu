@@ -21,7 +21,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/mechiko/pdfcpu/pkg/api"
 )
 
 func TestStampUserFont(t *testing.T) {

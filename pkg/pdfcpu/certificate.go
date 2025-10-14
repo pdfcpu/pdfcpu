@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	"github.com/hhrutter/pkcs7"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pkg/errors"
 )
 

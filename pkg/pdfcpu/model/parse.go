@@ -25,8 +25,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/mechiko/pdfcpu/pkg/log"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/types"
 )
 
 var (

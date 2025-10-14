@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/mechiko/pdfcpu/internal/spaserver"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/model"
 )
 
 var (
@@ -58,6 +59,16 @@ func main() {
 		os.Exit(0)
 	}
 
+	httpServer, err := spaserver.New("127.0.0.1", "8888")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(0)
+	}
+	go httpServer.Start()
+
+	// utility.OpenHttpBrowser(`http://localhost:8888/123.png`, utility.Chrome)
+	// time.Sleep(5 * time.Second)
+
 	// The first argument is the pdfcpu command string.
 	cmdStr := os.Args[1]
 
@@ -72,5 +83,6 @@ func main() {
 		os.Exit(1)
 	}
 
+	httpServer.Shutdown()
 	os.Exit(0)
 }

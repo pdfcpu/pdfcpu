@@ -21,8 +21,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/color"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/types"
 )
 
 // RenderMode represents the text rendering mode (see 9.3.6)

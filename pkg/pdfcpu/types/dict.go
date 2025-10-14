@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/mechiko/pdfcpu/pkg/log"
 	"github.com/pkg/errors"
 )
 

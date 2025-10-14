@@ -29,10 +29,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pdfcpu/pdfcpu/pkg/filter"
-	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/scan"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/mechiko/pdfcpu/pkg/filter"
+	"github.com/mechiko/pdfcpu/pkg/log"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/scan"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 

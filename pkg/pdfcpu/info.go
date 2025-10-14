@@ -22,10 +22,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/mechiko/pdfcpu/pkg/log"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/model"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/types"
 )
 
 func extractAuthor(ctx *model.Context, obj types.Object) (err error) {

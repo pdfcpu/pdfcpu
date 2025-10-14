@@ -21,11 +21,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pdfcpu/pdfcpu/pkg/font"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/format"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/mechiko/pdfcpu/pkg/font"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/color"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/format"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/model"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 

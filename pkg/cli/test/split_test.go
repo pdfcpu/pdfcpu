@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/mechiko/pdfcpu/pkg/cli"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/model"
 )
 
 // Split a test PDF file up into single page PDFs (using a split span of 1).

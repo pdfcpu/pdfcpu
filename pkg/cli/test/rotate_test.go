@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	"github.com/mechiko/pdfcpu/pkg/cli"
 )
 
 // Rotate first 2 pages clockwise by 90 degrees.

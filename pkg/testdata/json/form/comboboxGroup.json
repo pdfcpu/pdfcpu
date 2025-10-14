@@ -75,7 +75,7 @@
 		},
 		"logo2": {
 			"src": "$logo2",
-			"url": "https://github.com/pdfcpu/pdfcpu",
+			"url": "https://github.com/mechiko/pdfcpu",
 			"margin": {
 				"width": 5
 			}

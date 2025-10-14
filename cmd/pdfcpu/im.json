@@ -1,0 +1,52 @@
+{
+	"paper": "80x60L",
+	"crop": "0",
+	"origin": "UpperLeft",
+	"contentBox": false,
+	"debug": false,
+	"guides": false,
+	"margin": {
+		"width": 0
+	},
+  "fonts": {
+    "regular": {
+      "name": "RobotoCondensed-Regular",
+      "size": 5
+    },
+    "bold": {
+      "name": "RobotoCondensed-Bold",
+      "size": 5
+    },
+    "italic": {
+      "name": "Courier-Oblique",
+      "size": 12
+    }
+  },
+  "pages": {
+		"1": {
+			"content": {
+				"image": [
+					{
+						"hide": false,
+						"src": "http://localhost:8888/123.png",
+						"anchor": "tl",
+						"height": 43
+					}
+				],
+        "text": [
+          {
+            "value": "Using a global font",
+            "pos": [45,4],
+            "font": {"name": "$regular"}
+          },
+          {
+            "value": "boldddd",
+            "pos": [90,4],
+            "font": {"name": "$bold"},
+            "padding": {"width": 0}
+          }
+        ]
+      }
+		}
+	}
+}

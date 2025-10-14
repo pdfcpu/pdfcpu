@@ -16,7 +16,7 @@ limitations under the License.
 
 package model
 
-import "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+import "github.com/mechiko/pdfcpu/pkg/pdfcpu/types"
 
 // DestinationType represents the various PDF destination types.
 type DestinationType int

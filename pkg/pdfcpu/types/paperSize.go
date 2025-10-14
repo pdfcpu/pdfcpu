@@ -16,6 +16,23 @@ limitations under the License.
 
 package types
 
+// const (
+// 	POINTS DisplayUnit = iota
+// 	INCHES
+// 	CENTIMETRES
+// 	MILLIMETRES
+// )
+
+// const (
+// 	userSpaceToInch = float64(1) / 72 --- 0.0139
+// 	userSpaceToCm   = 2.54 / 72 ---- 0.3528 to mm
+// 	userSpaceToMm   = userSpaceToCm * 10
+
+// 	inchToUserSpace = 1 / userSpaceToInch
+// 	cmToUserSpace   = 1 / userSpaceToCm
+// 	mmToUserSpace   = 1 / userSpaceToMm
+// )
+
 // PaperSize is a map of known paper sizes in user units (=72 dpi pixels).
 var PaperSize = map[string]*Dim{
 
@@ -205,4 +222,10 @@ var PaperSize = map[string]*Dim{
 	"AB":          {595, 729},   //  8.27" x 10.12"	 	 210 x 257 mm
 	"B40":         {292, 516},   //  4.06" x 7.17"		 103 x 182 mm
 	"Shikisen":    {238, 420},   //  3.31" x 5.83"		  84 x 148 mm
+
+	// my
+	"80x60": {227, 170}, //  3.31" x 5.83"		  80 x 148 mm
 }
+
+// 	userSpaceToInch = float64(1) / 72 --- 0.0139
+// 	userSpaceToCm   = 2.54 / 72 ---- 0.3528 to mm

@@ -13,3 +13,7 @@ _scripts/*.csv
 
 # GoReleaser
 dist/*
+
+*.exe
+
+cmd/pdfcpu/*.pdf

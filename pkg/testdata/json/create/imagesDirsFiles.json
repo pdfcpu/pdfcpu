@@ -74,7 +74,7 @@
 		},
 		"logo_gh": {
 			"src": "$logo_gh",
-			"url": "https://github.com/pdfcpu/pdfcpu",
+			"url": "https://github.com/mechiko/pdfcpu",
 			"margin": {
 				"width": 5
 			}

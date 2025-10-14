@@ -27,12 +27,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/mechiko/pdfcpu/pkg/log"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/color"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/draw"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/matrix"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/model"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pkg/errors"
 )
 
@@ -261,6 +261,7 @@ func (ib *ImageBox) checkForExistingImage(sd *types.StreamDict, w, h int) (*type
 	return nil, nil
 }
 
+// здесь открываем файл картинки или получаем по http
 func (ib *ImageBox) resource() (io.ReadCloser, error) {
 	pdf := ib.pdf
 	var f io.ReadCloser
@@ -309,7 +310,7 @@ func (ib *ImageBox) resource() (io.ReadCloser, error) {
 }
 
 func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int) (*model.ImageResource, error) {
-
+	// TODO тут открываем файл!
 	f, err := ib.resource()
 	if err != nil || f == nil {
 		return nil, err

@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	"github.com/mechiko/pdfcpu/pkg/cli"
 )
 
 func testUpdateImages(t *testing.T, msg string, inFile, imgFile, outFile string, objNrOrPageNr int, id string) {

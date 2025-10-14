@@ -1,13 +1,13 @@
 # pdfcpu: a Go PDF processor and CLI
 
-[![Test](https://github.com/pdfcpu/pdfcpu/workflows/Test/badge.svg)](https://github.com/pdfcpu/pdfcpu/actions)
+[![Test](https://github.com/mechiko/pdfcpu/workflows/Test/badge.svg)](https://github.com/mechiko/pdfcpu/actions)
 [![Coverage Status](https://coveralls.io/repos/github/pdfcpu/pdfcpu/badge.svg?branch=master)](https://coveralls.io/github/pdfcpu/pdfcpu?branch=master)
-[![GoDoc](https://godoc.org/github.com/pdfcpu/pdfcpu?status.svg)](https://pkg.go.dev/github.com/pdfcpu/pdfcpu)
-[![Go Report Card](https://goreportcard.com/badge/github.com/pdfcpu/pdfcpu)](https://goreportcard.com/report/github.com/pdfcpu/pdfcpu)
+[![GoDoc](https://godoc.org/github.com/mechiko/pdfcpu?status.svg)](https://pkg.go.dev/github.com/mechiko/pdfcpu)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mechiko/pdfcpu)](https://goreportcard.com/report/github.com/mechiko/pdfcpu)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20pdfcpu%20Guru-006BFF)](https://gurubase.io/g/pdfcpu)
 
-[![Latest release](https://img.shields.io/github/release/pdfcpu/pdfcpu.svg)](https://github.com/pdfcpu/pdfcpu/releases)
+[![Latest release](https://img.shields.io/github/release/pdfcpu/pdfcpu.svg)](https://github.com/mechiko/pdfcpu/releases)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/hhrutter)
 
 
@@ -95,15 +95,15 @@ Simultaneously, pdfcpu aims to simplify the integration of PDF processing into y
 ## Documentation
 
 * [pdfcpu.io](https://pdfcpu.io)
-* [API tests](https://github.com/pdfcpu/pdfcpu/tree/master/pkg/api/test)
-* [API samples](https://github.com/pdfcpu/pdfcpu/tree/master/pkg/samples) 
+* [API tests](https://github.com/mechiko/pdfcpu/tree/master/pkg/api/test)
+* [API samples](https://github.com/mechiko/pdfcpu/tree/master/pkg/samples) 
 * CLI usage: `$ pdfcpu help cmd`
 
 ### GoDoc
 
-* [pdfcpu package](https://pkg.go.dev/github.com/pdfcpu/pdfcpu)
-* [pdfcpu API](https://pkg.go.dev/github.com/pdfcpu/pdfcpu/pkg/api)
-* [pdfcpu CLI](https://pkg.go.dev/github.com/pdfcpu/pdfcpu/pkg/cli)
+* [pdfcpu package](https://pkg.go.dev/github.com/mechiko/pdfcpu)
+* [pdfcpu API](https://pkg.go.dev/github.com/mechiko/pdfcpu/pkg/api)
+* [pdfcpu CLI](https://pkg.go.dev/github.com/mechiko/pdfcpu/pkg/cli)
 
 ## Reminder
 
@@ -122,13 +122,13 @@ Simultaneously, pdfcpu aims to simplify the integration of PDF processing into y
 ## Installation
 
 ### Download
-Get the latest binary [here](https://github.com/pdfcpu/pdfcpu/releases).
+Get the latest binary [here](https://github.com/mechiko/pdfcpu/releases).
 
 
 ### Using Go Modules
 
 ```
-$ git clone https://github.com/pdfcpu/pdfcpu
+$ git clone https://github.com/mechiko/pdfcpu
 $ cd pdfcpu/cmd/pdfcpu
 $ go install
 $ pdfcpu version
@@ -136,7 +136,7 @@ $ pdfcpu version
 or directly through Go install:
 
 ```
-$ go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@latest
+$ go install github.com/mechiko/pdfcpu/cmd/pdfcpu@latest
 ```
 
 ### Using Homebrew (macOS)
@@ -163,15 +163,15 @@ $ docker run -it -v "$(pwd)":/app pdfcpu validate a.pdf
 
 ### What
 
-* Please [create](https://github.com/pdfcpu/pdfcpu/issues/new/choose) an issue if you find a bug or want to propose a change.
+* Please [create](https://github.com/mechiko/pdfcpu/issues/new/choose) an issue if you find a bug or want to propose a change.
 * Feature requests - always welcome!
 * Bug fixes - always welcome!
-* PRs - let's [discuss](https://github.com/pdfcpu/pdfcpu/discussions) first or [create](https://github.com/pdfcpu/pdfcpu/issues/new/choose) an issue.
+* PRs - let's [discuss](https://github.com/mechiko/pdfcpu/discussions) first or [create](https://github.com/mechiko/pdfcpu/issues/new/choose) an issue.
 * pdfcpu is stable but still *Alpha* and occasionally undergoing heavy changes.
 
 ### How
 
-* The pdfcpu [discussion board](https://github.com/pdfcpu/pdfcpu/discussions) is open! Please engage in any form helpful for the community.
+* The pdfcpu [discussion board](https://github.com/mechiko/pdfcpu/discussions) is open! Please engage in any form helpful for the community.
 * If you want to report a bug please attach the *very verbose* (`pdfcpu cmd -vv ...`) output and ideally a test PDF that you can share.
 * Always make sure your contribution is based on the latest commit.
 * Please sign your commits.

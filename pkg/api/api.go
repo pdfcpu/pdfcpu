@@ -39,10 +39,10 @@ import (
 	"os"
 	"sync"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
+	"github.com/mechiko/pdfcpu/pkg/log"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/model"
+	"github.com/mechiko/pdfcpu/pkg/pdfcpu/validate"
 	"github.com/pkg/errors"
 )
 
@@ -54,7 +54,7 @@ func logDisclaimerPDF20() {
 * At the moment pdfcpu ships with basic PDF 2.0 support.            *
 * Please let us know which feature you would like to see supported, *
 * provide a sample PDF file and create an issue:                    *
-* https://github.com/pdfcpu/pdfcpu/issues/new/choose                *
+* https://github.com/mechiko/pdfcpu/issues/new/choose                *
 * Thank you for using pdfcpu <3                                     *
 *********************************************************************`
 
