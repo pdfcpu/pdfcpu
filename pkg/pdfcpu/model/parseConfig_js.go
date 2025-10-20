@@ -141,9 +141,18 @@ func handleConfEncryptKeyLength(v string, c *Configuration) error {
 	return nil
 }
 
+func handleFormFieldListMaxColWidth(v string, c *Configuration) error {
+	i, err := strconv.Atoi(v)
+	if err != nil || i < 0 {
+		return errors.Errorf("FormFieldListMaxColWidth is numeric >= 0, got: %s", v)
+	}
+	c.FormFieldListMaxColWidth = i
+	return nil
+}
+
 func handleTimeout(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
-	if err != nil {
+	if err != nil || i <= 0 {
 		return errors.Errorf("timeout is numeric > 0, got: %s", v)
 	}
 	c.Timeout = i
@@ -152,7 +161,7 @@ func handleTimeout(v string, c *Configuration) error {
 
 func handleTimeoutCRL(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
-	if err != nil {
+	if err != nil || i <= 0 {
 		return errors.Errorf("timeoutCRL is numeric > 0, got: %s", v)
 	}
 	c.TimeoutCRL = i
@@ -161,7 +170,7 @@ func handleTimeoutCRL(v string, c *Configuration) error {
 
 func handleTimeoutOCSP(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
-	if err != nil {
+	if err != nil || i <= 0 {
 		return errors.Errorf("timeoutOCSP is numeric > 0, got: %s", v)
 	}
 	c.TimeoutOCSP = i
@@ -294,6 +303,9 @@ func parseKeysPart2(k, v string, c *Configuration) (bool, error) {
 	case "timeoutOCSP":
 		return true, handleTimeoutOCSP(v, c)
 
+	case "formFieldListMaxColWidth":
+		return true, handleFormFieldListMaxColWidth(v, c)
+
 	case "preferredCertRevocationChecker":
 		return true, handlePreferredCertRevocationChecker(v, c)
 	}
@@ -321,6 +333,7 @@ func parseKeysPart3(k, v string, c *Configuration) (err error) {
 
 	case "offline":
 		c.Offline, err = boolean(k, v)
+
 	}
 
 	return err

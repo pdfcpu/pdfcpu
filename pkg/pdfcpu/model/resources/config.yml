@@ -79,3 +79,7 @@ timeoutOCSP: 10
 # crl
 # ocsp
 preferredCertRevocationChecker: crl
+
+# limit form field content for display purposes when using pdfcpu form list.
+# if > 0 affects the columns AltName, Default and Value.
+FormFieldListMaxColWidth: 0

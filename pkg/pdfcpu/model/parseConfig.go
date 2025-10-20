@@ -57,6 +57,7 @@ type configuration struct {
 	TimeoutCRL                      int    `yaml:"timeoutCRL"`
 	TimeoutOCSP                     int    `yaml:"timeoutOCSP"`
 	PreferredCertRevocationChecker  string `yaml:"preferredCertRevocationChecker"`
+	FormFieldListMaxColWidth        int    `yaml:"formFieldListMaxColWidth"`
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
@@ -118,6 +119,7 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	conf.Timeout = c.Timeout
 	conf.TimeoutCRL = c.TimeoutCRL
 	conf.TimeoutOCSP = c.TimeoutOCSP
+	conf.FormFieldListMaxColWidth = c.FormFieldListMaxColWidth
 
 	switch strings.ToLower(c.PreferredCertRevocationChecker) {
 	case "crl":
@@ -165,6 +167,10 @@ func parseConfigFile(r io.Reader, configPath string) error {
 			return errors.Errorf("invalid preferred certificate revocation checker: %s", c.PreferredCertRevocationChecker)
 		}
 		c.PreferredCertRevocationChecker = "crl"
+	}
+
+	if c.FormFieldListMaxColWidth < 0 {
+		return errors.Errorf("formFieldListMaxColWidth must be >= 0: %d", c.FormFieldListMaxColWidth)
 	}
 
 	loadedDefaultConfig = loadedConfig(c, configPath)

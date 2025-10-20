@@ -273,6 +273,10 @@ type Configuration struct {
 
 	// Preferred certificate revocation checking mechanism: CRL, OSCP
 	PreferredCertRevocationChecker int
+
+	// Limit form field content for display purposes when using pdfcpu form list.
+	// If > 0 affects the columns AltName, Default and Value.
+	FormFieldListMaxColWidth int
 }
 
 // ConfigPath defines the location of pdfcpu's configuration directory.
@@ -473,6 +477,7 @@ func newDefaultConfiguration() *Configuration {
 		Offline:                         false,
 		Timeout:                         5,
 		PreferredCertRevocationChecker:  CRL,
+		FormFieldListMaxColWidth:        0,
 	}
 }
 
