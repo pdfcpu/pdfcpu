@@ -30,10 +30,10 @@ config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 #############################
 
 # Creation date
-created: 2025-04-23 10:30
+created: 2025-10-22 00:33
 
 # version (Do not edit!)
-version: v0.10.2 dev
+version: v0.11.1 dev
 
 # toggle for inFilename extension check (.pdf)
 checkFileNameExt: true
@@ -116,4 +116,8 @@ timeoutOCSP: 10
 # crl
 # ocsp
 preferredCertRevocationChecker: crl
+
+# limit form field content for display purposes when using pdfcpu form list.
+# if > 0 affects the columns AltName, Default and Value.
+FormFieldListMaxColWidth: 0
 ```
