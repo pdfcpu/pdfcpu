@@ -277,10 +277,33 @@ func cacheSig(xRefTable *model.XRefTable, d types.Dict, dictName string, form bo
 		}
 	}
 
-	arr, err := validateRectangleEntry(xRefTable, d, dictName, "Rect", REQUIRED, model.V10, nil)
-	if err != nil {
-		return err
+	var arr types.Array
+	var err error
+
+	o, ok := d.Find("Kids")
+	if !ok {
+		// terminal field
+		arr, err = validateRectangleEntry(xRefTable, d, dictName, "Rect", REQUIRED, model.V10, nil)
+		if err != nil {
+			return err
+		}
+	} else {
+		// non terminal field
+		kids, err := xRefTable.DereferenceArray(o)
+		if err != nil {
+			return err
+		}
+		// TODO Validation of len(kids) necessary?
+		d1, err := xRefTable.DereferenceDict(kids[0])
+		if err != nil {
+			return err
+		}
+		arr, err = validateRectangleEntry(xRefTable, d1, dictName, "Rect", REQUIRED, model.V10, nil)
+		if err != nil {
+			return err
+		}
 	}
+
 	r := types.RectForArray(arr)
 	sig.Visible = r.Visible() && !dts
 
