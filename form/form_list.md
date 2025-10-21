@@ -34,6 +34,8 @@ Use the following configuration parameter in order to tweak verbose output:
 FormFieldListMaxColWidth: 0
 ```
 
+<br>
+
 ## Examples
 
 List all form fields of english.pdf:
