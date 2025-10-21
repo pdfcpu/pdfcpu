@@ -27,6 +27,13 @@ pdfcpu form list inFile...
 
 <br>
 
+Use the following configuration parameter in order to tweak verbose output:
+```
+# limit form field content for display purposes when using pdfcpu form list.
+# if > 0 affects the columns AltName, Default and Value.
+FormFieldListMaxColWidth: 0
+```
+
 ## Examples
 
 List all form fields of english.pdf:
