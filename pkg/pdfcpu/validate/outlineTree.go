@@ -80,16 +80,20 @@ func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// C, optional, array of 3 numbers, since V1.4
-	version := model.V14
+	sinceVersion := model.V14
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		version = model.V13
+		sinceVersion = model.V13
 	}
-	if _, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, version, func(a types.Array) bool { return len(a) == 3 }); err != nil {
+	if _, err = validateNumberArrayEntry(xRefTable, d, dictName, "C", OPTIONAL, sinceVersion, func(a types.Array) bool { return len(a) == 3 }); err != nil {
 		return err
 	}
 
 	// F, optional integer, since V1.4
-	if _, err = validateIntegerEntry(xRefTable, d, dictName, "F", OPTIONAL, model.V14, nil); err != nil {
+	sinceVersion = model.V14
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V13
+	}
+	if _, err = validateIntegerEntry(xRefTable, d, dictName, "F", OPTIONAL, sinceVersion, nil); err != nil {
 		return err
 	}
 

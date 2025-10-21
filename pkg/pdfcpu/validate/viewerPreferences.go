@@ -132,7 +132,11 @@ func validatePrinterPreferences(xRefTable *model.XRefTable, d types.Dict, dictNa
 	validate = func(s string) bool {
 		return types.MemberOf(s, []string{"Simplex", "DuplexFlipShortEdge", "DuplexFlipLongEdge"})
 	}
-	n, err = validateNameEntry(xRefTable, d, dictName, "Duplex", OPTIONAL, model.V17, validate)
+	sinceVersion = model.V17
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V15
+	}
+	n, err = validateNameEntry(xRefTable, d, dictName, "Duplex", OPTIONAL, sinceVersion, validate)
 	if err != nil {
 		return err
 	}

@@ -291,8 +291,8 @@ func validateNamedDestinations(xRefTable *model.XRefTable, rootDict types.Dict, 
 }
 
 func pageLayoutValidator(v model.Version) func(s string) bool {
-	// "UseNone" is out of spec.
-	layouts := []string{"SinglePage", "OneColumn", "TwoColumnLeft", "TwoColumnRight", "UseNone"}
+	// "UseNone", "Continuous", "oneside", "useoutlines" is out of spec.
+	layouts := []string{"SinglePage", "OneColumn", "TwoColumnLeft", "TwoColumnRight", "UseNone", "Continuous", "oneside", "TwoPageRight", "useoutlines"}
 	if v >= model.V15 {
 		layouts = append(layouts, "TwoPageLeft", "TwoPageRight")
 	}
@@ -316,8 +316,8 @@ func validatePageLayout(xRefTable *model.XRefTable, rootDict types.Dict, require
 }
 
 func pageModeValidator(v model.Version) func(s string) bool {
-	// "None" and "none" are out of spec.
-	modes := []string{"UseNone", "UseOutlines", "UseThumbs", "FullScreen", "None", "none"}
+	// "None", "none", "UserNone" are out of spec.
+	modes := []string{"UseNone", "UseOutlines", "UseThumbs", "FullScreen", "None", "none", "UserNone"}
 	if v >= model.V14 {
 		modes = append(modes, "UseOC")
 	}

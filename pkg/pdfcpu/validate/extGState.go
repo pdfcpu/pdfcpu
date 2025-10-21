@@ -819,7 +819,11 @@ func validateExtGStateDictPart1(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// op, boolean, optional, since V1.3
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "op", OPTIONAL, model.V13, nil)
+	sinceVersion := model.V13
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V12
+	}
+	_, err = validateBooleanEntry(xRefTable, d, dictName, "op", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
@@ -912,7 +916,7 @@ func validateExtGStateDictPart3(xRefTable *model.XRefTable, d types.Dict, dictNa
 	// BM, name or array, optional, since V1.4
 	sinceVersion := model.V14
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
+		sinceVersion = model.V12
 	}
 	err := validateBlendModeEntry(xRefTable, d, dictName, "BM", OPTIONAL, sinceVersion)
 	if err != nil {

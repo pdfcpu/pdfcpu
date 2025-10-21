@@ -495,9 +495,6 @@ func validatePageEntryTabs(xRefTable *model.XRefTable, d types.Dict, required bo
 
 	validateTabs := func(s string) bool { return types.MemberOf(s, []string{"R", "C", "S", "A", "W"}) }
 
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
-	}
 	_, err := validateNameEntry(xRefTable, d, "pagesDict", "Tabs", required, sinceVersion, validateTabs)
 
 	if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
@@ -754,10 +751,6 @@ func validateViewportDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion
 func validatePageEntryVP(xRefTable *model.XRefTable, d types.Dict, required bool, sinceVersion model.Version) error {
 
 	// see table 260
-
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V15
-	}
 	a, err := validateArrayEntry(xRefTable, d, "pagesDict", "VP", required, sinceVersion, nil)
 	if err != nil || a == nil {
 		return err
@@ -877,11 +870,11 @@ func validatePageDict(xRefTable *model.XRefTable, d types.Dict, hasMediaBox bool
 		{validatePageEntryID, OPTIONAL, model.V13, model.V13},
 		{validatePageEntryPZ, OPTIONAL, model.V13, model.V13},
 		{validatePageEntrySeparationInfo, OPTIONAL, model.V13, model.V13},
-		{validatePageEntryTabs, OPTIONAL, model.V15, model.V15},
+		{validatePageEntryTabs, OPTIONAL, model.V15, model.V12},
 		{validatePageEntryTemplateInstantiated, OPTIONAL, model.V15, model.V15},
 		{validatePageEntryPresSteps, OPTIONAL, model.V15, model.V15},
 		{validatePageEntryUserUnit, OPTIONAL, model.V16, model.V16},
-		{validatePageEntryVP, OPTIONAL, model.V16, model.V16},
+		{validatePageEntryVP, OPTIONAL, model.V16, model.V14},
 	} {
 		sinceVersion := f.sinceVersion
 		if xRefTable.ValidationMode == model.ValidationRelaxed {

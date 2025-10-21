@@ -211,7 +211,11 @@ func validateAnnotationDictText(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// State, optional, text string, since V1.5
-	state, err := validateStringEntry(xRefTable, d, dictName, "State", OPTIONAL, model.V15, nil)
+	sinceVersion := model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
+	state, err := validateStringEntry(xRefTable, d, dictName, "State", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
@@ -416,7 +420,7 @@ func validateAnnotationDictFreeTextPart2(xRefTable *model.XRefTable, d types.Dic
 	// IT, optional, name, since V1.6
 	sinceVersion := model.V16
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V14
+		sinceVersion = model.V13
 	}
 	validate := func(s string) bool {
 		return types.MemberOf(s, []string{"FreeText", "FreeTextCallout", "FreeTextTypeWriter", "FreeTextTypewriter"})
@@ -1538,7 +1542,7 @@ func validateAnnotationDictGeneralPart1(xRefTable *model.XRefTable, d types.Dict
 	// NM, optional, text string, since V1.4
 	sinceVersion := model.V14
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
+		sinceVersion = model.V12
 	}
 	if _, err = validateStringEntry(xRefTable, d, dictName, "NM", OPTIONAL, sinceVersion, nil); err != nil {
 		return nil, err

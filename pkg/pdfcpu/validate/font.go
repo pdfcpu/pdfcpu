@@ -178,7 +178,7 @@ func validateFontDescriptorFontFamily(xRefTable *model.XRefTable, d types.Dict, 
 func validateFontDescriptorFontStretch(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	sinceVersion := model.V15
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
+		sinceVersion = model.V12
 	}
 	_, err := validateNameEntry(xRefTable, d, dictName, "FontStretch", OPTIONAL, sinceVersion, nil)
 	return err
@@ -1050,7 +1050,11 @@ func validateType3FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// Resources, optional, dict, since V1.2
-	d1, err := validateDictEntry(xRefTable, d, dictName, "Resources", OPTIONAL, model.V12, nil)
+	sinceVersion = model.V12
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V11
+	}
+	d1, err := validateDictEntry(xRefTable, d, dictName, "Resources", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}

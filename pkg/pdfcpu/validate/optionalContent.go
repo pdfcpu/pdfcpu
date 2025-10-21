@@ -388,7 +388,11 @@ func validateOptionalContentConfigurationDict(xRefTable *model.XRefTable, d type
 	}
 
 	// Locked, optional, array
-	return validateOptionalContentGroupArray(xRefTable, d, dictName, "Locked", model.V16)
+	sinceVersion = model.V16
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V15
+	}
+	return validateOptionalContentGroupArray(xRefTable, d, dictName, "Locked", sinceVersion)
 }
 
 func validateOCProperties(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {

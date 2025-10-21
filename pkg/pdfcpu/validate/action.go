@@ -581,7 +581,9 @@ func validateNamedActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 		}
 
 		// Some known non standard named actions
-		if types.MemberOf(s, []string{"AcroSrch:Query", "Find", "FindAgain", "FindAgainDoc", "FindPrevious", "FindPreviousDoc", "FullScreen", "GoBack", "GoBackDoc", "GoForward", "GoToPage", "Print", "Quit", "SaveAs", "FitPage", "FitWidth"}) {
+		if types.MemberOf(s, []string{
+			"AcroSrch:Query", "Find", "FindAgain", "FindAgainDoc", "FindPrevious", "FindPreviousDoc", "FullScreen", "GoBack", "GoBackDoc",
+			"GoForward", "GoToPage", "Print", "Quit", "SaveAs", "FitPage", "FitWidth", "Close", "CropPages", "ZoomViewIn"}) {
 			return true
 		}
 
