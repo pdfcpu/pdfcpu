@@ -118,7 +118,7 @@ func parseTimezone(s string, off int, relaxed bool) (h, m int, ok bool) {
 
 	o := s[off] // 14
 
-	if !timezoneSeparator(o) {
+	if !timezoneSeparator(o) || len(s) == off+1 {
 		// Ignore timezone on corrupt timezone separator if relaxed.
 		return 0, 0, relaxed
 	}
