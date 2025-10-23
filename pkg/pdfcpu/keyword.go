@@ -17,6 +17,7 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -31,6 +32,7 @@ func KeywordsList(ctx *model.Context) ([]string, error) {
 			ss = append(ss, keyword)
 		}
 	}
+	sort.Strings(ss)
 	return ss, nil
 }
 
