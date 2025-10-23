@@ -214,8 +214,29 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 	dictName := "rootDict"
 
 	d, err := validateDictEntry(xRefTable, rootDict, dictName, "ViewerPreferences", required, sinceVersion, nil)
-	if err != nil || d == nil {
-		return err
+	if err != nil {
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return err
+		}
+		arr, err := validateArrayEntry(xRefTable, rootDict, dictName, "ViewerPreferences", required, sinceVersion, nil)
+		if err != nil || len(arr) == 0 {
+			return err
+		}
+		// For an out-of-spec viewer preferences array, we assume it only contains boolean flags set to true.
+		model.ShowDigestedSpecViolation("viewer preferences array instead of dict")
+		d = types.NewDict()
+		for _, v := range arr {
+			n, ok := v.(types.Name)
+			if !ok {
+				return errors.New("pdfcpu: corrupt viewer preferences")
+			}
+			d[n.Value()] = types.Boolean(true)
+		}
+		return nil
+	}
+
+	if d == nil {
+		return nil
 	}
 
 	vp := model.ViewerPreferences{}
