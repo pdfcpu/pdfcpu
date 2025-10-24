@@ -125,6 +125,17 @@ func metaDataModifiedAfterInfoDict(xRefTable *model.XRefTable) (bool, error) {
 
 	if xmpMeta != nil {
 		xRefTable.CatalogXMPMeta = xmpMeta
+
+		// Extract PDF/A identification from XMP metadata
+		if pdfaIdent := xmpMeta.RDF.Description.GetPDFAIdentification(); pdfaIdent != nil {
+			// Initialize PDFA info if needed
+			if xRefTable.PDFA == nil {
+				xRefTable.PDFA = model.NewPDFAInfo()
+			}
+			// Record PDF/A metadata information
+			xRefTable.PDFA.SetFromMetadata(pdfaIdent)
+		}
+
 		if xRefTable.Info != nil {
 			if err := fixInfoDict(xRefTable, rootDict); err != nil {
 				return false, err
@@ -573,9 +584,22 @@ func validateOutputIntentDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// S: required, name
-	_, err = validateNameEntry(xRefTable, d, dictName, "S", REQUIRED, model.V10, nil)
+	subtype, err := validateNameEntry(xRefTable, d, dictName, "S", REQUIRED, model.V10, nil)
 	if err != nil {
 		return err
+	}
+
+	// Extract PDF/A subtype for PDF/A identification
+	if subtype != nil {
+		subtypeStr := subtype.String()
+		if model.IsPDFASubtype(subtypeStr) {
+			// Initialize PDFA info if needed
+			if xRefTable.PDFA == nil {
+				xRefTable.PDFA = model.NewPDFAInfo()
+			}
+			// Record PDF/A OutputIntent information
+			xRefTable.PDFA.SetFromOutputIntent(subtypeStr)
+		}
 	}
 
 	// OutputCondition, optional, text string
@@ -1224,6 +1248,11 @@ func validateRootObject(ctx *model.Context, rootDict types.Dict) error {
 
 	// Validate links.
 	if err = checkForBrokenLinks(ctx); err == nil {
+		// Check PDF/A consistency between metadata and OutputIntent
+		if xRefTable.PDFA != nil {
+			xRefTable.PDFA.CheckConsistency()
+		}
+
 		if log.ValidateEnabled() {
 			log.Validate.Println("*** validateRootObject end ***")
 		}
