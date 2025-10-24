@@ -83,7 +83,10 @@ func validateDestType(a types.Array, destType types.Name) error {
 
 func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 	if !validateDestinationArrayLength(a) {
-		return errors.Errorf("pdfcpu: validateDestinationArray: invalid length: %d", len(a))
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return errors.Errorf("pdfcpu: validateDestinationArray: invalid length: %d", len(a))
+		}
+		return nil
 	}
 
 	// Validate first element: indRef of page dict or pageNumber(int) of remote doc for remote Go-to Action or nil.

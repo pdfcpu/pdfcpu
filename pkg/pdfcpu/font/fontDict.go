@@ -86,14 +86,14 @@ func fontDescriptorIndRefs(fd types.Dict, lang string, font *model.FontResource)
 	}
 
 	font.CIDSet = fd.IndirectRefEntry("CIDSet")
-	if font.CIDSet == nil {
-		return ErrCorruptFontDict
-	}
+	// if font.CIDSet == nil {
+	// 	return ErrCorruptFontDict
+	// }
 
 	font.FontFile = fd.IndirectRefEntry("FontFile2")
-	if font.FontFile == nil {
-		return ErrCorruptFontDict
-	}
+	// if font.FontFile == nil {
+	// 	return ErrCorruptFontDict
+	// }
 
 	return nil
 }
@@ -131,9 +131,9 @@ func IndRefsForUserfontUpdate(xRefTable *model.XRefTable, d types.Dict, lang str
 	}
 
 	font.W = df.IndirectRefEntry("W")
-	if font.W == nil {
-		return ErrCorruptFontDict
-	}
+	// if font.W == nil {
+	// 	return ErrCorruptFontDict
+	// }
 
 	o, found = df.Find("FontDescriptor")
 	if !found {

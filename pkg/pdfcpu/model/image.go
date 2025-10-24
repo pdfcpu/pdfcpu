@@ -572,107 +572,115 @@ func encodeJPEG(img image.Image) ([]byte, string, error) {
 	return buf.Bytes(), cs, err
 }
 
-func createImageBuf(xRefTable *XRefTable, img image.Image, imgA image.Image, format string) ([]byte, []byte, int, string, error) {
-	var buf []byte
-	var sm []byte // soft mask aka alpha mask
-	var bpc int
-	// TODO if dpi != 72 resample (applies to PNG,JPG,TIFF)
+func handleRGBImage(xRefTable *XRefTable, img image.Image) ([]byte, []byte, int, string, error) {
+	var (
+		buf, sm []byte
+		cs      = DeviceRGBCS
+		bpc     int
+	)
 
-	if format == "jpeg" {
-		bb, cs, err := encodeJPEG(img)
-		return bb, sm, 8, cs, err
-	}
-
-	var cs string
-
-	switch img := img.(type) {
+	switch im := img.(type) {
 	case *image.RGBA:
 		// A 32-bit alpha-premultiplied color, having 8 bits for each of red, green, blue and alpha.
 		// An alpha-premultiplied color component C has been scaled by alpha (A), so it has valid values 0 <= C <= A.
-		cs = DeviceRGBCS
 		bpc = 8
-		buf, sm = writeRGBAImageBuf(img)
+		buf, sm = writeRGBAImageBuf(im)
 
 	case *image.RGBA64:
 		// A 64-bit alpha-premultiplied color, having 16 bits for each of red, green, blue and alpha.
 		// An alpha-premultiplied color component C has been scaled by alpha (A), so it has valid values 0 <= C <= A.
-		cs = DeviceRGBCS
 		bpc = 16
-		buf = writeRGBA64ImageBuf(img)
+		buf = writeRGBA64ImageBuf(im)
 
 	case *image.NRGBA:
 		// Non-alpha-premultiplied 32-bit color.
-		cs = DeviceRGBCS
 		bpc = 8
-		buf, sm = writeNRGBAImageBuf(xRefTable, img)
+		buf, sm = writeNRGBAImageBuf(xRefTable, im)
 
 	case *image.NRGBA64:
 		// Non-alpha-premultiplied 64-bit color.
-		cs = DeviceRGBCS
 		bpc = 16
-		buf, sm = writeNRGBA64ImageBuf(xRefTable, img)
-
-	case *image.Alpha:
-		return buf, sm, bpc, cs, errors.New("pdfcpu: unsupported image type: Alpha")
-
-	case *image.Alpha16:
-		return buf, sm, bpc, cs, errors.New("pdfcpu: unsupported image type: Alpha16")
-
-	case *image.Gray:
-		// 8-bit grayscale color.
-		cs = DeviceGrayCS
-		bpc = 8
-		if imgA != nil {
-			switch imgA := imgA.(type) {
-			case *image.Alpha:
-				sm = writeSoftmask(xRefTable, imgA)
-			case *image.Alpha16:
-				sm = writeSoftmask16(xRefTable, imgA)
-			}
-		}
-		buf = writeGrayImageBuf(img)
-
-	case *image.Gray16:
-		// 16-bit grayscale color.
-		cs = DeviceGrayCS
-		bpc = 16
-		if imgA != nil {
-			switch imgA := imgA.(type) {
-			case *image.Alpha:
-				sm = writeSoftmask(xRefTable, imgA)
-			case *image.Alpha16:
-				sm = writeSoftmask16(xRefTable, imgA)
-			}
-		}
-		buf = writeGray16ImageBuf(img)
-
-	case *image.CMYK:
-		// Opaque CMYK color, having 8 bits for each of cyan, magenta, yellow and black.
-		cs = DeviceCMYKCS
-		bpc = 8
-		buf = writeCMYKImageBuf(img)
+		buf, sm = writeNRGBA64ImageBuf(xRefTable, im)
 
 	case *image.YCbCr:
-		cs = DeviceRGBCS
 		bpc = 8
-		buf, sm = writeRGBAImageBuf(convertToRGBA(img))
+		buf, sm = writeRGBAImageBuf(convertToRGBA(im))
 
 	case *image.NYCbCrA:
-		cs = DeviceRGBCS
 		bpc = 8
-		buf, sm = writeRGBAImageBuf(convertNYCbCrAToRGBA(img))
+		buf, sm = writeRGBAImageBuf(convertNYCbCrAToRGBA(im))
 
 	case *image.Paletted:
 		// In-memory image of uint8 indices into a given palette.
-		cs = DeviceRGBCS
 		bpc = 8
-		buf, sm = writeRGBAImageBuf(convertToRGBA(img))
-
-	default:
-		return buf, sm, bpc, cs, errors.Errorf("pdfcpu: unsupported image type: %T", img)
+		buf, sm = writeRGBAImageBuf(convertToRGBA(im))
 	}
 
 	return buf, sm, bpc, cs, nil
+}
+
+func handleGrayImage(xRefTable *XRefTable, img image.Image, imgA image.Image) ([]byte, []byte, int, string, error) {
+	var (
+		buf, sm []byte
+		cs      = DeviceGrayCS
+		bpc     int
+	)
+
+	writeSoftmaskIfNeeded := func() {
+		if imgA == nil {
+			return
+		}
+		switch a := imgA.(type) {
+		case *image.Alpha:
+			sm = writeSoftmask(xRefTable, a)
+		case *image.Alpha16:
+			sm = writeSoftmask16(xRefTable, a)
+		}
+	}
+
+	switch im := img.(type) {
+	case *image.Gray:
+		// 8-bit grayscale color.
+		bpc = 8
+		writeSoftmaskIfNeeded()
+		buf = writeGrayImageBuf(im)
+
+	case *image.Gray16:
+		// 16-bit grayscale color.
+		bpc = 16
+		writeSoftmaskIfNeeded()
+		buf = writeGray16ImageBuf(im)
+	}
+
+	return buf, sm, bpc, cs, nil
+}
+
+func handleCMYKImage(img *image.CMYK) ([]byte, []byte, int, string, error) {
+	// Opaque CMYK color, having 8 bits for each of cyan, magenta, yellow and black.
+	buf := writeCMYKImageBuf(img)
+	return buf, nil, 8, DeviceCMYKCS, nil
+}
+
+func createImageBuf(xRefTable *XRefTable, img image.Image, imgA image.Image, format string) ([]byte, []byte, int, string, error) {
+	if format == "jpeg" {
+		bb, cs, err := encodeJPEG(img)
+		return bb, nil, 8, cs, err
+	}
+
+	switch im := img.(type) {
+	case *image.RGBA, *image.RGBA64, *image.NRGBA, *image.NRGBA64,
+		*image.YCbCr, *image.NYCbCrA, *image.Paletted:
+		return handleRGBImage(xRefTable, im)
+
+	case *image.Gray, *image.Gray16:
+		return handleGrayImage(xRefTable, im, imgA)
+
+	case *image.CMYK:
+		return handleCMYKImage(im)
+
+	default:
+		return nil, nil, 0, "", errors.Errorf("pdfcpu: unsupported image type: %T", im)
+	}
 }
 
 func colorSpaceForJPEGColorModel(cm color.Model) string {

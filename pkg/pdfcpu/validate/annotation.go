@@ -221,8 +221,12 @@ func validateAnnotationDictText(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// StateModel, text string, since V1.5
+	sinceVersion = model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V14
+	}
 	validate := func(s string) bool { return types.MemberOf(s, []string{"Marked", "Review"}) }
-	stateModel, err := validateStringEntry(xRefTable, d, dictName, "StateModel", state != nil, model.V15, validate)
+	stateModel, err := validateStringEntry(xRefTable, d, dictName, "StateModel", state != nil, sinceVersion, validate)
 	if err != nil {
 		return err
 	}

@@ -869,6 +869,24 @@ func validateNumberEntry(xRefTable *model.XRefTable, d types.Dict, dictName, ent
 	return o, nil
 }
 
+func validateNumberEntryToFloat(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, validate func(f float64) bool) (float64, error) {
+	obj, err := validateNumberEntry(xRefTable, d, dictName, entryName, required, sinceVersion, validate)
+	if err != nil {
+		return 0, err
+	}
+
+	f := 0.0
+
+	switch o := obj.(type) {
+	case types.Integer:
+		f = float64(o.Value())
+	case types.Float:
+		f = o.Value()
+	}
+
+	return f, nil
+}
+
 func validateNumberArray(xRefTable *model.XRefTable, o types.Object) (types.Array, error) {
 	if log.ValidateEnabled() {
 		log.Validate.Println("validateNumberArray begin")

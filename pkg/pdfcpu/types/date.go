@@ -110,13 +110,13 @@ func timezoneSeparator(c byte) bool {
 	return c == '+' || c == '-' || c == 'Z'
 }
 
-// func validateTimezoneSeparator(c byte) bool {
-// 	return c == '+' || c == '-' || c == 'Z'
-// }
+func emptyTimeZone(t string, relaxed bool) bool {
+	return t == "" || relaxed && (t == "'" || t == "'0")
+}
 
 func parseTimezone(s string, off int, relaxed bool) (h, m int, ok bool) {
 
-	o := s[off] // 14
+	o := s[off]
 
 	if !timezoneSeparator(o) || len(s) == off+1 {
 		// Ignore timezone on corrupt timezone separator if relaxed.
@@ -133,7 +133,7 @@ func parseTimezone(s string, off int, relaxed bool) (h, m int, ok bool) {
 
 	if o == 'Z' {
 		t := s[off:]
-		if t == "" || relaxed && (t == "'" || t == "'0") {
+		if emptyTimeZone(t, relaxed) {
 			return 0, 0, true
 		}
 	}

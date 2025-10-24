@@ -22,6 +22,33 @@ import (
 	"github.com/pkg/errors"
 )
 
+func validateDirection(xRefTable *model.XRefTable, d types.Dict, dictName string, vp *model.ViewerPreferences) error {
+	validate := func(s string) bool {
+		return types.MemberOf(s, []string{"L2R", "R2L"})
+	}
+
+	n, err := validateNameEntry(xRefTable, d, dictName, "Direction", OPTIONAL, model.V13, validate)
+	if err != nil {
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return err
+		}
+		s, err := validateStringEntry(xRefTable, d, dictName, "Direction", OPTIONAL, model.V13, validate)
+		if err != nil {
+			return err
+		}
+		if s != nil {
+			vp.Direction = model.DirectionFor(*s)
+		}
+		return nil
+	}
+
+	if n != nil {
+		vp.Direction = model.DirectionFor(n.String())
+	}
+
+	return nil
+}
+
 func validatePageBoundaries(xRefTable *model.XRefTable, d types.Dict, dictName string, vp *model.ViewerPreferences) error {
 	validate := func(s string) bool {
 		return types.MemberOf(s, []string{"MediaBox", "CropBox", "BleedBox", "TrimBox", "ArtBox"})
@@ -263,19 +290,8 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 		vp.NonFullScreenPageMode = (*model.NonFullScreenPageMode)(model.PageModeFor(n.String()))
 	}
 
-	validate = func(s string) bool { return types.MemberOf(s, []string{"L2R", "R2L"}) }
-	n, err = validateNameEntry(xRefTable, d, dictName, "Direction", OPTIONAL, model.V13, validate)
-	if err != nil {
-		s, err := validateStringEntry(xRefTable, d, dictName, "Direction", OPTIONAL, model.V13, validate)
-		if err != nil {
-			return err
-		}
-		if s != nil {
-			vp.Direction = model.DirectionFor(*s)
-		}
-	}
-	if vp.Direction == nil && n != nil {
-		vp.Direction = model.DirectionFor(n.String())
+	if err := validateDirection(xRefTable, d, dictName, &vp); err != nil {
+		return err
 	}
 
 	if err := validatePageBoundaries(xRefTable, d, dictName, &vp); err != nil {

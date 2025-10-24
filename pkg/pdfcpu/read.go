@@ -3036,8 +3036,6 @@ func dereferenceXRefTable(c context.Context, ctx *model.Context) error {
 		log.Read.Println("dereferenceXRefTable: begin")
 	}
 
-	xRefTable := ctx.XRefTable
-
 	// Note for encrypted files:
 	// Mandatory provide userpw to open & display file.
 	// Access may be restricted (Decode access privileges).
@@ -3054,11 +3052,6 @@ func dereferenceXRefTable(c context.Context, ctx *model.Context) error {
 
 	// For each xRefTableEntry assign a Object either by parsing from file or pointing to a decompressed object.
 	if err := dereferenceObjects(c, ctx); err != nil {
-		return err
-	}
-
-	// Identify an optional Version entry in the root object/catalog.
-	if err := identifyRootVersion(xRefTable); err != nil {
 		return err
 	}
 
