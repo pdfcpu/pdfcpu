@@ -246,6 +246,9 @@ func doLoadUserFonts() error {
 		return err
 	}
 
+	print("loading fonts")
+	println("loading fonts")
+
 	for _, f := range files {
 		if !isSupportedFontFile(f.Name()) {
 			continue
@@ -276,9 +279,9 @@ func LoadUserFonts() error {
 	return loadUserFontsErr
 }
 
-// ensureUserFontsLoaded is a convenience wrapper for callers that cannot handle errors.
+// EnsureUserFontsLoaded is a convenience wrapper for callers that cannot handle errors.
 // It loads user fonts lazily and logs any errors to stderr.
-func ensureUserFontsLoaded() {
+func EnsureUserFontsLoaded() {
 	if err := LoadUserFonts(); err != nil {
 		fmt.Fprintf(os.Stderr, "pdfcpu: warning: failed to load user fonts: %v\n", err)
 	}
@@ -289,7 +292,7 @@ func BoundingBox(fontName string) *types.Rectangle {
 	if IsCoreFont(fontName) {
 		return metrics.CoreFontMetrics[fontName].FBox
 	}
-	ensureUserFontsLoaded()
+	EnsureUserFontsLoaded()
 	UserFontMetricsLock.RLock()
 	defer UserFontMetricsLock.RUnlock()
 	llx := UserFontMetrics[fontName].LLx
@@ -304,7 +307,7 @@ func CharWidth(fontName string, r rune) int {
 	if IsCoreFont(fontName) {
 		return metrics.CoreFontCharWidth(fontName, int(r))
 	}
-	ensureUserFontsLoaded()
+	EnsureUserFontsLoaded()
 	UserFontMetricsLock.RLock()
 	defer UserFontMetricsLock.RUnlock()
 	ttf, ok := UserFontMetrics[fontName]
@@ -415,6 +418,7 @@ func CoreFontNames() []string {
 
 // IsUserFont returns true for installed TrueType fonts.
 func IsUserFont(fontName string) bool {
+	EnsureUserFontsLoaded()
 	UserFontMetricsLock.RLock()
 	defer UserFontMetricsLock.RUnlock()
 	_, ok := UserFontMetrics[fontName]
@@ -424,6 +428,7 @@ func IsUserFont(fontName string) bool {
 // UserFontNames return a list of all installed TrueType fonts.
 func UserFontNames() []string {
 	ss := []string{}
+	EnsureUserFontsLoaded()
 	UserFontMetricsLock.RLock()
 	defer UserFontMetricsLock.RUnlock()
 	for fontName := range UserFontMetrics {
@@ -435,6 +440,7 @@ func UserFontNames() []string {
 // UserFontNamesVerbose return a list of all installed TrueType fonts including glyph count.
 func UserFontNamesVerbose() []string {
 	ss := []string{}
+	EnsureUserFontsLoaded()
 	UserFontMetricsLock.RLock()
 	defer UserFontMetricsLock.RUnlock()
 	for fName, ttf := range UserFontMetrics {

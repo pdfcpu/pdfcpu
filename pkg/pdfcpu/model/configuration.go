@@ -344,26 +344,6 @@ func onlyHidden(files []os.DirEntry) bool {
 	return true
 }
 
-func initUserFonts() error {
-	files, err := os.ReadDir(font.UserFontDir)
-	if err != nil {
-		return err
-	}
-
-	if onlyHidden(files) {
-		// Ensure Roboto font for form filling.
-		fontname := "Roboto-Regular"
-		if log.CLIEnabled() {
-			log.CLI.Printf("installing user font:")
-		}
-		if err := font.InstallFontFromBytes(font.UserFontDir, fontname, robotoFontFileBytes); err != nil {
-			return err
-		}
-	}
-
-	return font.LoadUserFonts()
-}
-
 // ensureFontDirInitialized sets up the font directory without loading fonts.
 // Font loading is deferred until fonts are actually needed.
 func ensureFontDirInitialized() error {
@@ -383,7 +363,6 @@ func ensureFontDirInitialized() error {
 		}
 	}
 
-	// Don't load fonts here - they will be loaded lazily when first accessed
 	return nil
 }
 

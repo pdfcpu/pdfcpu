@@ -207,6 +207,7 @@ func planeString(i int) string {
 // CreateUserFontDemoFiles creates single page PDF for each Unicode plane covered.
 func CreateUserFontDemoFiles(dir, fn string) error {
 	w, h := 7800, 7800
+	font.EnsureUserFontsLoaded()
 	font.UserFontMetricsLock.RLock()
 	ttf, ok := font.UserFontMetrics[fn]
 	font.UserFontMetricsLock.RUnlock()
@@ -229,6 +230,7 @@ func CreateUserFontDemoFiles(dir, fn string) error {
 			return err
 		}
 		fileName := filepath.Join(dir, fn+"_"+planeString(i)+".pdf")
+		log.CLI.Printf("%s\n", fileName)
 		if err := CreatePDFFile(xRefTable, fileName, nil); err != nil {
 			return err
 		}
