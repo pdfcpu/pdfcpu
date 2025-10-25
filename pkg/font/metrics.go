@@ -240,14 +240,12 @@ func doLoadUserFonts() error {
 		return nil
 	}
 
-	//fmt.Printf("loading userFonts from %s\n", UserFontDir)
+	//fmt.Printf("*** loading userFonts from %s ***\n", UserFontDir)
+
 	files, err := os.ReadDir(UserFontDir)
 	if err != nil {
 		return err
 	}
-
-	print("loading fonts")
-	println("loading fonts")
 
 	for _, f := range files {
 		if !isSupportedFontFile(f.Name()) {

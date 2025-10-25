@@ -142,7 +142,7 @@ func ValidateSignatures(inFile string, all bool, conf *model.Configuration) ([]*
 	}
 	conf.Cmd = model.VALIDATESIGNATURE
 
-	if _, err := LoadCertificates(); err != nil {
+	if err := pdfcpu.LoadCertificates(); err != nil {
 		return nil, err
 	}
 

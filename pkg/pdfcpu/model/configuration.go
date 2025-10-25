@@ -367,10 +367,10 @@ func ensureFontDirInitialized() error {
 }
 
 func initCertificates() error {
-	// NOTE
-	// Load certs managed by The European Union Trusted Lists (EUTL) (https://eidas.ec.europa.eu/efda/trust-services/browse/eidas/tls).
+	// Install certs managed by The European Union Trusted Lists (EUTL) (https://eidas.ec.europa.eu/efda/trust-services/browse/eidas/tls).
+	// The embedded files are unpacked and stored into the pdfcpu config dir.
 	// Additional certificates may be loaded using the corresponding CLI command: pdfcpu certificates import
-	// Certificates will be loaded by corresponding commands where applicable.
+	// Certificates are loaded into memory lazily.
 
 	files, err := os.ReadDir(CertDir)
 	if err != nil {
@@ -427,15 +427,19 @@ func EnsureDefaultConfigAt(path string, override bool) error {
 		return err
 	}
 
+	// Initialize pdfcpu config/fonts dir for userfonts then extract and install Roboto as default Unicode font for form filling.
+	// Other userfonts have to be installed via `pdfcpu font install` or copied over from another pdfcpu config dir.
+	// Userfonts are loaded into memory lazily.
 	font.UserFontDir = filepath.Join(configDir, "fonts")
 	if err := os.MkdirAll(font.UserFontDir, os.ModePerm); err != nil {
 		return err
 	}
-	// Initialize font directory and install Roboto if needed, but defer actual loading
 	if err := ensureFontDirInitialized(); err != nil {
 		return err
 	}
 
+	// Initialize pdfcpu config/cert dir, then extract and install certificates.
+	// Certificates are loaded into memory lazily.
 	CertDir = filepath.Join(configDir, "certs")
 	if err := os.MkdirAll(CertDir, os.ModePerm); err != nil {
 		return err
