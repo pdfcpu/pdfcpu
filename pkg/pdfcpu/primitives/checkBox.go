@@ -764,7 +764,7 @@ func (cb *CheckBox) render(p *model.Page, pageNr int, fonts model.FontMap) error
 func CalcCheckBoxASNames(ctx *model.Context, d types.Dict) (types.Name, types.Name, error) {
 	obj, found := d.Find("AP")
 	if !found {
-		return "", "", errors.New("pdfcpu: corrupt form field: missing entry \"AP\"")
+		return "", "", errors.New("pdfcpu: corrupt form field: missing entry \"AP\"") /////////// !!!!!
 	}
 	d, err := ctx.DereferenceDict(obj)
 	if err != nil {

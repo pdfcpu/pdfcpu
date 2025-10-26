@@ -552,34 +552,6 @@ func fillRadioButtonGroup(
 	return nil
 }
 
-func fillCheckBoxKid(ctx *model.Context, kids types.Array, off bool) (*types.Name, error) {
-	d, err := ctx.DereferenceDict(kids[0])
-	if err != nil {
-		return nil, err
-	}
-
-	d1, err := locateAPN(ctx.XRefTable, d)
-	if err != nil {
-		return nil, err
-	}
-
-	offName, yesName, err := primitives.CalcCheckBoxASNames(ctx, d1)
-	if err != nil {
-		return nil, err
-	}
-
-	asName := yesName
-	if off {
-		asName = offName
-	}
-
-	if _, found := d.Find("AS"); found {
-		d["AS"] = asName
-	}
-
-	return &asName, nil
-}
-
 func fillCheckBox(
 	ctx *model.Context,
 	d types.Dict,
@@ -622,31 +594,31 @@ func fillCheckBox(
 		v = types.Name("Yes")
 	}
 
+	d["V"] = v
+	d1 := d
+	var err error
+
 	kids := d.ArrayEntry("Kids")
 	if len(kids) == 1 {
-		asName, err := fillCheckBoxKid(ctx, kids, v == types.Name("Off"))
+		d1, err = ctx.DereferenceDict(kids[0])
 		if err != nil {
 			return err
 		}
-		d["V"] = *asName
-		*ok = true
-		return nil
 	}
 
-	d["V"] = v
-	if _, found := d.Find("AS"); found {
-		offName, yesName, err := primitives.CalcCheckBoxASNames(ctx, d)
+	if _, found := d1.Find("AS"); found {
+		offName, yesName, err := primitives.CalcCheckBoxASNames(ctx, d1)
 		if err != nil {
 			return err
 		}
-		//fmt.Printf("off:<%s> yes:<%s>\n", offName, yesName)
 		asName := yesName
 		if v == "Off" {
 			asName = offName
 		}
-		d["AS"] = asName
+		d1["AS"] = asName
 		d["V"] = asName
 	}
+
 	*ok = true
 	return nil
 }
