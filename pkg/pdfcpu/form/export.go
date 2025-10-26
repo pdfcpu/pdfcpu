@@ -374,12 +374,9 @@ func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, nam
 		cb.Value = strings.TrimSpace(s)
 	}
 
-	opts, err := parseOptions(xRefTable, d, REQUIRED)
+	opts, err := parseOptions(xRefTable, d, OPTIONAL)
 	if err != nil {
 		return nil, err
-	}
-	if len(opts) == 0 {
-		return nil, errors.New("pdfcpu: combobox missing Opts")
 	}
 
 	cb.Options = opts
@@ -534,12 +531,9 @@ func extractListBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name
 		lb.Values = ss
 	}
 
-	opts, err := parseOptions(xRefTable, d, REQUIRED)
+	opts, err := parseOptions(xRefTable, d, OPTIONAL)
 	if err != nil {
 		return nil, err
-	}
-	if len(opts) == 0 {
-		return nil, errors.New("pdfcpu: listbox missing Opts")
 	}
 
 	lb.Options = opts
@@ -647,11 +641,8 @@ func exportCh(
 	ok *bool) error {
 
 	ff := d.IntEntry("Ff")
-	if ff == nil {
-		return errors.New("pdfcpu: corrupt form field: missing entry Ff")
-	}
 
-	if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
+	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
 
 		for _, cb := range form.ComboBoxes {
 			if cb.Name == name && cb.ID == id {
@@ -676,7 +667,7 @@ func exportCh(
 		}
 	}
 
-	multi := primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
+	multi := ff != nil && primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
 	lb, err := extractListBox(xRefTable, i, d, id, name, altName, locked, multi)
 	if err != nil {
 		return err

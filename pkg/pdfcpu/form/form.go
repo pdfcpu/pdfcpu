@@ -294,12 +294,12 @@ func parseStringLiteralArray(xRefTable *model.XRefTable, d types.Dict, key strin
 
 func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, error) {
 
-	vv, err := parseOptions(xRefTable, d, OPTIONAL)
+	opts, err := parseOptions(xRefTable, d, OPTIONAL)
 	if err != nil {
 		return nil, err
 	}
-	if len(vv) > 0 {
-		return vv, nil
+	if len(opts) > 0 {
+		return opts, nil
 	}
 
 	for _, o := range d.ArrayEntry("Kids") {
@@ -321,21 +321,21 @@ func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 			}
 			if k != "Off" {
 				found := false
-				for _, opt := range vv {
+				for _, opt := range opts {
 					if opt == k {
 						found = true
 						break
 					}
 				}
 				if !found {
-					vv = append(vv, k)
+					opts = append(opts, k)
 				}
 				break
 			}
 		}
 	}
 
-	return vv, nil
+	return opts, nil
 }
 
 func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
@@ -508,12 +508,12 @@ func collectListBox(xRefTable *model.XRefTable, multi bool, d types.Dict, f *Fie
 func collectCh(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
 	ff := d.IntEntry("Ff")
 
-	vv, err := parseOptions(xRefTable, d, REQUIRED)
+	opts, err := parseOptions(xRefTable, d, OPTIONAL)
 	if err != nil {
 		return err
 	}
 
-	f.Opts = strings.Join(vv, ",")
+	f.Opts = strings.Join(opts, ",")
 	if len(f.Opts) > 0 {
 		fm.opt = true
 	}
@@ -1460,23 +1460,17 @@ func resetMultiListBox(xRefTable *model.XRefTable, d types.Dict, opts []string) 
 
 func resetCh(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRef) error {
 	ff := d.IntEntry("Ff")
-	if ff == nil {
-		return errors.New("pdfcpu: corrupt form field: missing entry \"Ff\"")
-	}
 
-	opts, err := parseOptions(ctx.XRefTable, d, REQUIRED)
+	opts, err := parseOptions(ctx.XRefTable, d, OPTIONAL)
 	if err != nil {
 		return err
-	}
-	if len(opts) == 0 {
-		return errors.New("pdfcpu: missing Opts")
 	}
 
 	var ind types.Array
 
-	if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 || primitives.FieldFlags(*ff)&primitives.FieldMultiselect == 0 {
+	if ff != nil && (primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 || primitives.FieldFlags(*ff)&primitives.FieldMultiselect == 0) {
 		ind, err = resetComboBoxOrRegularListBox(d, opts, ff)
-	} else { // primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
+	} else {
 		ind, err = resetMultiListBox(ctx.XRefTable, d, opts)
 	}
 
@@ -1486,7 +1480,7 @@ func resetCh(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 
 	da := d.StringEntry("DA")
 
-	if primitives.FieldFlags(*ff)&primitives.FieldCombo == 0 {
+	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldCombo == 0 {
 		if err := primitives.EnsureListBoxAP(ctx, d, opts, ind, da, fonts); err != nil {
 			return err
 		}

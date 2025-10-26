@@ -44,11 +44,13 @@ func cacheResIDs(ctx *model.Context, pdf *primitives.PDF) error {
 		if err != nil {
 			return err
 		}
-		if inhPA.Resources["Font"] != nil {
-			pdf.FontResIDs[i] = inhPA.Resources["Font"].(types.Dict)
-		}
-		if inhPA.Resources["XObject"] != nil {
-			pdf.XObjectResIDs[i] = inhPA.Resources["XObject"].(types.Dict)
+		if inhPA != nil {
+			if inhPA.Resources["Font"] != nil {
+				pdf.FontResIDs[i] = inhPA.Resources["Font"].(types.Dict)
+			}
+			if inhPA.Resources["XObject"] != nil {
+				pdf.XObjectResIDs[i] = inhPA.Resources["XObject"].(types.Dict)
+			}
 		}
 	}
 	return nil
@@ -816,7 +818,7 @@ func fillListBox(
 	}
 
 	var vOld []string
-	multi := primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
+	multi := ff != nil && primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
 	if !multi {
 		if sl := d.StringLiteralEntry("V"); sl != nil {
 			s, err := types.StringLiteralToString(*sl)
@@ -877,20 +879,12 @@ func fillCh(
 	ff *int,
 	ok *bool) error {
 
-	if ff == nil {
-		return errors.New("pdfcpu: corrupt form field: missing entry Ff")
-	}
-
-	opts, err := parseOptions(ctx.XRefTable, d, REQUIRED)
+	opts, err := parseOptions(ctx.XRefTable, d, OPTIONAL)
 	if err != nil {
 		return err
 	}
 
-	if len(opts) == 0 {
-		return errors.New("pdfcpu: missing Opts")
-	}
-
-	if primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
+	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
 		return fillComboBox(ctx, d, id, name, opts, locked, format, fonts, fillDetails, ok)
 	}
 
