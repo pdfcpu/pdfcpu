@@ -480,7 +480,7 @@ All configuration string parameters support completion.
 
 e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, scale:0.5 abs, rot:0"
      "d:2"                 "scale:.75 abs, points:48"  "rot:-90, scale:0.75 rel"
-     "f:Courier, scale:0.75, str: 0.5 0.0 0.0, rot:20"
+     "fo:Courier, scale:0.75, str: 0.5 0.0 0.0, rot:20"
 
 
 `

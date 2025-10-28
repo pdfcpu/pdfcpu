@@ -93,7 +93,7 @@ type FieldMeta struct {
 	pageMax, defMax, valMax, idMax, nameMax, altNameMax int
 }
 
-func fields(xRefTable *model.XRefTable) (types.Array, error) {
+func Fields(xRefTable *model.XRefTable) (types.Array, error) {
 
 	if xRefTable.Form == nil {
 		return nil, errors.New("pdfcpu: no form available")
@@ -1025,7 +1025,7 @@ func FormFields(ctx *model.Context) ([]Field, *FieldMeta, error) {
 
 	xRefTable := ctx.XRefTable
 
-	fields, err := fields(xRefTable)
+	fields, err := Fields(xRefTable)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1279,7 +1279,7 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 
 	xRefTable := ctx.XRefTable
 
-	fields, err := fields(xRefTable)
+	fields, err := Fields(xRefTable)
 	if err != nil {
 		return false, err
 	}
@@ -1636,7 +1636,7 @@ func ResetFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error)
 
 	xRefTable := ctx.XRefTable
 
-	fields, err := fields(xRefTable)
+	fields, err := Fields(xRefTable)
 	if err != nil {
 		return false, err
 	}
@@ -1802,7 +1802,7 @@ func LockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) 
 
 	xRefTable := ctx.XRefTable
 
-	fields, err := fields(xRefTable)
+	fields, err := Fields(xRefTable)
 	if err != nil {
 		return false, err
 	}
@@ -1947,7 +1947,7 @@ func UnlockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 
 	xRefTable := ctx.XRefTable
 
-	fields, err := fields(xRefTable)
+	fields, err := Fields(xRefTable)
 	if err != nil {
 		return false, err
 	}

@@ -793,7 +793,7 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 // ExportForm extracts form data originating from source from xRefTable.
 func ExportForm(xRefTable *model.XRefTable, source string) (*FormGroup, bool, error) {
 
-	fields, err := fields(xRefTable)
+	fields, err := Fields(xRefTable)
 	if err != nil {
 		return nil, false, err
 	}

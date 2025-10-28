@@ -1148,7 +1148,7 @@ func FillForm(
 
 	xRefTable := ctx.XRefTable
 
-	fields, err := fields(xRefTable)
+	fields, err := Fields(xRefTable)
 	if err != nil {
 		return false, nil, err
 	}

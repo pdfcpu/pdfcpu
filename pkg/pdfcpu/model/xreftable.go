@@ -2870,6 +2870,152 @@ func (xRefTable *XRefTable) RemoveSignature() {
 	}
 }
 
+func removePageAnnotationForSig(xRefTable *XRefTable, pIndRef, indRef types.IndirectRef) error {
+	d, err := xRefTable.DereferenceDict(pIndRef)
+	if err != nil {
+		return err
+	}
+
+	obj, ok := d.Find("Annots")
+	if !ok {
+		return nil
+	}
+
+	annots, err := xRefTable.DereferenceArray(obj)
+	if err != nil || len(annots) == 0 {
+		return nil
+	}
+
+	arr := types.Array{}
+
+	for _, v := range annots {
+		if v != indRef {
+			arr = append(arr, v)
+		}
+	}
+
+	if len(arr) == 0 {
+		delete(d, "Annots")
+		return nil
+	}
+
+	d["Annots"] = arr
+	return nil
+}
+
+func removeSigAnnot(xRefTable *XRefTable, indRef types.IndirectRef, d types.Dict) error {
+	subType := d.Subtype()
+	if subType != nil && *subType == "Widget" {
+		if _, ok := d.Find("Rect"); !ok {
+			return nil
+		}
+		p := d.IndirectRefEntry("P")
+		if p == nil {
+			return nil
+		}
+		if err := removePageAnnotationForSig(xRefTable, *p, indRef); err != nil {
+			return err
+		}
+	}
+
+	// The widget annotation may be a kid.
+
+	kids := d.ArrayEntry("Kids")
+	if len(kids) != 1 {
+		return nil
+	}
+
+	indRef1, ok := kids[0].(types.IndirectRef)
+	if !ok {
+		return nil
+	}
+
+	d1, err := xRefTable.DereferenceDict(indRef1)
+	if err != nil || len(d1) == 0 {
+		return nil
+	}
+
+	subType = d1.Subtype()
+	if subType != nil && *subType == "Widget" {
+		if _, ok := d1.Find("Rect"); !ok {
+			return nil
+		}
+		p := d1.IndirectRefEntry("P")
+		if p == nil {
+			return nil
+		}
+		if err := removePageAnnotationForSig(xRefTable, *p, indRef1); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (xRefTable *XRefTable) RemoveSignatures() error {
+	d := xRefTable.RootDict
+	delete(d, "DSS")
+	delete(d, "Legal")
+	delete(d, "Perm")
+	delete(d, "Extensions")
+
+	if xRefTable.Form == nil {
+		return nil
+	}
+
+	obj, ok := xRefTable.Form.Find("Fields")
+	if !ok || obj == nil {
+		delete(d, "AcroForm")
+		return nil
+	}
+
+	fields, err := xRefTable.DereferenceArray(obj)
+	if err != nil {
+		return err
+	}
+	if len(fields) == 0 {
+		delete(d, "AcroForm")
+		return nil
+	}
+
+	arr := types.Array{}
+
+	for _, v := range fields {
+		// NOTE validation has already taken care of the bad guys.
+		indRef, ok := v.(types.IndirectRef)
+		if !ok {
+			continue
+		}
+		d, err := xRefTable.DereferenceDict(indRef)
+		if err != nil {
+			continue
+		}
+		if len(d) == 0 {
+			continue
+		}
+		ft := d.NameEntry("FT")
+		if ft != nil && *ft != "Sig" {
+			arr = append(arr, indRef)
+			continue
+		}
+
+		if err := removeSigAnnot(xRefTable, indRef, d); err != nil {
+			return err
+		}
+	}
+
+	if len(arr) == 0 {
+		// Only Sigfields encountered.
+		delete(d, "AcroForm")
+		return nil
+	}
+
+	xRefTable.Form["Fields"] = arr // TODO need indRef?
+	delete(xRefTable.Form, "SigFlags")
+
+	return nil
+}
+
 func (xRefTable *XRefTable) BindPrinterPreferences(vp *ViewerPreferences, d types.Dict) {
 	if vp.PrintArea != nil {
 		d.InsertName("PrintArea", vp.PrintArea.String())

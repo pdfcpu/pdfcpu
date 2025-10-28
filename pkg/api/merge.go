@@ -39,8 +39,25 @@ func appendTo(rs io.ReadSeeker, fName string, ctxDest *model.Context, dividerPag
 		return pdfcpu.ErrUnsupportedVersion
 	}
 
+	if err := ctxSource.RemoveSignatures(); err != nil {
+		return err
+	}
+
 	// Merge source context into dest context.
 	return pdfcpu.MergeXRefTables(fName, ctxSource, ctxDest, false, dividerPage)
+}
+
+func appendFile(fName string, ctxDest *model.Context, dividerPage bool) error {
+	f, err := os.Open(fName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if log.CLIEnabled() {
+		log.CLI.Println(fName)
+	}
+	return appendTo(f, filepath.Base(fName), ctxDest, dividerPage)
 }
 
 // MergeRaw merges a sequence of PDF streams and writes the result to w.
@@ -98,20 +115,11 @@ func prepDestContext(destFile string, rs io.ReadSeeker, conf *model.Configuratio
 		ctxDest.EnsureVersionForWriting()
 	}
 
+	if err := ctxDest.RemoveSignatures(); err != nil {
+		return nil, err
+	}
+
 	return ctxDest, nil
-}
-
-func appendFile(fName string, ctxDest *model.Context, dividerPage bool) error {
-	f, err := os.Open(fName)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	if log.CLIEnabled() {
-		log.CLI.Println(fName)
-	}
-	return appendTo(f, filepath.Base(fName), ctxDest, dividerPage)
 }
 
 // Merge concatenates inFiles.
