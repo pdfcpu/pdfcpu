@@ -1,20 +1,21 @@
-# pdfcpu: a Go PDF processor
+# pdfcpu: a Go PDF processor and CLI
 
-[![Open in Visual Studio Code](https://img.shields.io/static/v1?logo=visualstudiocode&label=&message=Open%20in%20Visual%20Studio%20Code&labelColor=2c2c32&color=007acc&logoColor=007acc)](https://open.vscode.dev/pdfcpu/pdfcpu)
 [![Test](https://github.com/pdfcpu/pdfcpu/workflows/Test/badge.svg)](https://github.com/pdfcpu/pdfcpu/actions)
 [![Coverage Status](https://coveralls.io/repos/github/pdfcpu/pdfcpu/badge.svg?branch=master)](https://coveralls.io/github/pdfcpu/pdfcpu?branch=master)
 [![GoDoc](https://godoc.org/github.com/pdfcpu/pdfcpu?status.svg)](https://pkg.go.dev/github.com/pdfcpu/pdfcpu)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pdfcpu/pdfcpu)](https://goreportcard.com/report/github.com/pdfcpu/pdfcpu)
 [![Hex.pm](https://img.shields.io/hexpm/l/plug.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20pdfcpu%20Guru-006BFF)](https://gurubase.io/g/pdfcpu)
+
 [![Latest release](https://img.shields.io/github/release/pdfcpu/pdfcpu.svg)](https://github.com/pdfcpu/pdfcpu/releases)
+[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/hhrutter)
+
 
 <a href="https://pdfcpu.io"><img src="resources/logoSmall.png" width="150"></a>
 <a href="https://pdfa.org"><img src="resources/pdfa.png" width="75"></a>
 
-pdfcpu is a PDF processing library written in [Go](http://golang.org) supporting encryption.
-It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000).
+pdfcpu is a PDF processing library written in [Go](https://go.dev/) that supports encryption and offers both an API and a command-line interface (CLI). It is compatible with all PDF versions with basic support and ongoing improvement for PDF 2.0 (ISO-32000-2).
 
-Support for PDF 2.0 is basic and ongoing work.
 
 ## Motivation
 
@@ -41,7 +42,8 @@ This is an effort to build a comprehensive PDF processing library from the groun
 
 ## Focus
 
-The main focus lies on strong support for batch processing and scripting via a rich command line. At the same time pdfcpu wants to make it easy to integrate PDF processing into your Go based backend system by providing a robust command set.
+The primary emphasis is on providing robust assistance for batch processing and scripting through a comprehensive command-line interface.
+Simultaneously, pdfcpu aims to simplify the integration of PDF processing into your Go-based backend system by offering a versatile set of commands.
 
 ## Command Set
 
@@ -50,10 +52,12 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [booklet](https://pdfcpu.io/generate/booklet)
 * [bookmarks](https://pdfcpu.io/bookmarks/bookmarks)
 * [boxes](https://pdfcpu.io/boxes/boxes)
+* [certificates](https://pdfcpu.io/core/certs)
 * [change owner password](https://pdfcpu.io/encrypt/change_opw)
 * [change user password](https://pdfcpu.io/encrypt/change_upw)
 * [collect](https://pdfcpu.io/core/collect)
-* [create](https://pdfcpu.io/generate/create)
+* [config](https://pdfcpu.io/config/config)
+* [create](https://pdfcpu.io/create/create)
 * [crop](https://pdfcpu.io/core/crop)
 * [cut](https://pdfcpu.io/generate/cut)
 * [decrypt](https://pdfcpu.io/encrypt/decryptPDF)
@@ -73,25 +77,27 @@ The main focus lies on strong support for batch processing and scripting via a r
 * [pagelayout](https://pdfcpu.io/pagelayout/pagelayout)
 * [pagemode](https://pdfcpu.io/pagemode/pagemode)
 * [pages](https://pdfcpu.io/pages/pages)
-* [permissions](https://pdfcpu.io/encrypt/perm_add)
+* [permissions](https://pdfcpu.io/encrypt/perm_set)
 * [portfolio](https://pdfcpu.io/portfolio/portfolio)
 * [poster](https://pdfcpu.io/generate/poster)
 * [properties](https://pdfcpu.io/properties/properties)
 * [resize](https://pdfcpu.io/core/resize)
 * [rotate](https://pdfcpu.io/core/rotate)
+* [signatures](http://pdfcpu.io/core/sign)
 * [split](https://pdfcpu.io/core/split)
 * [stamp](https://pdfcpu.io/core/stamp)
 * [trim](https://pdfcpu.io/core/trim)
-* [validate](https://pdfcpu.io/core/validate) 👉 now including rudimentory support for PDF 2.0
+* [validate](https://pdfcpu.io/core/validate)
 * [viewerpref](https://pdfcpu.io/viewerpref/viewerpref)
 * [watermark](https://pdfcpu.io/core/watermark)
 * [zoom](https://pdfcpu.io/core/zoom)
 
 ## Documentation
 
-* The main entry point is [pdfcpu.io](https://pdfcpu.io).
-* For CLI examples also go to [pdfcpu.io](https://pdfcpu.io). There you will find explanations of all the commands and their parameters.
-* For API examples of all pdfcpu operations please refer to [GoDoc](https://pkg.go.dev/github.com/pdfcpu/pdfcpu/pkg/api).
+* [pdfcpu.io](https://pdfcpu.io)
+* [API tests](https://github.com/pdfcpu/pdfcpu/tree/master/pkg/api/test)
+* [API samples](https://github.com/pdfcpu/pdfcpu/tree/master/pkg/samples) 
+* CLI usage: `$ pdfcpu help cmd`
 
 ### GoDoc
 
@@ -147,10 +153,10 @@ $ pdfcpu version
 
 ### Run in a Docker container
 
-```
+```shell
 $ docker build -t pdfcpu .
-# mount current folder into container to process local files
-$ docker run -it --mount type=bind,source="$(pwd)",target=/app pdfcpu ./pdfcpu validate /app/pdfs/a.pdf
+# mount current host folder into container as /app to process files in the local host folder
+$ docker run -it -v "$(pwd)":/app pdfcpu validate a.pdf
 ```
 
 ## Contributing
@@ -204,7 +210,8 @@ Thanks 💚 goes to these wonderful people:
 | [<img src="https://avatars.githubusercontent.com/u/15472552?v=4" width="100px"/><br/><sub><b>Rafael Garcia Argente</b></sub>](https://github.com/rgargente) | [<img src="https://avatars.githubusercontent.com/u/710057?v=4" width="100px"/><br/><sub><b>truyet</b></sub>](https://github.com/truyet) | [<img src="https://avatars.githubusercontent.com/u/5031217?v=4" width="100px"/><br/><sub><b>Christian Nicola</b></sub>](https://github.com/christiannicola) | [<img src="https://avatars.githubusercontent.com/u/3233970?v=4" width="100px"/><br/><sub><b>Benjamin Krill</b></sub>](https://github.com/kben) | [<img src="https://avatars.githubusercontent.com/u/26521615?v=4" width="100px"/><br/><sub><b>Peter Wyatt</b></sub>](https://github.com/petervwyatt) | [<img src="https://avatars.githubusercontent.com/u/3142701?v=4" width="100px"/><br/><sub><b>Kroum Tzanev</b></sub>](https://github.com/kpym) | [<img src="https://avatars.githubusercontent.com/u/992878?v=4" width="100px"/><br/><sub><b>Stefan Huber</b></sub>](https://github.com/signalwerk) |
 | [<img src="https://avatars.githubusercontent.com/u/59667587?v=4" width="100px"/><br/><sub><b>Juan Iscar</b></sub>](https://github.com/juaismar) | [<img src="https://avatars.githubusercontent.com/u/20135478?v=4" width="100px"/><br/><sub><b>Eng Zer Jun</b></sub>](https://github.com/Juneezee) | [<img src="https://avatars.githubusercontent.com/u/28459131?v=4" width="100px"/><br/><sub><b>Dmitry Ivanov</b></sub>](https://github.com/hant0508)|[<img src="https://avatars.githubusercontent.com/u/16866547?v=4" width="100px"/><br/><sub><b>Rene Kaufmann</b></sub>](https://github.com/HeavyHorst)|[<img src="https://avatars.githubusercontent.com/u/26827864?v=4" width="100px"/><br/><sub><b>Christian Heusel</b></sub>](https://github.com/christian-heusel) | [<img src="https://avatars.githubusercontent.com/u/305673?v=4" width="100px"/><br/><sub><b>Chris</b></sub>](https://github.com/freshteapot) | [<img src="https://avatars.githubusercontent.com/u/2892794?v=4" width="100px"/><br/><sub><b>Lukasz Czaplinski</b></sub>](https://github.com/scoiatael) |
 [<img src="https://avatars.githubusercontent.com/u/49206635?v=4" width="100px"/><br/><sub><b>Joel Silva Schutz</b></sub>](https://github.com/joelschutz) | [<img src="https://avatars.githubusercontent.com/u/28219076?v=4" width="100px"/><br/><sub><b>semvis123</b></sub>](https://github.com/semvis123) | [<img src="https://avatars.githubusercontent.com/u/8717479?v=4"  width="100px"/><br/><sub><b>guangwu</b></sub>](https://github.com/testwill) | [<img src="https://avatars.githubusercontent.com/u/4014912?v=4"  width="100px"/><br/><sub><b>Yoshiki Nakagawa</b></sub>](https://github.com/yyoshiki41) | [<img src="https://avatars.githubusercontent.com/u/432860?v=4"  width="100px"/><br/><sub><b>Steve van Loben Sels</b></sub>](https://github.com/stevevls) | [<img src="https://avatars.githubusercontent.com/u/6083533?v=4" width="100px"/><br/><sub><b>Yaofu</b></sub>](https://github.com/mygityf) | [<img src="https://avatars.githubusercontent.com/u/15724278?v=4" width="100px"/><br/><sub><b>vsenko</b></sub>](https://github.com/vsenko) |
-[<img src="https://avatars.githubusercontent.com/u/16507?v=4" width="100px"/><br/><sub><b>Alexis Hildebrandt</b></sub>](https://github.com/afh) | [<img src="https://avatars.githubusercontent.com/u/1395040?v=4" width="100px"/><br/><sub><b>Sivukhin Nikita</b></sub>](https://github.com/sivukhin) | [<img src="https://avatars.githubusercontent.com/u/247730?v=4"  width="100px"/><br/><sub><b>Joachim Bauch</b></sub>](https://github.com/fancycode)| [<img src="https://avatars.githubusercontent.com/u/127291996?v=4"  width="100px"/><br/><sub><b>kalimit</b></sub>](https://github.com/kalimit) | | | 
+[<img src="https://avatars.githubusercontent.com/u/16507?v=4" width="100px"/><br/><sub><b>Alexis Hildebrandt</b></sub>](https://github.com/afh) | [<img src="https://avatars.githubusercontent.com/u/1395040?v=4" width="100px"/><br/><sub><b>Sivukhin Nikita</b></sub>](https://github.com/sivukhin)  | [<img src="https://avatars.githubusercontent.com/u/247730?v=4"  width="100px"/><br/><sub><b>Joachim Bauch</b></sub>](https://github.com/fancycode) | [<img src="https://avatars.githubusercontent.com/u/127291996?v=4"  width="100px"/><br/><sub><b>kalimit</b></sub>](https://github.com/kalimit) | [<img src="https://avatars.githubusercontent.com/u/5080535?v=4"  width="100px"/><br/><sub><b>Andreas Erhard</b></sub>](https://github.com/xelan) | [<img src="https://avatars.githubusercontent.com/u/32378535?v=4"  width="100px"/><br/><sub><b>Matsumoto Toshi</b></sub>](https://github.com/toshi1127) | [<img src="https://avatars.githubusercontent.com/u/440634?v=4"  width="100px"/><br/><sub><b>Carl Wilson</b></sub>](https://github.com/carlwilson) |
+[<img src="https://avatars.githubusercontent.com/u/9918222?v=4" width="100px"/><br/><sub><b>LNAhri</b></sub>](https://github.com/LNAhri) | [<img src="https://avatars.githubusercontent.com/u/142796877?v=4" width="100px"/><br/><sub><b>vishal</b></sub>](https://github.com/vishal-at) | [<img src="https://avatars.githubusercontent.com/u/18169566?v=4" width="100px"/><br/><sub><b>Andreas Deininger</b></sub>](https://github.com/deining) | [<img src="https://avatars.githubusercontent.com/u/5825735?v=4" width="100px"/><br/><sub><b>Robert Raines</b></sub>](https://github.com/solintllc-robert) | [<img src="https://avatars.githubusercontent.com/u/316176?v=4" width="100px"/><br/><sub><b>Frank Anderson</b></sub>](https://github.com/frob) | | 
 
 
 

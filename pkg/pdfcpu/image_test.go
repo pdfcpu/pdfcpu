@@ -87,7 +87,7 @@ func streamDictForJPGFile(xRefTable *model.XRefTable, fileName string) (*types.S
 
 	}
 
-	sd, err := model.CreateDCTImageObject(xRefTable, bb, c.Width, c.Height, 8, cs)
+	sd, err := model.CreateDCTImageStreamDict(xRefTable, bb, c.Width, c.Height, 8, cs)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func streamDictForImageFile(xRefTable *model.XRefTable, fileName string) (*types
 	}
 	defer f.Close()
 
-	sd, _, _, err := model.CreateImageStreamDict(xRefTable, f, false, false)
+	sd, _, _, err := model.CreateImageStreamDict(xRefTable, f)
 	return sd, err
 }
 
@@ -217,7 +217,7 @@ func TestReadWritePNGAndWEBP(t *testing.T) {
 }
 
 // Read in a device gray image stream dump from disk.
-func read1BPCDeviceGrayFlateStreamDump(xRefTable *model.XRefTable, fileName string) (*types.StreamDict, error) {
+func read1BPCDeviceGrayFlateStreamDump(fileName string) (*types.StreamDict, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
@@ -257,7 +257,7 @@ func TestReadDeviceGrayWritePNG(t *testing.T) {
 	filename := "DeviceGray"
 	path := filepath.Join(inDir, filename+".raw")
 
-	sd, err := read1BPCDeviceGrayFlateStreamDump(xRefTable, path)
+	sd, err := read1BPCDeviceGrayFlateStreamDump(path)
 	if err != nil {
 		t.Fatalf("err: %v\n", err)
 	}
@@ -305,7 +305,7 @@ func TestReadDeviceGrayWritePNG(t *testing.T) {
 }
 
 // Read in a device CMYK image stream dump from disk.
-func read8BPCDeviceCMYKFlateStreamDump(xRefTable *model.XRefTable, fileName string) (*types.StreamDict, error) {
+func read8BPCDeviceCMYKFlateStreamDump(fileName string) (*types.StreamDict, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
@@ -352,7 +352,7 @@ func TestReadCMYKWriteTIFF(t *testing.T) {
 	filename := "DeviceCMYK"
 	path := filepath.Join(inDir, filename+".raw")
 
-	sd, err := read8BPCDeviceCMYKFlateStreamDump(xRefTable, path)
+	sd, err := read8BPCDeviceCMYKFlateStreamDump(path)
 	if err != nil {
 		t.Errorf("err: %v\n", err)
 	}

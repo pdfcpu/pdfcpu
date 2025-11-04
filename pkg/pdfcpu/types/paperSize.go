@@ -82,31 +82,31 @@ var PaperSize = map[string]*Dim{
 	"SRA3++": {2835, 4008}, // 12.6" x 18.3"	320 x 464 mm
 
 	// American
-	"SuperB": {936, 1368}, //    13" x 19"
+	"SuperB": {936, 1368}, // 13" x 19"
 	"B+":     {936, 1368},
 
-	"Tabloid":      {791, 1225}, //    11" x 17" 		ANSIB, DobleCarta
-	"ExtraTabloid": {865, 1296}, //    12" x 18"		ARCHB, Arch2
-	"Ledger":       {1225, 791}, //    17" x 11" 		ANSIB
-	"Legal":        {612, 1009}, // 8 1/2" x 14"
+	"Tabloid":      {792, 1224}, //    11" x 17" 		ANSIB, DobleCarta
+	"ExtraTabloid": {864, 1296}, //    12" x 18"		ARCHB, Arch2
+	"Ledger":       {1224, 792}, //    17" x 11" 		ANSIB
+	"Legal":        {612, 1008}, // 8 1/2" x 14"
 
 	"GovLegal": {612, 936}, // 8 1/2" x 13"
 	"Oficio":   {612, 936},
 	"Folio":    {612, 936},
 
-	"Letter":         {612, 791}, // 8 1/2" x 11"		ANSIA
-	"Carta":          {612, 791},
-	"AmericanQuarto": {612, 791},
+	"Letter":         {612, 792}, // 8 1/2" x 11"		ANSIA
+	"Carta":          {612, 792},
+	"AmericanQuarto": {612, 792},
 
-	"DobleCarta": {791, 1225}, // 11" x 17"			Tabloid, ANSIB
+	"DobleCarta": {792, 1224}, // 11" x 17"			Tabloid, ANSIB
 
-	"GovLetter": {576, 757}, //     8" x 10 1/2"
+	"GovLetter": {576, 756}, //     8" x 10 1/2"
 	"Executive": {522, 756}, // 7 1/4" x 10 1/2"
 
-	"HalfLetter": {397, 612}, // 5 1/2" x 8 1/2"
-	"Memo":       {397, 612},
-	"Statement":  {397, 612},
-	"Stationary": {397, 612},
+	"HalfLetter": {396, 612}, // 5 1/2" x 8 1/2"
+	"Memo":       {396, 612},
+	"Statement":  {396, 612},
+	"Stationary": {396, 612},
 
 	"JuniorLegal": {360, 576}, // 5" x 8"
 	"IndexCard":   {360, 576},
@@ -114,11 +114,11 @@ var PaperSize = map[string]*Dim{
 	"Photo": {288, 432}, // 4" x 6"
 
 	// ANSI/ASME Y14.1
-	"ANSIA": {612, 791},   // 8 1/2" x 11" Letter, Carta, AmericanQuarto
-	"ANSIB": {791, 1225},  //    11" x 17" Ledger, Tabloid, DobleCarta
-	"ANSIC": {1225, 1585}, //    17" x 22"
-	"ANSID": {1585, 2449}, //    22" x 34"
-	"ANSIE": {2449, 3170}, //    34" x 44"
+	"ANSIA": {612, 792},   // 8 1/2" x 11" Letter, Carta, AmericanQuarto
+	"ANSIB": {792, 1224},  //    11" x 17" Ledger, Tabloid, DobleCarta
+	"ANSIC": {1224, 1584}, //    17" x 22"
+	"ANSID": {1584, 2448}, //    22" x 34"
+	"ANSIE": {2448, 3168}, //    34" x 44"
 	"ANSIF": {2016, 2880}, //    28" x 40"
 
 	// ANSI/ASME Y14.1 Architectural series
@@ -131,12 +131,12 @@ var PaperSize = map[string]*Dim{
 	"ARCHE2": {1871, 2736}, // 26" x 38"
 	"ARCHE3": {1945, 2809}, // 27" x 39"
 
-	"Arch1": {649, 865},   //  9" x 12"	ARCHA
-	"Arch2": {865, 1296},  // 12" x 18"	ARCHB, ExtraTabloide
-	"Arch3": {1296, 1729}, // 18" x 24"	ARCHC
-	"Arch4": {1729, 2591}, // 24" x 36"	ARCHD
-	"Arch5": {2160, 3025}, // 30" x 42"	ARCHE1
-	"Arch6": {2591, 3456}, // 36" x 48"	ARCHE
+	"Arch1": {648, 864},   //  9" x 12"	ARCHA
+	"Arch2": {864, 1296},  // 12" x 18"	ARCHB, ExtraTabloide
+	"Arch3": {1296, 1728}, // 18" x 24"	ARCHC
+	"Arch4": {1728, 2592}, // 24" x 36"	ARCHD
+	"Arch5": {2160, 3024}, // 30" x 42"	ARCHE1
+	"Arch6": {2592, 3456}, // 36" x 48"	ARCHE
 
 	// American Uncut
 	"Bond":  {1584, 1224}, //     22" x 17"
@@ -154,7 +154,7 @@ var PaperSize = map[string]*Dim{
 	"Crown":          {1170, 1512}, // 16 1/4" x 21"
 	"DoubleCrown":    {1440, 2160}, //     20" x 30"
 	"Quad":           {2160, 2880}, //     30" x 40"
-	"Demy":           {1242, 1620}, // 17 3/4" x 22 1/2"
+	"Demy":           {1278, 1620}, // 17 3/4" x 22 1/2"
 	"DoubleDemy":     {1620, 2556}, // 22 1/2" x 35 1/2"
 	"Medium":         {1314, 1656}, // 18 1/4" x 23"
 	"Royal":          {1440, 1804}, //     20" x 25 1/16"
@@ -164,7 +164,7 @@ var PaperSize = map[string]*Dim{
 	"Foolscap":       {972, 1224},  // 13 1/2" x 17"
 	"DoubleFoolscap": {1224, 1944}, //     17" x 27"
 
-	"F4": {595, 935}, // 8 1/4" x 13"
+	"F4": {594, 936}, // 8 1/4" x 13"
 
 	// GB/T 148-1997 D Series China
 	"D0": {2166, 3016}, // 29.9" x 41.9"	764 x 1064 mm

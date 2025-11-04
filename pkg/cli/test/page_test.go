@@ -35,7 +35,7 @@ func TestPagesCommand(t *testing.T) {
 	}
 
 	// Insert an empty page before pages 1 and 2.
-	cmd := cli.InsertPagesCommand(inFile, outFile, []string{"-2"}, conf, "before")
+	cmd := cli.InsertPagesCommand(inFile, outFile, []string{"-2"}, conf, "before", nil)
 	if _, err := cli.Process(cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}

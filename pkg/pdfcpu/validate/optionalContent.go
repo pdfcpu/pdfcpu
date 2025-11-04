@@ -190,7 +190,7 @@ func validateOCGs(xRefTable *model.XRefTable, d types.Dict, dictName, entryName 
 
 	// see 8.11.2.2
 
-	o, err := d.Entry(dictName, entryName, OPTIONAL)
+	o, _, err := d.Entry(dictName, entryName, OPTIONAL)
 	if err != nil || o == nil {
 		return err
 	}

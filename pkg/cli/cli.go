@@ -115,7 +115,7 @@ func InsertPages(cmd *Command) ([]string, error) {
 	if cmd.Mode == model.INSERTPAGESAFTER {
 		before = false
 	}
-	return nil, api.InsertPagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, before, cmd.Conf)
+	return nil, api.InsertPagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, before, cmd.PageConf, cmd.Conf)
 }
 
 // RemovePages removes selected pages.
@@ -185,7 +185,7 @@ func ExtractAttachments(cmd *Command) ([]string, error) {
 
 // ListInfo gathers information about inFile and returns the result as []string.
 func ListInfo(cmd *Command) ([]string, error) {
-	return ListInfoFiles(cmd.InFiles, cmd.PageSelection, cmd.BoolVal1, cmd.Conf)
+	return ListInfoFiles(cmd.InFiles, cmd.PageSelection, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
 }
 
 // CreateCheatSheetsFonts creates single page PDF cheat sheets for user fonts in current dir.
@@ -273,6 +273,24 @@ func RemoveAnnotations(cmd *Command) ([]string, error) {
 // ListImages returns inFiles embedded images.
 func ListImages(cmd *Command) ([]string, error) {
 	return ListImagesFile(cmd.InFiles, cmd.PageSelection, cmd.Conf)
+}
+
+// UpdateImages replaces image objects.
+func UpdateImages(cmd *Command) ([]string, error) {
+	var (
+		objNr  int
+		pageNr int
+		id     string
+	)
+	if cmd.IntVal > 0 {
+		if cmd.StringVal != "" {
+			pageNr = cmd.IntVal
+			id = cmd.StringVal
+		} else {
+			objNr = cmd.IntVal
+		}
+	}
+	return nil, api.UpdateImagesFile(cmd.InFiles[0], cmd.InFiles[1], *cmd.OutFile, objNr, pageNr, id, cmd.Conf)
 }
 
 // Dump known object to stdout.
@@ -421,4 +439,24 @@ func ResetViewerPreferences(cmd *Command) ([]string, error) {
 // Zoom in/out of selected pages either by zoom factor or corresponding margin.
 func Zoom(cmd *Command) ([]string, error) {
 	return nil, api.ZoomFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Zoom, cmd.Conf)
+}
+
+// ListCertificates returns installed certificates.
+func ListCertificates(cmd *Command) ([]string, error) {
+	return ListCertificatesAll(cmd.BoolVal1, cmd.Conf)
+}
+
+// ListCertificates returns installed certificates.
+func ImportCertificates(cmd *Command) ([]string, error) {
+	return api.ImportCertificates(cmd.InFiles)
+}
+
+// InspectCertificates prints the certificate details.
+func InspectCertificates(cmd *Command) ([]string, error) {
+	return api.InspectCertificates(cmd.InFiles)
+}
+
+// ValidateSignatures validates contained digital signatures.
+func ValidateSignatures(cmd *Command) ([]string, error) {
+	return api.ValidateSignaturesFile(*cmd.InFile, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
 }

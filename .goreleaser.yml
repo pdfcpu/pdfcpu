@@ -1,23 +1,35 @@
+version: 2
+
 builds:
-- main: ./cmd/pdfcpu
-  env:
-    - CGO_ENABLED=0
-  ldflags:
-     - '-s -w -X main.version={{.Version}} -X github.com/pdfcpu/pdfcpu/pkg/pdfcpu.VersionStr={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}} -X main.builtBy=goreleaser'
-  goos:
-    - js
-    - linux
-    - darwin
-    - windows
-  goarch:
-    - "386"
-    - arm64
-    - wasm
-    - amd64
+  - main: ./cmd/pdfcpu
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - '-s -w -X main.version={{.Version}} -X github.com/pdfcpu/pdfcpu/pkg/pdfcpu.VersionStr={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}} -X main.builtBy=goreleaser'
+    goos:
+      - linux
+      - darwin
+      - windows
+      - js
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - wasm
+      - "386"
+    goarm:
+      - 7
+    ignore:
+      - goos: windows
+        goarch: arm
+        goarm: 7
+      - goos: windows
+        goarch: arm64
+      
 dist: ./dist
+
 archives:
-  -
-    format: tar.xz
+  - format: tar.xz
     format_overrides:
       - goos: windows
         format: zip
@@ -40,5 +52,13 @@ changelog:
   sort: asc
   filters:
     exclude:
-    - '^docs:'
-    - '^test:'
+      - '^docs:'
+      - '^test:'
+
+release:
+  github:
+    owner: pdfcpu
+    name: pdfcpu
+  draft: false  # Optional: Set to true if you want to create drafts and not publish immediately
+  prerelease: false  # Optional: Set to true if it's a prerelease
+

@@ -28,6 +28,16 @@ import (
 
 // This gets rid of the gopkg.in/yaml.v2 dependency for wasm builds.
 
+func handleCreationDate(v string, c *Configuration) error {
+	c.CreationDate = v
+	return nil
+}
+
+func handleVersion(v string, c *Configuration) error {
+	c.Version = v
+	return nil
+}
+
 func handleCheckFileNameExt(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
@@ -131,6 +141,33 @@ func handleConfEncryptKeyLength(v string, c *Configuration) error {
 	return nil
 }
 
+func handleTimeout(v string, c *Configuration) error {
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return errors.Errorf("timeout is numeric > 0, got: %s", v)
+	}
+	c.Timeout = i
+	return nil
+}
+
+func handleTimeoutCRL(v string, c *Configuration) error {
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return errors.Errorf("timeoutCRL is numeric > 0, got: %s", v)
+	}
+	c.TimeoutCRL = i
+	return nil
+}
+
+func handleTimeoutOCSP(v string, c *Configuration) error {
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return errors.Errorf("timeoutOCSP is numeric > 0, got: %s", v)
+	}
+	c.TimeoutOCSP = i
+	return nil
+}
+
 func handleConfPermissions(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
 	if err != nil {
@@ -157,6 +194,21 @@ func handleConfUnit(v string, c *Configuration) error {
 	return nil
 }
 
+func handlePreferredCertRevocationChecker(v string, c *Configuration) error {
+	v1 := strings.ToLower(v)
+	switch v1 {
+	case "crl":
+		c.PreferredCertRevocationChecker = CRL
+	case "ocsp":
+		c.PreferredCertRevocationChecker = OCSP
+	case "":
+		c.PreferredCertRevocationChecker = CRL
+	default:
+		return errors.Errorf("invalid preferredCertRevocationChecker: %s", v)
+	}
+	return nil
+}
+
 func handleTimestampFormat(v string, c *Configuration) error {
 	c.TimestampFormat = v
 	return nil
@@ -167,35 +219,22 @@ func handleDateFormat(v string, c *Configuration) error {
 	return nil
 }
 
-func handleOptimizeDuplicateContentStreams(k, v string, c *Configuration) error {
+func boolean(k, v string) (bool, error) {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
+		return false, errors.Errorf("config key %s is boolean", k)
 	}
-	c.OptimizeDuplicateContentStreams = v == "true"
-	return nil
-}
-
-func handleCreateBookmarks(k, v string, c *Configuration) error {
-	v = strings.ToLower(v)
-	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
-	}
-	c.CreateBookmarks = v == "true"
-	return nil
-}
-
-func handleNeedAppearances(k, v string, c *Configuration) error {
-	v = strings.ToLower(v)
-	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
-	}
-	c.NeedAppearances = v == "true"
-	return nil
+	return v == "true", nil
 }
 
 func parseKeysPart1(k, v string, c *Configuration) (bool, error) {
 	switch k {
+
+	case "created":
+		return true, handleCreationDate(v, c)
+
+	case "version":
+		return true, handleVersion(v, c)
 
 	case "checkFileNameExt":
 		return true, handleCheckFileNameExt(k, v, c)
@@ -225,38 +264,66 @@ func parseKeysPart1(k, v string, c *Configuration) (bool, error) {
 	return false, nil
 }
 
-func parseKeysPart2(k, v string, c *Configuration) error {
+func parseKeysPart2(k, v string, c *Configuration) (bool, error) {
 	switch k {
 
 	case "encryptUsingAES":
-		return handleConfEncryptUsingAES(k, v, c)
+		return true, handleConfEncryptUsingAES(k, v, c)
 
 	case "encryptKeyLength":
-		return handleConfEncryptKeyLength(v, c)
+		return true, handleConfEncryptKeyLength(v, c)
 
 	case "permissions":
-		return handleConfPermissions(v, c)
+		return true, handleConfPermissions(v, c)
 
 	case "unit", "units":
-		return handleConfUnit(v, c)
+		return true, handleConfUnit(v, c)
 
 	case "timestampFormat":
-		return handleTimestampFormat(v, c)
+		return true, handleTimestampFormat(v, c)
 
 	case "dateFormat":
-		return handleDateFormat(v, c)
+		return true, handleDateFormat(v, c)
 
-	case "optimizeDuplicateContentStreams":
-		return handleOptimizeDuplicateContentStreams(k, v, c)
+	case "timeout":
+		return true, handleTimeout(v, c)
 
-	case "createBookmarks":
-		return handleCreateBookmarks(k, v, c)
+	case "timeoutCRL":
+		return true, handleTimeoutCRL(v, c)
 
-	case "needAppearances":
-		return handleNeedAppearances(k, v, c)
+	case "timeoutOCSP":
+		return true, handleTimeoutOCSP(v, c)
+
+	case "preferredCertRevocationChecker":
+		return true, handlePreferredCertRevocationChecker(v, c)
 	}
 
-	return nil
+	return false, nil
+}
+
+func parseKeysPart3(k, v string, c *Configuration) (err error) {
+	switch k {
+
+	case "optimize":
+		c.Optimize, err = boolean(k, v)
+
+	case "optimizeResourceDicts":
+		c.OptimizeResourceDicts, err = boolean(k, v)
+
+	case "optimizeDuplicateContentStreams":
+		c.OptimizeDuplicateContentStreams, err = boolean(k, v)
+
+	case "createBookmarks":
+		c.CreateBookmarks, err = boolean(k, v)
+
+	case "needAppearances":
+		c.NeedAppearances, err = boolean(k, v)
+
+	case "offline":
+		c.Offline, err = boolean(k, v)
+	}
+
+	return err
 }
 
 func parseKeyValue(k, v string, c *Configuration) error {
@@ -267,13 +334,25 @@ func parseKeyValue(k, v string, c *Configuration) error {
 	if ok {
 		return nil
 	}
-	return parseKeysPart2(k, v, c)
+
+	ok, err = parseKeysPart2(k, v, c)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+
+	return parseKeysPart3(k, v, c)
 }
 
 func parseConfigFile(r io.Reader, configPath string) error {
 	//fmt.Println("parseConfigFile For JS")
 	var conf Configuration
 	conf.Path = configPath
+
+	// TODO add to config.yml
+	conf.OptimizeBeforeWriting = true
 
 	s := bufio.NewScanner(r)
 	for s.Scan() {

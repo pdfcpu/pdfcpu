@@ -115,6 +115,8 @@ type PDF struct {
 	RadioBtnAPs     map[float64]*AP            `json:"-"`
 	HasForm         bool                       `json:"-"`
 	OldFieldIDs     types.StringSet            `json:"-"`
+	Offline         bool                       `json:"-"`
+	Timeout         int                        `json:"-"`
 	httpClient      *http.Client
 }
 
@@ -492,7 +494,7 @@ func (pdf *PDF) DuplicateField(ID string) bool {
 	if pdf.FieldIDs[ID] || pdf.OldFieldIDs[ID] {
 		return true
 	}
-	oldID, err := types.EscapeUTF16String(ID)
+	oldID, err := types.EscapedUTF16String(ID)
 	if err != nil {
 		return true
 	}

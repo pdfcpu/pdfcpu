@@ -65,7 +65,7 @@ func ExampleSplitFile() {
 	// Create dual page PDFs for in.pdf in outDir using the default configuration.
 	SplitFile("in.pdf", "outDir", 2, nil)
 
-	// Create a sequence of PDFs representing bookmark secions.
+	// Create a sequence of PDFs representing bookmark sections.
 	SplitFile("in.pdf", "outDir", 0, nil)
 }
 
@@ -98,10 +98,10 @@ func ExampleMergeAppendFile() {
 func ExampleInsertPagesFile() {
 
 	// Insert a blank page into in.pdf before page #3.
-	InsertPagesFile("in.pdf", "", []string{"3"}, true, nil)
+	InsertPagesFile("in.pdf", "", []string{"3"}, true, nil, nil)
 
 	// Insert a blank page into in.pdf after every page.
-	InsertPagesFile("in.pdf", "", nil, false, nil)
+	InsertPagesFile("in.pdf", "", nil, false, nil, nil)
 }
 
 func ExampleRemovePagesFile() {

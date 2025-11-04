@@ -18,7 +18,9 @@ package pdfcpu
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/angel-one/pdfcpu/pkg/log"
 	pdffont "github.com/angel-one/pdfcpu/pkg/pdfcpu/font"
@@ -63,20 +65,87 @@ func optimizeContentStreamUsage(ctx *model.Context, sd *types.StreamDict, objNr 
 	return nil, nil
 }
 
-func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber int) error {
-	if !ctx.OptimizeDuplicateContentStreams {
-		return nil
-	}
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("identifyPageContent begin")
+func removeEmptyContentStreams(ctx *model.Context, pageDict types.Dict, obj types.Object, pageObjNumber int) error {
+	var contentArr types.Array
+
+	if ir, ok := obj.(types.IndirectRef); ok {
+
+		objNr := ir.ObjectNumber.Value()
+		entry, found := ctx.FindTableEntry(objNr, ir.GenerationNumber.Value())
+		if !found {
+			return errors.Errorf("removeEmptyContentStreams: obj#:%d illegal indRef for Contents\n", pageObjNumber)
+		}
+
+		contentStreamDict, ok := entry.Object.(types.StreamDict)
+		if ok {
+			if err := contentStreamDict.Decode(); err != nil {
+				return errors.Errorf("invalid content stream obj#%d: %v", pageObjNumber, err)
+			}
+			if len(contentStreamDict.Content) == 0 {
+				pageDict.Delete("Contents")
+			}
+			return nil
+		}
+
+		contentArr, ok = entry.Object.(types.Array)
+		if !ok {
+			return errors.Errorf("removeEmptyContentStreams: obj#:%d page content entry neither stream dict nor array.\n", pageObjNumber)
+		}
+
+	} else if contentArr, ok = obj.(types.Array); !ok {
+		return errors.Errorf("removeEmptyContentStreams: obj#:%d corrupt page content array", pageObjNumber)
 	}
 
+	var newContentArr types.Array
+
+	for _, c := range contentArr {
+
+		ir, ok := c.(types.IndirectRef)
+		if !ok {
+			return errors.Errorf("removeEmptyContentStreams: obj#:%d corrupt page content array entry\n", pageObjNumber)
+		}
+
+		objNr := ir.ObjectNumber.Value()
+		entry, found := ctx.FindTableEntry(objNr, ir.GenerationNumber.Value())
+		if !found {
+			return errors.Errorf("removeEmptyContentStreams: obj#:%d illegal indRef for Contents\n", pageObjNumber)
+		}
+
+		contentStreamDict, ok := entry.Object.(types.StreamDict)
+		if !ok {
+			return errors.Errorf("identifyPageContent: obj#:%d page content entry is no stream dict\n", pageObjNumber)
+		}
+
+		if err := contentStreamDict.Decode(); err != nil {
+			return err
+		}
+		if len(contentStreamDict.Content) > 0 {
+			newContentArr = append(newContentArr, c)
+		}
+	}
+
+	pageDict["Contents"] = newContentArr
+
+	return nil
+}
+
+func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber int) error {
 	o, found := pageDict.Find("Contents")
 	if !found {
-		if log.OptimizeEnabled() {
-			log.Optimize.Println("identifyPageContent end: no \"Contents\"")
-		}
 		return nil
+	}
+
+	if err := removeEmptyContentStreams(ctx, pageDict, o, pageObjNumber); err != nil {
+		return err
+	}
+
+	o, found = pageDict.Find("Contents")
+	if !found {
+		return nil
+	}
+
+	if log.OptimizeEnabled() {
+		log.Optimize.Println("identifyPageContent begin")
 	}
 
 	var contentArr types.Array
@@ -115,7 +184,7 @@ func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber 
 		return errors.Errorf("identifyPageContent: obj#:%d corrupt page content array\n", pageObjNumber)
 	}
 
-	// TODO Activate content array opimization as soon as we have a proper test file.
+	// TODO Activate content array optimization as soon as we have a proper test file.
 
 	_ = contentArr
 
@@ -171,7 +240,7 @@ func resourcesDictForPageDict(xRefTable *model.XRefTable, pageDict types.Dict, p
 }
 
 // handleDuplicateFontObject returns nil or the object number of the registered font if it matches this font.
-func handleDuplicateFontObject(ctx *model.Context, fontDict types.Dict, fName, rName string, objNr, pageNumber int) (*int, error) {
+func handleDuplicateFontObject(ctx *model.Context, fontDict types.Dict, fName, rName string, objNr, pageNr int) (*int, error) {
 	// Get a slice of all font object numbers for font name.
 	fontObjNrs, found := ctx.Optimize.Fonts[fName]
 	if !found {
@@ -179,12 +248,16 @@ func handleDuplicateFontObject(ctx *model.Context, fontDict types.Dict, fName, r
 		return nil, nil
 	}
 
-	// Get the set of font object numbers for pageNumber.
-	pageFonts := ctx.Optimize.PageFonts[pageNumber]
+	// Get the set of font object numbers for pageNr.
+	pageFonts := ctx.Optimize.PageFonts[pageNr]
 
 	// Iterate over all registered font object numbers for font name.
 	// Check if this font dict matches the font dict of each font object number.
 	for _, fontObjNr := range fontObjNrs {
+
+		if fontObjNr == objNr {
+			continue
+		}
 
 		// Get the font object from the lookup table.
 		fontObject, ok := ctx.Optimize.FontObjects[fontObjNr]
@@ -212,7 +285,7 @@ func handleDuplicateFontObject(ctx *model.Context, fontDict types.Dict, fName, r
 			log.Optimize.Printf("handleDuplicateFontObject: redundant fontObj#:%d basefont %s already registered with obj#:%d !\n", objNr, fName, fontObjNr)
 		}
 
-		// Register new page font with pageNumber.
+		// Register new page font with pageNr.
 		// The font for font object number is used instead of objNr.
 		pageFonts[fontObjNr] = true
 
@@ -229,21 +302,21 @@ func handleDuplicateFontObject(ctx *model.Context, fontDict types.Dict, fName, r
 	return nil, nil
 }
 
-func pageImages(ctx *model.Context, pageNumber int) types.IntSet {
-	pageImages := ctx.Optimize.PageImages[pageNumber]
+func pageImages(ctx *model.Context, pageNr int) types.IntSet {
+	pageImages := ctx.Optimize.PageImages[pageNr]
 	if pageImages == nil {
 		pageImages = types.IntSet{}
-		ctx.Optimize.PageImages[pageNumber] = pageImages
+		ctx.Optimize.PageImages[pageNr] = pageImages
 	}
 
 	return pageImages
 }
 
-func pageFonts(ctx *model.Context, pageNumber int) types.IntSet {
-	pageFonts := ctx.Optimize.PageFonts[pageNumber]
+func pageFonts(ctx *model.Context, pageNr int) types.IntSet {
+	pageFonts := ctx.Optimize.PageFonts[pageNr]
 	if pageFonts == nil {
 		pageFonts = types.IntSet{}
-		ctx.Optimize.PageFonts[pageNumber] = pageFonts
+		ctx.Optimize.PageFonts[pageNr] = pageFonts
 	}
 
 	return pageFonts
@@ -265,16 +338,35 @@ func registerFontDictObjNr(ctx *model.Context, fName string, objNr int) {
 	}
 }
 
-// Get rid of redundant fonts for given fontResources dictionary.
-func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber, pageObjNumber int) error {
-	if log.OptimizeEnabled() {
-		log.Optimize.Printf("optimizeFontResourcesDict begin: page=%d pageObjNumber=%d %s\nPageFonts=%v\n", pageNumber, pageObjNumber, rDict, ctx.Optimize.PageFonts)
-	}
+func checkForEmbeddedFont(ctx *model.Context) bool {
+	return log.StatsEnabled() || ctx.Cmd == model.LISTINFO || ctx.Cmd == model.EXTRACTFONTS
+}
 
-	pageFonts := pageFonts(ctx, pageNumber)
+func qualifiedRName(rNamePrefix, rName string) string {
+	s := rName
+	if rNamePrefix != "" {
+		s = rNamePrefix + "." + rName
+	}
+	return s
+}
+
+// Get rid of redundant fonts for given fontResources dictionary.
+func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int, rNamePrefix string) error {
+	pageFonts := pageFonts(ctx, pageNr)
+
+	recordedCorrupt := false
 
 	// Iterate over font resource dict.
 	for rName, v := range rDict {
+
+		if v == nil {
+			if !recordedCorrupt {
+				// fontId with missing fontDict indRef.
+				ctx.Optimize.CorruptFontResDicts = append(ctx.Optimize.CorruptFontResDicts, rDict)
+				recordedCorrupt = true
+			}
+			continue
+		}
 
 		indRef, ok := v.(types.IndirectRef)
 		if !ok {
@@ -283,13 +375,10 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber,
 
 		objNr := int(indRef.ObjectNumber)
 
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeFontResourcesDict: processing font: %s, objj#=%d\n", rName, objNr)
-		}
+		qualifiedRName := qualifiedRName(rNamePrefix, rName)
 
 		if _, found := ctx.Optimize.FontObjects[objNr]; found {
 			// This font has already been registered.
-			//log.Optimize.Printf("optimizeFontResourcesDict: Fontobject %d already registered\n", objectNumber)
 			pageFonts[objNr] = true
 			continue
 		}
@@ -297,14 +386,14 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber,
 		// We are dealing with a new font.
 		fontDict, err := ctx.DereferenceFontDict(indRef)
 		if err != nil {
-			return err
+			if ctx.XRefTable.ValidationMode == model.ValidationStrict {
+				return err
+			}
+
+			fontDict = nil
 		}
 		if fontDict == nil {
 			continue
-		}
-
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeFontResourcesDict: fontDict: %s\n", fontDict)
 		}
 
 		// Get the unique font name.
@@ -313,12 +402,8 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber,
 			return err
 		}
 
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeFontResourcesDict: baseFont: prefix=%s name=%s\n", prefix, fName)
-		}
-
 		// Check if fontDict is a duplicate and if so return the object number of the original.
-		originalObjNr, err := handleDuplicateFontObject(ctx, fontDict, fName, rName, objNr, pageNumber)
+		originalObjNr, err := handleDuplicateFontObject(ctx, fontDict, fName, qualifiedRName, objNr, pageNr)
 		if err != nil {
 			return err
 		}
@@ -329,36 +414,68 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber,
 			ir := types.NewIndirectRef(*originalObjNr, 0)
 			rDict[rName] = *ir
 			ctx.IncrementRefCount(ir)
+			if log.OptimizeEnabled() {
+				log.Optimize.Printf("optimizeFontResourcesDict: redundant fontDict prefix=%s name=%s (objNr#%d -> objNr#%d)\n", prefix, fName, objNr, originalObjNr)
+			}
 			continue
 		}
 
 		registerFontDictObjNr(ctx, fName, objNr)
 
-		ctx.Optimize.FontObjects[objNr] =
-			&model.FontObject{
-				ResourceNames: []string{rName},
-				Prefix:        prefix,
-				FontName:      fName,
-				FontDict:      fontDict,
+		fontObj := model.FontObject{
+			ResourceNames: []string{qualifiedRName},
+			Prefix:        prefix,
+			FontName:      fName,
+			FontDict:      fontDict,
+		}
+
+		if checkForEmbeddedFont(ctx) {
+			fontObj.Embedded, err = pdffont.Embedded(ctx.XRefTable, fontDict, objNr)
+			if err != nil {
+				return err
 			}
+		}
+
+		ctx.Optimize.FontObjects[objNr] = &fontObj
 
 		pageFonts[objNr] = true
-	}
-
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("optimizeFontResourcesDict end:")
 	}
 
 	return nil
 }
 
 // handleDuplicateImageObject returns nil or the object number of the registered image if it matches this image.
-func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict, resourceName string, objNr, pageNumber int) (*int, error) {
-	// Get the set of image object numbers for pageNumber.
-	pageImages := ctx.Optimize.PageImages[pageNumber]
+func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict, resourceName string, objNr, pageNr int) (*int, bool, error) {
+	// Get the set of image object numbers for pageNr.
+	pageImages := ctx.Optimize.PageImages[pageNr]
+
+	if duplImgObj, ok := ctx.Optimize.DuplicateImages[objNr]; ok {
+
+		newObjNr := duplImgObj.NewObjNr
+		// We have detected a redundant image dict.
+		if log.OptimizeEnabled() {
+			log.Optimize.Printf("handleDuplicateImageObject: redundant imageObj#:%d already registered with obj#:%d !\n", objNr, newObjNr)
+		}
+
+		// Register new page image for pageNr.
+		// The image for image object number is used instead of objNr.
+		pageImages[newObjNr] = true
+
+		// Add the resource name of this duplicate image to the list of registered resource names.
+		ctx.Optimize.ImageObjects[newObjNr].AddResourceName(pageNr, resourceName)
+
+		// Return the imageObjectNumber that will be used instead of objNr.
+		return &newObjNr, false, nil
+	}
 
 	// Process image dict, check if this is a duplicate.
 	for imageObjNr, imageObject := range ctx.Optimize.ImageObjects {
+
+		if imageObjNr == objNr {
+			// Add the resource name of this duplicate image to the list of registered resource names.
+			imageObject.AddResourceName(pageNr, resourceName)
+			return nil, true, nil
+		}
 
 		if log.OptimizeEnabled() {
 			log.Optimize.Printf("handleDuplicateImageObject: comparing with imagedict Obj %d\n", imageObjNr)
@@ -367,7 +484,7 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 		// Check if the input imageDict matches the imageDict of this imageObject.
 		ok, err := model.EqualStreamDicts(imageObject.ImageDict, imageDict, ctx.XRefTable)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		if !ok {
@@ -380,37 +497,34 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 			log.Optimize.Printf("handleDuplicateImageObject: redundant imageObj#:%d already registered with obj#:%d !\n", objNr, imageObjNr)
 		}
 
-		// Register new page image for pageNumber.
+		// Register new page image for pageNr.
 		// The image for image object number is used instead of objNr.
 		pageImages[imageObjNr] = true
 
 		// Add the resource name of this duplicate image to the list of registered resource names.
-		imageObject.AddResourceName(resourceName)
+		imageObject.AddResourceName(pageNr, resourceName)
 
 		// Register imageDict as duplicate.
-		ctx.Optimize.DuplicateImages[objNr] = imageDict
+		ctx.Optimize.DuplicateImages[objNr] = &model.DuplicateImageObject{ImageDict: imageDict, NewObjNr: imageObjNr}
 
 		// Return the imageObjectNumber that will be used instead of objNr.
-		return &imageObjNr, nil
+		return &imageObjNr, false, nil
 	}
 
-	return nil, nil
+	return nil, false, nil
 }
 
-func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rName string, objNr, pageNumber int, pageImages types.IntSet) (*types.IndirectRef, error) {
+func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rNamePrefix, rName string, rDict types.Dict, objNr, pageNr, pageObjNumber int, pageImages types.IntSet) error {
 
-	// Already registered image object that appears in different resources dicts.
-	if _, found := ctx.Optimize.ImageObjects[objNr]; found {
-		// This image has already been registered.
-		//log.Optimize.Printf("optimizeXObjectResourcesDict: Imageobject %d already registered\n", objNr)
-		pageImages[objNr] = true
-		return nil, nil
+	qualifiedRName := rName
+	if rNamePrefix != "" {
+		qualifiedRName = rNamePrefix + "." + rName
 	}
 
 	// Check if image is a duplicate and if so return the object number of the original.
-	originalObjNr, err := handleDuplicateImageObject(ctx, osd, rName, objNr, pageNumber)
+	originalObjNr, alreadyDupl, err := handleDuplicateImageObject(ctx, osd, qualifiedRName, objNr, pageNr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if originalObjNr != nil {
@@ -418,22 +532,24 @@ func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rName strin
 		// Update xobject resource dict so that rName points to the original.
 		ir := types.NewIndirectRef(*originalObjNr, 0)
 		ctx.IncrementRefCount(ir)
-		return ir, nil
-	}
-
-	// Register new image dict.
-	if log.OptimizeEnabled() {
-		log.Optimize.Printf("optimizeXObjectResourcesDict: adding new image obj#%d\n", objNr)
-	}
-
-	ctx.Optimize.ImageObjects[objNr] =
-		&model.ImageObject{
-			ResourceNames: []string{rName},
-			ImageDict:     osd,
+		rDict[rName] = *ir
+		if log.OptimizeEnabled() {
+			log.Optimize.Printf("optimizeXObjectImage: redundant xobject name=%s (objNr#%d -> objNr#%d)\n", qualifiedRName, objNr, originalObjNr)
 		}
+		return nil
+	}
+
+	if !alreadyDupl {
+		// Register new image dict.
+		ctx.Optimize.ImageObjects[objNr] =
+			&model.ImageObject{
+				ResourceNames: map[int]string{pageNr: qualifiedRName},
+				ImageDict:     osd,
+			}
+	}
 
 	pageImages[objNr] = true
-	return nil, nil
+	return nil
 }
 
 func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, objNr int) (*types.IndirectRef, error) {
@@ -459,14 +575,14 @@ func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, objNr int) (*
 		return nil, nil
 	}
 
-	for _, objNr := range cachedObjNrs {
-		sd1 := f[objNr]
+	for _, objNr1 := range cachedObjNrs {
+		sd1 := f[objNr1]
 		ok, err := model.EqualStreamDicts(sd, sd1, ctx.XRefTable)
 		if err != nil {
 			return nil, err
 		}
 		if ok {
-			ir := types.NewIndirectRef(objNr, 0)
+			ir := types.NewIndirectRef(objNr1, 0)
 			ctx.IncrementRefCount(ir)
 			return ir, nil
 		}
@@ -476,14 +592,14 @@ func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, objNr int) (*
 	return nil, nil
 }
 
-func optimizeFormResources(ctx *model.Context, o types.Object, pageNumber, pageObjNumber int, visitedRes []types.Object) error {
+func optimizeFormResources(ctx *model.Context, o types.Object, pageNr, pageObjNumber int, rName string, visitedRes []types.Object) error {
 	d, err := ctx.DereferenceDict(o)
 	if err != nil {
 		return err
 	}
 	if d != nil {
 		// Optimize image and font resources.
-		if err = optimizeResources(ctx, d, pageNumber, pageObjNumber, visitedRes); err != nil {
+		if err = optimizeResources(ctx, d, pageNr, pageObjNumber, rName, visitedRes); err != nil {
 			return err
 		}
 	}
@@ -499,7 +615,7 @@ func visited(o types.Object, visited []types.Object) bool {
 	return false
 }
 
-func optimizeForm(ctx *model.Context, osd *types.StreamDict, rName string, rDict types.Dict, objNr, pageNumber, pageObjNumber int, vis []types.Object) error {
+func optimizeForm(ctx *model.Context, osd *types.StreamDict, rNamePrefix, rName string, rDict types.Dict, objNr, pageNr, pageObjNumber int, vis []types.Object) error {
 
 	ir, err := optimizeXObjectForm(ctx, osd, objNr)
 	if err != nil {
@@ -524,15 +640,83 @@ func optimizeForm(ctx *model.Context, osd *types.StreamDict, rName string, rDict
 		vis = append(vis, indRef)
 	}
 
-	return optimizeFormResources(ctx, o, pageNumber, pageObjNumber, vis)
-}
-
-func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumber, pageObjNumber int, vis []types.Object) error {
-	if log.OptimizeEnabled() {
-		log.Optimize.Printf("optimizeXObjectResourcesDict page#%dbegin: %s\n", pageObjNumber, rDict)
+	qualifiedRName := rName
+	if rNamePrefix != "" {
+		qualifiedRName = rNamePrefix + "." + rName
 	}
 
-	pageImages := pageImages(ctx, pageNumber)
+	return optimizeFormResources(ctx, o, pageNr, pageObjNumber, qualifiedRName, vis)
+}
+
+func optimizeExtGStateResources(ctx *model.Context, rDict types.Dict, pageNr, pageObjNumber int, rNamePrefix string, vis []types.Object) error {
+	if log.OptimizeEnabled() {
+		log.Optimize.Printf("optimizeExtGStateResources page#%dbegin: %s\n", pageObjNumber, rDict)
+	}
+
+	pageImages := pageImages(ctx, pageNr)
+
+	s, found := rDict.Find("SMask")
+	if found {
+		dict, ok := s.(types.Dict)
+		if ok {
+			if err := optimizeSMaskResources(dict, vis, rNamePrefix, ctx, rDict, pageNr, pageImages, pageObjNumber); err != nil {
+				return err
+			}
+		}
+	}
+
+	if log.OptimizeEnabled() {
+		log.Optimize.Println("optimizeExtGStateResources end")
+	}
+
+	return nil
+}
+
+func optimizeSMaskResources(dict types.Dict, vis []types.Object, rNamePrefix string, ctx *model.Context, rDict types.Dict, pageNr int, pageImages types.IntSet, pageObjNumber int) error {
+	indRef := dict.IndirectRefEntry("G")
+	if indRef == nil {
+		return nil
+	}
+
+	if visited(*indRef, vis) {
+		return nil
+	}
+
+	vis = append(vis, indRef)
+
+	objNr := int(indRef.ObjectNumber)
+
+	if log.OptimizeEnabled() {
+		log.Optimize.Printf("optimizeSMaskResources: processing \"G\", obj#=%d\n", objNr)
+	}
+
+	sd, err := ctx.DereferenceXObjectDict(*indRef)
+	if err != nil {
+		return err
+	}
+	if sd == nil {
+		return nil
+	}
+
+	if *sd.Subtype() == "Image" {
+		if err := optimizeXObjectImage(ctx, sd, rNamePrefix, "G", rDict, objNr, pageNr, pageObjNumber, pageImages); err != nil {
+			return err
+		}
+	}
+
+	if *sd.Subtype() == "Form" {
+		if err := optimizeForm(ctx, sd, rNamePrefix, "G", rDict, objNr, pageNr, pageObjNumber, vis); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func optimizeExtGStateResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pageObjNumber int, rNamePrefix string, vis []types.Object) error {
+	if log.OptimizeEnabled() {
+		log.Optimize.Printf("optimizeExtGStateResourcesDict page#%dbegin: %s\n", pageObjNumber, rDict)
+	}
 
 	for rName, v := range rDict {
 
@@ -544,42 +728,30 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumb
 		if visited(indRef, vis) {
 			continue
 		}
+
 		vis = append(vis, indRef)
 
 		objNr := int(indRef.ObjectNumber)
 
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeXObjectResourcesDict: processing XObject: %s, obj#=%d\n", rName, objNr)
+		qualifiedRName := rName
+		if rNamePrefix != "" {
+			qualifiedRName = rNamePrefix + "." + rName
 		}
 
-		sd, err := ctx.DereferenceXObjectDict(indRef)
+		if log.OptimizeEnabled() {
+			log.Optimize.Printf("optimizeExtGStateResourcesDict: processing XObject: %s, obj#=%d\n", qualifiedRName, objNr)
+		}
+
+		rDict, err := ctx.DereferenceDict(indRef)
 		if err != nil {
+			continue
+		}
+		if rDict == nil {
+			continue
+		}
+
+		if err := optimizeExtGStateResources(ctx, rDict, pageNr, pageObjNumber, qualifiedRName, vis); err != nil {
 			return err
-		}
-		if sd == nil {
-			continue
-		}
-
-		if log.OptimizeEnabled() {
-			log.Optimize.Printf("optimizeXObjectResourcesDict: dereferenced obj:%d\n%s", objNr, sd)
-		}
-
-		if *sd.Dict.Subtype() == "Image" {
-			ir, err := optimizeXObjectImage(ctx, sd, rName, objNr, pageNumber, pageImages)
-			if err != nil {
-				return err
-			}
-			if ir != nil {
-				rDict[rName] = *ir
-			}
-			continue
-		}
-
-		if *sd.Subtype() == "Form" {
-			if err := optimizeForm(ctx, sd, rName, rDict, objNr, pageNumber, pageObjNumber, vis); err != nil {
-				return err
-			}
-			continue
 		}
 
 	}
@@ -591,10 +763,113 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNumb
 	return nil
 }
 
-// Optimize given resource dictionary by removing redundant fonts and images.
-func optimizeResources(ctx *model.Context, resourcesDict types.Dict, pageNumber, pageObjNumber int, visitedRes []types.Object) error {
+func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pageObjNumber int, rNamePrefix string, vis []types.Object) error {
 	if log.OptimizeEnabled() {
-		log.Optimize.Printf("optimizeResources begin: pageNumber=%d pageObjNumber=%d\n", pageNumber, pageObjNumber)
+		log.Optimize.Printf("optimizeXObjectResourcesDict page#%dbegin: %s\n", pageObjNumber, rDict)
+	}
+
+	pageImages := pageImages(ctx, pageNr)
+
+	for rName, v := range rDict {
+
+		indRef, ok := v.(types.IndirectRef)
+		if !ok {
+			continue
+		}
+
+		if visited(indRef, vis) {
+			continue
+		}
+
+		vis = append(vis, indRef)
+
+		objNr := int(indRef.ObjectNumber)
+
+		qualifiedRName := rName
+		if rNamePrefix != "" {
+			qualifiedRName = rNamePrefix + "." + rName
+		}
+
+		if log.OptimizeEnabled() {
+			log.Optimize.Printf("optimizeXObjectResourcesDict: processing XObject: %s, obj#=%d\n", qualifiedRName, objNr)
+		}
+
+		sd, err := ctx.DereferenceXObjectDict(indRef)
+		if err != nil {
+			return err
+		}
+		if sd == nil {
+			continue
+		}
+
+		if *sd.Subtype() == "Image" {
+			if err := optimizeXObjectImage(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, pageImages); err != nil {
+				return err
+			}
+		}
+
+		if *sd.Subtype() == "Form" {
+			// Get rid of PieceInfo dict from form XObjects.
+			if err := ctx.DeleteDictEntry(sd.Dict, "PieceInfo"); err != nil {
+				return err
+			}
+			if err := optimizeForm(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, vis); err != nil {
+				return err
+			}
+		}
+
+	}
+
+	if log.OptimizeEnabled() {
+		log.Optimize.Println("optimizeXObjectResourcesDict end")
+	}
+
+	return nil
+}
+
+func processFontResources(ctx *model.Context, obj types.Object, pageNr, pageObjNumber int, rNamePrefix string) error {
+	d, err := ctx.DereferenceDict(obj)
+	if err != nil {
+		return err
+	}
+
+	if d == nil {
+		return errors.Errorf("pdfcpu: processFontResources: font resource dict is null for page %d pageObj %d\n", pageNr, pageObjNumber)
+	}
+
+	return optimizeFontResourcesDict(ctx, d, pageNr, rNamePrefix)
+}
+
+func processXObjectResources(ctx *model.Context, obj types.Object, pageNr, pageObjNumber int, rNamePrefix string, visitedRes []types.Object) error {
+	d, err := ctx.DereferenceDict(obj)
+	if err != nil {
+		return err
+	}
+
+	if d == nil {
+		return errors.Errorf("pdfcpu: processXObjectResources: xObject resource dict is null for page %d pageObj %d\n", pageNr, pageObjNumber)
+	}
+
+	return optimizeXObjectResourcesDict(ctx, d, pageNr, pageObjNumber, rNamePrefix, visitedRes)
+}
+
+func processExtGStateResources(ctx *model.Context, obj types.Object, pageNr, pageObjNumber int, rNamePrefix string, visitedRes []types.Object) error {
+	d, err := ctx.DereferenceDict(obj)
+	if err != nil {
+		return err
+	}
+
+	if d == nil {
+		return errors.Errorf("pdfcpu: processExtGStateResources: extGState resource dict is null for page %d pageObj %d\n", pageNr, pageObjNumber)
+	}
+
+	return optimizeExtGStateResourcesDict(ctx, d, pageNr, pageObjNumber, rNamePrefix, visitedRes)
+}
+
+// Optimize given resource dictionary by removing redundant fonts and images.
+func optimizeResources(ctx *model.Context, resourcesDict types.Dict, pageNr, pageObjNumber int, rNamePrefix string, visitedRes []types.Object) error {
+	if log.OptimizeEnabled() {
+		log.Optimize.Printf("optimizeResources begin: pageNr=%d pageObjNumber=%d\n", pageNr, pageObjNumber)
 	}
 
 	if resourcesDict == nil {
@@ -604,44 +879,28 @@ func optimizeResources(ctx *model.Context, resourcesDict types.Dict, pageNumber,
 		return nil
 	}
 
-	// Process Font resource dict, get rid of redundant fonts.
-	o, found := resourcesDict.Find("Font")
+	obj, found := resourcesDict.Find("Font")
 	if found {
-
-		d, err := ctx.DereferenceDict(o)
-		if err != nil {
+		// Process Font resource dict, get rid of redundant fonts.
+		if err := processFontResources(ctx, obj, pageNr, pageObjNumber, rNamePrefix); err != nil {
 			return err
 		}
-
-		if d == nil {
-			return errors.Errorf("pdfcpu: optimizeResources: font resource dict is null for page %d pageObj %d\n", pageNumber, pageObjNumber)
-		}
-
-		if err = optimizeFontResourcesDict(ctx, d, pageNumber, pageObjNumber); err != nil {
-			return err
-		}
-
 	}
 
-	// Note: An optional ExtGState resource dict may contain binary content in the following entries: "SMask", "HT".
-
-	// Process XObject resource dict, get rid of redundant images.
-	o, found = resourcesDict.Find("XObject")
+	obj, found = resourcesDict.Find("XObject")
 	if found {
-
-		d, err := ctx.DereferenceDict(o)
-		if err != nil {
+		// Process XObject resource dict, get rid of redundant images.
+		if err := processXObjectResources(ctx, obj, pageNr, pageObjNumber, rNamePrefix, visitedRes); err != nil {
 			return err
 		}
+	}
 
-		if d == nil {
-			return errors.Errorf("pdfcpu: optimizeResources: xobject resource dict is null for page %d pageObj %d\n", pageNumber, pageObjNumber)
-		}
-
-		if err = optimizeXObjectResourcesDict(ctx, d, pageNumber, pageObjNumber, visitedRes); err != nil {
+	obj, found = resourcesDict.Find("ExtGState")
+	if found {
+		// An ExtGState resource dict may contain binary content in the following entries: "SMask", "HT".
+		if err := processExtGStateResources(ctx, obj, pageNr, pageObjNumber, rNamePrefix, visitedRes); err != nil {
 			return err
 		}
-
 	}
 
 	if log.OptimizeEnabled() {
@@ -652,15 +911,15 @@ func optimizeResources(ctx *model.Context, resourcesDict types.Dict, pageNumber,
 }
 
 // Process the resources dictionary for given page number and optimize by removing redundant resources.
-func parseResourcesDict(ctx *model.Context, pageDict types.Dict, pageNumber, pageObjNumber int) error {
+func parseResourcesDict(ctx *model.Context, pageDict types.Dict, pageNr, pageObjNumber int) error {
 	if ctx.Optimize.Cache[pageObjNumber] {
 		return nil
 	}
 	ctx.Optimize.Cache[pageObjNumber] = true
 
-	// The logical pageNumber is pageNumber+1.
+	// The logical pageNr is pageNr+1.
 	if log.OptimizeEnabled() {
-		log.Optimize.Printf("parseResourcesDict begin page: %d, object:%d\n", pageNumber+1, pageObjNumber)
+		log.Optimize.Printf("parseResourcesDict begin page: %d, object:%d\n", pageNr+1, pageObjNumber)
 	}
 
 	// Get resources dict for this page.
@@ -673,30 +932,26 @@ func parseResourcesDict(ctx *model.Context, pageDict types.Dict, pageNumber, pag
 	if d != nil {
 
 		// Optimize image and font resources.
-		if err = optimizeResources(ctx, d, pageNumber, pageObjNumber, []types.Object{}); err != nil {
+		if err = optimizeResources(ctx, d, pageNr, pageObjNumber, "", []types.Object{}); err != nil {
 			return err
 		}
 
 	}
 
 	if log.OptimizeEnabled() {
-		log.Optimize.Printf("parseResourcesDict end page: %d, object:%d\n", pageNumber+1, pageObjNumber)
+		log.Optimize.Printf("parseResourcesDict end page: %d, object:%d\n", pageNr+1, pageObjNumber)
 	}
 
 	return nil
 }
 
-// Iterate over all pages and optimize resources.
-func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNumber int) (int, error) {
+// Iterate over all pages and optimize content & resources.
+func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNr int) (int, error) {
 	// TODO Integrate resource consolidation based on content stream requirements.
 
-	count, found := pagesDict.Find("Count")
+	_, found := pagesDict.Find("Count")
 	if !found {
-		return pageNumber, errors.New("pdfcpu: parsePagesDict: missing Count")
-	}
-
-	if log.OptimizeEnabled() {
-		log.Optimize.Printf("parsePagesDict begin (next page=%d has %s pages): %s\n", pageNumber+1, count.(types.Integer), pagesDict)
+		return pageNr, errors.New("pdfcpu: parsePagesDict: missing Count")
 	}
 
 	ctx.Optimize.Cache = map[int]bool{}
@@ -704,12 +959,12 @@ func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNumber int) (i
 	// Iterate over page tree.
 	o, found := pagesDict.Find("Kids")
 	if !found {
-		return pageNumber, errors.New("pdfcpu: corrupt \"Kids\" entry")
+		return pageNr, errors.Errorf("pdfcpu: corrupt \"Kids\" entry %s", pagesDict)
 	}
 
 	kids, err := ctx.DereferenceArray(o)
 	if err != nil || kids == nil {
-		return pageNumber, errors.New("pdfcpu: corrupt \"Kids\" entry")
+		return pageNr, errors.Errorf("pdfcpu: corrupt \"Kids\" entry: %s", pagesDict)
 	}
 
 	for _, v := range kids {
@@ -733,7 +988,7 @@ func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNumber int) (i
 		if *dictType == "Pages" {
 
 			// Recurse over pagetree and optimize resources.
-			pageNumber, err = parsePagesDict(ctx, d, pageNumber)
+			pageNr, err = parsePagesDict(ctx, d, pageNr)
 			if err != nil {
 				return 0, err
 			}
@@ -743,27 +998,30 @@ func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNumber int) (i
 
 		// Process page dict.
 
-		if err = optimizePageContent(ctx, d, int(ir.ObjectNumber)); err != nil {
-			return 0, err
+		if ctx.OptimizeDuplicateContentStreams {
+			if err = optimizePageContent(ctx, d, int(ir.ObjectNumber)); err != nil {
+				return 0, err
+			}
 		}
 
+		// Get rid of PieceInfo dict from page dict.
 		if err := ctx.DeleteDictEntry(d, "PieceInfo"); err != nil {
 			return 0, err
 		}
 
 		// Parse and optimize resource dict for one page.
-		if err = parseResourcesDict(ctx, d, pageNumber, int(ir.ObjectNumber)); err != nil {
+		if err = parseResourcesDict(ctx, d, pageNr, int(ir.ObjectNumber)); err != nil {
 			return 0, err
 		}
 
-		pageNumber++
+		pageNr++
 	}
 
 	if log.OptimizeEnabled() {
 		log.Optimize.Printf("parsePagesDict end: %s\n", pagesDict)
 	}
 
-	return pageNumber, nil
+	return pageNr, nil
 }
 
 func traverse(xRefTable *model.XRefTable, value types.Object, duplObjs types.IntSet) error {
@@ -848,10 +1106,10 @@ func calcRedundantObjects(ctx *model.Context) error {
 		}
 	}
 
-	for i, sd := range ctx.Optimize.DuplicateImages {
+	for i, obj := range ctx.Optimize.DuplicateImages {
 		ctx.Optimize.DuplicateImageObjs[i] = true
 		// Identify and mark all involved potential duplicate objects for a redundant image.
-		if err := traverseObjectGraphAndMarkDuplicates(ctx.XRefTable, *sd, ctx.Optimize.DuplicateImageObjs); err != nil {
+		if err := traverseObjectGraphAndMarkDuplicates(ctx.XRefTable, *obj.ImageDict, ctx.Optimize.DuplicateImageObjs); err != nil {
 			return err
 		}
 	}
@@ -860,6 +1118,28 @@ func calcRedundantObjects(ctx *model.Context) error {
 		log.Optimize.Println("calcRedundantObjects end")
 	}
 
+	return nil
+}
+
+func fixCorruptFontResDicts(ctx *model.Context) error {
+	// TODO: hacky, also because we don't reall y take the fontDict type into account.
+	for _, d := range ctx.Optimize.CorruptFontResDicts {
+		for k, v := range d {
+			if v == nil {
+				for fn, objNrs := range ctx.Optimize.Fonts {
+
+					if strings.HasPrefix(fn, "Arial") && (len(fn) == 5 || fn[5] != '-') {
+						model.ShowRepaired(fmt.Sprintf("font %s mapped to objNr %d", k, objNrs[0]))
+						d[k] = *types.NewIndirectRef(objNrs[0], 0)
+						break
+					}
+				}
+			}
+			// if d[k] == nil {
+			// 	d[k] = *types.NewIndirectRef(objNrs[0], 0)
+			// }
+		}
+	}
 	return nil
 }
 
@@ -882,22 +1162,6 @@ func optimizeFontAndImages(ctx *model.Context) error {
 		return err
 	}
 
-	// Detect the number of pages of this PDF file.
-	pageCount := pageTreeRootDict.IntEntry("Count")
-	if pageCount == nil {
-		return errors.New("pdfcpu: optimizeFontAndImagess: missing \"Count\" in page root dict")
-	}
-
-	// If PageCount already set by validation doublecheck.
-	if ctx.PageCount > 0 && ctx.PageCount != *pageCount {
-		return errors.New("pdfcpu: optimizeFontAndImagess: unexpected page root dict pageCount discrepancy")
-	}
-
-	// If we optimize w/o prior validation, set PageCount.
-	if ctx.PageCount == 0 {
-		ctx.PageCount = *pageCount
-	}
-
 	// Prepare optimization environment.
 	ctx.Optimize.PageFonts = make([]types.IntSet, ctx.PageCount)
 	ctx.Optimize.PageImages = make([]types.IntSet, ctx.PageCount)
@@ -905,6 +1169,10 @@ func optimizeFontAndImages(ctx *model.Context) error {
 	// Iterate over page dicts and optimize resources.
 	_, err = parsePagesDict(ctx, pageTreeRootDict, 0)
 	if err != nil {
+		return err
+	}
+
+	if err := fixCorruptFontResDicts(ctx); err != nil {
 		return err
 	}
 
@@ -955,25 +1223,29 @@ func calcEmbeddedFontsMemoryUsage(ctx *model.Context) error {
 
 	fontFileIndRefs := map[types.IndirectRef]bool{}
 
-	var objectNumbers []int
+	var objNrs []int
 
 	// Sorting unnecessary.
 	for k := range ctx.Optimize.FontObjects {
-		objectNumbers = append(objectNumbers, k)
+		objNrs = append(objNrs, k)
 	}
-	sort.Ints(objectNumbers)
+	sort.Ints(objNrs)
 
 	// Iterate over all embedded font objects and record font file references.
-	for _, objectNumber := range objectNumbers {
+	for _, objNr := range objNrs {
 
-		fontObject := ctx.Optimize.FontObjects[objectNumber]
+		fontObject := ctx.Optimize.FontObjects[objNr]
 
 		// Only embedded fonts have binary data.
-		if !fontObject.Embedded() {
+		ok, err := pdffont.Embedded(ctx.XRefTable, fontObject.FontDict, objNr)
+		if err != nil {
+			return err
+		}
+		if !ok {
 			continue
 		}
 
-		if err := processFontFilesForFontDict(ctx.XRefTable, fontObject.FontDict, objectNumber, fontFileIndRefs); err != nil {
+		if err := processFontFilesForFontDict(ctx.XRefTable, fontObject.FontDict, objNr, fontFileIndRefs); err != nil {
 			return err
 		}
 	}
@@ -1017,93 +1289,6 @@ func fontDescriptorFontFileIndirectObjectRef(fontDescriptorDict types.Dict) *typ
 	return ir
 }
 
-func trivialFontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) (types.Dict, error) {
-	o, ok := fontDict.Find("FontDescriptor")
-	if !ok {
-		return nil, nil
-	}
-
-	// fontDescriptor directly available.
-
-	d, err := xRefTable.DereferenceDict(o)
-	if err != nil {
-		return nil, err
-	}
-
-	if d == nil {
-		return nil, errors.Errorf("pdfcpu: trivialFontDescriptor: FontDescriptor is null for font object %d\n", objNr)
-	}
-
-	if d.Type() != nil && *d.Type() != "FontDescriptor" {
-		return nil, errors.Errorf("pdfcpu: trivialFontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
-	}
-
-	return d, nil
-}
-
-// FontDescriptor gets the font descriptor for this font.
-func fontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) (types.Dict, error) {
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("fontDescriptor begin")
-	}
-
-	d, err := trivialFontDescriptor(xRefTable, fontDict, objNr)
-	if err != nil {
-		return nil, err
-	}
-	if d != nil {
-		return d, nil
-	}
-
-	// Try to access a fontDescriptor in a Descendent font for Type0 fonts.
-
-	o, ok := fontDict.Find("DescendantFonts")
-	if !ok {
-		//logErrorOptimize.Printf("FontDescriptor: Neither FontDescriptor nor DescendantFonts for font object %d\n", objectNumber)
-		return nil, nil
-	}
-
-	// A descendant font is contained in an array of size 1.
-
-	a, err := xRefTable.DereferenceArray(o)
-	if err != nil || a == nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: DescendantFonts: IndirectRef or Array wth length 1 expected for font object %d\n", objNr)
-	}
-	if len(a) > 1 {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: DescendantFonts Array length > 1 %v\n", a)
-	}
-
-	// dict is the fontDict of the descendant font.
-	d, err = xRefTable.DereferenceDict(a[0])
-	if err != nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: No descendant font dict for %v\n", a)
-	}
-	if d == nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: descendant font dict is null for %v\n", a)
-	}
-
-	if *d.Type() != "Font" {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: font dict with incorrect dict type for %v\n", d)
-	}
-
-	o, ok = d.Find("FontDescriptor")
-	if !ok {
-		log.Optimize.Printf("fontDescriptor: descendant font not embedded %s\n", d)
-		return nil, nil
-	}
-
-	d, err = xRefTable.DereferenceDict(o)
-	if err != nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: No FontDescriptor dict for font object %d\n", objNr)
-	}
-
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("fontDescriptor end")
-	}
-
-	return d, nil
-}
-
 // Record font file objects referenced by this fonts font descriptor for stats and size calculation.
 func processFontFilesForFontDict(xRefTable *model.XRefTable, fontDict types.Dict, objectNumber int, indRefsMap map[types.IndirectRef]bool) error {
 	if log.OptimizeEnabled() {
@@ -1113,7 +1298,7 @@ func processFontFilesForFontDict(xRefTable *model.XRefTable, fontDict types.Dict
 	// Note:
 	// "ToUnicode" is also an entry containing binary content that could be inspected for duplicate content.
 
-	d, err := fontDescriptor(xRefTable, fontDict, objectNumber)
+	d, err := pdffont.FontDescriptor(xRefTable, fontDict, objectNumber)
 	if err != nil {
 		return err
 	}
@@ -1200,8 +1385,8 @@ func calcImageBinarySizes(ctx *model.Context) {
 	}
 
 	// Calc memory usage for duplicate images.
-	for _, imageDict := range ctx.Optimize.DuplicateImages {
-		ctx.Read.BinaryImageDuplSize += *imageDict.StreamLength
+	for _, obj := range ctx.Optimize.DuplicateImages {
+		ctx.Read.BinaryImageDuplSize += *obj.ImageDict.StreamLength
 	}
 
 	if log.OptimizeEnabled() {
@@ -1350,7 +1535,7 @@ func fixReferencesToFreeObjects(ctx *model.Context) error {
 	return fixDirectObject(ctx, ctx.RootDict)
 }
 
-func cacheFormFonts(ctx *model.Context) error {
+func CacheFormFonts(ctx *model.Context) error {
 
 	d, err := primitives.FormFontResDict(ctx.XRefTable)
 	if err != nil {
@@ -1428,13 +1613,35 @@ func optimizeResourceDicts(ctx *model.Context) error {
 	return nil
 }
 
+func resolveWidth(ctx *model.Context, sd *types.StreamDict) error {
+	if obj, ok := sd.Find("Width"); ok {
+		w, err := ctx.DereferenceNumber(obj)
+		if err != nil {
+			return err
+		}
+		sd.Dict["Width"] = types.Integer(w)
+	}
+	return nil
+}
+
+func ensureDirectWidthForXObjs(ctx *model.Context) error {
+	for _, imgObjs := range ctx.Optimize.PageImages {
+		for objNr, v := range imgObjs {
+			if v {
+				imageObj := ctx.Optimize.ImageObjects[objNr]
+				if err := resolveWidth(ctx, imageObj.ImageDict); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // OptimizeXRefTable optimizes an xRefTable by locating and getting rid of redundant embedded fonts and images.
 func OptimizeXRefTable(ctx *model.Context) error {
-	if log.InfoEnabled() {
-		log.Info.Println("optimizing fonts & images")
-	}
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("optimizeXRefTable begin")
+	if ctx.PageCount == 0 {
+		return nil
 	}
 
 	// Sometimes free objects are used although they are part of the free object list.
@@ -1443,14 +1650,12 @@ func OptimizeXRefTable(ctx *model.Context) error {
 		return err
 	}
 
-	// Cache form fonts.
-	// TODO optimize form fonts.
-	if err := cacheFormFonts(ctx); err != nil {
-		return err
-	}
-
-	if ctx.Cmd == model.OPTIMIZE {
-		// Consolidate resource dicts.
+	if (ctx.Cmd == model.VALIDATE ||
+		ctx.Cmd == model.OPTIMIZE ||
+		ctx.Cmd == model.LISTIMAGES ||
+		ctx.Cmd == model.EXTRACTIMAGES ||
+		ctx.Cmd == model.UPDATEIMAGES) &&
+		ctx.Conf.OptimizeResourceDicts {
 		// Extra step with potential for performance hit when processing large files.
 		if err := optimizeResourceDicts(ctx); err != nil {
 			return err
@@ -1462,21 +1667,23 @@ func OptimizeXRefTable(ctx *model.Context) error {
 		return err
 	}
 
+	if err := ensureDirectWidthForXObjs(ctx); err != nil {
+		return err
+	}
+
 	// Get rid of PieceInfo dict from root.
 	if err := ctx.DeleteDictEntry(ctx.RootDict, "PieceInfo"); err != nil {
 		return err
 	}
 
 	// Calculate memory usage of binary content for stats.
-	if err := calcBinarySizes(ctx); err != nil {
-		return err
+	if log.StatsEnabled() {
+		if err := calcBinarySizes(ctx); err != nil {
+			return err
+		}
 	}
 
 	ctx.Optimized = true
-
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("optimizeXRefTable end")
-	}
 
 	return nil
 }

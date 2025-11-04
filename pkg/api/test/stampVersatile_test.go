@@ -77,7 +77,7 @@ func TestAlternatingPageNumbersViaWatermarkMap(t *testing.T) {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	// Add a "Draft" stamp with opacity 0.6 along the 1st diagonale in light blue using Courier.
+	// Add a "Draft" stamp with opacity 0.6 along the 1st diagonal in light blue using Courier.
 	if err := api.AddTextWatermarksFile(outFile, outFile, nil, true, "Draft", "fo:Courier, scale:.9, fillcol:#00aacc, op:.6", nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
@@ -134,7 +134,7 @@ func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	// Add a "Draft" stamp with opacity 0.6 along the 1st diagonale in light blue using Courier.
+	// Add a "Draft" stamp with opacity 0.6 along the 1st diagonal in light blue using Courier.
 	wm, err = api.TextWatermark("Draft", "fo:Courier, scale:.9, fillcol:#00aacc, op:.6", true, false, unit)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
@@ -204,7 +204,7 @@ func TestAlternatingPageNumbersViaWatermarkSliceMap(t *testing.T) {
 		wms = append(wms, wm)
 
 		// 3rd watermark on page
-		// Add a "Draft" stamp with opacity 0.6 along the 1st diagonale in light blue using Courier.
+		// Add a "Draft" stamp with opacity 0.6 along the 1st diagonal in light blue using Courier.
 		text = "Draft"
 		desc = fmt.Sprintf("fo:Courier, scale:.9, fillcol:#00aacc, op:%f", opacity)
 		wm, err = api.TextWatermark(text, desc, onTop, update, unit)

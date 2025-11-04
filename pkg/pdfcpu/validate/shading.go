@@ -264,7 +264,7 @@ func validateTensorProductPatchMeshesDict(xRefTable *model.XRefTable, dict types
 
 func validateShadingStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {
 
-	// Shading 4-7
+	// Shading 2, 4-7
 
 	dict := sd.Dict
 
@@ -274,6 +274,9 @@ func validateShadingStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict)
 	}
 
 	switch shadingType {
+
+	case 2:
+		err = validateAxialShadingDict(xRefTable, dict)
 
 	case 4:
 		err = validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable, dict)

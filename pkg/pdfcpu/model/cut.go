@@ -49,7 +49,7 @@ func parseHorCut(v string, cut *Cut) (err error) {
 			return errors.Errorf("pdfcpu: cut position must be a float value: %s\n", s)
 		}
 		if f <= 0 || f >= 1 {
-			return errors.Errorf("pdfcpu: invalid cut poistion %.2f: 0 < i < 1.0\n", f)
+			return errors.Errorf("pdfcpu: invalid cut position %.2f: 0 < i < 1.0\n", f)
 		}
 		cut.Hor = append(cut.Hor, f)
 	}
@@ -65,7 +65,7 @@ func parseVertCut(v string, cut *Cut) (err error) {
 			return errors.Errorf("pdfcpu: cut position must be a float value: %s\n", s)
 		}
 		if f <= 0 || f >= 1 {
-			return errors.Errorf("pdfcpu: invalid cut poistion %.2f: 0 < i < 1.0\n", f)
+			return errors.Errorf("pdfcpu: invalid cut position %.2f: 0 < i < 1.0\n", f)
 		}
 		cut.Vert = append(cut.Vert, f)
 	}

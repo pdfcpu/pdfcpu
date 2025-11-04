@@ -29,55 +29,192 @@ import (
 )
 
 var textAnn model.AnnotationRenderer = model.NewTextAnnotation(
-	*types.NewRectangle(0, 0, 100, 100),
-	"Test Content",
-	"ID1",
-	"Title1",
-	0,
-	&color.Gray,
-	nil,
-	"",
-	"",
-	false,
-	"Comment")
+	*types.NewRectangle(0, 0, 100, 100), // rect
+	0,                                   // apObjNr
+	"Text Annotation",                   // contents
+	"ID1",                               // id
+	"",                                  // modDate
+	0,                                   // f
+	&color.Gray,                         // col
+	"Title1",                            // title
+	nil,                                 // popupIndRef
+	nil,                                 // ca
+	"",                                  // rc
+	"",                                  // subject
+	0,                                   // borderRadX
+	0,                                   // borderRadY
+	2,                                   // borderWidth
+	false,                               // displayOpen
+	"Comment")                           // name
+
+var textAnnCJK model.AnnotationRenderer = model.NewTextAnnotation(
+	*types.NewRectangle(0, 100, 100, 200), // rect
+	0,                                     // apObjNr
+	"文字注释",                                // contents
+	"ID1CJK",                              // id
+	"",                                    // modDate
+	0,                                     // f
+	&color.Gray,                           // col
+	"标题1",                                 // title
+	nil,                                   // popupIndRef
+	nil,                                   // ca
+	"RC",                                  // rc
+	"",                                    // subject
+	0,                                     // borderRadX
+	0,                                     // borderRadY
+	2,                                     // borderWidth
+	true,                                  // displayOpen
+	"Comment")                             // name
+
+var freeTextAnn model.AnnotationRenderer = model.NewFreeTextAnnotation(
+	*types.NewRectangle(200, 300, 400, 500), // rect
+	0,                                       // apObjNr
+	`Mac Preview shows "Contents"
+line 2
+line 3`, // contents
+	"ID1",           // id
+	"",              // modDate
+	model.AnnLocked, // f
+	&color.Gray,     // col
+	"Title1",        // title
+	nil,             // popupIndRef
+	nil,             // ca
+	"",              // rc
+	"",              // subject
+	`A.Reader renders rich text ("RC").
+line 2
+line 3`,
+	// `<?xml version="1.0" encoding="UTF-8"?>
+	//  <xhtml xmlns="http://www.w3.org/1999/xhtml" xmlns:xfa="http://www.xfa.org/schema/xfa-data/1.0/">
+	//  	<body>
+	// 		<p>This is some <b>rich text.</b></p>
+	// 	</body>
+	//  </xhmtl>`, // rich text (ignored by Mac Preview and rendered mediocre by Adobe Reader)
+	types.AlignCenter, // horizontal alignment
+	"Helvetica",       // font name (TODO)
+	12,                // font size in points (TODO)
+	&color.Green,      // font color
+	"",                // DS (default style string)
+	nil,               // Intent
+	nil,               // callOutLine
+	nil,               // callOutLineEndingStyle
+	0, 0, 0, 0,        // margin
+	0,             // borderWidth
+	model.BSSolid, // borderStyle
+	false,         // cloudyBorder
+	0)             // cloudyBorderIntensity
 
 var linkAnn model.AnnotationRenderer = model.NewLinkAnnotation(
-	*types.NewRectangle(200, 0, 300, 100),
-	nil,
-	nil,
-	"https://pdfcpu.io",
-	"ID2",
-	0,
-	1,
-	model.BSSolid,
-	&color.Red,
-	true)
+	*types.NewRectangle(200, 0, 300, 100), // rect
+	0,                                     // apObjNr
+	"",                                    // contents
+	"ID2",                                 // id
+	"",                                    // modDate
+	0,                                     // f
+	&color.Red,                            // borderCol
+	nil,                                   // dest
+	"https://pdfcpu.io",                   // uri
+	nil,                                   // quad
+	true,                                  // border
+	1,                                     // borderWidth
+	model.BSSolid,                         // borderStyle
+)
 
 var squareAnn model.AnnotationRenderer = model.NewSquareAnnotation(
-	*types.NewRectangle(300, 0, 350, 50),
-	"Square Annotation",
-	"ID3",
-	0,
-	1,
-	model.BSSolid,
-	&color.Blue,
-	false,
-	0,
-	nil,
-	0, 0, 0, 0)
+	*types.NewRectangle(300, 0, 350, 50), // rect
+	0,                                    // apObjNr
+	"Square Annotation",                  // contents
+	"ID3",                                // id
+	"",                                   // modDate
+	0,                                    // f
+	&color.Gray,                          // col
+	"Title1",                             // title
+	nil,                                  // popupIndRef
+	nil,                                  // ca
+	"",                                   // rc
+	"",                                   // subject
+	&color.Blue,                          // fillCol
+	0,                                    // MLeft
+	0,                                    // MTop
+	0,                                    // MRight
+	0,                                    // MBot
+	1,                                    // borderWidth
+	model.BSSolid,                        // borderStyle
+	false,                                // cloudyBorder
+	0,                                    // cloudyBorderIntensity
+)
+
+var squareAnnCJK model.AnnotationRenderer = model.NewSquareAnnotation(
+	*types.NewRectangle(300, 50, 350, 100), // rect
+	0,                                      // apObjNr
+	"方形注释",                                 // contents
+	"ID3CJK",                               // id
+	"",                                     // modDate
+	0,                                      // f
+	&color.Gray,                            // col
+	"Title1",                               // title
+	nil,                                    // popupIndRef
+	nil,                                    // ca
+	"",                                     // rc
+	"",                                     // subject
+	&color.Green,                           // fillCol
+	0,                                      // MLeft
+	0,                                      // MTop
+	0,                                      // MRight
+	0,                                      // MBot
+	1,                                      // borderWidth
+	model.BSDashed,                         // borderStyle
+	false,                                  // cloudyBorder
+	0,                                      // cloudyBorderIntensity
+)
 
 var circleAnn model.AnnotationRenderer = model.NewCircleAnnotation(
-	*types.NewRectangle(400, 0, 450, 50),
-	"Circle Annotation",
-	"ID4",
-	model.AnnLocked,
-	3,
-	model.BSBeveled,
-	&color.Green,
-	true,
-	1,
-	&color.Blue,
-	10, 10, 10, 10)
+	*types.NewRectangle(400, 0, 450, 50), // rect
+	0,                                    // apObjNr
+	"Circle Annotation",                  // contents
+	"ID4",                                // id
+	"",                                   // modDate
+	0,                                    // f
+	&color.Gray,                          // col
+	"Title1",                             // title
+	nil,                                  // popupIndRef
+	nil,                                  // ca
+	"",                                   // rc
+	"",                                   // subject
+	&color.Blue,                          // fillCol
+	0,                                    // MLeft
+	0,                                    // MTop
+	0,                                    // MRight
+	0,                                    // MBot
+	1,                                    // borderWidth
+	model.BSSolid,                        // borderStyle
+	false,                                // cloudyBorder
+	0,                                    // cloudyBorderIntensity
+)
+
+var circleAnnCJK model.AnnotationRenderer = model.NewCircleAnnotation(
+	*types.NewRectangle(400, 50, 450, 100), // rect
+	0,                                      // apObjNr
+	"圆圈注释",                                 // contents
+	"ID4CJK",                               // id
+	"",                                     // modDate
+	0,                                      // f
+	&color.Green,                           // col
+	"Title1",                               // title
+	nil,                                    // popupIndRef
+	nil,                                    // ca
+	"",                                     // rc
+	"",                                     // subject
+	&color.Blue,                            // fillCol
+	10,                                     // MLeft
+	10,                                     // MTop
+	10,                                     // MRight
+	10,                                     // MBot
+	1,                                      // borderWidth
+	model.BSBeveled,                        // borderStyle
+	false,                                  // cloudyBorder
+	0,                                      // cloudyBorderIntensity
+)
 
 func annotationCount(t *testing.T, inFile string) int {
 	t.Helper()
@@ -434,24 +571,30 @@ func TestAddAnnotationsLowLevel(t *testing.T) {
 func TestAddLinkAnnotationWithDest(t *testing.T) {
 	msg := "TestAddLinkAnnotationWithDest"
 
+	// Best viewed with Adobe Reader.
+
 	inFile := filepath.Join(inDir, "Walden.pdf")
 	outFile := filepath.Join(samplesDir, "annotations", "LinkAnnotWithDestTopLeft.pdf")
 
 	// Create internal link:
 	// Add a 100x100 link rectangle on the bottom left corner of page 2.
 	// Set destination to top left corner of page 1.
+	dest := &model.Destination{Typ: model.DestXYZ, PageNr: 1, Left: -1, Top: -1}
 
 	internalLink := model.NewLinkAnnotation(
-		*types.NewRectangle(0, 0, 100, 100),
-		nil,
-		&model.Destination{Typ: model.DestXYZ, PageNr: 1, Left: -1, Top: -1},
-		"",
-		"id",
-		0,
-		1,
-		model.BSSolid,
-		&color.Red,
-		true,
+		*types.NewRectangle(0, 0, 100, 100), // rect
+		0,                                   // apObjNr
+		"",                                  // contents
+		"ID2",                               // id
+		"",                                  // modDate
+		0,                                   // f
+		&color.Red,                          // borderCol
+		dest,                                // dest
+		"",                                  // uri
+		nil,                                 // quad
+		true,                                // border
+		1,                                   // borderWidth
+		model.BSSolid,                       // borderStyle
 	)
 
 	err := api.AddAnnotationsFile(inFile, outFile, []string{"2"}, internalLink, nil, false)
@@ -463,11 +606,18 @@ func TestAddLinkAnnotationWithDest(t *testing.T) {
 func TestAddAnnotationsFile(t *testing.T) {
 	msg := "TestAddAnnotationsFile"
 
+	// Best viewed with Adobe Reader.
+
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "TestAnnotationsFile.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "Annotations.pdf")
 
 	// Add text annotation.
 	if err := api.AddAnnotationsFile(inFile, outFile, nil, textAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+
+	// Add CJK text annotation.
+	if err := api.AddAnnotationsFile(outFile, outFile, nil, textAnnCJK, nil, false); err != nil {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
 
@@ -481,17 +631,28 @@ func TestAddAnnotationsFile(t *testing.T) {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
 
+	// Add CJK square annotation.
+	if err := api.AddAnnotationsFile(outFile, outFile, nil, squareAnnCJK, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+
 	// Add circle annotation.
 	if err := api.AddAnnotationsFile(outFile, outFile, nil, circleAnn, nil, false); err != nil {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
+
+	// Add CJK circle annotation.
+	if err := api.AddAnnotationsFile(outFile, outFile, nil, circleAnnCJK, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+
 }
 
 func TestAddAnnotations(t *testing.T) {
 	msg := "TestAddAnnotations"
 
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "TestAnnotations.pdf")
+	outFile := filepath.Join(outDir, "Annotations.pdf")
 
 	// Create a context from inFile.
 	ctx, err := api.ReadContextFile(inFile)
@@ -501,14 +662,19 @@ func TestAddAnnotations(t *testing.T) {
 
 	// Prepare annotations for page 1.
 	m := map[int][]model.AnnotationRenderer{}
-	anns := make([]model.AnnotationRenderer, 4)
+	anns := make([]model.AnnotationRenderer, 7)
+
 	anns[0] = textAnn
-	anns[1] = linkAnn
+	anns[1] = textAnnCJK
 	anns[2] = squareAnn
-	anns[3] = circleAnn
+	anns[3] = squareAnnCJK
+	anns[4] = circleAnn
+	anns[5] = circleAnnCJK
+	anns[6] = linkAnn
+
 	m[1] = anns
 
-	// Add 4 annotations to page 1.
+	// Add 7 annotations to page 1.
 	if ok, err := pdfcpu.AddAnnotationsMap(ctx, m, false); err != nil || !ok {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
@@ -518,4 +684,413 @@ func TestAddAnnotations(t *testing.T) {
 		t.Fatalf("%s write: %v\n", msg, err)
 	}
 
+}
+
+func TestPopupAnnotation(t *testing.T) {
+	msg := "TestPopupAnnotation"
+
+	// Add a Markup annotation and a linked Popup annotation.
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "PopupAnnotation.pdf")
+
+	incr := false
+	pageNr := 1
+
+	// Create a context.
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("%s readContext: %v\n", msg, err)
+	}
+
+	// Add Markup annotation.
+	parentIndRef, textAnnotDict, err := pdfcpu.AddAnnotationToPage(ctx, pageNr, textAnn, incr)
+	if err != nil {
+		t.Fatalf("%s Add Text AnnotationToPage: %v\n", msg, err)
+	}
+
+	// Add Markup annotation as parent of Popup annotation.
+	popupAnn := model.NewPopupAnnotation(
+		*types.NewRectangle(0, 0, 100, 100), // rect
+		0,                                   // apObjNr
+		"Popup content",                     // contents
+		"IDPopup",                           // id
+		"",                                  // modDate
+		0,                                   // f
+		&color.Green,                        // col
+		0,                                   // borderRadX
+		0,                                   // borderRadY
+		2,                                   // borderWidth
+		parentIndRef,                        // parentIndRef,
+		false,                               // displayOpen
+	)
+
+	// Add Popup annotation.
+	popupIndRef, _, err := pdfcpu.AddAnnotationToPage(ctx, pageNr, popupAnn, incr)
+	if err != nil {
+		t.Fatalf("%s Add Popup AnnotationToPage: %v\n", msg, err)
+	}
+
+	// Add Popup annotation to Markup annotation.
+	textAnnotDict["Popup"] = *popupIndRef
+
+	// Write context to file.
+	if err := api.WriteContextFile(ctx, outFile); err != nil {
+		t.Fatalf("%s write: %v\n", msg, err)
+	}
+}
+
+func TestInkAnnotation(t *testing.T) {
+	msg := "TestInkAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "InkAnnotation.pdf")
+
+	p1 := model.InkPath{100., 542., 150., 492., 200., 542.}
+	p2 := model.InkPath{100, 592, 150, 592}
+
+	inkAnn := model.NewInkAnnotation(
+		*types.NewRectangle(0, 0, 100, 100), // rect
+		0,                                   // apObjNr
+		"Ink content",                       // contents
+		"IDInk",                             // id
+		"",                                  // modDate
+		0,                                   // f
+		&color.Red,                          // col
+		"Title1",                            // title
+		nil,                                 // popupIndRef
+		nil,                                 // ca
+		"",                                  // rc
+		"",                                  // subject
+		[]model.InkPath{p1, p2},             // InkList
+		0,                                   // borderWidth
+		model.BSSolid,                       // borderStyle
+	)
+
+	// Add Ink annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, inkAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestHighlightAnnotation(t *testing.T) {
+	msg := "TestHighlightAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "testWithText.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "HighlightAnnotation.pdf")
+
+	r := types.NewRectangle(205, 624.16, 400, 645.88)
+
+	ql := types.NewQuadLiteralForRect(r)
+
+	inkAnn := model.NewHighlightAnnotation(
+		*r,                    // rect
+		0,                     // apObjNr
+		"Highlight content",   // contents
+		"IDHighlight",         // id
+		"",                    // modDate
+		model.AnnLocked,       // f
+		&color.Yellow,         // col
+		0,                     // borderRadX
+		0,                     // borderRadY
+		2,                     // borderWidth
+		"Comment by Horst",    // title
+		nil,                   // popupIndRef
+		nil,                   // ca
+		"",                    // rc
+		"Subject",             // subject
+		types.QuadPoints{*ql}, // quad points
+	)
+
+	// Add Highlight annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, inkAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestUnderlineAnnotation(t *testing.T) {
+	msg := "TestUnderlineAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "testWithText.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "UnderlineAnnotation.pdf")
+
+	r := types.NewRectangle(205, 624.16, 400, 645.88)
+
+	ql := types.NewQuadLiteralForRect(r)
+
+	underlineAnn := model.NewUnderlineAnnotation(
+		*r,                    // rect
+		0,                     // apObjNr
+		"Underline content",   // contents
+		"IDUnderline",         // id
+		"",                    // modDate
+		model.AnnLocked,       // f
+		&color.Yellow,         // col
+		0,                     // borderRadX
+		0,                     // borderRadY
+		2,                     // borderWidth
+		"Title1",              // title
+		nil,                   // popupIndRef
+		nil,                   // ca
+		"",                    // rc
+		"",                    // subject
+		types.QuadPoints{*ql}, // quad points
+	)
+
+	// Add Underline annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, underlineAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestSquigglyAnnotation(t *testing.T) {
+	msg := "TestSquigglyAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "testWithText.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "SquigglyAnnotation.pdf")
+
+	r := types.NewRectangle(205, 624.16, 400, 645.88)
+
+	ql := types.NewQuadLiteralForRect(r)
+
+	squigglyAnn := model.NewSquigglyAnnotation(
+		*r,                    // rect
+		0,                     // apObjNr
+		"Squiggly content",    // contents
+		"IDSquiggly",          // id
+		"",                    // modDate
+		model.AnnLocked,       // f
+		&color.Yellow,         // col
+		0,                     // borderRadX
+		0,                     // borderRadY
+		2,                     // borderWidth
+		"Title1",              // title
+		nil,                   // popupIndRef
+		nil,                   // ca
+		"",                    // rc
+		"",                    // subject
+		types.QuadPoints{*ql}, // quad points
+	)
+
+	// Add Squiggly annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, squigglyAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestStrikeOutAnnotation(t *testing.T) {
+	msg := "TestStrikeOutAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "testWithText.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "StrikeOutAnnotation.pdf")
+
+	r := types.NewRectangle(205, 624.16, 400, 645.88)
+
+	ql := types.NewQuadLiteralForRect(r)
+
+	strikeOutAnn := model.NewStrikeOutAnnotation(
+		*r,                    // rect
+		0,                     // apObjNr
+		"StrikeOut content",   // contents
+		"IDStrikeOut",         // id
+		"",                    // modDate
+		model.AnnLocked,       // f
+		&color.Yellow,         // col
+		0,                     // borderRadX
+		0,                     // borderRadY
+		2,                     // borderWidth
+		"Title1",              // title
+		nil,                   // popupIndRef
+		nil,                   // ca
+		"",                    // rc
+		"",                    // subject
+		types.QuadPoints{*ql}, // quad points
+	)
+
+	// Add StrikeOut annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, strikeOutAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestFreeTextAnnotation(t *testing.T) {
+	msg := "TestFreeTextAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "FreeTextAnnotation.pdf")
+
+	// Add Free text annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, freeTextAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestPolyLineAnnotation(t *testing.T) {
+	msg := "TestPolyLineAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "PolyLineAnnotation.pdf")
+
+	leButt := model.LEButt
+	leOpenArrow := model.LEOpenArrow
+
+	polyLineAnn := model.NewPolyLineAnnotation(
+		*types.NewRectangle(30, 30, 110, 110), // rect
+		0,                                     // apObjNr
+		"PolyLine Annotation",                 // contents
+		"IDPolyLine",                          // id
+		"",                                    // modDate
+		0,                                     // f
+		&color.Gray,                           // col
+		"Title1",                              // title
+		nil,                                   // popupIndRef
+		nil,                                   // ca
+		"",                                    // rc
+		"",                                    // subject
+		types.NewNumberArray(30, 30, 110, 110, 110, 30), // vertices
+		nil,            // path
+		nil,            // intent
+		nil,            // measure
+		&color.Green,   // fillCol
+		1,              // borderWidth
+		model.BSDashed, // borderStyle
+		&leButt,        // start lineEndingStyle
+		&leOpenArrow,   // end lineEndingStyle
+	)
+
+	// Add PolyLine annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, polyLineAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestPolygonAnnotation(t *testing.T) {
+	msg := "TestPolygonAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "PolygonAnnotation.pdf")
+
+	polygonAnn := model.NewPolygonAnnotation(
+		*types.NewRectangle(30, 30, 110, 110), // rect
+		0,                                     // apObjNr
+		"Polygon Annotation",                  // contents
+		"IDPolygon",                           // id
+		"",                                    // modDate
+		0,                                     // f
+		&color.Gray,                           // col
+		"Title1",                              // title
+		nil,                                   // popupIndRef
+		nil,                                   // ca
+		"",                                    // rc
+		"",                                    // subject
+		types.NewNumberArray(30, 30, 110, 110, 110, 30), // vertices
+		nil,            // path
+		nil,            // intent
+		nil,            // measure
+		&color.Green,   // fillCol
+		5,              // borderWidth
+		model.BSDashed, // borderStyle
+		true,           // cloudyBorder
+		2)              // cloudyBorderIntensity
+
+	// Add Polygon annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, polygonAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestLineAnnotation(t *testing.T) {
+	msg := "TestLineAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "LineAnnotation.pdf")
+
+	leOpenArrow := model.LEOpenArrow
+
+	lineAnn := model.NewLineAnnotation(
+		*types.NewRectangle(30, 30, 110, 110), // rect
+		0,                                     // apObjNr
+		"Diagonal",                            // contents
+		"IDLine",                              // id
+		"",                                    // modDate
+		0,                                     // f
+		&color.DarkGray,                       // col
+		"Title1",                              // title
+		nil,                                   // popupIndRef
+		nil,                                   // ca
+		"",                                    // rc
+		"",                                    // subject
+		types.NewPoint(148.75, 140.33),        // P1
+		types.NewPoint(297.5, 280.66),         // P2
+		&leOpenArrow,                          // start lineEndingStyle
+		&leOpenArrow,                          // end lineEndingStyle
+		50,                                    // leader line length
+		0,                                     // leader line offset
+		10,                                    // leader line extension length
+		nil,                                   // intent
+		nil,                                   // measure
+		true,                                  // caption
+		false,                                 // caption position top
+		0,                                     // caption offset X
+		0,                                     // caption offset Y
+		nil,                                   // fillCol
+		1,                                     // borderWidth
+		model.BSSolid)                         // borderStyle
+
+	// Add line annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, lineAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
+}
+
+func TestCaretAnnotation(t *testing.T) {
+	msg := "TestCaretAnnotation"
+
+	// Best viewed with Adobe Reader.
+
+	inFile := filepath.Join(inDir, "test.pdf")
+	outFile := filepath.Join(samplesDir, "annotations", "CaretAnnotation.pdf")
+
+	caretAnn := model.NewCaretAnnotation(
+		*types.NewRectangle(30, 30, 110, 110), // rect
+		0,                                     // apObjNr
+		"Caret Annotation",                    // contents
+		"IDCaret",                             // id
+		"",                                    // modDate
+		0,                                     // f,
+		nil,                                   // col
+		0,                                     // borderRadX
+		0,                                     // borderRadY
+		0,                                     // borderWidth
+		"Title1",                              // title
+		nil,                                   // popupIndRef
+		nil,                                   // ca
+		"",                                    // rc
+		"",                                    // subject
+		types.NewRectangle(20, 20, 20, 20),    // RD
+		true)                                  // paragraph symbol
+
+	// Add line annotation.
+	if err := api.AddAnnotationsFile(inFile, outFile, nil, caretAnn, nil, false); err != nil {
+		t.Fatalf("%s add: %v\n", msg, err)
+	}
 }

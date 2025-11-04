@@ -35,7 +35,6 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
-	//conf.Cmd = model.OPTIMIZE
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

@@ -24,6 +24,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/angel-one/pdfcpu/pkg/log"
@@ -426,7 +427,11 @@ func validateComboBoxValues(f form.Form) error {
 		}
 		if len(cb.Options) > 0 {
 			if !types.MemberOf(cb.Value, cb.Options) {
-				return errors.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: %v\n", cb.Name, cb.Value, cb.Options)
+				i, err := strconv.Atoi(cb.Value)
+				if err == nil && i < len(cb.Options) {
+					return nil
+				}
+				return errors.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: [%v]\n", cb.Name, cb.Value, strings.Join(cb.Options, ", "))
 			}
 		}
 	}
@@ -441,7 +446,11 @@ func validateListBoxValues(f form.Form) error {
 		if len(lb.Options) > 0 {
 			for _, v := range lb.Values {
 				if !types.MemberOf(v, lb.Options) {
-					return errors.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: %v\n", lb.Name, v, lb.Options)
+					i, err := strconv.Atoi(v)
+					if err == nil && i < len(lb.Options) {
+						return nil
+					}
+					return errors.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: [%v]\n", lb.Name, v, strings.Join(lb.Options, ", "))
 				}
 			}
 		}
@@ -456,7 +465,11 @@ func validateRadioButtonGroupValues(f form.Form) error {
 		}
 		if len(rbg.Options) > 0 {
 			if !types.MemberOf(rbg.Value, rbg.Options) {
-				return errors.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: %v\n", rbg.Name, rbg.Value, rbg.Options)
+				i, err := strconv.Atoi(rbg.Value)
+				if err == nil && i < len(rbg.Options) {
+					return nil
+				}
+				return errors.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: [%v]\n", rbg.Name, rbg.Value, strings.Join(rbg.Options, ", "))
 			}
 		}
 	}
@@ -507,6 +520,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return err
 	}
 
+	// TODO not necessarily so
 	ctx.RemoveSignature()
 
 	var buf bytes.Buffer

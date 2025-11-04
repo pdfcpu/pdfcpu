@@ -306,10 +306,6 @@ func (n *Node) Add(xRefTable *XRefTable, k string, v types.Object, m NameMap, na
 		return n.HandleLeaf(xRefTable, k, v, m, nameRefDictKeys)
 	}
 
-	if k == n.Kmin || k == n.Kmax {
-		return nil
-	}
-
 	if keyLess(k, n.Kmin) {
 		n.Kmin = k
 	} else if keyLess(n.Kmax, k) {

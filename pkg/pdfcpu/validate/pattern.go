@@ -23,16 +23,13 @@ import (
 )
 
 func validateTilingPatternDict(xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
-
 	dictName := "tilingPatternDict"
 
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
+	if err := xRefTable.ValidateVersion(dictName, sinceVersion); err != nil {
 		return err
 	}
 
-	_, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Pattern" })
+	_, err := validateNameEntry(xRefTable, sd.Dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Pattern" })
 	if err != nil {
 		return err
 	}
@@ -83,15 +80,13 @@ func validateTilingPatternDict(xRefTable *model.XRefTable, sd *types.StreamDict,
 }
 
 func validateShadingPatternDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
-
 	dictName := "shadingPatternDict"
 
-	err := xRefTable.ValidateVersion(dictName, sinceVersion)
-	if err != nil {
+	if err := xRefTable.ValidateVersion(dictName, sinceVersion); err != nil {
 		return err
 	}
 
-	_, err = validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Pattern" })
+	_, err := validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Pattern" })
 	if err != nil {
 		return err
 	}
@@ -136,11 +131,11 @@ func validatePattern(xRefTable *model.XRefTable, o types.Object) error {
 
 	switch o := o.(type) {
 
-	case types.Dict:
-		err = validateShadingPatternDict(xRefTable, o, model.V13)
-
 	case types.StreamDict:
 		err = validateTilingPatternDict(xRefTable, &o, model.V10)
+
+	case types.Dict:
+		err = validateShadingPatternDict(xRefTable, o, model.V13)
 
 	default:
 		err = errors.New("pdfcpu: validatePattern: corrupt obj typ, must be dict or stream dict")
@@ -155,8 +150,7 @@ func validatePatternResourceDict(xRefTable *model.XRefTable, o types.Object, sin
 	// see 8.7 Patterns
 
 	// Version check
-	err := xRefTable.ValidateVersion("PatternResourceDict", sinceVersion)
-	if err != nil {
+	if err := xRefTable.ValidateVersion("PatternResourceDict", sinceVersion); err != nil {
 		return err
 	}
 
@@ -169,8 +163,7 @@ func validatePatternResourceDict(xRefTable *model.XRefTable, o types.Object, sin
 	for _, o := range d {
 
 		// Process pattern
-		err = validatePattern(xRefTable, o)
-		if err != nil {
+		if err = validatePattern(xRefTable, o); err != nil {
 			return err
 		}
 

@@ -411,6 +411,10 @@ func (tb *TextBox) render(p *model.Page, pageNr int, fonts model.FontMap) error 
 		return err
 	}
 
+	if len(td.Text) == 0 {
+		return nil
+	}
+
 	mTop, mRight, mBottom, mLeft, err := tb.calcMargin()
 	if err != nil {
 		return err

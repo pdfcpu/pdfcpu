@@ -61,6 +61,10 @@ func TestMain(m *testing.M) {
 	samplesDir = filepath.Join("..", "..", "samples")
 
 	conf = api.LoadConfiguration()
+	if os.Getenv("GITHUB_ACTIONS") == "true" {
+		conf.Offline = true
+	}
+	fmt.Printf("conf.Offline: %t\n", conf.Offline)
 
 	// Install test user fonts from pkg/testdata/fonts.
 	fonts, err := userFonts(filepath.Join(inDir, "fonts"))
@@ -186,6 +190,8 @@ func TestValidate(t *testing.T) {
 	msg := "TestValidate"
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
 
+	//log.SetDefaultStatsLogger()
+
 	// Validate inFile.
 	if err := api.ValidateFile(inFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
@@ -230,7 +236,7 @@ func TestInfo(t *testing.T) {
 	}
 	defer f.Close()
 
-	info, err := api.PDFInfo(f, inFile, nil, conf)
+	info, err := api.PDFInfo(f, inFile, nil, true, conf)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}

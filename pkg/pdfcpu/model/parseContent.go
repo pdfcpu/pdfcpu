@@ -48,23 +48,31 @@ func skipDict(l *string) error {
 			return errDictionaryCorrupt
 		}
 		if s[i] == '<' {
-			j++
+			if i == len(s)-1 {
+				return errDictionaryCorrupt
+			}
+			if s[i+1] == '<' {
+				j++
+				s = s[i+2:]
+				continue
+			}
 			s = s[i+1:]
 			continue
 		}
 		if s[i] == '>' {
-			if j > 0 {
-				j--
-				s = s[i+1:]
-				continue
-			}
-			// >> ?
-			s = s[i:]
-			if !strings.HasPrefix(s, ">>") {
+			if i == len(s)-1 {
 				return errDictionaryCorrupt
 			}
-			*l = s[2:]
-			break
+			if s[i+1] == '>' {
+				if j > 0 {
+					j--
+					s = s[i+2:]
+					continue
+				}
+				*l = s[i+2:]
+				break
+			}
+			s = s[i+1:]
 		}
 	}
 	return nil
@@ -75,9 +83,17 @@ func skipStringLiteral(l *string) error {
 	i := 0
 	for {
 		i = strings.IndexByte(s, byte(')'))
-		if i <= 0 || i > 0 && s[i-1] != '\\' || i > 1 && s[i-2] == '\\' {
+		if i <= 0 || i > 0 && s[i-1] != '\\' {
 			break
 		}
+		k := 0
+		for j := i - 1; j >= 0 && s[j] == '\\'; j-- {
+			k++
+		}
+		if k%2 == 0 {
+			break
+		}
+		// Skip \)
 		s = s[i+1:]
 	}
 	if i < 0 {
@@ -128,20 +144,69 @@ func skipTJ(l *string) error {
 	return nil
 }
 
+func lookupEI(l *string) (int, error) {
+	s := *l
+	//fmt.Printf("\n%s\n", hex.Dump([]byte(s)))
+	for i := 2; i <= len(s)-2; i++ {
+		if s[i:i+2] != "EI" {
+			continue
+		}
+		j := i + 2
+		ws := 0
+		for j < len(s) && unicode.IsSpace(rune(s[j])) && ws < 2 {
+			j++
+			ws++
+		}
+		switch {
+		case j == len(s) && ws <= 2:
+			// "EI" at end or followed by 1–2 spaces till end
+			return i, nil
+		case ws >= 1 && ws <= 2 && j < len(s) && s[j] == 'Q':
+			// "EI" followed by 1–2 spaces, then 'Q'
+			return i, nil
+		case ws == 0 && j == len(s):
+			// suffix "EI"
+			return i, nil
+		}
+	}
+	return 0, errBIExpressionCorrupt
+}
+
 func skipBI(l *string, prn PageResourceNames) error {
 	s := *l
+	//fmt.Printf("skipBI <%s>\n", s)
 	for {
 		s = strings.TrimLeftFunc(s, whitespaceOrEOL)
-		if strings.HasPrefix(s, "EI") && whitespaceOrEOL(rune(s[2])) {
-			s = s[2:]
+		if strings.HasPrefix(s, "ID") && whitespaceOrEOL(rune(s[2])) {
+			i, err := lookupEI(&s)
+			if err != nil {
+				return err
+			}
+			s = s[i+2:]
 			break
 		}
-		// TODO Check len(s) > 0
+		if len(s) == 0 {
+			return errBIExpressionCorrupt
+		}
 		if s[0] == '/' {
 			s = s[1:]
 			i, _ := positionToNextWhitespaceOrChar(s, "/")
 			if i < 0 {
 				return errBIExpressionCorrupt
+			}
+			token := s[:i]
+			if token == "CS" || token == "ColorSpace" {
+				s = s[i:]
+				s, _ = trimLeftSpace(s, false)
+				s = s[1:]
+				i, _ = positionToNextWhitespaceOrChar(s, "/")
+				if i < 0 {
+					return errBIExpressionCorrupt
+				}
+				name := s[:i]
+				if !types.MemberOf(name, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK", "Indexed", "G", "RGB", "CMYK", "I"}) {
+					prn["ColorSpace"][name] = true
+				}
 			}
 			s = s[i:]
 			continue
@@ -164,6 +229,12 @@ func positionToNextContentToken(line *string, prn PageResourceNames) (bool, erro
 			// whitespace or eol only
 			return true, nil
 		}
+		if l[0] == '%' {
+			// Skip comment.
+			l, _ = positionToNextEOL(l)
+			continue
+		}
+
 		if l[0] == '[' {
 			// Skip TJ expression:
 			// [()...()] TJ
@@ -200,12 +271,12 @@ func positionToNextContentToken(line *string, prn PageResourceNames) (bool, erro
 	}
 }
 
-func nextContentToken(line *string, prn PageResourceNames) (string, error) {
+func nextContentToken(pre string, line *string, prn PageResourceNames) (string, error) {
 	// A token is either a name or some chunk terminated by white space or one of /, (, [
 	if noBuf(line) {
 		return "", nil
 	}
-	l := *line
+	l := pre + *line
 	t := ""
 
 	//log.Parse.Printf("nextContentToken: start buf= <%s>\n", *line)
@@ -258,9 +329,8 @@ func nextContentToken(line *string, prn PageResourceNames) (string, error) {
 	return t, nil
 }
 
-func resourceNameAtPos1(s, name string, prn PageResourceNames) bool {
-	switch s {
-	case "cs", "CS":
+func colorSpace(s, name string, prn PageResourceNames) bool {
+	if strings.HasPrefix(s, "cs") || strings.HasPrefix(s, "CS") {
 		if !types.MemberOf(name, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK", "Pattern"}) {
 			prn["ColorSpace"][name] = true
 			if log.ParseEnabled() {
@@ -268,72 +338,90 @@ func resourceNameAtPos1(s, name string, prn PageResourceNames) bool {
 			}
 		}
 		return true
+	}
+	return false
+}
 
-	case "gs":
+func resourceNameAtPos1(s, name string, prn PageResourceNames) (string, bool) {
+	if colorSpace(s, name, prn) {
+		return s[2:], true
+	}
+
+	if strings.HasPrefix(s, "gs") {
 		prn["ExtGState"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("ExtGState[%s]\n", name)
 		}
-		return true
+		return s[2:], true
+	}
 
-	case "Do":
+	if strings.HasPrefix(s, "Do") {
 		prn["XObject"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("XObject[%s]\n", name)
 		}
-		return true
+		return s[2:], true
+	}
 
-	case "sh":
+	if strings.HasPrefix(s, "sh") {
 		prn["Shading"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("Shading[%s]\n", name)
 		}
-		return true
+		return s[2:], true
+	}
 
-	case "scn", "SCN":
+	if strings.HasPrefix(s, "scn") || strings.HasPrefix(s, "SCN") {
 		prn["Pattern"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("Pattern[%s]\n", name)
 		}
-		return true
-
-	case "ri", "BMC", "MP":
-		return true
-
+		return s[3:], true
 	}
 
-	return false
+	if strings.HasPrefix(s, "ri") || strings.HasPrefix(s, "MP") {
+		return s[2:], true
+	}
+
+	if strings.HasPrefix(s, "BMC") {
+		return s[3:], true
+	}
+
+	return "", false
 }
 
-func resourceNameAtPos2(s, name string, prn PageResourceNames) bool {
+func resourceNameAtPos2(s, name string, prn PageResourceNames) (string, bool) {
 	switch s {
 	case "Tf":
 		prn["Font"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("Font[%s]\n", name)
 		}
-		return true
+		return "", true
 	case "BDC", "DP":
 		prn["Properties"][name] = true
 		if log.ParseEnabled() {
 			log.Parse.Printf("Properties[%s]\n", name)
 		}
-		return true
+		return "", true
 	}
-	return false
+	return "", false
 }
 
 func parseContent(s string) (PageResourceNames, error) {
 	var (
+		pre  string
 		name string
 		n    bool
+		ok   bool
 	)
 	prn := NewPageResourceNames()
 
 	//fmt.Printf("parseContent:\n%s\n", hex.Dump([]byte(s)))
 
 	for pos := 0; ; {
-		t, err := nextContentToken(&s, prn)
+		t, err := nextContentToken(pre, &s, prn)
+		pre = ""
 		if log.ParseEnabled() {
 			log.Parse.Printf("t = <%s>\n", t)
 		}
@@ -367,17 +455,22 @@ func parseContent(s string) (PageResourceNames, error) {
 
 		pos++
 		if pos == 1 {
-			if resourceNameAtPos1(t, name, prn) {
+			if pre, ok = resourceNameAtPos1(t, name, prn); ok {
 				n = false
 			}
 			continue
 		}
 		if pos == 2 {
-			if resourceNameAtPos2(t, name, prn) {
+			if pre, ok = resourceNameAtPos2(t, name, prn); ok {
 				n = false
 			}
 			continue
 		}
-		return nil, errPageContentCorrupt
+		ShowSkipped("corrupt page content")
+		n = false
+		if log.ParseEnabled() {
+			log.Parse.Printf("skip:%s\n", t)
+		}
+		//return nil, errPageContentCorrupt
 	}
 }

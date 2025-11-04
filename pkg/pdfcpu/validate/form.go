@@ -17,6 +17,7 @@ limitations under the License.
 package validate
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -201,13 +202,13 @@ func validateDARelaxed(s string) bool {
 			if i < 3 {
 				return false
 			}
-			if _, err := strconv.ParseFloat(da[i-3], 32); err != nil {
+			if _, err := strconv.ParseFloat(strings.TrimPrefix(da[i-3], "["), 32); err != nil {
 				return false
 			}
 			if _, err := strconv.ParseFloat(da[i-2], 32); err != nil {
 				return false
 			}
-			if _, err := strconv.ParseFloat(da[i-1], 32); err != nil {
+			if _, err := strconv.ParseFloat(strings.TrimSuffix(da[i-1], "]"), 32); err != nil {
 				return false
 			}
 		}
@@ -229,13 +230,18 @@ func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName stri
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		validate = validateDARelaxed
 	}
-	if terminalNode && (*outFieldType).Value() == "Tx" {
-		da, err := validateStringEntry(xRefTable, d, dictName, "DA", terminalNode && requiresDA, model.V10, validate)
+
+	if outFieldType == nil || (*outFieldType).Value() == "Tx" {
+		//if (*outFieldType).Value() == "Tx" {
+		da, err := validateStringEntry(xRefTable, d, dictName, "DA", requiresDA, model.V10, validate)
 		if err != nil {
+			if !terminalNode && requiresDA {
+				err = nil
+			}
 			return false, err
 		}
 		if xRefTable.ValidationMode == model.ValidationRelaxed && da != nil {
-			// Repair
+			// Repair DA
 			d["DA"] = types.StringLiteral(*da)
 		}
 
@@ -245,7 +251,84 @@ func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName stri
 	return false, nil
 }
 
-func validateFormFieldDictEntries(xRefTable *model.XRefTable, d types.Dict, terminalNode bool, inFieldType *types.Name, requiresDA bool) (outFieldType *types.Name, hasDA bool, err error) {
+func cacheSig(xRefTable *model.XRefTable, d types.Dict, dictName string, form bool, objNr, incr int) error {
+	fieldType := d.NameEntry("FT")
+	if fieldType == nil || *fieldType != "Sig" {
+		return nil
+	}
+
+	sig := &model.Signature{Type: model.SigTypePage, ObjNr: objNr, Signed: d["V"] != nil, PageNr: xRefTable.CurPage}
+	if form {
+		sig.Type = model.SigTypeForm
+	}
+
+	var dts bool
+
+	if indRef := d.IndirectRefEntry("V"); indRef != nil {
+		sigDict, err := xRefTable.DereferenceDict(*indRef)
+		if err != nil {
+			return nil
+		}
+		if typ := sigDict.Type(); typ != nil {
+			if *typ == "DocTimeStamp" {
+				sig.Type = model.SigTypeDTS
+				dts = true
+			}
+		}
+	}
+
+	arr, err := validateRectangleEntry(xRefTable, d, dictName, "Rect", REQUIRED, model.V10, nil)
+	if err != nil {
+		return err
+	}
+	r := types.RectForArray(arr)
+	sig.Visible = r.Visible() && !dts
+
+	if _, ok := xRefTable.Signatures[incr]; !ok {
+		xRefTable.Signatures[incr] = map[int]model.Signature{}
+	}
+	if sig1, ok := xRefTable.Signatures[incr][sig.ObjNr]; !ok {
+		xRefTable.Signatures[incr][sig.ObjNr] = *sig
+	} else {
+		sig1.PageNr = xRefTable.CurPage
+		xRefTable.Signatures[incr][sig.ObjNr] = sig1
+	}
+
+	return nil
+}
+
+func isTextField(ft *types.Name) bool {
+	return ft != nil && *ft == "Tx"
+}
+
+func validateV(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, dictName string, terminalNode, textField, oneKid bool) error {
+	_, err := validateEntry(xRefTable, d, dictName, "V", OPTIONAL, model.V10)
+	if err != nil {
+		return err
+	}
+	// Ignore kids if V is present
+	// if textField && v != nil && !terminalNode && !oneKid {
+	// 	return errors.New("\"V\" not allowed in non terminal text fields with more than one kid")
+	// }
+	if err := cacheSig(xRefTable, d, dictName, true, objNr, incr); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateDV(xRefTable *model.XRefTable, d types.Dict, dictName string, terminalNode, textField, oneKid bool) error {
+	_, err := validateEntry(xRefTable, d, dictName, "DV", OPTIONAL, model.V10)
+	if err != nil {
+		return err
+	}
+	// Ignore kids if DV is present.
+	// if textField && dv != nil && !terminalNode && !oneKid {
+	// 	return errors.New("\"DV\" not allowed in non terminal text fields with more than one kid")
+	// }
+	return nil
+}
+
+func validateFormFieldDictEntries(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, terminalNode, oneKid bool, inFieldType *types.Name, requiresDA bool) (outFieldType *types.Name, hasDA bool, err error) {
 
 	dictName := "formFieldDict"
 
@@ -260,6 +343,8 @@ func validateFormFieldDictEntries(xRefTable *model.XRefTable, d types.Dict, term
 	if fieldType != nil {
 		outFieldType = fieldType
 	}
+
+	textField := isTextField(outFieldType)
 
 	// Parent, required if this is a child in the field hierarchy.
 	_, err = validateIndRefEntry(xRefTable, d, dictName, "Parent", OPTIONAL, model.V10)
@@ -292,14 +377,12 @@ func validateFormFieldDictEntries(xRefTable *model.XRefTable, d types.Dict, term
 	}
 
 	// V, optional, various
-	_, err = validateEntry(xRefTable, d, dictName, "V", OPTIONAL, model.V10)
-	if err != nil {
+	if err := validateV(xRefTable, objNr, incr, d, dictName, terminalNode, textField, oneKid); err != nil {
 		return nil, false, err
 	}
 
 	// DV, optional, various
-	_, err = validateEntry(xRefTable, d, dictName, "DV", OPTIONAL, model.V10)
-	if err != nil {
+	if err := validateDV(xRefTable, d, dictName, terminalNode, textField, oneKid); err != nil {
 		return nil, false, err
 	}
 
@@ -316,14 +399,14 @@ func validateFormFieldDictEntries(xRefTable *model.XRefTable, d types.Dict, term
 	return outFieldType, hasDA, err
 }
 
-func validateFormFieldParts(xRefTable *model.XRefTable, d types.Dict, inFieldType *types.Name, requiresDA bool) error {
+func validateFormFieldParts(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, inFieldType *types.Name, requiresDA bool) error {
 	// dict represents a terminal field and must have Subtype "Widget"
 	if _, err := validateNameEntry(xRefTable, d, "formFieldDict", "Subtype", REQUIRED, model.V10, func(s string) bool { return s == "Widget" }); err != nil {
-		return err
+		d["Subtype"] = types.Name("Widget")
 	}
 
 	// Validate field dict entries.
-	if _, _, err := validateFormFieldDictEntries(xRefTable, d, true, inFieldType, requiresDA); err != nil {
+	if _, _, err := validateFormFieldDictEntries(xRefTable, objNr, incr, d, true, false, inFieldType, requiresDA); err != nil {
 		return err
 	}
 
@@ -332,29 +415,35 @@ func validateFormFieldParts(xRefTable *model.XRefTable, d types.Dict, inFieldTyp
 	return err
 }
 
-func validateFormFieldKids(xRefTable *model.XRefTable, d types.Dict, o types.Object, inFieldType *types.Name, requiresDA bool) error {
+func validateFormFieldKids(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, o types.Object, inFieldType *types.Name, requiresDA bool) error {
 	var err error
 	// dict represents a non terminal field.
 	if d.Subtype() != nil && *d.Subtype() == "Widget" {
-		return errors.New("pdfcpu: validateFormFieldKids: non terminal field can not be widget annotation")
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return errors.New("pdfcpu: validateFormFieldKids: non terminal field can not be widget annotation")
+		}
+	}
+
+	a, err := xRefTable.DereferenceArray(o)
+	if err != nil {
+		return err
 	}
 
 	// Validate field entries.
 	var xInFieldType *types.Name
 	var hasDA bool
-	if xInFieldType, hasDA, err = validateFormFieldDictEntries(xRefTable, d, false, inFieldType, requiresDA); err != nil {
+	if xInFieldType, hasDA, err = validateFormFieldDictEntries(xRefTable, objNr, incr, d, false, len(a) == 1, inFieldType, requiresDA); err != nil {
 		return err
 	}
 	if requiresDA && hasDA {
 		requiresDA = false
 	}
 
-	// Recurse over kids.
-	a, err := xRefTable.DereferenceArray(o)
-	if err != nil || a == nil {
-		return err
+	if len(a) == 0 {
+		return nil
 	}
 
+	// Recurse over kids.
 	for _, value := range a {
 		ir, ok := value.(types.IndirectRef)
 		if !ok {
@@ -362,7 +451,11 @@ func validateFormFieldKids(xRefTable *model.XRefTable, d types.Dict, o types.Obj
 		}
 		valid, err := xRefTable.IsValid(ir)
 		if err != nil {
-			return err
+			if xRefTable.ValidationMode == model.ValidationStrict {
+				return err
+			}
+			model.ShowSkipped(fmt.Sprintf("missing form field kid obj #%s", ir.ObjectNumber.String()))
+			valid = true
 		}
 
 		if !valid {
@@ -376,7 +469,7 @@ func validateFormFieldKids(xRefTable *model.XRefTable, d types.Dict, o types.Obj
 }
 
 func validateFormFieldDict(xRefTable *model.XRefTable, ir types.IndirectRef, inFieldType *types.Name, requiresDA bool) error {
-	d, err := xRefTable.DereferenceDict(ir)
+	d, incr, err := xRefTable.DereferenceDictWithIncr(ir)
 	if err != nil || d == nil {
 		return err
 	}
@@ -391,21 +484,18 @@ func validateFormFieldDict(xRefTable *model.XRefTable, ir types.IndirectRef, inF
 		return err
 	}
 
+	objNr := ir.ObjectNumber.Value()
+
 	if o, ok := d.Find("Kids"); ok {
-		return validateFormFieldKids(xRefTable, d, o, inFieldType, requiresDA)
+		return validateFormFieldKids(xRefTable, objNr, incr, d, o, inFieldType, requiresDA)
 	}
 
-	return validateFormFieldParts(xRefTable, d, inFieldType, requiresDA)
+	return validateFormFieldParts(xRefTable, objNr, incr, d, inFieldType, requiresDA)
 }
 
-func validateFormFields(xRefTable *model.XRefTable, o types.Object, requiresDA bool) error {
+func validateFormFields(xRefTable *model.XRefTable, arr types.Array, requiresDA bool) error {
 
-	a, err := xRefTable.DereferenceArray(o)
-	if err != nil || len(a) == 0 {
-		return err
-	}
-
-	for _, value := range a {
+	for _, value := range arr {
 
 		ir, ok := value.(types.IndirectRef)
 		if !ok {
@@ -414,7 +504,11 @@ func validateFormFields(xRefTable *model.XRefTable, o types.Object, requiresDA b
 
 		valid, err := xRefTable.IsValid(ir)
 		if err != nil {
-			return err
+			if xRefTable.ValidationMode == model.ValidationStrict {
+				return err
+			}
+			model.ShowSkipped(fmt.Sprintf("missing form field obj #%s", ir.ObjectNumber.String()))
+			valid = true
 		}
 
 		if !valid {
@@ -428,7 +522,7 @@ func validateFormFields(xRefTable *model.XRefTable, o types.Object, requiresDA b
 	return nil
 }
 
-func validateFormCO(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version, requiresDA bool) error {
+func validateFormCO(xRefTable *model.XRefTable, arr types.Array, sinceVersion model.Version, requiresDA bool) error {
 
 	// see 12.6.3 Trigger Events
 	// Array of indRefs to field dicts with calculation actions, since V1.3
@@ -439,7 +533,7 @@ func validateFormCO(xRefTable *model.XRefTable, o types.Object, sinceVersion mod
 		return err
 	}
 
-	return validateFormFields(xRefTable, o, requiresDA)
+	return validateFormFields(xRefTable, arr, requiresDA)
 }
 
 func validateFormXFA(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
@@ -513,7 +607,12 @@ func validateFormEntryCO(xRefTable *model.XRefTable, d types.Dict, sinceVersion 
 		return nil
 	}
 
-	return validateFormCO(xRefTable, o, sinceVersion, requiresDA)
+	arr, err := xRefTable.DereferenceArray(o)
+	if err != nil || len(arr) == 0 {
+		return err
+	}
+
+	return validateFormCO(xRefTable, arr, sinceVersion, requiresDA)
 }
 
 func validateFormEntryDR(xRefTable *model.XRefTable, d types.Dict) error {
@@ -526,6 +625,50 @@ func validateFormEntryDR(xRefTable *model.XRefTable, d types.Dict) error {
 	_, err := validateResourceDict(xRefTable, o)
 
 	return err
+}
+
+func validateFormEntries(xRefTable *model.XRefTable, d types.Dict, dictName string, requiresDA bool, sinceVersion model.Version) error {
+	// NeedAppearances: optional, boolean
+	_, err := validateBooleanEntry(xRefTable, d, dictName, "NeedAppearances", OPTIONAL, model.V10, nil)
+	if err != nil {
+		return err
+	}
+
+	// SigFlags: optional, since 1.3, integer
+	sinceV := model.V13
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceV = model.V12
+	}
+	sf, err := validateIntegerEntry(xRefTable, d, dictName, "SigFlags", OPTIONAL, sinceV, nil)
+	if err != nil {
+		return err
+	}
+	if sf != nil {
+		i := sf.Value()
+		xRefTable.SignatureExist = i&1 > 0
+		xRefTable.AppendOnly = i&2 > 0
+	}
+
+	// CO: array
+	err = validateFormEntryCO(xRefTable, d, model.V13, requiresDA)
+	if err != nil {
+		return err
+	}
+
+	// DR, optional, resource dict
+	err = validateFormEntryDR(xRefTable, d)
+	if err != nil {
+		return err
+	}
+
+	// Q: optional, integer
+	_, err = validateIntegerEntry(xRefTable, d, dictName, "Q", OPTIONAL, model.V10, validateQ)
+	if err != nil {
+		return err
+	}
+
+	// XFA: optional, since 1.5, stream or array
+	return validateFormXFA(xRefTable, d, sinceVersion)
 }
 
 func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
@@ -545,6 +688,16 @@ func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool
 	// Fields, required, array of indirect references
 	o, ok := d.Find("Fields")
 	if !ok {
+		// Fix empty AcroForm dict.
+		rootDict.Delete("AcroForm")
+		return nil
+	}
+
+	arr, err := xRefTable.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+	if len(arr) == 0 {
 		// Fix empty AcroForm dict.
 		rootDict.Delete("AcroForm")
 		return nil
@@ -570,50 +723,136 @@ func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool
 
 	requiresDA := da == nil || len(*da) == 0
 
-	err = validateFormFields(xRefTable, o, requiresDA)
+	err = validateFormFields(xRefTable, arr, requiresDA)
 	if err != nil {
 		return err
 	}
 
-	// NeedAppearances: optional, boolean
-	_, err = validateBooleanEntry(xRefTable, d, dictName, "NeedAppearances", OPTIONAL, model.V10, nil)
+	return validateFormEntries(xRefTable, d, dictName, requiresDA, sinceVersion)
+}
+
+func locateAnnForAPAndRect(d types.Dict, r *types.Rectangle, pageAnnots map[int]model.PgAnnots) *types.IndirectRef {
+	if indRef1 := d.IndirectRefEntry("AP"); indRef1 != nil {
+		apObjNr := indRef1.ObjectNumber.Value()
+		for _, m := range pageAnnots {
+			annots, ok := m[model.AnnWidget]
+			if ok {
+				for objNr, annRend := range annots.Map {
+					if objNr > 0 {
+						if annRend.RectString() == r.ShortString() && annRend.APObjNrInt() == apObjNr {
+							return types.NewIndirectRef(objNr, 0)
+						}
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func pageAnnotIndRefForAcroField(xRefTable *model.XRefTable, indRef types.IndirectRef) (*types.IndirectRef, error) {
+
+	// indRef should be part of a page annotation dict.
+
+	for _, m := range xRefTable.PageAnnots {
+		annots, ok := m[model.AnnWidget]
+		if ok {
+			for _, ir := range *annots.IndRefs {
+				if ir == indRef {
+					return &ir, nil
+				}
+			}
+		}
+	}
+
+	// form field is duplicated, retrieve corresponding page annotation for Rect, AP
+
+	d, err := xRefTable.DereferenceDict(indRef)
+	if err != nil {
+		return nil, err
+	}
+
+	arr, err := xRefTable.DereferenceArray(d["Rect"])
+	if err != nil {
+		return nil, err
+	}
+	if arr == nil {
+		// Assumption: There are kids and the kids are allright.
+		return &indRef, nil
+	}
+
+	r, err := xRefTable.RectForArray(arr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Possible orphan sig field dicts.
+	if ft := d.NameEntry("FT"); ft != nil && *ft == "Sig" {
+		// Signature Field
+		if _, ok := d.Find("V"); !ok {
+			// without linked sig dict (unsigned)
+			return &indRef, nil
+		}
+		// signed but invisible
+		if !r.Visible() {
+			return &indRef, nil
+		}
+	}
+
+	if indRef := locateAnnForAPAndRect(d, r, xRefTable.PageAnnots); indRef != nil {
+		return indRef, nil
+	}
+
+	return &indRef, nil
+	//return nil, errors.Errorf("pdfcpu: can't repair form field: %d\n", indRef.ObjectNumber.Value())
+}
+
+func fixFormFieldsArray(xRefTable *model.XRefTable, arr types.Array) (types.Array, error) {
+	arr1 := types.Array{}
+	for _, obj := range arr {
+		indRef, err := pageAnnotIndRefForAcroField(xRefTable, obj.(types.IndirectRef))
+		if err != nil {
+			return nil, err
+		}
+		arr1 = append(arr1, *indRef)
+	}
+	return arr1, nil
+}
+
+func validateFormFieldsAgainstPageAnnotations(xRefTable *model.XRefTable) error {
+	o, found := xRefTable.Form.Find("Fields")
+	if !found {
+		return nil
+	}
+
+	indRef, ok := o.(types.IndirectRef)
+	if !ok {
+		arr, ok := o.(types.Array)
+		if !ok {
+			return errors.New("pdfcpu: invalid array object")
+		}
+		arr, err := fixFormFieldsArray(xRefTable, arr)
+		if err != nil {
+			return err
+		}
+		indRef, err := xRefTable.IndRefForNewObject(arr)
+		if err != nil {
+			return err
+		}
+		xRefTable.Form["Fields"] = *indRef
+		return nil
+	}
+
+	arr, err := xRefTable.DereferenceArray(o)
 	if err != nil {
 		return err
 	}
-
-	// SigFlags: optional, since 1.3, integer
-	sinceV := model.V13
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceV = model.V12
-	}
-	sf, err := validateIntegerEntry(xRefTable, d, dictName, "SigFlags", OPTIONAL, sinceV, nil)
+	arr, err = fixFormFieldsArray(xRefTable, arr)
 	if err != nil {
 		return err
 	}
-	if sf != nil {
-		i := sf.Value()
-		xRefTable.SignatureExist = i&1 > 0
-		xRefTable.AppendOnly = i&2 > 0
-	}
+	entry, _ := xRefTable.FindTableEntryForIndRef(&indRef)
+	entry.Object = arr
 
-	// CO: arra
-	err = validateFormEntryCO(xRefTable, d, model.V13, requiresDA)
-	if err != nil {
-		return err
-	}
-
-	// DR, optional, resource dict
-	err = validateFormEntryDR(xRefTable, d)
-	if err != nil {
-		return err
-	}
-
-	// Q: optional, integer
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "Q", OPTIONAL, model.V10, validateQ)
-	if err != nil {
-		return err
-	}
-
-	// XFA: optional, since 1.5, stream or array
-	return validateFormXFA(xRefTable, d, sinceVersion)
+	return nil
 }

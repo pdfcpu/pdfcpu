@@ -104,6 +104,9 @@ func TestParseDateTime(t *testing.T) {
 	s = "D:20210515103719-02'00"
 	doParseDateTimeOK(s, t)
 
+	s = "D:2025022513222+01'00'"
+	doParseDateTimeOK(s, t)
+
 	s = "D:20170430155901+66'A9"
 	doParseDateTimeFail(s, t)
 

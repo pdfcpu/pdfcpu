@@ -72,10 +72,6 @@ func logWriteStats(ctx *model.Context) {
 	l, str = ctx.Read.ObjectStreamsString()
 	log.Stats.Printf("%d original objectStream entries: %s", l, str)
 
-	// XRefStreams
-	l, str = ctx.Read.XRefStreamsString()
-	log.Stats.Printf("%d original xrefStream entries: %s", l, str)
-
 	// Linearization objects
 	l, str = ctx.LinearizationObjsString()
 	log.Stats.Printf("%d original linearization entries: %s", l, str)

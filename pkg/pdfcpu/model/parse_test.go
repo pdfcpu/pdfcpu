@@ -66,3 +66,55 @@ func TestDecodeNameHexValid(t *testing.T) {
 		}
 	}
 }
+
+func TestDetectNonEscaped(t *testing.T) {
+	testcases := []struct {
+		input string
+		want  int
+	}{
+		{"", -1},
+		{" ( ", 1},
+		{" \\( )", -1},
+		{"\\(", -1},
+		{"   \\(   ", -1},
+		{"\\()(", 3},
+		{" \\(\\((abc)", 5},
+	}
+	for _, tc := range testcases {
+		got := detectNonEscaped(tc.input, "(")
+		if tc.want != got {
+			t.Errorf("%s, want: %d, got: %d", tc.input, tc.want, got)
+		}
+	}
+}
+
+func TestDetectKeywords(t *testing.T) {
+	msg := "detectKeywords"
+
+	// process: # gen obj ... obj dict ... {stream ... data ... endstream} endobj
+	//                                    streamInd                        endInd
+	//                                  -1 if absent                    -1 if absent
+
+	//s := "5 0 obj\n<</Title (xxxxendobjxxxxx)\n/Parent 4 0 R\n/Dest [3 0 R /XYZ 0 738 0]>>\nendobj\n" //78
+
+	s := "1 0 obj\n<<\n /Lang (en-endobject-stream-UK%)  % comment \n>>\nendobj\n\n2 0 obj\n"
+	//    0....... ..1 .........2.........3.........4.........5..... ... .6
+	endInd, _, err := DetectKeywords(s)
+	if err != nil {
+		t.Errorf("%s failed: %v", msg, err)
+	}
+	if endInd != 59 {
+		t.Errorf("%s failed: want %d, got %d", msg, 59, endInd)
+	}
+
+	// negative test
+	s = "1 0 obj\n<<\n /Lang (en-endobject-stream-UK%)  % endobject"
+	endInd, _, err = DetectKeywords(s)
+	if err != nil {
+		t.Errorf("%s failed: %v", msg, err)
+	}
+	if endInd > 0 {
+		t.Errorf("%s failed: want %d, got %d", msg, 0, endInd)
+	}
+
+}

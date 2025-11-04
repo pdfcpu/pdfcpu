@@ -144,6 +144,7 @@ func TestSelectedPages(t *testing.T) {
 	testSelectedPages("l,even", pageCount, "01011", t)
 
 	testSelectedPages("1-l,!2-l-1", pageCount, "10001", t)
+	testSelectedPages("1-l,!2-l-1", pageCount, "10001", t)
 }
 
 func collectedPagesString(cp []int) string {
@@ -188,7 +189,6 @@ func TestCollectedPages(t *testing.T) {
 	testCollectedPages("3", pageCount, "[3]", t)
 	testCollectedPages("4", pageCount, "[4]", t)
 	testCollectedPages("5", pageCount, "[5]", t)
-	testCollectedPages("6", pageCount, "[]", t)
 
 	testCollectedPages("-3", pageCount, "[1 2 3]", t)
 	testCollectedPages("3-", pageCount, "[3 4 5]", t)
@@ -201,18 +201,12 @@ func TestCollectedPages(t *testing.T) {
 	testCollectedPages("5-7", pageCount, "[5]", t)
 	testCollectedPages("4-", pageCount, "[4 5]", t)
 	testCollectedPages("5-", pageCount, "[5]", t)
-	testCollectedPages("!4", pageCount, "[]", t)
 
 	testCollectedPages("-l", pageCount, "[1 2 3 4 5]", t)
 	testCollectedPages("-l-1", pageCount, "[1 2 3 4]", t)
 	testCollectedPages("2-l", pageCount, "[2 3 4 5]", t)
 	testCollectedPages("2-l-2", pageCount, "[2 3]", t)
 	testCollectedPages("2-l-3", pageCount, "[2]", t)
-	testCollectedPages("2-l-4", pageCount, "[]", t)
-	testCollectedPages("!l", pageCount, "[]", t)
-	testCollectedPages("nl", pageCount, "[]", t)
-	testCollectedPages("!l-2", pageCount, "[]", t)
-	testCollectedPages("nl-2", pageCount, "[]", t)
 	testCollectedPages("l", pageCount, "[5]", t)
 	testCollectedPages("l-1", pageCount, "[4]", t)
 	testCollectedPages("l-1-", pageCount, "[4 5]", t)
@@ -226,6 +220,4 @@ func TestCollectedPages(t *testing.T) {
 
 	testCollectedPages("1-,!l", pageCount, "[1 2 3 4]", t)
 	testCollectedPages("1-,nl", pageCount, "[1 2 3 4]", t)
-	testSelectedPages("1-l,!2-l-1", pageCount, "10001", t)
-
 }

@@ -165,9 +165,11 @@ func TestParseArray(t *testing.T) {
 	doTestParseArrayFail("[<AB>", t)
 	doTestParseArrayFail("[<ABc>    ", t)
 	doTestParseArrayFail("[<0ab> <bcf098>", t)
-	doTestParseArrayFail("[a]", t)
-	doTestParseArrayFail("[<0ab> <bcf098>a]", t)
-	doTestParseArrayFail("[<0ab> <bcf098> a]", t)
+
+	doTestParseArrayOK("[a]", t)
+
+	doTestParseArrayOK("[<0ab> <bcf098>a]", t)
+	doTestParseArrayOK("[<0ab> <bcf098> a]", t)
 
 	doTestParseArrayOK("[<AB >]", t)
 	doTestParseArrayOK("[<     AB >]", t)

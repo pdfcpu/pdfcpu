@@ -20,7 +20,7 @@
 # /data # exit           // exit container
 
 # Start from the latest golang base image
-FROM golang:latest as builder
+FROM golang:latest AS builder
 
 # install
 RUN go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@latest
@@ -39,9 +39,10 @@ COPY --from=builder /go/bin ./
 # Export path of executable
 ENV PATH="${PATH}:/root"
 
-WORKDIR /data
+VOLUME /app
+WORKDIR /app
 
-# Command to run executable
-CMD pdfcpu && echo && pdfcpu version -v
+# Entrypoint for container default executable
+ENTRYPOINT ["pdfcpu"]
 
 

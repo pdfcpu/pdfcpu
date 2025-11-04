@@ -27,6 +27,17 @@ import (
 	"golang.org/x/text/unicode/norm"
 )
 
+func RemoveControlChars(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '\n', '\r', '\t', '\b', '\f':
+			return -1
+		default:
+			return r
+		}
+	}, s)
+}
+
 // NewStringSet returns a new StringSet for slice.
 func NewStringSet(slice []string) StringSet {
 	strSet := StringSet{}
@@ -194,7 +205,7 @@ func Unescape(s string) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// UTF8ToCP1252 converts UTF-8 to CP1252.
+// UTF8ToCP1252 converts UTF-8 to CP1252. Unused
 func UTF8ToCP1252(s string) string {
 	bb := []byte{}
 	for _, r := range s {
@@ -203,7 +214,7 @@ func UTF8ToCP1252(s string) string {
 	return string(bb)
 }
 
-// CP1252ToUTF8 converts CP1252 to UTF-8.
+// CP1252ToUTF8 converts CP1252 to UTF-8. Unused
 func CP1252ToUTF8(s string) string {
 	utf8Buf := make([]byte, utf8.UTFMax)
 	bb := []byte{}
@@ -303,4 +314,18 @@ func DecodeName(s string) (string, error) {
 		return s, nil
 	}
 	return sb.String(), nil
+}
+
+func TrimLeadingComment(s string) string {
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case ' ', '\t', '\r', '\n', '\f':
+			continue
+		case '%':
+			return ""
+		default:
+			return s
+		}
+	}
+	return ""
 }

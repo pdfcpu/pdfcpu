@@ -28,7 +28,7 @@ func validateBlendMode(s string) bool {
 
 	// see 11.3.5; table 136
 
-	return types.MemberOf(s, []string{"None", "Normal", "Compatible", "Multiply", "Screen", "Overlay", "Darken", "Lighten",
+	return types.MemberOf(s, []string{"None", "Normal", "Compatible", "Multiply", "Mult", "Screen", "Overlay", "Darken", "Lighten",
 		"ColorDodge", "ColorBurn", "HardLight", "SoftLight", "Difference", "Exclusion",
 		"Hue", "Saturation", "Color", "Luminosity"})
 }
@@ -40,12 +40,14 @@ func validateLineDashPatternEntry(xRefTable *model.XRefTable, d types.Dict, dict
 		return err
 	}
 
-	_, err = validateIntegerArray(xRefTable, a[0])
+	// We are dealing with integers which may be represented by Integer or Float objects.
+
+	_, err = validateNumberArray(xRefTable, a[0])
 	if err != nil {
 		return err
 	}
 
-	_, err = validateInteger(xRefTable, a[1], nil)
+	_, err = validateNumber(xRefTable, a[1])
 
 	return err
 }
@@ -297,7 +299,7 @@ func validateTREntry(xRefTable *model.XRefTable, d types.Dict, dictName string, 
 	return validateTR(xRefTable, o)
 }
 
-func validateTR2Name(xRefTable *model.XRefTable, name types.Name) error {
+func validateTR2Name(name types.Name) error {
 	s := name.Value()
 	if s != "Identity" && s != "Default" {
 		return errors.Errorf("pdfcpu: validateTR2: corrupt name\n")
@@ -310,7 +312,7 @@ func validateTR2(xRefTable *model.XRefTable, o types.Object) (err error) {
 	switch o := o.(type) {
 
 	case types.Name:
-		if err = validateTR2Name(xRefTable, o); err != nil {
+		if err = validateTR2Name(o); err != nil {
 			return err
 		}
 
@@ -332,7 +334,7 @@ func validateTR2(xRefTable *model.XRefTable, o types.Object) (err error) {
 			}
 
 			if o, ok := o.(types.Name); ok {
-				if err = validateTR2Name(xRefTable, o); err != nil {
+				if err = validateTR2Name(o); err != nil {
 					return err
 				}
 				continue
@@ -874,7 +876,11 @@ func validateExtGStateDictPart2(xRefTable *model.XRefTable, d types.Dict, dictNa
 
 	// HT, dict, stream or name, optional
 	// half tone dictionary or stream or /Default, see 10.5
-	err = validateHalfToneEntry(xRefTable, d, dictName, "HT", OPTIONAL, model.V12)
+	sinceVersion := model.V12
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V11
+	}
+	err = validateHalfToneEntry(xRefTable, d, dictName, "HT", OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -886,7 +892,11 @@ func validateExtGStateDictPart2(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// SM, number, optional, since V1.3, smoothness tolerance
-	_, err = validateNumberEntry(xRefTable, d, dictName, "SM", OPTIONAL, model.V13, nil)
+	sinceVersion = model.V13
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V12
+	}
+	_, err = validateNumberEntry(xRefTable, d, dictName, "SM", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
@@ -932,7 +942,7 @@ func validateExtGStateDictPart3(xRefTable *model.XRefTable, d types.Dict, dictNa
 	// ca, number, optional, since V1.4, same as CA but for nonstroking operations.
 	sinceVersion = model.V14
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V13
+		sinceVersion = model.V11
 	}
 	_, err = validateNumberEntry(xRefTable, d, dictName, "ca", OPTIONAL, sinceVersion, nil)
 	if err != nil {
@@ -986,7 +996,21 @@ func validateExtGStateDict(xRefTable *model.XRefTable, o types.Object) error {
 		return err
 	}
 
-	return validateExtGStateDictPart3(xRefTable, d, dictName)
+	err = validateExtGStateDictPart3(xRefTable, d, dictName)
+	if err != nil {
+		return err
+	}
+
+	// Check for AAPL extensions.
+	o, _, err = d.Entry(dictName, "AAPL:AA", OPTIONAL)
+	if err != nil {
+		return err
+	}
+	if o != nil {
+		xRefTable.CustomExtensions = true
+	}
+
+	return nil
 }
 
 func validateExtGStateResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {

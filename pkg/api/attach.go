@@ -107,7 +107,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 		return errors.New("pdfcpu: AddAttachments: No attachment added")
 	}
 
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // AddAttachmentsFile embeds files into a PDF context read from inFile and writes the result to outFile.
@@ -176,7 +176,7 @@ func RemoveAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *mode
 		return errors.New("pdfcpu: RemoveAttachments: No attachment removed")
 	}
 
-	return WriteContext(ctx, w)
+	return Write(ctx, w, conf)
 }
 
 // RemoveAttachmentsFile deletes embedded files from a PDF context read from inFile and writes the result to outFile.
@@ -236,6 +236,36 @@ func ExtractAttachmentsRaw(rs io.ReadSeeker, outDir string, fileNames []string, 
 	return ctx.ExtractAttachments(fileNames)
 }
 
+func SanitizePath(path string) string {
+
+	// Do not process "'" and "..".
+
+	if path == "" || path == "." || path == ".." {
+		return "attachment"
+	}
+
+	path = strings.TrimPrefix(path, string(filepath.Separator))
+
+	parts := strings.Split(path, string(filepath.Separator))
+
+	cleanParts := []string{}
+	for i := 0; i < len(parts); i++ {
+		if parts[i] != "" && parts[i] != "." && parts[i] != ".." {
+			cleanParts = append(cleanParts, parts[i])
+			continue
+		}
+		if i == len(parts)-1 {
+			cleanParts = append(cleanParts, "attachment")
+		}
+	}
+
+	if len(cleanParts) == 0 {
+		return "attachment"
+	}
+
+	return filepath.Join(cleanParts...)
+}
+
 // ExtractAttachments extracts embedded files from a PDF context read from rs into outDir.
 func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, conf *model.Configuration) error {
 	aa, err := ExtractAttachmentsRaw(rs, outDir, fileNames, conf)
@@ -244,12 +274,19 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 	}
 
 	for _, a := range aa {
-		fileName := filepath.Join(outDir, a.FileName)
-		logWritingTo(fileName)
+
+		fn := SanitizePath(a.FileName)
+		fileName := filepath.Join(outDir, fn)
+
 		f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 		if err != nil {
-			return err
+			fileName = filepath.Base(a.FileName)
+			f, err = os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+			if err != nil {
+				return err
+			}
 		}
+		logWritingTo(fileName)
 		if _, err = io.Copy(f, a); err != nil {
 			return err
 		}

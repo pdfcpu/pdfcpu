@@ -35,7 +35,10 @@ func (f dctDecode) Encode(r io.Reader) (io.Reader, error) {
 
 // Decode implements decoding for a DCTDecode filter.
 func (f dctDecode) Decode(r io.Reader) (io.Reader, error) {
+	return f.DecodeLength(r, -1)
+}
 
+func (f dctDecode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) {
 	im, err := jpeg.Decode(r)
 	if err != nil {
 		return nil, err

@@ -267,7 +267,7 @@ func createScreenParamsDict() *types.Dict {
 	return &d1
 }
 
-func createMediaRendition(xRefTable *model.XRefTable, mediaClipDataDict *types.IndirectRef) *types.Dict {
+func createMediaRendition(mediaClipDataDict *types.IndirectRef) *types.Dict {
 
 	mhbe := createMHBEDict()
 

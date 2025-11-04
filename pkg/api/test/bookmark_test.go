@@ -66,15 +66,24 @@ func TestListBookmarks(t *testing.T) {
 	}
 }
 
-func InactiveTestAddDuplicateBookmarks(t *testing.T) {
+func TestAddDuplicateBookmarks(t *testing.T) {
 	msg := "TestAddDuplicateBookmarks"
 	inFile := filepath.Join(inDir, "CenterOfWhy.pdf")
 	outFile := filepath.Join("..", "..", "samples", "bookmarks", "bookmarkDuplicates.pdf")
 
 	bms := []pdfcpu.Bookmark{
-		{PageFrom: 2, Title: "Duplicate Name"},
-		{PageFrom: 3, Title: "Duplicate Name"},
-		{PageFrom: 5, Title: "Duplicate Name"},
+		{PageFrom: 1, Title: "Parent1",
+			Kids: []pdfcpu.Bookmark{
+				{PageFrom: 2, Title: "kid1"},
+				{PageFrom: 3, Title: "kid2"},
+			},
+		},
+		{PageFrom: 4, Title: "Parent2",
+			Kids: []pdfcpu.Bookmark{
+				{PageFrom: 5, Title: "kid1"},
+				{PageFrom: 6, Title: "kid2"},
+			},
+		},
 	}
 
 	replace := true // Replace existing bookmarks.

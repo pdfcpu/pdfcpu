@@ -150,6 +150,10 @@ type Point struct {
 	Y float64 `json:"y"`
 }
 
+func NewPoint(x, y float64) Point {
+	return Point{X: x, Y: y}
+}
+
 // Translate modifies p's coordinates.
 func (p *Point) Translate(dx, dy float64) {
 	p.X += dx
@@ -169,6 +173,30 @@ type Rectangle struct {
 // NewRectangle returns a new rectangle for given corner coordinates.
 func NewRectangle(llx, lly, urx, ury float64) *Rectangle {
 	return &Rectangle{LL: Point{llx, lly}, UR: Point{urx, ury}}
+}
+
+func decodeFloat(number Object) float64 {
+	var f float64
+	switch v := number.(type) {
+	case Float:
+		f = v.Value()
+	case Integer:
+		f = float64(v.Value())
+	}
+	return f
+}
+
+func RectForArray(arr Array) *Rectangle {
+	if len(arr) != 4 {
+		return nil
+	}
+
+	llx := decodeFloat(arr[0])
+	lly := decodeFloat(arr[1])
+	urx := decodeFloat(arr[2])
+	ury := decodeFloat(arr[3])
+
+	return NewRectangle(llx, lly, urx, ury)
 }
 
 // RectForDim returns a new rectangle for given dimensions.
@@ -204,6 +232,10 @@ func (r Rectangle) Equals(r2 Rectangle) bool {
 // FitsWithin returns true if rectangle r fits within rectangle r2.
 func (r Rectangle) FitsWithin(r2 *Rectangle) bool {
 	return r.Width() <= r2.Width() && r.Height() <= r2.Height()
+}
+
+func (r Rectangle) Visible() bool {
+	return r.Width() != 0 && r.Height() != 0
 }
 
 // AspectRatio returns the relation between width and height of a rectangle.
@@ -358,6 +390,20 @@ type QuadLiteral struct {
 	P1, P2, P3, P4 Point
 }
 
+func NewQuadLiteralForRect(r *Rectangle) *QuadLiteral {
+	// p1 := Point{X: r.LL.X, Y: r.LL.Y}
+	// p2 := Point{X: r.UR.X, Y: r.LL.Y}
+	// p3 := Point{X: r.UR.X, Y: r.UR.Y}
+	// p4 := Point{X: r.LL.X, Y: r.UR.Y}
+
+	p3 := Point{X: r.LL.X, Y: r.LL.Y}
+	p4 := Point{X: r.UR.X, Y: r.LL.Y}
+	p2 := Point{X: r.UR.X, Y: r.UR.Y}
+	p1 := Point{X: r.LL.X, Y: r.UR.Y}
+
+	return &QuadLiteral{P1: p1, P2: p2, P3: p3, P4: p4}
+}
+
 // Array returns the PDF representation of ql.
 func (ql QuadLiteral) Array() Array {
 	return NewNumberArray(ql.P1.X, ql.P1.Y, ql.P2.X, ql.P2.Y, ql.P3.X, ql.P3.Y, ql.P4.X, ql.P4.Y)
@@ -410,7 +456,7 @@ func (nameObject Name) Clone() Object {
 }
 
 func (nameObject Name) String() string {
-	return fmt.Sprint(string(nameObject))
+	return string(nameObject)
 }
 
 // PDFString returns a string representation as found in and written to a PDF file.
@@ -424,7 +470,7 @@ func (nameObject Name) PDFString() string {
 
 // Value returns a string value for this PDF object.
 func (nameObject Name) Value() string {
-	return string(nameObject)
+	return nameObject.String()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -602,5 +648,5 @@ func (d Dim) Portrait() bool {
 }
 
 func (d Dim) String() string {
-	return fmt.Sprintf("%fx%f points", d.Width, d.Height)
+	return fmt.Sprintf("%fx%f", d.Width, d.Height)
 }

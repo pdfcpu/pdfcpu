@@ -36,6 +36,7 @@ var (
 	Red       = SimpleColor{1, 0, 0}
 	Green     = SimpleColor{0, 1, 0}
 	Blue      = SimpleColor{0, 0, 1}
+	Yellow    = SimpleColor{.5, .5, 0}
 )
 
 var ErrInvalidColor = errors.New("pdfcpu: invalid color constant")
