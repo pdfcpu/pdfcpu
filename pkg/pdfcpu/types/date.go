@@ -140,6 +140,9 @@ func parseTimezone(s string, off int, relaxed bool) (h, m int, ok bool) {
 
 	// HH'mm
 	s = s[off:]
+	if emptyTimeZone(s, relaxed) {
+		return 0, 0, true
+	}
 	if s[0] == '-' {
 		s = s[1:]
 	}
