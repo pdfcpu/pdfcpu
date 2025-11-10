@@ -675,6 +675,9 @@ func createPDFRes(ctx, otherCtx *model.Context, pageNrSrc, pageNrDest int, migra
 		return errors.Errorf("pdfcpu: unknown page number: %d\n", pageNrSrc)
 	}
 
+	// Take into account existing rotation.
+	wm.Rotation -= float64(inhPAttrs.Rotate % 360)
+
 	// Retrieve content stream bytes of page dict.
 	pdfRes.Content, err = otherXRefTable.PageContent(d, pageNrSrc)
 	if err != nil && err != model.ErrNoContent {
@@ -729,13 +732,8 @@ func createPDFResForWM(ctx *model.Context, wm *model.Watermark) error {
 		return createPDFRes(ctx, otherCtx, wm.PdfPageNrSrc, wm.PdfPageNrSrc, migrated, wm)
 	}
 
-	j := otherCtx.PageCount
-	if ctx.PageCount < otherCtx.PageCount {
-		j = ctx.PageCount
-	}
-
 	destPageNr := wm.PdfMultiStartPageNrDest
-	for srcPageNr := wm.PdfMultiStartPageNrSrc; srcPageNr <= j; srcPageNr++ {
+	for srcPageNr := wm.PdfMultiStartPageNrSrc; srcPageNr <= min(ctx.PageCount, otherCtx.PageCount); srcPageNr++ {
 		if err := createPDFRes(ctx, otherCtx, srcPageNr, destPageNr, migrated, wm); err != nil {
 			return err
 		}
