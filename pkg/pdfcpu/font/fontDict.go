@@ -234,7 +234,8 @@ func PDFDocEncoding(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func coreFontDict(xRefTable *model.XRefTable, coreFontName string) (*types.IndirectRef, error) {
+// CoreFontDict returns an indirect reference to a Type 1 font.
+func CoreFontDict(xRefTable *model.XRefTable, coreFontName string) (*types.IndirectRef, error) {
 	d := types.NewDict()
 	d.InsertName("Type", "Font")
 	d.InsertName("Subtype", "Type1")
@@ -735,7 +736,6 @@ func UpdateUserfont(xRefTable *model.XRefTable, fontName string, f model.FontRes
 	font.UserFontMetricsLock.RLock()
 	ttf, ok := font.UserFontMetrics[fontName]
 	font.UserFontMetricsLock.RUnlock()
-
 	if !ok {
 		return errors.Errorf("pdfcpu: userfont %s not available", fontName)
 	}
@@ -758,6 +758,32 @@ func UpdateUserfont(xRefTable *model.XRefTable, fontName string, f model.FontRes
 
 	if _, err := CIDSet(xRefTable, ttf, fontName, f.CIDSet); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// UpdateUserfonts updates referenced fonts.
+func UpdateUserfonts(xRefTable *model.XRefTable, fonts map[string]types.IndirectRef) error {
+	for fName, indRef := range fonts {
+
+		if len(xRefTable.UsedGIDs[fName]) == 0 {
+			continue
+		}
+
+		fDict, err := xRefTable.DereferenceDict(indRef)
+		if err != nil {
+			return err
+		}
+
+		fr := model.FontResource{}
+		if err := IndRefsForUserfontUpdate(xRefTable, fDict, "", &fr); err != nil {
+			return ErrCorruptFontDict
+		}
+
+		if err := UpdateUserfont(xRefTable, fName, fr); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -883,7 +909,6 @@ func type0FontDict(xRefTable *model.XRefTable, fontName, lang, script string, in
 
 	subFont := script == ""
 
-	// For consecutive pages or if no AP present using this font.
 	if indRef != nil && subFont && !xRefTable.HasUsedGIDs(fontName) {
 		if obj, _ := xRefTable.Dereference(*indRef); obj != nil {
 			return indRef, nil
@@ -990,11 +1015,12 @@ func RTL(lang string) bool {
 
 // EnsureFontDict ensures a font dict for fontName, lang, script.
 func EnsureFontDict(xRefTable *model.XRefTable, fontName, lang, script string, field bool, indRef *types.IndirectRef) (*types.IndirectRef, error) {
+	// TODO Reuse fontDict
 	if font.IsCoreFont(fontName) {
 		if indRef != nil {
 			return indRef, nil
 		}
-		return coreFontDict(xRefTable, fontName)
+		return CoreFontDict(xRefTable, fontName)
 	}
 	if field && (script == "" || !CJK(script, lang)) {
 		return trueTypeFontDict(xRefTable, fontName, lang)

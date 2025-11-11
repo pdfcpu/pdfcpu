@@ -1661,25 +1661,8 @@ func ResetFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error)
 		}
 	}
 
-	for fName, indRef := range fonts {
-
-		if len(ctx.UsedGIDs[fName]) == 0 {
-			continue
-		}
-
-		fDict, err := xRefTable.DereferenceDict(indRef)
-		if err != nil {
-			return false, err
-		}
-
-		fr := model.FontResource{}
-		if err := pdffont.IndRefsForUserfontUpdate(xRefTable, fDict, "", &fr); err != nil {
-			return false, pdffont.ErrCorruptFontDict
-		}
-
-		if err := pdffont.UpdateUserfont(xRefTable, fName, fr); err != nil {
-			return false, nil
-		}
+	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
+		return false, err
 	}
 
 	// pdfcpu provides all appearance streams for form fields.
@@ -1827,25 +1810,8 @@ func LockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) 
 		}
 	}
 
-	for fName, indRef := range fonts {
-
-		if len(ctx.UsedGIDs[fName]) == 0 {
-			continue
-		}
-
-		fDict, err := xRefTable.DereferenceDict(indRef)
-		if err != nil {
-			return false, err
-		}
-
-		fr := model.FontResource{}
-		if err := pdffont.IndRefsForUserfontUpdate(xRefTable, fDict, "", &fr); err != nil {
-			return false, pdffont.ErrCorruptFontDict
-		}
-
-		if err := pdffont.UpdateUserfont(xRefTable, fName, fr); err != nil {
-			return false, nil
-		}
+	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
+		return false, err
 	}
 
 	// pdfcpu provides all appearance streams for form fields.

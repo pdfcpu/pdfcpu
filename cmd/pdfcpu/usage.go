@@ -347,8 +347,8 @@ content ... extract raw page content
       -mode text string			
          eg. pdfcpu stamp add -mode text -- "Hello gopher!" "" in.pdf out.pdf
          Use the following format strings:
-               %p ... current page number
-               %P ... total pages
+               %p{off} ... current page number, page number offset off defaults to 0
+               %P      ... total pages
          eg. pdfcpu stamp add -mode text -- "Page %p of %P" "scale:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
    
    2) image based
@@ -377,8 +377,8 @@ content ... extract raw page content
       -mode text string			
          eg. pdfcpu watermark add -mode text -- "Hello gopher!" "" in.pdf out.pdf
          Use the following format strings:
-               %p ... current page number
-               %P ... total pages
+               %p{off} ... current page number, page number offset off defaults to 0
+               %P      ... total pages
          eg. pdfcpu watermark add -mode text -- "Page %p of %P" "scale:1.0 abs, pos:bc, rot:0" in.pdf out.pdf
    
    2) image based

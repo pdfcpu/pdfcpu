@@ -1177,22 +1177,8 @@ func FillForm(
 		}
 	}
 
-	for fName, indRef := range fonts {
-		if len(ctx.UsedGIDs[fName]) == 0 {
-			continue
-		}
-		// Update user font.
-		fDict, err := xRefTable.DereferenceDict(indRef)
-		if err != nil {
-			return false, nil, err
-		}
-		fr := model.FontResource{}
-		if err := pdffont.IndRefsForUserfontUpdate(xRefTable, fDict, "", &fr); err != nil {
-			return false, nil, pdffont.ErrCorruptFontDict
-		}
-		if err := pdffont.UpdateUserfont(xRefTable, fName, fr); err != nil {
-			return false, nil, err
-		}
+	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
+		return false, nil, err
 	}
 
 	var pages []*model.Page

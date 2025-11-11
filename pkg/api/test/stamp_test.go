@@ -122,7 +122,7 @@ func TestAddWatermarks(t *testing.T) {
 			"TextPagenumbers.pdf",
 			[]string{"1-"},
 			"text",
-			"Page %p of %P",
+			"Page %p of %P", // or "%p10 of %P" if you want to consider a page offset of 10.
 			"scale:1 abs, pos:bc, rot:0"},
 
 		{"TestWatermarkText",

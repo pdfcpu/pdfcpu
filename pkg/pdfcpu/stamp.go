@@ -748,24 +748,49 @@ func createImageResForWM(ctx *model.Context, wm *model.Watermark) (err error) {
 	return err
 }
 
-func createFontResForWM(ctx *model.Context, wm *model.Watermark) (err error) {
-	// TODO Reuse font dict.
-	if font.IsUserFont(wm.FontName) {
-		td, _ := setupTextDescriptor(*wm, "", 123456789, 0)
-		model.WriteMultiLine(ctx.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+func createFontResForWM(ctx *model.Context, wm *model.Watermark, fonts map[string]types.IndirectRef) (err error) {
+	if indRef, ok := fonts[wm.FontName]; ok {
+		wm.Font = &indRef
+		return nil
 	}
-	wm.Font, err = pdffont.EnsureFontDict(ctx.XRefTable, wm.FontName, "", wm.ScriptName, false, nil)
-	return err
+
+	if font.IsCoreFont(wm.FontName) {
+		indRef, err := pdffont.CoreFontDict(ctx.XRefTable, wm.FontName)
+		if err != nil {
+			return err
+		}
+		fonts[wm.FontName] = *indRef
+		wm.Font = indRef
+		return nil
+	}
+
+	for objNr, fo := range ctx.Optimize.FontObjects {
+		if fo.FontName == wm.FontName && fo.Prefix != "" {
+			indRef := types.NewIndirectRef(objNr, 0)
+			fonts[wm.FontName] = *indRef
+			wm.Font = indRef
+			return nil
+		}
+	}
+
+	indRef, err := pdffont.EnsureFontDict(ctx.XRefTable, wm.FontName, "", wm.ScriptName, false, nil)
+	if err != nil {
+		return err
+	}
+
+	fonts[wm.FontName] = *indRef
+	wm.Font = indRef
+	return nil
 }
 
-func createResourcesForWM(ctx *model.Context, wm *model.Watermark) error {
+func createResourcesForWM(ctx *model.Context, wm *model.Watermark, fonts map[string]types.IndirectRef) error {
 	if wm.IsPDF() {
 		return createPDFResForWM(ctx, wm)
 	}
 	if wm.IsImage() {
 		return createImageResForWM(ctx, wm)
 	}
-	return createFontResForWM(ctx, wm)
+	return createFontResForWM(ctx, wm, fonts)
 }
 
 func ensureOCG(ctx *model.Context, onTop bool) (*types.IndirectRef, error) {
@@ -1434,82 +1459,53 @@ func addPageWatermark(ctx *model.Context, pageNr int, wm model.Watermark) error 
 	return handleLink(ctx, pageIndRef, d, pageNr, wm)
 }
 
-func createResourcesForPageNr(
-	ctx *model.Context,
-	wm *model.Watermark,
-	pageNr int,
-	fm map[string]types.IntSet,
-	ocgIndRef, extGStateIndRef *types.IndirectRef,
-	onTop bool, opacity float64) error {
-
-	wm.Ocg = ocgIndRef
-	wm.ExtGState = extGStateIndRef
-	wm.OnTop = onTop
-	wm.Opacity = opacity
-
-	if wm.IsImage() {
-		return createImageResForWM(ctx, wm)
+// AddWatermarks adds watermarks to all pages selected.
+func AddWatermarks(ctx *model.Context, selectedPages types.IntSet, wm *model.Watermark) error {
+	if log.DebugEnabled() {
+		log.Debug.Printf("AddWatermarks wm:\n%s\n", wm)
 	}
 
-	if wm.IsPDF() {
-		return createPDFResForWM(ctx, wm)
+	var err error
+
+	if wm.Ocg, err = prepareOCPropertiesInRoot(ctx, wm.OnTop); err != nil {
+		return err
 	}
 
-	// Text watermark
-
-	if font.IsUserFont(wm.FontName) {
-		td, _ := setupTextDescriptor(*wm, "", 123456789, 0)
-		model.WriteMultiLine(ctx.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if wm.ExtGState, err = createExtGStateForStamp(ctx, wm.Opacity); err != nil {
+		return err
 	}
 
-	pageSet, found := fm[wm.FontName]
-	if !found {
-		fm[wm.FontName] = types.IntSet{pageNr: true}
-	} else {
-		pageSet[pageNr] = true
+	fonts := map[string]types.IndirectRef{}
+
+	if err = createResourcesForWM(ctx, wm, fonts); err != nil {
+		return err
 	}
 
-	return nil
-}
-
-func createResourcesForWMMap(
-	ctx *model.Context,
-	m map[int]*model.Watermark,
-	ocgIndRef, extGStateIndRef *types.IndirectRef,
-	onTop bool,
-	opacity float64) (map[string]types.IntSet, error) {
-
-	fm := map[string]types.IntSet{}
-	for pageNr, wm := range m {
-		if err := createResourcesForPageNr(ctx, wm, pageNr, fm, ocgIndRef, extGStateIndRef, onTop, opacity); err != nil {
-			return nil, err
-		}
-	}
-
-	return fm, nil
-}
-
-func createResourcesForWMSliceMap(
-	ctx *model.Context,
-	m map[int][]*model.Watermark,
-	ocgIndRef, extGStateIndRef *types.IndirectRef,
-	onTop bool,
-	opacity float64) (map[string]types.IntSet, error) {
-
-	fm := map[string]types.IntSet{}
-	for pageNr, wms := range m {
-		for _, wm := range wms {
-			if err := createResourcesForPageNr(ctx, wm, pageNr, fm, ocgIndRef, extGStateIndRef, onTop, opacity); err != nil {
-				return nil, err
+	for i := wm.PdfMultiStartPageNrDest; i <= ctx.PageCount; i++ {
+		if len(selectedPages) == 0 || selectedPages[i] {
+			if err = addPageWatermark(ctx, i, *wm); err != nil {
+				return err
 			}
 		}
 	}
 
-	return fm, nil
+	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
+		return err
+	}
+
+	ctx.EnsureVersionForWriting()
+
+	return nil
 }
 
 // AddWatermarksMap adds watermarks in m to corresponding pages.
 func AddWatermarksMap(ctx *model.Context, m map[int]*model.Watermark) error {
+	if len(m) == 0 {
+		return errors.Errorf("pdfcpu: no watermarks available")
+	}
+
+	// Calc onTop and opacity.
+	// All watermarks are assumed to have the same onTop and opacity.
 	var (
 		onTop   bool
 		opacity float64
@@ -1530,81 +1526,53 @@ func AddWatermarksMap(ctx *model.Context, m map[int]*model.Watermark) error {
 		return err
 	}
 
-	fm, err := createResourcesForWMMap(ctx, m, ocgIndRef, extGStateIndRef, onTop, opacity)
-	if err != nil {
+	fonts := map[string]types.IndirectRef{}
+
+	for _, wm := range m {
+		if err := createResourcesForWM(ctx, wm, fonts); err != nil {
+			return err
+		}
+	}
+
+	for pageNr, wm := range m {
+		wm.Ocg = ocgIndRef
+		wm.ExtGState = extGStateIndRef
+		wm.OnTop = onTop
+		wm.Opacity = opacity
+		if err := addPageWatermark(ctx, pageNr, *wm); err != nil {
+			return err
+		}
+	}
+
+	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
 		return err
 	}
 
-	// TODO Reuse font dict.
-	for fontName, pageSet := range fm {
-		ir, err := pdffont.EnsureFontDict(ctx.XRefTable, fontName, "", "", false, nil)
-		if err != nil {
-			return err
-		}
-		for pageNr, v := range pageSet {
-			if !v {
-				continue
-			}
-			wm := m[pageNr]
-			if wm.IsText() && wm.FontName == fontName {
-				m[pageNr].Font = ir
-			}
-		}
-	}
-
-	for k, wm := range m {
-		if err := addPageWatermark(ctx, k, *wm); err != nil {
-			return err
-		}
-	}
-
 	ctx.EnsureVersionForWriting()
-	return nil
-}
 
-func resolveFonts(fm map[string]types.IntSet, xRefTable *model.XRefTable, m1 map[int][]*model.Watermark) error {
-	// TODO Take existing font dicts in xref into account.
-	for fontName, pageSet := range fm {
-		ir, err := pdffont.EnsureFontDict(xRefTable, fontName, "", "", false, nil)
-		if err != nil {
-			return err
-		}
-		for pageNr, v := range pageSet {
-			if !v {
-				continue
-			}
-			for _, wm := range m1[pageNr] {
-				if wm.IsText() && wm.FontName == fontName {
-					wm.Font = ir
-				}
-			}
-		}
-	}
 	return nil
 }
 
 // AddWatermarksSliceMap adds watermarks in m to corresponding pages.
 func AddWatermarksSliceMap(ctx *model.Context, m map[int][]*model.Watermark) error {
 	var (
-		onTop   bool
-		opacity float64
+		onTop         bool
+		opacity       float64
+		hasWatermarks bool
 	)
-	m1 := map[int][]*model.Watermark{}
-	gotParms := false
-	for p, wms := range m {
-		if len(wms) == 0 {
-			continue
-		}
-		m1[p] = wms
-		if !gotParms {
+
+	// All watermarks are assumed to have the same onTop and opacity.
+	for _, wms := range m {
+		if len(wms) > 0 {
 			onTop = wms[0].OnTop
 			opacity = wms[0].Opacity
-			gotParms = true
+			hasWatermarks = true
+			break
 		}
 	}
 
-	if len(m1) == 0 {
-		errors.Errorf("pdfcpu: no watermarks available")
+	if !hasWatermarks {
+		return errors.Errorf("pdfcpu: no watermarks available")
 	}
 
 	ocgIndRef, err := prepareOCPropertiesInRoot(ctx, onTop)
@@ -1617,54 +1585,34 @@ func AddWatermarksSliceMap(ctx *model.Context, m map[int][]*model.Watermark) err
 		return err
 	}
 
-	fm, err := createResourcesForWMSliceMap(ctx, m1, ocgIndRef, extGStateIndRef, onTop, opacity)
-	if err != nil {
-		return err
-	}
+	fonts := map[string]types.IndirectRef{}
 
-	if err := resolveFonts(fm, ctx.XRefTable, m1); err != nil {
-		return err
-	}
-
-	for k, wms := range m1 {
+	for _, wms := range m {
 		for _, wm := range wms {
+			if err := createResourcesForWM(ctx, wm, fonts); err != nil {
+				return err
+			}
+		}
+	}
+
+	for k, wms := range m {
+		for _, wm := range wms {
+			wm.Ocg = ocgIndRef
+			wm.ExtGState = extGStateIndRef
+			wm.OnTop = onTop
+			wm.Opacity = opacity
 			if err := addPageWatermark(ctx, k, *wm); err != nil {
 				return err
 			}
 		}
 	}
 
-	ctx.EnsureVersionForWriting()
-	return nil
-}
-
-// AddWatermarks adds watermarks to all pages selected.
-func AddWatermarks(ctx *model.Context, selectedPages types.IntSet, wm *model.Watermark) error {
-	if log.DebugEnabled() {
-		log.Debug.Printf("AddWatermarks wm:\n%s\n", wm)
-	}
-	var err error
-	if wm.Ocg, err = prepareOCPropertiesInRoot(ctx, wm.OnTop); err != nil {
+	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
 		return err
-	}
-
-	if err = createResourcesForWM(ctx, wm); err != nil {
-		return err
-	}
-
-	if wm.ExtGState, err = createExtGStateForStamp(ctx, wm.Opacity); err != nil {
-		return err
-	}
-
-	for i := wm.PdfMultiStartPageNrDest; i <= ctx.PageCount; i++ {
-		if len(selectedPages) == 0 || selectedPages[i] {
-			if err = addPageWatermark(ctx, i, *wm); err != nil {
-				return err
-			}
-		}
 	}
 
 	ctx.EnsureVersionForWriting()
+
 	return nil
 }
 

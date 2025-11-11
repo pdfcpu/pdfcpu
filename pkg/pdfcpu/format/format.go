@@ -18,6 +18,7 @@ package format
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -25,7 +26,7 @@ import (
 
 // Text returns a string with resolved place holders for pageNr, pageCount, timestamp or pdfcpu version.
 func Text(text, timeStampFormat string, pageNr, pageCount int) (string, bool) {
-	// replace  %p with pageNr
+	// replace  %p{off} with $off + pageNr+ eg. %p10 -> 10 + pageNr
 	//			%P with pageCount
 	//			%t with timestamp
 	//			%v with pdfcpu version
@@ -33,8 +34,20 @@ func Text(text, timeStampFormat string, pageNr, pageCount int) (string, bool) {
 		bb         []byte
 		hasPercent bool
 		unique     bool
+		pageNrTag  bool
+		sb         strings.Builder
 	)
 	for i := 0; i < len(text); i++ {
+		if pageNrTag {
+			if text[i] >= '0' && text[i] <= '9' {
+				sb.WriteByte(text[i])
+				continue
+			}
+			pageOffset, _ := strconv.Atoi(sb.String())
+			bb = append(bb, strconv.Itoa(pageOffset+pageNr)...)
+			pageNrTag = false
+			sb.Reset()
+		}
 		if text[i] == '%' {
 			if hasPercent {
 				bb = append(bb, '%')
@@ -45,7 +58,7 @@ func Text(text, timeStampFormat string, pageNr, pageCount int) (string, bool) {
 		if hasPercent {
 			hasPercent = false
 			if text[i] == 'p' {
-				bb = append(bb, strconv.Itoa(pageNr)...)
+				pageNrTag = true
 				unique = true
 				continue
 			}
@@ -66,6 +79,10 @@ func Text(text, timeStampFormat string, pageNr, pageCount int) (string, bool) {
 			}
 		}
 		bb = append(bb, text[i])
+	}
+	if pageNrTag {
+		pageOffset, _ := strconv.Atoi(sb.String())
+		bb = append(bb, strconv.Itoa(pageOffset+pageNr)...)
 	}
 	return string(bb), unique
 }
