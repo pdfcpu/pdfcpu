@@ -221,9 +221,18 @@ func locateAPN(xRefTable *model.XRefTable, d types.Dict) (types.Dict, error) {
 	if !ok {
 		return nil, errors.New("corrupt AP field: missing entry \"N\"")
 	}
-	d2, err := xRefTable.DereferenceDict(obj)
+
+	obj, err = xRefTable.Dereference(obj)
 	if err != nil {
 		return nil, err
+	}
+
+	var d2 types.Dict
+	switch o := obj.(type) {
+	case types.Dict:
+		d2 = o
+	case types.StreamDict:
+		d2 = o.Dict
 	}
 
 	if len(d2) == 0 {
