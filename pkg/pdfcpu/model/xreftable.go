@@ -221,6 +221,10 @@ func (xRefTable *XRefTable) Version() Version {
 	return *xRefTable.HeaderVersion
 }
 
+func (xRefTable *XRefTable) PDF20() bool {
+	return xRefTable.Version() == V20
+}
+
 // VersionString return a string representation for this PDF files PDF version.
 func (xRefTable *XRefTable) VersionString() string {
 	return xRefTable.Version().String()

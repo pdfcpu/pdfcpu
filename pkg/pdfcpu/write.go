@@ -105,7 +105,7 @@ func WriteContext(ctx *model.Context) (err error) {
 	// We support PDF Collections (since V1.7) for file attachments
 	v := model.V17
 
-	if ctx.XRefTable.Version() == model.V20 {
+	if ctx.XRefTable.PDF20() {
 		v = model.V20
 	}
 
@@ -921,7 +921,7 @@ func setupEncryption(ctx *model.Context) error {
 	}
 
 	d := newEncryptDict(
-		ctx.XRefTable.Version(),
+		ctx.PDF20(),
 		ctx.EncryptUsingAES,
 		ctx.EncryptKeyLength,
 		int16(ctx.Permissions),
