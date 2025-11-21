@@ -1188,7 +1188,8 @@ func validateEncryptFilter(d types.Dict) (string, error) {
 	if filter == nil {
 		return "", errors.New("pdfcpu: encryption, missing \"Filter\"")
 	}
-	if !types.MemberOf(*filter, []string{"Standard", "Entrust.PPKEF", "Adobe.PPKLite", "Adobe.PubSec"}) {
+	// TODO support "Adobe.PubSec"
+	if !types.MemberOf(*filter, []string{"Standard"}) {
 		return "", errors.Errorf("pdfcpu: encryption, unsupported filter: %s", *filter)
 	}
 	return *filter, nil
@@ -1213,7 +1214,7 @@ func validateEncryptV(d types.Dict) (int, error) {
 	if *v < 1 || *v > 5 {
 		return -1, errors.Errorf("validateV: encrypt \"V\" must be one of 1,2,3,4,5")
 	}
-	// v == 6 AES-256 in GCM mode (ISO/TS32003), Extlevel 2.0 32003
+	// TODO Support v == 6, AES-256 in GCM mode (ISO/TS32003), Extlevel 2.0 32003
 	return *v, nil
 }
 

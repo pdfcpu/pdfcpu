@@ -3174,7 +3174,7 @@ func checkForEncryption(c context.Context, ctx *model.Context) error {
 		return errors.New("pdfcpu: this file is already encrypted")
 	}
 
-	if ctx.Cmd == model.VALIDATESIGNATURE || ctx.Cmd == model.ADDSIGNATURE {
+	if ctx.Cmd == model.VALIDATESIGNATURES || ctx.Cmd == model.ADDSIGNATURE {
 		return errors.New("pdfcpu: this file is encrypted")
 	}
 
