@@ -144,7 +144,7 @@ func compare(t *testing.T, fn1, fn2 string) {
 		return
 	}
 
-	for i := 0; i < len(bb1); i++ {
+	for i := range bb1 {
 		if bb1[i] != bb2[i] {
 			t.Errorf("%s <-> %s: mismatch at %d, 0x%02x != 0x%02x\n", fn1, fn2, i, bb1[i], bb2[i])
 			return
@@ -163,11 +163,12 @@ func printOptionalSMask(t *testing.T, sd *types.StreamDict) {
 		fmt.Printf("SMask %s: %s\n", o, sm)
 	}
 }
-func TestReadWritePNGAndWEBP(t *testing.T) {
+func TestReadWriteImages(t *testing.T) {
 
 	for _, filename := range []string{
-		"mountain.png",
+		"mountain.jpg",
 		"mountain.webp",
+		"mountain.png",
 	} {
 
 		// Read a PNG file and create an image object which is a stream dict.

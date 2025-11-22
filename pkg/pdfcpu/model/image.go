@@ -191,7 +191,7 @@ func CreateDCTImageStreamDict(xRefTable *XRefTable, buf []byte, w, h, bpc int, c
 		return nil, err
 	}
 
-	sd.Content = nil
+	//sd.Content = nil
 
 	sd.FilterPipeline = []types.PDFFilter{{Name: filter.DCT, DecodeParms: nil}}
 
@@ -901,43 +901,45 @@ func CreateImageResources(xRefTable *XRefTable, r io.Reader, gray, sepia bool) (
 	return createImageResources(xRefTable, c, bb, gray, sepia)
 }
 
-// CreateImageStreamDict returns a stream dict for image data represented by r and applies optional filters.
 func CreateImageStreamDict(xRefTable *XRefTable, r io.Reader) (*types.StreamDict, int, int, error) {
-
 	var bb bytes.Buffer
-	tee := io.TeeReader(r, &bb)
-
-	var sniff bytes.Buffer
-	if _, err := io.Copy(&sniff, tee); err != nil {
+	if _, err := io.Copy(&bb, r); err != nil {
 		return nil, 0, 0, err
 	}
+	data := bb.Bytes()
 
-	c, configFormat, err := image.DecodeConfig(&sniff)
+	c, format, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
 		return nil, 0, 0, err
 	}
 
-	img, format, err := image.Decode(&bb)
+	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return nil, 0, 0, err
 	}
+
+	w, h := img.Bounds().Dx(), img.Bounds().Dy()
+	if w != c.Width || h != c.Height {
+		return nil, 0, 0, errors.New("pdfcpu: unexpected width or height")
+	}
+
 	gray := checkIfGray(img)
 
-	if configFormat == "jpeg" && !gray {
+	if format == "jpeg" && !gray {
 		sd, err := createDCTImageStreamDictForJPEG(xRefTable, c, bb)
 		if err != nil {
 			return nil, 0, 0, err
 		}
-		return sd, c.Width, c.Height, nil
+		return sd, w, h, nil
 	}
 
 	var imgA image.Image
-	if gray { // We could also check if the image is grayscale only by checking RGB / CMYK values
-		cm := img.ColorModel()
-		if hasAlpha(cm) {
-			imgA = extractAlpha(img)
 
+	if gray {
+		if hasAlpha(img.ColorModel()) {
+			imgA = extractAlpha(img)
 		}
+
 		switch img.(type) {
 		case *image.Gray, *image.Gray16:
 		default:
@@ -950,16 +952,12 @@ func CreateImageStreamDict(xRefTable *XRefTable, r io.Reader) (*types.StreamDict
 		return nil, 0, 0, err
 	}
 
-	w, h := img.Bounds().Dx(), img.Bounds().Dy()
-	if w != c.Width || h != c.Height {
-		return nil, 0, 0, errors.New("pdfcpu: unexpected width or height")
-	}
-
 	sd, err := createImageStreamDict(xRefTable, imgBuf, softMask, w, h, bpc, format, cs)
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	return sd, c.Width, c.Height, nil
+
+	return sd, w, h, nil
 }
 
 func hasAlpha(cm color.Model) bool {
