@@ -88,6 +88,13 @@ type Description struct {
 	Producer     string   `xml:"http://ns.adobe.com/pdf/1.3/ Producer"`
 	Trapped      bool     `xml:"http://ns.adobe.com/pdf/1.3/ Trapped"`
 	Keywords     string   `xml:"http://ns.adobe.com/pdf/1.3/ Keywords"`
+
+	// PDF/A identification (ISO 19005)
+	// Namespace: xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+	PDFAPart        int    `xml:"http://www.aiim.org/pdfa/ns/id/ part"`
+	PDFAConformance string `xml:"http://www.aiim.org/pdfa/ns/id/ conformance"`
+	PDFAAmendment   string `xml:"http://www.aiim.org/pdfa/ns/id/ amd"`
+	PDFARevision    int    `xml:"http://www.aiim.org/pdfa/ns/id/ rev"`
 }
 
 type RDF struct {
@@ -129,6 +136,24 @@ func removeTag(s, kw string) string {
 	s1 := block1 + block2
 
 	return s1
+}
+
+// GetPDFAIdentification extracts PDF/A identification information from XMP metadata Description.
+// Returns nil if no PDF/A information is present.
+func (d *Description) GetPDFAIdentification() *PDFAIdentification {
+	// Check if any PDF/A fields are present
+	if d.PDFAPart == 0 && d.PDFAConformance == "" {
+		return nil
+	}
+
+	ident := &PDFAIdentification{
+		Part:        d.PDFAPart,
+		Conformance: d.PDFAConformance,
+		Amendment:   d.PDFAAmendment,
+		Revision:    d.PDFARevision,
+	}
+
+	return ident
 }
 
 func RemoveKeywords(metadata *[]byte) error {
