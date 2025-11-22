@@ -318,3 +318,21 @@ func TestExtractMetadataLowLevel(t *testing.T) {
 			md.ObjNr, md.ParentObjNr, md.ParentType, string(bb))
 	}
 }
+
+
+func TestExtractContentCommandFS(t *testing.T) {
+	msg := "TestExtractContentCommandFS"
+
+	// Extract content of all pages into outDir.
+	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
+
+	fs, err := os.Open(inFile)
+	if err != nil {
+		t.Fatalf("%s %s: %v\n", msg, inFile, err)
+	}
+
+	fsOut := api.NewOsFS(outDir)
+	if err := api.ExtractContentFS(fs, fsOut, nil, nil); err != nil {
+		t.Fatalf("%s %s: %v\n", msg, inFile, err)
+	}
+}
