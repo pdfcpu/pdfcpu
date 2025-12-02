@@ -10,6 +10,7 @@ require (
 	github.com/hhrutter/tiff v1.0.2
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/pkg/errors v0.9.1
+	github.com/spf13/cobra v1.10.1
 	golang.org/x/crypto v0.46.0
 	golang.org/x/image v0.34.0
 	golang.org/x/text v0.32.0
@@ -19,4 +20,6 @@ require (
 require (
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
 )
