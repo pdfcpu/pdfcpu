@@ -1921,7 +1921,7 @@ func buildFilterPipeline(c context.Context, ctx *model.Context, filterArray, dec
 }
 
 func singleFilter(c context.Context, ctx *model.Context, filterName string, d types.Dict) ([]types.PDFFilter, error) {
-	o, found := d.Find("DecodeParms")
+	obj, found := d.Find("DecodeParms")
 	if !found {
 		// w/o decode parameters.
 		if log.ReadEnabled() {
@@ -1930,34 +1930,40 @@ func singleFilter(c context.Context, ctx *model.Context, filterName string, d ty
 		return []types.PDFFilter{{Name: filterName}}, nil
 	}
 
-	if ctx.XRefTable.ValidationMode == model.ValidationRelaxed {
-		if arr, ok := o.(types.Array); ok && len(arr) == 0 || len(arr) == 1 && arr[0] == nil {
-			// w/o decode parameters.
-			if log.ReadEnabled() {
-				log.Read.Println("singleFilter: end w/o decode parms")
-			}
-			return []types.PDFFilter{{Name: filterName}}, nil
-		}
-	}
-
 	var err error
-	d, ok := o.(types.Dict)
-	if !ok {
-		indRef, ok := o.(types.IndirectRef)
-		if !ok {
-			return nil, errors.Errorf("singleFilter: corrupt Dict: %s\n", o)
-		}
-		if d, err = dereferencedDict(c, ctx, indRef.ObjectNumber.Value()); err != nil {
+
+	if indRef, ok := obj.(types.IndirectRef); ok {
+		obj, err = dereferencedObject(c, ctx, indRef.ObjectNumber.Value())
+		if err != nil {
 			return nil, err
 		}
 	}
 
-	// with decode parameters.
-	if log.ReadEnabled() {
-		log.Read.Println("singleFilter: end with decode parms")
+	if d, ok := obj.(types.Dict); ok {
+		if len(d) == 0 {
+			d = nil
+		}
+		return []types.PDFFilter{{Name: filterName, DecodeParms: d}}, nil
 	}
 
-	return []types.PDFFilter{{Name: filterName, DecodeParms: d}}, nil
+	if arr, ok := obj.(types.Array); ok {
+		if len(arr) > 1 {
+			return nil, errors.Errorf("singleFilter: DecodeParam array must have <= 1 parameter dicts")
+		}
+		if len(arr) == 0 || arr[0] == nil {
+			return []types.PDFFilter{{Name: filterName}}, nil
+		}
+		d, ok := arr[0].(types.Dict)
+		if !ok {
+			return nil, errors.Errorf("singleFilter: DecodeParam array must contain parameter dict")
+		}
+		if len(d) == 0 {
+			d = nil
+		}
+		return []types.PDFFilter{{Name: filterName, DecodeParms: d}}, nil
+	}
+
+	return nil, errors.Errorf("singleFilter: corrupt Dict: %s\n", obj)
 }
 
 func filterArraySupportsDecodeParms(filters types.Array) bool {
