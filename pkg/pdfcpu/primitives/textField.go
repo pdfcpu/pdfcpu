@@ -434,7 +434,7 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	if font.IsCoreFont(f.Name) && utf8.ValidString(s) {
 		s = model.DecodeUTF8ToByte(s)
 	}
-	//lines := model.SplitMultilineStr(s)
+
 	var lines []string
 	if tf.Multiline {
 		lines = model.WordWrap(s, f.Name, f.Size, w-2*boWidth)
