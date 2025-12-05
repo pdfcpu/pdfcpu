@@ -85,6 +85,7 @@ func TestCreateContentPrimitivesViaJson(t *testing.T) {
 
 		// Table
 		{"TestTable", "table.json", "table.pdf"},
+		{"TestTableCustomHeader", "tableCustomHeader.json", "tableCustomHeader.pdf"},
 		{"TestTableRTL", "tableRTL.json", "tableRTL.pdf"},
 		{"TestTableCJK", "tableCJK.json", "tableCJK.pdf"},
 

@@ -53,7 +53,7 @@
 		},
 		"left": "pdfcpu: %v\n创建: %t",
 		"center": "第 %p 页，共 %P 页",
-		"right": "来源:\ntestdata/json/create/userfonts.json",
+		"right": "来源:\ntestdata/json/create/tableCJK.json",
 		"height": 30,
 		"dx": 5,
 		"dy": 5,

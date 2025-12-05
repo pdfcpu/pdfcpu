@@ -61,7 +61,7 @@
 		},
 		"left": "pdfcpu: %v\n%t :נוצר",
 		"center": "%P שֶׁל %p עמוד",
-		"right": "מָקוֹר:\ntestdata/json/create/tables.json",
+		"right": "מָקוֹר:\ntestdata/json/create/tableRTL.json",
 		"height": 30,
 		"dx": 5,
 		"dy": 5,

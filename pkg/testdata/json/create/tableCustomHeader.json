@@ -56,7 +56,7 @@
 		},
 		"left": "pdfcpu: %v\nCreated: %t",
 		"center": "Page %p of %P",
-		"right": "Source:\ntestdata/json/create/table.json",
+		"right": "Source:\ntestdata/json/create/tableCustomHeader.json",
 		"height": 30,
 		"dx": 5,
 		"dy": 5,
@@ -93,9 +93,10 @@
 					{
 						"hide": false,
 						"header": {
-							"values": ["Qty", "Description", "Price", "Amount"],
+							"values": ["Qty", "Description\nwith linebreak", "Price", "Amount"],
 							"colAnchors": ["Center", "Center", "Center", "Center"],
 							"bgCol": "$DarkSalmon",
+							"lheight": 42,
 							"font": {
 								"name": "Courier-Bold",
 								"size": 15
