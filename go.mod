@@ -11,7 +11,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/pkg/errors v0.9.1
 	golang.org/x/crypto v0.46.0
-	golang.org/x/image v0.33.0
+	golang.org/x/image v0.34.0
 	golang.org/x/text v0.32.0
 	gopkg.in/yaml.v2 v2.4.0
 )
