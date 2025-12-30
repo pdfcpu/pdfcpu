@@ -1,33 +1,30 @@
 on: [push, pull_request]
 name: Test
+
 jobs:
+  # Run tests on native platforms
   test:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - goos: js
-            goarch: wasm
-          - goos: darwin
-            goarch: amd64
-          - goos: darwin
-            goarch: arm64
-          - goos: linux
-            goarch: amd64
-          - goos: linux
-            goarch: arm
-            goarm: 7
-          - goos: linux
-            goarch: arm64
-          - goos: windows
-            goarch: amd64
-        go:
-           - '1.24.x'
-           - '1.25.x'
-    runs-on: ubuntu-latest
+        include:
+          - os: ubuntu-latest
+            go: '1.24.x'
+          - os: ubuntu-latest
+            go: '1.25.x'
+          - os: macos-latest
+            go: '1.24.x'
+          - os: macos-latest
+            go: '1.25.x'
+          - os: windows-latest
+            go: '1.24.x'
+          - os: windows-latest
+            go: '1.25.x'
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout repo      
+      - name: Checkout repo
         uses: actions/checkout@v6
 
       - name: Set up Go ${{ matrix.go }}
@@ -35,21 +32,78 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
 
-      - run: go version
+      - name: Go version
+        run: go version
 
       - name: Go vet
         run: go vet -v ./...
 
-      - name: Check coverage
+      - name: Run tests
+        if: matrix.os != 'ubuntu-latest'
+        run: go test -v ./...
+
+      - name: Run tests with coverage
+        if: matrix.os == 'ubuntu-latest'
+        run: go test -v -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest'
         uses: shogo82148/actions-goveralls@v1
         with:
+          path-to-profile: coverage.out
           flag-name: Go-${{ matrix.go }}
           parallel: true
-        
-  finish:
+
+  # Finalize coverage report
+  coverage-finish:
     needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: shogo82148/actions-goveralls@v1
         with:
           parallel-finished: true
+
+  # Cross-compilation checks for platforms we can't test natively
+  cross-compile:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: js
+            goarch: wasm
+          - goos: linux
+            goarch: arm
+            goarm: '7'
+          - goos: linux
+            goarch: arm64
+        go:
+          - '1.24.x'
+          - '1.25.x'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Set up Go ${{ matrix.go }}
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Go version
+        run: go version
+
+      - name: Go vet
+        run: go vet -v ./...
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+
+      - name: Build check
+        run: go build ./...
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
