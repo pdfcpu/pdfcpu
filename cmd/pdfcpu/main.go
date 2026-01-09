@@ -20,24 +20,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-)
-
-var (
-	fileStats, mode, selectedPages           string
-	upw, opw, key, perm, unit, conf          string
-	verbose, veryVerbose                     bool
-	links, quiet, offline                    bool
-	replaceBookmarks                         bool // Import Bookmarks
-	all                                      bool // List Viewer Preferences
-	full                                     bool // eg. signature validation output
-	fonts                                    bool // Info
-	json                                     bool // List Viewer Preferences, Info
-	bookmarks, dividerPage, optimize, sorted bool // Merge
-	bookmarksSet, offlineSet, optimizeSet    bool
-	needStackTrace                           = true
-	cmdMap                                   commandMap
 )
 
 // Set by Goreleaser.
@@ -48,29 +33,27 @@ var (
 )
 
 func init() {
-	initFlags()
-	initCommandMap()
+	// Update version info from build info if not set by Goreleaser
+	if date == "?" {
+		if info, ok := debug.ReadBuildInfo(); ok {
+			for _, setting := range info.Settings {
+				if setting.Key == "vcs.revision" {
+					commit = setting.Value
+					if len(commit) >= 8 {
+						commit = commit[:8]
+					}
+				}
+				if setting.Key == "vcs.time" {
+					date = setting.Value
+				}
+			}
+		}
+	}
 }
 
 func main() {
-	if len(os.Args) == 1 {
-		fmt.Fprintln(os.Stderr, usage)
-		os.Exit(0)
-	}
-
-	// The first argument is the pdfcpu command string.
-	cmdStr := os.Args[1]
-
-	// Process command string for given configuration.
-	str, err := cmdMap.process(cmdStr, "")
-	if err != nil {
-		if len(str) > 0 {
-			cmdStr = fmt.Sprintf("%s %s", str, os.Args[2])
-		}
-		fmt.Fprintf(os.Stderr, "%v \"%s\"\n", err, cmdStr)
-		fmt.Fprintln(os.Stderr, "Run 'pdfcpu help' for usage.")
+	if err := Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
-
-	os.Exit(0)
 }

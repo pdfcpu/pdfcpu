@@ -52,7 +52,7 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) error {
 	if err = ValidateContext(ctx); err != nil {
 		s := ""
 		if conf.ValidationMode == model.ValidationStrict {
-			s = " (try -mode=relaxed)"
+			s = " (try --mode=relaxed)"
 		}
 		err = errors.Wrap(err, fmt.Sprintf("validation error (obj#:%d)%s", ctx.CurObj, s))
 	}
@@ -147,7 +147,7 @@ func DumpObject(rs io.ReadSeeker, mode, objNr int, conf *model.Configuration) er
 	if err = ValidateContext(ctx); err != nil {
 		s := ""
 		if conf.ValidationMode == model.ValidationStrict {
-			s = " (try -mode=relaxed)"
+			s = " (try --mode=relaxed)"
 		}
 		return errors.Wrap(err, fmt.Sprintf("validation error (obj#:%d)%s", ctx.CurObj, s))
 	}
