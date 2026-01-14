@@ -510,8 +510,7 @@ func NewDefaultConfiguration() *Configuration {
 			c := *loadedDefaultConfig
 			return &c
 		}
-		fmt.Fprintf(os.Stderr, "pdfcpu: config problem: %v\n", err)
-		os.Exit(1)
+		panic(fmt.Sprintf("pdfcpu: config problem: %v", err))
 	}
 	// Bypass config.yml
 	return newDefaultConfiguration()
