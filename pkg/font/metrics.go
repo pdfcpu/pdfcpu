@@ -23,7 +23,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -310,9 +309,7 @@ func CharWidth(fontName string, r rune) int {
 	defer UserFontMetricsLock.RUnlock()
 	ttf, ok := UserFontMetrics[fontName]
 	if !ok {
-		fmt.Fprintf(os.Stderr, "pdfcpu: user font not loaded: %s\n", fontName)
-		debug.PrintStack()
-		os.Exit(1)
+		panic(fmt.Sprintf("pdfcpu: user font not loaded: %s", fontName))
 	}
 
 	pos, ok := ttf.Chars[uint32(r)]
