@@ -149,6 +149,24 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+// TestValidateCircularReference tests that the validate CLI command handles PDFs with circular
+// object references without causing a stack overflow. This test uses a minimal PDF with
+// circular references in Resources dictionaries that previously could cause infinite recursion
+// in EqualObjects when fixInfoDict compares Metadata and Info dicts.
+func TestValidateCircularReference(t *testing.T) {
+	msg := "TestValidateCircularReference"
+	fileName := "circular_ref_test.pdf"
+	inFile := filepath.Join(inDir, fileName)
+
+	// This PDF has two Form XObjects with identical stream lengths that
+	// reference each other in their Resources via ProcSet, creating a cycle.
+	// Without cycle detection in EqualObjects, validation could cause infinite
+	// recursion when comparing objects during fixInfoDict.
+	if err := validateFile(t, inFile, conf); err != nil {
+		t.Fatalf("%s: validate should handle circular references without stack overflow: %v\n", msg, err)
+	}
+}
+
 func TestInfoCommand(t *testing.T) {
 	msg := "TestInfoCommand"
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")

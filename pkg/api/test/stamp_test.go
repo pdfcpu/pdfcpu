@@ -637,3 +637,32 @@ func TestRecycleWM(t *testing.T) {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }
+
+// TestWatermarkCircularReference tests that watermark processing handles PDFs with circular
+// object references without causing a stack overflow. This test uses a minimal PDF with
+// circular references in Resources dictionaries that previously caused infinite recursion
+// in EqualObjects when watermark processing optimized Form XObjects.
+func TestWatermarkCircularReference(t *testing.T) {
+	msg := "TestWatermarkCircularReference"
+	fileName := "circular_ref_test.pdf"
+	inFile := filepath.Join(inDir, fileName)
+	outFile := filepath.Join(outDir, "circular_ref_watermarked.pdf")
+
+	// This PDF has two Form XObjects with identical stream lengths that
+	// reference each other in their Resources via ProcSet, creating a cycle.
+	// Without cycle detection in EqualObjects, watermark processing would cause
+	// infinite recursion when comparing Form XObjects during optimization.
+	if err := api.AddTextWatermarksFile(inFile, outFile, nil, false, "Test", "", nil); err != nil {
+		t.Fatalf("%s: watermark should handle circular references without stack overflow: %v\n", msg, err)
+	}
+
+	// Validate the output
+	if err := api.ValidateFile(outFile, nil); err != nil {
+		t.Fatalf("%s: watermarked PDF should be valid: %v\n", msg, err)
+	}
+
+	// Test that we can add another watermark (in-place)
+	if err := api.AddTextWatermarksFile(outFile, "", nil, false, "Second", "", nil); err != nil {
+		t.Fatalf("%s: second watermark should also succeed: %v\n", msg, err)
+	}
+}

@@ -60,3 +60,28 @@ func TestOptimizeCommand(t *testing.T) {
 		testOptimizeFile(t, inFile, outFile)
 	}
 }
+
+// TestOptimizeCircularReference tests that the optimize CLI command handles PDFs with circular
+// object references without causing a stack overflow. This test uses a minimal PDF with
+// circular references in Resources dictionaries that previously caused infinite recursion
+// in EqualObjects.
+func TestOptimizeCircularReference(t *testing.T) {
+	msg := "TestOptimizeCircularReference"
+	fileName := "circular_ref_test.pdf"
+	inFile := filepath.Join(inDir, fileName)
+	outFile := filepath.Join(outDir, fileName)
+
+	// This PDF has two Form XObjects with identical stream lengths that
+	// reference each other in their Resources via ProcSet, creating a cycle.
+	// Without cycle detection in EqualObjects, this causes infinite recursion.
+	cmd := cli.OptimizeCommand(inFile, outFile, conf)
+	if _, err := cli.Process(cmd); err != nil {
+		t.Fatalf("%s: optimize should handle circular references without stack overflow: %v\n", msg, err)
+	}
+
+	// Test that we can optimize it again (in-place)
+	cmd = cli.OptimizeCommand(outFile, "", conf)
+	if _, err := cli.Process(cmd); err != nil {
+		t.Fatalf("%s: second optimize should also succeed: %v\n", msg, err)
+	}
+}

@@ -200,3 +200,44 @@ func TestStampingLifecycle(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
+
+// TestWatermarkCircularReference tests that the watermark CLI command handles PDFs with circular
+// object references without causing a stack overflow. This test uses a minimal PDF with
+// circular references in Resources dictionaries that previously caused infinite recursion
+// in EqualObjects when watermark processing optimized Form XObjects.
+func TestWatermarkCircularReference(t *testing.T) {
+	msg := "TestWatermarkCircularReference"
+	fileName := "circular_ref_test.pdf"
+	inFile := filepath.Join(inDir, fileName)
+	outFile := filepath.Join(outDir, "circular_ref_watermarked.pdf")
+
+	// This PDF has two Form XObjects with identical stream lengths that
+	// reference each other in their Resources via ProcSet, creating a cycle.
+	// Without cycle detection in EqualObjects, watermark processing would cause
+	// infinite recursion when comparing Form XObjects during optimization.
+	wm, err := pdfcpu.ParseTextWatermarkDetails("Test", "", false, types.POINTS)
+	if err != nil {
+		t.Fatalf("%s: ParseTextWatermarkDetails: %v\n", msg, err)
+	}
+
+	cmd := cli.AddWatermarksCommand(inFile, outFile, nil, wm, conf)
+	if _, err := cli.Process(cmd); err != nil {
+		t.Fatalf("%s: watermark should handle circular references without stack overflow: %v\n", msg, err)
+	}
+
+	// Validate the output
+	if err := validateFile(t, outFile, conf); err != nil {
+		t.Fatalf("%s: watermarked PDF should be valid: %v\n", msg, err)
+	}
+
+	// Test that we can add another watermark (in-place)
+	wm2, err := pdfcpu.ParseTextWatermarkDetails("Second", "", false, types.POINTS)
+	if err != nil {
+		t.Fatalf("%s: ParseTextWatermarkDetails (second): %v\n", msg, err)
+	}
+
+	cmd = cli.AddWatermarksCommand(outFile, "", nil, wm2, conf)
+	if _, err := cli.Process(cmd); err != nil {
+		t.Fatalf("%s: second watermark should also succeed: %v\n", msg, err)
+	}
+}

@@ -355,3 +355,31 @@ func TestReadFormAndUpdateFormViaJson(t *testing.T) {
 	outFile = filepath.Join(outDir, "readFormAndUpdateFormCJK.pdf")
 	createPDF(t, "pass1", inFile, inFileJSON, outFile, conf)
 }
+
+// TestCreateCircularReference tests that the create command handles PDFs with circular
+// object references without causing a stack overflow when appending content. This test uses
+// a minimal PDF with circular references in Resources dictionaries that previously could
+// cause infinite recursion in EqualObjects when ImageBox compares image stream dicts.
+func TestCreateCircularReference(t *testing.T) {
+	msg := "TestCreateCircularReference"
+	fileName := "circular_ref_test.pdf"
+	inFile := filepath.Join(inDir, fileName)
+	
+	// Use a simple JSON that creates a page with text
+	inFileJSON := filepath.Join(inDir, "json", "create", "textAnchored.json")
+	outFile := filepath.Join(outDir, "circular_ref_created.pdf")
+
+	// This PDF has two Form XObjects with identical stream lengths that
+	// reference each other in their Resources via ProcSet, creating a cycle.
+	// Without cycle detection in EqualObjects, creating/appending to this PDF
+	// could cause infinite recursion when comparing objects during ImageBox
+	// image deduplication or other object comparisons.
+	if err := api.CreateFile(inFile, inFileJSON, outFile, nil); err != nil {
+		t.Fatalf("%s: create should handle circular references without stack overflow: %v\n", msg, err)
+	}
+
+	// Validate the output
+	if err := api.ValidateFile(outFile, nil); err != nil {
+		t.Fatalf("%s: created PDF should be valid: %v\n", msg, err)
+	}
+}
