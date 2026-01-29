@@ -739,10 +739,20 @@ func validateOwnerPassword(ctx *model.Context) (ok bool, err error) {
 
 func validateCFLength(len int, cfm *string) bool {
 	// See table 25 Length
+	// Note: Length can be expressed in bytes or bits depending on the security handler.
+	// AESV2 (AES-128) expects Length=16 (bytes) or Length=128 (bits)
+	// AESV3 (AES-256) expects Length=32 (bytes) or Length=256 (bits)
 
 	if cfm != nil {
-		if (*cfm == "AESV2" && len != 16) || (*cfm == "AESV3" && len != 32) {
+		if *cfm == "AESV2" && len != 16 && len != 128 {
 			return false
+		}
+		if *cfm == "AESV3" && len != 32 && len != 256 {
+			return false
+		}
+		// If we matched a valid AESV2 or AESV3 length, return early
+		if *cfm == "AESV2" || *cfm == "AESV3" {
+			return true
 		}
 	}
 
