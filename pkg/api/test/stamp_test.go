@@ -18,6 +18,7 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -33,7 +34,11 @@ func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages 
 	if onTop {
 		s = "stamp"
 	}
-	outFile = filepath.Join(samplesDir, s, mode, outFile)
+	wmDir := filepath.Join(outDir, s, mode)
+	if err := os.MkdirAll(wmDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+	outFile = filepath.Join(wmDir, outFile)
 
 	var err error
 	switch mode {
@@ -502,7 +507,11 @@ func TestAddStampWithLink(t *testing.T) {
 func TestCropBox(t *testing.T) {
 	msg := "TestCropBox"
 	inFile := filepath.Join(inDir, "empty.pdf")
-	outFile := filepath.Join(samplesDir, "stamp", "pdf", "PdfWithCropBox.pdf")
+	stampPdfDir := filepath.Join(outDir, "stamp", "pdf")
+	if err := os.MkdirAll(stampPdfDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+	outFile := filepath.Join(stampPdfDir, "PdfWithCropBox.pdf")
 	pdfFile := filepath.Join(inDir, "grid_example.pdf")
 
 	// Create a context.
@@ -615,7 +624,11 @@ func TestStampingLifecycle(t *testing.T) {
 func TestRecycleWM(t *testing.T) {
 	msg := "TestRecycleWM"
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join(samplesDir, "watermark", "text", "TextRecycled.pdf")
+	wmTextDir := filepath.Join(outDir, "watermark", "text")
+	if err := os.MkdirAll(wmTextDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+	outFile := filepath.Join(wmTextDir, "TextRecycled.pdf")
 	onTop := false // we are testing watermarks
 
 	desc := "pos:tl, points:22, rot:0, scale:1 abs, off:0 -5, opacity:0.3"

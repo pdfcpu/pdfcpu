@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -52,7 +53,10 @@ func testGrid(t *testing.T, msg string, inFiles []string, outFile string, select
 
 func TestGrid(t *testing.T) {
 
-	outDir := filepath.Join(samplesDir, "grid")
+	gridDir := filepath.Join(outDir, "grid")
+	if err := os.MkdirAll(gridDir, os.ModePerm); err != nil {
+		t.Fatalf("TestGrid mkdirAll: %v\n", err)
+	}
 
 	for _, tt := range []struct {
 		msg           string
@@ -66,17 +70,17 @@ func TestGrid(t *testing.T) {
 	}{
 		{"TestGridFromPDF",
 			[]string{filepath.Join(inDir, "read.go.pdf")},
-			filepath.Join(outDir, "GridFromPDF.pdf"),
+			filepath.Join(gridDir, "GridFromPDF.pdf"),
 			nil, "form:LegalP, o:dr, border:off", "points", 4, 6, false},
 
 		{"TestGridFromPDFWithCropBox",
 			[]string{filepath.Join(inDir, "grid_example.pdf")},
-			filepath.Join(outDir, "GridFromPDFWithCropBox.pdf"),
+			filepath.Join(gridDir, "GridFromPDFWithCropBox.pdf"),
 			nil, "form:A5L, border:on, margin:0", "points", 2, 1, false},
 
 		{"TestGridFromImages",
 			imageFileNames(t, resDir),
-			filepath.Join(outDir, "GridFromImages.pdf"),
+			filepath.Join(gridDir, "GridFromImages.pdf"),
 			nil, "d:500 500, margin:20, bo:off", "points", 1, 4, true},
 	} {
 		conf := model.NewDefaultConfiguration()

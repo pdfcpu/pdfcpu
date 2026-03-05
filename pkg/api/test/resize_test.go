@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -28,6 +29,11 @@ import (
 func TestResizeByScaleFactor(t *testing.T) {
 	msg := "TestResizeByScaleFactor"
 
+	resizeDir := filepath.Join(outDir, "resize")
+	if err := os.MkdirAll(resizeDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	inFile := filepath.Join(inDir, "test.pdf")
 
 	// Enlarge by scale factor 2.
@@ -36,7 +42,7 @@ func TestResizeByScaleFactor(t *testing.T) {
 		t.Fatalf("%s invalid resize configuration: %v\n", msg, err)
 	}
 
-	outFile := filepath.Join(samplesDir, "resize", "enlargeByScaleFactor.pdf")
+	outFile := filepath.Join(resizeDir, "enlargeByScaleFactor.pdf")
 	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
@@ -47,7 +53,7 @@ func TestResizeByScaleFactor(t *testing.T) {
 		t.Fatalf("%s invalid resize configuration: %v\n", msg, err)
 	}
 
-	outFile = filepath.Join(samplesDir, "resize", "shrinkByScaleFactor.pdf")
+	outFile = filepath.Join(resizeDir, "shrinkByScaleFactor.pdf")
 	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
@@ -55,6 +61,11 @@ func TestResizeByScaleFactor(t *testing.T) {
 
 func TestResizeByWidthOrHeight(t *testing.T) {
 	msg := "TestResizeByWidthOrHeight"
+
+	resizeDir := filepath.Join(outDir, "resize")
+	if err := os.MkdirAll(resizeDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 
 	inFile := filepath.Join(inDir, "test.pdf")
 
@@ -64,7 +75,7 @@ func TestResizeByWidthOrHeight(t *testing.T) {
 		t.Fatalf("%s invalid resize configuration: %v\n", msg, err)
 	}
 
-	outFile := filepath.Join(samplesDir, "resize", "resizeByWidth.pdf")
+	outFile := filepath.Join(resizeDir, "resizeByWidth.pdf")
 	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
@@ -75,7 +86,7 @@ func TestResizeByWidthOrHeight(t *testing.T) {
 		t.Fatalf("%s invalid resize configuration: %v\n", msg, err)
 	}
 
-	outFile = filepath.Join(samplesDir, "resize", "resizeByHeight.pdf")
+	outFile = filepath.Join(resizeDir, "resizeByHeight.pdf")
 	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
@@ -83,6 +94,11 @@ func TestResizeByWidthOrHeight(t *testing.T) {
 
 func TestResizeToFormSize(t *testing.T) {
 	msg := "TestResizeToPaperSize"
+
+	resizeDir := filepath.Join(outDir, "resize")
+	if err := os.MkdirAll(resizeDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 
 	inFile := filepath.Join(inDir, "test.pdf")
 
@@ -92,7 +108,7 @@ func TestResizeToFormSize(t *testing.T) {
 		t.Fatalf("%s invalid resize configuration: %v\n", msg, err)
 	}
 
-	outFile := filepath.Join(samplesDir, "resize", "resizeToA3.pdf")
+	outFile := filepath.Join(resizeDir, "resizeToA3.pdf")
 	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
@@ -103,7 +119,7 @@ func TestResizeToFormSize(t *testing.T) {
 		t.Fatalf("%s invalid resize configuration: %v\n", msg, err)
 	}
 
-	outFile = filepath.Join(samplesDir, "resize", "resizeToA4L.pdf")
+	outFile = filepath.Join(resizeDir, "resizeToA4L.pdf")
 	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
@@ -111,6 +127,11 @@ func TestResizeToFormSize(t *testing.T) {
 
 func TestResizeToDimensions(t *testing.T) {
 	msg := "TestResizeToDimensions"
+
+	resizeDir := filepath.Join(outDir, "resize")
+	if err := os.MkdirAll(resizeDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 
 	inFile := filepath.Join(inDir, "test.pdf")
 
@@ -121,7 +142,7 @@ func TestResizeToDimensions(t *testing.T) {
 		t.Fatalf("%s invalid resize configuration: %v\n", msg, err)
 	}
 
-	outFile := filepath.Join(samplesDir, "resize", "resizeToDimensionsKeep.pdf")
+	outFile := filepath.Join(resizeDir, "resizeToDimensionsKeep.pdf")
 	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
@@ -133,7 +154,7 @@ func TestResizeToDimensions(t *testing.T) {
 		t.Fatalf("%s invalid resize configuration: %v\n", msg, err)
 	}
 
-	outFile = filepath.Join(samplesDir, "resize", "resizeToDimensionsEnforce.pdf")
+	outFile = filepath.Join(resizeDir, "resizeToDimensionsEnforce.pdf")
 	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}

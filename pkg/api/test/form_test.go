@@ -26,6 +26,17 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
+// formOutDir creates and returns a subdirectory under the package-level outDir.
+func formOutDir(t *testing.T, subPaths ...string) string {
+	t.Helper()
+	parts := append([]string{outDir, "form"}, subPaths...)
+	d := filepath.Join(parts...)
+	if err := os.MkdirAll(d, os.ModePerm); err != nil {
+		t.Fatalf("formOutDir mkdirAll %s: %v\n", d, err)
+	}
+	return d
+}
+
 /**************************************************************
  * All form related processing is optimized for Adobe Reader! *
  **************************************************************/
@@ -73,7 +84,7 @@ func TestRemoveFormFields(t *testing.T) {
 
 	msg := "TestRemoveFormFields"
 	inFile := filepath.Join(samplesDir, "form", "demo", "english.pdf")
-	outFile := filepath.Join(samplesDir, "form", "remove", "removedField.pdf")
+	outFile := filepath.Join(formOutDir(t, "remove"), "removedField.pdf")
 
 	ss, err := listFormFieldsFile(t, inFile, conf)
 	if err != nil {
@@ -110,7 +121,7 @@ func TestResetFormFields(t *testing.T) {
 		{"TestResetPersonForm", "person.pdf", "person-reset.pdf"},            // Person Form
 	} {
 		inFile := filepath.Join(samplesDir, "form", "demoSinglePage", tt.inFile)
-		outFile := filepath.Join(samplesDir, "form", "reset", tt.outFile)
+		outFile := filepath.Join(formOutDir(t, "reset"), tt.outFile)
 		if err := api.ResetFormFieldsFile(inFile, outFile, nil, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
@@ -132,7 +143,7 @@ func TestLockFormFields(t *testing.T) {
 		{"TestLockPersonForm", "person.pdf", "person-locked.pdf"},            // Person Form
 	} {
 		inFile := filepath.Join(samplesDir, "form", "demoSinglePage", tt.inFile)
-		outFile := filepath.Join(samplesDir, "form", "lock", tt.outFile)
+		outFile := filepath.Join(formOutDir(t, "lock"), tt.outFile)
 		if err := api.LockFormFieldsFile(inFile, outFile, nil, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
@@ -153,7 +164,7 @@ func TestUnlockFormFields(t *testing.T) {
 		{"TestUnlockPersonForm", "person-locked.pdf", "person-unlocked.pdf"},            // Person Form
 	} {
 		inFile := filepath.Join(samplesDir, "form", "lock", tt.inFile)
-		outFile := filepath.Join(samplesDir, "form", "lock", tt.outFile)
+		outFile := filepath.Join(formOutDir(t, "lock"), tt.outFile)
 		if err := api.UnlockFormFieldsFile(inFile, outFile, nil, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
@@ -163,7 +174,7 @@ func TestUnlockFormFields(t *testing.T) {
 func TestExportForm(t *testing.T) {
 
 	inDir := filepath.Join(samplesDir, "form", "demoSinglePage")
-	outDir := filepath.Join(samplesDir, "form", "export")
+	exportDir := formOutDir(t, "export")
 
 	for _, tt := range []struct {
 		msg     string
@@ -177,7 +188,7 @@ func TestExportForm(t *testing.T) {
 		{"TestExportPersonForm", "person.pdf", "person.json"},            // Person Form
 	} {
 		inFile := filepath.Join(inDir, tt.inFile)
-		outFile := filepath.Join(outDir, tt.outFile)
+		outFile := filepath.Join(exportDir, tt.outFile)
 		if err := api.ExportFormFile(inFile, outFile, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
@@ -188,7 +199,7 @@ func TestFillForm(t *testing.T) {
 
 	inDir := filepath.Join(samplesDir, "form", "demoSinglePage")
 	jsonDir := filepath.Join(samplesDir, "form", "fill")
-	outDir := jsonDir
+	fillOutDir := formOutDir(t, "fill")
 
 	for _, tt := range []struct {
 		msg        string
@@ -204,7 +215,7 @@ func TestFillForm(t *testing.T) {
 	} {
 		inFile := filepath.Join(inDir, tt.inFile)
 		inFileJSON := filepath.Join(jsonDir, tt.inFileJSON)
-		outFile := filepath.Join(outDir, tt.outFile)
+		outFile := filepath.Join(fillOutDir, tt.outFile)
 		if err := api.FillFormFile(inFile, inFileJSON, outFile, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
@@ -215,7 +226,7 @@ func TestMultiFillFormJSON(t *testing.T) {
 
 	inDir := filepath.Join(samplesDir, "form", "demoSinglePage")
 	jsonDir := filepath.Join(samplesDir, "form", "multifill", "json")
-	outDir := jsonDir
+	mfOutDir := formOutDir(t, "multifill", "json")
 
 	for _, tt := range []struct {
 		msg        string
@@ -227,7 +238,7 @@ func TestMultiFillFormJSON(t *testing.T) {
 	} {
 		inFile := filepath.Join(inDir, tt.inFile)
 		inFileJSON := filepath.Join(jsonDir, tt.inFileJSON)
-		if err := api.MultiFillFormFile(inFile, inFileJSON, outDir, inFile, false, conf); err != nil {
+		if err := api.MultiFillFormFile(inFile, inFileJSON, mfOutDir, inFile, false, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}
@@ -237,7 +248,7 @@ func TestMultiFillFormJSONMerged(t *testing.T) {
 
 	inDir := filepath.Join(samplesDir, "form", "demoSinglePage")
 	jsonDir := filepath.Join(samplesDir, "form", "multifill", "json")
-	outDir := filepath.Join(jsonDir, "merge")
+	mfMergeDir := formOutDir(t, "multifill", "json", "merge")
 
 	for _, tt := range []struct {
 		msg        string
@@ -249,7 +260,7 @@ func TestMultiFillFormJSONMerged(t *testing.T) {
 	} {
 		inFile := filepath.Join(inDir, tt.inFile)
 		inFileJSON := filepath.Join(jsonDir, tt.inFileJSON)
-		if err := api.MultiFillFormFile(inFile, inFileJSON, outDir, inFile, true, conf); err != nil {
+		if err := api.MultiFillFormFile(inFile, inFileJSON, mfMergeDir, inFile, true, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}
@@ -259,7 +270,7 @@ func TestMultiFillFormCSV(t *testing.T) {
 
 	inDir := filepath.Join(samplesDir, "form", "demoSinglePage")
 	csvDir := filepath.Join(samplesDir, "form", "multifill", "csv")
-	outDir := csvDir
+	csvOutDir := formOutDir(t, "multifill", "csv")
 
 	for _, tt := range []struct {
 		msg       string
@@ -272,7 +283,7 @@ func TestMultiFillFormCSV(t *testing.T) {
 
 		inFile := filepath.Join(inDir, tt.inFile)
 		inFileCSV := filepath.Join(csvDir, tt.inFileCSV)
-		if err := api.MultiFillFormFile(inFile, inFileCSV, outDir, inFile, false, conf); err != nil {
+		if err := api.MultiFillFormFile(inFile, inFileCSV, csvOutDir, inFile, false, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}
@@ -282,7 +293,7 @@ func TestMultiFillFormCSVMerged(t *testing.T) {
 
 	inDir := filepath.Join(samplesDir, "form", "demoSinglePage")
 	csvDir := filepath.Join(samplesDir, "form", "multifill", "csv")
-	outDir := filepath.Join(csvDir, "merge")
+	csvMergeDir := formOutDir(t, "multifill", "csv", "merge")
 
 	for _, tt := range []struct {
 		msg       string
@@ -295,7 +306,7 @@ func TestMultiFillFormCSVMerged(t *testing.T) {
 
 		inFile := filepath.Join(inDir, tt.inFile)
 		inFileCSV := filepath.Join(csvDir, tt.inFileCSV)
-		if err := api.MultiFillFormFile(inFile, inFileCSV, outDir, inFile, true, conf); err != nil {
+		if err := api.MultiFillFormFile(inFile, inFileCSV, csvMergeDir, inFile, true, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}

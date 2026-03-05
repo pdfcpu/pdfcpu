@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -25,7 +26,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func testCut(t *testing.T, msg, inFile, outDir, outFile string, unit types.DisplayUnit, cutConf string) {
+func testCut(t *testing.T, msg, inFile, outSubDir, outFile string, unit types.DisplayUnit, cutConf string) {
 	t.Helper()
 
 	cut, err := pdfcpu.ParseCutConfig(cutConf, unit)
@@ -34,9 +35,12 @@ func testCut(t *testing.T, msg, inFile, outDir, outFile string, unit types.Displ
 	}
 
 	inFile = filepath.Join(inDir, inFile)
-	outDir = filepath.Join(samplesDir, outDir)
+	cutDir := filepath.Join(outDir, outSubDir)
+	if err := os.MkdirAll(cutDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 
-	if err := api.CutFile(inFile, outDir, outFile, nil, cut, nil); err != nil {
+	if err := api.CutFile(inFile, cutDir, outFile, nil, cut, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -95,7 +99,7 @@ func TestCut(t *testing.T) {
 	}
 }
 
-func testNDown(t *testing.T, msg, inFile, outDir, outFile string, n int, unit types.DisplayUnit, cutConf string) {
+func testNDown(t *testing.T, msg, inFile, outSubDir, outFile string, n int, unit types.DisplayUnit, cutConf string) {
 	t.Helper()
 
 	cut, err := pdfcpu.ParseCutConfigForN(n, cutConf, unit)
@@ -104,9 +108,12 @@ func testNDown(t *testing.T, msg, inFile, outDir, outFile string, n int, unit ty
 	}
 
 	inFile = filepath.Join(inDir, inFile)
-	outDir = filepath.Join(samplesDir, outDir)
+	cutDir := filepath.Join(outDir, outSubDir)
+	if err := os.MkdirAll(cutDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 
-	if err := api.NDownFile(inFile, outDir, outFile, nil, n, cut, nil); err != nil {
+	if err := api.NDownFile(inFile, cutDir, outFile, nil, n, cut, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -156,7 +163,7 @@ func TestNDown(t *testing.T) {
 	}
 }
 
-func testPoster(t *testing.T, msg, inFile, outDir, outFile string, unit types.DisplayUnit, cutConf string) {
+func testPoster(t *testing.T, msg, inFile, outSubDir, outFile string, unit types.DisplayUnit, cutConf string) {
 	t.Helper()
 
 	cut, err := pdfcpu.ParseCutConfigForPoster(cutConf, unit)
@@ -165,9 +172,12 @@ func testPoster(t *testing.T, msg, inFile, outDir, outFile string, unit types.Di
 	}
 
 	inFile = filepath.Join(inDir, inFile)
-	outDir = filepath.Join(samplesDir, outDir)
+	cutDir := filepath.Join(outDir, outSubDir)
+	if err := os.MkdirAll(cutDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 
-	if err := api.PosterFile(inFile, outDir, outFile, nil, cut, nil); err != nil {
+	if err := api.PosterFile(inFile, cutDir, outFile, nil, cut, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

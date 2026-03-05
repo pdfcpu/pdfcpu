@@ -18,7 +18,7 @@ package test
 
 import (
 	"fmt"
-
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -111,8 +111,17 @@ func TestCoreFontDemoPDF(t *testing.T) {
 		if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
-		outFile := filepath.Join("..", "..", "samples", "fonts", "core", fn+".pdf")
-		createAndValidate(t, xRefTable, outFile, msg)
+		coreDir := filepath.Join(outDir, "fonts", "core")
+		if err = os.MkdirAll(coreDir, os.ModePerm); err != nil {
+			t.Fatalf("%s mkdirAll: %v\n", msg, err)
+		}
+		outFile := filepath.Join(coreDir, fn+".pdf")
+		if err = api.CreatePDFFile(xRefTable, outFile, nil); err != nil {
+			t.Fatalf("%s: %v\n", msg, err)
+		}
+		if err = api.ValidateFile(outFile, nil); err != nil {
+			t.Fatalf("%s: %v\n", msg, err)
+		}
 	}
 }
 
@@ -123,7 +132,11 @@ func TestUserFontDemoPDF(t *testing.T) {
 	// in pkg/samples/fonts/user.
 	for _, fn := range font.UserFontNames() {
 		fmt.Println(fn)
-		if err := api.CreateUserFontDemoFiles(filepath.Join("..", "..", "samples", "fonts", "user"), fn); err != nil {
+		userDir := filepath.Join(outDir, "fonts", "user")
+		if err := os.MkdirAll(userDir, os.ModePerm); err != nil {
+			t.Fatalf("%s mkdirAll: %v\n", msg, err)
+		}
+		if err := api.CreateUserFontDemoFiles(userDir, fn); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 	}

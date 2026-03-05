@@ -571,10 +571,15 @@ func TestAddAnnotationsLowLevel(t *testing.T) {
 func TestAddLinkAnnotationWithDest(t *testing.T) {
 	msg := "TestAddLinkAnnotationWithDest"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "Walden.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "LinkAnnotWithDestTopLeft.pdf")
+	outFile := filepath.Join(annDir, "LinkAnnotWithDestTopLeft.pdf")
 
 	// Create internal link:
 	// Add a 100x100 link rectangle on the bottom left corner of page 2.
@@ -606,10 +611,15 @@ func TestAddLinkAnnotationWithDest(t *testing.T) {
 func TestAddAnnotationsFile(t *testing.T) {
 	msg := "TestAddAnnotationsFile"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "Annotations.pdf")
+	outFile := filepath.Join(annDir, "Annotations.pdf")
 
 	// Add text annotation.
 	if err := api.AddAnnotationsFile(inFile, outFile, nil, textAnn, nil, false); err != nil {
@@ -689,11 +699,16 @@ func TestAddAnnotations(t *testing.T) {
 func TestPopupAnnotation(t *testing.T) {
 	msg := "TestPopupAnnotation"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Add a Markup annotation and a linked Popup annotation.
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "PopupAnnotation.pdf")
+	outFile := filepath.Join(annDir, "PopupAnnotation.pdf")
 
 	incr := false
 	pageNr := 1
@@ -744,10 +759,15 @@ func TestPopupAnnotation(t *testing.T) {
 func TestInkAnnotation(t *testing.T) {
 	msg := "TestInkAnnotation"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "InkAnnotation.pdf")
+	outFile := filepath.Join(annDir, "InkAnnotation.pdf")
 
 	p1 := model.InkPath{100., 542., 150., 492., 200., 542.}
 	p2 := model.InkPath{100, 592, 150, 592}
@@ -779,10 +799,15 @@ func TestInkAnnotation(t *testing.T) {
 func TestHighlightAnnotation(t *testing.T) {
 	msg := "TestHighlightAnnotation"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "testWithText.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "HighlightAnnotation.pdf")
+	outFile := filepath.Join(annDir, "HighlightAnnotation.pdf")
 
 	r := types.NewRectangle(205, 624.16, 400, 645.88)
 
@@ -816,10 +841,15 @@ func TestHighlightAnnotation(t *testing.T) {
 func TestUnderlineAnnotation(t *testing.T) {
 	msg := "TestUnderlineAnnotation"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "testWithText.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "UnderlineAnnotation.pdf")
+	outFile := filepath.Join(annDir, "UnderlineAnnotation.pdf")
 
 	r := types.NewRectangle(205, 624.16, 400, 645.88)
 
@@ -853,10 +883,15 @@ func TestUnderlineAnnotation(t *testing.T) {
 func TestSquigglyAnnotation(t *testing.T) {
 	msg := "TestSquigglyAnnotation"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "testWithText.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "SquigglyAnnotation.pdf")
+	outFile := filepath.Join(annDir, "SquigglyAnnotation.pdf")
 
 	r := types.NewRectangle(205, 624.16, 400, 645.88)
 
@@ -890,10 +925,15 @@ func TestSquigglyAnnotation(t *testing.T) {
 func TestStrikeOutAnnotation(t *testing.T) {
 	msg := "TestStrikeOutAnnotation"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "testWithText.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "StrikeOutAnnotation.pdf")
+	outFile := filepath.Join(annDir, "StrikeOutAnnotation.pdf")
 
 	r := types.NewRectangle(205, 624.16, 400, 645.88)
 
@@ -927,10 +967,15 @@ func TestStrikeOutAnnotation(t *testing.T) {
 func TestFreeTextAnnotation(t *testing.T) {
 	msg := "TestFreeTextAnnotation"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "FreeTextAnnotation.pdf")
+	outFile := filepath.Join(annDir, "FreeTextAnnotation.pdf")
 
 	// Add Free text annotation.
 	if err := api.AddAnnotationsFile(inFile, outFile, nil, freeTextAnn, nil, false); err != nil {
@@ -941,10 +986,15 @@ func TestFreeTextAnnotation(t *testing.T) {
 func TestPolyLineAnnotation(t *testing.T) {
 	msg := "TestPolyLineAnnotation"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "PolyLineAnnotation.pdf")
+	outFile := filepath.Join(annDir, "PolyLineAnnotation.pdf")
 
 	leButt := model.LEButt
 	leOpenArrow := model.LEOpenArrow
@@ -982,10 +1032,15 @@ func TestPolyLineAnnotation(t *testing.T) {
 func TestPolygonAnnotation(t *testing.T) {
 	msg := "TestPolygonAnnotation"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "PolygonAnnotation.pdf")
+	outFile := filepath.Join(annDir, "PolygonAnnotation.pdf")
 
 	polygonAnn := model.NewPolygonAnnotation(
 		*types.NewRectangle(30, 30, 110, 110), // rect
@@ -1019,10 +1074,15 @@ func TestPolygonAnnotation(t *testing.T) {
 func TestLineAnnotation(t *testing.T) {
 	msg := "TestLineAnnotation"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "LineAnnotation.pdf")
+	outFile := filepath.Join(annDir, "LineAnnotation.pdf")
 
 	leOpenArrow := model.LEOpenArrow
 
@@ -1065,10 +1125,15 @@ func TestLineAnnotation(t *testing.T) {
 func TestCaretAnnotation(t *testing.T) {
 	msg := "TestCaretAnnotation"
 
+	annDir := filepath.Join(outDir, "annotations")
+	if err := os.MkdirAll(annDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	// Best viewed with Adobe Reader.
 
 	inFile := filepath.Join(inDir, "test.pdf")
-	outFile := filepath.Join(samplesDir, "annotations", "CaretAnnotation.pdf")
+	outFile := filepath.Join(annDir, "CaretAnnotation.pdf")
 
 	caretAnn := model.NewCaretAnnotation(
 		*types.NewRectangle(30, 30, 110, 110), // rect

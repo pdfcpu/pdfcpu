@@ -29,6 +29,16 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// importDir returns a temporary output directory under the package-level outDir for import tests.
+func importDir(t *testing.T) string {
+	t.Helper()
+	d := filepath.Join(outDir, "import")
+	if err := os.MkdirAll(d, os.ModePerm); err != nil {
+		t.Fatalf("importDir mkdirAll: %v\n", err)
+	}
+	return d
+}
+
 func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impConf string) {
 	t.Helper()
 	var err error
@@ -51,12 +61,12 @@ func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impC
 
 func TestImportImages(t *testing.T) {
 
-	outDir := filepath.Join(samplesDir, "import")
+	impDir := importDir(t)
 
-	testFile1 := filepath.Join(outDir, "CenteredGraySepia.pdf")
+	testFile1 := filepath.Join(impDir, "CenteredGraySepia.pdf")
 	os.Remove(testFile1)
 
-	testFile2 := filepath.Join(outDir, "Full.pdf")
+	testFile2 := filepath.Join(impDir, "Full.pdf")
 	os.Remove(testFile2)
 
 	for _, tt := range []struct {

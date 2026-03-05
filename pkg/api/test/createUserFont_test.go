@@ -17,7 +17,6 @@ limitations under the License.
 package test
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -574,7 +573,5 @@ func TestUserFonts(t *testing.T) {
 	if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	outDir := filepath.Join("..", "..", "samples", "basic")
-	outFile := filepath.Join(outDir, "UserFont_HumanRights.pdf")
-	createAndValidate(t, xRefTable, outFile, msg)
+	createAndValidate(t, xRefTable, "UserFont_HumanRights.pdf", msg)
 }

@@ -54,6 +54,11 @@ func TestMain(m *testing.M) {
 
 	exitCode := m.Run()
 
+	if err = os.RemoveAll(outDir); err != nil {
+		fmt.Printf("%v", err)
+		os.Exit(1)
+	}
+
 	os.Exit(exitCode)
 }
 

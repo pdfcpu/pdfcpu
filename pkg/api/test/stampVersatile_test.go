@@ -31,8 +31,12 @@ import (
 
 func TestAlternatingPageNumbersViaWatermarkMap(t *testing.T) {
 	msg := "TestAlternatingPageNumbersViaWatermarkMap"
+	stampMixedDir := filepath.Join(outDir, "stamp", "mixed")
+	if err := os.MkdirAll(stampMixedDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 	inFile := filepath.Join(inDir, "WaldenFull.pdf")
-	outFile := filepath.Join(samplesDir, "stamp", "mixed", "AlternatingPageNumbersViaWatermarkMap.pdf")
+	outFile := filepath.Join(stampMixedDir, "AlternatingPageNumbersViaWatermarkMap.pdf")
 
 	pageCount, err := api.PageCountFile(inFile)
 	if err != nil {
@@ -85,8 +89,12 @@ func TestAlternatingPageNumbersViaWatermarkMap(t *testing.T) {
 
 func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 	msg := "TestAlternatingPageNumbersViaWatermarkMapLowLevel"
+	stampMixedDir := filepath.Join(outDir, "stamp", "mixed")
+	if err := os.MkdirAll(stampMixedDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 	inFile := filepath.Join(inDir, "WaldenFull.pdf")
-	outFile := filepath.Join(samplesDir, "stamp", "mixed", "AlternatingPageNumbersViaWatermarkMapLowLevel.pdf")
+	outFile := filepath.Join(stampMixedDir, "AlternatingPageNumbersViaWatermarkMapLowLevel.pdf")
 
 	// Create a context.
 	ctx, err := api.ReadContextFile(inFile)
@@ -151,8 +159,12 @@ func TestAlternatingPageNumbersViaWatermarkMapLowLevel(t *testing.T) {
 
 func TestAlternatingPageNumbersViaWatermarkSliceMap(t *testing.T) {
 	msg := "TestAlternatingPageNumbersViaWatermarkSliceMap"
+	stampMixedDir := filepath.Join(outDir, "stamp", "mixed")
+	if err := os.MkdirAll(stampMixedDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 	inFile := filepath.Join(inDir, "WaldenFull.pdf")
-	outFile := filepath.Join(samplesDir, "stamp", "mixed", "AlternatingPageNumbersViaWatermarkSliceMap.pdf")
+	outFile := filepath.Join(stampMixedDir, "AlternatingPageNumbersViaWatermarkSliceMap.pdf")
 
 	pageCount, err := api.PageCountFile(inFile)
 	if err != nil {
@@ -226,8 +238,12 @@ func TestAlternatingPageNumbersViaWatermarkSliceMap(t *testing.T) {
 
 func TestImagesTextAndPDFWMViaWatermarkMap(t *testing.T) {
 	msg := "TestImagesTextAndPDFWMViaWatermarkMap"
+	stampMixedDir := filepath.Join(outDir, "stamp", "mixed")
+	if err := os.MkdirAll(stampMixedDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 	inFile := filepath.Join(inDir, "WaldenFull.pdf")
-	outFile := filepath.Join(samplesDir, "stamp", "mixed", "ImagesTextAndPDFWMViaWatermarkMap.pdf")
+	outFile := filepath.Join(stampMixedDir, "ImagesTextAndPDFWMViaWatermarkMap.pdf")
 
 	pageCount, err := api.PageCountFile(inFile)
 	if err != nil {
@@ -282,6 +298,10 @@ func TestImagesTextAndPDFWMViaWatermarkMap(t *testing.T) {
 
 func TestPdfSingleStampVariations(t *testing.T) {
 	msg := "TestPdfSingleStampVariations"
+	stampMixedDir := filepath.Join(outDir, "stamp", "mixed")
+	if err := os.MkdirAll(stampMixedDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 	inFile := filepath.Join(inDir, "zineTest.pdf")
 	stampFile := inFile
 
@@ -319,7 +339,7 @@ func TestPdfSingleStampVariations(t *testing.T) {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 
-		outFile := filepath.Join(samplesDir, "stamp", "mixed", tt.outFile)
+		outFile := filepath.Join(stampMixedDir, tt.outFile)
 
 		if err = api.AddWatermarksFile(inFile, outFile, nil, wm, conf); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, outFile, err)
@@ -329,6 +349,10 @@ func TestPdfSingleStampVariations(t *testing.T) {
 
 func TestPdfMultiStampVariations(t *testing.T) {
 	msg := "TestPdfMultiStampVariations"
+	stampMixedDir := filepath.Join(outDir, "stamp", "mixed")
+	if err := os.MkdirAll(stampMixedDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 	inFile := filepath.Join(inDir, "zineTest.pdf")
 	stampFile := inFile
 
@@ -383,7 +407,7 @@ func TestPdfMultiStampVariations(t *testing.T) {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 
-		outFile := filepath.Join(samplesDir, "stamp", "mixed", tt.outFile)
+		outFile := filepath.Join(stampMixedDir, tt.outFile)
 
 		if err = api.AddWatermarksFile(inFile, outFile, nil, wm, conf); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, outFile, err)

@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -51,7 +52,10 @@ func testBooklet(t *testing.T, msg string, inFiles []string, outFile string, sel
 }
 
 func TestBooklet(t *testing.T) {
-	outDir := filepath.Join("..", "..", "samples", "booklet")
+	outDir := filepath.Join(outDir, "booklet")
+	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
+		t.Fatalf("TestBooklet mkdirAll: %v\n", err)
+	}
 
 	for _, tt := range []struct {
 		msg           string

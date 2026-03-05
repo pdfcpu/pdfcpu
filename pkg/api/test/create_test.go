@@ -18,6 +18,7 @@ package test
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -162,8 +163,11 @@ parents during vacation--so there was no bright side to life anywhere.`
 
 func createAndValidate(t *testing.T, xRefTable *model.XRefTable, outFile, msg string) {
 	t.Helper()
-	outDir := "../../samples/basic"
-	outFile = filepath.Join(outDir, outFile)
+	basicDir := filepath.Join(outDir, "basic")
+	if err := os.MkdirAll(basicDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+	outFile = filepath.Join(basicDir, outFile)
 	if err := api.CreatePDFFile(xRefTable, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -1678,9 +1682,7 @@ func createXRefAndWritePDF(t *testing.T, msg, fileName string, mediaBox *types.R
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	outDir := filepath.Join("..", "..", "samples", "basic")
-	outFile := filepath.Join(outDir, fileName+".pdf")
-	createAndValidate(t, xRefTable, outFile, msg)
+	createAndValidate(t, xRefTable, fileName+".pdf", msg)
 }
 
 func testTextDemoPDF(t *testing.T, msg, fileName string, w, h int, hAlign types.HAlignment) {
@@ -1907,9 +1909,7 @@ func createXRefAndWriteJustifiedPDF(t *testing.T, msg, fileName string, mediaBox
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	outDir := filepath.Join("..", "..", "samples", "basic")
-	outFile := filepath.Join(outDir, fileName+".pdf")
-	createAndValidate(t, xRefTable, outFile, msg)
+	createAndValidate(t, xRefTable, fileName+".pdf", msg)
 }
 
 func TestUserFontJustified(t *testing.T) {
@@ -1940,9 +1940,7 @@ func createXRefAndWriteRTLPDF(t *testing.T,
 	if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	outDir := filepath.Join("..", "..", "samples", "basic")
-	outFile := filepath.Join(outDir, fileName+".pdf")
-	createAndValidate(t, xRefTable, outFile, msg)
+	createAndValidate(t, xRefTable, fileName+".pdf", msg)
 }
 
 func TestUserFontRTL(t *testing.T) {
@@ -2063,7 +2061,5 @@ func TestCJKV(t *testing.T) {
 	if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	outDir := filepath.Join("..", "..", "samples", "basic")
-	outFile := filepath.Join(outDir, "UserFont_CJKV.pdf")
-	createAndValidate(t, xRefTable, outFile, msg)
+	createAndValidate(t, xRefTable, "UserFont_CJKV.pdf", msg)
 }

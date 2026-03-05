@@ -26,7 +26,7 @@ import (
 
 func TestListBookmarks(t *testing.T) {
 	msg := "TestListBookmarks"
-	inDir := filepath.Join("..", "..", "samples", "bookmarks")
+	inDir := filepath.Join(samplesDir, "bookmarks")
 	inFile := filepath.Join(inDir, "bookmarkTree.pdf")
 
 	cmd := cli.ListBookmarksCommand(inFile, conf)
@@ -37,7 +37,7 @@ func TestListBookmarks(t *testing.T) {
 
 func TestExportBookmarks(t *testing.T) {
 	msg := "TestExportBookmarks"
-	inDir := filepath.Join("..", "..", "samples", "bookmarks")
+	inDir := filepath.Join(samplesDir, "bookmarks")
 	inFile := filepath.Join(inDir, "bookmarkTree.pdf")
 	outFile := filepath.Join(outDir, "bookmarkTree.json")
 
@@ -49,7 +49,7 @@ func TestExportBookmarks(t *testing.T) {
 
 func TestImportBookmarks(t *testing.T) {
 	msg := "TestImportBookmarks"
-	inDir := filepath.Join("..", "..", "samples", "bookmarks")
+	inDir := filepath.Join(samplesDir, "bookmarks")
 	inFile := filepath.Join(inDir, "bookmarkTree.pdf")
 	inFileJSON := filepath.Join(inDir, "bookmarkTree.json")
 	outFile := filepath.Join(outDir, "bookmarkTreeImported.pdf")
@@ -71,7 +71,7 @@ func TestImportBookmarks(t *testing.T) {
 
 func TestRemoveBookmarks(t *testing.T) {
 	msg := "TestRemoveBookmarks"
-	inDir := filepath.Join("..", "..", "samples", "bookmarks")
+	inDir := filepath.Join(samplesDir, "bookmarks")
 	inFile := filepath.Join(inDir, "bookmarkTree.pdf")
 	outFile := filepath.Join(outDir, "bookmarkTreeNoBookmarks.pdf")
 

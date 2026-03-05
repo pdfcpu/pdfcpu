@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -52,7 +53,10 @@ func testNUp(t *testing.T, msg string, inFiles []string, outFile string, selecte
 
 func TestNUp(t *testing.T) {
 
-	outDir := filepath.Join(samplesDir, "nup")
+	nupDir := filepath.Join(outDir, "nup")
+	if err := os.MkdirAll(nupDir, os.ModePerm); err != nil {
+		t.Fatalf("TestNUp mkdirAll: %v\n", err)
+	}
 
 	for _, tt := range []struct {
 		msg           string
@@ -67,7 +71,7 @@ func TestNUp(t *testing.T) {
 		// 4-Up a PDF
 		{"TestNUpFromPDF",
 			[]string{filepath.Join(inDir, "WaldenFull.pdf")},
-			filepath.Join(outDir, "NUpFromPDF.pdf"),
+			filepath.Join(nupDir, "NUpFromPDF.pdf"),
 			nil,
 			"dim: 400 800, margin:10, bgcol:#f7e6c7",
 			"mm",
@@ -77,7 +81,7 @@ func TestNUp(t *testing.T) {
 		// 2-Up a PDF with CropBox
 		{"TestNUpFromPdfWithCropBox",
 			[]string{filepath.Join(inDir, "grid_example.pdf")},
-			filepath.Join(outDir, "NUpFromPDFWithCropBox.pdf"),
+			filepath.Join(nupDir, "NUpFromPDFWithCropBox.pdf"),
 			nil,
 			"form:A5L, border:on, margin:0, bgcol:#f7e6c7",
 			"points",
@@ -87,7 +91,7 @@ func TestNUp(t *testing.T) {
 		// 16-Up an image
 		{"TestNUpFromSingleImage",
 			[]string{filepath.Join(resDir, "logoSmall.png")},
-			filepath.Join(outDir, "NUpFromSingleImage.pdf"),
+			filepath.Join(nupDir, "NUpFromSingleImage.pdf"),
 			nil,
 			"form:A3P, ma:10, bgcol:#f7e6c7",
 			"points",
@@ -97,7 +101,7 @@ func TestNUp(t *testing.T) {
 		// 6-Up a sequence of images.
 		{"TestNUpFromImages",
 			imageFileNames(t, resDir),
-			filepath.Join(outDir, "NUpFromImages.pdf"),
+			filepath.Join(nupDir, "NUpFromImages.pdf"),
 			nil,
 			"form:Tabloid, border:on, ma:10, bgcol:#f7e6c7",
 			"points",

@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -36,8 +37,11 @@ func testUpdateImages(t *testing.T, msg string, inFile, imgFile, outFile string,
 
 func TestUpdateImages(t *testing.T) {
 
-	outDir := filepath.Join(samplesDir, "images")
-	inDir := outDir
+	imgInDir := filepath.Join(samplesDir, "images")
+	imgOutDir := filepath.Join(outDir, "images")
+	if err := os.MkdirAll(imgOutDir, os.ModePerm); err != nil {
+		t.Fatalf("TestUpdateImages mkdirAll: %v\n", err)
+	}
 
 	for _, tt := range []struct {
 		msg     string
@@ -135,9 +139,9 @@ func TestUpdateImages(t *testing.T) {
 			"Im1"},
 	} {
 		testUpdateImages(t, tt.msg,
-			filepath.Join(inDir, tt.inFile),
-			filepath.Join(outDir, tt.imgFile),
-			filepath.Join(outDir, tt.outFile),
+			filepath.Join(imgInDir, tt.inFile),
+			filepath.Join(imgInDir, tt.imgFile),
+			filepath.Join(imgOutDir, tt.outFile),
 			tt.objNr,
 			tt.pageNr,
 			tt.id)

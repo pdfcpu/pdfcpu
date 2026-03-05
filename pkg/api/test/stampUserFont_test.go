@@ -18,6 +18,7 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -27,7 +28,10 @@ import (
 func TestStampUserFont(t *testing.T) {
 	msg := "TestStampUserFont"
 	inFile := filepath.Join(inDir, "mountain.pdf")
-	outDir := filepath.Join("..", "..", "samples", "stamp", "text", "utf8")
+	outDir := filepath.Join(outDir, "stamp", "text", "utf8")
+	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
 
 	for _, sample := range langSamples {
 		outFile := filepath.Join(outDir, sample.lang+".pdf")

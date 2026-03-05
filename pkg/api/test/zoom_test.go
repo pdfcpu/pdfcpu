@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -28,13 +29,18 @@ import (
 func TestZoomInByFactor(t *testing.T) {
 	msg := "TestZoomInByFactor"
 
+	zoomDir := filepath.Join(outDir, "zoom")
+	if err := os.MkdirAll(zoomDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	inFile := filepath.Join(inDir, "test.pdf")
 
 	zoom, err := pdfcpu.ParseZoomConfig("factor:2", types.POINTS)
 	if err != nil {
 		t.Fatalf("%s invalid zoom configuration: %v\n", msg, err)
 	}
-	outFile := filepath.Join(samplesDir, "zoom", "zoomInByFactor2.pdf")
+	outFile := filepath.Join(zoomDir, "zoomInByFactor2.pdf")
 	if err := api.ZoomFile(inFile, outFile, nil, zoom, nil); err != nil {
 		t.Fatalf("%s zoom: %v\n", msg, err)
 	}
@@ -43,7 +49,7 @@ func TestZoomInByFactor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s invalid zoom configuration: %v\n", msg, err)
 	}
-	outFile = filepath.Join(samplesDir, "zoom", "zoomInByFactor4.pdf")
+	outFile = filepath.Join(zoomDir, "zoomInByFactor4.pdf")
 	if err := api.ZoomFile(inFile, outFile, nil, zoom, nil); err != nil {
 		t.Fatalf("%s zoom: %v\n", msg, err)
 	}
@@ -52,13 +58,18 @@ func TestZoomInByFactor(t *testing.T) {
 func TestZoomOutByFactor(t *testing.T) {
 	msg := "TestZoomOutByFactor"
 
+	zoomDir := filepath.Join(outDir, "zoom")
+	if err := os.MkdirAll(zoomDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	inFile := filepath.Join(inDir, "test.pdf")
 
 	zoom, err := pdfcpu.ParseZoomConfig("factor:.5", types.POINTS)
 	if err != nil {
 		t.Fatalf("%s invalid zoom configuration: %v\n", msg, err)
 	}
-	outFile := filepath.Join(samplesDir, "zoom", "zoomOutByFactor05.pdf")
+	outFile := filepath.Join(zoomDir, "zoomOutByFactor05.pdf")
 	if err := api.ZoomFile(inFile, outFile, nil, zoom, nil); err != nil {
 		t.Fatalf("%s zoom: %v\n", msg, err)
 	}
@@ -67,7 +78,7 @@ func TestZoomOutByFactor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s invalid zoom configuration: %v\n", msg, err)
 	}
-	outFile = filepath.Join(samplesDir, "zoom", "zoomOutByFactor025.pdf")
+	outFile = filepath.Join(zoomDir, "zoomOutByFactor025.pdf")
 	if err := api.ZoomFile(inFile, outFile, nil, zoom, nil); err != nil {
 		t.Fatalf("%s zoom: %v\n", msg, err)
 	}
@@ -76,13 +87,19 @@ func TestZoomOutByFactor(t *testing.T) {
 func TestZoomOutByHorizontalMargin(t *testing.T) {
 	// Zoom out of page content resulting in a preferred horizontal margin.
 	msg := "TestZoomOutByHMargin"
+
+	zoomDir := filepath.Join(outDir, "zoom")
+	if err := os.MkdirAll(zoomDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	inFile := filepath.Join(inDir, "test.pdf")
 
 	zoom, err := pdfcpu.ParseZoomConfig("hmargin:149", types.POINTS)
 	if err != nil {
 		t.Fatalf("%s invalid zoom configuration: %v\n", msg, err)
 	}
-	outFile := filepath.Join(samplesDir, "zoom", "zoomOutByHMarginPoints.pdf")
+	outFile := filepath.Join(zoomDir, "zoomOutByHMarginPoints.pdf")
 	if err := api.ZoomFile(inFile, outFile, nil, zoom, nil); err != nil {
 		t.Fatalf("%s zoom: %v\n", msg, err)
 	}
@@ -91,7 +108,7 @@ func TestZoomOutByHorizontalMargin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s invalid zoom configuration: %v\n", msg, err)
 	}
-	outFile = filepath.Join(samplesDir, "zoom", "zoomOutByHMarginCm.pdf")
+	outFile = filepath.Join(zoomDir, "zoomOutByHMarginCm.pdf")
 	if err := api.ZoomFile(inFile, outFile, nil, zoom, nil); err != nil {
 		t.Fatalf("%s zoom: %v\n", msg, err)
 	}
@@ -100,13 +117,19 @@ func TestZoomOutByHorizontalMargin(t *testing.T) {
 func TestZoomOutByVerticalMargin(t *testing.T) {
 	// Zoom out of page content resulting in a preferred vertical margin.
 	msg := "TestZoomOutByVMargin"
+
+	zoomDir := filepath.Join(outDir, "zoom")
+	if err := os.MkdirAll(zoomDir, os.ModePerm); err != nil {
+		t.Fatalf("%s mkdirAll: %v\n", msg, err)
+	}
+
 	inFile := filepath.Join(inDir, "test.pdf")
 
 	zoom, err := pdfcpu.ParseZoomConfig("vmargin:1", types.INCHES)
 	if err != nil {
 		t.Fatalf("%s invalid zoom configuration: %v\n", msg, err)
 	}
-	outFile := filepath.Join(samplesDir, "zoom", "zoomOutByVMarginInches.pdf")
+	outFile := filepath.Join(zoomDir, "zoomOutByVMarginInches.pdf")
 	if err := api.ZoomFile(inFile, outFile, nil, zoom, nil); err != nil {
 		t.Fatalf("%s zoom: %v\n", msg, err)
 	}
@@ -115,7 +138,7 @@ func TestZoomOutByVerticalMargin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s invalid zoom configuration: %v\n", msg, err)
 	}
-	outFile = filepath.Join(samplesDir, "zoom", "zoomOutByVMarginMm.pdf")
+	outFile = filepath.Join(zoomDir, "zoomOutByVMarginMm.pdf")
 	if err := api.ZoomFile(inFile, outFile, nil, zoom, nil); err != nil {
 		t.Fatalf("%s zoom: %v\n", msg, err)
 	}

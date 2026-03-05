@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -55,8 +56,11 @@ func createPDF(t *testing.T, msg, inFile, inFileJSON, outFile string, conf *mode
 func TestCreateContentPrimitivesViaJson(t *testing.T) {
 
 	t.Helper()
-	inDir := filepath.Join(inDir, "json", "create")
-	outDir := filepath.Join(samplesDir, "create", "primitives")
+	jsonInDir := filepath.Join(inDir, "json", "create")
+	createPrimDir := filepath.Join(outDir, "create", "primitives")
+	if err := os.MkdirAll(createPrimDir, os.ModePerm); err != nil {
+		t.Fatalf("TestCreateContentPrimitivesViaJson mkdirAll: %v\n", err)
+	}
 
 	for _, tt := range []struct {
 		msg        string
@@ -93,8 +97,8 @@ func TestCreateContentPrimitivesViaJson(t *testing.T) {
 		{"TestRegions", "regions.json", "regions.pdf"},
 		{"TestRegionsMarginBorderPadding", "regionsMargBordPadd.json", "regionsMarginBorderPadding.pdf"},
 	} {
-		inFileJSON := filepath.Join(inDir, tt.inFileJSON)
-		outFile := filepath.Join(outDir, tt.outFile)
+		inFileJSON := filepath.Join(jsonInDir, tt.inFileJSON)
+		outFile := filepath.Join(createPrimDir, tt.outFile)
 		createPDF(t, tt.msg, "", inFileJSON, outFile, conf)
 	}
 
@@ -103,7 +107,10 @@ func TestCreateContentPrimitivesViaJson(t *testing.T) {
 func TestCreateFormPrimitivesViaJson(t *testing.T) {
 
 	inDirForm := filepath.Join(inDir, "json", "form")
-	outDirForm := filepath.Join(samplesDir, "form", "primitives")
+	outDirForm := filepath.Join(outDir, "form", "primitives")
+	if err := os.MkdirAll(outDirForm, os.ModePerm); err != nil {
+		t.Fatalf("TestCreateFormPrimitivesViaJson mkdirAll: %v\n", err)
+	}
 
 	for _, tt := range []struct {
 		msg        string
@@ -157,7 +164,10 @@ func TestCreateSinglePageDemoFormsViaJson(t *testing.T) {
 	// Render single page demo forms for export, reset, lock, unlock and fill tests.
 
 	inDirFormDemo := filepath.Join(inDir, "json", "form", "demoSinglePage")
-	outDirFormDemo := filepath.Join(samplesDir, "form", "demoSinglePage")
+	outDirFormDemo := filepath.Join(outDir, "form", "demoSinglePage")
+	if err := os.MkdirAll(outDirFormDemo, os.ModePerm); err != nil {
+		t.Fatalf("TestCreateSinglePageDemoFormsViaJson mkdirAll: %v\n", err)
+	}
 
 	for _, tt := range []struct {
 		msg        string
@@ -180,7 +190,10 @@ func TestCreateSinglePageDemoFormsViaJson(t *testing.T) {
 func TestCreateDemoFormsViaJson(t *testing.T) {
 
 	inDirFormDemo := filepath.Join(inDir, "json", "form", "demo")
-	outDirFormDemo := filepath.Join(samplesDir, "form", "demo")
+	outDirFormDemo := filepath.Join(outDir, "form", "demo")
+	if err := os.MkdirAll(outDirFormDemo, os.ModePerm); err != nil {
+		t.Fatalf("TestCreateDemoFormsViaJson mkdirAll: %v\n", err)
+	}
 
 	for _, tt := range []struct {
 		msg        string
@@ -256,18 +269,21 @@ func TestCreateAndUpdatePageViaJson(t *testing.T) {
 	// 	 b) on different page
 
 	jsonDir := filepath.Join(inDir, "json", "create", "flow")
-	outDir := filepath.Join(samplesDir, "create", "flow")
+	flowDir := filepath.Join(outDir, "create", "flow")
+	if err := os.MkdirAll(flowDir, os.ModePerm); err != nil {
+		t.Fatalf("TestCreateAndUpdatePageViaJson mkdirAll: %v\n", err)
+	}
 
-	// Create PDF in outDir.
+	// Create PDF in flowDir.
 	inFileJSON1 := filepath.Join(jsonDir, "createPage.json")
-	file := filepath.Join(outDir, "createAndUpdatePage.pdf")
+	file := filepath.Join(flowDir, "createAndUpdatePage.pdf")
 	createPDF(t, "pass1", "", inFileJSON1, file, conf)
 
-	// Update PDF in outDir: reuse fonts from (same) page 1
+	// Update PDF in flowDir: reuse fonts from (same) page 1
 	inFileJSON2 := filepath.Join(jsonDir, "updatePage1.json")
 	createPDF(t, "pass2", file, inFileJSON2, file, conf)
 
-	// Update PDF in outDir: reuse fonts from (different) page 1
+	// Update PDF in flowDir: reuse fonts from (different) page 1
 	inFileJSON3 := filepath.Join(jsonDir, "updatePage2.json")
 	createPDF(t, "pass2", file, inFileJSON3, file, conf)
 }
@@ -281,15 +297,18 @@ func TestReadAndUpdatePageViaJson(t *testing.T) {
 	// 	 b) on different page
 
 	jsonDir := filepath.Join(inDir, "json", "create", "flow")
-	outDir := filepath.Join(samplesDir, "create", "flow")
+	flowDir := filepath.Join(outDir, "create", "flow")
+	if err := os.MkdirAll(flowDir, os.ModePerm); err != nil {
+		t.Fatalf("TestReadAndUpdatePageViaJson mkdirAll: %v\n", err)
+	}
 
-	// Update PDF in outDir.
+	// Update PDF in flowDir.
 	inFile := filepath.Join(inDir, "Walden.pdf")
 	inFileJSON1 := filepath.Join(jsonDir, "updateAnyPage1.json")
-	outFile := filepath.Join(outDir, "readAndUpdatePage.pdf")
+	outFile := filepath.Join(flowDir, "readAndUpdatePage.pdf")
 	createPDF(t, "pass", inFile, inFileJSON1, outFile, conf)
 
-	// Update PDF in outDir: reuse fonts from (different) page 1 and create new page
+	// Update PDF in flowDir: reuse fonts from (different) page 1 and create new page
 	inFileJSON2 := filepath.Join(jsonDir, "updateAnyPage2.json")
 	createPDF(t, "pass2", outFile, inFileJSON2, outFile, conf)
 }
@@ -301,29 +320,32 @@ func TestCreateFormAndUpdatePageViaJson(t *testing.T) {
 	// 2. Add content
 
 	jsonDir := filepath.Join(inDir, "json", "form")
-	outDir := filepath.Join(samplesDir, "form", "flow")
+	formFlowDir := filepath.Join(outDir, "form", "flow")
+	if err := os.MkdirAll(formFlowDir, os.ModePerm); err != nil {
+		t.Fatalf("TestCreateFormAndUpdatePageViaJson mkdirAll: %v\n", err)
+	}
 
-	// Create PDF form in outDir and add content using corefont.
+	// Create PDF form in formFlowDir and add content using corefont.
 	inFileJSON1 := filepath.Join(jsonDir, "demo", "english.json")
-	file := filepath.Join(outDir, "createFormAndUpdatePageCoreFont.pdf")
+	file := filepath.Join(formFlowDir, "createFormAndUpdatePageCoreFont.pdf")
 	createPDF(t, "pass1", "", inFileJSON1, file, conf)
-	// Update PDF form in outDir reusing page font.
+	// Update PDF form in formFlowDir reusing page font.
 	inFileJSON2 := filepath.Join(jsonDir, "flow", "updatePageCoreFont.json")
 	createPDF(t, "pass2", file, inFileJSON2, file, conf)
 
-	// Create PDF form in outDir and add content using userfont.
+	// Create PDF form in formFlowDir and add content using userfont.
 	inFileJSON1 = filepath.Join(jsonDir, "demo", "ukrainian.json")
-	file = filepath.Join(outDir, "createFormAndUpdatePageUserFont.pdf")
+	file = filepath.Join(formFlowDir, "createFormAndUpdatePageUserFont.pdf")
 	createPDF(t, "pass1", "", inFileJSON1, file, conf)
-	// Update PDF form in outDir reusing page font.
+	// Update PDF form in formFlowDir reusing page font.
 	inFileJSON2 = filepath.Join(jsonDir, "flow", "updatePageUserFont.json")
 	createPDF(t, "pass2", file, inFileJSON2, file, conf)
 
-	// Create PDF form in outDir and add content using CJK userfont.
+	// Create PDF form in formFlowDir and add content using CJK userfont.
 	inFileJSON1 = filepath.Join(jsonDir, "demo", "chineseSimple.json")
-	file = filepath.Join(outDir, "createFormAndUpdatePageCJKUserFont.pdf")
+	file = filepath.Join(formFlowDir, "createFormAndUpdatePageCJKUserFont.pdf")
 	createPDF(t, "pass1", "", inFileJSON1, file, conf)
-	// Update PDF form in outDir reusing page font.
+	// Update PDF form in formFlowDir reusing page font.
 	inFileJSON2 = filepath.Join(jsonDir, "flow", "updatePageCJKUserFont.json")
 	createPDF(t, "pass2", file, inFileJSON2, file, conf)
 }
@@ -335,23 +357,26 @@ func TestReadFormAndUpdateFormViaJson(t *testing.T) {
 	// 2. Add fields
 
 	jsonDir := filepath.Join(inDir, "json", "form", "flow")
-	outDir := filepath.Join(samplesDir, "form", "flow")
+	formFlowDir := filepath.Join(outDir, "form", "flow")
+	if err := os.MkdirAll(formFlowDir, os.ModePerm); err != nil {
+		t.Fatalf("TestReadFormAndUpdateFormViaJson mkdirAll: %v\n", err)
+	}
 
-	// Read demo form and update with corefont in outDir.
+	// Read demo form and update with corefont in formFlowDir.
 	inFile := filepath.Join(samplesDir, "form", "demo", "english.pdf")
 	inFileJSON := filepath.Join(jsonDir, "updateFormCoreFont.json")
-	outFile := filepath.Join(outDir, "readFormAndUpdateFormCoreFont.pdf")
+	outFile := filepath.Join(formFlowDir, "readFormAndUpdateFormCoreFont.pdf")
 	createPDF(t, "pass1", inFile, inFileJSON, outFile, conf)
 
-	// Read demo form and update with userfont in outDir.
+	// Read demo form and update with userfont in formFlowDir.
 	inFile = filepath.Join(samplesDir, "form", "demo", "ukrainian.pdf")
 	inFileJSON = filepath.Join(jsonDir, "updateFormUserFont.json")
-	outFile = filepath.Join(outDir, "readFormAndUpdateFormUserFont.pdf")
+	outFile = filepath.Join(formFlowDir, "readFormAndUpdateFormUserFont.pdf")
 	createPDF(t, "pass1", inFile, inFileJSON, outFile, conf)
 
-	// Read demo form and update with CJK userfont in outDir.
+	// Read demo form and update with CJK userfont in formFlowDir.
 	inFile = filepath.Join(samplesDir, "form", "demo", "chineseSimple.pdf")
 	inFileJSON = filepath.Join(jsonDir, "updateFormCJK.json")
-	outFile = filepath.Join(outDir, "readFormAndUpdateFormCJK.pdf")
+	outFile = filepath.Join(formFlowDir, "readFormAndUpdateFormCJK.pdf")
 	createPDF(t, "pass1", inFile, inFileJSON, outFile, conf)
 }
