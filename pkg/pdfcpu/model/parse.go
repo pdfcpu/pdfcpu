@@ -49,7 +49,27 @@ var (
 	errObjStreamMissingFirst   = errors.New("pdfcpu: parse: obj stream dict missing entry First")
 
 	ErrCorruptObjectOffset = errors.New("pdfcpu: corrupt object offset")
+	errMaxParseDepth       = errors.New("pdfcpu: parse: maximum nesting depth exceeded")
 )
+
+const maxParseDepth = 100
+
+type parseDepthKey struct{}
+
+func parseDepth(c context.Context) int {
+	if v, ok := c.Value(parseDepthKey{}).(int); ok {
+		return v
+	}
+	return 0
+}
+
+func withIncrementedDepth(c context.Context) (context.Context, error) {
+	d := parseDepth(c) + 1
+	if d > maxParseDepth {
+		return c, errMaxParseDepth
+	}
+	return context.WithValue(c, parseDepthKey{}, d), nil
+}
 
 func positionToNextWhitespace(s string) (int, string) {
 	for i, c := range s {
@@ -323,6 +343,10 @@ func ParseObjectAttributes(line *string) (*int, *int, error) {
 }
 
 func parseArray(c context.Context, line *string) (*types.Array, error) {
+	c, err := withIncrementedDepth(c)
+	if err != nil {
+		return nil, err
+	}
 	if log.ParseEnabled() {
 		log.Parse.Println("ParseObject: value = Array")
 	}
@@ -608,7 +632,7 @@ func processDictKeys(c context.Context, line *string, relaxed bool) (types.Dict,
 			// #252: For dicts with kv pairs terminated by eol we accept a missing value as an empty string.
 			val = types.StringLiteral("")
 		} else {
-			if val, err = ParseObject(&l); err != nil {
+			if val, err = ParseObjectContext(c, &l); err != nil {
 				return nil, err
 			}
 		}
@@ -638,6 +662,10 @@ func processDictKeys(c context.Context, line *string, relaxed bool) (types.Dict,
 }
 
 func parseDict(c context.Context, line *string, relaxed bool) (types.Dict, error) {
+	c, err := withIncrementedDepth(c)
+	if err != nil {
+		return nil, err
+	}
 	if line == nil || len(*line) == 0 {
 		return nil, errNoDictionary
 	}
@@ -1095,6 +1123,9 @@ func ParseXRefStreamDict(sd *types.StreamDict) (*types.XRefStreamDict, error) {
 				return nil, errXrefStreamCorruptIndex
 			}
 
+			if count.Value() > 10_000_000 {
+				return nil, errXrefStreamCorruptIndex
+			}
 			for j := 0; j < count.Value(); j++ {
 				objs = append(objs, startObj.Value()+j)
 			}

@@ -125,6 +125,9 @@ func skipTJ(l *string) error {
 	s := *l
 	for {
 		s = strings.TrimLeftFunc(s, whitespaceOrEOL)
+		if len(s) == 0 {
+			return errTJExpressionCorrupt
+		}
 		if s[0] == ']' {
 			s = s[1:]
 			break
@@ -133,6 +136,9 @@ func skipTJ(l *string) error {
 			if err := skipStringLiteral(&s); err != nil {
 				return err
 			}
+		}
+		if len(s) == 0 {
+			return errTJExpressionCorrupt
 		}
 		if s[0] == '<' {
 			if err := skipHexStringLiteral(&s); err != nil {
@@ -182,7 +188,7 @@ func skipBI(l *string, prn PageResourceNames) error {
 	//fmt.Printf("skipBI <%s>\n", s)
 	for {
 		s = strings.TrimLeftFunc(s, whitespaceOrEOLOrClosingBracket)
-		if strings.HasPrefix(s, "ID") && whitespaceOrEOL(rune(s[2])) {
+		if len(s) >= 3 && strings.HasPrefix(s, "ID") && whitespaceOrEOL(rune(s[2])) {
 			i, err := lookupEI(&s)
 			if err != nil {
 				return err

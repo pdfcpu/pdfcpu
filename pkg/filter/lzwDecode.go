@@ -84,11 +84,17 @@ func (f lzwDecode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) {
 	var written int64
 	var err error
 	if maxLen < 0 {
-		written, err = io.Copy(&b, rc)
+		written, err = io.CopyN(&b, rc, MaxDecompressedSize+1)
+		if err == io.EOF {
+			err = nil
+		}
+		if err == nil && written > MaxDecompressedSize {
+			return nil, ErrDecompressionBomb
+		}
 	} else {
 		written, err = io.CopyN(&b, rc, maxLen)
 	}
-	if err != nil {
+	if err != nil && err != io.EOF {
 		return nil, err
 	}
 

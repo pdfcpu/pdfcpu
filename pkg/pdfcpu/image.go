@@ -278,11 +278,11 @@ func WriteImageToDisk(outDir, fileName string) func(model.Image, bool, int) erro
 			return nil
 		}
 		s := "%s_%" + fmt.Sprintf("0%dd", maxPageDigits)
-		qual := img.Name
+		qual := filepath.Base(img.Name)
 		if img.Thumb {
 			qual = "thumb"
 		}
-		f := fmt.Sprintf(s+"_%s.%s", fileName, img.PageNr, qual, img.FileType)
+		f := fmt.Sprintf(s+"_%s.%s", fileName, img.PageNr, qual, filepath.Base(img.FileType))
 		outFile := filepath.Join(outDir, f)
 		log.CLI.Printf("writing %s\n", outFile)
 		return WriteReader(outFile, img)

@@ -391,9 +391,9 @@ func validateTimestampToken(data []byte, rootCAs *x509.CertPool) (time.Time, err
 	}
 	signer := p7.Signers[0]
 
-	// if err := p7.VerifyWithChain(rootCAs); err != nil {
-	// 	return defTime, fmt.Errorf("timestamp token signature verification failed: %v", err)
-	// }
+	if err := p7.VerifyWithChain(rootCAs); err != nil {
+		return defTime, fmt.Errorf("timestamp token signature verification failed: %v", err)
+	}
 
 	for _, attr := range signer.AuthenticatedAttributes {
 		if attr.Type.Equal(oidSigningTime) {

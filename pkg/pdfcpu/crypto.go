@@ -27,6 +27,7 @@ import (
 	"crypto/rc4"
 	"crypto/sha256"
 	"crypto/sha512"
+	"crypto/subtle"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -269,10 +270,10 @@ func validateUserPassword(ctx *model.Context) (ok bool, err error) {
 	switch ctx.E.R {
 
 	case 2:
-		ok = bytes.Equal(ctx.E.U, u)
+		ok = len(ctx.E.U) == len(u) && subtle.ConstantTimeCompare(ctx.E.U, u) == 1
 
 	case 3, 4:
-		ok = bytes.HasPrefix(ctx.E.U, u[:16])
+		ok = len(ctx.E.U) >= 16 && subtle.ConstantTimeCompare(ctx.E.U[:16], u[:16]) == 1
 	}
 
 	return ok, nil
@@ -467,7 +468,7 @@ func validateOwnerPasswordAES256(ctx *model.Context) (ok bool, err error) {
 	b = append(b, ctx.E.U...)
 	s := sha256.Sum256(b)
 
-	if !bytes.HasPrefix(ctx.E.O, s[:]) {
+	if len(ctx.E.O) < 32 || subtle.ConstantTimeCompare(ctx.E.O[:32], s[:]) != 1 {
 		return false, nil
 	}
 
@@ -508,7 +509,7 @@ func validateUserPasswordAES256(ctx *model.Context) (ok bool, err error) {
 	// Algorithm 3.2a 4,
 	s := sha256.Sum256(append(upw, validationSalt(ctx.E.U)...))
 
-	if !bytes.HasPrefix(ctx.E.U, s[:]) {
+	if len(ctx.E.U) < 32 || subtle.ConstantTimeCompare(ctx.E.U[:32], s[:]) != 1 {
 		return false, nil
 	}
 
@@ -608,7 +609,7 @@ func validateOwnerPasswordAES256Rev6(ctx *model.Context) (ok bool, err error) {
 		return false, err
 	}
 
-	if !bytes.HasPrefix(ctx.E.O, s[:]) {
+	if len(ctx.E.O) < len(s) || subtle.ConstantTimeCompare(ctx.E.O[:len(s)], s[:]) != 1 {
 		return false, nil
 	}
 
@@ -653,7 +654,7 @@ func validateUserPasswordAES256Rev6(ctx *model.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if !bytes.HasPrefix(ctx.E.U, s) {
+	if len(ctx.E.U) < len(s) || subtle.ConstantTimeCompare(ctx.E.U[:len(s)], s) != 1 {
 		return false, nil
 	}
 
@@ -1743,11 +1744,22 @@ func decryptAESBytes(b, key []byte) ([]byte, error) {
 	mode := cipher.NewCBCDecrypter(cb, iv)
 	mode.CryptBlocks(data, data)
 
-	// Remove padding.
+	// Remove PKCS#7 padding.
 	// Note: For some reason not all AES ciphertexts are padded.
-	if len(data) > 0 && data[len(data)-1] <= 0x10 {
-		e := len(data) - int(data[len(data)-1])
-		data = data[:e]
+	if len(data) > 0 && data[len(data)-1] > 0 && data[len(data)-1] <= 0x10 {
+		padLen := int(data[len(data)-1])
+		if padLen <= len(data) {
+			valid := true
+			for i := len(data) - padLen; i < len(data); i++ {
+				if data[i] != byte(padLen) {
+					valid = false
+					break
+				}
+			}
+			if valid {
+				data = data[:len(data)-padLen]
+			}
+		}
 	}
 
 	return data, nil

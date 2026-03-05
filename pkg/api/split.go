@@ -176,7 +176,7 @@ func writePageSpansSplitAlongBookmarks(ctx *model.Context, outDir string) error 
 	}
 
 	for _, bm := range bms {
-		fileName := strings.Replace(bm.Title, " ", "_", -1)
+		fileName := filepath.Base(strings.Replace(bm.Title, " ", "_", -1))
 		from, thru := bm.PageFrom, bm.PageThru
 		if thru == 0 {
 			thru = ctx.PageCount

@@ -137,7 +137,7 @@ func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *mode
 
 func writeFonts(ff []pdfcpu.Font, outDir, fileName string) error {
 	for _, f := range ff {
-		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%s.%s", fileName, f.Name, f.Type))
+		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%s.%s", fileName, filepath.Base(f.Name), filepath.Base(f.Type)))
 		logWritingTo(outFile)
 		w, err := os.Create(outFile)
 		if err != nil {

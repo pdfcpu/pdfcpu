@@ -89,8 +89,11 @@ func (f ccittDecode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) 
 	rd := ccitt.NewReader(r, ccitt.MSB, mode, cols, rows, opts)
 
 	var b bytes.Buffer
-	written, err := io.Copy(&b, rd)
-	if err != nil {
+	written, err := io.CopyN(&b, rd, MaxDecompressedSize+1)
+	if err == nil && written > MaxDecompressedSize {
+		return nil, ErrDecompressionBomb
+	}
+	if err != nil && err != io.EOF {
 		return nil, err
 	}
 

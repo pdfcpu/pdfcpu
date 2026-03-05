@@ -27,6 +27,13 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 )
 
+// MaxDecompressedSize is the maximum allowed size for decompressed data (250MB).
+// This prevents decompression bomb attacks where a small compressed stream
+// expands to consume all available memory.
+const MaxDecompressedSize = 250 * 1024 * 1024
+
+var ErrDecompressionBomb = errors.New("pdfcpu: decompressed data exceeds maximum allowed size")
+
 // PDF defines the following filters. See also 7.4 in the PDF spec.
 const (
 	ASCII85   = "ASCII85Decode"

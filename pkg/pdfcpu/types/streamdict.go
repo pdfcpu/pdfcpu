@@ -402,7 +402,9 @@ func (sd *StreamDict) DecodeLength(maxLen int64) ([]byte, error) {
 		if maxLen < 0 {
 			return sd.Content, nil
 		}
-
+		if maxLen > int64(len(sd.Content)) {
+			maxLen = int64(len(sd.Content))
+		}
 		return sd.Content[:maxLen], nil
 	}
 
@@ -415,7 +417,9 @@ func (sd *StreamDict) DecodeLength(maxLen int64) ([]byte, error) {
 		if maxLen < 0 {
 			return sd.Content, nil
 		}
-
+		if maxLen > int64(len(sd.Content)) {
+			maxLen = int64(len(sd.Content))
+		}
 		return sd.Content[:maxLen], nil
 	}
 

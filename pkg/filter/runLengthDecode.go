@@ -41,7 +41,9 @@ func (f runLengthDecode) decode(w io.ByteWriter, src []byte, maxLen int64) {
 				if maxLen >= 0 && maxLen == written {
 					break
 				}
-
+				if i >= len(src) {
+					return
+				}
 				w.WriteByte(src[i])
 				written++
 				i++
@@ -49,6 +51,9 @@ func (f runLengthDecode) decode(w io.ByteWriter, src []byte, maxLen int64) {
 			continue
 		}
 		c := 257 - int(b)
+		if i >= len(src) {
+			return
+		}
 		for j := 0; j < c; j++ {
 			if maxLen >= 0 && maxLen == written {
 				break

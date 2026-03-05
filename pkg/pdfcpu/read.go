@@ -38,8 +38,10 @@ import (
 )
 
 const (
-	defaultBufSize = 1024
-	maximumBufSize = 1024 * 1024
+	defaultBufSize     = 1024
+	maximumBufSize     = 1024 * 1024
+	maxStreamAllocSize = 250 * 1024 * 1024 // 250MB max for stream allocation
+	maxBufferGrowSize  = 250 * 1024 * 1024 // 250MB max for buffer growth
 )
 
 var (
@@ -453,6 +455,9 @@ func parseObjectStream(c context.Context, osd *types.ObjectStreamDict) error {
 		if err != nil {
 			return err
 		}
+	}
+	if osd.FirstObjOffset > len(decodedContent) {
+		return fmt.Errorf("pdfcpu: object stream FirstObjOffset %d exceeds content length %d", osd.FirstObjOffset, len(decodedContent))
 	}
 	prolog := decodedContent[:osd.FirstObjOffset]
 
@@ -1747,7 +1752,11 @@ func nextStreamOffset(line string, streamInd int) (off int) {
 
 	// Skip optional blanks.
 	// TODO Should we skip optional whitespace instead?
-	for ; line[off] == 0x20; off++ {
+	for ; off < len(line) && line[off] == 0x20; off++ {
+	}
+
+	if off >= len(line) {
+		return
 	}
 
 	// Skip 0A eol.
@@ -1760,7 +1769,7 @@ func nextStreamOffset(line string, streamInd int) (off int) {
 	if line[off] == '\r' {
 		off++
 		// Skip 0D0A eol.
-		if line[off] == '\n' {
+		if off < len(line) && line[off] == '\n' {
 			off++
 		}
 	}
@@ -1810,6 +1819,10 @@ func buffer(c context.Context, rd io.Reader) (buf []byte, endInd int, streamInd 
 	for endInd < 0 && streamInd < 0 {
 		if err := c.Err(); err != nil {
 			return nil, 0, 0, 0, err
+		}
+
+		if len(buf) > maxBufferGrowSize {
+			return nil, 0, 0, 0, fmt.Errorf("pdfcpu: object buffer exceeds maximum size %d", maxBufferGrowSize)
 		}
 
 		if buf, err = growBufBy(buf, growSize, rd); err != nil {
@@ -2341,6 +2354,9 @@ func readStreamContentBlindly(rd io.Reader) (buf []byte, err error) {
 	i := bytes.Index(buf, []byte("endstream"))
 	if i < 0 {
 		for i = -1; i < 0; i = bytes.Index(buf, []byte("endstream")) {
+			if len(buf) > maxBufferGrowSize {
+				return nil, fmt.Errorf("pdfcpu: stream content exceeds maximum buffer size %d", maxBufferGrowSize)
+			}
 			growSize = min(growSize*2, maximumBufSize)
 			buf, err = growBufBy(buf, growSize, rd)
 			if err != nil {
@@ -2374,6 +2390,10 @@ func readStreamContent(rd io.Reader, streamLength int) ([]byte, error) {
 	if streamLength == 0 {
 		// Read until "endstream" then fix "Length".
 		return readStreamContentBlindly(rd)
+	}
+
+	if streamLength > maxStreamAllocSize {
+		return nil, fmt.Errorf("pdfcpu: stream length %d exceeds maximum allowed size %d", streamLength, maxStreamAllocSize)
 	}
 
 	buf := make([]byte, streamLength)

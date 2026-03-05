@@ -106,7 +106,13 @@ func passThru(rin io.Reader, maxLen int64) (*bytes.Buffer, error) {
 	var b bytes.Buffer
 	var err error
 	if maxLen < 0 {
-		_, err = io.Copy(&b, rin)
+		_, err = io.CopyN(&b, rin, MaxDecompressedSize+1)
+		if err == io.EOF {
+			err = nil
+		}
+		if err == nil && int64(b.Len()) > MaxDecompressedSize {
+			return nil, ErrDecompressionBomb
+		}
 	} else {
 		_, err = io.CopyN(&b, rin, maxLen)
 	}
