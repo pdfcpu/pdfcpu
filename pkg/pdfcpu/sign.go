@@ -26,7 +26,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/sign"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // ValidateSignatures validates all digital signatures of ctx.
@@ -351,7 +350,7 @@ func detectPermissions(sigDict types.Dict, ctx *model.Context) (int, error) {
 		i := d1.IntEntry("P")
 		if i != nil {
 			if *i < 1 || *i > 3 {
-				return 0, errors.Errorf("invalid DocMDP permissions detected: %d ", *i)
+				return 0, fmt.Errorf("invalid DocMDP permissions detected: %d ", *i)
 			}
 			return *i, nil
 		}

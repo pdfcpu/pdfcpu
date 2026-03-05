@@ -17,9 +17,8 @@ limitations under the License.
 package types
 
 import (
+	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // Corner represents one of four rectangle corners.
@@ -77,7 +76,7 @@ func ParseHorAlignment(s string) (HAlignment, error) {
 	case "j", "justify":
 		a = AlignJustify
 	default:
-		return a, errors.Errorf("pdfcpu: unknown textfield alignment (left, center, right, justify): %s", s)
+		return a, fmt.Errorf("pdfcpu: unknown textfield alignment (left, center, right, justify): %s", s)
 	}
 	return a, nil
 }
@@ -94,7 +93,7 @@ func ParseOrigin(s string) (Corner, error) {
 	case "ur", "upperright":
 		c = UpperRight
 	default:
-		return c, errors.Errorf("pdfcpu: unknown origin (ll, lr, ul, ur): %s", s)
+		return c, fmt.Errorf("pdfcpu: unknown origin (ll, lr, ul, ur): %s", s)
 	}
 	return c, nil
 }
@@ -121,7 +120,7 @@ func ParseAnchor(s string) (Anchor, error) {
 	case "br", "bottomright":
 		a = BottomRight
 	default:
-		return a, errors.Errorf("pdfcpu: unknown anchor: %s", s)
+		return a, fmt.Errorf("pdfcpu: unknown anchor: %s", s)
 	}
 	return a, nil
 }
@@ -150,7 +149,7 @@ func ParsePositionAnchor(s string) (Anchor, error) {
 	case "f", "full":
 		a = Full
 	default:
-		return a, errors.Errorf("pdfcpu: unknown position anchor: %s", s)
+		return a, fmt.Errorf("pdfcpu: unknown position anchor: %s", s)
 	}
 	return a, nil
 }
@@ -210,7 +209,7 @@ func ParseRelPosition(s string) (RelPosition, error) {
 	case "b", "bottom":
 		p = RelPosBottom
 	default:
-		return p, errors.Errorf("pdfcpu: unknown textfield alignment (left, right, top, bottom): %s", s)
+		return p, fmt.Errorf("pdfcpu: unknown textfield alignment (left, right, top, bottom): %s", s)
 	}
 	return p, nil
 }
@@ -399,7 +398,7 @@ func ParsePageFormat(v string) (*Dim, string, error) {
 
 	d, ok := PaperSize[v]
 	if !ok {
-		return nil, v, errors.Errorf("pdfcpu: page format %s is unsupported.\n", v)
+		return nil, v, fmt.Errorf("pdfcpu: page format %s is unsupported.\n", v)
 	}
 
 	dim := Dim{d.Width, d.Height}

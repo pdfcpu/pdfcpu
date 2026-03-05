@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
+	"errors"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -106,7 +106,7 @@ func EqualObjects(o1, o2 types.Object, xRefTable *XRefTable, pairs []int) (ok bo
 		ok, err = equalArrays(o1.(types.Array), o2.(types.Array), xRefTable, pairs)
 
 	default:
-		err = errors.Errorf("equalObjects: unhandled compare for type %s\n", o1Type)
+		err = fmt.Errorf("equalObjects: unhandled compare for type %s\n", o1Type)
 	}
 
 	return ok, err
@@ -156,7 +156,7 @@ func equalFontNames(v1, v2 types.Object, xRefTable *XRefTable) (bool, error) {
 
 	bf1, ok := v1.(types.Name)
 	if !ok {
-		return false, errors.Errorf("equalFontNames: type cast problem")
+		return false, fmt.Errorf("equalFontNames: type cast problem")
 	}
 
 	v2, err = xRefTable.Dereference(v2)
@@ -166,7 +166,7 @@ func equalFontNames(v1, v2 types.Object, xRefTable *XRefTable) (bool, error) {
 
 	bf2, ok := v2.(types.Name)
 	if !ok {
-		return false, errors.Errorf("equalFontNames: type cast problem")
+		return false, fmt.Errorf("equalFontNames: type cast problem")
 	}
 
 	// Ignore fontname prefix

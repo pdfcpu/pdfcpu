@@ -17,9 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 var ErrBookmarksRepair = errors.New("pdfcpu: bookmarks repair failed")
@@ -120,7 +122,7 @@ func handleOutlineItemDict(xRefTable *model.XRefTable, ir types.IndirectRef, obj
 		return nil, err
 	}
 	if d == nil {
-		return nil, errors.Errorf("validateOutlineTree: object #%d is nil.", objNumber)
+		return nil, fmt.Errorf("validateOutlineTree: object #%d is nil.", objNumber)
 	}
 
 	if err = validateOutlineItemDict(xRefTable, d); err != nil {
@@ -137,17 +139,17 @@ func leaf(firstChild, lastChild *types.IndirectRef, objNumber, validationMode in
 			return true, nil
 		}
 		if validationMode == model.ValidationStrict {
-			return false, errors.Errorf("pdfcpu: validateOutlineTree: missing \"First\" at obj#%d", objNumber)
+			return false, fmt.Errorf("pdfcpu: validateOutlineTree: missing \"First\" at obj#%d", objNumber)
 		}
 	}
 	if lastChild == nil && validationMode == model.ValidationStrict {
-		return false, errors.Errorf("pdfcpu: validateOutlineTree: missing \"Last\" at obj#%d", objNumber)
+		return false, fmt.Errorf("pdfcpu: validateOutlineTree: missing \"Last\" at obj#%d", objNumber)
 	}
 	if firstChild != nil && firstChild.ObjectNumber.Value() == objNumber &&
 		lastChild != nil && lastChild.ObjectNumber.Value() == objNumber {
 		// Degenerated leaf = node pointing to itself.
 		if validationMode == model.ValidationStrict {
-			return false, errors.Errorf("pdfcpu: validateOutlineTree: invalid at obj#%d", objNumber)
+			return false, fmt.Errorf("pdfcpu: validateOutlineTree: invalid at obj#%d", objNumber)
 		}
 		return true, nil
 	}
@@ -164,7 +166,7 @@ func evalOutlineCount(xRefTable *model.XRefTable, c, visc int, count int, total,
 		}
 		if count != c && count != -c {
 			if xRefTable.ValidationMode == model.ValidationStrict {
-				return errors.Errorf("pdfcpu: validateOutlineTree: non-empty outline item dict got \"Count\" %d, want %d or %d", count, c, -c)
+				return fmt.Errorf("pdfcpu: validateOutlineTree: non-empty outline item dict got \"Count\" %d, want %d or %d", count, c, -c)
 			}
 			count = c
 		}
@@ -175,7 +177,7 @@ func evalOutlineCount(xRefTable *model.XRefTable, c, visc int, count int, total,
 
 	if visc > 0 {
 		if count != c+visc {
-			return errors.Errorf("pdfcpu: validateOutlineTree: non-empty outline item dict got \"Count\" %d, want %d", count, c+visc)
+			return fmt.Errorf("pdfcpu: validateOutlineTree: non-empty outline item dict got \"Count\" %d, want %d", count, c+visc)
 		}
 		*total += c
 		*visible += visc
@@ -240,7 +242,7 @@ func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.Indirect
 	}
 
 	if xRefTable.ValidationMode == model.ValidationStrict && objNr != last.ObjectNumber.Value() {
-		return 0, 0, errors.Errorf("pdfcpu: validateOutlineTree: invalid child list %d <> %d\n", objNr, last.ObjectNumber)
+		return 0, 0, fmt.Errorf("pdfcpu: validateOutlineTree: invalid child list %d <> %d\n", objNr, last.ObjectNumber)
 	}
 
 	return total, visible, nil
@@ -248,13 +250,13 @@ func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.Indirect
 
 func validateVisibleOutlineCount(xRefTable *model.XRefTable, total, visible int, count *int) error {
 	if count == nil {
-		return errors.Errorf("pdfcpu: validateOutlines: invalid, root \"Count\" is nil, expected to be %d", total+visible)
+		return fmt.Errorf("pdfcpu: validateOutlines: invalid, root \"Count\" is nil, expected to be %d", total+visible)
 	}
 	if xRefTable.ValidationMode == model.ValidationStrict && *count != total+visible {
-		return errors.Errorf("pdfcpu: validateOutlines: invalid, root \"Count\" = %d, expected to be %d", *count, total+visible)
+		return fmt.Errorf("pdfcpu: validateOutlines: invalid, root \"Count\" = %d, expected to be %d", *count, total+visible)
 	}
 	if xRefTable.ValidationMode == model.ValidationRelaxed && *count != total+visible && *count != -total-visible {
-		return errors.Errorf("pdfcpu: validateOutlines: invalid, root \"Count\" = %d, expected to be %d", *count, total+visible)
+		return fmt.Errorf("pdfcpu: validateOutlines: invalid, root \"Count\" = %d, expected to be %d", *count, total+visible)
 	}
 
 	return nil
@@ -266,7 +268,7 @@ func validateInvisibleOutlineCount(xRefTable *model.XRefTable, total int, count 
 			return errors.New("pdfcpu: validateOutlines: invalid, root \"Count\" shall be omitted if there are no open outline items")
 		}
 		if xRefTable.ValidationMode == model.ValidationStrict && *count != total && *count != -total {
-			return errors.Errorf("pdfcpu: validateOutlines: invalid, root \"Count\" = %d, expected to be %d", *count, total)
+			return fmt.Errorf("pdfcpu: validateOutlines: invalid, root \"Count\" = %d, expected to be %d", *count, total)
 		}
 	}
 

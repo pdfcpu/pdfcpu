@@ -23,12 +23,13 @@ import (
 	"math"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // ParseCutConfigForPoster parses a Cut command string into an internal structure.
@@ -253,7 +254,7 @@ func prepForCut(ctxSrc *model.Context, pageNr int) (
 		return nil, nil, nil, nil, nil, nil, err
 	}
 	if d == nil {
-		return nil, nil, nil, nil, nil, nil, errors.Errorf("pdfcpu: unknown page number: %d\n", pageNr)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("pdfcpu: unknown page number: %d\n", pageNr)
 	}
 	d.Delete("Annots")
 

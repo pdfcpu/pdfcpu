@@ -17,10 +17,12 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -370,7 +372,7 @@ func validateMaskEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entry
 
 	default:
 
-		return errors.Errorf("pdfcpu: validateMaskEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		return fmt.Errorf("pdfcpu: validateMaskEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -385,7 +387,7 @@ func validateAlternateImageStreamDicts(xRefTable *model.XRefTable, d types.Dict,
 	}
 	if a == nil {
 		if required {
-			return errors.Errorf("pdfcpu: validateAlternateImageStreamDicts: dict=%s required entry \"%s\" missing.", dictName, entryName)
+			return fmt.Errorf("pdfcpu: validateAlternateImageStreamDicts: dict=%s required entry \"%s\" missing.", dictName, entryName)
 		}
 		return nil
 	}
@@ -817,10 +819,10 @@ func validateXObjectStreamDict(xRefTable *model.XRefTable, o types.Object) error
 		err = validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
 
 	case "PS":
-		err = errors.Errorf("pdfcpu: validateXObjectStreamDict: PostScript XObjects should not be used")
+		err = fmt.Errorf("pdfcpu: validateXObjectStreamDict: PostScript XObjects should not be used")
 
 	default:
-		return errors.Errorf("pdfcpu: validateXObjectStreamDict: unknown Subtype: %s\n", *subtype)
+		return fmt.Errorf("pdfcpu: validateXObjectStreamDict: unknown Subtype: %s\n", *subtype)
 
 	}
 

@@ -31,7 +31,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // ListFonts returns a list of supported fonts.
@@ -212,7 +211,7 @@ func CreateUserFontDemoFiles(dir, fn string) error {
 	ttf, ok := font.UserFontMetrics[fn]
 	font.UserFontMetricsLock.RUnlock()
 	if !ok {
-		return errors.Errorf("pdfcpu: font %s not available\n", fn)
+		return fmt.Errorf("pdfcpu: font %s not available\n", fn)
 	}
 	// Create a single page PDF for each Unicode plane with existing glyphs.
 	for i := range ttf.Planes {

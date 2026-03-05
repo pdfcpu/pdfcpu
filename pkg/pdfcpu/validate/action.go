@@ -17,11 +17,13 @@ limitations under the License.
 package validate
 
 import (
+	"fmt"
 	"strings"
+
+	"errors"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func validateGoToActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -211,7 +213,7 @@ func validateDestinationThreadEntry(xRefTable *model.XRefTable, d types.Dict, di
 		// or the title of the thread as specified in its thread info dict
 
 	default:
-		return errors.Errorf("validateDestinationThreadEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		return fmt.Errorf("validateDestinationThreadEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
 
 	return nil
@@ -233,7 +235,7 @@ func validateDestinationBeadEntry(xRefTable *model.XRefTable, d types.Dict, dict
 		// or an index of the thread within its thread
 
 	default:
-		return errors.Errorf("validateDestinationBeadEntry: dict=%s entry=%s invalid type", dictName, entryName)
+		return fmt.Errorf("validateDestinationBeadEntry: dict=%s entry=%s invalid type", dictName, entryName)
 	}
 
 	return nil
@@ -537,7 +539,7 @@ func validateHideActionDictEntryT(xRefTable *model.XRefTable, o types.Object) er
 		}
 
 	default:
-		return errors.Errorf("validateHideActionDict: invalid entry \"T\"")
+		return fmt.Errorf("validateHideActionDict: invalid entry \"T\"")
 
 	}
 
@@ -692,7 +694,7 @@ func validateJavaScript(xRefTable *model.XRefTable, d types.Dict, dictName, entr
 		// no further processing
 
 	default:
-		err = errors.Errorf("validateJavaScript: invalid type\n")
+		err = fmt.Errorf("validateJavaScript: invalid type\n")
 
 	}
 
@@ -861,7 +863,7 @@ func validateActionDictCore(xRefTable *model.XRefTable, n *types.Name, d types.D
 		}
 	}
 
-	return errors.Errorf("validateActionDictCore: unsupported action type: %s\n", *n)
+	return fmt.Errorf("validateActionDictCore: unsupported action type: %s\n", *n)
 }
 
 func validateActionDict(xRefTable *model.XRefTable, d types.Dict) error {
@@ -968,7 +970,7 @@ func validateAdditionalActions(xRefTable *model.XRefTable, dict types.Dict, dict
 	for k, v := range d {
 
 		if !validateAdditionalAction(k, source) {
-			return errors.Errorf("validateAdditionalActions: action %s not allowed for source %s", k, source)
+			return fmt.Errorf("validateAdditionalActions: action %s not allowed for source %s", k, source)
 		}
 
 		d, err := xRefTable.DereferenceDict(v)

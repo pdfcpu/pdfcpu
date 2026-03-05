@@ -22,7 +22,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func EnsureOutlines(ctx *model.Context, fName string, append bool) error {
@@ -781,7 +780,7 @@ func appendSourcePageTreeToDestPageTree(ctxSrc, ctxDest *model.Context, dividerP
 
 	pageCountDest := pageTreeRootDictDest.IntEntry("Count")
 	if pageCountDest == nil || *pageCountDest != ctxDest.PageCount {
-		return errors.Errorf("pdfcpu: corrupt page node at obj #%d\n", indRefPageTreeRootDictDest.ObjectNumber)
+		return fmt.Errorf("pdfcpu: corrupt page node at obj #%d\n", indRefPageTreeRootDictDest.ObjectNumber)
 	}
 
 	c := ctxDest.PageCount
@@ -822,7 +821,7 @@ func appendSourcePageTreeToDestPageTree(ctxSrc, ctxDest *model.Context, dividerP
 
 	pageCountSource := pageTreeRootDictSource.IntEntry("Count")
 	if pageCountSource == nil || *pageCountSource != ctxSrc.PageCount {
-		return errors.Errorf("pdfcpu: corrupt page node at obj #%d\n", indRefPageTreeRootDictSource.ObjectNumber)
+		return fmt.Errorf("pdfcpu: corrupt page node at obj #%d\n", indRefPageTreeRootDictSource.ObjectNumber)
 	}
 
 	c += ctxSrc.PageCount

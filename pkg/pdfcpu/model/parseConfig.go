@@ -21,11 +21,11 @@ package model
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -147,30 +147,30 @@ func parseConfigFile(r io.Reader, configPath string) error {
 	}
 
 	if !types.MemberOf(c.ValidationMode, []string{"ValidationStrict", "ValidationRelaxed"}) {
-		return errors.Errorf("invalid validationMode: %s", c.ValidationMode)
+		return fmt.Errorf("invalid validationMode: %s", c.ValidationMode)
 	}
 
 	if !types.MemberOf(c.Eol, []string{"EolLF", "EolCR", "EolCRLF"}) {
-		return errors.Errorf("invalid eol: %s", c.Eol)
+		return fmt.Errorf("invalid eol: %s", c.Eol)
 	}
 
 	if !types.MemberOf(c.Unit, []string{"points", "inches", "cm", "mm"}) {
-		return errors.Errorf("invalid unit: %s", c.Unit)
+		return fmt.Errorf("invalid unit: %s", c.Unit)
 	}
 
 	if !types.IntMemberOf(c.EncryptKeyLength, []int{40, 128, 256}) {
-		return errors.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
+		return fmt.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
 	}
 
 	if !types.MemberOf(c.PreferredCertRevocationChecker, []string{"crl", "ocsp"}) {
 		if c.PreferredCertRevocationChecker != "" {
-			return errors.Errorf("invalid preferred certificate revocation checker: %s", c.PreferredCertRevocationChecker)
+			return fmt.Errorf("invalid preferred certificate revocation checker: %s", c.PreferredCertRevocationChecker)
 		}
 		c.PreferredCertRevocationChecker = "crl"
 	}
 
 	if c.FormFieldListMaxColWidth < 0 {
-		return errors.Errorf("formFieldListMaxColWidth must be >= 0: %d", c.FormFieldListMaxColWidth)
+		return fmt.Errorf("formFieldListMaxColWidth must be >= 0: %d", c.FormFieldListMaxColWidth)
 	}
 
 	loadedDefaultConfig = loadedConfig(c, configPath)

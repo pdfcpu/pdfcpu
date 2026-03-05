@@ -21,12 +21,13 @@ import (
 	"fmt"
 	"io"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/format"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // Note: Mac Preview does not support validating date fields.
@@ -70,7 +71,7 @@ func (df *DateField) validateID() error {
 		return errors.New("pdfcpu: missing field id")
 	}
 	if df.pdf.DuplicateField(df.ID) {
-		return errors.Errorf("pdfcpu: duplicate form field: %s", df.ID)
+		return fmt.Errorf("pdfcpu: duplicate form field: %s", df.ID)
 	}
 	df.pdf.FieldIDs[df.ID] = true
 	return nil
@@ -78,7 +79,7 @@ func (df *DateField) validateID() error {
 
 func (df *DateField) validatePosition() error {
 	if df.Position[0] < 0 || df.Position[1] < 0 {
-		return errors.Errorf("pdfcpu: field: %s pos value < 0", df.ID)
+		return fmt.Errorf("pdfcpu: field: %s pos value < 0", df.ID)
 	}
 	df.x, df.y = df.Position[0], df.Position[1]
 	return nil
@@ -86,7 +87,7 @@ func (df *DateField) validatePosition() error {
 
 func (df *DateField) validateWidth() error {
 	if df.Width <= 0 {
-		return errors.Errorf("pdfcpu: field: %s width <= 0", df.ID)
+		return fmt.Errorf("pdfcpu: field: %s width <= 0", df.ID)
 	}
 	return nil
 }
@@ -171,7 +172,7 @@ func (df *DateField) validateDefault() error {
 	}
 	if df.dateFormat != nil {
 		if err := df.dateFormat.validate(df.Default); err != nil {
-			return errors.Errorf("pdfcpu: field: %s date format failure, \"%s\" incompatible with  \"%s\"", df.ID, df.Default, df.dateFormat.Ext)
+			return fmt.Errorf("pdfcpu: field: %s date format failure, \"%s\" incompatible with  \"%s\"", df.ID, df.Default, df.dateFormat.Ext)
 		}
 		return nil
 	}
@@ -189,7 +190,7 @@ func (df *DateField) validateValue() error {
 	}
 	if df.dateFormat != nil {
 		if err := df.dateFormat.validate(df.Value); err != nil {
-			return errors.Errorf("pdfcpu: field: %s date format failure, \"%s\" incompatible with  \"%s\"", df.ID, df.Value, df.dateFormat.Ext)
+			return fmt.Errorf("pdfcpu: field: %s date format failure, \"%s\" incompatible with  \"%s\"", df.ID, df.Value, df.dateFormat.Ext)
 		}
 		return nil
 	}
@@ -203,7 +204,7 @@ func (df *DateField) validateValue() error {
 
 func (df *DateField) validateTab() error {
 	if df.Tab < 0 {
-		return errors.Errorf("pdfcpu: field: %s negative tab value", df.ID)
+		return fmt.Errorf("pdfcpu: field: %s negative tab value", df.ID)
 	}
 	if df.Tab == 0 {
 		return nil
@@ -213,7 +214,7 @@ func (df *DateField) validateTab() error {
 		page.Tabs = types.IntSet{}
 	} else {
 		if page.Tabs[df.Tab] {
-			return errors.Errorf("pdfcpu: field: %s duplicate tab value %d", df.ID, df.Tab)
+			return fmt.Errorf("pdfcpu: field: %s duplicate tab value %d", df.ID, df.Tab)
 		}
 	}
 	page.Tabs[df.Tab] = true
@@ -324,7 +325,7 @@ func (df *DateField) calcMargin() (float64, float64, float64, float64, error) {
 			mName := m.Name[1:]
 			m0 := df.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBottom, mLeft, errors.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, fmt.Errorf("pdfcpu: unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}

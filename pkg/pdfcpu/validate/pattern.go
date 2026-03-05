@@ -17,9 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func validateTilingPatternDict(xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
@@ -116,7 +118,7 @@ func validateShadingPatternDict(xRefTable *model.XRefTable, d types.Dict, sinceV
 	// Shading: required, dict or stream dict.
 	o, ok := d.Find("Shading")
 	if !ok {
-		return errors.Errorf("pdfcpu: validateShadingPatternDict: missing required entry \"Shading\".")
+		return fmt.Errorf("pdfcpu: validateShadingPatternDict: missing required entry \"Shading\".")
 	}
 
 	return validateShading(xRefTable, o)

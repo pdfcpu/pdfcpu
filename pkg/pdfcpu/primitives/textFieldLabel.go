@@ -17,9 +17,11 @@
 package primitives
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // TextFieldLabel represents a label for an input field.
@@ -41,7 +43,7 @@ func (tfl *TextFieldLabel) validate() error {
 
 	if tfl.Width <= 0 {
 		// only for pos left align left or pos right align right!
-		return errors.Errorf("pdfcpu: invalid label width: %d", tfl.Width)
+		return fmt.Errorf("pdfcpu: invalid label width: %d", tfl.Width)
 	}
 
 	tfl.relPos = types.RelPosLeft

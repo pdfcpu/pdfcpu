@@ -24,10 +24,11 @@ import (
 	"strconv"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 var errInvalidBookletAdvanced = errors.New("pdfcpu booklet advanced cannot have binding along the top (portrait short-edge, landscape long-edge). use plain booklet instead.")
@@ -65,7 +66,7 @@ func PDFBookletConfig(val int, desc string, conf *model.Configuration) (*model.N
 		for i, v := range NUpValuesForBooklets {
 			ss[i] = strconv.Itoa(v)
 		}
-		return nil, errors.Errorf("pdfcpu: n must be one of %s", strings.Join(ss, ", "))
+		return nil, fmt.Errorf("pdfcpu: n must be one of %s", strings.Join(ss, ", "))
 	}
 	if err := ParseNUpValue(val, nup); err != nil {
 		return nil, err

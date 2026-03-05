@@ -20,8 +20,9 @@ import (
 	"io"
 	"os"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pkg/errors"
 )
 
 // Permissions returns user access permissions for rs.

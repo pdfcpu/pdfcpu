@@ -21,11 +21,12 @@ import (
 	"strconv"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 var errInvalidPageAnnotArray = errors.New("pdfcpu: validatePageAnnotations: page annotation array without indirect references.")
@@ -234,7 +235,7 @@ func validateAnnotationDictText(xRefTable *model.XRefTable, d types.Dict, dictNa
 
 	if state == nil {
 		if stateModel != nil {
-			return errors.Errorf("pdfcpu: validateAnnotationDictText: dict=%s missing state for statemodel=%s", dictName, *stateModel)
+			return fmt.Errorf("pdfcpu: validateAnnotationDictText: dict=%s missing state for statemodel=%s", dictName, *stateModel)
 		}
 		return nil
 	}
@@ -245,7 +246,7 @@ func validateAnnotationDictText(xRefTable *model.XRefTable, d types.Dict, dictNa
 		validStates = []string{"Marked", "Unmarked"}
 	}
 	if !types.MemberOf(*state, validStates) {
-		return errors.Errorf("pdfcpu: validateAnnotationDictText: dict=%s invalid state=%s for state model=%s", dictName, *state, *stateModel)
+		return fmt.Errorf("pdfcpu: validateAnnotationDictText: dict=%s invalid state=%s for state model=%s", dictName, *state, *stateModel)
 	}
 
 	return nil
@@ -1591,7 +1592,7 @@ func validateAnnotationDictGeneralPart2(xRefTable *model.XRefTable, d types.Dict
 			return err
 		}
 		if !validateBorderArray(xRefTable, a) {
-			return errors.Errorf("invalid border array: %s", a)
+			return fmt.Errorf("invalid border array: %s", a)
 		}
 	}
 
@@ -1885,7 +1886,7 @@ func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage 
 			}
 
 		default:
-			return curPage, errors.Errorf("validatePagesAnnotations: expected dict type: %s\n", *dictType)
+			return curPage, fmt.Errorf("validatePagesAnnotations: expected dict type: %s\n", *dictType)
 
 		}
 

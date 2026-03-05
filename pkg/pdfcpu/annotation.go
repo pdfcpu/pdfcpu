@@ -22,11 +22,12 @@ import (
 	"strconv"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // CachedAnnotationObjNrs returns a list of object numbers representing known annotation dict indirect references.
@@ -70,7 +71,7 @@ func addAnnotationToCache(ctx *model.Context, ann model.AnnotationRenderer, page
 		pgAnnots[ann.Type()] = annots
 	}
 	if _, ok := annots.Map[objNr]; ok {
-		return errors.Errorf("addAnnotation: obj#%d already cached", objNr)
+		return fmt.Errorf("addAnnotation: obj#%d already cached", objNr)
 	}
 	annots.Map[objNr] = ann
 	return nil
@@ -79,7 +80,7 @@ func addAnnotationToCache(ctx *model.Context, ann model.AnnotationRenderer, page
 func removeAnnotationFromCache(ctx *model.Context, pageNr, objNr int) error {
 	pgAnnots, ok := ctx.PageAnnots[pageNr]
 	if !ok {
-		return errors.Errorf("removeAnnotation: no page annotations cached for page %d", pageNr)
+		return fmt.Errorf("removeAnnotation: no page annotations cached for page %d", pageNr)
 	}
 	for annType, annots := range pgAnnots {
 		if _, ok := annots.Map[objNr]; ok {
@@ -93,7 +94,7 @@ func removeAnnotationFromCache(ctx *model.Context, pageNr, objNr int) error {
 			return nil
 		}
 	}
-	return errors.Errorf("removeAnnotation: no page annotation cached for obj#%d", objNr)
+	return fmt.Errorf("removeAnnotation: no page annotation cached for obj#%d", objNr)
 }
 
 func findAnnotByID(ctx *model.Context, id string, annots types.Array) (int, error) {
@@ -434,7 +435,7 @@ func addAnnotationToDirectObj(
 		return err
 	}
 	if i >= 0 {
-		return errors.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
+		return fmt.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
 	}
 	pageDict.Update("Annots", append(annots, *annotIndRef))
 	if incr {
@@ -500,12 +501,12 @@ func AddAnnotation(
 		return nil, nil, err
 	}
 	if i >= 0 {
-		return nil, nil, errors.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
+		return nil, nil, fmt.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
 	}
 
 	entry, ok := ctx.FindTableEntryForIndRef(&ir)
 	if !ok {
-		return nil, nil, errors.Errorf("page %d: can't dereference Annots indirect reference(obj#:%d)\n", pageNr, ir.ObjectNumber)
+		return nil, nil, fmt.Errorf("page %d: can't dereference Annots indirect reference(obj#:%d)\n", pageNr, ir.ObjectNumber)
 	}
 	entry.Object = append(annots, *annotIndRef)
 	if incr {
@@ -544,7 +545,7 @@ func AddAnnotations(ctx *model.Context, selectedPages types.IntSet, ar model.Ann
 			continue
 		}
 		if k > ctx.PageCount {
-			return false, errors.Errorf("pdfcpu: invalid page number: %d", k)
+			return false, fmt.Errorf("pdfcpu: invalid page number: %d", k)
 		}
 
 		pageDictIndRef, err := ctx.PageDictIndRef(k)
@@ -579,7 +580,7 @@ func AddAnnotationsMap(ctx *model.Context, m map[int][]model.AnnotationRenderer,
 	for i, annots := range m {
 
 		if i > ctx.PageCount {
-			return false, errors.Errorf("pdfcpu: invalid page number: %d", i)
+			return false, fmt.Errorf("pdfcpu: invalid page number: %d", i)
 		}
 
 		pageDictIndRef, err := ctx.PageDictIndRef(i)

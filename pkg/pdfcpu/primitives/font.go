@@ -17,15 +17,17 @@
 package primitives
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
+
+	"errors"
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 type FormFont struct {
@@ -51,7 +53,7 @@ var ISO639Codes = []string{"ab", "aa", "af", "ak", "sq", "am", "ar", "an", "hy",
 
 func (f *FormFont) validateISO639() error {
 	if !types.MemberOf(f.Lang, ISO639Codes) {
-		return errors.Errorf("pdfcpu: invalid ISO-639 code: %s", f.Lang)
+		return fmt.Errorf("pdfcpu: invalid ISO-639 code: %s", f.Lang)
 	}
 	return nil
 }
@@ -61,14 +63,14 @@ func (f *FormFont) validateScriptSupport() error {
 	fd, ok := font.UserFontMetrics[f.Name]
 	font.UserFontMetricsLock.RUnlock()
 	if !ok {
-		return errors.Errorf("pdfcpu: userfont %s not available", f.Name)
+		return fmt.Errorf("pdfcpu: userfont %s not available", f.Name)
 	}
 	ok, err := fd.SupportsScript(f.Script)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		return errors.Errorf("pdfcpu: userfont (%s) does not support script: %s", f.Name, f.Script)
+		return fmt.Errorf("pdfcpu: userfont (%s) does not support script: %s", f.Name, f.Script)
 	}
 	return nil
 }
@@ -80,7 +82,7 @@ func (f *FormFont) validate() error {
 
 	if f.Name != "" && f.Name[0] != '$' {
 		if !font.SupportedFont(f.Name) {
-			return errors.Errorf("pdfcpu: font %s is unsupported, please refer to \"pdfcpu fonts list\".\n", f.Name)
+			return fmt.Errorf("pdfcpu: font %s is unsupported, please refer to \"pdfcpu fonts list\".\n", f.Name)
 		}
 		if font.IsUserFont(f.Name) {
 			if f.Lang != "" {
@@ -97,7 +99,7 @@ func (f *FormFont) validate() error {
 			}
 		}
 		if f.Size <= 0 {
-			return errors.Errorf("pdfcpu: invalid font size: %d", f.Size)
+			return fmt.Errorf("pdfcpu: invalid font size: %d", f.Size)
 		}
 	}
 
@@ -289,7 +291,7 @@ func extractFormFontDetails(
 			}
 
 			if fName == "" {
-				return "", "", "", "", nil, errors.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
+				return "", "", "", "", nil, fmt.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
 			}
 		}
 

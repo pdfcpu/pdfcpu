@@ -19,11 +19,13 @@ package types
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
-	"github.com/pkg/errors"
+	"errors"
+
 	"golang.org/x/text/unicode/norm"
 )
 
@@ -161,7 +163,7 @@ func Unescape(s string) ([]byte, error) {
 				esc = true
 			} else { // Escaped \
 				if len(octalCode) > 0 {
-					return nil, errors.Errorf("Unescape: illegal \\ in octal code sequence detected %X", octalCode)
+					return nil, fmt.Errorf("Unescape: illegal \\ in octal code sequence detected %X", octalCode)
 				}
 				b.WriteByte(c)
 				esc = false
@@ -184,7 +186,7 @@ func Unescape(s string) ([]byte, error) {
 
 		// Relax for issue 305 and also accept "\ ".
 		//if !enc && !strings.ContainsRune(" nrtbf()01234567", rune(c)) {
-		//	return nil, errors.Errorf("Unescape: illegal escape sequence \\%c detected: <%s>", c, s)
+		//	return nil, fmt.Errorf("Unescape: illegal escape sequence \\%c detected: <%s>", c, s)
 		//}
 
 		var octal bool

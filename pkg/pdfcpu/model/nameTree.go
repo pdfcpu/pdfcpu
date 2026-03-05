@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 var errNameTreeDuplicateKey = errors.New("pdfcpu: name: duplicate key")
@@ -167,7 +168,7 @@ func updateNameRef(d types.Dict, keys []string, nameOld, nameNew string) error {
 		}
 		if s != nil {
 			if *s != nameOld {
-				return errors.Errorf("invalid Name ref detected for: %s", nameOld)
+				return fmt.Errorf("invalid Name ref detected for: %s", nameOld)
 			}
 			d[k] = types.NewHexLiteral([]byte(nameNew))
 		}

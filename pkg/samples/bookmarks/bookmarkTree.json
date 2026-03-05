@@ -1,12 +1,12 @@
 {
 	"header": {
 		"source": "bookmarkTree.pdf",
-		"version": "pdfcpu v0.5.0 dev",
-		"creation": "2023-08-19 10:12:08 CEST",
+		"version": "pdfcpu v0.11.1 dev",
+		"creation": "2026-03-05 10:34:26 UTC",
 		"title": "The Center of Why?\"",
 		"author": "Alan Kay",
 		"creator": "Acrobat PDFMaker 5.0 for Word",
-		"producer": "pdfcpu v0.5.0 dev",
+		"producer": "pdfcpu v0.11.1 dev",
 		"subject": "2004 Kyoto Prize Commorative Lecture"
 	},
 	"bookmarks": [

@@ -20,11 +20,12 @@ import (
 	"fmt"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 var ErrMissingFont = errors.New("pdfcpu: missing font dict")
@@ -50,24 +51,24 @@ func validateFontFile3SubType(sd *types.StreamDict, fontType string, relaxed boo
 	case "Type1":
 		if *dictSubType != "Type1C" && *dictSubType != "OpenType" {
 			if !relaxed {
-				return errors.Errorf("pdfcpu: validateFontFile3SubType: Type1: unexpected Subtype %s", *dictSubType)
+				return fmt.Errorf("pdfcpu: validateFontFile3SubType: Type1: unexpected Subtype %s", *dictSubType)
 			}
 			model.ShowSkipped(fmt.Sprintf("validateFontFile3SubType: Type1: unexpected Subtype %s", *dictSubType))
 		}
 
 	case "MMType1":
 		if *dictSubType != "Type1C" {
-			return errors.Errorf("pdfcpu: validateFontFile3SubType: MMType1: unexpected Subtype %s", *dictSubType)
+			return fmt.Errorf("pdfcpu: validateFontFile3SubType: MMType1: unexpected Subtype %s", *dictSubType)
 		}
 
 	case "CIDFontType0":
 		if *dictSubType != "CIDFontType0C" && *dictSubType != "OpenType" {
-			return errors.Errorf("pdfcpu: validateFontFile3SubType: CIDFontType0: unexpected Subtype %s", *dictSubType)
+			return fmt.Errorf("pdfcpu: validateFontFile3SubType: CIDFontType0: unexpected Subtype %s", *dictSubType)
 		}
 
 	case "CIDFontType2", "TrueType":
 		if *dictSubType != "OpenType" {
-			return errors.Errorf("pdfcpu: validateFontFile3SubType: %s: unexpected Subtype %s", fontType, *dictSubType)
+			return fmt.Errorf("pdfcpu: validateFontFile3SubType: %s: unexpected Subtype %s", fontType, *dictSubType)
 		}
 	}
 
@@ -364,7 +365,7 @@ func validateFontDescriptorFontFile(xRefTable *model.XRefTable, d types.Dict, di
 	case "Type3": // No fontfile.
 
 	default:
-		return errors.Errorf("pdfcpu: unknown fontDictType: %s\n", fontDictType)
+		return fmt.Errorf("pdfcpu: unknown fontDictType: %s\n", fontDictType)
 
 	}
 
@@ -462,14 +463,14 @@ func validateFontEncoding(xRefTable *model.XRefTable, d types.Dict, dictName str
 			return types.MemberOf(s, encodings)
 		}
 		if !validateFontEncodingName(s) {
-			return errors.Errorf("validateFontEncoding: invalid Encoding name: %s\n", s)
+			return fmt.Errorf("validateFontEncoding: invalid Encoding name: %s\n", s)
 		}
 
 	case types.Dict:
 		// no further processing
 
 	default:
-		return errors.Errorf("validateFontEncoding: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		return fmt.Errorf("validateFontEncoding: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -552,7 +553,7 @@ func validateCIDToGIDMap(xRefTable *model.XRefTable, o types.Object) error {
 	case types.Name:
 		s := o.Value()
 		if s != "Identity" {
-			return errors.Errorf("pdfcpu: validateCIDToGIDMap: invalid name: %s - must be \"Identity\"\n", s)
+			return fmt.Errorf("pdfcpu: validateCIDToGIDMap: invalid name: %s - must be \"Identity\"\n", s)
 		}
 
 	case types.StreamDict:
@@ -595,7 +596,7 @@ func validateCIDFontGlyphWidths(xRefTable *model.XRefTable, d types.Dict, dictNa
 			}
 
 		default:
-			return errors.Errorf("validateCIDFontGlyphWidths: dict=%s entry=%s invalid type at index %d\n", dictName, entryName, i)
+			return fmt.Errorf("validateCIDFontGlyphWidths: dict=%s entry=%s invalid type at index %d\n", dictName, entryName, i)
 		}
 
 	}
@@ -728,7 +729,7 @@ func validateDescendantFonts(xRefTable *model.XRefTable, d types.Dict, fontDictN
 
 	if d1 == nil {
 		if required {
-			return errors.Errorf("validateDescendantFonts: dict=%s required descendant font dict missing.\n", fontDictName)
+			return fmt.Errorf("validateDescendantFonts: dict=%s required descendant font dict missing.\n", fontDictName)
 		}
 		return nil
 	}
@@ -892,7 +893,7 @@ func validateUseCMapEntry(xRefTable *model.XRefTable, d types.Dict, dictName str
 		}
 
 	default:
-		return errors.Errorf("validateUseCMapEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		return fmt.Errorf("validateUseCMapEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -982,7 +983,7 @@ func validateType0FontEncoding(xRefTable *model.XRefTable, d types.Dict, dictNam
 		err = validateCMapStreamDict(xRefTable, &o)
 
 	default:
-		err = errors.Errorf("validateType0FontEncoding: dict=%s corrupt entry \"Encoding\"\n", dictName)
+		err = fmt.Errorf("validateType0FontEncoding: dict=%s corrupt entry \"Encoding\"\n", dictName)
 
 	}
 
@@ -1095,7 +1096,7 @@ func _validateFontDict(xRefTable *model.XRefTable, d types.Dict, isIndRef bool, 
 		err = validateType3FontDict(xRefTable, d)
 
 	default:
-		return "", errors.Errorf("pdfcpu: validateFontDict: unknown Subtype: %s", *subtype)
+		return "", fmt.Errorf("pdfcpu: validateFontDict: unknown Subtype: %s", *subtype)
 
 	}
 

@@ -17,11 +17,13 @@ limitations under the License.
 package validate
 
 import (
+	"fmt"
 	"net/url"
+
+	"errors"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // See 7.11.4
@@ -146,7 +148,7 @@ func validateFileSpecDictEntryEFDict(xRefTable *model.XRefTable, d types.Dict) e
 	for k, obj := range d {
 
 		if !validateFileSpecDictEntriesEFAndRFKeys(k) {
-			return errors.Errorf("validateFileSpecEntriesEFAndRF: invalid key: %s", k)
+			return fmt.Errorf("validateFileSpecEntriesEFAndRF: invalid key: %s", k)
 		}
 
 		if k == "F" || k == "UF" {
@@ -220,7 +222,7 @@ func validateFileSpecDictEntriesEFAndRF(xRefTable *model.XRefTable, efDict, rfDi
 	// EF only or EF and RF
 
 	if efDict == nil {
-		return errors.Errorf("pdfcpu: validateFileSpecEntriesEFAndRF: missing required efDict.")
+		return fmt.Errorf("pdfcpu: validateFileSpecEntriesEFAndRF: missing required efDict.")
 	}
 
 	if err := validateFileSpecDictEntryEFDict(xRefTable, efDict); err != nil {
@@ -230,7 +232,7 @@ func validateFileSpecDictEntriesEFAndRF(xRefTable *model.XRefTable, efDict, rfDi
 	for k, val := range rfDict {
 
 		if _, ok := efDict.Find(k); !ok {
-			return errors.Errorf("pdfcpu: validateFileSpecEntriesEFAndRF: rfDict entry=%s missing corresponding efDict entry\n", k)
+			return fmt.Errorf("pdfcpu: validateFileSpecEntriesEFAndRF: rfDict entry=%s missing corresponding efDict entry\n", k)
 		}
 
 		// value must be related files array.
@@ -420,7 +422,7 @@ func validateFileSpecification(xRefTable *model.XRefTable, o types.Object) (type
 	case types.StringLiteral, types.HexLiteral:
 		s := o.(interface{ Value() string }).Value()
 		if !validateFileSpecString(s) {
-			return nil, errors.Errorf("pdfcpu: validateFileSpecification: invalid file spec string: %s", s)
+			return nil, fmt.Errorf("pdfcpu: validateFileSpecification: invalid file spec string: %s", s)
 		}
 
 	case types.Dict:
@@ -429,7 +431,7 @@ func validateFileSpecification(xRefTable *model.XRefTable, o types.Object) (type
 		}
 
 	default:
-		return nil, errors.Errorf("pdfcpu: validateFileSpecification: invalid type")
+		return nil, fmt.Errorf("pdfcpu: validateFileSpecification: invalid type")
 
 	}
 

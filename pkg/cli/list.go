@@ -31,6 +31,8 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/hhrutter/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -38,7 +40,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/form"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func listAttachments(rs io.ReadSeeker, conf *model.Configuration, withDesc, sorted bool) ([]string, error) {
@@ -555,7 +556,7 @@ func listPEM(fName string) (int, error) {
 	}
 
 	if len(bb) == 0 {
-		//return 0, errors.Errorf("%s is empty\n", filepath.Base(fName))
+		//return 0, fmt.Errorf("%s is empty\n", filepath.Base(fName))
 		return 0, errors.New("is empty\n")
 	}
 
@@ -595,7 +596,7 @@ func listP7C(fName string) (int, error) {
 	}
 
 	if len(bb) == 0 {
-		//return 0, errors.Errorf("%s is empty\n", filepath.Base(fName))
+		//return 0, fmt.Errorf("%s is empty\n", filepath.Base(fName))
 		return 0, errors.New("is empty\n")
 	}
 

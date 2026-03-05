@@ -22,13 +22,14 @@ import (
 	"math"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/format"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 type TableHeader struct {
@@ -57,7 +58,7 @@ func (th *TableHeader) validateColumnPaddings(cols int) error {
 			continue
 		}
 		if err := p.validate(); err != nil {
-			return errors.Errorf("%s on table header colPaddings index %d", err.Error(), i)
+			return fmt.Errorf("%s on table header colPaddings index %d", err.Error(), i)
 		}
 	}
 
@@ -66,7 +67,7 @@ func (th *TableHeader) validateColumnPaddings(cols int) error {
 
 func (th *TableHeader) validate(pdf *PDF, cols int) error {
 	if th.Values == nil || len(th.Values) != cols {
-		return errors.Errorf("pdfcpu: wants %d table header values", cols)
+		return fmt.Errorf("pdfcpu: wants %d table header values", cols)
 	}
 
 	if len(th.ColAnchors) > 0 {
@@ -243,7 +244,7 @@ func (t *Table) validateColPaddings() error {
 				continue
 			}
 			if err := p.validate(); err != nil {
-				return errors.Errorf("pdfcpu: table %s on colPaddings index %d", err.Error(), i)
+				return fmt.Errorf("pdfcpu: table %s on colPaddings index %d", err.Error(), i)
 			}
 		}
 	}
@@ -263,11 +264,11 @@ func (t *Table) validateColumns() error {
 func (t *Table) validateValues() error {
 	if t.Values != nil {
 		if len(t.Values) > t.Rows {
-			return errors.Errorf("pdfcpu: table value overflow (for more than %d rows)", t.Rows)
+			return fmt.Errorf("pdfcpu: table value overflow (for more than %d rows)", t.Rows)
 		}
 		for _, vv := range t.Values {
 			if len(vv) > t.Cols {
-				return errors.Errorf("pdfcpu: table value overflow (for more than %d cols)", t.Cols)
+				return fmt.Errorf("pdfcpu: table value overflow (for more than %d cols)", t.Cols)
 			}
 		}
 	}
@@ -503,7 +504,7 @@ func (t *Table) calcFont() error {
 		fName := f.Name[1:]
 		f0 := t.font(fName)
 		if f0 == nil {
-			return errors.Errorf("pdfcpu: unknown table font name %s", fName)
+			return fmt.Errorf("pdfcpu: unknown table font name %s", fName)
 		}
 		f.Name = f0.Name
 		if f.Size == 0 {
@@ -536,7 +537,7 @@ func (t *Table) calcBorder() (float64, *color.SimpleColor, types.LineJoinStyle, 
 			bName := b.Name[1:]
 			b0 := t.border(bName)
 			if b0 == nil {
-				return bWidth, bCol, bStyle, errors.Errorf("pdfcpu: unknown named table border %s", bName)
+				return bWidth, bCol, bStyle, fmt.Errorf("pdfcpu: unknown named table border %s", bName)
 			}
 			b.mergeIn(b0)
 		}
@@ -560,7 +561,7 @@ func (t *Table) calcMargin() (float64, float64, float64, float64, error) {
 			mName := m.Name[1:]
 			m0 := t.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBottom, mLeft, errors.Errorf("pdfcpu: unknown named table margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, fmt.Errorf("pdfcpu: unknown named table margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}
@@ -742,7 +743,7 @@ func (t *Table) calcTextDescriptorPadding(td *model.TextDescriptor, p *Padding) 
 		pName := p.Name[1:]
 		p0 := t.padding(pName)
 		if p0 == nil {
-			return errors.Errorf("pdfcpu: unknown named table padding %s", pName)
+			return fmt.Errorf("pdfcpu: unknown named table padding %s", pName)
 		}
 		p.mergeIn(p0)
 	}
@@ -807,11 +808,11 @@ func (t *Table) renderValues(p *model.Page, pageNr int, fonts model.FontMap, col
 			bb := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, t.colAnchors[j])
 
 			if bb.Width() > colWidths[j] {
-				return errors.Errorf("pdfcpu: table cell width overflow - reduce padding or text: %s", colTd.Text)
+				return fmt.Errorf("pdfcpu: table cell width overflow - reduce padding or text: %s", colTd.Text)
 			}
 
 			if bb.Height() > float64(t.LineHeight) {
-				return errors.Errorf("pdfcpu: table cell height overflow - increase table lheight over : %f", bb.Height())
+				return fmt.Errorf("pdfcpu: table cell height overflow - increase table lheight over : %f", bb.Height())
 			}
 		}
 	}
@@ -831,7 +832,7 @@ func (t *Table) renderHeader(p *model.Page, pageNr int, fonts model.FontMap, col
 		fName := f1.Name[1:]
 		f0 := t.font(fName)
 		if f0 == nil {
-			return errors.Errorf("pdfcpu: unknown font name %s", fName)
+			return fmt.Errorf("pdfcpu: unknown font name %s", fName)
 		}
 		f1.Name = f0.Name
 		f1.Script = f0.Script
@@ -881,11 +882,11 @@ func (t *Table) renderHeader(p *model.Page, pageNr int, fonts model.FontMap, col
 		bb := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, a)
 
 		if bb.Width() > colWidths[i] {
-			return errors.Errorf("pdfcpu: table header cell width overflow - reduce padding or text: %s", colTd.Text)
+			return fmt.Errorf("pdfcpu: table header cell width overflow - reduce padding or text: %s", colTd.Text)
 		}
 
 		if bb.Height() > float64(th.LineHeight) {
-			return errors.Errorf("pdfcpu: table header cell height overflow - increase table header lheight over : %f", bb.Height())
+			return fmt.Errorf("pdfcpu: table header cell height overflow - increase table header lheight over : %f", bb.Height())
 		}
 	}
 

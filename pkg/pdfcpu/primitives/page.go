@@ -17,13 +17,15 @@
 package primitives
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
+
+	"errors"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // PDFPage represents a PDF page with content for generation.
@@ -67,7 +69,7 @@ func (page *PDFPage) resolveFileName(s string) (string, error) {
 	filePath = filePath[1:]
 	i := strings.Index(filePath, "/")
 	if i <= 0 {
-		return "", errors.Errorf("pdfcpu: corrupt filename: %s", s)
+		return "", fmt.Errorf("pdfcpu: corrupt filename: %s", s)
 	}
 
 	dirName := filePath[:i]
@@ -75,7 +77,7 @@ func (page *PDFPage) resolveFileName(s string) (string, error) {
 
 	dirPath, ok := page.pdf.DirNames[dirName]
 	if !ok {
-		return "", errors.Errorf("pdfcpu: can't resolve dirname: %s", dirName)
+		return "", fmt.Errorf("pdfcpu: can't resolve dirname: %s", dirName)
 	}
 
 	s1 := filepath.Join(dirPath, fileName)

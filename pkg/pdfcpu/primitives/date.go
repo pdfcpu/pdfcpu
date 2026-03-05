@@ -17,10 +17,9 @@
 package primitives
 
 import (
+	"fmt"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // DateFormat represents a supported date format.
@@ -70,7 +69,7 @@ func DateFormatForFmtInt(fmtInt string) (*DateFormat, error) {
 			return &df, nil
 		}
 	}
-	return nil, errors.Errorf("pdfcpu: \"%s\": unknown internal date format", fmtInt)
+	return nil, fmt.Errorf("pdfcpu: \"%s\": unknown internal date format", fmtInt)
 }
 
 // DateFormatForFmtInt returns the date format for an external format string.
@@ -81,7 +80,7 @@ func DateFormatForFmtExt(fmtExt string) (*DateFormat, error) {
 			return &df, nil
 		}
 	}
-	return nil, errors.Errorf("pdfcpu: \"%s\": unknown external date format", fmtExt)
+	return nil, fmt.Errorf("pdfcpu: \"%s\": unknown external date format", fmtExt)
 }
 
 // DateFormatForDate returns the date format for given date string.
@@ -91,7 +90,7 @@ func DateFormatForDate(date string) (*DateFormat, error) {
 			return &df, nil
 		}
 	}
-	return nil, errors.Errorf("pdfcpu: \"%s\": using unknown date format", date)
+	return nil, fmt.Errorf("pdfcpu: \"%s\": using unknown date format", date)
 }
 
 func (df DateFormat) validate(date string) error {

@@ -19,6 +19,7 @@ package create
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"sort"
 	"strings"
@@ -28,21 +29,20 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func ensureFontIndRef(xRefTable *model.XRefTable, fontName string, frPage model.FontResource, fonts model.FontMap) (*types.IndirectRef, error) {
 
 	frGlobal, ok := fonts[fontName]
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: missing global font: %s", fontName)
+		return nil, fmt.Errorf("pdfcpu: missing global font: %s", fontName)
 	}
 
 	// Do we have an already created indRef or an indRef from AP form fonts or fonts we are reusing?
 	if frGlobal.Res.IndRef != nil {
 
 		if frPage.Res.IndRef != nil && *frPage.Res.IndRef != *frGlobal.Res.IndRef {
-			return nil, errors.Errorf("pdfcpu: multiple objstreams for font: %s detected: ", fontName)
+			return nil, fmt.Errorf("pdfcpu: multiple objstreams for font: %s detected: ", fontName)
 		}
 
 		if font.IsUserFont(fontName) && frGlobal.FontFile != nil {
@@ -451,7 +451,7 @@ func cacheResIDs(ctx *model.Context, pdf *primitives.PDF) error {
 func parseFromJSON(ctx *model.Context, bb []byte) (*primitives.PDF, error) {
 
 	if !json.Valid(bb) {
-		return nil, errors.Errorf("pdfcpu: invalid JSON encoding detected.")
+		return nil, fmt.Errorf("pdfcpu: invalid JSON encoding detected.")
 	}
 
 	pdf := &primitives.PDF{
@@ -693,7 +693,7 @@ func updateForm(
 
 	for k, v := range d1 {
 		if !fontResDict.Insert(k, v) {
-			return errors.Errorf("pdfcpu: duplicate font resource id detected: %s", k)
+			return fmt.Errorf("pdfcpu: duplicate font resource id detected: %s", k)
 		}
 	}
 

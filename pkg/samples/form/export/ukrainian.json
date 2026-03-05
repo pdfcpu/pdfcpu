@@ -1,44 +1,56 @@
 {
 	"header": {
 		"source": "ukrainian.pdf",
-		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-03-16 23:35:35 CET",
-		"producer": "pdfcpu v0.4.0 dev"
+		"version": "pdfcpu v0.11.1 dev",
+		"creation": "2026-03-05 10:34:50 UTC",
+		"producer": "pdfcpu v0.11.1 dev"
 	},
 	"forms": [
 		{
 			"textfield": [
 				{
-					"page": 1,
-					"id": "36",
-					"name": "lastName1",
-					"value": "лань",
+					"pages": [
+						1
+					],
+					"id": "38",
+					"name": "firstName1",
+					"altname": "ім'я",
+					"default": "Володимир",
+					"value": "Джекі",
 					"multiline": false,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "29",
+					"pages": [
+						1
+					],
+					"id": "33",
 					"name": "note1",
+					"altname": "Причина",
 					"value": "Це зразок тексту.\nЦе наступний рядок.",
 					"multiline": true,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "35",
-					"name": "firstName1",
-					"default": "Володимир",
-					"value": "Джекі",
+					"pages": [
+						1
+					],
+					"id": "39",
+					"name": "lastName1",
+					"altname": "прізвище",
+					"value": "лань",
 					"multiline": false,
 					"locked": false
 				}
 			],
 			"datefield": [
 				{
-					"page": 1,
-					"id": "30",
+					"pages": [
+						1
+					],
+					"id": "34",
 					"name": "dob1",
+					"altname": "dd.mm.yyyy",
 					"format": "dd.mm.yyyy",
 					"default": "05.12.1992",
 					"value": "31.12.1999",
@@ -47,51 +59,69 @@
 			],
 			"checkbox": [
 				{
-					"page": 1,
-					"id": "32",
-					"name": "cb13",
+					"pages": [
+						1
+					],
+					"id": "35",
+					"name": "cb12",
+					"altname": "Пошук на Github",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "39",
-					"name": "cb14",
-					"default": false,
-					"value": false,
-					"locked": false
-				},
-				{
-					"page": 1,
-					"id": "33",
+					"pages": [
+						1
+					],
+					"id": "31",
 					"name": "cb15",
+					"altname": "Інший",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "38",
+					"pages": [
+						1
+					],
+					"id": "36",
+					"name": "cb13",
+					"altname": "Golang Weekly",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"pages": [
+						1
+					],
+					"id": "30",
+					"name": "cb14",
+					"altname": "Побратим Гофер",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"pages": [
+						1
+					],
+					"id": "29",
 					"name": "cb11",
+					"altname": "Пошук Google",
 					"default": false,
 					"value": true,
-					"locked": false
-				},
-				{
-					"page": 1,
-					"id": "31",
-					"name": "cb12",
-					"default": false,
-					"value": false,
 					"locked": false
 				}
 			],
 			"radiobuttongroup": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "17",
 					"name": "gender1",
+					"altname": "Стать",
 					"options": [
 						"жіноча",
 						"чоловічий",
@@ -104,9 +134,12 @@
 			],
 			"combobox": [
 				{
-					"page": 1,
-					"id": "34",
+					"pages": [
+						1
+					],
+					"id": "32",
 					"name": "city12",
+					"altname": "Місто",
 					"editable": false,
 					"options": [
 						"Київ",
@@ -120,9 +153,12 @@
 			],
 			"listbox": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "37",
 					"name": "city11",
+					"altname": "Улюблене місто",
 					"multi": true,
 					"options": [
 						"Сан Франциско",

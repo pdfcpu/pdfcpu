@@ -17,12 +17,14 @@ limitations under the License.
 package model
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 type Zoom struct {
@@ -53,7 +55,7 @@ func (z *Zoom) EnsureFactorAndMargins(w, h float64) error {
 func parseHMargin(s string, zoom *Zoom) error {
 	m, err := strconv.ParseFloat(s, 64)
 	if err != nil || m == 0 {
-		return errors.Errorf("pdfcpu: \"hmargin\" must be a numeric value and must not be 0, got %s\n", s)
+		return fmt.Errorf("pdfcpu: \"hmargin\" must be a numeric value and must not be 0, got %s\n", s)
 	}
 
 	if zoom.VMargin != 0 {
@@ -67,7 +69,7 @@ func parseHMargin(s string, zoom *Zoom) error {
 func parseVMargin(s string, zoom *Zoom) error {
 	m, err := strconv.ParseFloat(s, 64)
 	if err != nil || m == 0 {
-		return errors.Errorf("pdfcpu: \"vmargin\" must be a numeric value and must not be 0, got %s\n", s)
+		return fmt.Errorf("pdfcpu: \"vmargin\" must be a numeric value and must not be 0, got %s\n", s)
 	}
 
 	if zoom.HMargin != 0 {
@@ -81,11 +83,11 @@ func parseVMargin(s string, zoom *Zoom) error {
 func parseZoomFactor(s string, zoom *Zoom) (err error) {
 	zf, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return errors.Errorf("pdfcpu: zoom factor must be a float value: %s\n", s)
+		return fmt.Errorf("pdfcpu: zoom factor must be a float value: %s\n", s)
 	}
 
 	if zf <= 0 || zf == 1 {
-		return errors.Errorf("pdfcpu: invalid zoom factor %.2f: 0.0 < i < 1.0 or i > 1.0\n", zf)
+		return fmt.Errorf("pdfcpu: invalid zoom factor %.2f: 0.0 < i < 1.0 or i > 1.0\n", zf)
 	}
 
 	zoom.Factor = zf
@@ -134,13 +136,13 @@ func (m zoomParameterMap) Handle(paramPrefix, paramValueStr string, zoom *Zoom) 
 			continue
 		}
 		if len(param) > 0 {
-			return errors.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
+			return fmt.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
 		}
 		param = k
 	}
 
 	if param == "" {
-		return errors.Errorf("pdfcpu: unknown parameter prefix \"%s\"", paramPrefix)
+		return fmt.Errorf("pdfcpu: unknown parameter prefix \"%s\"", paramPrefix)
 	}
 
 	return m[param](paramValueStr, zoom)

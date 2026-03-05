@@ -17,9 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func validateBitsPerComponent(i int) bool {
@@ -148,7 +150,7 @@ func validateShadingDict(xRefTable *model.XRefTable, dict types.Dict) error {
 		err = validateRadialShadingDict(xRefTable, dict)
 
 	default:
-		return errors.Errorf("validateShadingDict: unexpected shadingType: %d\n", shadingType)
+		return fmt.Errorf("validateShadingDict: unexpected shadingType: %d\n", shadingType)
 	}
 
 	return err
@@ -291,7 +293,7 @@ func validateShadingStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict)
 		err = validateTensorProductPatchMeshesDict(xRefTable, dict)
 
 	default:
-		return errors.Errorf("pdfcpu: validateShadingStreamDict: unexpected shadingType: %d\n", shadingType)
+		return fmt.Errorf("pdfcpu: validateShadingStreamDict: unexpected shadingType: %d\n", shadingType)
 	}
 
 	return err

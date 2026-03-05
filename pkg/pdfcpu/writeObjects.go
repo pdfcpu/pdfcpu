@@ -22,7 +22,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -96,7 +95,7 @@ func stopObjectStream(ctx *model.Context) error {
 	xRefTable := ctx.XRefTable
 
 	if !ctx.Write.WriteToObjectStream {
-		return errors.Errorf("stopObjectStream: Not writing to object stream.")
+		return fmt.Errorf("stopObjectStream: Not writing to object stream.")
 	}
 
 	if ctx.Write.CurrentObjStream == nil {
@@ -387,20 +386,20 @@ func writeArrayObject(ctx *model.Context, objNumber, genNumber int, a types.Arra
 func writeStream(w *model.WriteContext, sd types.StreamDict) (int64, error) {
 	b, err := w.WriteString(fmt.Sprintf("%sstream%s", w.Eol, w.Eol))
 	if err != nil {
-		return 0, errors.Wrapf(err, "writeStream: failed to write raw content")
+		return 0, fmt.Errorf("writeStream: failed to write raw content: %w", err)
 	}
 
 	c, err := w.Write(sd.Raw)
 	if err != nil {
-		return 0, errors.Wrapf(err, "writeStream: failed to write raw content")
+		return 0, fmt.Errorf("writeStream: failed to write raw content: %w", err)
 	}
 	if int64(c) != *sd.StreamLength {
-		return 0, errors.Errorf("writeStream: failed to write raw content: %d bytes written - streamlength:%d", c, *sd.StreamLength)
+		return 0, fmt.Errorf("writeStream: failed to write raw content: %d bytes written - streamlength:%d", c, *sd.StreamLength)
 	}
 
 	e, err := w.WriteString(fmt.Sprintf("%sendstream", w.Eol))
 	if err != nil {
-		return 0, errors.Wrapf(err, "writeStream: failed to write raw content")
+		return 0, fmt.Errorf("writeStream: failed to write raw content: %w", err)
 	}
 
 	written := int64(b+e) + *sd.StreamLength
@@ -673,7 +672,7 @@ func writeObjectGeneric(ctx *model.Context, o types.Object, objNr, genNr int) (e
 		err = writeLazyObjectStreamObject(ctx, objNr, genNr, o)
 
 	default:
-		err = errors.Errorf("writeIndirectObject: undefined PDF object #%d %T\n", objNr, o)
+		err = fmt.Errorf("writeIndirectObject: undefined PDF object #%d %T\n", objNr, o)
 	}
 
 	return err
@@ -692,7 +691,7 @@ func writeIndirectObject(ctx *model.Context, ir types.IndirectRef) error {
 
 	o, err := ctx.DereferenceForWrite(ir)
 	if err != nil {
-		return errors.Wrapf(err, "writeIndirectObject: unable to dereference indirect object #%d", objNr)
+		return fmt.Errorf("writeIndirectObject: unable to dereference indirect object #%d: %w", objNr, err)
 	}
 
 	if log.WriteEnabled() {
@@ -774,7 +773,7 @@ func writeEntry(ctx *model.Context, d types.Dict, dictName, entryName string) (t
 func writeFlatObject(ctx *model.Context, objNr int) error {
 	e, ok := ctx.FindTableEntryLight(objNr)
 	if !ok {
-		return errors.Errorf("writeFlatObject: undefined PDF object #%d ", objNr)
+		return fmt.Errorf("writeFlatObject: undefined PDF object #%d ", objNr)
 	}
 
 	if e.Free {
@@ -816,7 +815,7 @@ func writeFlatObject(ctx *model.Context, objNr int) error {
 		err = writeNameObject(ctx, objNr, genNr, o)
 
 	default:
-		err = errors.Errorf("writeFlatObject: unexpected PDF object #%d %T\n", objNr, o)
+		err = fmt.Errorf("writeFlatObject: unexpected PDF object #%d %T\n", objNr, o)
 
 	}
 

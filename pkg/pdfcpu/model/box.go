@@ -21,8 +21,9 @@ import (
 	"strconv"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // Box is a rectangular region in user space
@@ -141,7 +142,7 @@ func (pb *PageBoundaries) ResolveBox(s string) error {
 			return nil
 		}
 	}
-	return errors.Errorf("pdfcpu: invalid box prefix: %s", s)
+	return fmt.Errorf("pdfcpu: invalid box prefix: %s", s)
 }
 
 // ParseBoxList parses a list of box
@@ -169,19 +170,19 @@ func resolveBoxType(s string) (string, error) {
 			return k, nil
 		}
 	}
-	return "", errors.Errorf("pdfcpu: invalid box type: %s", s)
+	return "", fmt.Errorf("pdfcpu: invalid box type: %s", s)
 }
 
 func processBox(b **Box, boxID, paramValueStr string, unit types.DisplayUnit) error {
 	var err error
 	if *b != nil {
-		return errors.Errorf("pdfcpu: duplicate box definition: %s", boxID)
+		return fmt.Errorf("pdfcpu: duplicate box definition: %s", boxID)
 	}
 	// process box assignment
 	boxVal, err := resolveBoxType(paramValueStr)
 	if err == nil {
 		if boxVal == boxID {
-			return errors.Errorf("pdfcpu: invalid box self assignment: %s", boxID)
+			return fmt.Errorf("pdfcpu: invalid box self assignment: %s", boxID)
 		}
 		*b = &Box{RefBox: boxVal}
 		return nil
@@ -258,7 +259,7 @@ func ParsePageBoundaries(s string, unit types.DisplayUnit) (*PageBoundaries, err
 func parseBoxByRectangle(s string, u types.DisplayUnit) (*Box, error) {
 	ss := strings.Fields(s)
 	if len(ss) != 4 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	f, err := strconv.ParseFloat(ss[0], 64)
 	if err != nil {
@@ -301,7 +302,7 @@ func parseBoxPercentage(s string) (float64, error) {
 		return 0, err
 	}
 	if pct <= -50 || pct >= 50 {
-		return 0, errors.Errorf("pdfcpu: invalid margin percentage: %s must be < 50%%", s)
+		return 0, fmt.Errorf("pdfcpu: invalid margin percentage: %s must be < 50%%", s)
 	}
 	return pct / 100, nil
 }
@@ -313,7 +314,7 @@ func parseBoxBySingleMarginVal(s, s1 string, abs bool, u types.DisplayUnit) (*Bo
 		// % has higher precedence than abs/rel.
 		s1 = s1[:len(s1)-1]
 		if len(s1) == 0 {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+			return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 		}
 		m, err := parseBoxPercentage(s1)
 		if err != nil {
@@ -328,7 +329,7 @@ func parseBoxBySingleMarginVal(s, s1 string, abs bool, u types.DisplayUnit) (*Bo
 	if !abs {
 		// 0.25 rel (=25%)
 		if m <= 0 || m >= .5 {
-			return nil, errors.Errorf("pdfcpu: invalid relative box margin: %f must be positive < 0.5", m)
+			return nil, fmt.Errorf("pdfcpu: invalid relative box margin: %f must be positive < 0.5", m)
 		}
 		return &Box{MLeft: m, MRight: m, MTop: m, MBot: m}, nil
 	}
@@ -345,7 +346,7 @@ func parseBoxBy2Percentages(s, s1, s2 string) (*Box, error) {
 	// Parse vert margin.
 	s1 = s1[:len(s1)-1]
 	if len(s1) == 0 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	vm, err := parseBoxPercentage(s1)
 	if err != nil {
@@ -353,12 +354,12 @@ func parseBoxBy2Percentages(s, s1, s2 string) (*Box, error) {
 	}
 
 	if s2[len(s2)-1] != '%' {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	// Parse hor margin.
 	s2 = s2[:len(s2)-1]
 	if len(s2) == 0 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	hm, err := parseBoxPercentage(s2)
 	if err != nil {
@@ -384,7 +385,7 @@ func parseBoxBy2MarginVals(s, s1, s2 string, abs bool, u types.DisplayUnit) (*Bo
 	if !abs {
 		// eg 0.25 rel (=25%)
 		if vm <= 0 || vm >= .5 {
-			return nil, errors.Errorf("pdfcpu: invalid relative vertical box margin: %f must be positive < 0.5", vm)
+			return nil, fmt.Errorf("pdfcpu: invalid relative vertical box margin: %f must be positive < 0.5", vm)
 		}
 	}
 	hm, err := strconv.ParseFloat(s2, 64)
@@ -394,7 +395,7 @@ func parseBoxBy2MarginVals(s, s1, s2 string, abs bool, u types.DisplayUnit) (*Bo
 	if !abs {
 		// eg 0.25 rel (=25%)
 		if hm <= 0 || hm >= .5 {
-			return nil, errors.Errorf("pdfcpu: invalid relative horizontal box margin: %f must be positive < 0.5", hm)
+			return nil, fmt.Errorf("pdfcpu: invalid relative horizontal box margin: %f must be positive < 0.5", hm)
 		}
 	}
 	if abs {
@@ -409,7 +410,7 @@ func parseBoxBy3Percentages(s, s1, s2, s3 string) (*Box, error) {
 	// Parse top margin.
 	s1 = s1[:len(s1)-1]
 	if len(s1) == 0 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	pct, err := strconv.ParseFloat(s1, 64)
 	if err != nil {
@@ -418,12 +419,12 @@ func parseBoxBy3Percentages(s, s1, s2, s3 string) (*Box, error) {
 	tm := pct / 100
 
 	if s2[len(s2)-1] != '%' {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	// Parse hor margin.
 	s2 = s2[:len(s2)-1]
 	if len(s2) == 0 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	hm, err := parseBoxPercentage(s2)
 	if err != nil {
@@ -431,12 +432,12 @@ func parseBoxBy3Percentages(s, s1, s2, s3 string) (*Box, error) {
 	}
 
 	if s3[len(s3)-1] != '%' {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	// Parse bottom margin.
 	s3 = s3[:len(s3)-1]
 	if len(s3) == 0 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	pct, err = strconv.ParseFloat(s3, 64)
 	if err != nil {
@@ -444,7 +445,7 @@ func parseBoxBy3Percentages(s, s1, s2, s3 string) (*Box, error) {
 	}
 	bm := pct / 100
 	if tm+bm >= 1 {
-		return nil, errors.Errorf("pdfcpu: vertical margin overflow: %s", s)
+		return nil, fmt.Errorf("pdfcpu: vertical margin overflow: %s", s)
 	}
 
 	return &Box{MLeft: hm, MRight: hm, MTop: tm, MBot: bm}, nil
@@ -472,7 +473,7 @@ func parseBoxBy3MarginVals(s, s1, s2, s3 string, abs bool, u types.DisplayUnit) 
 	if !abs {
 		// eg 0.25 rel (=25%)
 		if hm <= 0 || hm >= .5 {
-			return nil, errors.Errorf("pdfcpu: invalid relative horizontal box margin: %f must be positive < 0.5", hm)
+			return nil, fmt.Errorf("pdfcpu: invalid relative horizontal box margin: %f must be positive < 0.5", hm)
 		}
 	}
 
@@ -481,7 +482,7 @@ func parseBoxBy3MarginVals(s, s1, s2, s3 string, abs bool, u types.DisplayUnit) 
 		return nil, err
 	}
 	if !abs && (tm+bm >= 1) {
-		return nil, errors.Errorf("pdfcpu: vertical margin overflow: %s", s)
+		return nil, fmt.Errorf("pdfcpu: vertical margin overflow: %s", s)
 	}
 
 	if abs {
@@ -497,7 +498,7 @@ func parseBoxBy4Percentages(s, s1, s2, s3, s4 string) (*Box, error) {
 	// Parse top margin.
 	s1 = s1[:len(s1)-1]
 	if len(s1) == 0 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	pct, err := strconv.ParseFloat(s1, 64)
 	if err != nil {
@@ -507,11 +508,11 @@ func parseBoxBy4Percentages(s, s1, s2, s3, s4 string) (*Box, error) {
 
 	// Parse right margin.
 	if s2[len(s2)-1] != '%' {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	s2 = s2[:len(s2)-1]
 	if len(s2) == 0 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	pct, err = strconv.ParseFloat(s1, 64)
 	if err != nil {
@@ -521,11 +522,11 @@ func parseBoxBy4Percentages(s, s1, s2, s3, s4 string) (*Box, error) {
 
 	// Parse bottom margin.
 	if s3[len(s3)-1] != '%' {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	s3 = s3[:len(s3)-1]
 	if len(s3) == 0 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	pct, err = strconv.ParseFloat(s3, 64)
 	if err != nil {
@@ -535,11 +536,11 @@ func parseBoxBy4Percentages(s, s1, s2, s3, s4 string) (*Box, error) {
 
 	// Parse left margin.
 	if s4[len(s4)-1] != '%' {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	s4 = s4[:len(s4)-1]
 	if len(s4) == 0 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	pct, err = strconv.ParseFloat(s3, 64)
 	if err != nil {
@@ -548,10 +549,10 @@ func parseBoxBy4Percentages(s, s1, s2, s3, s4 string) (*Box, error) {
 	lm := pct / 100
 
 	if tm+bm >= 1 {
-		return nil, errors.Errorf("pdfcpu: vertical margin overflow: %s", s)
+		return nil, fmt.Errorf("pdfcpu: vertical margin overflow: %s", s)
 	}
 	if rm+lm >= 1 {
-		return nil, errors.Errorf("pdfcpu: horizontal margin overflow: %s", s)
+		return nil, fmt.Errorf("pdfcpu: horizontal margin overflow: %s", s)
 	}
 
 	return &Box{MLeft: lm, MRight: rm, MTop: tm, MBot: bm}, nil
@@ -592,10 +593,10 @@ func parseBoxBy4MarginVals(s, s1, s2, s3, s4 string, abs bool, u types.DisplayUn
 	}
 	if !abs {
 		if tm+bm >= 1 {
-			return nil, errors.Errorf("pdfcpu: vertical margin overflow: %s", s)
+			return nil, fmt.Errorf("pdfcpu: vertical margin overflow: %s", s)
 		}
 		if lm+rm >= 1 {
-			return nil, errors.Errorf("pdfcpu: horizontal margin overflow: %s", s)
+			return nil, fmt.Errorf("pdfcpu: horizontal margin overflow: %s", s)
 		}
 	}
 
@@ -611,7 +612,7 @@ func parseBoxBy4MarginVals(s, s1, s2, s3, s4 string, abs bool, u types.DisplayUn
 func parseBoxOffset(s string, b *Box, u types.DisplayUnit) error {
 	d := strings.Split(s, " ")
 	if len(d) != 2 {
-		return errors.Errorf("pdfcpu: illegal position offset string: need 2 numeric values, %s\n", s)
+		return fmt.Errorf("pdfcpu: illegal position offset string: need 2 numeric values, %s\n", s)
 	}
 
 	f, err := strconv.ParseFloat(d[0], 64)
@@ -634,31 +635,31 @@ func parseBoxDimByPercentage(s, s1, s2 string, b *Box) error {
 	// Parse width.
 	s1 = s1[:len(s1)-1]
 	if len(s1) == 0 {
-		return errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	pct, err := strconv.ParseFloat(s1, 64)
 	if err != nil {
 		return err
 	}
 	if pct <= 0 || pct > 100 {
-		return errors.Errorf("pdfcpu: invalid percentage: %s", s)
+		return fmt.Errorf("pdfcpu: invalid percentage: %s", s)
 	}
 	w := pct / 100
 
 	if s2[len(s2)-1] != '%' {
-		return errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	// Parse height.
 	s2 = s2[:len(s2)-1]
 	if len(s2) == 0 {
-		return errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	pct, err = strconv.ParseFloat(s2, 64)
 	if err != nil {
 		return err
 	}
 	if pct <= 0 || pct > 100 {
-		return errors.Errorf("pdfcpu: invalid percentage: %s", s)
+		return fmt.Errorf("pdfcpu: invalid percentage: %s", s)
 	}
 	h := pct / 100
 	b.Dim = &types.Dim{Width: w, Height: h}
@@ -678,7 +679,7 @@ func parseBoxDimWidthAndHeight(s1, s2 string, abs bool) (float64, float64, error
 	if !abs {
 		// eg 0.25 rel (=25%)
 		if w <= 0 || w > 1 {
-			return w, h, errors.Errorf("pdfcpu: invalid relative box width: %f must be positive <= 1", w)
+			return w, h, fmt.Errorf("pdfcpu: invalid relative box width: %f must be positive <= 1", w)
 		}
 	}
 
@@ -689,7 +690,7 @@ func parseBoxDimWidthAndHeight(s1, s2 string, abs bool) (float64, float64, error
 	if !abs {
 		// eg 0.25 rel (=25%)
 		if h <= 0 || h > 1 {
-			return w, h, errors.Errorf("pdfcpu: invalid relative box height: %f must be positive <= 1", h)
+			return w, h, fmt.Errorf("pdfcpu: invalid relative box height: %f must be positive <= 1", h)
 		}
 	}
 
@@ -699,7 +700,7 @@ func parseBoxDimWidthAndHeight(s1, s2 string, abs bool) (float64, float64, error
 func parseBoxDim(s string, b *Box, u types.DisplayUnit) error {
 	ss := strings.Fields(s)
 	if len(ss) != 2 && len(ss) != 3 {
-		return errors.Errorf("pdfcpu: illegal dimension string: need 2 positive numeric values, %s\n", s)
+		return fmt.Errorf("pdfcpu: illegal dimension string: need 2 positive numeric values, %s\n", s)
 	}
 	abs := true
 	if len(ss) == 3 {
@@ -734,7 +735,7 @@ func parseBoxByPosWithinParent(ss []string, u types.DisplayUnit) (*Box, error) {
 
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+			return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
@@ -759,7 +760,7 @@ func parseBoxByPosWithinParent(ss []string, u types.DisplayUnit) (*Box, error) {
 			}
 
 		default:
-			return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+			return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 		}
 	}
 	if b.Dim == nil {
@@ -779,7 +780,7 @@ func parseBoxByMarginVals(ss []string, s string, abs bool, u types.DisplayUnit) 
 	case 4:
 		return parseBoxBy4MarginVals(s, ss[0], ss[1], ss[2], ss[3], abs, u)
 	case 5:
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	return nil, nil
 }
@@ -825,7 +826,7 @@ func ParseBox(s string, u types.DisplayUnit) (*Box, error) {
 	// Via relative position within parent box.
 	ss := strings.Split(s, ",")
 	if len(ss) > 3 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	if len(ss) > 1 || strings.HasPrefix(ss[0], "dim") {
 		return parseBoxByPosWithinParent(ss, u)
@@ -834,10 +835,10 @@ func ParseBox(s string, u types.DisplayUnit) (*Box, error) {
 	// Via margins relative to parent box.
 	ss = strings.Fields(s)
 	if len(ss) > 5 {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 	if len(ss) == 1 && (ss[0] == "abs" || ss[0] == "rel") {
-		return nil, errors.Errorf("pdfcpu: invalid box definition: %s", s)
+		return nil, fmt.Errorf("pdfcpu: invalid box definition: %s", s)
 	}
 
 	abs := true

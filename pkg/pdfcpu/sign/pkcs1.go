@@ -25,9 +25,10 @@ import (
 	"fmt"
 	"io"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // ValidateX509RSASHA1Signature validates signatures using subFilter adbe.x509.rsa_sha1.
@@ -157,7 +158,7 @@ func certFromObj(obj types.Object) (*x509.Certificate, error) {
 	case types.HexLiteral:
 		return certFromHexLiteral(obj)
 	}
-	return nil, errors.Errorf("unable to parse certificate for %T", obj)
+	return nil, fmt.Errorf("unable to parse certificate for %T", obj)
 }
 
 func certFromStringLiteral(obj types.StringLiteral) (*x509.Certificate, error) {
@@ -186,17 +187,17 @@ func verifyRSASHA1Signature(ra io.ReaderAt, sigDict types.Dict, rsaPubKey *rsa.P
 
 	contents, err := hl.Bytes()
 	if err != nil {
-		return model.SignatureReasonInternal, errors.Errorf("invalid content data: %v", err)
+		return model.SignatureReasonInternal, fmt.Errorf("invalid content data: %v", err)
 	}
 
 	var bb []byte
 	if _, err = asn1.Unmarshal(contents, &bb); err != nil {
-		return model.SignatureReasonInternal, errors.Errorf("unmarshal asn1 content: %v", err)
+		return model.SignatureReasonInternal, fmt.Errorf("unmarshal asn1 content: %v", err)
 	}
 
 	data, err := signedData(ra, sigDict)
 	if err != nil {
-		return model.SignatureReasonInternal, errors.Errorf("unmarshal asn1 content: %v", err)
+		return model.SignatureReasonInternal, fmt.Errorf("unmarshal asn1 content: %v", err)
 	}
 
 	// Combine hash calculation and signature verification.
@@ -206,7 +207,7 @@ func verifyRSASHA1Signature(ra io.ReaderAt, sigDict types.Dict, rsaPubKey *rsa.P
 
 	// Confirm that the signature was created using the private key corresponding to the public key from the certificate.
 	if err := rsa.VerifyPKCS1v15(rsaPubKey, crypto.SHA1, hashed[:], bb); err != nil {
-		return model.SignatureReasonDocModified, errors.Errorf("RSA PKCS#1v15 signature verification failure: %v\n", err)
+		return model.SignatureReasonDocModified, fmt.Errorf("RSA PKCS#1v15 signature verification failure: %v\n", err)
 	}
 
 	return model.SignatureReasonDocNotModified, nil

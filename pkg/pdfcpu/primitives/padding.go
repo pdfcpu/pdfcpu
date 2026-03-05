@@ -16,7 +16,10 @@
 
 package primitives
 
-import "github.com/pkg/errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type Padding struct {
 	Name                     string
@@ -32,7 +35,7 @@ func (p *Padding) validate() error {
 
 	if p.Width < 0 {
 		if p.Top > 0 || p.Right > 0 || p.Bottom > 0 || p.Left > 0 {
-			return errors.Errorf("pdfcpu: invalid padding width: %f", p.Width)
+			return fmt.Errorf("pdfcpu: invalid padding width: %f", p.Width)
 		}
 	}
 

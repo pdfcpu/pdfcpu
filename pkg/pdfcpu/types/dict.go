@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pkg/errors"
 )
 
 // Dict represents a PDF dict object.
@@ -137,14 +136,14 @@ func (d Dict) Entry(dictName, key string, required bool) (Object, bool, error) {
 	obj, found := d.Find(key)
 	if !found {
 		if required {
-			return nil, false, errors.Errorf("dict=%s required entry=%s missing", dictName, key)
+			return nil, false, fmt.Errorf("dict=%s required entry=%s missing", dictName, key)
 		}
 		return nil, false, nil
 	}
 
 	if obj == nil {
 		if required {
-			return nil, true, errors.Errorf("dict=%s required entry=%s corrupt", dictName, key)
+			return nil, true, fmt.Errorf("dict=%s required entry=%s corrupt", dictName, key)
 		}
 	}
 
@@ -420,7 +419,7 @@ func (d Dict) IsLinearizationParmDict() bool {
 func (d *Dict) IncrementBy(key string, i int) error {
 	v := d.IntEntry(key)
 	if v == nil {
-		return errors.Errorf("IncrementBy: unknown key: %s", key)
+		return fmt.Errorf("IncrementBy: unknown key: %s", key)
 	}
 	*v += i
 	d.Update(key, Integer(*v))

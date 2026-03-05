@@ -38,7 +38,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
-	"github.com/pkg/errors"
 )
 
 func abs(i int) int {
@@ -1080,7 +1079,7 @@ func addWatermarks(conf *model.Configuration, onTop bool) {
 	case "pdf":
 		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 	default:
-		err = errors.Errorf("unsupported wm type: %s\n", mode)
+		err = fmt.Errorf("unsupported wm type: %s\n", mode)
 	}
 
 	if err != nil {
@@ -1147,7 +1146,7 @@ func updateWatermarks(conf *model.Configuration, onTop bool) {
 	case "pdf":
 		wm, err = pdfcpu.ParsePDFWatermarkDetails(flag.Arg(0), flag.Arg(1), onTop, conf.Unit)
 	default:
-		err = errors.Errorf("unsupported wm type: %s\n", mode)
+		err = fmt.Errorf("unsupported wm type: %s\n", mode)
 	}
 
 	if err != nil {
@@ -1434,7 +1433,7 @@ func parseForNUp(nup *model.NUp, argInd *int, nUpValues []int) {
 		for i, v := range nUpValues {
 			ss[i] = strconv.Itoa(v)
 		}
-		err := errors.Errorf("pdfcpu: n must be one of %s", strings.Join(ss, ", "))
+		err := fmt.Errorf("pdfcpu: n must be one of %s", strings.Join(ss, ", "))
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}

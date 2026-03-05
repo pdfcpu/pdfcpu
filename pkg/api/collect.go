@@ -20,9 +20,10 @@ import (
 	"io"
 	"os"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pkg/errors"
 )
 
 // Collect creates a custom PDF page sequence for selected pages of rs and writes the result to w.

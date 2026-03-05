@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func sigDictPDFString(d types.Dict) string {
@@ -58,12 +59,12 @@ func writeSigDict(ctx *model.Context, ir types.IndirectRef) error {
 
 	f := d.NameEntry("Filter")
 	if f == nil || *f != "Adobe.PPKLite" {
-		return errors.Errorf("sig dict: unexpected Filter: %s", *f)
+		return fmt.Errorf("sig dict: unexpected Filter: %s", *f)
 	}
 
 	f = d.NameEntry("SubFilter")
 	if f == nil || *f != "adbe.pkcs7.detached" {
-		return errors.Errorf("sig dict: unexpected SubFilter: %s", *f)
+		return fmt.Errorf("sig dict: unexpected SubFilter: %s", *f)
 	}
 
 	objNr := ir.ObjectNumber.Value()

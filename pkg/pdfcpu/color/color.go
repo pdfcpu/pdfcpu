@@ -22,8 +22,9 @@ import (
 	"strconv"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // Some popular colors.
@@ -91,11 +92,11 @@ func NewSimpleColorForArray(arr types.Array) SimpleColor {
 func NewSimpleColorForHexCode(hexCol string) (SimpleColor, error) {
 	var sc SimpleColor
 	if len(hexCol) != 7 || hexCol[0] != '#' {
-		return sc, errors.Errorf("pdfcpu: invalid hex color string: #FFFFFF, %s\n", hexCol)
+		return sc, fmt.Errorf("pdfcpu: invalid hex color string: #FFFFFF, %s\n", hexCol)
 	}
 	b, err := hex.DecodeString(hexCol[1:])
 	if err != nil || len(b) != 3 {
-		return sc, errors.Errorf("pdfcpu: invalid hex color string: #FFFFFF, %s\n", hexCol)
+		return sc, fmt.Errorf("pdfcpu: invalid hex color string: #FFFFFF, %s\n", hexCol)
 	}
 	return SimpleColor{float32(b[0]) / 255, float32(b[1]) / 255, float32(b[2]) / 255}, nil
 }
@@ -134,7 +135,7 @@ func ParseColor(s string) (SimpleColor, error) {
 
 	cs := strings.Split(s, " ")
 	if len(cs) != 1 && len(cs) != 3 {
-		return sc, errors.Errorf("pdfcpu: illegal color string: 3 intensities 0.0 <= i <= 1.0 or #FFFFFF, %s\n", s)
+		return sc, fmt.Errorf("pdfcpu: illegal color string: 3 intensities 0.0 <= i <= 1.0 or #FFFFFF, %s\n", s)
 	}
 
 	if len(cs) == 1 {
@@ -147,7 +148,7 @@ func ParseColor(s string) (SimpleColor, error) {
 
 	r, err := strconv.ParseFloat(cs[0], 32)
 	if err != nil {
-		return sc, errors.Errorf("red must be a float value: %s\n", cs[0])
+		return sc, fmt.Errorf("red must be a float value: %s\n", cs[0])
 	}
 	if r < 0 || r > 1 {
 		return sc, errors.New("pdfcpu: red: a color value is an intensity between 0.0 and 1.0")
@@ -156,7 +157,7 @@ func ParseColor(s string) (SimpleColor, error) {
 
 	g, err := strconv.ParseFloat(cs[1], 32)
 	if err != nil {
-		return sc, errors.Errorf("pdfcpu: green must be a float value: %s\n", cs[1])
+		return sc, fmt.Errorf("pdfcpu: green must be a float value: %s\n", cs[1])
 	}
 	if g < 0 || g > 1 {
 		return sc, errors.New("pdfcpu: green: a color value is an intensity between 0.0 and 1.0")
@@ -165,7 +166,7 @@ func ParseColor(s string) (SimpleColor, error) {
 
 	b, err := strconv.ParseFloat(cs[2], 32)
 	if err != nil {
-		return sc, errors.Errorf("pdfcpu: blue must be a float value: %s\n", cs[2])
+		return sc, fmt.Errorf("pdfcpu: blue must be a float value: %s\n", cs[2])
 	}
 	if b < 0 || b > 1 {
 		return sc, errors.New("pdfcpu: blue: a color value is an intensity between 0.0 and 1.0")

@@ -29,10 +29,11 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/hhrutter/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 const CertifiedSigPermsNotSupported = "Certified signature detected. Permission validation not supported."
@@ -296,7 +297,7 @@ func publicKeySize(cert *x509.Certificate) (int, error) {
 	case *dsa.PublicKey:
 		return pubKey.Y.BitLen(), nil
 	default:
-		return 0, errors.Errorf("unknown public key type %T", pubKey)
+		return 0, fmt.Errorf("unknown public key type %T", pubKey)
 	}
 }
 

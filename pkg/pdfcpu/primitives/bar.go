@@ -17,11 +17,12 @@
 package primitives
 
 import (
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // Bar represents a horizontal or vertical bar used by content.
@@ -40,7 +41,7 @@ type Bar struct {
 func (b *Bar) validate() error {
 
 	if b.X != 0 && b.Y != 0 || b.X < 0 || b.Y < 0 {
-		return errors.Errorf("pdfcpu: bar: supply positive values for either x (vertical bar) or y (horizontal)")
+		return fmt.Errorf("pdfcpu: bar: supply positive values for either x (vertical bar) or y (horizontal)")
 	}
 
 	if b.Color != "" {
@@ -61,7 +62,7 @@ func (b *Bar) validate() error {
 		case "bevel":
 			b.style = types.LJBevel
 		default:
-			return errors.Errorf("pdfcpu: invalid bar style: %s (should be \"miter\", \"round\" or \"bevel\")", b.Style)
+			return fmt.Errorf("pdfcpu: invalid bar style: %s (should be \"miter\", \"round\" or \"bevel\")", b.Style)
 		}
 	}
 

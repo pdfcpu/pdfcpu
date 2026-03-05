@@ -17,9 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func validateDestinationArrayFirstElement(xRefTable *model.XRefTable, a types.Array) (types.Object, error) {
@@ -38,7 +40,7 @@ func validateDestinationArrayFirstElement(xRefTable *model.XRefTable, a types.Ar
 				model.ShowDigestedSpecViolation(s)
 				return nil, nil
 			}
-			err = errors.Errorf("%s", s)
+			err = fmt.Errorf("%s", s)
 		}
 
 	default:
@@ -46,7 +48,7 @@ func validateDestinationArrayFirstElement(xRefTable *model.XRefTable, a types.Ar
 			model.ShowDigestedSpecViolation(s)
 			return nil, nil
 		}
-		err = errors.Errorf("%s", s)
+		err = fmt.Errorf("%s", s)
 	}
 
 	return o, err
@@ -61,25 +63,25 @@ func validateDestType(a types.Array, destType types.Name) error {
 	case "Fit":
 	case "FitB":
 		if len(a) > 2 {
-			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+			return fmt.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
 		}
 	case "FitH":
 	case "FitV":
 	case "FitBH":
 	case "FitBV":
 		if len(a) > 3 {
-			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+			return fmt.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
 		}
 	case "XYZ":
 		if len(a) > 5 {
-			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+			return fmt.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
 		}
 	case "FitR":
 		if len(a) > 6 {
-			return errors.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+			return fmt.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
 		}
 	default:
-		return errors.Errorf("pdfcpu: validateDestinationArray     j- invalid mode: %s", destType)
+		return fmt.Errorf("pdfcpu: validateDestinationArray     j- invalid mode: %s", destType)
 	}
 
 	return nil
@@ -88,7 +90,7 @@ func validateDestType(a types.Array, destType types.Name) error {
 func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 	if !validateDestinationArrayLength(a) {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return errors.Errorf("pdfcpu: validateDestinationArray: invalid length: %d", len(a))
+			return fmt.Errorf("pdfcpu: validateDestinationArray: invalid length: %d", len(a))
 		}
 		return nil
 	}
@@ -101,7 +103,7 @@ func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 
 	name, ok := a[1].(types.Name)
 	if !ok {
-		return errors.Errorf("pdfcpu: validateDestinationArray: second element must be a name %v", a[1])
+		return fmt.Errorf("pdfcpu: validateDestinationArray: second element must be a name %v", a[1])
 	}
 
 	return validateDestType(a, name)

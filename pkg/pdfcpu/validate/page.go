@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func validateResourceDict(xRefTable *model.XRefTable, o types.Object) (hasResources bool, err error) {
@@ -99,7 +100,7 @@ func validateContents(obj types.Object, xRefTable *model.XRefTable, d types.Dict
 		}
 
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return false, errors.Errorf("validatePageContents: empty page content array detected")
+			return false, fmt.Errorf("validatePageContents: empty page content array detected")
 		}
 
 		// Digest empty array.
@@ -111,7 +112,7 @@ func validateContents(obj types.Object, xRefTable *model.XRefTable, d types.Dict
 		s := strings.TrimSpace(obj.Value())
 
 		if len(s) > 0 || xRefTable.ValidationMode == model.ValidationStrict {
-			return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
+			return false, fmt.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
 		}
 
 		// Digest empty string literal.
@@ -121,7 +122,7 @@ func validateContents(obj types.Object, xRefTable *model.XRefTable, d types.Dict
 	case types.Dict:
 
 		if len(obj) > 0 || xRefTable.ValidationMode == model.ValidationStrict {
-			return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
+			return false, fmt.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
 		}
 
 		// Digest empty dict.
@@ -129,7 +130,7 @@ func validateContents(obj types.Object, xRefTable *model.XRefTable, d types.Dict
 		model.ShowRepaired("page dict \"Contents\"")
 
 	default:
-		return false, errors.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
+		return false, fmt.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
 	}
 
 	return hasContents, nil
@@ -656,7 +657,7 @@ func validateMeasureDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion 
 			// unknown coord system
 			return nil
 		}
-		return errors.Errorf("validateMeasureDict dict=%s entry=%s invalid dict entry: %s", dictName, "Subtype", coordSys.Value())
+		return fmt.Errorf("validateMeasureDict dict=%s entry=%s invalid dict entry: %s", dictName, "Subtype", coordSys.Value())
 	}
 
 	// R, text string, required, scale ratio
@@ -977,7 +978,7 @@ func detectPageNodeDict(xRefTable *model.XRefTable, indRef types.IndirectRef, ob
 	}
 
 	if xRefTable.ValidationMode == model.ValidationStrict {
-		return nil, errors.Errorf("pdfcpu: validatePagesDict: corrupt page %d (obj#%d)", pageNr, objNr)
+		return nil, fmt.Errorf("pdfcpu: validatePagesDict: corrupt page %d (obj#%d)", pageNr, objNr)
 	}
 
 	var mediaBox *types.Rectangle
@@ -1054,7 +1055,7 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr 
 			}
 
 		default:
-			return nil, errors.Errorf("pdfcpu: validatePagesDict: Unexpected dict type: %s", dictType)
+			return nil, fmt.Errorf("pdfcpu: validatePagesDict: Unexpected dict type: %s", dictType)
 		}
 
 	}

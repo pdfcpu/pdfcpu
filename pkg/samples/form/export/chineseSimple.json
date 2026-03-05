@@ -1,34 +1,43 @@
 {
 	"header": {
 		"source": "chineseSimple.pdf",
-		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-03-16 23:35:35 CET",
-		"producer": "pdfcpu v0.4.0 dev"
+		"version": "pdfcpu v0.11.1 dev",
+		"creation": "2026-03-05 10:34:51 UTC",
+		"producer": "pdfcpu v0.11.1 dev"
 	},
 	"forms": [
 		{
 			"textfield": [
 				{
-					"page": 1,
-					"id": "31",
+					"pages": [
+						1
+					],
+					"id": "36",
 					"name": "firstName1",
+					"altname": "名",
 					"default": "默认名称",
 					"value": "杰基",
 					"multiline": false,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "36",
+					"pages": [
+						1
+					],
+					"id": "30",
 					"name": "lastName1",
+					"altname": "姓",
 					"value": "能源部",
 					"multiline": false,
 					"locked": false
 				},
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "37",
 					"name": "note1",
+					"altname": "原因",
 					"value": "这是一个示例文本。\n那是下一行。",
 					"multiline": true,
 					"locked": false
@@ -36,9 +45,12 @@
 			],
 			"datefield": [
 				{
-					"page": 1,
-					"id": "38",
+					"pages": [
+						1
+					],
+					"id": "31",
 					"name": "dob1",
+					"altname": "dd.mm.yyyy",
 					"format": "dd.mm.yyyy",
 					"default": "01.01.2000",
 					"value": "31.12.1999",
@@ -47,41 +59,56 @@
 			],
 			"checkbox": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "32",
+					"name": "cb13",
+					"altname": "歌朗周刊",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"pages": [
+						1
+					],
+					"id": "33",
+					"name": "cb14",
+					"altname": "同伴地鼠",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"pages": [
+						1
+					],
+					"id": "40",
+					"name": "cb15",
+					"altname": "其他",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"pages": [
+						1
+					],
+					"id": "38",
 					"name": "cb11",
+					"altname": "谷歌搜索",
 					"default": false,
 					"value": true,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "33",
-					"name": "cb12",
-					"default": false,
-					"value": false,
-					"locked": false
-				},
-				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "39",
-					"name": "cb13",
-					"default": false,
-					"value": false,
-					"locked": false
-				},
-				{
-					"page": 1,
-					"id": "40",
-					"name": "cb14",
-					"default": false,
-					"value": false,
-					"locked": false
-				},
-				{
-					"page": 1,
-					"id": "35",
-					"name": "cb15",
+					"name": "cb12",
+					"altname": "Github 搜索",
 					"default": false,
 					"value": false,
 					"locked": false
@@ -89,9 +116,12 @@
 			],
 			"radiobuttongroup": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "18",
 					"name": "gender1",
+					"altname": "性别",
 					"options": [
 						"女性",
 						"男性",
@@ -104,9 +134,12 @@
 			],
 			"combobox": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "34",
 					"name": "city12",
+					"altname": "城市",
 					"editable": false,
 					"options": [
 						"北京",
@@ -120,9 +153,12 @@
 			],
 			"listbox": [
 				{
-					"page": 1,
-					"id": "30",
+					"pages": [
+						1
+					],
+					"id": "35",
 					"name": "city11",
+					"altname": "最喜欢的城市",
 					"multi": true,
 					"options": [
 						"旧金山",

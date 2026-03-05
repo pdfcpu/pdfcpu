@@ -27,7 +27,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // ImageObjNrs returns all image dict objNrs for pageNr.
@@ -220,7 +219,7 @@ func ColorSpaceComponents(xRefTable *model.XRefTable, sd *types.StreamDict) (int
 func imageWidth(ctx *model.Context, sd *types.StreamDict, objNr int) (int, error) {
 	obj, ok := sd.Find("Width")
 	if !ok {
-		return 0, errors.Errorf("pdfcpu: missing image width obj#%d", objNr)
+		return 0, fmt.Errorf("pdfcpu: missing image width obj#%d", objNr)
 	}
 	i, err := ctx.DereferenceInteger(obj)
 	if err != nil {
@@ -232,7 +231,7 @@ func imageWidth(ctx *model.Context, sd *types.StreamDict, objNr int) (int, error
 func imageHeight(ctx *model.Context, sd *types.StreamDict, objNr int) (int, error) {
 	obj, ok := sd.Find("Height")
 	if !ok {
-		return 0, errors.Errorf("pdfcpu: missing image height obj#%d", objNr)
+		return 0, fmt.Errorf("pdfcpu: missing image height obj#%d", objNr)
 	}
 	i, err := ctx.DereferenceInteger(obj)
 	if err != nil {
@@ -541,7 +540,7 @@ func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*F
 			return nil, err
 		}
 		if sd == nil {
-			return nil, errors.Errorf("extractFontData: corrupt font obj#%d for font: %s\n", objNr, fontObject.FontName)
+			return nil, fmt.Errorf("extractFontData: corrupt font obj#%d for font: %s\n", objNr, fontObject.FontName)
 		}
 
 		// Decode streamDict if used filter is supported only.

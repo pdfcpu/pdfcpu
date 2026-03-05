@@ -24,11 +24,12 @@ import (
 	"strconv"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // Images returns all embedded images of ctx.
@@ -291,7 +292,7 @@ func WriteImageToDisk(outDir, fileName string) func(model.Image, bool, int) erro
 func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
 	imgObj := ctx.Optimize.ImageObjects[objNr]
 	if imgObj == nil {
-		return errors.Errorf("pdfcpu: unknown image object for objNr=%d", objNr)
+		return fmt.Errorf("pdfcpu: unknown image object for objNr=%d", objNr)
 	}
 
 	d := imgObj.ImageDict
@@ -304,7 +305,7 @@ func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
 	}
 
 	if *width != w || *height != h {
-		return errors.Errorf("pdfcpu: invalid image dimensions, want(%d,%d), got(%d,%d)", w, h, *width, *height)
+		return fmt.Errorf("pdfcpu: invalid image dimensions, want(%d,%d), got(%d,%d)", w, h, *width, *height)
 	}
 
 	return nil
@@ -325,7 +326,7 @@ func UpdateImagesByObjNr(ctx *model.Context, rd io.Reader, objNr int) error {
 	genNr := 0
 	entry, ok := ctx.FindTableEntry(objNr, genNr)
 	if !ok {
-		errors.Errorf("pdfcpu: invalid objNr=%d", objNr)
+		return fmt.Errorf("pdfcpu: invalid objNr=%d", objNr)
 	}
 
 	entry.Object = *sd
@@ -375,7 +376,7 @@ func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id 
 			d["Resources"] = d2
 			return nil
 		}
-		return errors.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
+		return fmt.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
 	}
 
 	resDict, err := ctx.DereferenceDict(obj)
@@ -391,7 +392,7 @@ func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id 
 			resDict["XObject"] = d
 			return nil
 		}
-		return errors.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
+		return fmt.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
 	}
 
 	imgResDict, err := ctx.DereferenceDict(obj1)
@@ -417,5 +418,5 @@ func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id 
 		return nil
 	}
 
-	return errors.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
+	return fmt.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
 }

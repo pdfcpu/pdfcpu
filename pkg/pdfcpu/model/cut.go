@@ -17,12 +17,14 @@ limitations under the License.
 package model
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 type Cut struct {
@@ -46,10 +48,10 @@ func parseHorCut(v string, cut *Cut) (err error) {
 	for _, s := range strings.Split(v, " ") {
 		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			return errors.Errorf("pdfcpu: cut position must be a float value: %s\n", s)
+			return fmt.Errorf("pdfcpu: cut position must be a float value: %s\n", s)
 		}
 		if f <= 0 || f >= 1 {
-			return errors.Errorf("pdfcpu: invalid cut position %.2f: 0 < i < 1.0\n", f)
+			return fmt.Errorf("pdfcpu: invalid cut position %.2f: 0 < i < 1.0\n", f)
 		}
 		cut.Hor = append(cut.Hor, f)
 	}
@@ -62,10 +64,10 @@ func parseVertCut(v string, cut *Cut) (err error) {
 	for _, s := range strings.Split(v, " ") {
 		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			return errors.Errorf("pdfcpu: cut position must be a float value: %s\n", s)
+			return fmt.Errorf("pdfcpu: cut position must be a float value: %s\n", s)
 		}
 		if f <= 0 || f >= 1 {
-			return errors.Errorf("pdfcpu: invalid cut position %.2f: 0 < i < 1.0\n", f)
+			return fmt.Errorf("pdfcpu: invalid cut position %.2f: 0 < i < 1.0\n", f)
 		}
 		cut.Vert = append(cut.Vert, f)
 	}
@@ -77,17 +79,17 @@ func parsePageDimCut(v string, u types.DisplayUnit) (*types.Dim, string, error) 
 
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
-		return nil, v, errors.Errorf("pdfcpu: illegal dimension string: need 2 values one may be 0, %s\n", v)
+		return nil, v, fmt.Errorf("pdfcpu: illegal dimension string: need 2 values one may be 0, %s\n", v)
 	}
 
 	w, err := strconv.ParseFloat(ss[0], 64)
 	if err != nil || w < 0 {
-		return nil, v, errors.Errorf("pdfcpu: dimension width must be >= 0: %s\n", ss[0])
+		return nil, v, fmt.Errorf("pdfcpu: dimension width must be >= 0: %s\n", ss[0])
 	}
 
 	h, err := strconv.ParseFloat(ss[1], 64)
 	if err != nil || h < 0 {
-		return nil, v, errors.Errorf("pdfcpu: dimension height must >= 0: %s\n", ss[1])
+		return nil, v, fmt.Errorf("pdfcpu: dimension height must >= 0: %s\n", ss[1])
 	}
 
 	d := types.Dim{Width: types.ToUserSpace(w, u), Height: types.ToUserSpace(h, u)}
@@ -124,7 +126,7 @@ func parsePageFormatCut(s string, cut *Cut) error {
 
 	d, ok := types.PaperSize[v]
 	if !ok {
-		return errors.Errorf("pdfcpu: page format %s is unsupported.\n", v)
+		return fmt.Errorf("pdfcpu: page format %s is unsupported.\n", v)
 	}
 
 	if (d.Portrait() && landscape) || (d.Landscape() && portrait) {
@@ -141,11 +143,11 @@ func parseScaleFactorCut(s string, cut *Cut) (err error) {
 
 	sc, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return errors.Errorf("pdfcpu: scale factor must be a float value: %s\n", s)
+		return fmt.Errorf("pdfcpu: scale factor must be a float value: %s\n", s)
 	}
 
 	if sc < 1 {
-		return errors.Errorf("pdfcpu: invalid scale factor %.2f: i >= 1.0\n", sc)
+		return fmt.Errorf("pdfcpu: invalid scale factor %.2f: i >= 1.0\n", sc)
 	}
 
 	cut.Scale = sc
@@ -212,13 +214,13 @@ func (m cutParameterMap) Handle(paramPrefix, paramValueStr string, cut *Cut) err
 			continue
 		}
 		if len(param) > 0 {
-			return errors.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
+			return fmt.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
 		}
 		param = k
 	}
 
 	if param == "" {
-		return errors.Errorf("pdfcpu: unknown parameter prefix \"%s\"", paramPrefix)
+		return fmt.Errorf("pdfcpu: unknown parameter prefix \"%s\"", paramPrefix)
 	}
 
 	return m[param](paramValueStr, cut)

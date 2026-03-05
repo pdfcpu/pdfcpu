@@ -26,10 +26,11 @@ import (
 	"strconv"
 	"time"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // XRefTable validates a PDF cross reference table obeying the validation mode.
@@ -180,11 +181,11 @@ func setRootVersion(xRefTable *model.XRefTable, s string) error {
 	rootVersion, err := model.PDFVersion(s)
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return errors.Wrapf(err, "identifyRootVersion: unknown PDF Root version: %s\n", s)
+			return fmt.Errorf("identifyRootVersion: unknown PDF Root version: %s: %w", s, err)
 		}
 		rootVersion, err = model.PDFVersionRelaxed(s)
 		if err != nil {
-			return errors.Wrapf(err, "identifyRootVersion: unknown PDF Root version: %s\n", s)
+			return fmt.Errorf("identifyRootVersion: unknown PDF Root version: %s: %w", s, err)
 		}
 	}
 
@@ -257,7 +258,7 @@ func validatePageLabels(xRefTable *model.XRefTable, rootDict types.Dict, require
 	ir := rootDict.IndirectRefEntry("PageLabels")
 	if ir == nil {
 		if required {
-			return errors.Errorf("validatePageLabels: required entry \"PageLabels\" missing")
+			return fmt.Errorf("validatePageLabels: required entry \"PageLabels\" missing")
 		}
 		return nil
 	}
@@ -299,7 +300,7 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 
 		if ok := validateNameTreeName(treeName); !ok {
 			if xRefTable.ValidationMode == model.ValidationStrict {
-				return errors.Errorf("validateNames: unknown name tree name: %s\n", treeName)
+				return fmt.Errorf("validateNames: unknown name tree name: %s\n", treeName)
 			}
 			continue
 		}

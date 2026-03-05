@@ -24,8 +24,9 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pkg/errors"
 )
 
 // ErrInvalidUTF16BE represents an error that gets raised for invalid UTF-16BE byte sequences.
@@ -77,19 +78,19 @@ func decodeUTF16String(b []byte) (string, error) {
 
 		// Ensure bytes needed in order to decode surrogate pair.
 		if i+2 >= len(b) {
-			return "", errors.Errorf("decodeUTF16String: corrupt UTF16BE byte length on unicode point 1: %v", b)
+			return "", fmt.Errorf("decodeUTF16String: corrupt UTF16BE byte length on unicode point 1: %v", b)
 		}
 
 		// Ensure high surrogate is leading in possible surrogate pair.
 		if val >= 0xDC00 && val <= 0xDFFF {
-			return "", errors.Errorf("decodeUTF16String: corrupt UTF16BE on unicode point 1: %v", b)
+			return "", fmt.Errorf("decodeUTF16String: corrupt UTF16BE on unicode point 1: %v", b)
 		}
 
 		// Supplementary Planes
 		u16 = append(u16, val)
 		val = (uint16(b[i+2]) << 8) + uint16(b[i+3])
 		if val < 0xDC00 || val > 0xDFFF {
-			return "", errors.Errorf("decodeUTF16String: corrupt UTF16BE on unicode point 2: %v", b)
+			return "", fmt.Errorf("decodeUTF16String: corrupt UTF16BE on unicode point 2: %v", b)
 		}
 
 		u16 = append(u16, val)

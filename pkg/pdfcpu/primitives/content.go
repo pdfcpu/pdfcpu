@@ -17,11 +17,13 @@
 package primitives
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // Content represents page content.
@@ -135,56 +137,56 @@ func (c *Content) validatePaddings() error {
 
 func (c *Content) validatePrimitives(s string) error {
 	if len(c.SimpleBoxPool) > 0 {
-		return errors.Errorf("pdfcpu: \"boxes\" %s", s)
+		return fmt.Errorf("pdfcpu: \"boxes\" %s", s)
 	}
 	if len(c.SimpleBoxes) > 0 {
-		return errors.Errorf("pdfcpu: \"box\" %s", s)
+		return fmt.Errorf("pdfcpu: \"box\" %s", s)
 	}
 	if len(c.TextBoxPool) > 0 {
-		return errors.Errorf("pdfcpu: \"texts\" %s", s)
+		return fmt.Errorf("pdfcpu: \"texts\" %s", s)
 	}
 	if len(c.TextBoxes) > 0 {
-		return errors.Errorf("pdfcpu: \"text\" %s", s)
+		return fmt.Errorf("pdfcpu: \"text\" %s", s)
 	}
 	if len(c.ImageBoxPool) > 0 {
-		return errors.Errorf("pdfcpu: \"images\" %s", s)
+		return fmt.Errorf("pdfcpu: \"images\" %s", s)
 	}
 	if len(c.ImageBoxes) > 0 {
-		return errors.Errorf("pdfcpu: \"image\" %s", s)
+		return fmt.Errorf("pdfcpu: \"image\" %s", s)
 	}
 	if len(c.TablePool) > 0 {
-		return errors.Errorf("pdfcpu: \"tables\" %s", s)
+		return fmt.Errorf("pdfcpu: \"tables\" %s", s)
 	}
 	if len(c.Tables) > 0 {
-		return errors.Errorf("pdfcpu: \"table\" %s", s)
+		return fmt.Errorf("pdfcpu: \"table\" %s", s)
 	}
 	return nil
 }
 
 func (c *Content) validateFormPrimitives(s string) error {
 	if len(c.FieldGroupPool) > 0 {
-		return errors.Errorf("pdfcpu: \"fieldgroups\" %s", s)
+		return fmt.Errorf("pdfcpu: \"fieldgroups\" %s", s)
 	}
 	if len(c.FieldGroups) > 0 {
-		return errors.Errorf("pdfcpu: \"fieldgroup\" %s", s)
+		return fmt.Errorf("pdfcpu: \"fieldgroup\" %s", s)
 	}
 	if len(c.TextFields) > 0 {
-		return errors.Errorf("pdfcpu: \"textfield\" %s", s)
+		return fmt.Errorf("pdfcpu: \"textfield\" %s", s)
 	}
 	if len(c.DateFields) > 0 {
-		return errors.Errorf("pdfcpu: \"datefield\" %s", s)
+		return fmt.Errorf("pdfcpu: \"datefield\" %s", s)
 	}
 	if len(c.CheckBoxes) > 0 {
-		return errors.Errorf("pdfcpu: \"checkbox\" %s", s)
+		return fmt.Errorf("pdfcpu: \"checkbox\" %s", s)
 	}
 	if len(c.RadioButtonGroups) > 0 {
-		return errors.Errorf("pdfcpu: \"radiobuttongroup\" %s", s)
+		return fmt.Errorf("pdfcpu: \"radiobuttongroup\" %s", s)
 	}
 	if len(c.ComboBoxes) > 0 {
-		return errors.Errorf("pdfcpu: \"combobox\" %s", s)
+		return fmt.Errorf("pdfcpu: \"combobox\" %s", s)
 	}
 	if len(c.ListBoxes) > 0 {
-		return errors.Errorf("pdfcpu: \"listbox\" %s", s)
+		return fmt.Errorf("pdfcpu: \"listbox\" %s", s)
 	}
 	return nil
 }
@@ -610,7 +612,7 @@ func (c *Content) calcFont(ff map[string]*FormFont) {
 func (c *Content) mergeIn(fName string, f *FormFont) error {
 	f0 := c.namedFont(fName)
 	if f0 == nil {
-		return errors.Errorf("pdfcpu: missing named font \"input\"")
+		return fmt.Errorf("pdfcpu: missing named font \"input\"")
 	}
 	f.Name = f0.Name
 	if f.Size == 0 {
@@ -648,7 +650,7 @@ func (c *Content) calcInputFont(f *FormFont) (*FormFont, error) {
 		// Use inherited named font "input".
 		f = c.namedFont("input")
 		if f == nil {
-			return nil, errors.Errorf("pdfcpu: missing named font \"input\"")
+			return nil, fmt.Errorf("pdfcpu: missing named font \"input\"")
 		}
 	}
 
@@ -667,7 +669,7 @@ func (c *Content) calcLabelFont(f *FormFont) (*FormFont, error) {
 			// Use inherited named font "label".
 			f0 = c.namedFont("label")
 			if f0 == nil {
-				return nil, errors.Errorf("pdfcpu: missing named font \"label\"")
+				return nil, fmt.Errorf("pdfcpu: missing named font \"label\"")
 			}
 			f.Name = f0.Name
 			if f.Size == 0 {
@@ -685,7 +687,7 @@ func (c *Content) calcLabelFont(f *FormFont) (*FormFont, error) {
 			fName := f.Name[1:]
 			f0 := c.namedFont(fName)
 			if f0 == nil {
-				return nil, errors.Errorf("pdfcpu: unknown font name %s", fName)
+				return nil, fmt.Errorf("pdfcpu: unknown font name %s", fName)
 			}
 			f.Name = f0.Name
 			if f.Size == 0 {
@@ -702,7 +704,7 @@ func (c *Content) calcLabelFont(f *FormFont) (*FormFont, error) {
 		// Use inherited named font "label".
 		f = c.namedFont("label")
 		if f == nil {
-			return nil, errors.Errorf("pdfcpu: missing named font \"label\"")
+			return nil, fmt.Errorf("pdfcpu: missing named font \"label\"")
 		}
 	}
 
@@ -1055,7 +1057,7 @@ func (c *Content) renderSimpleBoxes(p *model.Page) error {
 			sbName := sb.Name[1:]
 			sb0 := c.namedSimpleBox(sbName)
 			if sb0 == nil {
-				return errors.Errorf("pdfcpu: unknown named box %s", sbName)
+				return fmt.Errorf("pdfcpu: unknown named box %s", sbName)
 			}
 			sb.mergeIn(sb0)
 		}
@@ -1076,7 +1078,7 @@ func (c *Content) renderTextBoxes(p *model.Page, pageNr int, fonts model.FontMap
 			tbName := tb.Name[1:]
 			tb0 := c.namedTextBox(tbName)
 			if tb0 == nil {
-				return errors.Errorf("pdfcpu: unknown named text %s", tbName)
+				return fmt.Errorf("pdfcpu: unknown named text %s", tbName)
 			}
 			tb.mergeIn(tb0)
 		}
@@ -1097,7 +1099,7 @@ func (c *Content) renderImageBoxes(p *model.Page, pageNr int, images model.Image
 			ibName := ib.Name[1:]
 			ib0 := c.namedImageBox(ibName)
 			if ib0 == nil {
-				return errors.Errorf("pdfcpu: unknown named image %s", ibName)
+				return fmt.Errorf("pdfcpu: unknown named image %s", ibName)
 			}
 			ib.mergeIn(ib0)
 		}
@@ -1118,7 +1120,7 @@ func (c *Content) renderTables(p *model.Page, pageNr int, fonts model.FontMap) e
 			tName := t.Name[1:]
 			t0 := c.namedTable(tName)
 			if t0 == nil {
-				return errors.Errorf("pdfcpu: unknown named table %s", tName)
+				return fmt.Errorf("pdfcpu: unknown named table %s", tName)
 			}
 			t.mergeIn(t0)
 		}
@@ -1211,7 +1213,7 @@ func (c *Content) renderFieldGroups(p *model.Page, pageNr int, fonts model.FontM
 			fgName := fg.Name[1:]
 			fg0 := c.namedFieldGroup(fgName)
 			if fg0 == nil {
-				return errors.Errorf("pdfcpu: unknown named field group %s", fgName)
+				return fmt.Errorf("pdfcpu: unknown named field group %s", fgName)
 			}
 			fg.mergeIn(fg0)
 		}

@@ -1,34 +1,43 @@
 {
 	"header": {
 		"source": "english.pdf",
-		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-03-16 23:35:35 CET",
-		"producer": "pdfcpu v0.4.0 dev"
+		"version": "pdfcpu v0.11.1 dev",
+		"creation": "2026-03-05 10:34:50 UTC",
+		"producer": "pdfcpu v0.11.1 dev"
 	},
 	"forms": [
 		{
 			"textfield": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
+					"id": "38",
+					"name": "note1",
+					"altname": "Reason",
+					"value": "This is a sample text.\nThis is the next line.",
+					"multiline": true,
+					"locked": false
+				},
+				{
+					"pages": [
+						1
+					],
 					"id": "37",
 					"name": "lastName1",
+					"altname": "Last Name",
 					"default": "Doeby",
 					"value": "Doe",
 					"multiline": false,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "32",
-					"name": "note1",
-					"value": "This is a sample text.\nThis is the next line.",
-					"multiline": true,
-					"locked": false
-				},
-				{
-					"page": 1,
-					"id": "31",
+					"pages": [
+						1
+					],
+					"id": "36",
 					"name": "firstName1",
+					"altname": "First Name",
 					"default": "Joe",
 					"value": "Jackie",
 					"multiline": false,
@@ -37,9 +46,12 @@
 			],
 			"datefield": [
 				{
-					"page": 1,
-					"id": "38",
+					"pages": [
+						1
+					],
+					"id": "30",
 					"name": "dob1",
+					"altname": "dd.mm.yyyy",
 					"format": "dd.mm.yyyy",
 					"default": "01.01.2000",
 					"value": "31.12.1999",
@@ -48,41 +60,56 @@
 			],
 			"checkbox": [
 				{
-					"page": 1,
-					"id": "39",
-					"name": "cb12",
-					"default": false,
-					"value": false,
-					"locked": false
-				},
-				{
-					"page": 1,
-					"id": "34",
-					"name": "cb14",
-					"default": false,
-					"value": false,
-					"locked": false
-				},
-				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "33",
+					"name": "cb13",
+					"altname": "Golang Weekly",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"pages": [
+						1
+					],
+					"id": "31",
 					"name": "cb11",
+					"altname": "Google Search",
 					"default": false,
 					"value": true,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "40",
-					"name": "cb13",
+					"pages": [
+						1
+					],
+					"id": "32",
+					"name": "cb12",
+					"altname": "Github Search",
 					"default": false,
 					"value": false,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "35",
+					"pages": [
+						1
+					],
+					"id": "34",
+					"name": "cb14",
+					"altname": "Fellow Gopher",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"pages": [
+						1
+					],
+					"id": "39",
 					"name": "cb15",
+					"altname": "Other",
 					"default": false,
 					"value": false,
 					"locked": false
@@ -90,9 +117,12 @@
 			],
 			"radiobuttongroup": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "17",
 					"name": "gender1",
+					"altname": "Gender",
 					"options": [
 						"female",
 						"male",
@@ -105,9 +135,12 @@
 			],
 			"combobox": [
 				{
-					"page": 1,
-					"id": "30",
+					"pages": [
+						1
+					],
+					"id": "40",
 					"name": "city12",
+					"altname": "City",
 					"editable": false,
 					"options": [
 						"London",
@@ -121,9 +154,12 @@
 			],
 			"listbox": [
 				{
-					"page": 1,
-					"id": "36",
+					"pages": [
+						1
+					],
+					"id": "35",
 					"name": "city11",
+					"altname": "Favorite city",
 					"multi": true,
 					"options": [
 						"San Francisco",

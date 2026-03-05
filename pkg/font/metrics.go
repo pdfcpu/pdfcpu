@@ -31,7 +31,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/internal/corefont/metrics"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 
-	"github.com/pkg/errors"
+	"errors"
 )
 
 // TTFLight represents a TrueType font w/o font file.

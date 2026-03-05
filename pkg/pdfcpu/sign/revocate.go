@@ -26,8 +26,9 @@ import (
 	"slices"
 	"time"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -182,7 +183,7 @@ func processArchivedCRLs(cert *x509.Certificate, signingTime time.Time, crls [][
 	for _, bb := range crls {
 		crl, err := x509.ParseRevocationList(bb)
 		if err != nil {
-			return nil, errors.Errorf("failed to process archived CRL: %v", err)
+			return nil, fmt.Errorf("failed to process archived CRL: %v", err)
 		}
 
 		if crl.NextUpdate.IsZero() || crl.ThisUpdate.After(signingTime) || crl.NextUpdate.Before(signingTime) {
@@ -233,22 +234,22 @@ func processCurrentCRLs(cert *x509.Certificate, conf *model.Configuration) (*mod
 
 		resp, err := client.Get(url)
 		if err != nil {
-			return nil, errors.Errorf("failed to fetch CRL from %s: %v", url, err)
+			return nil, fmt.Errorf("failed to fetch CRL from %s: %v", url, err)
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return nil, errors.Errorf("CRL responder at: %s returned http status: %d", url, resp.StatusCode)
+			return nil, fmt.Errorf("CRL responder at: %s returned http status: %d", url, resp.StatusCode)
 		}
 
 		crlData, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, errors.Errorf("CRL: read error: %v", err)
+			return nil, fmt.Errorf("CRL: read error: %v", err)
 		}
 
 		crl, err := x509.ParseRevocationList(crlData)
 		if err != nil {
-			return nil, errors.Errorf("CRL: parse error: %v", err)
+			return nil, fmt.Errorf("CRL: parse error: %v", err)
 		}
 
 		if now.Before(crl.ThisUpdate) || now.After(crl.NextUpdate) {
@@ -283,7 +284,7 @@ func checkCertViaOCSP(
 	if issuer == nil {
 		c, err := getIssuerCertificate(cert, rootCerts, client)
 		if err != nil {
-			return nil, errors.Errorf("OCSP: failed to load certificate issuer: %v", err)
+			return nil, fmt.Errorf("OCSP: failed to load certificate issuer: %v", err)
 		}
 		issuer = c
 	}
@@ -338,7 +339,7 @@ func processArchivedOCSPResponses(
 	}
 
 	if lastErr != nil {
-		return nil, errors.Errorf("no valid OCSP response found, last parse error: %v", lastErr)
+		return nil, fmt.Errorf("no valid OCSP response found, last parse error: %v", lastErr)
 	}
 	return nil, errors.New("no valid OCSP response found")
 }
@@ -377,29 +378,29 @@ func processCurrentOCSPResponses(
 
 	ocspRequest, err := ocsp.CreateRequest(cert, issuer, nil)
 	if err != nil {
-		return nil, errors.Errorf("OCSP: failed to create request: %v", err)
+		return nil, fmt.Errorf("OCSP: failed to create request: %v", err)
 	}
 
 	ocspURL := cert.OCSPServer[0]
 
 	resp, err := client.Post(ocspURL, "application/ocsp-request", io.NopCloser(bytes.NewReader(ocspRequest)))
 	if err != nil {
-		return nil, errors.Errorf("OCSP: failed to send request to %s: %v", ocspURL, err)
+		return nil, fmt.Errorf("OCSP: failed to send request to %s: %v", ocspURL, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("OCSP responder at: %s returned http status: %d", ocspURL, resp.StatusCode)
+		return nil, fmt.Errorf("OCSP responder at: %s returned http status: %d", ocspURL, resp.StatusCode)
 	}
 
 	ocspResponseData, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Errorf("OCSP: failed to read response: %v", err)
+		return nil, fmt.Errorf("OCSP: failed to read response: %v", err)
 	}
 
 	ocspResponse, err := ocsp.ParseResponse(ocspResponseData, nil)
 	if err != nil {
-		return nil, errors.Errorf("OCSP: failed to parse response: %v", err)
+		return nil, fmt.Errorf("OCSP: failed to parse response: %v", err)
 	}
 
 	if err := checkCurrentOCSPResponse(ocspResponse); err != nil {
@@ -434,17 +435,17 @@ func checkCurrentOCSPResponse(resp *ocsp.Response) error {
 
 	// ProducedAt should not be in the future (with tolerance).
 	if !resp.ProducedAt.IsZero() && resp.ProducedAt.After(now.Add(skew)) {
-		return errors.Errorf("OCSP: response ProducedAt (%v) is in the future", resp.ProducedAt)
+		return fmt.Errorf("OCSP: response ProducedAt (%v) is in the future", resp.ProducedAt)
 	}
 
 	// ThisUpdate should not be in the future (with tolerance).
 	if resp.ThisUpdate.After(now.Add(skew)) {
-		return errors.Errorf("OCSP: ThisUpdate (%v) is in the future", resp.ThisUpdate)
+		return fmt.Errorf("OCSP: ThisUpdate (%v) is in the future", resp.ThisUpdate)
 	}
 
 	// NextUpdate should not be in the past (expired).
 	if !resp.NextUpdate.IsZero() && resp.NextUpdate.Before(now) {
-		return errors.Errorf("OCSP: response is expired (NextUpdate: %v < now: %v)", resp.NextUpdate, now)
+		return fmt.Errorf("OCSP: response is expired (NextUpdate: %v < now: %v)", resp.NextUpdate, now)
 	}
 
 	return nil
@@ -453,12 +454,12 @@ func checkCurrentOCSPResponse(resp *ocsp.Response) error {
 func checkResponderCert(resp *ocsp.Response, rootCerts *x509.CertPool) error {
 	cert, err := findOCSPResponderCert(resp, rootCerts)
 	if err != nil {
-		return errors.Errorf("OCSP: failed to find responder certificate: %v", err)
+		return fmt.Errorf("OCSP: failed to find responder certificate: %v", err)
 	}
 
 	// Validate OCSP response signature using responder's certificate
 	if err := resp.CheckSignatureFrom(cert); err != nil {
-		return errors.Errorf("OCSP: invalid response signature: %v", err)
+		return fmt.Errorf("OCSP: invalid response signature: %v", err)
 	}
 
 	// Check if the OCSP responder has the No Check extension
@@ -506,5 +507,5 @@ func getIssuerCertificate(cert *x509.Certificate, pool *x509.CertPool, client *h
 			return candidate, nil // Found the issuer
 		}
 	}
-	return nil, errors.Errorf("issuer certificate not found")
+	return nil, fmt.Errorf("issuer certificate not found")
 }

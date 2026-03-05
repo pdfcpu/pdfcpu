@@ -17,6 +17,7 @@
 package primitives
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -24,13 +25,14 @@ import (
 	"strconv"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // FieldFlags represents the PDF form field flags.
@@ -154,7 +156,7 @@ func (pdf *PDF) parseColor(s string) (*color.SimpleColor, error) {
 func (pdf *PDF) resolveFileName(s string) (string, error) {
 	filePath, ok := pdf.FileNames[s]
 	if !ok {
-		return "", errors.Errorf("pdfcpu: can't resolve filename: %s", s)
+		return "", fmt.Errorf("pdfcpu: can't resolve filename: %s", s)
 	}
 	if filePath[0] != '$' {
 		return filePath, nil
@@ -163,7 +165,7 @@ func (pdf *PDF) resolveFileName(s string) (string, error) {
 	filePath = filePath[1:]
 	i := strings.Index(filePath, "/")
 	if i <= 0 {
-		return "", errors.Errorf("pdfcpu: corrupt filename: %s", s)
+		return "", fmt.Errorf("pdfcpu: corrupt filename: %s", s)
 	}
 
 	dirName := filePath[:i]
@@ -171,7 +173,7 @@ func (pdf *PDF) resolveFileName(s string) (string, error) {
 
 	dirPath, ok := pdf.DirNames[dirName]
 	if !ok {
-		return "", errors.Errorf("pdfcpu: can't resolve dirname: %s", dirName)
+		return "", fmt.Errorf("pdfcpu: can't resolve dirname: %s", dirName)
 	}
 
 	s1 := filepath.Join(dirPath, fileName)
@@ -462,7 +464,7 @@ func (pdf *PDF) Validate() error {
 	for pageNr, p := range pdf.Pages {
 		nr, err := strconv.Atoi(pageNr)
 		if err != nil {
-			return errors.Errorf("pdfcpu: invalid page number: %s", pageNr)
+			return fmt.Errorf("pdfcpu: invalid page number: %s", pageNr)
 		}
 		pageNrs = append(pageNrs, nr)
 		p.number = nr
@@ -509,7 +511,7 @@ func (pdf *PDF) calcFont(f *FormFont) error {
 	fName := f.Name[1:]
 	f0 := pdf.Fonts[fName]
 	if f0 == nil {
-		return errors.Errorf("pdfcpu: unknown font %s", fName)
+		return fmt.Errorf("pdfcpu: unknown font %s", fName)
 	}
 	f.Name = f0.Name
 	if f.Size == 0 {

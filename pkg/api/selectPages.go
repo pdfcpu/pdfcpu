@@ -25,7 +25,6 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -65,7 +64,7 @@ func ParsePageSelection(s string) ([]string, error) {
 	//
 
 	if !selectedPagesRegExp.MatchString(s) {
-		return nil, errors.Errorf("-pages \"%s\" => syntax error\n", s)
+		return nil, fmt.Errorf("-pages \"%s\" => syntax error\n", s)
 	}
 
 	//log.CLI.Printf("pageSelection: %s\n", s)
@@ -682,7 +681,7 @@ func PagesForPageCollection(pageCount int, pageSelection []string) ([]int, error
 	}
 
 	if len(collectedPages) == 0 {
-		return nil, errors.Errorf("pdfcpu: no page selected")
+		return nil, fmt.Errorf("pdfcpu: no page selected")
 	}
 
 	return collectedPages, nil

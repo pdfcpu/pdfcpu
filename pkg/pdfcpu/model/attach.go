@@ -23,9 +23,10 @@ import (
 	"sort"
 	"time"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // Attachment is a Reader representing a PDF attachment.
@@ -314,7 +315,7 @@ func (ctx *Context) RemoveAttachments(ids []string) (bool, error) {
 		}
 	}
 	if xRefTable.Names["EmbeddedFiles"] == nil {
-		return false, errors.Errorf("no attachments available.")
+		return false, fmt.Errorf("no attachments available.")
 	}
 
 	if len(ids) == 0 {
@@ -355,7 +356,7 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 		}
 	}
 	if xRefTable.Names["EmbeddedFiles"] == nil {
-		return nil, errors.Errorf("no attachments available.")
+		return nil, fmt.Errorf("no attachments available.")
 	}
 
 	aa := []Attachment{}
@@ -414,7 +415,7 @@ func (ctx *Context) ExtractAttachment(a Attachment) (*Attachment, error) {
 		return nil, err
 	}
 	if len(aa) > 1 {
-		return nil, errors.Errorf("pdfcpu: unexpected number of attachments: %d", len(aa))
+		return nil, fmt.Errorf("pdfcpu: unexpected number of attachments: %d", len(aa))
 	}
 	return &aa[0], nil
 }

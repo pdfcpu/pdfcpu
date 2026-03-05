@@ -23,10 +23,11 @@ import (
 	"io"
 	"time"
 
+	"errors"
+
 	"github.com/hhrutter/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 type AlgorithmIdentifier struct {

@@ -20,8 +20,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 // ICC profiles are not yet supported!
@@ -72,7 +70,7 @@ func (p iccProfile) tag(sig string) (int, int, error) {
 		return int(off), int(size), nil
 	}
 
-	return 0, 0, errors.Errorf("tag %s not found", sig)
+	return 0, 0, fmt.Errorf("tag %s not found", sig)
 }
 
 func (p *iccProfile) matrixCol(sig string) (float32, float32, float32, error) {
@@ -83,7 +81,7 @@ func (p *iccProfile) matrixCol(sig string) (float32, float32, float32, error) {
 	}
 
 	if size != 20 {
-		return 0, 0, 0, errors.Errorf("tag %s should have size 20, has:%d", sig, size)
+		return 0, 0, 0, fmt.Errorf("tag %s should have size 20, has:%d", sig, size)
 	}
 
 	x, y, z := p.xyz(off + 8)

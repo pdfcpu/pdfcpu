@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"strings"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 type PageMode int
@@ -335,22 +336,22 @@ type ViewerPreferences struct {
 
 func (vp *ViewerPreferences) validatePrinterPreferences(version Version) error {
 	if vp.PrintScaling != nil && version < V16 {
-		return errors.Errorf("pdfcpu: invalid viewer preference \"PrintScaling\" - since PDF 1.6, got: %v\n", version)
+		return fmt.Errorf("pdfcpu: invalid viewer preference \"PrintScaling\" - since PDF 1.6, got: %v\n", version)
 	}
 	if vp.Duplex != nil && version < V17 {
-		return errors.Errorf("pdfcpu: invalid viewer preference \"Duplex\" - since PDF 1.7, got: %v\n", version)
+		return fmt.Errorf("pdfcpu: invalid viewer preference \"Duplex\" - since PDF 1.7, got: %v\n", version)
 	}
 	if vp.PickTrayByPDFSize != nil && version < V17 {
-		return errors.Errorf("pdfcpu: invalid viewer preference \"PickTrayByPDFSize\" - since PDF 1.7, got: %v\n", version)
+		return fmt.Errorf("pdfcpu: invalid viewer preference \"PickTrayByPDFSize\" - since PDF 1.7, got: %v\n", version)
 	}
 	if len(vp.PrintPageRange) > 0 && version < V17 {
-		return errors.Errorf("pdfcpu: invalid viewer preference \"PrintPageRange\" - since PDF 1.7, got: %v\n", version)
+		return fmt.Errorf("pdfcpu: invalid viewer preference \"PrintPageRange\" - since PDF 1.7, got: %v\n", version)
 	}
 	if vp.NumCopies != nil && version < V17 {
-		return errors.Errorf("pdfcpu: invalid viewer preference \"NumCopies\" - since PDF 1.7, got: %v\n", version)
+		return fmt.Errorf("pdfcpu: invalid viewer preference \"NumCopies\" - since PDF 1.7, got: %v\n", version)
 	}
 	if len(vp.Enforce) > 0 && version < V20 {
-		return errors.Errorf("pdfcpu: invalid viewer preference \"Enforce\" - since PDF 2.0, got: %v\n", version)
+		return fmt.Errorf("pdfcpu: invalid viewer preference \"Enforce\" - since PDF 2.0, got: %v\n", version)
 	}
 
 	return nil
@@ -358,19 +359,19 @@ func (vp *ViewerPreferences) validatePrinterPreferences(version Version) error {
 
 func (vp *ViewerPreferences) Validate(version Version) error {
 	if vp.Direction != nil && version < V13 {
-		return errors.Errorf("pdfcpu: invalid viewer preference \"Direction\" - since PDF 1.3, got: %v\n", version)
+		return fmt.Errorf("pdfcpu: invalid viewer preference \"Direction\" - since PDF 1.3, got: %v\n", version)
 	}
 	if vp.ViewArea != nil && (version < V14 || version > V17) {
-		return errors.Errorf("pdfcpu: invalid viewer preference \"ViewArea\" - since PDF 1.4 until PDF 1.7, got: %v\n", version)
+		return fmt.Errorf("pdfcpu: invalid viewer preference \"ViewArea\" - since PDF 1.4 until PDF 1.7, got: %v\n", version)
 	}
 	if vp.ViewClip != nil && (version < V14 || version > V17) {
-		return errors.Errorf("pdfcpu: invalid viewer preference \"ViewClip\" - since PDF 1.4 until PDF 1.7, got: %v\n", version)
+		return fmt.Errorf("pdfcpu: invalid viewer preference \"ViewClip\" - since PDF 1.4 until PDF 1.7, got: %v\n", version)
 	}
 	if vp.PrintArea != nil && (version < V14 || version > V17) {
-		return errors.Errorf("pdfcpu: invalid viewer preference \"PrintArea\" - since PDF 1.4 until PDF 1.7, got: %v\n", version)
+		return fmt.Errorf("pdfcpu: invalid viewer preference \"PrintArea\" - since PDF 1.4 until PDF 1.7, got: %v\n", version)
 	}
 	if vp.PrintClip != nil && (version < V14 || version > V17) {
-		return errors.Errorf("pdfcpu: invalid viewer preference \"PrintClip\" - since PDF 1.4 until PDF 1.7, got: %v\n", version)
+		return fmt.Errorf("pdfcpu: invalid viewer preference \"PrintClip\" - since PDF 1.4 until PDF 1.7, got: %v\n", version)
 	}
 
 	return vp.validatePrinterPreferences(version)
@@ -593,22 +594,22 @@ func (vp *ViewerPreferences) unmarshalPrintPageRange(vpJSON ViewerPrefJSON) erro
 func (vp *ViewerPreferences) unmarshalPrinterPreferences(vpJSON ViewerPrefJSON) error {
 	vp.PrintArea = PageBoundaryFor(vpJSON.PrintArea)
 	if vpJSON.PrintArea != "" && vp.PrintArea == nil {
-		return errors.Errorf("pdfcpu: unknown \"PrintArea\", got: %s want one of: MediaBox, CropBox, TrimBox, BleedBox, ArtBox\n", vpJSON.PrintArea)
+		return fmt.Errorf("pdfcpu: unknown \"PrintArea\", got: %s want one of: MediaBox, CropBox, TrimBox, BleedBox, ArtBox\n", vpJSON.PrintArea)
 	}
 
 	vp.PrintClip = PageBoundaryFor(vpJSON.PrintClip)
 	if vpJSON.PrintClip != "" && vp.PrintClip == nil {
-		return errors.Errorf("pdfcpu: unknown \"PrintClip\", got: %s want one of: MediaBox, CropBox, TrimBox, BleedBox, ArtBox\n", vpJSON.PrintClip)
+		return fmt.Errorf("pdfcpu: unknown \"PrintClip\", got: %s want one of: MediaBox, CropBox, TrimBox, BleedBox, ArtBox\n", vpJSON.PrintClip)
 	}
 
 	vp.PrintScaling = PrintScalingFor(vpJSON.PrintScaling)
 	if vpJSON.PrintScaling != "" && vp.PrintScaling == nil {
-		return errors.Errorf("pdfcpu: unknown \"PrintScaling\", got: %s, want one of: None, AppDefault", vpJSON.PrintScaling)
+		return fmt.Errorf("pdfcpu: unknown \"PrintScaling\", got: %s, want one of: None, AppDefault", vpJSON.PrintScaling)
 	}
 
 	vp.Duplex = PaperHandlingFor(vpJSON.Duplex)
 	if vpJSON.Duplex != "" && vp.Duplex == nil {
-		return errors.Errorf("pdfcpu: unknown \"Duplex\", got: %s, want one of: Simplex, DuplexFlipShortEdge, DuplexFlipLongEdge", vpJSON.Duplex)
+		return fmt.Errorf("pdfcpu: unknown \"Duplex\", got: %s, want one of: Simplex, DuplexFlipShortEdge, DuplexFlipLongEdge", vpJSON.Duplex)
 	}
 
 	if err := vp.unmarshalPrintPageRange(vpJSON); err != nil {
@@ -649,33 +650,33 @@ func (vp *ViewerPreferences) UnmarshalJSON(data []byte) error {
 	}
 
 	if vp.NumCopies != nil && *vp.NumCopies < 1 {
-		return errors.Errorf("pdfcpu: invalid \"NumCopies\", got: %d, want a numerical value > 0", *vp.NumCopies)
+		return fmt.Errorf("pdfcpu: invalid \"NumCopies\", got: %d, want a numerical value > 0", *vp.NumCopies)
 	}
 
 	vp.NonFullScreenPageMode = (*NonFullScreenPageMode)(PageModeFor(vpJSON.NonFullScreenPageMode))
 	if vpJSON.NonFullScreenPageMode != "" {
 		if vp.NonFullScreenPageMode == nil {
-			return errors.Errorf("pdfcpu: unknown \"NonFullScreenPageMode\", got: %s want one of: UseNone, UseOutlines, UseThumbs, UseOC\n", vpJSON.NonFullScreenPageMode)
+			return fmt.Errorf("pdfcpu: unknown \"NonFullScreenPageMode\", got: %s want one of: UseNone, UseOutlines, UseThumbs, UseOC\n", vpJSON.NonFullScreenPageMode)
 		}
 		pm := (PageMode)(*vp.NonFullScreenPageMode)
 		if pm == PageModeFullScreen || pm == PageModeUseAttachments {
-			return errors.Errorf("pdfcpu: unknown \"NonFullScreenPageMode\", got: %s want one of: UseNone, UseOutlines, UseThumbs, UseOC\n", vpJSON.NonFullScreenPageMode)
+			return fmt.Errorf("pdfcpu: unknown \"NonFullScreenPageMode\", got: %s want one of: UseNone, UseOutlines, UseThumbs, UseOC\n", vpJSON.NonFullScreenPageMode)
 		}
 	}
 
 	vp.Direction = DirectionFor(vpJSON.Direction)
 	if vpJSON.Direction != "" && vp.Direction == nil {
-		return errors.Errorf("pdfcpu: unknown \"Direction\", got: %s want one of: L2R, R2L\n", vpJSON.Direction)
+		return fmt.Errorf("pdfcpu: unknown \"Direction\", got: %s want one of: L2R, R2L\n", vpJSON.Direction)
 	}
 
 	vp.ViewArea = PageBoundaryFor(vpJSON.ViewArea)
 	if vpJSON.ViewArea != "" && vp.ViewArea == nil {
-		return errors.Errorf("pdfcpu: unknown \"ViewArea\", got: %s want one of: MediaBox, CropBox, TrimBox, BleedBox, ArtBox\n", vpJSON.ViewArea)
+		return fmt.Errorf("pdfcpu: unknown \"ViewArea\", got: %s want one of: MediaBox, CropBox, TrimBox, BleedBox, ArtBox\n", vpJSON.ViewArea)
 	}
 
 	vp.ViewClip = PageBoundaryFor(vpJSON.ViewClip)
 	if vpJSON.ViewClip != "" && vp.ViewClip == nil {
-		return errors.Errorf("pdfcpu: unknown \"ViewClip\", got: %s want one of: MediaBox, CropBox, TrimBox, BleedBox, ArtBox\n", vpJSON.ViewClip)
+		return fmt.Errorf("pdfcpu: unknown \"ViewClip\", got: %s want one of: MediaBox, CropBox, TrimBox, BleedBox, ArtBox\n", vpJSON.ViewClip)
 	}
 
 	return vp.unmarshalPrinterPreferences(vpJSON)

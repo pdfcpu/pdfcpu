@@ -23,7 +23,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/pkg/errors"
+	"errors"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"

@@ -20,11 +20,12 @@ import (
 	"bytes"
 	"fmt"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // CheckBox represents a form checkbox including a positioned label.
@@ -62,7 +63,7 @@ func (cb *CheckBox) validateID() error {
 		return errors.New("pdfcpu: missing field id")
 	}
 	if cb.pdf.DuplicateField(cb.ID) {
-		return errors.Errorf("pdfcpu: duplicate form field: %s", cb.ID)
+		return fmt.Errorf("pdfcpu: duplicate form field: %s", cb.ID)
 	}
 	cb.pdf.FieldIDs[cb.ID] = true
 	return nil
@@ -70,7 +71,7 @@ func (cb *CheckBox) validateID() error {
 
 func (cb *CheckBox) validatePosition() error {
 	if cb.Position[0] < 0 || cb.Position[1] < 0 {
-		return errors.Errorf("pdfcpu: field: %s pos value < 0", cb.ID)
+		return fmt.Errorf("pdfcpu: field: %s pos value < 0", cb.ID)
 	}
 	cb.x, cb.y = cb.Position[0], cb.Position[1]
 	return nil
@@ -87,7 +88,7 @@ func (cb *CheckBox) validateMargin() error {
 
 func (cb *CheckBox) validateWidth() error {
 	if cb.Width <= 0 {
-		return errors.Errorf("pdfcpu: field: %s width <= 0", cb.ID)
+		return fmt.Errorf("pdfcpu: field: %s width <= 0", cb.ID)
 	}
 	return nil
 }
@@ -104,7 +105,7 @@ func (cb *CheckBox) validateLabel() error {
 
 func (cb *CheckBox) validateTab() error {
 	if cb.Tab < 0 {
-		return errors.Errorf("pdfcpu: field: %s negative tab value", cb.ID)
+		return fmt.Errorf("pdfcpu: field: %s negative tab value", cb.ID)
 	}
 	if cb.Tab == 0 {
 		return nil
@@ -114,7 +115,7 @@ func (cb *CheckBox) validateTab() error {
 		page.Tabs = types.IntSet{}
 	} else {
 		if page.Tabs[cb.Tab] {
-			return errors.Errorf("pdfcpu: field: %s duplicate tab value %d", cb.ID, cb.Tab)
+			return fmt.Errorf("pdfcpu: field: %s duplicate tab value %d", cb.ID, cb.Tab)
 		}
 	}
 	page.Tabs[cb.Tab] = true
@@ -159,7 +160,7 @@ func (cb *CheckBox) calcMargin() (float64, float64, float64, float64, error) {
 			mName := m.Name[1:]
 			m0 := cb.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBottom, mLeft, errors.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, fmt.Errorf("pdfcpu: unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}

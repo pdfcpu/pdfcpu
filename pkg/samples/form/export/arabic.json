@@ -1,33 +1,42 @@
 {
 	"header": {
 		"source": "arabic.pdf",
-		"version": "pdfcpu v0.4.0 dev",
-		"creation": "2023-03-16 23:35:35 CET",
-		"producer": "pdfcpu v0.4.0 dev"
+		"version": "pdfcpu v0.11.1 dev",
+		"creation": "2026-03-05 10:34:51 UTC",
+		"producer": "pdfcpu v0.11.1 dev"
 	},
 	"forms": [
 		{
 			"textfield": [
 				{
-					"page": 1,
-					"id": "30",
+					"pages": [
+						1
+					],
+					"id": "35",
 					"name": "lastName1",
+					"altname": "اللقب",
 					"value": "ظبية",
 					"multiline": false,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "31",
+					"pages": [
+						1
+					],
+					"id": "36",
 					"name": "note1",
+					"altname": "سبب",
 					"value": "هذا نموذج نص.\nهذا هو السطر التال.",
 					"multiline": true,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "35",
+					"pages": [
+						1
+					],
+					"id": "34",
 					"name": "firstName1",
+					"altname": "الاسم الاول",
 					"default": "الاسم الافتراضي",
 					"value": "جاكي",
 					"multiline": false,
@@ -36,9 +45,12 @@
 			],
 			"datefield": [
 				{
-					"page": 1,
-					"id": "32",
+					"pages": [
+						1
+					],
+					"id": "37",
 					"name": "dob1",
+					"altname": "dd/mm/yyyy",
 					"format": "dd/mm/yyyy",
 					"default": "01/01/2000",
 					"value": "31/12/1999",
@@ -47,41 +59,56 @@
 			],
 			"checkbox": [
 				{
-					"page": 1,
-					"id": "36",
+					"pages": [
+						1
+					],
+					"id": "32",
+					"name": "cb15",
+					"altname": "آخر",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"pages": [
+						1
+					],
+					"id": "30",
 					"name": "cb11",
+					"altname": "بحث جوجل",
 					"default": false,
 					"value": true,
 					"locked": false
 				},
 				{
-					"page": 1,
-					"id": "33",
-					"name": "cb13",
-					"default": false,
-					"value": false,
-					"locked": false
-				},
-				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "38",
-					"name": "cb14",
-					"default": false,
-					"value": false,
-					"locked": false
-				},
-				{
-					"page": 1,
-					"id": "39",
-					"name": "cb15",
-					"default": false,
-					"value": false,
-					"locked": false
-				},
-				{
-					"page": 1,
-					"id": "37",
 					"name": "cb12",
+					"altname": "بحث جيثب",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"pages": [
+						1
+					],
+					"id": "39",
+					"name": "cb13",
+					"altname": "جولانج ويكلي",
+					"default": false,
+					"value": false,
+					"locked": false
+				},
+				{
+					"pages": [
+						1
+					],
+					"id": "31",
+					"name": "cb14",
+					"altname": "زميل غوفر",
 					"default": false,
 					"value": false,
 					"locked": false
@@ -89,9 +116,12 @@
 			],
 			"radiobuttongroup": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "17",
 					"name": "gender1",
+					"altname": "جنس",
 					"options": [
 						"غير ثنائي",
 						"الذكر",
@@ -104,9 +134,12 @@
 			],
 			"combobox": [
 				{
-					"page": 1,
-					"id": "34",
+					"pages": [
+						1
+					],
+					"id": "33",
 					"name": "city12",
+					"altname": "مدينة",
 					"editable": false,
 					"options": [
 						"رياض",
@@ -120,9 +153,12 @@
 			],
 			"listbox": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "29",
 					"name": "city11",
+					"altname": "المدينة المفضلة",
 					"multi": true,
 					"options": [
 						"سان فرانسيسكو",

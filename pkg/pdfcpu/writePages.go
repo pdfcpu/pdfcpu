@@ -17,10 +17,12 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // Write page entry to disk.
@@ -207,7 +209,7 @@ func writeKids(ctx *model.Context, a types.Array, pageNr *int) (types.Array, int
 			}
 
 		default:
-			err = errors.Errorf("pdfcpu: writeKids: Unexpected dict type: %s", *d.Type())
+			err = fmt.Errorf("pdfcpu: writeKids: Unexpected dict type: %s", *d.Type())
 
 		}
 
@@ -250,7 +252,7 @@ func writePagesDict(ctx *model.Context, indRef *types.IndirectRef, pageNr *int) 
 
 	d, err := ctx.DereferenceDict(*indRef)
 	if err != nil {
-		return false, 0, errors.Wrapf(err, "writePagesDict: unable to dereference indirect object #%d", objNr)
+		return false, 0, fmt.Errorf("writePagesDict: unable to dereference indirect object #%d: %w", objNr, err)
 	}
 
 	// Push count, kids.

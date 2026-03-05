@@ -18,10 +18,12 @@ package primitives
 
 import (
 	"bytes"
+	"fmt"
+
+	"errors"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 type Buttons struct {
@@ -49,13 +51,13 @@ func (b *Buttons) validate(defValue, value string) error {
 
 	if defValue != "" {
 		if !types.MemberOf(defValue, b.Values) {
-			return errors.Errorf("pdfcpu: radiobuttongroups invalid default: %s", defValue)
+			return fmt.Errorf("pdfcpu: radiobuttongroups invalid default: %s", defValue)
 		}
 	}
 
 	if value != "" {
 		if !types.MemberOf(value, b.Values) {
-			return errors.Errorf("pdfcpu: radiobuttongroups invalid value: %s", value)
+			return fmt.Errorf("pdfcpu: radiobuttongroups invalid value: %s", value)
 		}
 	}
 

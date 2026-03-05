@@ -29,11 +29,12 @@ import (
 	"time"
 	"unicode/utf16"
 
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 type cjk struct {
@@ -737,7 +738,7 @@ func UpdateUserfont(xRefTable *model.XRefTable, fontName string, f model.FontRes
 	ttf, ok := font.UserFontMetrics[fontName]
 	font.UserFontMetricsLock.RUnlock()
 	if !ok {
-		return errors.Errorf("pdfcpu: userfont %s not available", fontName)
+		return fmt.Errorf("pdfcpu: userfont %s not available", fontName)
 	}
 
 	if err := usedGIDsFromCMapIndRef(xRefTable, fontName, *f.ToUnicode); err != nil {
@@ -904,7 +905,7 @@ func type0FontDict(xRefTable *model.XRefTable, fontName, lang, script string, in
 	ttf, ok := font.UserFontMetrics[fontName]
 	font.UserFontMetricsLock.RUnlock()
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: font %s not available", fontName)
+		return nil, fmt.Errorf("pdfcpu: font %s not available", fontName)
 	}
 
 	subFont := script == ""
@@ -971,7 +972,7 @@ func trueTypeFontDict(xRefTable *model.XRefTable, fontName, fontLang string) (*t
 	ttf, ok := font.UserFontMetrics[fontName]
 	font.UserFontMetricsLock.RUnlock()
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: font %s not available", fontName)
+		return nil, fmt.Errorf("pdfcpu: font %s not available", fontName)
 	}
 
 	first, last := 0, 255
@@ -1159,11 +1160,11 @@ func trivialFontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objN
 	}
 
 	if d == nil {
-		return nil, errors.Errorf("pdfcpu: trivialFontDescriptor: FontDescriptor is null for font object %d\n", objNr)
+		return nil, fmt.Errorf("pdfcpu: trivialFontDescriptor: FontDescriptor is null for font object %d\n", objNr)
 	}
 
 	if d.Type() != nil && *d.Type() != "FontDescriptor" {
-		return nil, errors.Errorf("pdfcpu: trivialFontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
+		return nil, fmt.Errorf("pdfcpu: trivialFontDescriptor: FontDescriptor dict incorrect dict type for font object %d\n", objNr)
 	}
 
 	return d, nil
@@ -1195,23 +1196,23 @@ func FontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) 
 
 	a, err := xRefTable.DereferenceArray(o)
 	if err != nil || a == nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: DescendantFonts: IndirectRef or Array with length 1 expected for font object %d\n", objNr)
+		return nil, fmt.Errorf("pdfcpu: fontDescriptor: DescendantFonts: IndirectRef or Array with length 1 expected for font object %d\n", objNr)
 	}
 	if len(a) != 1 {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: DescendantFonts Array length <> 1 %v\n", a)
+		return nil, fmt.Errorf("pdfcpu: fontDescriptor: DescendantFonts Array length <> 1 %v\n", a)
 	}
 
 	// dict is the fontDict of the descendant font.
 	d, err = xRefTable.DereferenceDict(a[0])
 	if err != nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: No descendant font dict for %v\n", a)
+		return nil, fmt.Errorf("pdfcpu: fontDescriptor: No descendant font dict for %v\n", a)
 	}
 	if d == nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: descendant font dict is null for %v\n", a)
+		return nil, fmt.Errorf("pdfcpu: fontDescriptor: descendant font dict is null for %v\n", a)
 	}
 
 	if *d.Type() != "Font" {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: font dict with incorrect dict type for %v\n", d)
+		return nil, fmt.Errorf("pdfcpu: fontDescriptor: font dict with incorrect dict type for %v\n", d)
 	}
 
 	o, ok = d.Find("FontDescriptor")
@@ -1222,7 +1223,7 @@ func FontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) 
 
 	d, err = xRefTable.DereferenceDict(o)
 	if err != nil {
-		return nil, errors.Errorf("pdfcpu: fontDescriptor: No FontDescriptor dict for font object %d\n", objNr)
+		return nil, fmt.Errorf("pdfcpu: fontDescriptor: No FontDescriptor dict for font object %d\n", objNr)
 	}
 
 	if log.OptimizeEnabled() {

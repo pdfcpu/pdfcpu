@@ -17,9 +17,10 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // see 7.10 Functions
