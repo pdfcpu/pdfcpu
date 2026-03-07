@@ -17,6 +17,7 @@ limitations under the License.
 package validate
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -409,12 +410,14 @@ func validateAnnotationDictFreeTextPart1(xRefTable *model.XRefTable, d types.Dic
 	}
 
 	// CL, optional, number array, since V1.6, len: 4 or 6
+	validateCL := func(a types.Array) bool { return len(a) == 4 || len(a) == 6 }
 	sinceVersion = model.V16
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V14
+		validateCL = nil
 	}
 
-	_, err := validateNumberArrayEntry(xRefTable, d, dictName, "CL", OPTIONAL, sinceVersion, func(a types.Array) bool { return len(a) == 4 || len(a) == 6 })
+	_, err := validateNumberArrayEntry(xRefTable, d, dictName, "CL", OPTIONAL, sinceVersion, validateCL)
 
 	return err
 }
@@ -1657,7 +1660,7 @@ func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, di
 		"Screen":         {validateAnnotationDictScreen, model.V15, model.V14, false},
 		"PrinterMark":    {validateAnnotationDictPrinterMark, model.V14, model.V14, false},
 		"TrapNet":        {validateAnnotationDictTrapNet, model.V13, model.V13, false},
-		"Watermark":      {validateAnnotationDictWatermark, model.V16, model.V16, false},
+		"Watermark":      {validateAnnotationDictWatermark, model.V16, model.V14, false},
 		"3D":             {validateAnnotationDict3D, model.V16, model.V16, false},
 		"Redact":         {validateAnnotationDictRedact, model.V17, model.V17, true},
 		"RichMedia":      {validateRichMediaAnnotation, model.V17, model.V14, false},
@@ -1669,7 +1672,7 @@ func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, di
 				sinceVersion = v.sinceVersionRelaxed
 			}
 
-			err := xRefTable.ValidateVersion(k, sinceVersion)
+			err := xRefTable.ValidateVersion(k+" annotation", sinceVersion)
 			if err != nil {
 				return err
 			}
@@ -1723,7 +1726,7 @@ func addAnnotation(ann model.AnnotationRenderer, pgAnnots model.PgAnnots, i int,
 	annots.Map[objNr] = ann
 }
 
-func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
+func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) (types.Array, error) {
 
 	// a ... array of indrefs to annotation dicts.
 
@@ -1735,10 +1738,12 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 	// an optional TrapNetAnnotation has to be the final entry in this list.
 	hasTrapNet := false
 
+	cleanAnnotsArr := types.Array{}
+
 	for i, v := range a {
 
 		if hasTrapNet {
-			return errors.New("pdfcpu: validatePageAnnotations: invalid page annotation list, \"TrapNet\" has to be the last entry")
+			return nil, errors.New("pdfcpu: validatePageAnnotations: invalid page annotation list, \"TrapNet\" has to be the last entry")
 		}
 
 		var (
@@ -1756,15 +1761,22 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 			}
 			annotDict, incr, err = xRefTable.DereferenceDictWithIncr(indRef)
 			if err != nil {
-				return err
+				return nil, err
+			}
+			if annotDict == nil {
+				// Skip nil dicts.
+				model.ShowMsg(fmt.Sprintf("removed corrupt annotation dict (unknown object #%d)", indRef.ObjectNumber))
+				continue
 			}
 			if len(annotDict) == 0 {
+				// Skip empty dicts.
+				model.ShowMsg(fmt.Sprintf("removed empty annotation dict (object #%d)", indRef.ObjectNumber))
 				continue
 			}
 		} else if xRefTable.ValidationMode != model.ValidationRelaxed {
-			return errInvalidPageAnnotArray
+			return nil, errInvalidPageAnnotArray
 		} else if annotDict, ok = v.(types.Dict); !ok {
-			return errInvalidPageAnnotArray
+			return nil, errInvalidPageAnnotArray
 		} else {
 			if log.ValidateEnabled() {
 				log.Validate.Println("digesting page annotation array w/o indirect references")
@@ -1775,27 +1787,29 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) error {
 			objNr := indRef.ObjectNumber.Value()
 			if objNr > 0 {
 				if err := cacheSig(xRefTable, annotDict, "formFieldDict", false, objNr, incr); err != nil {
-					return err
+					return nil, err
 				}
 			}
 		}
 
 		hasTrapNet, err = validateAnnotationDict(xRefTable, annotDict)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Collect annotation.
 
+		cleanAnnotsArr = append(cleanAnnotsArr, v)
+
 		ann, err := pdfcpu.Annotation(xRefTable, annotDict)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		addAnnotation(ann, pgAnnots, i, hasIndRef, indRef)
 	}
 
-	return nil
+	return cleanAnnotsArr, nil
 }
 
 func validatePageAnnotations(xRefTable *model.XRefTable, d types.Dict) error {
@@ -1808,12 +1822,24 @@ func validatePageAnnotations(xRefTable *model.XRefTable, d types.Dict) error {
 
 	if len(a) == 0 {
 		delete(d, "Annots")
+		model.ShowMsg("removed empty annotation array")
 		return nil
 	}
 
-	d["Annots"] = a
+	cleanedAnnots, err := validateAnnotationsArray(xRefTable, a)
+	if err != nil {
+		return err
+	}
 
-	return validateAnnotationsArray(xRefTable, a)
+	if len(cleanedAnnots) == 0 {
+		delete(d, "Annots")
+		model.ShowMsg("removed empty annotation array")
+		return nil
+	}
+
+	d["Annots"] = cleanedAnnots
+
+	return nil
 }
 
 func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage int) (int, error) {

@@ -101,7 +101,7 @@ func XRefTable(ctx *model.Context) error {
 
 func fixInfoDict(xRefTable *model.XRefTable, rootDict types.Dict) error {
 	indRef := rootDict.IndirectRefEntry("Metadata")
-	ok, err := model.EqualObjects(*indRef, *xRefTable.Info, xRefTable)
+	ok, err := model.EqualObjects(*indRef, *xRefTable.Info, xRefTable, nil)
 	if err != nil {
 		return err
 	}

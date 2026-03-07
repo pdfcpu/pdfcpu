@@ -23,26 +23,30 @@ import (
 )
 
 func validateDestinationArrayFirstElement(xRefTable *model.XRefTable, a types.Array) (types.Object, error) {
-
 	o, err := xRefTable.Dereference(a[0])
 	if err != nil || o == nil {
 		return nil, err
 	}
 
-	switch o := o.(type) {
+	s := "destination array: first element is not a page dict: " + a.String()
 
-	case types.Integer, types.Name: // no further processing
+	switch o := o.(type) {
 
 	case types.Dict:
 		if o.Type() == nil || (o.Type() != nil && (*o.Type() != "Page" && *o.Type() != "Pages")) {
-			err = errors.Errorf("pdfcpu: validateDestinationArrayFirstElement: must be a pageDict indRef or an integer: %v (%T)", o, o)
+			if xRefTable.ValidationMode == model.ValidationRelaxed {
+				model.ShowDigestedSpecViolation(s)
+				return nil, nil
+			}
+			err = errors.Errorf("%s", s)
 		}
 
 	default:
-		err = errors.Errorf("pdfcpu: validateDestinationArrayFirstElement: must be a pageDict indRef or an integer: %v (%T)", o, o)
 		if xRefTable.ValidationMode == model.ValidationRelaxed {
-			err = nil
+			model.ShowDigestedSpecViolation(s)
+			return nil, nil
 		}
+		err = errors.Errorf("%s", s)
 	}
 
 	return o, err

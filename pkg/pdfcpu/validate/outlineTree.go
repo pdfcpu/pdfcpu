@@ -100,11 +100,13 @@ func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
 	// Optional A or Dest, since V1.1
 	destName, err := validateActionOrDestination(xRefTable, d, dictName, model.V11)
 	if err != nil {
+		model.ShowMsg("outlineItemDict: corrupt action or destination entry")
 		return err
 	}
+
 	if destName != "" {
 		if _, err = xRefTable.DereferenceDestArray(destName); err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
-			model.ShowDigestedSpecViolation("outlineDict with unresolved destination")
+			model.ShowDigestedSpecViolation("outlineItemDict: unable to resolve destination entry")
 			return nil
 		}
 	}

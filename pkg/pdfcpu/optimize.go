@@ -270,7 +270,7 @@ func handleDuplicateFontObject(ctx *model.Context, fontDict types.Dict, fName, r
 		}
 
 		// Check if the input fontDict matches the fontDict of this fontObject.
-		ok, err := model.EqualFontDicts(fontObject.FontDict, fontDict, ctx.XRefTable)
+		ok, err := model.EqualObjects(fontObject.FontDict, fontDict, ctx.XRefTable, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -482,7 +482,7 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 		}
 
 		// Check if the input imageDict matches the imageDict of this imageObject.
-		ok, err := model.EqualStreamDicts(imageObject.ImageDict, imageDict, ctx.XRefTable)
+		ok, err := model.EqualObjects(*imageObject.ImageDict, *imageDict, ctx.XRefTable, nil)
 		if err != nil {
 			return nil, false, err
 		}
@@ -577,7 +577,7 @@ func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, objNr int) (*
 
 	for _, objNr1 := range cachedObjNrs {
 		sd1 := f[objNr1]
-		ok, err := model.EqualStreamDicts(sd, sd1, ctx.XRefTable)
+		ok, err := model.EqualObjects(*sd, *sd1, ctx.XRefTable, nil)
 		if err != nil {
 			return nil, err
 		}

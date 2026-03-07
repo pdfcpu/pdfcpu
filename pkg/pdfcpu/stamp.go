@@ -1240,38 +1240,36 @@ func patchFirstContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string
 	return sd.Encode()
 }
 
-func patchLastContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string, wm *model.Watermark) error {
-	err := sd.Decode()
-	if err == filter.ErrUnsupportedFilter {
-		if log.InfoEnabled() {
-			log.Info.Println("unsupported filter: unable to patch content with watermark.")
-		}
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	// stamp
+func newContentStreamForWatermark(ctx *model.Context, gsID, xoID string, wm *model.Watermark) (*types.IndirectRef, error) {
+	var bb []byte
 	if wm.OnTop {
-		sd.Content = append(sd.Content, []byte(" Q ")...)
-		sd.Content = append(sd.Content, wmContent(wm, gsID, xoID)...)
-		return sd.Encode()
+		bb = append([]byte(" Q "), wmContent(wm, gsID, xoID)...)
+	} else if wm.PageRot != 0 {
+		bb = []byte(" Q ")
 	}
 
-	// watermark
-	if wm.PageRot != 0 {
-		sd.Content = append(sd.Content, []byte(" Q")...)
-		return sd.Encode()
+	sd, err := ctx.NewStreamDictForBuf(bb)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	if err := sd.Encode(); err != nil {
+		return nil, err
+	}
+
+	indRef, err := ctx.IndRefForNewObject(*sd)
+	if err != nil {
+		return nil, err
+	}
+
+	return indRef, nil
 }
 
-func updatePageContentsForWM(ctx *model.Context, obj types.Object, wm *model.Watermark, gsID, xoID string) error {
+func updatePageContentsForWM(ctx *model.Context, d types.Dict, wm *model.Watermark, gsID, xoID string) error {
 	var entry *model.XRefTableEntry
 	var objNr int
 
+	obj, _ := d.Find("Contents")
 	ir, ok := obj.(types.IndirectRef)
 	if ok {
 		objNr = ir.ObjectNumber.Value()
@@ -1287,12 +1285,10 @@ func updatePageContentsForWM(ctx *model.Context, obj types.Object, wm *model.Wat
 	switch o := obj.(type) {
 
 	case types.StreamDict:
-
 		err := patchFirstContentStreamForWatermark(&o, gsID, xoID, wm, true)
 		if err != nil {
 			return err
 		}
-
 		entry.Object = o
 		wm.Objs[objNr] = true
 
@@ -1301,13 +1297,13 @@ func updatePageContentsForWM(ctx *model.Context, obj types.Object, wm *model.Wat
 		if len(o) == 0 {
 			return nil
 		}
+
 		o1 := o[0]
 		ir, _ := o1.(types.IndirectRef)
 		objNr = ir.ObjectNumber.Value()
 		genNr := ir.GenerationNumber.Value()
 		entry, _ := ctx.FindTableEntry(objNr, genNr)
 		sd, _ := (entry.Object).(types.StreamDict)
-
 		if wm.Objs[objNr] {
 			// wm already applied to this content stream.
 			return nil
@@ -1324,27 +1320,13 @@ func updatePageContentsForWM(ctx *model.Context, obj types.Object, wm *model.Wat
 			return nil
 		}
 
-		// Get stream dict for last array element.
-		o1 = o[len(o)-1]
-
-		ir, _ = o1.(types.IndirectRef)
-		objNr = ir.ObjectNumber.Value()
-		if wm.Objs[objNr] {
-			// wm already applied to this content stream.
-			return nil
-		}
-
-		genNr = ir.GenerationNumber.Value()
-		entry, _ = ctx.FindTableEntry(objNr, genNr)
-		sd, _ = (entry.Object).(types.StreamDict)
-
-		err = patchLastContentStreamForWatermark(&sd, gsID, xoID, wm)
+		indRef, err := newContentStreamForWatermark(ctx, gsID, xoID, wm)
 		if err != nil {
 			return err
 		}
 
-		entry.Object = sd
-		wm.Objs[objNr] = true
+		d["Contents"] = append(o, *indRef)
+		wm.Objs[indRef.ObjectNumber.Value()] = true
 	}
 
 	return nil
@@ -1446,9 +1428,9 @@ func addPageWatermark(ctx *model.Context, pageNr int, wm model.Watermark) error 
 		return err
 	}
 
-	obj, found := d.Find("Contents")
+	_, found := d.Find("Contents")
 	if found {
-		err = updatePageContentsForWM(ctx, obj, &wm, gsID, xoID)
+		err = updatePageContentsForWM(ctx, d, &wm, gsID, xoID)
 	} else {
 		err = insertPageContentsForWM(ctx, d, &wm, gsID, xoID)
 	}
