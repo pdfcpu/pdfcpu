@@ -157,7 +157,7 @@ func SetDefaultWriteLogger() {
 
 // SetDefaultCLILogger sets the default cli logger.
 func SetDefaultCLILogger() {
-	SetCLILogger(log.New(os.Stdout, "", 0))
+	SetCLILogger(log.New(os.Stderr, "", 0))
 }
 
 // SetDefaultLoggers sets all loggers to their default logger.
