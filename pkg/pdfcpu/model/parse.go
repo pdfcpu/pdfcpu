@@ -326,6 +326,9 @@ func ParseObjectAttributes(line *string) (*int, *int, error) {
 }
 
 func parseArray(c context.Context, line *string, level int) (*types.Array, error) {
+	if level == MAX_RECURSE_LEVEL {
+		return nil, errMaxRecurseOverflow
+	}
 	if log.ParseEnabled() {
 		log.Parse.Println("ParseObject: value = Array")
 	}
@@ -972,9 +975,6 @@ func ParseObjectContext(c context.Context, line *string, level int) (types.Objec
 	switch l[0] {
 
 	case '[': // array
-		if level == MAX_RECURSE_LEVEL {
-			return nil, errMaxRecurseOverflow
-		}
 		a, err := parseArray(c, &l, level)
 		if err != nil {
 			return nil, err

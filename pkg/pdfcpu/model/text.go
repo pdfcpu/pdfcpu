@@ -628,17 +628,22 @@ func SplitMultilineStr(s string) []string {
 	return append(lines, fieldsFunc(s, func(c rune) bool { return c == 0x0a })...)
 }
 
-// WordWrap wraps text at unicode whitespace to fit within a specified width using the given font and font size.
-// Explicit newlines are honored, and whitespace at the beginning of a line is preserved (unless it
-// would cause a word to overrun the line).  Amounts and types of whitespace are preserved within lines.
-func WordWrap(s string, fontName string, fontSize int, maxWidthPoints float64) []string {
-	if len(s) == 0 || maxWidthPoints <= 0 {
-		return []string{s}
+func wrapLine(ss *[]string, line, space, word, fontName string, fontSize int, maxWidthPoints float64) {
+	candidate := line + space + word
+	if font.TextWidth(candidate, fontName, fontSize) < maxWidthPoints {
+		*ss = append(*ss, candidate)
+	} else {
+		if len(line) > 0 {
+			*ss = append(*ss, line)
+		}
+		*ss = append(*ss, word)
 	}
+}
 
-	lines := SplitMultilineStr(s)
+func wrap(lines []string, fontName string, fontSize int, maxWidthPoints float64) []string {
 
 	var wrapState int
+
 	const (
 		beginLine = iota
 		inWord
@@ -709,17 +714,24 @@ func WordWrap(s string, fontName string, fontSize int, maxWidthPoints float64) [
 		}
 
 		if wrapState == inWord {
-			candidate := line + space + word
-			if font.TextWidth(candidate, fontName, fontSize) < maxWidthPoints {
-				ss = append(ss, candidate)
-			} else {
-				if len(line) > 0 {
-					ss = append(ss, line)
-				}
-				ss = append(ss, word)
-			}
+			wrapLine(&ss, line, space, word, fontName, fontSize, maxWidthPoints)
 		}
 	}
+
+	return ss
+}
+
+// WordWrap wraps text at unicode whitespace to fit within a specified width using the given font and font size.
+// Explicit newlines are honored, and whitespace at the beginning of a line is preserved (unless it
+// would cause a word to overrun the line).  Amounts and types of whitespace are preserved within lines.
+func WordWrap(s string, fontName string, fontSize int, maxWidthPoints float64) []string {
+	if len(s) == 0 || maxWidthPoints <= 0 {
+		return []string{s}
+	}
+
+	lines := SplitMultilineStr(s)
+
+	ss := wrap(lines, fontName, fontSize, maxWidthPoints)
 
 	if len(ss) == 0 {
 		ss = append(ss, "")

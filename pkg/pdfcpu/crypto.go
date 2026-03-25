@@ -927,7 +927,11 @@ func validateAlgorithm(ctx *model.Context) (ok bool) {
 	return k == 40 || k == 128
 }
 
-func validateAES256Parameters(d types.Dict) (oe, ue, perms []byte, err error) {
+func validateAES256Parameters(d types.Dict, r int) (oe, ue, perms []byte, err error) {
+	if !(r == 5 || r == 6 || r == 7) {
+		return nil, nil, nil, nil
+	}
+
 	// OE
 	oe, err = d.StringEntryBytes("OE")
 	if err != nil {
@@ -992,6 +996,41 @@ func validateOAndU(ctx *model.Context, d types.Dict, r int) (o, u []byte, err er
 	return o, u, nil
 }
 
+func checkCFLengthV2(len int, pdf20, relaxed bool) error {
+	bitLen := len
+	if pdf20 {
+		bitLen *= 8
+	}
+	if bitLen < 40 || bitLen > 128 || bitLen%8 != 0 {
+		if pdf20 || !relaxed {
+			return errors.Errorf("pdfcpu: invalid CF length: %d", len)
+		}
+		bitLen *= 8
+		if bitLen < 40 || bitLen > 128 || bitLen%8 != 0 {
+			return errors.Errorf("pdfcpu: invalid CF length: %d", len)
+		}
+	}
+	return nil
+}
+
+func checkCFLengthAESV2(len int, pdf20, relaxed bool) error {
+	aesV2KeyLen := 128
+	bitLen := len
+	if pdf20 {
+		bitLen *= 8
+	}
+	if bitLen != aesV2KeyLen {
+		if pdf20 || !relaxed {
+			return errors.Errorf("pdfcpu: invalid CF length, got %d want %d", len, aesV2KeyLen)
+		}
+		bitLen *= 8
+		if bitLen != aesV2KeyLen {
+			return errors.Errorf("pdfcpu: invalid CF length, got %d want %d", len, aesV2KeyLen)
+		}
+	}
+	return nil
+}
+
 func validateCFLength(len *int, cfm *string, pdf20, relaxed bool) error {
 	// See table 25 Length
 	// v = 4
@@ -1001,35 +1040,14 @@ func validateCFLength(len *int, cfm *string, pdf20, relaxed bool) error {
 	}
 
 	if *cfm == "V2" {
-		bitLen := *len
-		if pdf20 {
-			bitLen *= 8
-		}
-		if bitLen < 40 || bitLen > 128 || bitLen%8 != 0 {
-			if pdf20 || !relaxed {
-				return errors.Errorf("pdfcpu: invalid CF length: %d", *len)
-			}
-			bitLen *= 8
-			if bitLen < 40 || bitLen > 128 || bitLen%8 != 0 {
-				return errors.Errorf("pdfcpu: invalid CF length: %d", *len)
-			}
+		if err := checkCFLengthV2(*len, pdf20, relaxed); err != nil {
+			return err
 		}
 	}
 
 	if *cfm == "AESV2" {
-		aesV2KeyLen := 128
-		bitLen := *len
-		if pdf20 {
-			bitLen *= 8
-		}
-		if bitLen != aesV2KeyLen {
-			if pdf20 || !relaxed {
-				return errors.Errorf("pdfcpu: invalid CF length, got %d want %d", *len, aesV2KeyLen)
-			}
-			bitLen *= 8
-			if bitLen != aesV2KeyLen {
-				return errors.Errorf("pdfcpu: invalid CF length, got %d want %d", *len, aesV2KeyLen)
-			}
+		if err := checkCFLengthAESV2(*len, pdf20, relaxed); err != nil {
+			return err
 		}
 	}
 
@@ -1066,6 +1084,24 @@ func validateCryptFilterRecipients(ctx *model.Context, d types.Dict, cfm *string
 	return nil
 }
 
+func checkCryptFilterCFM(cfm string, v int) error {
+	var ss []string
+	switch v {
+	case 4:
+		ss = []string{"V2", "AESV2"}
+	case 5:
+		ss = []string{"AESV3"}
+	case 6:
+		ss = []string{"AESV4"}
+	}
+	if len(ss) > 0 {
+		if !types.MemberOf(cfm, ss) {
+			return errors.Errorf("pdfcpu: crypt filter invalid entry \"CFM\": %s", cfm)
+		}
+	}
+	return nil
+}
+
 func validateCryptFilter(ctx *model.Context, d types.Dict, v int, pubKeySecHandler, relaxed bool) (bool, error) {
 	// v = 4,5,6
 	// 4 AESV2, V2
@@ -1074,19 +1110,8 @@ func validateCryptFilter(ctx *model.Context, d types.Dict, v int, pubKeySecHandl
 
 	cfm := d.NameEntry("CFM")
 	if cfm != nil {
-		var ss []string
-		switch v {
-		case 4:
-			ss = []string{"V2", "AESV2"}
-		case 5:
-			ss = []string{"AESV3"}
-		case 6:
-			ss = []string{"AESV4"}
-		}
-		if len(ss) > 0 {
-			if !types.MemberOf(*cfm, ss) {
-				return false, errors.Errorf("pdfcpu: crypt filter invalid entry \"CFM\": %s", *cfm)
-			}
+		if err := checkCryptFilterCFM(*cfm, v); err != nil {
+			return false, err
 		}
 	}
 
@@ -1239,6 +1264,28 @@ func validateEncryptLength(d types.Dict, v int) (int, error) {
 	}
 }
 
+func validatePubKeySecHandler(ctx *model.Context, d types.Dict, pubKeySecHandler bool, subFilter string) error {
+	if !pubKeySecHandler {
+		return nil
+	}
+
+	if subFilter == "adbe.pkcs7.s3" || subFilter == "adbe.pkcs7.s4" {
+		obj, ok := d.Find("Recipients")
+		if !ok {
+			return errors.New("pdfcpu: unsupported encryption: required entry \"Recipients\" missing")
+		}
+		arr, err := ctx.DereferenceArray(obj)
+		if err != nil {
+			return err
+		}
+		if len(arr) == 0 {
+			return errors.New("pdfcpu: unsupported encryption: required entry \"Recipients\" empty")
+		}
+	}
+
+	return nil
+}
+
 // SupportedEncryption returns a pointer to a struct encapsulating used encryption.
 func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 	// Filter
@@ -1286,12 +1333,9 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 	}
 
 	// OE, UE, Perms
-	var oe, ue, perms []byte
-	if r == 5 || r == 6 || r == 7 {
-		oe, ue, perms, err = validateAES256Parameters(d)
-		if err != nil {
-			return nil, err
-		}
+	oe, ue, perms, err := validateAES256Parameters(d, r)
+	if err != nil {
+		return nil, err
 	}
 
 	// P
@@ -1307,18 +1351,9 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 		encMeta = *emd
 	}
 
-	if pubKeySecHandler && subFilter == "adbe.pkcs7.s3" || subFilter == "adbe.pkcs7.s4" {
-		obj, ok := d.Find("Recipients")
-		if !ok {
-			return nil, errors.New("pdfcpu: unsupported encryption: required entry \"Recipients\" missing")
-		}
-		arr, err := ctx.DereferenceArray(obj)
-		if err != nil {
-			return nil, err
-		}
-		if len(arr) == 0 {
-			return nil, errors.New("pdfcpu: unsupported encryption: required entry \"Recipients\" empty")
-		}
+	// PubKeySecHandler
+	if err := validatePubKeySecHandler(ctx, d, pubKeySecHandler, subFilter); err != nil {
+		return nil, err
 	}
 
 	return &model.Enc{

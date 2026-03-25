@@ -1726,6 +1726,13 @@ func addAnnotation(ann model.AnnotationRenderer, pgAnnots model.PgAnnots, i int,
 	annots.Map[objNr] = ann
 }
 
+func detectSignature(xRefTable *model.XRefTable, annotDict types.Dict, objNr, incr int) error {
+	if objNr <= 0 {
+		return nil
+	}
+	return cacheSig(xRefTable, annotDict, "formFieldDict", false, objNr, incr)
+}
+
 func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) (types.Array, error) {
 
 	// a ... array of indrefs to annotation dicts.
@@ -1784,11 +1791,8 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) (types.
 		}
 
 		if hasIndRef {
-			objNr := indRef.ObjectNumber.Value()
-			if objNr > 0 {
-				if err := cacheSig(xRefTable, annotDict, "formFieldDict", false, objNr, incr); err != nil {
-					return nil, err
-				}
+			if err := detectSignature(xRefTable, annotDict, indRef.ObjectNumber.Value(), incr); err != nil {
+				return nil, err
 			}
 		}
 

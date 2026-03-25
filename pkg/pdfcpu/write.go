@@ -1018,6 +1018,25 @@ func updateEncryption(ctx *model.Context) error {
 	return nil
 }
 
+func encryptInfo(ctx *model.Context) {
+	if log.CLIEnabled() {
+		alg := "RC4"
+		if ctx.EncryptUsingAES {
+			alg = "AES"
+		}
+		log.CLI.Printf("using %s-%d\n", alg, ctx.EncryptKeyLength)
+	}
+}
+
+func removeEncryptionWarning(ctx *model.Context) {
+	if log.CLIEnabled() {
+		s := "no encryption to remove..."
+		if ctx.EncKey != nil {
+			s = "removing encryption..."
+		}
+		log.CLI.Println(s)
+	}
+}
 func handleEncryption(ctx *model.Context) error {
 
 	switch ctx.Cmd {
@@ -1026,14 +1045,7 @@ func handleEncryption(ctx *model.Context) error {
 		if err := setupEncryption(ctx); err != nil {
 			return err
 		}
-
-		if log.CLIEnabled() {
-			alg := "RC4"
-			if ctx.EncryptUsingAES {
-				alg = "AES"
-			}
-			log.CLI.Printf("using %s-%d\n", alg, ctx.EncryptKeyLength)
-		}
+		encryptInfo(ctx)
 
 	case model.DECRYPT:
 		ctx.EncKey = nil
@@ -1045,13 +1057,7 @@ func handleEncryption(ctx *model.Context) error {
 
 	default:
 		if ctx.RemoveEncryption && ctx.Cmd.AllowRemoveEncryption() {
-			if log.CLIEnabled() {
-				if ctx.EncKey != nil {
-					log.CLI.Println("removing encryption...")
-				} else {
-					log.CLI.Println("no encryption to remove...")
-				}
-			}
+			removeEncryptionWarning(ctx)
 			ctx.EncKey = nil
 		} else if ctx.UserPWNew != nil || ctx.OwnerPWNew != nil {
 			if err := updateEncryption(ctx); err != nil {
