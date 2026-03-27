@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/hhrutter/lzw v1.0.0
-	github.com/hhrutter/pkcs7 v0.2.0
+	github.com/hhrutter/pkcs7 v0.2.2
 	github.com/hhrutter/tiff v1.0.2
 	github.com/mattn/go-runewidth v0.0.19
 	github.com/pkg/errors v0.9.1

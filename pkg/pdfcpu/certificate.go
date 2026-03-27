@@ -219,7 +219,7 @@ func saveCertsAsP7C(certs []*x509.Certificate, filename string, overwrite bool) 
 		return false, errors.New("no certificates to save")
 	}
 
-	p7, err := pkcs7.NewSignedData(nil)
+	p7, err := pkcs7.NewSignedData()
 	if err != nil {
 		return false, err
 	}
