@@ -27,7 +27,7 @@ layout: default
 * [Poster](../generate/poster.md) (create poster tiles for given paper size or dimensions)
 * [Resize](../core/resize.md) selected pages
 * [Rotate](../core/rotate.md) selected pages
-* [Signatures](../core/sign.md) (validates digital signatures)
+* [Signatures](../core/sign.md) (removes and validates digital signatures)
 * [Split](../core/split.md) multi-page PDF into several PDFs according to split span
 * [Trim](../core/trim.md) (generate a custom version of a PDF including selected pages)
 * [Validate](../core/validate.md) PDF files up to version 1.7 + basic validation version 2.0
