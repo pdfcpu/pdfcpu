@@ -247,6 +247,9 @@ func (wm *Watermark) CalcBoundingBox(pageNr int) {
 			i := wm.PdfResIndex(pageNr)
 			wm.bbPDF = wm.PdfRes[i].Bb
 		}
+		if wm.bbPDF == nil {
+			return
+		}
 		wm.Width = int(wm.bbPDF.Width())
 		wm.Height = int(wm.bbPDF.Height())
 		bb = wm.bbPDF.CroppedCopy(0)
