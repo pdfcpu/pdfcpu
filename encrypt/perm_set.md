@@ -16,7 +16,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu permissions set [-perm n(one)|p(rint)|a(ll)|max4Hex|max12Bits] [-upw userpw] -opw ownerpw inFile
+pdfcpu permissions set [--perm n(one)|p(rint)|a(ll)|max4Hex|max12Bits] [--upw userpw] --opw ownerpw inFile
 ```
 
 <br>
@@ -48,7 +48,7 @@ pdfcpu permissions set [-perm n(one)|p(rint)|a(ll)|max4Hex|max12Bits] [-upw user
 You have to provide any non empty password in order to change permissions:
 
 ```
-$ pdfcpu encrypt -opw opw enc.pdf
+$ pdfcpu encrypt enc.pdf --opw opw
 writing enc.pdf ...
 
 $ pdfcpu perm list enc.pdf
@@ -62,10 +62,10 @@ Bit 10: false (extract(rev>=3))
 Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 
-pdfcpu perm set -perm all enc.pdf
+pdfcpu perm set enc.pdf --perm all
 pdfcpu: please provide the owner password with -opw
 
-$ pdfcpu perm set -opw opw -perm all enc.pdf
+$ pdfcpu perm set enc.pdf --opw opw --perm all
 adding permissions to enc.pdf ...
 writing enc.pdf ...
 

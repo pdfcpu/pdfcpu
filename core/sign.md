@@ -1,4 +1,4 @@
----
+pdfcpu s---
 layout: default
 ---
 
@@ -92,7 +92,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu signatures validate [-a(ll) -f(ull)] -- inFile
+pdfcpu signatures validate inFile [flags]
 ```
 
 <br>
@@ -179,7 +179,7 @@ The PAdES baseline levels(profiles) are defined in [ETSI EN 319 142-1 V1.2.1 (20
 We start with a valid PAdES-B-B conforming ETSI CAdES-detached signature:
 
 ```sh
-$ pdfcpu sig val sample1.pdf
+$ pdfcpu signatures validate sample1.pdf
 optimizing...
 
 1 form signature (authoritative, visible, signed) on page 1
@@ -191,7 +191,7 @@ optimizing...
 By using *-full* we can look at all the details: 
 
 ```sh
-$ pdfcpu sig val -full sample1.pdf
+$ pdfcpu signatures validate sample1.pdf --full
 optimizing...
 
 1:
@@ -260,7 +260,7 @@ The output also shows that the certificate is not expired and passed the online 
 Next we take a look at a signature that in addition to being PAdES B-B compliant also comes with an embedded trusted timestamp.
 
 ```sh
-$ pdfcpu sig val sample2.pdf
+$ pdfcpu signatures validate sample2.pdf
 optimizing...
 
 1 form signature (authoritative, visible, signed) on page 1
@@ -273,7 +273,7 @@ Now let's look at the validation result details.
 In addition to -full we are also going to supply -all to check for other signatures:
 
 ```sh
-$ pdfcpu sig val -all -full sample2.pdf
+$ pdfcpu signatures validate sample2.pdf --all --full
 repaired: trailer size
 optimizing...
 
@@ -347,7 +347,7 @@ Next, we have an example that uses a Document Timestamp Signature to prove that 
 
 ```sh
 
-$ pdfcpu sig val sample3.pdf
+$ pdfcpu signatures validate sample3.pdf
 optimizing...
 
 2 signatures present:
@@ -365,7 +365,8 @@ optimizing...
    Signed: 2024-03-04 12:24:31 +0000
 ```
 
-In order to see the details for both signatures, you need to supply `-all` and `-full`.
+In order to see the details for both signatures, you need to supply `--all` and `--full`.
+(Using a combination of short flags also works: `-af`)
 There is a good chance that this form signature is B-T or even higher, such as B-LT or B-LTA compliant.  
 We skip this because it produces a rather long output.
 
@@ -376,7 +377,7 @@ This is not a signature in the traditional sense, but rather a trusted definitio
 For example, you can use usage rights to explicitly allow saving a filled form.
 
 ```sh
-$ pdfcpu sig val -all usageRights.pdf
+$ pdfcpu signatures validate usageRights.pdf --all
 optimizing...
 
 1 usage rights signature (invisible, signed)
@@ -390,7 +391,7 @@ Using `-all` reveals that there is only one signature.
 Let's take a detailed look at what is going on here:
 
 ```sh
-$ pdfcpu sig val -full usageRights.pdf
+$ pdfcpu signatures validate usageRights.pdf --full
 optimizing...
 
 1:

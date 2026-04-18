@@ -19,7 +19,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu viewerpref set inFile (inFileJSON | JSONstring)
+pdfcpu viewerpref set inFile ( inFileJSON | JSONstring ) [flags]
 ```
 
 <br>

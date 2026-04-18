@@ -14,7 +14,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu bookmarks export inFile [outFileJSON]
+pdfcpu bookmarks export inFile [ outFileJSON ] [flags]v
 ```
 
 <br>
@@ -35,10 +35,10 @@ pdfcpu bookmarks export inFile [outFileJSON]
 ## Examples
 
 ```sh
-$ pdfcpu bookm export bookmarkTree.pdf
+$ pdfcpu bookmarks export bookmarkTree.pdf
 writing out.json...
 
-$ cat out.json
+cat out.json
 {
 	"header": {
 		"source": "bookmarkTree.pdf",

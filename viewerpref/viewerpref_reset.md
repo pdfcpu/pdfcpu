@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu viewerpref reset inFile
+pdfcpu viewerpref reset inFile [flags]
 ```
 
 <br>

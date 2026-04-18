@@ -9,7 +9,7 @@ A PDF portfolio entry is any file previously added to a PDF portfolio. This comm
 ## Usage
 
 ```
-pdfcpu portfolio list inFile
+pdfcpu portfolio list inFile [flags]
 ```
 
 <br>

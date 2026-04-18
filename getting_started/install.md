@@ -25,12 +25,18 @@ $ pdfcpu version
 $ go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@latest
 ```
 
-## Using Homebrew (macOS)
+## Using Homebrew (Linux, macOS)
 ```
 $ brew install pdfcpu
 $ pdfcpu version
-
 ```
+
+## Using MacPorts (macOS)
+```
+sudo port selfupdate
+sudo port install pdfcpu
+```
+
 ## Using DNF/YUM (Fedora)
 (maybe not current)
 ```

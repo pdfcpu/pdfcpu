@@ -20,7 +20,7 @@ layout: default
 ## Usage
 
 ```
-pdfcpu poster [-p(ages) selectedPages] -- description inFile outDir [outFileName]
+pdfcpu poster description inFile outDir [ outFile] [flags]
 ```
 
 <br>
@@ -66,7 +66,7 @@ pdfcpu poster [-p(ages) selectedPages] -- description inFile outDir [outFileName
 Page format is A2, the printer supports A4.<br>
 Generate a poster(A2) via a corresponding 2x2 grid of A4 pages:
 ```sh
-$ pdfcpu poster "f:A4" test.pdf .
+$ pdfcpu poster 'f:A4' test.pdf .
 cut test.pdf into ./ ...
 writing test_page_1.pdf
 ```
@@ -84,7 +84,7 @@ writing test_page_1.pdf
 Page format is A2, the printer supports A4.<br>
 Generate a poster(A0) via a corresponding 4x4 grid of A4 pages:
 ```sh
-$ pdfcpu poster "f:A4, scale:2.0" test.pdf .
+$ pdfcpu poster 'f:A4, scale:2.0' test.pdf .
 cut test.pdf into ./ ...
 writing test_page_1.pdf
 ```
@@ -93,7 +93,7 @@ writing test_page_1.pdf
 
 Generate a poster via a corresponding grid with cell size 15x10 cm and provide a glue area of 1 cm:
 ```sh
-$ pdfcpu poster -u cm -- "dim:15 10, margin:1, border:on" test.pdf .
+$ pdfcpu poster 'dim:15 10, margin:1, border:on' test.pdf . -u cm
 cut test.pdf into ./ ...
 writing test_page_1.pdf
 ````

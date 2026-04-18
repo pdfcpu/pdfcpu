@@ -16,7 +16,7 @@ layout: default
 ## Usage
 
 ```
-pdfcpu collect -p(ages) selectedPages inFile [outFile]
+pdfcpu collect inFile [outFile] --pages
 ```
 
 <br>
@@ -48,6 +48,6 @@ Create a custom page collection from `in.pdf` and write the result to `out.pdf`.
 Begin with 3 instances of page 1 then append the rest of the file excluding the last page:
 
 ```sh
-$ pdfcpu collect -pages 1,1,1,2-l-1 in.pdf out.pdf
+$ pdfcpu collect in.pdf out.pdf --pages 1,1,1,2-l-1 
 writing sequ.pdf ...
 ```

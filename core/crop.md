@@ -22,7 +22,7 @@ layout: default
 ## Usage
 
 ```
-pdfcpu crop [-p(ages) selectedPages] -- description inFile [outFile]
+pdfcpu crop description inFile [outFile] [flags]
 ```
 
 <br>
@@ -77,7 +77,7 @@ $ pdfcpu crop -- "[0 0 200 200]" in.pdf cropped.pdf
 Margins and offsets may be expressed in any display unit you like (po,cm,mm,in). Crop a region located in the bottom left corner of the media box with dimension expressed as relative width and height of the media box applying a horizontal/vertical offset of 1 cm:
 
 ```sh
-$ pdfcpu crop -u cm -- "pos:bl, off:1 1, dim:25% 25%" in.pdf cropped.pdf
+$ pdfcpu crop "pos:bl, off:1 1, dim:25% 25%" in.pdf cropped.pdf -u cm
 ```
 
 <p align="center">
@@ -89,7 +89,7 @@ $ pdfcpu crop -u cm -- "pos:bl, off:1 1, dim:25% 25%" in.pdf cropped.pdf
 Crop relative to media box using 100 points for each of the four margins:
 
 ```sh
-$ pdfcpu crop -- "100" in.pdf cropped.pdf
+$ pdfcpu crop "100" in.pdf cropped.pdf
 ```
 
 <p align="center">

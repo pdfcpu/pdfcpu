@@ -9,7 +9,7 @@ This command changes the password which is also known as the *open doc password*
 ## Usage
 
 ```
-pdfcpu changeupw [-opw ownerpw] inFile upwOld upwNew
+pdfcpu changeupw inFile upwOld upwNew [flags]
 ````
 
 <br>
@@ -35,7 +35,7 @@ You can set the *user password* either when you `encrypt` a file or later with `
 Change the *user password* of a document that already has one:
 
 ```sh
-$ pdfcpu encrypt -upw upw -opw opw enc.pdf
+$ pdfcpu encrypt enc.pdf --upw upw --opw opw
 writing enc.pdf ...
 
 $ pdfcpu changeupw enc.pdf upw upwNew
@@ -47,12 +47,12 @@ writing enc.pdf ...
 Set the *user password* of a document that has none. Whenever you change the *user password* of a document you also have to provide the current *owner password*:
 
 ```sh
-$ pdfcpu encrypt -opw opw enc.pdf
+$ pdfcpu encrypt enc.pdf --opw opw
 writing enc.pdf ...
 
 $ pdfcpu changeupw enc.pdf "" upwNew
-Please provide the owner password with -opw
+Please provide the owner password with --opw
 
-$ pdfcpu changeupw -opw opw enc.pdf "" upwNew
+$ pdfcpu changeupw enc.pdf "" upwNew --opw opw
 writing enc.pdf ...
 ```

@@ -17,7 +17,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu form reset inFile [outFile] [fieldID|fieldName]...
+pdfcpu form reset inFile [ outFile ] [ fieldID | fieldName ]... [flags]
 ```
 
 <br>

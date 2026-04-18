@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu pagelayout reset inFile
+pdfcpu pagelayout reset inFile [flags]
 ```
 
 <br>

@@ -12,7 +12,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu zoom [-p(ages) selectedPages] -- description inFile [outFile]
+pdfcpu zoom description inFile [outFile] [flags]
 ```
 
 <br>
@@ -75,7 +75,7 @@ Given in.pdf:
 
 Zoom in by factor.
 ```sh
-$ pdfcpu zoom -- "factor: 2"  in.pdf out.pdf
+$ pdfcpu zoom -- 'factor: 2' in.pdf out.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/zoomInByFactor2.png" height="500">
@@ -85,7 +85,7 @@ $ pdfcpu zoom -- "factor: 2"  in.pdf out.pdf
 
 Zoom out by factor.
 ```sh
-$ pdfcpu zoom -- "factor: .5"  in.pdf out.pdf
+$ pdfcpu zoom 'factor: .5'  in.pdf out.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/zoomOutByFactor05.png" height="500">
@@ -95,7 +95,7 @@ $ pdfcpu zoom -- "factor: .5"  in.pdf out.pdf
 
 Zoom out by horizontal margin of 10 points.
 ```sh
-$ pdfcpu zoom -- "hmargin: -10" in.pdf out.pdf
+$ pdfcpu zoom 'hmargin: -10' in.pdf out.pdf
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/zoomOutByHMargin10Points.png" height="500">
@@ -106,7 +106,7 @@ $ pdfcpu zoom -- "hmargin: -10" in.pdf out.pdf
 Zoom out by vertical margin of 1 inch.
 Draw border around content and fill background light gray.
 ```sh
-$ pdfcpu zoom -unit inch -- "vmargin: 1, border:true, bgcolor:lightgray" in.pdf out.pdf
+$ pdfcpu zoom 'vmargin: 1, border:true, bgcolor:lightgray' in.pdf out.pdf --unit inch
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/zoomOutByVMargin1Inch.png" height="500">

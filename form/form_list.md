@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu form list inFile...
+pdfcpu form list inFile... [flags]
 ```
 <br>
 

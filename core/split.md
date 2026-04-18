@@ -9,7 +9,7 @@ Generate a set of PDF files for `inFile` in `outDir` according to given `span` v
 ## Usage
 
 ```
-pdfcpu split [-m(ode) span|bookmark|page] inFile outDir [span|pageNr...]
+pdfcpu split inFile outDir [ span | pageNr... ] [flags]
 ```
 
 <br>
@@ -67,7 +67,7 @@ $ pdfcpu split test.pdf out 2
 
 Split a PDF file along its bookmarks:
 ```sh
-$ pdfcpu split -m bookmark test.pdf out
+$ pdfcpu split test.pdf out -m bookmark
 ```
 
 <br>

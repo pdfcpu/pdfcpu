@@ -9,7 +9,7 @@ A PDF attachment is any file previously attached to a PDF document. This command
 ## Usage
 
 ```
-pdfcpu attachments list inFile
+pdfcpu attachments list inFile [flags]
 ```
 
 <br>

@@ -9,7 +9,7 @@ This command adds keywords or key phrases to a PDF document. Have a look at some
 ## Usage
 
 ```
-pdfcpu keywords add inFile keyword...
+pdfcpu keywords add inFile keyword... [flags]
 ```
 
 <br>

@@ -15,7 +15,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu form remove inFile [outFile] <fieldID|fieldName>...
+pdfcpu form list inFile... [flags]
 ```
 <br>
 
@@ -53,7 +53,7 @@ Pg L Field     │ Id | Name       │ Default          │ Value               
      CheckBox  │ 36 | cb11       │                  │ Yes                      │
      Textfield │ 37 | note1      │                  │ This is a sample text.\n │
 
-$ wpdfcpu form remove english.pdf 32
+$ pdfcpu form remove english.pdf 32
 writing english.pdf...
 
 $ pdfcpu form list english.pdf

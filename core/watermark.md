@@ -21,9 +21,9 @@ A watermark resides in the background of a page. How much of the watermark will 
 ## Usage
 
 ```
-pdfcpu watermark add    [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]
-pdfcpu watermark update [-p(ages) selectedPages] -m(ode) text|image|pdf -- string|file description inFile [outFile]
-pdfcpu watermark remove [-p(ages) selectedPages] inFile [outFile]
+pdfcpu watermark add    string | file description inFile [ outFile ] [flags]
+pdfcpu watermark update string | file description inFile [ outFile ] [flags]
+pdfcpu watermark remove inFile [ outFile ] [flags]
 ```
 
 
@@ -169,7 +169,7 @@ You only have to specify parameters that differ from the default.
 
 Create a watermark using defaults only:
 ```sh
-$ pdfcpu watermark add -mode text -- "This is a watermark" "" in.pdf out.pdf
+$ pdfcpu watermark add 'This is a watermark' '' in.pdf out.pdf --mode text
 ```
 <p align="center">
   <img style="border-color:silver" border="1" src="resources/wmt10.png" height="300">
@@ -179,7 +179,7 @@ $ pdfcpu watermark add -mode text -- "This is a watermark" "" in.pdf out.pdf
 Create a watermark using scale factor 1:
 
 ```sh
-$ pdfcpu watermark add -mode text -- "This is a watermark" "scale:1" in.pdf out.pdf
+$ pdfcpu watermark add --mode text -- 'This is a watermark' 'scale:1' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -192,7 +192,7 @@ $ pdfcpu watermark add -mode text -- "This is a watermark" "scale:1" in.pdf out.
 Create a watermark along the second diagonale using scale factor 0.9, default render mode `fill` and a fill color:
 
 ```sh
-$ pdfcpu watermark add -mode text -- "This is a watermark" "scale:.9, d:2, c:.6 .2 .9" in.pdf out.pdf
+$ pdfcpu watermark add 'This is a watermark' 'scale:.9, d:2, c:.6 .2 .9' in.pdf out.pdf -m text
 ```
 
 <p align="center">
@@ -204,7 +204,7 @@ $ pdfcpu watermark add -mode text -- "This is a watermark" "scale:.9, d:2, c:.6 
 Create a watermark with 0 degree rotation using scale factor 0.9 and render mode `stroke`:
 
 ```sh
-$ pdfcpu watermark add -mode text -- "This is a watermark" "scale:.9, rot:0, mo:1" in.pdf out.pdf
+$ pdfcpu watermark add 'This is a watermark' 'scale:.9, rot:0, mo:1' in.pdf out.pdf --mode text
 ```
 
 <p align="center">
@@ -216,7 +216,7 @@ $ pdfcpu watermark add -mode text -- "This is a watermark" "scale:.9, rot:0, mo:
 Create a watermark with a counterclockwise rotation of 45 degrees using scale factor 1, render mode `fill & stroke` and a fill color:
 
 ```sh
-$ pdfcpu watermark add -mode text -- "This is a watermark" "scale:1, rot:45, mo:2, c:.2 .7 .9" in.pdf out.pdf
+$ pdfcpu watermark add 'This is a watermark' 'scale:1, rot:45, mo:2, c:.2 .7 .9' in.pdf out.pdf --mode text
 ```
 
 <p align="center">
@@ -228,7 +228,7 @@ $ pdfcpu watermark add -mode text -- "This is a watermark" "scale:1, rot:45, mo:
 Create a watermark using  some multi line text, show its bounding box by setting bgcol, set all margins to 5 and a border width of 7 rendering round corners.
 
 ```sh
-$ pdfcpu watermark add -mode text -- "Some multi\nline text" "ma:5, bo:7 round .3 .7 .7, fillc:#3277d3, bgcol:#beded9, rot:0" in.pdf out.pdf
+$ pdfcpu watermark add 'Some multi\nline text' 'ma:5, bo:7 round .3 .7 .7, fillc:#3277d3, bgcol:#beded9, rot:0' in.pdf out.pdf -m text
 ```
 
 <p align="center">
@@ -240,7 +240,7 @@ $ pdfcpu watermark add -mode text -- "Some multi\nline text" "ma:5, bo:7 round .
 Create a watermark with default rotation, using scale factor 1, font size 48, default render mode `fill`, a fill color and set opacity to 0.6:
 
 ```sh
-$ pdfcpu watermark add -mode text -- "Draft" "points:48, scale:1, color:.8 .8 .4, op:.6" in.pdf out.pdf
+$ pdfcpu watermark add 'Draft' 'points:48, scale:1, color:.8 .8 .4, op:.6' in.pdf out.pdf --mode text
 ```
 
 <p align="center">
@@ -251,7 +251,7 @@ $ pdfcpu watermark add -mode text -- "Draft" "points:48, scale:1, color:.8 .8 .4
 Let's assume we have a PDF where even pages are blank. We can add a watermark for theses pages saying "Intentionally left blank" like so:
 
 ```sh
-$ pdfcpu watermark add -pages even -mode text -- "Intentionally left blank" "" in.pdf out.pdf
+$ pdfcpu watermark add 'Intentionally left blank' '' in.pdf out.pdf --mode text --pages even 
 ```
 
 We also could have used `pdfcpu stamp`. There is really no difference since we apply only to empty pages here.
@@ -262,7 +262,7 @@ We also could have used `pdfcpu stamp`. There is really no difference since we a
 
 Create a watermark using defaults only:
 ```sh
-$ pdfcpu watermark add -mode image -- "pic.jpg" "" in.pdf out.pdf
+$ pdfcpu watermark add 'pic.jpg' '' in.pdf out.pdf -m image
 ```
 
 <p align="center">
@@ -274,7 +274,7 @@ $ pdfcpu watermark add -mode image -- "pic.jpg" "" in.pdf out.pdf
 Create a watermark using 0 degree rotation and relative scaling of 1.0:
 
 ```sh
-$ pdfcpu watermark add -mode image -- "pic.jpg" "scale:1 rel, rot:0" in.pdf out.pdf
+$ pdfcpu watermark add 'pic.jpg' 'scale:1 rel, rot:0' in.pdf out.pdf --mode image
 ```
 
 <p align="center">
@@ -286,7 +286,7 @@ $ pdfcpu watermark add -mode image -- "pic.jpg" "scale:1 rel, rot:0" in.pdf out.
 Create a watermark using 0 degree rotation and absolute scaling of 1.0:
 
 ```sh
-$ pdfcpu watermark add -mode image -- "pic.jpg" "scale:1 abs, rot:0" in.pdf out.pdf
+$ pdfcpu watermark add 'pic.jpg' 'scale:1 abs, rot:0' in.pdf out.pdf -m image
 ```
 
 <p align="center">
@@ -298,7 +298,7 @@ $ pdfcpu watermark add -mode image -- "pic.jpg" "scale:1 abs, rot:0" in.pdf out.
 Create a watermark using a clockwise rotation of 30 degrees and absolute scaling of 1.0:
 
 ```sh
-$ pdfcpu watermark add -mode image -- "pic.jpg" "rotation:-30, scalefactor:1 abs" in.pdf out.pdf
+$ pdfcpu watermark add --mode image -- 'pic.jpg' 'rotation:-30, scalefactor:1 abs' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -310,7 +310,7 @@ $ pdfcpu watermark add -mode image -- "pic.jpg" "rotation:-30, scalefactor:1 abs
 Create a watermark using a clockwise rotation of 30 degrees and absolute scaling of 0.25:
 
 ```sh
-$ pdfcpu watermark add -mode image -- "pic.jpg" "rot:-30, scale:.25 abs" in.pdf out.pdf
+$ pdfcpu watermark add -m image -- 'pic.jpg' 'rot:-30, scale:.25 abs' in.pdf out.pdf
 ```
 
 <p align="center">
@@ -322,7 +322,7 @@ $ pdfcpu watermark add -mode image -- "pic.jpg" "rot:-30, scale:.25 abs" in.pdf 
 Create a watermark using defaults only. This will apply page 1 of `some.pdf`:
 
 ```sh
-$ pdfcpu watermark add -mode pdf -- "some.pdf:1" "" in.pdf out.pdf
+$ pdfcpu watermark add 'some.pdf:1' '' in.pdf out.pdf --mode pdf
 ```
 
 <p align="center">
@@ -334,5 +334,5 @@ $ pdfcpu watermark add -mode pdf -- "some.pdf:1" "" in.pdf out.pdf
 This is how to create a watermark using defaults and page 2 of `some.pdf`:
 
 ```sh
-$ pdfcpu watermark add -mode pdf -- "some.pdf:2" "" in.pdf out.pdf
+$ pdfcpu watermark add 'some.pdf:2' '' in.pdf out.pdf -m pdf
 ```

@@ -14,7 +14,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu pages insert [-p(ages) selectedPages] [-m(ode) before|after] inFile [outFile]
+pdfcpu pages insert [ description ] inFile [ outFile ] [flags]
 ```
 
 <br>
@@ -56,7 +56,7 @@ writing in.pdf...
 Insert an empty page before pages 1 to 5:
 
 ```sh
-$ pdfcpu pages insert -pages 1-5 in.pdf out.pdf
+$ pdfcpu pages insert in.pdf out.pdf --pages 1-5
 writing out.pdf...
 ```
 
@@ -65,6 +65,6 @@ writing out.pdf...
 Insert an empty page after the last page:
 
 ```sh
-$ pdfcpu pages insert -pages l -mode after in.pdf out.pdf
+$ pdfcpu pages insert in.pdf out.pdf --pages l --mode after 
 writing out.pdf...
 ```

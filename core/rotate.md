@@ -9,7 +9,7 @@ Rotate selected pages of `inFile` clockwise by a multiple of 90 degrees. Have a 
 ## Usage
 
 ```
-pdfcpu rotate [-p(ages) selectedPages] inFile rotation [outFile]
+pdfcpu rotate inFile rotation [outFile] [flags]
 ```
 
 <br>
@@ -48,5 +48,5 @@ $ pdfcpu rotate test.pdf 90
 Rotate the first two pages counter clockwise by 90 degrees:
 
 ```sh
-$ pdfcpu rotate -pages 1-2 test.pdf -90
+$ pdfcpu rotate --pages 1-2 test.pdf -90
 ```

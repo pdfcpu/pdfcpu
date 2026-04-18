@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu annotations remove [-p(ages) selectedPages] inFile [outFile] [objNr|annotId|annotType]...
+pdfcpu annotations remove inFile [ outFile ] [ objNr | annotId | annotType]... [flags]
 ```
 
 <br>
@@ -45,7 +45,7 @@ pages: all
 
 Remove annotations for first 5 pages:
 ```
-$ pdfcpu annot remove -pages 1-5 test.pdf
+$ pdfcpu annot remove test.pdf --pages 1-5
 writing test.pdf...
 pages: 1,2,3,4,5
 ```

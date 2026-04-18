@@ -16,7 +16,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu form multifill [-m(ode) single|merge] inFile inFileData outDir [outName]
+pdfcpu form multifill inFile inFileData outDir [ outFile ] [flags]
 ```
 <br>
 
@@ -70,7 +70,7 @@ $ pdfcpu form multifill in.pdf in.json outDir
 
 7. If you are only interested in a single output file run:
 ```
-$ pdfcpu form multifill -m merge in.pdf in.json outDir
+$ pdfcpu form multifill in.pdf in.json outDir --mode merge
 ```
 
 ### Multifill via CSV
@@ -102,7 +102,7 @@ $ pdfcpu form multifill in.pdf in.csv outDir
 
 4. If you are only interested in a single output file run:
 ```
-$ pdfcpu form multifill -m merge in.pdf in.csv outDir
+$ pdfcpu form multifill in.pdf in.csv outDir --mode merge
 ```
 
 

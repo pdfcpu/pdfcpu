@@ -6,7 +6,7 @@ layout: default
 
 Generally pdfcpu does not have to be configured.
 
-There is a configuration directory for user font management and storing the default configuration in effect.
+There is a configuration directory for certificate and user font management and storing the default configuration in effect.
 
 
 ## Config Dir
@@ -17,10 +17,10 @@ You can look up its location either like so:
 
 ```
 $ pdfcpu version
-pdfcpu: v0.10.2 dev
-commit: c5014528 (2025-04-23T12:42:04Z)
-base  : go1.24.2
+pdfcpu: v0.12.0 dev
+commit: adbc7ca2 (2026-04-03T17:15:58Z)
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
+base  : go1.26.1
 ```
 
 `pdfcpu config list` will also print the config file path followed by its content.
@@ -102,7 +102,7 @@ $ tree
     └── UnifontUpperMedium.gob
 ```
 
-Use the [-conf](common_flags.md) flag to set a custom config dir path.
+Use the [--conf](common_flags.md) flag to set a custom config dir path.
 
 You can also use this flag to disable the usage of a config dir.
 

@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu pagelayout list inFile
+pdfcpu pagelayout list inFile [flags]
 ```
 
 <br>

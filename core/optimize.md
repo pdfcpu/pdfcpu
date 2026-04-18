@@ -9,7 +9,7 @@ Optimize `inFile` by getting rid of redundant page resources like embedded fonts
 ## Usage
 
 ```
-pdfcpu optimize [-stats csvFile] inFile [outFile]
+pdfcpu optimize inFile [ outFile ] [flags]
 ```
 
 <br>
@@ -74,7 +74,7 @@ writing test_opt.pdf ...
 Optimize `test.pdf`, write the result to `test_opt.pdf`, append stats to `stats.csv` and produce logging on standard out:
 
 ```sh
-$ pdfcpu optimize -verbose -stats stats.csv test.pdf test_opt.pdf
+$ pdfcpu optimize --verbose --stats stats.csv test.pdf test_opt.pdf
 stats will be appended to stats.csv
  INFO: 2019/02/20 23:20:12 reading upc.pdf..
  INFO: 2019/02/20 23:20:12 PDF Version 1.5 conforming reader

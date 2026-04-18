@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu bookmarks list inFile
+pdfcpu bookmarks list inFile [flags]
 ```
 
 <br>
@@ -46,10 +46,9 @@ Page 5: Level 2
 
 <br>
 
-You can also abbreviate the command like so:
 
 ```
-$ pdfcpu bookm l bookmarkSimple.pdf
+$ pdfcpu bookmarks list bookmarkSimple.pdf
 Page 1: Applicant’s Form
 Page 2: Bold 这是一个测试
 Page 3: Italic 测试 尾巴

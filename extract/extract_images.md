@@ -12,7 +12,7 @@ NOTE: Meanwhile there is also the more intuitive command: <br>
 `pdfcpu images extract`
 
 ```sh
-$ pdfcpu extract -mode image book.pdf .
+$ pdfcpu extract image book.pdf . --mode image
 extracting images from book.pdf into . ...
 
 $ ls
@@ -32,7 +32,7 @@ $ ls
 Extract all images of the first 5 pages of `folder.pdf` into `out`:
 
 ```sh
-$ pdfcpu extract -mode image -pages -5 folder.pdf out
+$ pdfcpu extract folder.pdf out --mode image --pages -5
 pageSelection: -5
 extracting images from folder.pdf into out ...
 

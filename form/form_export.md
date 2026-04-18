@@ -22,7 +22,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu form export inFile [outFileJSON]
+pdfcpu form export inFile [ outFileJSON ] [flags]
 ```
 <br>
 

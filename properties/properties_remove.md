@@ -9,7 +9,7 @@ This command removes properties from a PDF document. Have a look at some [exampl
 ## Usage
 
 ```
-pdfcpu properties remove inFile [name...]
+pdfcpu properties remove inFile [ name... ] [flags]
 ```
 
 <br>

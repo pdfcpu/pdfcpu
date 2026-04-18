@@ -14,10 +14,10 @@ layout: default
 
 Have a look at some [examples](#examples).
 
-## Usage
+## Usagev
 
 ```
-pdfcpu boxes remove [-p(ages) selectedPages] -- boxTypes inFile [outFile]
+pdfcpu boxes remove boxTypes inFile [ outFile ] [flags]
 ```
 
 <br>
@@ -49,7 +49,7 @@ pdfcpu boxes remove [-p(ages) selectedPages] -- boxTypes inFile [outFile]
  Remove all page boundaries other than Media Box for page 2 of in.pdf:
 
 ```
-$ pdfcpu box rem -pages 2 -- "c,b,a,t" in.pdf out.pdf
+$ pdfcpu boxes remove 'c,b,a,t' in.pdf out.pdf --pages 2
 removing cropBox, trimBox, bleedBox, artBox for in.pdf
 writing out.pdf...
 ```
@@ -59,7 +59,7 @@ writing out.pdf...
 Remove Crop Box for all pages of in.pdf:
 
 ```
-$ pdfcpu box rem -- "crop" in.pdf out.pdf
+$ pdfcpu boxes remove 'crop' in.pdf out.pdf
 removing cropBox for in.pdf
 writing out.pdf...
 pages: all

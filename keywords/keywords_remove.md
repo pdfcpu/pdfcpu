@@ -9,7 +9,7 @@ This command removes keywords from a PDF document. Have a look at some [examples
 ## Usage
 
 ```
-pdfcpu keywords remove inFile [keyword...]
+pdfcpu keywords remove inFile [ keyword... ] [flags]
 ```
 
 <br>

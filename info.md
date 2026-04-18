@@ -9,7 +9,7 @@ Print information about a PDF file and its attachments.
 ## Usage
 
 ```
-pdfcpu info [-pages selectedPages] [-fonts -j(son)] inFile...
+pdfcpu info inFile... [flags]
 ```
 
 <br>
@@ -37,7 +37,7 @@ pdfcpu info [-pages selectedPages] [-fonts -j(son)] inFile...
 ## Example
 
 ```sh
-$ pdfcpu info -u cm test.pdf
+$ pdfcpu info test.pdf -u cm
               Source: test.pdf
          PDF version: 1.7
           Page count: 1
@@ -84,7 +84,7 @@ h  ... height<br>
 ar ... aspect ratio
 
 ```sh
-$ pdfcpu info -u po -pages 1,2 test.pdf
+$ pdfcpu info test.pdf --unit po --pages 1,2
 pages: 1,2
               Source: test.pdf
          PDF version: 1.2
@@ -122,7 +122,7 @@ Using object streams: No
 Output a JSON data set:
 
 ```
-$ pdfcpu info -json test.pdf
+$ pdfcpu info test.pdf --json
 {
 	"header": {
 		"version": "pdfcpu v0.5.0 dev",

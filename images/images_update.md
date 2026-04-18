@@ -15,7 +15,7 @@ Have a look at an [example](#example).
 ## Usage
 
 ```
-pdfcpu images update inFile imageFile [outFile] [ objNr | (pageNr Id) ]
+pdfcpu images update inFile imageFile [ outFile ] [ objNr | (pageNr Id) ] [flags]
 ````
 
 <br>

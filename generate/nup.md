@@ -23,7 +23,7 @@ For a single image file create a single page PDF file and fill the grid with cop
 ## Usage
 
 ```
-pdfcpu nup [-p(ages) selectedPages] -- [description] outFile n inFile|imageFiles...
+pdfcpu nup [ description ] outFile n inFile | imageFiles... [flags]
 ```
 
 <br>
@@ -133,7 +133,7 @@ $ pdfcpu nup out.pdf 4 in.pdf
 
 The output file will use the page size of the input file unless explicitly declared by a description string like so:
 ```sh
-$ pdfcpu nup -- "form:A4" out.pdf 9 in.pdf
+$ pdfcpu nup 'form:A4' out.pdf 9 in.pdf
 ```
 
 <p align="center">
@@ -148,8 +148,8 @@ Generate `out.pdf` using `A4 L`andscape mode where each page fits 4 images onto 
 The grid element border lines are rendered by default as well is the default margin of 3 points applied:
 
 ```sh
-$ pdfcpu nup -- "form:A4L" out.pdf 4 *.jpg *.png *.tif
-````
+$ pdfcpu nup 'form:A4L' out.pdf 4 *.jpg *.png *.tif
+```
 
 
 <p align="center">
@@ -163,7 +163,7 @@ In the following example `logo.jpg` will be `16`-up'ed onto `out.pdf`.
 Both grid borders and margins are suppressed and the output format is `Ledger`:
 
 ```sh
-$ pdfcpu nup -- "form:Ledger, bo:off, ma:0" out.pdf 16 logo.jpg
+$ pdfcpu nup 'form:Ledger, bo:off, ma:0' out.pdf 16 logo.jpg
 ```
 
 

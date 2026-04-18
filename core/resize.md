@@ -10,7 +10,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu resize [-p(ages) selectedPages] -- [description] inFile [outFile]
+pdfcpu resize description inFile [ outFile ] [flags]
 ```
 
 <br>
@@ -62,7 +62,7 @@ $ pdfcpu resize "scale:2" in.pdf out.pdf
 
 Shrink first 3 pages by cutting in half the page dimensions, keep orientation.
 ```sh
-$ pdfcpu resize -pages 1-3 -- "sc:.5" in.pdf out.pdf
+$ pdfcpu resize in.pdf out.pdf --pages 1-3
 ```
 
 <br>

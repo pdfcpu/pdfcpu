@@ -14,7 +14,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu bookmarks import [-r(eplace)] inFile inFileJSON [outFile]
+pdfcpu bookmarks import inFile inFileJSON [ outFile ] [flags]
 ```
 
 <br>
@@ -64,7 +64,7 @@ Note: color, bold and italic are not supported by Mac Preview!
 $ pdfcpu bookmarks import bookmarkTree.pdf bookmarkTree.json
 pdfcpu: existing outlines
 
-$ pdfcpu bookmarks import -replace bookmarkTree.pdf bookmarkTree.json
+pdfcpu bookmarks import bookmarkTree.pdf bookmarkTree.json --replace
 
 $ pdfcpu bookmarks list bookmarkTree.pdf
 Page 1: Level 1

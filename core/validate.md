@@ -21,7 +21,7 @@ Validation can also check for broken links.
 ## Usage
 
 ```
-pdfcpu validate [-m(ode) strict|relaxed] [-l(inks)] inFile
+pdfcpu validate inFile... [flags]
 ```
 
 <br>
@@ -64,7 +64,7 @@ It behaves like strict but does not complain about common seen violations of the
 
 An example using `strict` validation:
 ```sh
-pdfcpu validate -mode strict test.pdf
+$ pdfcpu validate test.pdf --mode strict
 validating(mode=strict) test.pdf ...
 validation ok
 ```
@@ -73,7 +73,7 @@ validation ok
 
 An example using default validation:
 ```sh
-pdfcpu validate test.pdf
+$ pdfcpu validate test.pdf
 validating(mode=relaxed) test.pdf ...
 validation ok
 ```
@@ -82,7 +82,7 @@ validation ok
 
 Check for broken links:
 ```sh
-pdfcpu val -l PDF32000_2008.pdf
+$ pdfcpu val PDF32000_2008.pdf -l
 validating(mode=relaxed) PDF32000_2008.pdf ...
 validating URIs..
 ...........................

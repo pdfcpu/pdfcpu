@@ -19,7 +19,7 @@ is a useful variation of the N-up command.
 ## Usage
 
 ```
-pdfcpu booklet [-p(ages) selectedPages] -- [description] outFile n inFile|imageFiles...
+pdfcpu booklet [ description ] outFile n inFile | imageFiles... [flags]
 ```
 
 <br>
@@ -186,7 +186,7 @@ This command generates a PDF file representing a sequence of page pairs (front a
 Once generated we need to print the file two-sided and then assemble our booklet by stacking the printed sheets and folding them down the middle:
 
 ```sh
-$ pdfcpu booklet -- "p:A4, border:on" booklet.pdf 2 pageSequence.pdf
+$ pdfcpu booklet 'p:A4, border:on' booklet.pdf 2 pageSequence.pdf
 ```
 
 Here is the front and back side of the first printed sheet of paper for an input file with eight pages.
@@ -203,7 +203,7 @@ This also explains that four booklet pages fit on one sheet of paper:
 You can also set margins, the sheet background color and you can even render the guidelines for folding:
 
 ```sh
-$ pdfcpu booklet -- "formsize:A4, border:off, guide:on, margin:10, bgcol:#beded9" booklet.pdf 2 pageSequence.pdf
+$ pdfcpu booklet 'formsize:A4, border:off, guide:on, margin:10, bgcol:#beded9' booklet.pdf 2 pageSequence.pdf
 ```
 
 <p align="center">
@@ -216,7 +216,7 @@ $ pdfcpu booklet -- "formsize:A4, border:off, guide:on, margin:10, bgcol:#beded9
 Since A4 happens to be the default form size the following command is identical to the one above:
 
 ```sh
-$ pdfcpu booklet -- "g:on, ma:10, bgcol:#beded9" booklet.pdf 2 pageSequence.pdf
+$ pdfcpu booklet 'g:on, ma:10, bgcol:#beded9' booklet.pdf 2 pageSequence.pdf
 ```
 
 <br>
@@ -232,7 +232,7 @@ Then we take the printed stack and cut the sheets horizontally. After cutting, w
 set of pages after the top set of pages in the zine. Then fold the half sheets:
 
 ```sh
-$ pdfcpu booklet -- "p:A4, border:on" zine.pdf 4 pageSequence.pdf
+$ pdfcpu booklet 'p:A4, border:on' zine.pdf 4 pageSequence.pdf
 ```
 
 Here are the first two pages representing the front and back side of the first paper sheet:
@@ -248,7 +248,7 @@ Using guidelines for cutting and folding and a nice combination of margin and ba
 may be easier to understand:
 
 ```sh
-$ pdfcpu booklet -- "p:A4, bo:off, g:on, ma:10, bgcol:#beded9" zine.pdf 4 pageSequence.pdf
+$ pdfcpu booklet 'p:A4, bo:off, g:on, ma:10, bgcol:#beded9' zine.pdf 4 pageSequence.pdf
 ```
 
 <p align="center">
@@ -264,7 +264,7 @@ Similar to _nup_ and _grid_ the _booklet_ command also accepts a sequence of ima
 In this case pdfcpu applies the same logic as above treating each image as a booklet page:
 
 ```sh
-$ pdfcpu booklet -- "p:A4, g:on, ma:25, bgcol:#beded9" bookletFromImages.pdf 4 *.png
+$ pdfcpu booklet 'p:A4, g:on, ma:25, bgcol:#beded9' bookletFromImages.pdf 4 *.png
 ```
 
 In the following example we have five input image files resulting in a booklet with five pages of content.<br>
@@ -285,5 +285,5 @@ Here are all pages (1 and 2) of the output file _bookletFromImages.pdf_:
 - For such a multi folio booklet set 'multifolio:on' and play around with 'foliosize' which defaults to 8.
 
 ```sh
-$ pdfcpu booklet -- "p:A4, multifolio:on, foliosize:8" hardbackbook.pdf 2 in.pdf
+$ pdfcpu booklet 'p:A4, multifolio:on, foliosize:8' hardbackbook.pdf 2 in.pdf
 ```

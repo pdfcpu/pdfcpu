@@ -40,8 +40,8 @@ and the current pdfcpu version:
 $ pdfcpu version
 pdfcpu: v0.9.1 dev
 commit: 22ebeff8 (2024-10-18T19:51:48Z)
-base  : go1.23.0
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
+base  : go1.23.0
 ```
 
 The major version of both is 9 and match, so no upgrade is needed.
@@ -57,8 +57,8 @@ and the pdfcpu version:
 $ pdfcpu version
 pdfcpu: v0.10.0 dev
 commit: 22ebeff8 (2024-10-18T19:51:48Z)
-base  : go1.23.0
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
+base  : go1.23.0
 ```
 
 have different major versions 9 and 10 respectively making a config file upgrade necessary.

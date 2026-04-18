@@ -10,7 +10,7 @@ If you want to remove an extracted entry you can do this using [portfolio remove
 ## Usage
 
 ```
-pdfcpu portfolio extract inFile outDir [file...]
+pdfcpu portfolio extract inFile outDir [ file... ] [flags]
 ```
 
 <br>

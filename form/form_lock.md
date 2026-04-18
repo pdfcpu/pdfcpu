@@ -12,7 +12,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu form lock inFile [outFile] [fieldID|fieldName]...
+pdfcpu form lock inFile [ outFile ] [ fieldID | fieldName ]... [flags]
 ```
 
 <br>

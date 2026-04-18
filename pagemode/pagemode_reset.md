@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu pagemode reset inFile
+pdfcpu pagemode reset inFile [flags]
 ```
 
 <br>

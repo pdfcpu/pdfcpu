@@ -39,7 +39,7 @@ pdfcpu comes preloaded with about 4300 certificates maintained by the [EU/EEA Tr
 You can list certificates managed by pdfcpu using the following command:
 
 ```sh
-$ pdfcpu cert list
+$ pdfcpu certificates list
 certDir: /Users/horstrutter/Library/Application Support/pdfcpu/certs
 
 /eu/ades-lotl.p7c:
@@ -211,7 +211,7 @@ Users located in other regions may add any missing certificates to `.../pdfcpu/c
 The recommended way to achieve this is:
 
 ```sh
-$ pdfcpu cert import hr.p7c
+$ pdfcpu certificates import hr.p7c
 hr.p7c: 156 certificates
 imported 156 certificates
 ```
@@ -237,7 +237,7 @@ creating special folders.
 If you want to reset certificates managed by pdfcpu do this:
 
 ```sh
-$ pdfcpu cert reset
+$ pdfcpu certificates reset
 Are you ready to reset your certificates to your system root certificates?
 (yes/no): yes
 resetting..
@@ -249,7 +249,7 @@ Finished
 You may also inspect your certificate file(s) before importing:
 
 ```sh
-$ pdfcpu cert inspect root.crt
+$ pdfcpu certificates inspect root.crt
 1:
     Subject:
              org       : A-Trust GmbH

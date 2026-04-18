@@ -9,7 +9,7 @@ layout: default
 Extract XML-Metadata from `book.pdf` into the current directory:
 
 ```sh
-$ pdfcpu extract -mode meta book.pdf .
+$ pdfcpu extract book.pdf . --mode meta
 extracting metadata from book.pdf into . ...
 
 $ ls

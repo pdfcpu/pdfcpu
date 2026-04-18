@@ -9,7 +9,7 @@ This command outputs a list of all properties. Have a look at some [examples](#e
 ## Usage
 
 ```
-pdfcpu properties list inFile
+pdfcpu properties list inFile [flags]
 ```
 
 <br>

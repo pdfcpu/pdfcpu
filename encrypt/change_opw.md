@@ -9,7 +9,7 @@ This command changes the password which is also known as the *set permissions pa
 ## Usage
 
 ```
-pdfcpu changeopw [-upw userpw] inFile opwOld opwNew
+pdfcpu changeopw inFile opwOld opwNew [flags]
 ```
 
 <br>
@@ -34,7 +34,7 @@ You have to set the *owner password* when you `encrypt` a file and you can chang
 
 Change the *owner password*:
 ```sh
-$ pdfcpu encrypt -opw opw enc.pdf
+$ pdfcpu encrypt enc.pdf --opw opw
 writing enc.pdf ...
 
 $ pdfcpu changeopw enc.pdf opw opwNew

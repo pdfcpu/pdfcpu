@@ -9,7 +9,7 @@ This command adds one or more files to a PDF input file aka the PDF portfolio. H
 ## Usage
 
 ```
-pdfcpu portfolio add inFile file[,desc]...
+pdfcpu portfolio add inFile file [ , desc ]... [flags]
 ```
 
 <br>

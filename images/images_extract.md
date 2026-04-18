@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu images extract [-p(ages) selectedPages] -- inFile outDir
+pdfcpu images extract inFile outDir [flags]
 ````
 
 <br>
@@ -60,7 +60,7 @@ $ ls
 Extract all images of the first 5 pages of `folder.pdf` into `out`:
 
 ```sh
-$ pdfcpu images extract -pages -5 folder.pdf out
+$ pdfcpu images extract folder.pdf out --pages -5
 pageSelection: -5
 extracting images from folder.pdf into out ...
 

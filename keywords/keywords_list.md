@@ -9,7 +9,7 @@ This command outputs a list of all document keywords. Have a look at some [examp
 ## Usage
 
 ```
-pdfcpu keywords list inFile
+pdfcpu keywords list inFile [flags]
 ```
 
 <br>

@@ -30,7 +30,7 @@ allows you to generate PDF via JSON
 ## Usage
 
 ```
-pdfcpu create inFileJSON [inFile] outFile
+pdfcpu create inFileJSON [ inFile ] outFile [flags]
 ```
 
 <br>
@@ -52,7 +52,7 @@ pdfcpu create inFileJSON [inFile] outFile
 ## Futher Reference
 
 ```
-$ pdfcpu help create
+$ pdfcpu create --help
 ``` 
 
 and

@@ -10,7 +10,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu pages remove -p(ages) selectedPages inFile [outFile]
+pdfcpu pages remove inFile [ outFile ] [flags]
 ```
 
 <br>
@@ -41,7 +41,7 @@ pdfcpu pages remove -p(ages) selectedPages inFile [outFile]
 Remove pages 1-3 and 5 from `notes.pdf`:
 
 ```sh
-$ pdfcpu pages rem -pages 1-3,5 notes.pdf
+$ pdfcpu pages remove notes.pdf --pages 1-3,5
 removing pages from notes.pdf ...
 writing notes_new.pdf ...
 ```

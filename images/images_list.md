@@ -11,7 +11,7 @@ Have a look at an [example](#example).
 ## Usage
 
 ```
-pdfcpu images list [-p(ages) selectedPages] inFile
+pdfcpu images list inFile... [flags]
 ```
 
 ### Flags

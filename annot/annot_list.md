@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu annotations list [-p(ages) selectedPages] inFile
+pdfcpu annotations list inFile [flags]
 ```
 
 <br>

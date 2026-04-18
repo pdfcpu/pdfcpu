@@ -4,7 +4,7 @@ layout: default
 
 # Page Selection
 
-The `-pages ` flag allows you to select specific pages for processing when using the following commands:
+The `--pages -p` flag allows you to select specific pages for processing when using the following commands:
 
 ## Syntax
 
@@ -36,7 +36,7 @@ You can use either `!` or `n` for negating an expression.<br>
 
 Select the first three pages, page 5 and page 7 up to the end of the document:
 ```sh
--pages -3,5,7-
+--pages -3,5,7-
 ```
 
 <br>
@@ -44,7 +44,7 @@ Select the first three pages, page 5 and page 7 up to the end of the document:
 Select pages 4 to 7 but exclude page 6:
 
 ```sh
--pages '4-7,!6'
+--pages '4-7,!6'
 ``` 
 
 <br>
@@ -52,7 +52,7 @@ Select pages 4 to 7 but exclude page 6:
 Select all pages other than page 5:
 
 ```sh
--pages '1-,!5' 
+--pages '1-,!5' 
 ```
 
 <br>
@@ -60,7 +60,7 @@ Select all pages other than page 5:
 Select all odd pages and exclude page 1 and the last page:
 
 ```sh
--pages odd,n1,nl
+-p odd,n1,nl
 ```
 
 <br>
@@ -68,5 +68,5 @@ Select all odd pages and exclude page 1 and the last page:
 Select all even pages and ensure the last page:
 
 ```sh
--pages even,l
+-p even,l
 ```

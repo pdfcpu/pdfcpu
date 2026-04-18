@@ -9,7 +9,7 @@ This command decrypts `inFile` and removes password protection. If provided the 
 ## Usage
 
 ```
-pdfcpu decrypt [-upw userpw] [-opw ownerpw] inFile [outFile]
+pdfcpu decrypt inFile [ outFile ] [flags]
 ```
 
 <br>
@@ -41,7 +41,7 @@ pdfcpu decrypt [-upw userpw] [-opw ownerpw] inFile [outFile]
 Decrypt a file that has only the *owner password* set. This will also reset all permissions, providing full access. You don't need to provide any password:
 
 ```sh
-$ pdfcpu encrypt -opw opw test.pdf
+$ pdfcpu encrypt test.pdf --opw opw
 writing test.pdf ...
 
 $ pdfcpu decrypt test.pdf 
@@ -53,12 +53,12 @@ writing test.pdf ...
 Decrypt a file that is protected by both the *user password* and the *owner password*. This also removes the open doc password and resets all permissions providing full access. You will need to provide either of the two passwords:
 
 ```sh
-$ pdfcpu encrypt -opw opw -upw upw test.pdf
+$ pdfcpu encrypt test.pdf --opw opw --upw upw
 writing test.pdf ...
 
 $ pdfcpu decrypt test.pdf
 Please provide the correct password
 
-$ pdfcpu decrypt -upw upw test.pdf 
+$ pdfcpu decrypt test.pdf --upw upw 
 writing test.pdf ...
 ```

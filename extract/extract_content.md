@@ -9,7 +9,7 @@ layout: default
 Extract page content in PDF syntax from `book.pdf` into `out`:
 
 ```sh
-$ pdfcpu extract -mode content book.pdf out
+$ pdfcpu extract book.pdf out --mode content
 extracting content from book.pdf into out ...
 
 $ cd out && ls

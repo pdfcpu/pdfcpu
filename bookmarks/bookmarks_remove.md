@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu bookmarks remove inFile [outFile]
+pdfcpu bookmarks remove inFile [ outFile ] [flags]
 ```
 
 <br>

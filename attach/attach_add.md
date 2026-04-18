@@ -9,7 +9,7 @@ This command embeds one or more files by attaching them to a PDF input file. Hav
 ## Usage
 
 ```
-pdfcpu attachments add inFile file...
+pdfcpu attachments add inFile file... [flags]
 ```
 
 <br>

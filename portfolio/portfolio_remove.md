@@ -9,7 +9,7 @@ This command removes previously added entries from a PDF portfolio. Have a look 
 ## Usage
 
 ```
-pdfcpu portfolio remove inFile [file...]
+pdfcpu portfolio remove inFile [ file... ] [flags]
 ```
 
 <br>

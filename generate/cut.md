@@ -17,7 +17,7 @@ layout: default
 ## Usage
 
 ```
-pdfcpu cut [-p(ages) selectedPages] -- description inFile outDir [outFileName]
+pdfcpu cut description inFile outDir [ outFile ] [flags]
 ```
 
 <br>
@@ -64,7 +64,7 @@ A configuration string to specify the cutlines.
 Apply a horizontal page cut at 0.25 height.<br>
 Results in a PDF containing 3 PDF pages for each processed page:
 ```sh
-$ pdfcpu cut -- "hor:.25" test.pdf .
+$ pdfcpu cut 'hor:.25' test.pdf .
 cutting test.pdf into ./ ...
 writing test_page_1.pdf
 ```
@@ -82,7 +82,7 @@ writing test_page_1.pdf
 Apply a horizontal page cut at 0.25 height and a vertical page cut at 0.75 width.<br>
 Results in a PDF containing 5 pages for each processed page:
 ```sh
-$ pdfcpu cut -- "hor:.25, vert:.75" test.pdf .
+$ pdfcpu cut 'hor:.25, vert:.75' test.pdf .
 cutting test.pdf into ./ ...
 writing test_page_1.pdf
 ```
@@ -100,13 +100,13 @@ writing test_page_1.pdf
 
 The following has the same effect as: pdfcpu ndown 3 in.pdf outDir:
 ```sh
-$ pdfcpu cut -- "hor:.33 .66" inFile outDir
+$ pdfcpu cut 'hor:.33 .66' inFile outDir
 ````
 
 <br>
 
 The following has the same effect as: pdfcpu ndown 4 in.pdf outDir:
 ```sh
-$ pdfcpu cut -- "hor:.5, ver:.5" inFile outDir
+$ pdfcpu cut 'hor:.5, ver:.5' inFile outDir
 ````
 

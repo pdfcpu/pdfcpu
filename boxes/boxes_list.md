@@ -13,7 +13,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu boxes list [-p(ages) selectedPages] -- [boxTypes] inFile
+pdfcpu boxes list [ boxTypes ] inFile [flags]
 ```
 
 <br>
@@ -68,7 +68,7 @@ Page 2: rot=+0 orientation:portrait
 List mediaBox and cropBox of page 1 of test.pdf using display unit cm:
 
 ```
-$ pdfcpu box list -u cm -pages 1 -- "m,c" test.pdf
+$ pdfcpu box list 'm,c' test.pdf --pages 1 --unit cm
 listing mediaBox, cropBox for test.pdf
 pages: 1
 Page 1: rot=+0 orientation:portrait
@@ -80,4 +80,4 @@ Page 1: rot=+0 orientation:portrait
 
 ## Hint
 
-The [info](../info.md) command also prints page boundaries if the *-pages* flag is present.
+The [info](../info.md) command also prints page boundaries if the *--pages* flag is present.

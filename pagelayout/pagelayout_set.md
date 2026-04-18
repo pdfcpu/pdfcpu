@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu pagelayout set inFile value
+pdfcpu pagemode set inFile value [flags]
 ```
 
 <br>

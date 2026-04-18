@@ -29,7 +29,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu form fill inFile inFileJSON [outFile]
+pdfcpu form fill inFile inFileJSON [ outFile ] [flags]
 ```
 <br>
 

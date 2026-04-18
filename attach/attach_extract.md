@@ -10,7 +10,7 @@ If you want to remove an extracted document you can do this using [attach remove
 ## Usage
 
 ```
-pdfcpu attachments extract inFile outDir [file...]
+pdfcpu attachments extract inFile outDir [ file... ] [flags]
 ```
 
 <br>

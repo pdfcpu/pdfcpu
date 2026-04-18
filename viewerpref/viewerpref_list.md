@@ -11,7 +11,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu viewerpref list [-a(ll)] [-j(son)] inFile
+pdfcpu viewerpref list inFile [flags]
 ```
 
 <br>
@@ -24,8 +24,8 @@ pdfcpu viewerpref list [-a(ll)] [-j(son)] inFile
 
 | name    | description         | required
 |:--------|:--------------------|:--------------------------
-| all     | output all (including default values)      | no
-| json    | output JSON                                | no
+| a(ll)     | output all (including default values)      | no
+| j(son)    | output JSON                                | no
 | inFile  | PDF input file                             | yes
 
 
@@ -46,7 +46,7 @@ Viewer preferences:
 
 Display all viewer preferences:
 ```sh
-$ pdfcpu viewerpref list -all test.pdf
+$ pdfcpu viewerpref list test.pdf --all
 Viewer preferences:
    HideToolbar = false
    HideMenubar = false

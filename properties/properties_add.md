@@ -11,7 +11,7 @@ You can also set the PDFs *Title*, *Subject* and *Author*.
 ## Usage
 
 ```
-pdfcpu properties add inFile nameValuePair...
+pdfcpu properties add inFile nameValuePair... [flags]
 ```
 
 <br>
