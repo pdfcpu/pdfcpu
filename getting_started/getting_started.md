@@ -4,12 +4,16 @@ layout: default
 
 # Getting Started
 
-Understanding the command set is essential if you are planning to use the Go API and integrate `pdfcpu` into your Go based backend system.
+Choose how you want to use pdfcpu.
 
 ## CLI
 
-The focus of this site is to document all available commands, their flags and parameters.
+Use the command-line tool to process PDF files directly.
+
+→ [CLI Installation]({{ site.baseurl }}/getting_started/install_cli)
 
 ## API
 
-You can find the documentation of the API [here](https://pkg.go.dev/github.com/pdfcpu/pdfcpu/pkg/api).
+Use pdfcpu as a Go library in your applications.
+
+→ [API Installation]({{ site.baseurl }}/getting_started/install_api)
