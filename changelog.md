@@ -6,7 +6,7 @@ layout: default
 
 | Date      | Tag / Commit                                                                                | Description  
 |:----------|:--------------------------------------------------------------------------------------------|:------------------------------
-|2026-04-21 | [v0.12.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.12.0)                            | Migrate cli to cobra
+|2026-04-22 | [v0.12.0](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.12.0)                            | Migrate cli to cobra
 |           |                                                                                             | Fix #399, #642, #1055, #1201,
 |           |                                                                                             | #1211, #1215, #1229, #1231,
 |           |                                                                                             | #1255, #1261, #1263, #1267, #1268,
