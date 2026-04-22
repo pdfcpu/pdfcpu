@@ -62,6 +62,11 @@ Install the CLI tool:
     brew install pdfcpu
     pdfcpu version
 
+### MacPorts
+
+    sudo port install pdfcpu
+    pdfcpu version
+
 ### DNF/YUM (Fedora)
 
     sudo dnf install golang-github-pdfcpu
