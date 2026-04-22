@@ -41,10 +41,10 @@ Example:
 
 ## Documentation
 
-* API: https://pkg.go.dev/github.com/pdfcpu/pdfcpu/pkg/api
+* API: [pkg.go.dev docs](https://pkg.go.dev/github.com/pdfcpu/pdfcpu/pkg/api)
 * Examples:
-  * https://github.com/pdfcpu/pdfcpu/tree/master/pkg/api/test
-  * https://github.com/pdfcpu/pdfcpu/tree/master/pkg/samples
+  * [API tests](https://github.com/pdfcpu/pdfcpu/tree/master/pkg/api/test)
+  * [Sample files](https://github.com/pdfcpu/pdfcpu/tree/master/pkg/samples)
 
 ---
 
