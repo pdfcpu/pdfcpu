@@ -48,4 +48,4 @@ Example:
 
 ---
 
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=0b675754-cb2d-4989-bdb9-814aba0ea888" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=0b675754-cb2d-4989-bdb9-814aba0ea888" width="1" height="1" />

@@ -81,4 +81,4 @@ Install the CLI tool:
 
 ---
 
-<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=0203eab5-b03d-4fd2-b2f1-2c505e09cbe2" />
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=0203eab5-b03d-4fd2-b2f1-2c505e09cbe2" width="1" height="1" />
