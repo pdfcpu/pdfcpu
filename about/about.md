@@ -14,7 +14,8 @@ The parser is designed for real-world PDFs and can handle many files that violat
 
 Support for PDF 2.0 is ongoing.
 
-New features are implemented on demand due to the limited availability of real-world test files.  
+New features are implemented on demand due to the limited availability of real-world test files.
+
 If you need support for a specific feature, please open an issue and provide a sample file if possible.
 
 ## Usage
