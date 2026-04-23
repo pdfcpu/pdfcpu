@@ -470,6 +470,14 @@ func (n *Node) removeKid(xRefTable *XRefTable, kid *Node, i int) (bool, error) {
 		n.Kids = append(n.Kids[:i], n.Kids[i+1:]...)
 	}
 
+	if len(n.Kids) == 0 {
+		// The removed kid was the last one. Signal the caller so it can
+		// drop this now-empty intermediary node (and doesn't read
+		// n.Kids[0].Kmin below, which used to panic with "index out of
+		// range [0] with length 0" on single-child name-tree nodes).
+		return true, nil
+	}
+
 	if len(n.Kids) == 1 {
 
 		// If a single kid remains we can merge it with its parent.
