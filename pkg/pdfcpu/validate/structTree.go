@@ -526,6 +526,10 @@ func validateStructTreeRootDictEntryKArray(xRefTable *model.XRefTable, a types.A
 			return errors.Errorf("pdfcpu: validateStructTreeRootDictEntryKArray: invalid dictType %s (should be \"StructElem\")\n", *dictType)
 
 		default:
+			if xRefTable.ValidationMode == model.ValidationRelaxed {
+				model.ShowDigestedSpecViolation("validateStructTreeRootDictEntryKArray: unexpected struct tree value type")
+				continue
+			}
 			return errors.New("pdfcpu: validateStructTreeRootDictEntryKArray: unsupported PDF object")
 
 		}
@@ -568,6 +572,10 @@ func validateStructTreeRootDictEntryK(xRefTable *model.XRefTable, o types.Object
 		}
 
 	default:
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			model.ShowDigestedSpecViolation("validateStructTreeRootDictEntryK: unexpected struct tree value type")
+			return nil
+		}
 		return errors.New("pdfcpu: validateStructTreeRootDictEntryK: unsupported PDF object")
 
 	}

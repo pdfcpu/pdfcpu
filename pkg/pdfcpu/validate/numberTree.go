@@ -105,6 +105,10 @@ func validateNumberTreeDictNumsEntry(xRefTable *model.XRefTable, d types.Dict, n
 
 			i, ok := o.(types.Integer)
 			if !ok {
+				if xRefTable.ValidationMode == model.ValidationRelaxed {
+					model.ShowDigestedSpecViolation(fmt.Sprintf("validateNumberTreeDictNumsEntry: corrupt key <%v> - skipping remaining entries", o))
+					return firstKey, lastKey, nil
+				}
 				return 0, 0, errors.Errorf("pdfcpu: validateNumberTreeDictNumsEntry: corrupt key <%v>\n", o)
 			}
 
