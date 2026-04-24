@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="{{ site.LanguageCode | default "en-us" }}">
+  <head>
+    <title>{{ if .IsHome }}PDF processor api & cli | {{ site.Title }}{{ else }}{{ .Title }} | {{ site.Title }}{{ end }}</title>
+
+    {{ with site.Params.googleAnalyticsID }}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ . }}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '{{ . }}');
+    </script>
+    {{ end }}
+
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ site.Params.metaDescription }}{{ end }}">
+    <meta property="og:title" content="{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }}{{ end }}">
+    <meta property="og:description" content="{{ with .Description }}{{ . }}{{ else }}{{ site.Params.metaDescription }}{{ end }}">
+    <meta property="og:url" content="{{ .Permalink }}">
+    <meta property="og:type" content="website">
+
+    <link rel="stylesheet" href="{{ "assets/css/style.css" | relURL }}">
+    <link rel="stylesheet" href="{{ "css/common.css" | relURL }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ "apple-touch-icon.png?v=YAmJMYG6d0" | relURL }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ "favicon-32x32.png?v=YAmJMYG6d0" | relURL }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ "favicon-16x16.png?v=YAmJMYG6d0" | relURL }}">
+    <link rel="manifest" href="{{ "site.webmanifest?v=YAmJMYG6d0" | relURL }}">
+    <link rel="mask-icon" href="{{ "safari-pinned-tab.svg?v=YAmJMYG6d0" | relURL }}" color="#5bbad5">
+    <link rel="shortcut icon" href="{{ "favicon.ico?v=YAmJMYG6d0" | relURL }}">
+    <meta name="msapplication-TileColor" content="#2b5797">
+    <meta name="theme-color" content="#ffffff">
+  </head>
+  <body>
+    <div class="wrapper">
+      <header style="max-height: calc(100vh - 58px); overflow: auto;">
+        <h1><a href="{{ "/" | relURL }}">{{ site.Title }}</a></h1>
+
+        {{ with site.Params.logo }}
+          <img src="{{ . | relURL }}" width="100" alt="Logo">
+        {{ end }}
+
+        <p>{{ site.Params.description }}</p>
+        <p class="view"><a href="{{ site.Params.repositoryURL }}">View the Project on GitHub <small>pdfcpu/pdfcpu</small></a></p>
+
+        {{ partial "nav.html" . }}
+
+        <a href="{{ "changelog" | relURL }}" class="{{ if eq .RelPermalink "/changelog/" }}current{{ end }}">Changelog</a><br>
+      </header>
+      <section class="{{ if .IsHome }}home-section{{ else }}content-section{{ end }}">
+        {{ .Content }}
+      </section>
+      <footer></footer>
+    </div>
+    <script src="{{ "assets/js/scale.fix.js" | relURL }}"></script>
+  </body>
+</html>

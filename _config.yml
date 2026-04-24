@@ -1,6 +1,0 @@
-theme: jekyll-theme-minimal
-#baseurl: /pdfcpu
-url: "https://pdfcpu.io"
-exclude: ['README.md']
-show_downloads: false
-logo: "/resources/logoSmall.png"

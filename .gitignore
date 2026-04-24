@@ -7,3 +7,7 @@
 
 # GoReleaser
 dist/*
+
+# Hugo
+public/
+.hugo_build.lock

@@ -1,0 +1,23 @@
+baseURL = "https://pdfcpu.io/"
+languageCode = "en-us"
+title = "pdfcpu"
+disableKinds = ["taxonomy", "term"]
+
+[params]
+  description = "A PDF processor written in Go."
+  metaDescription = "pdfcpu is a simple PDF processing library written in Go supporting encryption. It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000)."
+  logo = "/resources/logoSmall.png"
+  repositoryURL = "https://github.com/pdfcpu/pdfcpu"
+  googleAnalyticsID = "UA-138739451-1"
+
+[markup]
+  [markup.highlight]
+    style = "github"
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+[outputs]
+  home = ["HTML"]
+  page = ["HTML"]
+  section = ["HTML"]

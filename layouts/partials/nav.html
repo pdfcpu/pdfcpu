@@ -1,0 +1,20 @@
+{{ $current := .RelPermalink }}
+{{ $section := "" }}
+{{ with .File }}
+  {{ $section = index (split .Path "/") 0 }}
+{{ end }}
+
+<nav class="nav-top">
+  {{ range hugo.Data.nav }}
+    {{ $isCurrent := eq $current (printf "%s/" .url) }}
+    {{ $isSection := eq $section .section }}
+    <a href="{{ .url | relURL }}" class="{{ if or $isCurrent $isSection }}current{{ end }}">{{ .title }}</a><br>
+    {{ if and $isSection .pages }}
+      {{ range .pages }}
+        <div style="text-indent:25px;"><a href="{{ .url | relURL }}" class="{{ if eq $current (printf "%s/" .url) }}current{{ end }}">{{ .title }}</a></div>
+      {{ end }}
+    {{ end }}
+  {{ end }}
+</nav>
+
+<br>

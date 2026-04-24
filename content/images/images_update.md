@@ -1,0 +1,89 @@
+---
+layout: default
+title: "Update Images"
+---
+
+# Update Images
+
+This command lets you replace individual images by object number or page number and resource id.
+
+This basic implementation allows for image replacement as long as there is no softmask or alpha channel involved and the image dimensions (width & height) match.
+
+The necessary info to execute this command is retrieved from the output of `pdfcpu images list`.
+
+Have a look at an [example](#example).
+
+## Usage
+
+```
+pdfcpu images update inFile imageFile [ outFile ] [ objNr | (pageNr Id) ] [flags]
+````
+
+<br>
+
+### [Common Flags](/getting_started/common_flags)
+
+<br>
+
+### Arguments
+
+| name         | description         | required
+|:-------------|:--------------------|:--------
+| inFile       | PDF input file      | yes
+| imageFile    | image file          | yes
+| outFile      | PDF output file     | no
+| objNr        | object number       | no
+| pageNr       | page number         | no
+| Id           | resource id         | no
+
+<br>
+
+## Example
+
+List all contained images:
+
+```sh
+$ pdfcpu images list gallery.pdf
+gallery.pdf:
+1 images available (1.8 MB)
+
+Page Obj# │ Id  │ Type  SoftMask ImgMask │ Width │ Height │ ColorSpace Comp bpc Interp │   Size │ Filters
+━━━━━━━━━━┿━━━━━┿━━━━━━━━━━━━━━━━━━━━━━━━┿━━━━━━━┿━━━━━━━━┿━━━━━━━━━━━━━━━━━━━━━━━━━━━━┿━━━━━━━━┿━━━━━━━━━━━━
+   1    3 │ Im0 │ image                  │  1268 │    720 │  DeviceRGB    3   8    *   │ 1.8 MB │ FlateDecode
+```
+
+<br>
+
+Extract all images into the current dir:
+
+```sh
+$ pdfcpu images extract gallery.pdf .
+extracting images from gallery.pdf into ./ ...
+optimizing...
+writing gallery_1_Im0.png
+```
+
+<br>
+
+Update image with Id=Im0 on page=1 with gallery_1_Im0.png and write the result to updatedGallery.pdf.<br><br>
+Here page number and resource id are contained in the image file name:
+
+```sh
+$ pdfcpu images update gallery.pdf gallery_1_Im0.png updatedGallery.pdf
+```
+
+<br>
+
+Update image with object number 3 with logo.png:
+
+```sh
+$ pdfcpu images update gallery.pdf logo.png 3
+```
+
+<br>
+
+Update image with Id=Im0 on page=1 with logo.jpg:
+
+```sh
+$ pdfcpu images update gallery.pdf logo.jpg 1 Im0
+```
