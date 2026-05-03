@@ -45,7 +45,7 @@ A comma separated list of expressions defining the [selected pages](/getting_sta
 
 ## --mode, -m
 Used by various commands.<br>
-Please refer to [validate](/core/validate), [extract](/extract/extract), [encrypt](/encrypt/encryptPDF), [pages](/pages/pages_insert), [stamp](/core/stamp) and [watermark](/core/watermark) for more information. 
+Please refer to [validate](/core/validate), [extract](/extract/extract), [encrypt](/encrypt/encryptpdf), [pages](/pages/pages_insert), [stamp](/core/stamp) and [watermark](/core/watermark) for more information. 
 
 ## --opw
 *Owner password*<br>
@@ -57,4 +57,3 @@ Since some PDF readers skip over blank owner passwords pdfcpu makes this mandato
 *User password*<br>
 This is the password needed to open a PDF for reading.
 It is also known as the *open doc password*.
-

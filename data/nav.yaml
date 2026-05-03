@@ -145,9 +145,9 @@
   section: encrypt
   pages:
     - title: Encrypt
-      url: /encrypt/encryptPDF
+      url: /encrypt/encryptpdf
     - title: Decrypt
-      url: /encrypt/decryptPDF
+      url: /encrypt/decryptpdf
     - title: Change Owner Password
       url: /encrypt/change_opw
     - title: Change User Password

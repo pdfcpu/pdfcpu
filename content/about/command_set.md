@@ -10,8 +10,8 @@ title: "Command Set"
 * [Create](/create/create) PDF file via JSON with optional form
 * [Crop](/core/crop) (apply a custom crop box for selected pages)
 * [Cut](/generate/cut) page (apply custom horizontal/vertical cuts)
-* [Decrypt](/encrypt/decryptPDF) (remove password protection)
-* [Encrypt](/encrypt/encryptPDF) (set password protection)
+* [Decrypt](/encrypt/decryptpdf) (remove password protection)
+* [Encrypt](/encrypt/encryptpdf) (set password protection)
 * [Extract Content](/extract/extract_content) (extract the PDF-Source into dir)
 * [Extract Fonts](/extract/extract_fonts) (extract all embedded fonts of a PDF file into dir)
 * [Extract Images](/extract/extract_images) (extract embedded images of a PDF into dir)
