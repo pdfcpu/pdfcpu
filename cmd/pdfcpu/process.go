@@ -19,7 +19,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -824,14 +823,14 @@ func processSetPermissionsCommand(conf *model.Configuration, args []string) {
 }
 
 func processDecryptCommand(conf *model.Configuration, args []string) {
-	inFile := flag.Arg(0)
+	inFile := args[0]
 	if conf.CheckFileNameExt {
 		ensurePDFExtension(inFile)
 	}
 
 	outFile := inFile
-	if len(flag.Args()) == 2 {
-		outFile = flag.Arg(1)
+	if len(args) == 2 {
+		outFile = args[1]
 		ensurePDFExtension(outFile)
 	}
 
