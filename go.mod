@@ -9,9 +9,9 @@ require (
 	github.com/mattn/go-runewidth v0.0.23
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/crypto v0.50.0
+	golang.org/x/crypto v0.51.0
 	golang.org/x/image v0.39.0
-	golang.org/x/text v0.36.0
+	golang.org/x/text v0.37.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
