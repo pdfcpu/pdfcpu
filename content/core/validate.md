@@ -13,7 +13,6 @@ This command validates `inFile` against:
 
 * PDF 2.0: [PDF 32000-2:2020](https://www.pdfa-inc.org/product/iso-32000-2-pdf-2-0-bundle-sponsored-access/) (ongoing task!)
 
-
 <br>
 Validation can also check for broken links.
 
@@ -33,6 +32,7 @@ pdfcpu validate inFile... [flags]
 |:---------------------------------|:----------------|:---------|:----------------|:------
 | m(ode)                           | validation mode | no       | strict, relaxed | relaxed
 | l(inks)                          | check links     | no       |                 |
+| opt, optimize                    | optimize resources | no    |                 |
 
 <br>
 
@@ -44,7 +44,7 @@ pdfcpu validate inFile... [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin | yes
 
 <br>
 
@@ -95,4 +95,13 @@ Page 753: http://developer.apple.com/fonts/TTRefMan/ status=404
 Page 754: http://www.agfamonotype.com/printer/pan1.asp status=404
 Page 755: http://www.rsasecurity.com/rsalabs/node.asp?id=2125 status=404
 validation error: broken links detected
+```
+
+<br>
+
+Validate a PDF streamed from S3:
+
+```sh
+$ aws s3 cp s3://acme-invoices/invoice.pdf - \
+   | pdfcpu validate -
 ```

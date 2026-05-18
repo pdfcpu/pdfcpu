@@ -23,7 +23,7 @@ pdfcpu properties list inFile [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 
 <br>
 
@@ -35,4 +35,13 @@ pdfcpu properties list inFile [flags]
 $ pdfcpu properties list in.pdf
 dept = hr
 group = 3
+```
+
+<br>
+
+List properties for a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-assets/brochure.pdf - \
+   | pdfcpu properties list -
 ```

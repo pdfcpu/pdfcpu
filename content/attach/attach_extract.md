@@ -24,7 +24,7 @@ pdfcpu attachments extract inFile outDir [ file... ] [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | outDir       | output directory    | yes
 | file...      | one or more attachments to be extracted | no
 
@@ -48,4 +48,13 @@ $ pdfcpu attach extract ledger.pdf out
 writing out/invoice1.pdf
 writing out/invoice2.pdf
 writing out/invoice3.pdf
+```
+
+<br>
+
+Extract an attachment from a streamed PDF into a local output directory:
+
+```sh
+$ aws s3 cp s3://acme-archive/ledger.pdf - \
+   | pdfcpu attachments extract - ./attachments invoice1.pdf
 ```

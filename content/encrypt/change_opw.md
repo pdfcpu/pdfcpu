@@ -10,7 +10,7 @@ This command changes the password which is also known as the *set permissions pa
 ## Usage
 
 ```
-pdfcpu changeopw inFile opwOld opwNew [flags]
+pdfcpu changeopw inFile opwOld opwNew [ outFile ] [flags]
 ```
 
 <br>
@@ -23,9 +23,10 @@ pdfcpu changeopw inFile opwOld opwNew [flags]
 
 | name         | description            | required
 |:-------------|:-----------------------|:--------
-| inFile       | PDF input file         | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | opwOld       | current owner password | yes
 | opwNew       | new owner password     | yes, must not be empty!
+| outFile      | PDF output file, use `-` to write to stdout | no
 
 <br>
 
@@ -40,4 +41,14 @@ writing enc.pdf ...
 
 $ pdfcpu changeopw enc.pdf opw opwNew
 writing enc.pdf ...
+```
+
+<br>
+
+Change the owner password for a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-legal/client.pdf - \
+   | pdfcpu changeopw --upw "$UPW" - "$OLD_OPW" "$NEW_OPW" - \
+   | aws s3 cp - s3://acme-legal/client-rotated-opw.pdf
 ```

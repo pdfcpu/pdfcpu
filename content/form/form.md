@@ -40,4 +40,3 @@ You are very welcome to try the form commands on existing forms.
 
 Issues are expected though so please report back any strange behavior
 based on using Adobe Reader only.
-

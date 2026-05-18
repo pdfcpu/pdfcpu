@@ -15,7 +15,6 @@ Also known as permission or master password.
 Opens the document based on configured restrictions/permissions. <br>
 Also known as Open Doc password.
 
-
 > IMPORTANT
 >
 > Both passwords are needed to compute the encryption key.
@@ -53,8 +52,8 @@ pdfcpu encrypt inFile [ outFile ] [flags]
 
 | name         | description               | required
 |:-------------|:--------------------------|:--------
-| inFile       | PDF input file            | yes
-| outFile      | encrypted PDF output file | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -139,4 +138,14 @@ Set the user password to `upw` which will be needed to open `test_enc.pdf`, also
 ```sh
 $ pdfcpu encrypt test.pdf test_enc.pdf --upw upw --opw opw --mode rc4 --key 128 --perm all 
 writing test_enc.pdf ...
+```
+
+<br>
+
+Encrypt a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-hr/onboarding.pdf - \
+   | pdfcpu encrypt --opw "$OPW" --upw "$UPW" - - \
+   | aws s3 cp - s3://acme-hr/secure/onboarding.pdf
 ```

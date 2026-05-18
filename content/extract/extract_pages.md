@@ -7,6 +7,8 @@ title: "Extract Pages"
 
 This command is similar to [split](/core/split) with a default `span` of 1.
 
+Use `-` as `outDir` with page mode and a single selected page to write the extracted page PDF to stdout.
+
 ## Examples
 
 Extract all pages from `book.pdf` into single page PDFs in the current directory:
@@ -34,4 +36,14 @@ writing out/book_8.pdf ...
 writing out/book_9.pdf ...
 writing out/book_10.pdf ...
 writing out/book_5.pdf ...
+```
+
+<br>
+
+Extract a single page from an S3 PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-archive/contract.pdf - \
+   | pdfcpu extract --mode page --pages 3 - - \
+   | aws s3 cp - s3://acme-archive/pages/contract-page-3.pdf
 ```

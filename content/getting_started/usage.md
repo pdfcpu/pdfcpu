@@ -64,13 +64,14 @@ pdfcpu watermark remove inFile [ outFile ] [flags]
 Manage your PDF forms:
 
 ```
-pdfcpu form list   inFile... [flags]
-pdfcpu form remove inFile [ outFile ] < fieldID | fieldName >... [flags]
-pdfcpu form lock   inFile [ outFile ] [ fieldID | fieldName ]... [flags]
-pdfcpu form unlock inFile [ outFile ] [ fieldID | fieldName ]... [flags]
-pdfcpu form reset  inFile [ outFile ] [ fieldID | fieldName ]... [flags]
-pdfcpu form export inFile [ outFileJSON ] [flags]
-pdfcpu form fill   inFile inFileJSON [ outFile ] [flags]
+pdfcpu form list      inFile... [flags]
+pdfcpu form remove    inFile [ outFile ] < fieldID | fieldName >... [flags]
+pdfcpu form lock      inFile [ outFile ] [ fieldID | fieldName ]... [flags]
+pdfcpu form unlock    inFile [ outFile ] [ fieldID | fieldName ]... [flags]
+pdfcpu form reset     inFile [ outFile ] [ fieldID | fieldName ]... [flags]
+pdfcpu form export    inFile [ outFileJSON ] [flags]
+pdfcpu form fill      inFile inFileJSON [ outFile ] [flags]
+pdfcpu form multifill inFile inFileData outDir [ outFile ] [flags]
 ```
 <br>
 

@@ -46,9 +46,9 @@ pdfcpu nup [ description ] outFile n inFile | imageFiles... [flags]
 | name         | description          | required | default
 |:-------------|:---------------------|:---------|:-
 | description  | configuration string | no
-| outFile      | PDF output file      | yes
+| outFile      | PDF output file, use `-` to write to stdout      | yes
 | n            | the N-up value       | yes
-| inFile       | PDF input file       | inFile or imageFile(s)
+| inFile       | PDF input file, use `-` to read from stdin | inFile or imageFile(s)
 | imageFile... | one or more images   | inFile or imageFile(s)
 
 <br>
@@ -171,3 +171,13 @@ $ pdfcpu nup 'form:Ledger, bo:off, ma:0' out.pdf 16 logo.jpg
 <p align="center">
   <img style="border-color:silver" border="1" src="../resources/nup16img.png">
 </p>
+
+<br>
+
+Create an N-up PDF from a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-handouts/slides.pdf - \
+   | pdfcpu nup 'form:A4L' - 4 - \
+   | aws s3 cp - s3://acme-handouts/slides-4up.pdf
+```

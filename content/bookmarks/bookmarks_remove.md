@@ -25,8 +25,8 @@ pdfcpu bookmarks remove inFile [ outFile ] [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
-| outFile      | PDF output file     | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -39,4 +39,14 @@ $ pdfcpu bookmarks remove bookmarkSimple.pdf
 
 $ pdfcpu bookmarks list bookmarkSimple.pdf
 no bookmarks available
+```
+
+<br>
+
+Remove bookmarks while reading the PDF from stdin:
+
+```sh
+$ aws s3 cp s3://acme-manuals/product-bookmarked.pdf - \
+   | pdfcpu bookmarks remove - - \
+   | aws s3 cp - s3://acme-manuals/product-flat.pdf
 ```

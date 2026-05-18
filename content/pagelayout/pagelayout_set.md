@@ -12,7 +12,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu pagelayout set inFile value [flags]
+pdfcpu pagelayout set inFile value [ outFile ] [flags]
 ```
 
 <br>
@@ -25,8 +25,9 @@ pdfcpu pagelayout set inFile value [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------------------------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | value        | page layout mode    | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -50,4 +51,14 @@ Set page layout for `test.pdf` (case agnostic):
 $ pdfcpu pagelayout set test.pdf TwoColumnLeft
 $ pdfcpu pagelayout list test.pdf
 TwoColumnLeft
+```
+
+<br>
+
+Set page layout while reading and writing the PDF through pipes:
+
+```sh
+$ aws s3 cp s3://acme-publishing/ebook.pdf - \
+   | pdfcpu pagelayout set - TwoPageLeft - \
+   | aws s3 cp - s3://acme-publishing/ebook-spreads.pdf
 ```

@@ -24,7 +24,7 @@ pdfcpu form list inFile... [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file containing a form      | yes
+| inFile       | PDF input file containing a form, use `-` to read from stdin      | yes
 
 <br>
 
@@ -79,4 +79,12 @@ Pg L Field     │ Id | Name        │ Value   │ Options
      Textfield │ 41 | occup       │         │
      ComboBox  │ 42 | status      │ unknown │ alive,deceased,imprisoned,killed,unknown
      ComboBox  │ 43 | license     │         │ CC BY 4.0,CC BY-SA 2.0,Public Domain,unknown
+```
+<br>
+
+List form fields for a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-forms/application.pdf - \
+   | pdfcpu form list -
 ```

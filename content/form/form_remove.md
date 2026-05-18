@@ -16,7 +16,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu form list inFile... [flags]
+pdfcpu form remove inFile [ outFile ] < fieldID | fieldName >... [flags]
 ```
 <br>
 
@@ -28,8 +28,8 @@ pdfcpu form list inFile... [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file containing form      | yes
-| outFile      | PDF output file for dry runs     | no
+| inFile       | PDF input file containing form, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 | fieldID      | form field id       | either
 | fieldName    | form field name     | or
 
@@ -69,4 +69,14 @@ Pg L Field     │ Id | Name       │ Default          │ Value               
      ComboBox  │ 35 | city12     │ San Francisco    │ Sidney                   │ London,San Francisco,Sidney
      CheckBox  │ 36 | cb11       │                  │ Yes                      │
      Textfield │ 37 | note1      │                  │ This is a sample text.\n │
+```
+
+<br>
+
+Remove form fields while reading and writing the PDF through pipes:
+
+```sh
+$ aws s3 cp s3://acme-forms/application.pdf - \
+   | pdfcpu form remove - - legacyField \
+   | aws s3 cp - s3://acme-forms/application-pruned.pdf
 ```

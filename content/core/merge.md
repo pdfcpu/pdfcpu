@@ -24,7 +24,7 @@ pdfcpu merge outFile inFile... [flags]
 | b(ookmarks)| create bookmarks                     | yes       | no
 | d(ivider)  | insert separator between merged docs | no        | no
 | opt(imize) | optimize before writing              | yes       | no
-
+| rmsig      | remove signatures                    | no        | no
 
 <br>
 
@@ -36,8 +36,8 @@ pdfcpu merge outFile inFile... [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| outFile      | PDF output file     | yes  
-| inFile...    | at least 2 PDF input files subject to concatenation | yes
+| outFile      | PDF output file, use `-` to write to stdout | yes
+| inFile...    | at least 2 PDF input files subject to concatenation, use `-` for one stdin input in create mode | yes
 
 <br>
 
@@ -78,4 +78,23 @@ $ pdfcpu merge --mode append -divider out.pdf in1.pdf in2.pdf in3.pdf
 Zip two files together (eg. like in 1a,1b,2a,2b..):
 ```sh
 $ pdfcpu merge --mode zip out.pdf a.pdf b.pdf
+```
+
+<br>
+
+Merge local PDFs and upload the result:
+
+```sh
+$ pdfcpu merge - quarterly/*.pdf \
+   | aws s3 cp - s3://acme-reports/quarterly/merged.pdf
+```
+
+<br>
+
+Merge one PDF streamed from S3 with local files:
+
+```sh
+$ aws s3 cp s3://acme-reports/cover.pdf - \
+   | pdfcpu merge - - chapter1.pdf chapter2.pdf \
+   | aws s3 cp - s3://acme-reports/book.pdf
 ```

@@ -38,8 +38,8 @@ pdfcpu boxes add description inFile [ outFile ] [flags]
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | [description](/getting_started/box)  | box configuration string | yes
-| inFile       | PDF input file      | yes
-| outFile      | PDF output file     | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -109,3 +109,12 @@ pages: all
 ```
 
 Learn more about [box description](/getting_started/box)
+<br>
+
+Add page boundaries while reading the PDF from stdin:
+
+```sh
+$ aws s3 cp s3://acme-print/ad.pdf - \
+   | pdfcpu boxes add 'trim:5, bleed:10' - - \
+   | aws s3 cp - s3://acme-print/ad-boxes.pdf
+```

@@ -20,6 +20,8 @@ pdfcpu optimize inFile [ outFile ] [flags]
 | name                             | description       | required
 |:---------------------------------|:------------------|:--------
 | stats                            | CSV output file   | no
+| rmenc                            | remove encryption | no
+| rmsig                            | remove signatures | no
 
 <br>
 
@@ -31,8 +33,8 @@ pdfcpu optimize inFile [ outFile ] [flags]
 
 | name         | description         | required | default
 |:-------------|:--------------------|:---------|:-
-| inFile       | PDF input file      | yes
-| outFile      | PDF output file     | no       | inFile
+| inFile       | PDF input file, use `-` to read from stdin | yes
+| outFile      | PDF output file, use `-` to write to stdout | no       | inFile
 
 <br>
 
@@ -229,9 +231,7 @@ obj     prefix     Fontname                       Subtype    Encoding           
 
 Duplicate Fonts:
 
-
 No image info available.
-
 
 writing test_opt.pdf ...
  INFO: 2019/02/20 23:20:12 writing to a.pdf
@@ -412,9 +412,7 @@ obj     prefix     Fontname                       Subtype    Encoding           
 
 Duplicate Fonts:
 
-
 No image info available.
-
 
 STATS: 2019/02/20 23:20:12 Timing:
 STATS: 2019/02/20 23:20:12 read                 :  0.001s  28.7%
@@ -442,4 +440,14 @@ STATS: 2019/02/20 23:20:12 Breakup of binary data:
 STATS: 2019/02/20 23:20:12 images               : 0.000000 Bytes (0 bytes)  0.0%
 STATS: 2019/02/20 23:20:12 fonts                : 0.000000 Bytes (0 bytes)  0.0%
 STATS: 2019/02/20 23:20:12 other                : 4 KB (4358 bytes) 100.0%
+```
+
+<br>
+
+Optimize a PDF streamed from S3 and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-contracts/master.pdf - \
+   | pdfcpu optimize - - \
+   | aws s3 cp - s3://acme-contracts/optimized/master.pdf
 ```

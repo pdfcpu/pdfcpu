@@ -27,7 +27,7 @@ pdfcpu viewerpref list inFile [flags]
 |:--------|:--------------------|:--------------------------
 | a(ll)     | output all (including default values)      | no
 | j(son)    | output JSON                                | no
-| inFile  | PDF input file                             | yes
+| inFile  | PDF input file, use `-` to read from stdin      | yes
 
 
 
@@ -102,3 +102,11 @@ $ pdfcpu viewerpref list -all -json test.pdf
 }
 ```
 
+<br>
+
+List viewer preferences for a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-print/catalog.pdf - \
+   | pdfcpu viewerpref list -
+```

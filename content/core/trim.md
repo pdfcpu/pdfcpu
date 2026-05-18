@@ -31,8 +31,8 @@ pdfcpu trim inFile [outFile] [flags]
 
 | name         | description         | required | default
 |:-------------|:--------------------|:---------|:-
-| inFile       | PDF input file      | yes
-| outFile      | PDF output file     | no       | inFile
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no       | inFile
 
 <br>
 
@@ -67,4 +67,14 @@ Get rid of the catalog and trailing index:
 
 ```sh
 $ pdfcpu trim book.pdf essence.pdf --pages '!2-4,!12-'
+```
+
+<br>
+
+Trim a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-cases/filing.pdf - \
+   | pdfcpu trim --pages 1-12 - - \
+   | aws s3 cp - s3://acme-cases/filing-trimmed.pdf
 ```

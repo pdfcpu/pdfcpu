@@ -42,9 +42,9 @@ pdfcpu booklet [ description ] outFile n inFile | imageFiles... [flags]
 | name         | description          | required               | values     |
 | :----------- | :------------------- | :--------------------- | :--------- |
 | description  | configuration string | no                     |
-| outFile      | PDF output file      | yes                    |
+| outFile      | PDF output file, use `-` to write to stdout      | yes                    |
 | n            | the N-up value       | yes                    | 2, 4, 6, 8 |
-| inFile       | PDF input file       | inFile or imageFile(s) |
+| inFile       | PDF input file, use `-` to read from stdin | inFile or imageFile(s) |
 | imageFile... | one or more images   | inFile or imageFile(s) |
 
 <br>
@@ -287,4 +287,14 @@ Here are all pages (1 and 2) of the output file _bookletFromImages.pdf_:
 
 ```sh
 $ pdfcpu booklet 'p:A4, multifolio:on, foliosize:8' hardbackbook.pdf 2 in.pdf
+```
+
+<br>
+
+Create a booklet from a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-print/zine.pdf - \
+   | pdfcpu booklet - 4 - \
+   | aws s3 cp - s3://acme-print/zine-booklet.pdf
 ```

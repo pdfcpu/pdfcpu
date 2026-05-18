@@ -26,8 +26,8 @@ pdfcpu form lock inFile [ outFile ] [ fieldID | fieldName ]... [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file containing form      | yes
-| outFile      | PDF output file for dry runs    | no
+| inFile       | PDF input file containing form, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout    | no
 | fieldID      | form field id       | no
 | fieldName    | form field name     | name
 
@@ -76,4 +76,14 @@ Pg L Field     │ Id | Name       │ Default          │ Value               
    * ComboBox  │ 35 | city12     │ San Francisco    │ Sidney                   │ London,San Francisco,Sidney
    * CheckBox  │ 36 | cb11       │                  │ Yes                      │
    * Textfield │ 37 | note1      │                  │ This is a sample text.\n │
+```
+
+<br>
+
+Lock form fields while reading and writing the PDF through pipes:
+
+```sh
+$ aws s3 cp s3://acme-forms/application.pdf - \
+   | pdfcpu form lock - - \
+   | aws s3 cp - s3://acme-forms/application-locked.pdf
 ```

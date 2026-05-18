@@ -12,7 +12,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu pagemode reset inFile [flags]
+pdfcpu pagemode reset inFile [ outFile ] [flags]
 ```
 
 <br>
@@ -25,7 +25,8 @@ pdfcpu pagemode reset inFile [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -37,4 +38,14 @@ Reset page mode for `test.pdf`:
 $ pdfcpu pagemode reset test.pdf
 $ pdfcpu pagemode list test.pdf
 No page mode set, PDF viewers will default to "UseNone"
+```
+
+<br>
+
+Reset page mode while reading and writing the PDF through pipes:
+
+```sh
+$ aws s3 cp s3://acme-publishing/ebook-outlines.pdf - \
+   | pdfcpu pagemode reset - - \
+   | aws s3 cp - s3://acme-publishing/ebook-default-mode.pdf
 ```

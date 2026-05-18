@@ -31,9 +31,9 @@ pdfcpu rotate inFile rotation [outFile] [flags]
 
 | name         | description     | required | values
 |:-------------|:----------------|:---------|:-
-| inFile       | PDF input file  | yes      |
+| inFile       | PDF input file, use `-` to read from stdin      | yes      |
 | rotation     | rotation angle  | yes      | -270, -180, -90, 90, 180, 270
-| outFile      | PDF output file | no       |
+| outFile      | PDF output file, use `-` to write to stdout     | no       |
 
 <br>
 
@@ -50,4 +50,14 @@ Rotate the first two pages counter clockwise by 90 degrees:
 
 ```sh
 $ pdfcpu rotate --pages 1-2 test.pdf -90
+```
+
+<br>
+
+Rotate streamed input and write the result to stdout:
+
+```sh
+$ aws s3 cp s3://acme-scans/batch.pdf - \
+   | pdfcpu rotate --pages odd - 90 - \
+   | aws s3 cp - s3://acme-scans/batch-rotated.pdf
 ```

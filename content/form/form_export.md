@@ -17,7 +17,6 @@ The content of this element contains all form fields grouped by field type:
 * combo boxes
 * list boxes
 
-
 Have a look at some [examples](#examples).
 
 ## Usage
@@ -35,7 +34,7 @@ pdfcpu form export inFile [ outFileJSON ] [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file containing form      | yes
+| inFile       | PDF input file containing form, use `-` to read from stdin      | yes
 | outFileJSON  | JSON output file    | no
 
 <br>
@@ -157,3 +156,11 @@ $ cat out.json
 }
 ```
 
+<br>
+
+Export form JSON from a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-forms/application.pdf - \
+   | pdfcpu form export - application.json
+```

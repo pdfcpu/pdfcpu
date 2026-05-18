@@ -13,7 +13,7 @@ Have a look at some [examples](#examples).
 
 ```
 pdfcpu images extract inFile outDir [flags]
-````
+```
 
 <br>
 
@@ -33,7 +33,7 @@ pdfcpu images extract inFile outDir [flags]
 
 | name   | description      | required
 |:-------|:-----------------|:--------
-| inFile | PDF input file   | yes
+| inFile | PDF input file, use `-` to read from stdin      | yes
 | outDir | output directory | yes
 
 ## Examples
@@ -73,4 +73,12 @@ extracting images from folder.pdf into out ...
 -rwxr-xr-x   1 horstrutter  staff   7.7K Mar  8 12:10 Im0_5_48.jpg*
 -rwxr-xr-x   1 horstrutter  staff    11K Mar  8 12:10 Im1_2_8.jpg*
 -rwxr-xr-x   1 horstrutter  staff   4.9K Mar  8 12:10 Im1_3_21.jpg*
+```
+<br>
+
+Extract images from a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-assets/gallery.pdf - \
+   | pdfcpu images extract - ./images
 ```

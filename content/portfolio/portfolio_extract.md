@@ -24,7 +24,7 @@ pdfcpu portfolio extract inFile outDir [ file... ] [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | outDir       | output directory    | yes
 | file...      | one or more entries to be extracted | no
 
@@ -44,4 +44,13 @@ Extract all portfolio entries of `portfolio.pdf` into `out`:
 
 ```sh
 $ pdfcpu portfolio extract portfolio.pdf out
+```
+
+<br>
+
+Extract a portfolio entry from a streamed PDF into a local output directory:
+
+```sh
+$ aws s3 cp s3://acme-dataroom/package.pdf - \
+   | pdfcpu portfolio extract - ./portfolio-entries contract.pdf
 ```

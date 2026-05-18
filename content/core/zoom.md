@@ -35,8 +35,8 @@ pdfcpu zoom description inFile [outFile] [flags]
 | name         | description          | required 
 |:-------------|:---------------------|:---------
 | description  | configuration string | yes
-| inFile       | PDF input file       | yes
-| outFile      | PDF output file      | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 
 
@@ -112,3 +112,13 @@ $ pdfcpu zoom 'vmargin: 1, border:true, bgcolor:lightgray' in.pdf out.pdf --unit
 <p align="center">
   <img style="border-color:silver" border="1" src="../resources/zoomOutByVMargin1Inch.png" height="500">
 </p>
+
+<br>
+
+Zoom a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-presentations/deck.pdf - \
+   | pdfcpu zoom 'hmargin: 10' - - \
+   | aws s3 cp - s3://acme-presentations/deck-with-margin.pdf
+```

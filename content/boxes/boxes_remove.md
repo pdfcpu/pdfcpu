@@ -40,8 +40,8 @@ pdfcpu boxes remove boxTypes inFile [ outFile ] [flags]
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | boxTypes     | comma separated list of box types: c(rop), t(rim), b(leed), a(rt)      | yes
-| inFile       | PDF input file      | yes
-| outFile      | PDF output file     | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -64,4 +64,14 @@ $ pdfcpu boxes remove 'crop' in.pdf out.pdf
 removing cropBox for in.pdf
 writing out.pdf...
 pages: all
+```
+
+<br>
+
+Remove page boundaries while reading the PDF from stdin:
+
+```sh
+$ aws s3 cp s3://acme-print/ad-boxes.pdf - \
+   | pdfcpu boxes remove 'trim,bleed' - - \
+   | aws s3 cp - s3://acme-print/ad-clean-boxes.pdf
 ```

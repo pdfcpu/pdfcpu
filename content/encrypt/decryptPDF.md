@@ -32,8 +32,8 @@ pdfcpu decrypt inFile [ outFile ] [flags]
 
 | name         | description              | required
 |:-------------|:-------------------------|:--------
-| inFile       | encrypted PDF input file | yes
-| outFile      | PDF output file          | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -62,4 +62,14 @@ Please provide the correct password
 
 $ pdfcpu decrypt test.pdf --upw upw 
 writing test.pdf ...
+```
+
+<br>
+
+Decrypt a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-hr/secure/onboarding.pdf - \
+   | pdfcpu decrypt --upw "$UPW" - - \
+   | aws s3 cp - s3://acme-hr/plain/onboarding.pdf
 ```

@@ -28,7 +28,7 @@ pdfcpu bookmarks export inFile [ outFileJSON ] [flags]
 
 | name         | description         | required | default
 |:-------------|:--------------------|:---------|:------
-| inFile       | PDF input file      | yes      |
+| inFile       | PDF input file, use `-` to read from stdin      | yes      |
 | outFileJSON  | JSON output file    | no       | out.json
 
 <br>

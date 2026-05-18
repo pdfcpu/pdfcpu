@@ -33,13 +33,13 @@ pdfcpu annotations list inFile [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 
 <br>
 
 ## Examples
 
- List all annotations of test.pdf:
+List all annotations of test.pdf:
 ```
 $ pdfcpu annot list test.pdf
 4 annotations available
@@ -59,4 +59,13 @@ Page 4:
     ========================================
       563 ( 70, 354, 197, 377)    (internal)
       575 ( 70, 634, 120, 657)    (internal)
+```
+
+<br>
+
+List annotations for a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-redaction/review.pdf - \
+   | pdfcpu annotations list -
 ```

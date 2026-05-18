@@ -37,7 +37,7 @@ $ pdfcpu extract folder.pdf out --mode image --pages -5
 pageSelection: -5
 extracting images from folder.pdf into out ...
 
- $ ls out
+$ ls out
 -rwxr-xr-x   1 horstrutter  staff    26K Mar  8 12:10 Im0_1_2880.jpg*
 -rwxr-xr-x   1 horstrutter  staff    10K Mar  8 12:10 Im0_2_7.jpg*
 -rwxr-xr-x   1 horstrutter  staff   9.9K Mar  8 12:10 Im0_3_20.jpg*
@@ -45,4 +45,13 @@ extracting images from folder.pdf into out ...
 -rwxr-xr-x   1 horstrutter  staff   7.7K Mar  8 12:10 Im0_5_48.jpg*
 -rwxr-xr-x   1 horstrutter  staff    11K Mar  8 12:10 Im1_2_8.jpg*
 -rwxr-xr-x   1 horstrutter  staff   4.9K Mar  8 12:10 Im1_3_21.jpg*
+```
+
+<br>
+
+Extract images from a streamed PDF into a local output directory:
+
+```sh
+$ aws s3 cp s3://acme-assets/gallery.pdf - \
+   | pdfcpu extract - ./images --mode image
 ```

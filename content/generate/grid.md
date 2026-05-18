@@ -35,10 +35,10 @@ pdfcpu grid [ description ] outFile m n inFile | imageFiles... [flags]
 | name         | description          | required
 |:-------------|:---------------------|:--------
 | description  | configuration string | no
-| outFile      | PDF output file      | yes
+| outFile      | PDF output file, use `-` to write to stdout      | yes
 | m            | vertical span        | yes
 | n            | horizontal span      | yes
-| inFile       | PDF input file       | inFile or imageFile(s)
+| inFile       | PDF input file, use `-` to read from stdin | inFile or imageFile(s)
 | imageFile... | one or more images   | inFile or imageFile(s)
 
 <br>
@@ -140,4 +140,14 @@ The output page size is the result of a 3(hor)x2(vert) page grid using in.pdf's 
 
 ```sh
 $ pdfcpu grid 'o:rd' out.pdf 3 2 in.pdf
+```
+
+<br>
+
+Create grid pages from a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-training/source-code.pdf - \
+   | pdfcpu grid 'bo:off' - 4 1 - \
+   | aws s3 cp - s3://acme-training/source-code-grid.pdf
 ```

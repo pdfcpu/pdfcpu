@@ -20,7 +20,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu viewerpref set inFile ( inFileJSON | JSONstring ) [flags]
+pdfcpu viewerpref set inFile ( inFileJSON | JSONstring ) [ outFile ] [flags]
 ```
 
 <br>
@@ -33,9 +33,10 @@ pdfcpu viewerpref set inFile ( inFileJSON | JSONstring ) [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------------------------
-| inFile       | PDF input file                             | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | inFileJSON   | JSON input file or                         | yes
 | JSONstring   | JSON string containing viewing preferences | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -173,4 +174,14 @@ $ cat viewerpref.json
 
 $ pdfcpu viewerpref set test.pdf viewerpref.json
 
+```
+
+<br>
+
+Set viewer preferences while reading and writing the PDF through pipes:
+
+```sh
+$ aws s3 cp s3://acme-print/catalog.pdf - \
+   | pdfcpu viewerpref set - '{"Duplex":"DuplexFlipLongEdge","NumCopies":2}' - \
+   | aws s3 cp - s3://acme-print/catalog-print-ready.pdf
 ```

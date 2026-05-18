@@ -11,13 +11,11 @@ Watermarks may be stacked on top of each other.
 This allows for producing more complex page stamps - a mixture of text, images and foreign PDF page content.
 Using `description` you can configure various aspects like position, offset, rotation, scaling and opacity. For text based watermarks you can also configure font name, font size, fill color and render mode.
 
-
 ---
 WARNING<br>
 A watermark resides in the background of a page. How much of the watermark will be rendered visible on a page depends on the layers on top and the transparency involved. This applies to PDF in general. Eg. scanned PDF files usually consist of bitmap images spanning whole pages and will hide anything in the background including any watermark. For these cases use `pdfcpu stamp` with an opacity < 1 instead to get a similar result.
 
 ---
-
 
 ## Usage
 
@@ -26,8 +24,6 @@ pdfcpu watermark add    string | file description inFile [ outFile ] [flags]
 pdfcpu watermark update string | file description inFile [ outFile ] [flags]
 pdfcpu watermark remove inFile [ outFile ] [flags]
 ```
-
-
 
 ---
 NOTE<br>
@@ -39,7 +35,6 @@ In the Adobe world a watermark is text or an image that appears either in front 
 
 where *content* may be text, an image or a PDF page.
 
-
 ---
 <br>
 
@@ -49,7 +44,6 @@ where *content* may be text, an image or a PDF page.
 |:---------------------------------|:---------------------|:--------
 | [p(ages)](/getting_started/page_selection) | selected pages | no
 | [m(ode)](/getting_started/common_flags)    | text, image or pdf       | yes
-
 
 <br>
 
@@ -64,8 +58,8 @@ where *content* may be text, an image or a PDF page.
 | string       | display string       | for text stamps
 | file         | file name            | for image or pdf stamps
 | description  | configuration string | yes
-| inFile       | PDF input file       | yes
-| outFile      | PDF output file      | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -336,4 +330,16 @@ This is how to create a watermark using defaults and page 2 of `some.pdf`:
 
 ```sh
 $ pdfcpu watermark add 'some.pdf:2' '' in.pdf out.pdf -m pdf
+```
+
+<br>
+
+## Pipeline Example
+
+Add a watermark to a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-dataroom/draft.pdf - \
+   | pdfcpu watermark add "DRAFT" "diag:1, scale:.8 rel, op:.25" - - \
+   | aws s3 cp - s3://acme-dataroom/draft-watermarked.pdf
 ```

@@ -27,7 +27,6 @@ allows you to generate PDF via JSON
 
 <br>
 
-
 ## Usage
 
 ```
@@ -45,8 +44,8 @@ pdfcpu create inFileJSON [ inFile ] outFile [flags]
 | name         | description             | required |
 |:-------------|:------------------------|:---------|
 | inFileJSON   | JSON input file         | yes
-| inFile       | PDF input file          | no
-| outFile      | PDF output file         | yes
+| inFile       | PDF input file, use `-` to read from stdin | no
+| outFile      | PDF output file, use `-` to write to stdout      | yes
 
 <br>
 
@@ -61,4 +60,23 @@ and
 ```
 pdfcpu/pkg/testdata/json/*
 pdfcpu/pkg/samples/create/*
+```
+
+<br>
+
+Create a PDF and write it to stdout:
+
+```sh
+$ pdfcpu create invoice.json - \
+   | aws s3 cp - s3://acme-billing/invoice.pdf
+```
+
+<br>
+
+Overlay generated content onto a streamed input PDF:
+
+```sh
+$ aws s3 cp s3://acme-forms/template.pdf - \
+   | pdfcpu create overlay.json - - \
+   | aws s3 cp - s3://acme-forms/template-filled.pdf
 ```

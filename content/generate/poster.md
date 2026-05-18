@@ -43,7 +43,7 @@ pdfcpu poster description inFile outDir [ outFile] [flags]
 | name         | description          | required
 |:-------------|:---------------------|:--------
 | description  | configuration string | yes
-| inFile       | PDF input file       | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | outDir       | output directory     | yes
 | outFileName  | PDF output file name | no
 
@@ -97,7 +97,7 @@ Generate a poster via a corresponding grid with cell size 15x10 cm and provide a
 $ pdfcpu poster 'dim:15 10, margin:1, border:on' test.pdf . -u cm
 cut test.pdf into ./ ...
 writing test_page_1.pdf
-````
+```
 
 <p align="center">
   <img style="border-color:silver" border="1" src="../resources/posterDimOut.png" height="300"><br>
@@ -108,3 +108,12 @@ writing test_page_1.pdf
   <img style="border-color:silver" border="1" src="../resources/posterDim5.png" width="300">
   <img style="border-color:silver" border="1" src="../resources/posterDim6.png" width="300">
 </p>
+
+<br>
+
+Create poster tile PDFs from a streamed PDF in a container work directory:
+
+```sh
+$ aws s3 cp s3://acme-print/storefront-poster.pdf - \
+   | pdfcpu poster 'form:A4, margin:1, border:on' - /work/poster-tiles -u cm
+```

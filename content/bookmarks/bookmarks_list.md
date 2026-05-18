@@ -25,7 +25,7 @@ pdfcpu bookmarks list inFile [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 
 <br>
 
@@ -58,4 +58,13 @@ Page 16: The birthday of Smalltalk
 Page 17: Gray
 Page 18: Red
 Page 19: Bold Red
+```
+
+<br>
+
+List bookmarks for a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-manuals/product.pdf - \
+   | pdfcpu bookmarks list -
 ```

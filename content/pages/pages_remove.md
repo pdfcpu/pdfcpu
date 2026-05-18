@@ -32,8 +32,8 @@ pdfcpu pages remove inFile [ outFile ] [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
-| outFile...   | PDF output file     | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile   | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -45,4 +45,14 @@ Remove pages 1-3 and 5 from `notes.pdf`:
 $ pdfcpu pages remove notes.pdf --pages 1-3,5
 removing pages from notes.pdf ...
 writing notes_new.pdf ...
+```
+
+<br>
+
+Remove pages from streamed input and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-forms/packet.pdf - \
+   | pdfcpu pages remove --pages 2 - - \
+   | aws s3 cp - s3://acme-forms/packet-without-page-2.pdf
 ```

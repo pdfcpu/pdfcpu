@@ -23,7 +23,7 @@ pdfcpu attachments remove inFile [ file... ] [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | file...      | one or more attachments to be removed | yes
 
 <br>
@@ -45,3 +45,14 @@ Remove all attachments:
 $ pdfcpu attach remove container.pdf
 removing all attachments
 ```
+
+<br>
+
+Remove an attachment while reading the PDF from stdin:
+
+```sh
+$ cat report-with-source.pdf \
+   | pdfcpu attachments remove - source.xlsx > report-without-source.pdf
+```
+
+<br>

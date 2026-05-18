@@ -17,7 +17,7 @@ This command lets you extract the following from a PDF file:
 
 ```
 pdfcpu extract -m(ode) image|font|content|page|meta [-p(ages) selectedPages] inFile outDir
-````
+```
 
 <br>
 
@@ -38,5 +38,5 @@ pdfcpu extract -m(ode) image|font|content|page|meta [-p(ages) selectedPages] inF
 
 | name   | description      | required
 |:-------|:-----------------|:--------
-| inFile | PDF input file   | yes
+| inFile | PDF input file, use `-` to read from stdin | yes
 | outDir | output directory | yes

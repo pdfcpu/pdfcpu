@@ -46,8 +46,8 @@ pdfcpu crop description inFile [outFile] [flags]
 | name         | description          | required
 |:-------------|:---------------------|:---------
 | [description](/getting_started/box)  | box configuration string | yes
-| inFile       | PDF input file       | yes
-| outFile      | PDF output file      | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -110,4 +110,14 @@ The following command uses negative margins for cropping and therefore expands t
 
 ```sh
 $ pdfcpu crop -- "-10" in.pdf cropped.pdf
+```
+
+<br>
+
+Crop a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-print/catalog.pdf - \
+   | pdfcpu crop '10' - - --unit mm \
+   | aws s3 cp - s3://acme-print/catalog-cropped.pdf
 ```

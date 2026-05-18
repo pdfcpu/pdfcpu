@@ -10,7 +10,7 @@ This command embeds one or more files by attaching them to a PDF input file. Hav
 ## Usage
 
 ```
-pdfcpu attachments add inFile file... [flags]
+pdfcpu attachments add inFile file [ , desc ]... [flags]
 ```
 
 <br>
@@ -23,8 +23,9 @@ pdfcpu attachments add inFile file... [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | file...      | one or more files to be attached | yes
+| desc         | description         | no
 
 <br>
 
@@ -46,4 +47,13 @@ adding invoice.doc
 
 $ pdfcpu attach list invoice.pdf
 invoice.doc (my 1st desc)
+```
+
+<br>
+
+Add an attachment while reading the PDF from stdin:
+
+```sh
+$ aws s3 cp s3://acme-archive/report.pdf - \
+   | pdfcpu attachments add - source.xlsx > report-with-source.pdf
 ```

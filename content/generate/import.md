@@ -35,8 +35,8 @@ pdfcpu import [description] outFile imageFile... [flags]
 | name         | description                   | required
 |:-------------|:------------------------------|:--------
 | description  | configuration string          | no
-| outFile      | PDF output file               | yes
-| imageFile... | one or more input image files | yes
+| outFile      | PDF output file, use `-` to write to stdout      | yes
+| imageFile... | one or more input image files, use `-` to read one image from stdin | yes
 
 <br>
 
@@ -219,3 +219,12 @@ $ pdfcpu import 'sepia:true' sepia.pdf test.jpg
 <img width="150" src="https://user-images.githubusercontent.com/11322155/113626732-d0dc6c00-9662-11eb-9255-009e56009852.png">&nbsp;&nbsp;&nbsp;
 <img width="150" src="https://user-images.githubusercontent.com/11322155/113625936-d5eceb80-9661-11eb-9ea6-01ca0459e809.png">
 </div>
+<br>
+
+Import an image and upload the generated PDF:
+
+```sh
+$ aws s3 cp s3://acme-assets/logo.png - \
+   | pdfcpu import - - \
+   | aws s3 cp - s3://acme-assets/logo.pdf
+```

@@ -17,7 +17,7 @@ Have a look at an [example](#example).
 
 ```
 pdfcpu images update inFile imageFile [ outFile ] [ objNr | (pageNr Id) ] [flags]
-````
+```
 
 <br>
 
@@ -29,9 +29,9 @@ pdfcpu images update inFile imageFile [ outFile ] [ objNr | (pageNr Id) ] [flags
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | imageFile    | image file          | yes
-| outFile      | PDF output file     | no
+| outFile      | PDF output file, use `-` to write to stdout     | no
 | objNr        | object number       | no
 | pageNr       | page number         | no
 | Id           | resource id         | no
@@ -86,4 +86,14 @@ Update image with Id=Im0 on page=1 with logo.jpg:
 
 ```sh
 $ pdfcpu images update gallery.pdf logo.jpg 1 Im0
+```
+
+<br>
+
+Update an image while reading and writing the PDF through pipes:
+
+```sh
+$ aws s3 cp s3://acme-assets/gallery.pdf - \
+   | pdfcpu images update - logo.jpg - 1 Im0 \
+   | aws s3 cp - s3://acme-assets/gallery-updated.pdf
 ```

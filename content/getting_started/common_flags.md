@@ -18,6 +18,9 @@ Please use this flag to [report a bug](https://github.com/pdfcpu/pdfcpu/issues).
 ## --quiet, -q
 Disables all output to stdOut.
 
+## --force
+Overwrite existing output files and write to non-empty output directories where supported.
+
 ## --offline, -o
 Disable outgoing HTTP traffic.<br>
 For validating links or filling image boxes.<br>
@@ -57,3 +60,7 @@ Since some PDF readers skip over blank owner passwords pdfcpu makes this mandato
 *User password*<br>
 This is the password needed to open a PDF for reading.
 It is also known as the *open doc password*.
+
+## -
+Use `-` in PDF input and output positions to read from `stdin` or write to `stdout`.
+See [Piping](/getting_started/piping) for examples and the [piping support matrix](/getting_started/piping/#support-matrix) for command-specific stdin/stdout support.

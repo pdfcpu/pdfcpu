@@ -23,7 +23,7 @@ pdfcpu portfolio remove inFile [ file... ] [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | file...      | one or more entries to be removed | no
 
 <br>
@@ -45,3 +45,14 @@ Remove all portfolio entries:
 $ pdfcpu portfolio remove portfolio.pdf
 writing portfolio.pdf ...
 ```
+
+<br>
+
+Remove a portfolio entry while reading the PDF from stdin:
+
+```sh
+$ cat package-with-contract.pdf \
+   | pdfcpu portfolio remove - contract.pdf > package-without-contract.pdf
+```
+
+<br>

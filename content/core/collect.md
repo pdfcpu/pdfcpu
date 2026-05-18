@@ -38,8 +38,8 @@ pdfcpu collect inFile [outFile] --pages
 
 | name         | description         | required | default
 |:-------------|:--------------------|:---------|:-
-| inFile       | PDF input file      | yes
-| outFile      | PDF output file     | no       | inFile
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no       | inFile
 
 <br>
 
@@ -51,4 +51,14 @@ Begin with 3 instances of page 1 then append the rest of the file excluding the 
 ```sh
 $ pdfcpu collect in.pdf out.pdf --pages 1,1,1,2-l-1 
 writing sequ.pdf ...
+```
+
+<br>
+
+Collect selected pages from stdin and write the result to stdout:
+
+```sh
+$ aws s3 cp s3://acme-dataroom/deck.pdf - \
+   | pdfcpu collect --pages 1,3,5-7 - - \
+   | aws s3 cp - s3://acme-dataroom/executive-extract.pdf
 ```

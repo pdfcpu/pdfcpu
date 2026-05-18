@@ -45,7 +45,7 @@ pdfcpu ndown [ description ] n inFile outDir [ outFile ] [flags]
 |:-------------|:---------------------|:--------
 | description  | configuration string | no
 | n            | the N-down value     | yes
-| inFile       | PDF input file       | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | outDir       | output directory     | yes
 | outFileName  | PDF output file name | no
 
@@ -124,7 +124,7 @@ Results in a PDF containing 5 pages for each processed page:
 $ pdfcpu ndown 'margin:1, bgcol:DarkGray, border:on' 4 test.pdf . -u cm
 cut test.pdf into ./ ...
 writing test_page_1.pdf
-````
+```
 
 <p align="center">
   <img style="border-color:silver" border="1" src="../resources/posterout.png" width="200"><br>
@@ -133,3 +133,12 @@ writing test_page_1.pdf
   <img style="border-color:silver" border="1" src="../resources/ndownc3.png" width="200">
   <img style="border-color:silver" border="1" src="../resources/ndownc4.png" width="200">
 </p>
+
+<br>
+
+Create N-down tile PDFs from a streamed PDF in a container work directory:
+
+```sh
+$ aws s3 cp s3://acme-print/window-poster.pdf - \
+   | pdfcpu ndown 'margin:1, border:on' 4 - /work/tiles -u cm
+```

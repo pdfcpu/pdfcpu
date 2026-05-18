@@ -10,8 +10,8 @@ This command changes the password which is also known as the *open doc password*
 ## Usage
 
 ```
-pdfcpu changeupw inFile upwOld upwNew [flags]
-````
+pdfcpu changeupw inFile upwOld upwNew [ outFile ] [flags]
+```
 
 <br>
 
@@ -23,9 +23,10 @@ pdfcpu changeupw inFile upwOld upwNew [flags]
 
 | name         | description            | required
 |:-------------|:-----------------------|:--------
-| inFile       | PDF input file         | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | upwOld       | current user password  | yes
 | upwNew       | new user password      | yes
+| outFile      | PDF output file, use `-` to write to stdout | no
 
 <br>
 
@@ -56,4 +57,14 @@ Please provide the owner password with --opw
 
 $ pdfcpu changeupw enc.pdf "" upwNew --opw opw
 writing enc.pdf ...
+```
+
+<br>
+
+Change the user password for a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-legal/client.pdf - \
+   | pdfcpu changeupw --opw "$OPW" - "$OLD_UPW" "$NEW_UPW" - \
+   | aws s3 cp - s3://acme-legal/client-rotated-upw.pdf
 ```

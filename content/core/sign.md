@@ -31,7 +31,6 @@ Has to be the only signature in the document.
 
 ## Summary of Signature Intentions
 
-
 | **Type**         | **Intention**                             | **Visibility**          |
 |:----------------------------|:--------------------------------------------------|:-------------------------|
 | **Form Signature**          | Authenticate form data and signer identity        | Visible or invisible     |
@@ -84,15 +83,14 @@ You may also configure your preferred certificate revocation checking mechanism 
 > pdfcpu will try to validate as much as possible even without the `-full` option.
 > A *fast mode* is conceivable.
 
-
 <br>
 
 Have a look at some [examples](#examples).
 
-
 ## Usage
 
 ```
+pdfcpu signatures remove inFile [ outFile ] [flags]
 pdfcpu signatures validate inFile [flags]
 ```
 
@@ -102,6 +100,7 @@ pdfcpu signatures validate inFile [flags]
 
 | **Name** | **Description**          | **Default** | **Required** |
 |:---------|:--------------------------|:------------|:-------------|
+| rmenc    | Remove encryption while removing signatures | false | no |
 | a(ll)    | Validate all signatures    | false       | no           |
 | f(ull)   | Comprehensive output       | false       | no           |
 
@@ -115,7 +114,8 @@ pdfcpu signatures validate inFile [flags]
 
 | name         | description         | required 
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout for `remove` | no
 
 <br>
 
@@ -148,7 +148,6 @@ Current limitations mostly involve either older encryption standards restricted 
 
 - **Go Runtime Restrictions**: No support for SHA-1, which is considered insecure.
 
-
 ## PAdES Level
 
 While the PDF specification mainly focuses on PAdES-E-BES and PAdES-E-EPES for processing ETSI.CAdES.detached signatures, pdfcpu instead detects and reports the PAdES Baseline level:
@@ -163,7 +162,6 @@ Focusing on these levels improves compatibility with modern signature validation
 
 The PAdES baseline levels(profiles) are defined in [ETSI EN 319 142-1 V1.2.1 (2024-01)](https://www.etsi.org/deliver/etsi_en/319100_319199/31914201/01.02.01_60/en_31914201v010201p.pdf) 6.1.
 
-
 | PAdES Level | Description                         | Supported |
 |:------------|:------------------------------------|:----------|
 | B-B         | Basic electronic signature          | ☑️ |
@@ -172,8 +170,7 @@ The PAdES baseline levels(profiles) are defined in [ETSI EN 319 142-1 V1.2.1 (20
 | B-LTA       | B-LT with DTS                       | ☑️ |
 
 > **Note:**  
-> pdfcpu currently focuses primarily on PAdES-B and is not extensively concerned with other PAdES standards.
-
+> pdfcpu currently focuses primarily on PAdES-B.
 
 ## Examples
 
@@ -478,3 +475,22 @@ Conclusion: If you import the missing certificates using [pdfcpu cert import](/c
 > **Note:**  
 > This command only checks if the **usage rights signature** is valid.    
 > Any violation of **usage rights** defined as UR3 transform parameters are not checked at the moment (see [limitations](#limitations)).
+
+<br>
+
+Validate a signed PDF streamed from S3:
+
+```sh
+$ aws s3 cp s3://acme-signing/executed.pdf - \
+   | pdfcpu signatures validate -
+```
+
+<br>
+
+Remove signatures from a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-signing/executed.pdf - \
+   | pdfcpu signatures remove - - \
+   | aws s3 cp - s3://acme-signing/executed-unsigned.pdf
+```

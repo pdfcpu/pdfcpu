@@ -25,7 +25,7 @@ pdfcpu pagemode list inFile [flags]
 
 | name    | description         | required
 |:--------|:--------------------|:--------------------------
-| inFile  | PDF input file                             | yes
+| inFile  | PDF input file, use `-` to read from stdin      | yes
 
 <br>
 
@@ -58,5 +58,11 @@ $ pdfcpu pagemode list test2.pdf
 FullScreen
 ```
 
+<br>
 
+List page mode for a streamed PDF:
 
+```sh
+$ aws s3 cp s3://acme-publishing/ebook.pdf - \
+   | pdfcpu pagemode list -
+```

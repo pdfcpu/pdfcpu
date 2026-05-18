@@ -37,7 +37,7 @@ pdfcpu boxes list [ boxTypes ] inFile [flags]
 | name         | description         | required
 |:-------------|:--------------------|:--------
 | boxTypes     | comma separated list of box types: m(edia), c(rop), t(rim), b(leed), a(rt)      | no
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 
 <br>
 
@@ -82,3 +82,12 @@ Page 1: rot=+0 orientation:portrait
 ## Hint
 
 The [info](/info) command also prints page boundaries if the *--pages* flag is present.
+
+<br>
+
+List page boundaries for a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-print/ad.pdf - \
+   | pdfcpu boxes list -
+```

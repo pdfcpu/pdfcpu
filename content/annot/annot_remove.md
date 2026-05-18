@@ -25,8 +25,8 @@ pdfcpu annotations remove inFile [ outFile ] [ objNr | annotId | annotType]... [
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
-| outFile      | PDF output file     | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 | objNr...     | one or more objNrs  | no
 | annotId...   | one or more annotIds  | no
 | annotType... | one or more annotTypes  | no
@@ -58,4 +58,14 @@ Remove all annotations:
 $ pdfcpu annot remove test.pdf
 writing test.pdf...
 pages: all
+```
+
+<br>
+
+Remove link annotations from a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-redaction/review.pdf - \
+   | pdfcpu annotations remove - - Link \
+   | aws s3 cp - s3://acme-redaction/review-no-links.pdf
 ```

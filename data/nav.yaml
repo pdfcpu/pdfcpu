@@ -16,6 +16,8 @@
       url: /getting_started/usage
     - title: Common Flags
       url: /getting_started/common_flags
+    - title: Piping
+      url: /getting_started/piping
     - title: Page Selection
       url: /getting_started/page_selection
     - title: Box Description

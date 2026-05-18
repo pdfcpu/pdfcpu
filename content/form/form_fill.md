@@ -42,9 +42,9 @@ pdfcpu form fill inFile inFileJSON [ outFile ] [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file containing form      | yes
+| inFile       | PDF input file containing form, use `-` to read from stdin      | yes
 | inFileJSON   | JSON input file with form data    | yes
-| outFile      | PDF output file for dry runs      | no
+| outFile      | PDF output file, use `-` to write to stdout      | no
 
 <br>
 
@@ -101,4 +101,14 @@ writing tmp.json...
 
 ```
 $ pdfcpu form fill english.pdf english.json
+```
+
+<br>
+
+Fill a streamed form with a local JSON data file:
+
+```sh
+$ aws s3 cp s3://acme-forms/application.pdf - \
+   | pdfcpu form fill - application.json - \
+   | aws s3 cp - s3://acme-forms/application-filled.pdf
 ```

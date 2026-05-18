@@ -23,7 +23,7 @@ pdfcpu portfolio add inFile file [ , desc ]... [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | file...      | one or more files to be attached | yes
 | desc         | description         | no
 
@@ -36,4 +36,13 @@ Add pictures to a PDF portfolio for easy content delivery:
 ```sh
 $ pdfcpu portfolio add portfolio.pdf *.jpg
 writing portfolio.pdf ...
+```
+
+<br>
+
+Add a portfolio entry while reading the PDF from stdin:
+
+```sh
+$ aws s3 cp s3://acme-dataroom/package.pdf - \
+   | pdfcpu portfolio add - contract.pdf > package-with-contract.pdf
 ```

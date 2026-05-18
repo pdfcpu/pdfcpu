@@ -17,7 +17,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu permissions set [--perm n(one)|p(rint)|a(ll)|max4Hex|max12Bits] [--upw userpw] --opw ownerpw inFile
+pdfcpu permissions set [--perm n(one)|p(rint)|a(ll)|max4Hex|max12Bits] [--upw userpw] --opw ownerpw inFile [ outFile ]
 ```
 
 <br>
@@ -40,7 +40,8 @@ pdfcpu permissions set [--perm n(one)|p(rint)|a(ll)|max4Hex|max12Bits] [--upw us
 
 | name         | description            | required
 |:-------------|:-----------------------|:--------
-| inFile       | PDF input file         | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout | no
 
 <br>
 
@@ -80,4 +81,14 @@ Bit  9: true (fill in form fields(rev>=3)
 Bit 10: true (extract(rev>=3))
 Bit 11: true (modify(rev>=3))
 Bit 12: true (print high-level(rev>=3))
+```
+
+<br>
+
+Set permissions for a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-legal/protected.pdf - \
+   | pdfcpu permissions set --opw "$OPW" --perm print - - \
+   | aws s3 cp - s3://acme-legal/printable.pdf
 ```

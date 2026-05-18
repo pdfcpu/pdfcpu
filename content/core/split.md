@@ -33,7 +33,7 @@ pdfcpu split inFile outDir [ span | pageNr... ] [flags]
 
 | name         | description         | required | default
 |:-------------|:--------------------|:---------|:-
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | outDir       | output directory    | yes
 | span         | split span in pages | no       | 1
 
@@ -78,6 +78,12 @@ Split a PDF file before pages 2,4,10:
 $ pdfcpu split -m page test.pdf out 2 4 10
 ```
 
+<br>
 
+Split selected pages from a PDF streamed from S3 into a local output directory:
 
+```sh
+$ aws s3 cp s3://acme-print/board-pack.pdf - \
+   | pdfcpu split -m page - ./board-pack 10 25
+```
 

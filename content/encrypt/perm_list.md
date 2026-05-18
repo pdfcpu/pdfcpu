@@ -24,7 +24,7 @@ pdfcpu permissions list inFile... [flags]
 
 | name         | description            | required
 |:-------------|:-----------------------|:--------
-| inFile       | PDF input file         | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 
 <br>
 
@@ -92,4 +92,13 @@ Bit  9: false (fill in form fields(rev>=3)
 Bit 10: false (extract(rev>=3))
 Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
+```
+
+<br>
+
+List permissions for a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-legal/protected.pdf - \
+   | pdfcpu permissions list -
 ```

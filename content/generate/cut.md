@@ -40,7 +40,7 @@ pdfcpu cut description inFile outDir [ outFile ] [flags]
 | name         | description          | required
 |:-------------|:---------------------|:--------
 | description  | configuration string | yes
-| inFile       | PDF input file       | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | outDir       | output directory     | yes
 | outFileName  | PDF output file name | no
 
@@ -102,12 +102,20 @@ writing test_page_1.pdf
 The following has the same effect as: pdfcpu ndown 3 in.pdf outDir:
 ```sh
 $ pdfcpu cut 'hor:.33 .66' inFile outDir
-````
+```
 
 <br>
 
 The following has the same effect as: pdfcpu ndown 4 in.pdf outDir:
 ```sh
 $ pdfcpu cut 'hor:.5, ver:.5' inFile outDir
-````
+```
 
+<br>
+
+Cut pages into tiles in a container work directory:
+
+```sh
+$ aws s3 cp s3://acme-print/poster.pdf - \
+   | pdfcpu cut 'hor:.5, ver:.5' - /work/cut-pages
+```

@@ -36,9 +36,9 @@ pdfcpu bookmarks import inFile inFileJSON [ outFile ] [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | inFileJSON   | JSON input file      | yes
-| outFile      | PDF output file     | no
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -76,4 +76,14 @@ Page 5: Level 2
     Page 6: Level 2.1
     Page 7: Level 2.2
     Page 8: Level 2.3
+```
+
+<br>
+
+Import bookmarks while reading the PDF from stdin:
+
+```sh
+$ aws s3 cp s3://acme-manuals/product.pdf - \
+   | pdfcpu bookmarks import --replace - bookmarks.json - \
+   | aws s3 cp - s3://acme-manuals/product-bookmarked.pdf
 ```

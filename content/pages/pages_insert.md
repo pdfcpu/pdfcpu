@@ -38,8 +38,8 @@ pdfcpu pages insert [ description ] inFile [ outFile ] [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
-| outFile...   | PDF output file     | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile   | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -68,4 +68,14 @@ Insert an empty page after the last page:
 ```sh
 $ pdfcpu pages insert in.pdf out.pdf --pages l --mode after 
 writing out.pdf...
+```
+
+<br>
+
+Insert a page into streamed input and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-forms/packet.pdf - \
+   | pdfcpu pages insert --pages 1 - - \
+   | aws s3 cp - s3://acme-forms/packet-with-cover.pdf
 ```

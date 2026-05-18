@@ -33,8 +33,8 @@ pdfcpu resize description inFile [ outFile ] [flags]
 | name         | description          | required 
 |:-------------|:---------------------|:---------
 | description  | configuration string | yes
-| inFile       | PDF input file       | yes
-| outFile      | PDF output file      | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -99,4 +99,14 @@ $ pdfcpu resize "dim:400 200" in.pdf out.pdf
 Resize pages to 400 x 200 points, enforce orientation.
 ```sh
 $ pdfcpu resize "dim:400 200, enforce:true" in.pdf out.pdf
+```
+
+<br>
+
+Resize a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-design/spec-sheet.pdf - \
+   | pdfcpu resize 'form:A4' - - \
+   | aws s3 cp - s3://acme-design/spec-sheet-a4.pdf
 ```

@@ -23,7 +23,7 @@ pdfcpu properties remove inFile [ name... ] [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | name...      | one or more property names | no
 
 <br>
@@ -42,4 +42,13 @@ Remove all properties:
 
 ```sh
 $ pdfcpu prop remove test.pdf
+```
+<br>
+
+Remove properties while reading and writing the PDF through pipes:
+
+```sh
+$ aws s3 cp s3://acme-assets/brochure-described.pdf - \
+   | pdfcpu properties remove - - Subject \
+   | aws s3 cp - s3://acme-assets/brochure-clean-meta.pdf
 ```

@@ -23,17 +23,26 @@ pdfcpu portfolio list inFile [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 
 <br>
 
 ## Examples
 
- List all portfolio entries embedded into `portfolio.pdf`. You may add any kind of file to a PDF portfolio:
+List all portfolio entries embedded into `portfolio.pdf`. You may add any kind of file to a PDF portfolio:
 
 ```sh
 $ pdfcpu portfolio list portfolio.pdf
 forest.jpg
 pdfcpu.zip
 invoice.pdf
+```
+
+<br>
+
+List portfolio entries for a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-dataroom/package.pdf - \
+   | pdfcpu portfolio list -
 ```

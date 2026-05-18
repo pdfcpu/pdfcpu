@@ -25,7 +25,7 @@ pdfcpu pagelayout list inFile [flags]
 
 | name    | description         | required
 |:--------|:--------------------|:--------------------------
-| inFile  | PDF input file                             | yes
+| inFile  | PDF input file, use `-` to read from stdin      | yes
 
 
 <br>
@@ -58,3 +58,11 @@ $ pdfcpu pagelayout list test2.pdf
 TwoPageLeft
 ```
 
+<br>
+
+List page layout for a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-publishing/ebook.pdf - \
+   | pdfcpu pagelayout list -
+```

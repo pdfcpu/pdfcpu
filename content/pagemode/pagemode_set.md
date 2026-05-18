@@ -12,7 +12,7 @@ Have a look at some [examples](#examples).
 ## Usage
 
 ```
-pdfcpu pagemode set inFile value [flags]
+pdfcpu pagemode set inFile value [ outFile ] [flags]
 ```
 
 <br>
@@ -25,8 +25,9 @@ pdfcpu pagemode set inFile value [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------------------------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 | value        | page layout mode    | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -51,4 +52,14 @@ Set pagemode for `test.pdf` (case agnostic):
 $ pdfcpu pagemode set test.pdf usethumbs
 $ pdfcpu pagemode list test.pdf
 UseThumbs
+```
+
+<br>
+
+Set page mode while reading and writing the PDF through pipes:
+
+```sh
+$ aws s3 cp s3://acme-publishing/ebook.pdf - \
+   | pdfcpu pagemode set - UseOutlines - \
+   | aws s3 cp - s3://acme-publishing/ebook-outlines.pdf
 ```

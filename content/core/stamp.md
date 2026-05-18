@@ -7,7 +7,6 @@ title: "Stamp"
 
 Add stamps to selected pages of `inFile`. Have a look at some [examples](#examples).
 
-
 Stamps may be stacked on top of each other. 
 This allows for producing more complex page stamps - a mixture of text, images and foreign PDF page content.
 Using `description` you can configure various aspects like position, offset, rotation, scaling and opacity. For text based stamps you can also configure font name, font size, fill color and render mode.
@@ -42,7 +41,6 @@ where *content* may be text, an image or a PDF page.
 | [p(ages)](/getting_started/page_selection) | selected pages | no
 | [m(ode)](/getting_started/common_flags)    | text, image or pdf       | yes
 
-
 <br>
 
 ### [Common Flags](/getting_started/common_flags)
@@ -56,8 +54,8 @@ where *content* may be text, an image or a PDF page.
 | string       | display string       | for text stamps
 | file         | file name            | for image or pdf stamps
 | description  | configuration string | yes
-| inFile       | PDF input file       | yes
-| outFile      | PDF output file      | no
+| inFile       | PDF input file, use `-` to read from stdin      | yes
+| outFile      | PDF output file, use `-` to write to stdout     | no
 
 <br>
 
@@ -101,7 +99,6 @@ and page 3 of your input file you can do the following:
 ```
 $ pdfcpu stamp add 'stamp.pdf:2:3' '' in.pdf out.pdf --mode pdf
 ```
-
 
 <br>
 
@@ -435,3 +432,15 @@ pages: all
 <p align="center">
   <img style="border-color:silver" border="1" src="../resources/testStampRTL.png" height="300">
 </p>
+
+<br>
+
+## Pipeline Example
+
+Add a stamp to a streamed PDF and upload the result:
+
+```sh
+$ aws s3 cp s3://acme-branding/proposal.pdf - \
+   | pdfcpu stamp add "CONFIDENTIAL" "pos:tr, scale:.35 abs, op:.6" - - \
+   | aws s3 cp - s3://acme-branding/proposal-stamped.pdf
+```

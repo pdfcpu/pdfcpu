@@ -31,7 +31,7 @@ pdfcpu images list inFile... [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input file      | yes
+| inFile       | PDF input file, use `-` to read from stdin      | yes
 
 <br>
 
@@ -49,4 +49,12 @@ Page  Obj# | Id  | Type  SoftMask ImgMask | Width | Height | Colorspace Comp bpc
     2   10 | Im0 | image    *             |  1667 |   2646 | DeviceGray    1   8        | 1.6 MB | FlateDecode
     3    8 | Im0 | image    *             |  1667 |   2646 |  DeviceRGB    3   8        | 1.7 MB | FlateDecode
     4    9 | Im0 | image    *             |  1667 |   2646 |  DeviceRGB    3   8    *   | 3.8 MB | FlateDecode
+```
+<br>
+
+List images for a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-assets/gallery.pdf - \
+   | pdfcpu images list -
 ```

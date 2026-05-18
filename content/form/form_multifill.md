@@ -37,7 +37,7 @@ pdfcpu form multifill inFile inFileData outDir [ outFile ] [flags]
 
 | name         | description                        | required
 |:-------------|:-----------------------------------|:--------
-| inFile       | PDF input file containing form     | yes
+| inFile       | PDF input file containing form, use `-` to read from stdin     | yes
 | inFileData   | JSON/CSV input file with form data | yes
 | outDir       | output directory                   | yes
 | outName      | output file name                   | no
@@ -106,6 +106,12 @@ $ pdfcpu form multifill in.pdf in.csv outDir
 $ pdfcpu form multifill in.pdf in.csv outDir --mode merge
 ```
 
+<br>
 
+For `multifill`, `outDir` is still used for generated form instances even when the merged PDF is written to stdout:
 
-
+```sh
+$ aws s3 cp s3://acme-forms/application.pdf - \
+   | pdfcpu form multifill --mode merge - applications.csv /tmp/pdfcpu-forms - \
+   | aws s3 cp - s3://acme-forms/applications-merged.pdf
+```

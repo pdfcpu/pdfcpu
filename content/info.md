@@ -33,7 +33,7 @@ pdfcpu info inFile... [flags]
 
 | name         | description         | required
 |:-------------|:--------------------|:--------
-| inFile       | PDF input files     | yes
+| inFile       | PDF input files, use `-` to read from stdin     | yes
 
 ## Example
 
@@ -160,4 +160,13 @@ $ pdfcpu info test.pdf --json
 		}
 	]
 }
+```
+
+<br>
+
+Print JSON info for a streamed PDF:
+
+```sh
+$ aws s3 cp s3://acme-docs/manual.pdf - \
+   | pdfcpu info --json -
 ```
