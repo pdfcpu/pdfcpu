@@ -178,7 +178,7 @@ The default stamp configuration is:
 
 * fixed center page position (for 'free' positioning use pos:bl)
 * scale factor `0.5 rel`ative to page dimensions
-* positive rotation along the diagonale from the lower left to the upper right page corner (`d:1`).
+* positive rotation along the diagonal from the lower left to the upper right page corner (`d:1`).
 * fully opaque stamp by defining `op`acity `1`
 
 In addition for text based stamps:
@@ -224,7 +224,7 @@ $ pdfcpu stamp add --mode text -- 'This is a stamp' 'scale:1' in.pdf out.pdf
 
 <br>
 
-Create a stamp along the second diagonale using scale factor 0.9, default render mode `fill` and a fill color:
+Create a stamp along the second diagonal using scale factor 0.9, default render mode `fill` and a fill color:
 
 ```sh
 $ pdfcpu stamp add 'This is a stamp' 'scale:.9, d:2, c:.6 .2 .9' in.pdf out.pdf -m text

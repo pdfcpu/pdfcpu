@@ -16,6 +16,14 @@ pdfcpu form list inFile... [flags]
 ```
 <br>
 
+### Flags
+
+| name   | description | default | required
+|:-------|:------------|:--------|:--
+| json   | output JSON | no      | no
+
+<br>
+
 ### [Common Flags](/getting_started/common_flags)
 
 <br>

@@ -21,6 +21,7 @@ pdfcpu annotations list inFile [flags]
 
 | name                             | description     | required
 |:---------------------------------|:----------------|---------
+| json                             | output JSON     | no
 | [p(ages)](/getting_started/page_selection) | selected pages | no
 
 <br>
@@ -41,7 +42,7 @@ pdfcpu annotations list inFile [flags]
 
 List all annotations of test.pdf:
 ```
-$ pdfcpu annot list test.pdf
+$ pdfcpu annotations list test.pdf
 4 annotations available
 
 Page 3:

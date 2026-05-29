@@ -13,9 +13,9 @@ This command fills form fields with data via JSON.
 
 3. In addition to modifying `value(s)` you may change the `locked` status for fields.
 
-3. Remove all fields which shall remain untouched.
+4. Remove all fields which shall remain untouched.
 
-4. Run `pdfcpu form fill`. This will process the attributes `value` and `locked` only.
+5. Run `pdfcpu form fill`. This will process the attributes `value` and `locked` only.
 
 ## Note
 pdfcpu generates all appearance streams for form fields, but if you do have form field display
@@ -64,6 +64,7 @@ We edit the JSON file:
 		"producer": "pdfcpu v0.4.1"
 	},
 	"forms": [
+		{
 			"textfield": [
 				{
 					"name": "firstName",
@@ -77,7 +78,7 @@ We edit the JSON file:
 					"value": "31.12.1999",
 					"locked": true
 				}
-			],
+			]
 		}
 	]
 }

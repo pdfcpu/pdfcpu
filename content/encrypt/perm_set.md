@@ -47,13 +47,13 @@ pdfcpu permissions set [--perm n(one)|p(rint)|a(ll)|max4Hex|max12Bits] [--upw us
 
 ## Examples
 
-You have to provide any non empty password in order to change permissions:
+You have to provide any non-empty password in order to change permissions:
 
 ```
 $ pdfcpu encrypt enc.pdf --opw opw
 writing enc.pdf ...
 
-$ pdfcpu perm list enc.pdf
+$ pdfcpu permissions list enc.pdf
 permission bits: 000000000000 (x000)
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
@@ -64,14 +64,14 @@ Bit 10: false (extract(rev>=3))
 Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 
-pdfcpu perm set enc.pdf --perm all
+pdfcpu permissions set enc.pdf --perm all
 pdfcpu: please provide the owner password with -opw
 
-$ pdfcpu perm set enc.pdf --opw opw --perm all
+$ pdfcpu permissions set enc.pdf --opw opw --perm all
 adding permissions to enc.pdf ...
 writing enc.pdf ...
 
-$ pdfcpu perm list enc.pdf
+$ pdfcpu permissions list enc.pdf
 permission bits: 111100111100 (xF3C)
 Bit  3: true (print(rev2), print quality(rev>=3))
 Bit  4: true (modify other than controlled by bits 6,9,11)

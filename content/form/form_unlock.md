@@ -5,7 +5,7 @@ title: "Unlock form fields"
 
 # Unlock form fields
 
-This command makes locked form fields writeable.
+This command makes locked form fields writable.
 Either supply a list of form field ids taken from the output of `pdfcpu form list` or skip field ids in order to unlock the whole form.
 
 Have a look at some [examples](#examples).

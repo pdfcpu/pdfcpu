@@ -48,7 +48,7 @@ pdfcpu permissions list inFile... [flags]
 $ pdfcpu encrypt enc.pdf --opw opw
 writing enc.pdf ...
 
-$ pdfcpu perm list enc.pdf
+$ pdfcpu permissions list enc.pdf
 permission bits: 000000000000 (x000)
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
@@ -68,10 +68,10 @@ If both passwords are set, you need to provide either one to list permissions:
 $ pdfcpu encrypt enc.pdf --opw opw --upw upw
 writing enc.pdf ...
 
-$ pdfcpu perm list enc.pdf
+$ pdfcpu permissions list enc.pdf
 Please provide the correct password
 
-$ pdfcpu perm list enc.pdf --upw upw
+$ pdfcpu permissions list enc.pdf --upw upw
 permission bits: 000000000000 (x000)
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)
@@ -82,7 +82,7 @@ Bit 10: false (extract(rev>=3))
 Bit 11: false (modify(rev>=3))
 Bit 12: false (print high-level(rev>=3))
 
-$ pdfcpu perm list enc.pdf --opw opw
+$ pdfcpu permissions list enc.pdf --opw opw
 permission bits: 000000000000 (x000)
 Bit  3: false (print(rev2), print quality(rev>=3))
 Bit  4: false (modify other than controlled by bits 6,9,11)

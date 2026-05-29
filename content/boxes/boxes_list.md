@@ -46,7 +46,7 @@ pdfcpu boxes list [ boxTypes ] inFile [flags]
  List all page boundaries of test.pdf:
 
 ```
-$ pdfcpu box list test.pdf
+$ pdfcpu boxes list test.pdf
 listing mediaBox, cropBox, trimBox, bleedBox, artBox for upc.pdf
 pages: all
 Page 1: rot=+0 orientation:portrait
@@ -69,7 +69,7 @@ Page 2: rot=+0 orientation:portrait
 List mediaBox and cropBox of page 1 of test.pdf using display unit cm:
 
 ```
-$ pdfcpu box list 'm,c' test.pdf --pages 1 --unit cm
+$ pdfcpu boxes list 'm,c' test.pdf --pages 1 --unit cm
 listing mediaBox, cropBox for test.pdf
 pages: 1
 Page 1: rot=+0 orientation:portrait

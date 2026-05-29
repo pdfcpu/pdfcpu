@@ -94,7 +94,7 @@ pdfcpu booklet [ description ] outFile n inFile | imageFiles... [flags]
 pdfcpu create  inFileJSON [ inFile ] outFile [flags]
 pdfcpu cut     description inFile outDir [ outFile ] [flags]
 pdfcpu grid    [ description ] outFile m n inFile | imageFiles... [flags]
-pdfcpu import  [ description ] outFile imageFile... [flags]
+pdfcpu import  [description] outFile imageFile... [flags]
 pdfcpu ndown   [ description ] n inFile outDir [ outFile ] [flags]
 pdfcpu nup     [ description ] outFile n inFile | imageFiles... [flags]
 pdfcpu poster  description inFile outDir [ outFile] [flags]
@@ -126,7 +126,7 @@ pdfcpu extract inFile outDir [flags]
 Manage your attachments:
 ```
 pdfcpu attachments list inFile [flags]
-pdfcpu attachments add inFile file... [flags]
+pdfcpu attachments add inFile file [ , desc ]... [flags]
 pdfcpu attachments remove inFile [ file... ] [flags]
 pdfcpu attachments extract inFile outDir [ file... ] [flags]
 ```
@@ -138,7 +138,7 @@ pdfcpu attachments extract inFile outDir [ file... ] [flags]
 Manage your portfolios:
 ```
 pdfcpu portfolio list inFile [flags]
-pdfcpu portfolio add inFile file... [flags]
+pdfcpu portfolio add inFile file [ , desc ]... [flags]
 pdfcpu portfolio remove inFile [ file... ] [flags]
 pdfcpu portfolio extract inFile outDir [ file... ] [flags]
 ```
@@ -172,10 +172,22 @@ Secure your PDFs:
 ```
 pdfcpu encrypt     inFile [ outFile ] [flags]
 pdfcpu decrypt     inFile [ outFile ] [flags]
-pdfcpu changeopw   inFile opwOld opwNew [flags]
-pdfcpu changeupw   inFile upwOld upwNew [flags]
+pdfcpu changeopw   inFile opwOld opwNew [ outFile ] [flags]
+pdfcpu changeupw   inFile upwOld upwNew [ outFile ] [flags]
 pdfcpu permissions list inFile... [flags]
-pdfcpu permissions set inFile [flags]
+pdfcpu permissions set inFile [ outFile ] [flags]
+```
+
+<br>
+
+## [Certificates](/core/certs)
+
+Manage certificates:
+```
+pdfcpu certificates list [flags]
+pdfcpu certificates inspect inFile [flags]
+pdfcpu certificates import inFile... [flags]
+pdfcpu certificates reset [flags]
 ```
 
 <br>
@@ -192,8 +204,8 @@ pdfcpu paper [flags]
 Manage your keywords for searching:
 ```
 pdfcpu keywords list inFile [flags]
-pdfcpu keywords add inFile keyword... [flags]
-pdfcpu keywords remove inFile [ keyword... ] [flags]
+pdfcpu keywords add inFile [ outFile ] keyword... [flags]
+pdfcpu keywords remove inFile [ outFile ] [ keyword... ] [flags]
 ```
 
 <br>
@@ -203,8 +215,8 @@ pdfcpu keywords remove inFile [ keyword... ] [flags]
 Manage your document properties:
 ```
 pdfcpu properties list inFile [flags]
-pdfcpu properties add inFile nameValuePair... [flags]
-pdfcpu properties remove inFile [ name... ] [flags]
+pdfcpu properties add inFile [ outFile ] nameValuePair... [flags]
+pdfcpu properties remove inFile [ outFile ] [ name... ] [flags]
 ```
 
 <br>
@@ -214,8 +226,8 @@ pdfcpu properties remove inFile [ name... ] [flags]
 Manage the page layout for your opened document:
 ```
 pdfcpu pagelayout list inFile [flags]
-pdfcpu pagelayout set inFile value [flags]
-pdfcpu pagelayout reset inFile [flags]
+pdfcpu pagelayout set inFile value [ outFile ] [flags]
+pdfcpu pagelayout reset inFile [ outFile ] [flags]
 ```
 
 <br>
@@ -225,8 +237,8 @@ pdfcpu pagelayout reset inFile [flags]
 Manage the page mode for your opened document:
 ```
 pdfcpu pagemode list inFile [flags]
-pdfcpu pagemode set inFile value [flags]
-pdfcpu pagemode reset inFile [flags]
+pdfcpu pagemode set inFile value [ outFile ] [flags]
+pdfcpu pagemode reset inFile [ outFile ] [flags]
 ```
 
 <br>
@@ -246,8 +258,8 @@ pdfcpu signatures validate inFile [flags]
 Manage the viewer preferences for your opened document:
 ```
 pdfcpu viewerpref list inFile [flags]
-pdfcpu viewerpref set inFile ( inFileJSON | JSONstring ) [flags]
-pdfcpu viewerpref reset inFile [flags]
+pdfcpu viewerpref set inFile ( inFileJSON | JSONstring ) [ outFile ] [flags]
+pdfcpu viewerpref reset inFile [ outFile ] [flags]
 ```
 
 <br>

@@ -60,7 +60,9 @@ $ cat out.json
 		{
 			"textfield": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "30",
 					"name": "firstName1",
 					"default": "Joe",
@@ -69,7 +71,9 @@ $ cat out.json
 					"locked": false
 				},
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "31",
 					"name": "note1",
 					"value": "This is a sample text.\nThis is the next line.",
@@ -79,7 +83,9 @@ $ cat out.json
 			],
 			"datefield": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "33",
 					"name": "dob1",
 					"format": "dd.mm.yyyy",
@@ -90,17 +96,21 @@ $ cat out.json
 			],
 			"checkbox": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "34",
 					"name": "cb11",
 					"default": false,
 					"value": true,
 					"locked": false
-				},
+				}
 			],
 			"radiobuttongroup": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "35",
 					"name": "gender1",
 					"options": [
@@ -115,7 +125,9 @@ $ cat out.json
 			],
 			"combobox": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "36",
 					"name": "city12",
 					"editable": false,
@@ -131,7 +143,9 @@ $ cat out.json
 			],
 			"listbox": [
 				{
-					"page": 1,
+					"pages": [
+						1
+					],
 					"id": "37",
 					"name": "city11",
 					"multi": true,

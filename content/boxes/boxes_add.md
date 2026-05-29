@@ -67,7 +67,7 @@ A string representation for a sequence of box definitions and assignments:
 Set a 200 x 200 Crop Box located in lower left corner of media box:
 
 ```sh
-$ pdfcpu box add 'crop:[0 0 200 200]' in.pdf cropped.pdf
+$ pdfcpu boxes add 'crop:[0 0 200 200]' in.pdf cropped.pdf
 adding cropBox for in.pdf
 writing cropped.pdf...
 pages: all
@@ -90,7 +90,7 @@ pages: all
 The following command sets an absolute Trim Box in user space and assigns it in turn to Bleed Box for page 2 only: 
 
 ```
-$ pdfcpu box add 'trim:[10 10 50 50], bleed:trim' in.pdf out.pdf --pages 2
+$ pdfcpu boxes add 'trim:[10 10 50 50], bleed:trim' in.pdf out.pdf --pages 2
 adding trimBox, bleedBox for in.pdf
 writing out.pdf...
 ```
@@ -102,7 +102,7 @@ Here we define a Crop Box for all pages in terms of a general margin of 1 inch w
 We also define a Bleed Box in terms of relative margins within Crop Box and assign it to Art Box and Trim Box:  
 
 ```
-$ pdfcpu box add 'c:1, b:15%, a:b, t:b' in.pdf out.pdf -u inches
+$ pdfcpu boxes add 'c:1, b:15%, a:b, t:b' in.pdf out.pdf -u inches
 adding cropBox, trimBox, bleedBox, artBox for test.pdf
 writing out.pdf...
 pages: all

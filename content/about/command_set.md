@@ -24,7 +24,7 @@ title: "Command Set"
 * [N-down](/generate/ndown) (cut page into n pieces - the "inverse" of N-up)
 * [N-up](/generate/nup) (rearrange pages into grid layout for reduced number of pages)
 * [Optimize](/core/optimize) (get rid of redundancies like duplicate fonts, images)
-* [Paper](/paper) (print list of supported papersizes)
+* [Paper](/paper) (print list of supported paper sizes)
 * [Poster](/generate/poster) (create poster tiles for given paper size or dimensions)
 * [Resize](/core/resize) selected pages
 * [Rotate](/core/rotate) selected pages

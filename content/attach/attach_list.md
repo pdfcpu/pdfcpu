@@ -33,7 +33,7 @@ List all attachments embedded into `container.pdf`. You may attach any file to a
 Any available attachment description will be shown in braces:
 
 ```sh
-$ pdfcpu attach list container.pdf
+$ pdfcpu attachments list container.pdf
 forest.jpg
 pdfcpu.zip (description1)
 invoice.pdf (description2)

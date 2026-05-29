@@ -82,7 +82,7 @@ $ pdfcpu resize "form:A4" in.pdf out.pdf
 
 <br>
 
-Resize pages to A4 and enforce orientation(here: portrait mode), apply background color.
+Resize pages to A4 and enforce orientation (here: portrait mode), apply background color.
 ```sh
 $ pdfcpu resize "f:A4P, bgcol:#d0d0d0" in.pdf out.pdf
 ```

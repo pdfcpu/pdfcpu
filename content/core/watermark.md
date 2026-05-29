@@ -139,7 +139,7 @@ The default watermark configuration is:
 
 * fixed center page position (for 'free' positioning use pos:bl)
 * scale factor `0.5 rel`ative to page dimensions
-* positive rotation along the diagonale from the lower left to the upper right page corner (`d:1`).
+* positive rotation along the diagonal from the lower left to the upper right page corner (`d:1`).
 * fully opaque watermark by defining `o`pacity `1`
 
 In addition for text based watermarks:
@@ -184,7 +184,7 @@ $ pdfcpu watermark add --mode text -- 'This is a watermark' 'scale:1' in.pdf out
 
 <br>
 
-Create a watermark along the second diagonale using scale factor 0.9, default render mode `fill` and a fill color:
+Create a watermark along the second diagonal using scale factor 0.9, default render mode `fill` and a fill color:
 
 ```sh
 $ pdfcpu watermark add 'This is a watermark' 'scale:.9, d:2, c:.6 .2 .9' in.pdf out.pdf -m text

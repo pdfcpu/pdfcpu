@@ -17,6 +17,15 @@ pdfcpu viewerpref list inFile [flags]
 
 <br>
 
+### Flags
+
+| name   | description                            | default | required
+|:-------|:---------------------------------------|:--------|:--
+| a(ll)  | output all, including default values   | no      | no
+| json   | output JSON                            | no      | no
+
+<br>
+
 ### [Common Flags](/getting_started/common_flags)
 
 <br>
@@ -25,8 +34,6 @@ pdfcpu viewerpref list inFile [flags]
 
 | name    | description         | required
 |:--------|:--------------------|:--------------------------
-| a(ll)     | output all (including default values)      | no
-| j(son)    | output JSON                                | no
 | inFile  | PDF input file, use `-` to read from stdin      | yes
 
 
@@ -35,7 +42,7 @@ pdfcpu viewerpref list inFile [flags]
 
 ## Examples
 
-Display all non default viewer preferences:
+Display all non-default viewer preferences:
 
 ```sh
 $ pdfcpu viewerpref list test.pdf
@@ -63,13 +70,13 @@ Viewer preferences:
 
 <br>
 
-Display all non default viewer preferences using JSON:
+Display all non-default viewer preferences using JSON:
 ```sh
-$ pdfcpu viewerpref list -json test.pdf
+$ pdfcpu viewerpref list --json test.pdf
 {
 	"header": {
-		"version": "pdfcpu v0.6.0 dev",
-		"creation": "2023-12-05 14:23:56 CET"
+		"version": "pdfcpu vX.Y.Z",
+		"creation": "YYYY-MM-DD HH:MM:SS TZ"
 	},
 	"viewerPreferences": {
 		"displayDocTitle": true
@@ -81,11 +88,11 @@ $ pdfcpu viewerpref list -json test.pdf
 
 Display all viewer preferences using JSON:
 ```sh
-$ pdfcpu viewerpref list -all -json test.pdf
+$ pdfcpu viewerpref list --all --json test.pdf
 {
 	"header": {
-		"version": "pdfcpu v0.6.0 dev",
-		"creation": "2023-12-05 14:24:04 CET"
+		"version": "pdfcpu vX.Y.Z",
+		"creation": "YYYY-MM-DD HH:MM:SS TZ"
 	},
 	"viewerPreferences": {
 		"hideToolbar": false,

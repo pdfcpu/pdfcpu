@@ -23,7 +23,7 @@ $ ls out
 
 <br>
 
-Extract all fonts of pages 5-10  from `book.pdf` into `out`: 
+Extract all fonts of pages 5-10 from `book.pdf` into `out`:
 
 ```sh
 $ pdfcpu extract book.pdf out --mode font --pages 5-10 

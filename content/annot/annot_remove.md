@@ -35,9 +35,9 @@ pdfcpu annotations remove inFile [ outFile ] [ objNr | annotId | annotType]... [
 
 ## Examples
 
-Remove annotation with object number 575 as taken from the output from `pdfcpu annot list`:
+Remove annotation with object number 575 as taken from the output from `pdfcpu annotations list`:
 ```
-$ pdfcpu annot remove test.pdf 575
+$ pdfcpu annotations remove test.pdf 575
 writing test.pdf...
 pages: all
 ```
@@ -46,7 +46,7 @@ pages: all
 
 Remove annotations for first 5 pages:
 ```
-$ pdfcpu annot remove test.pdf --pages 1-5
+$ pdfcpu annotations remove test.pdf --pages 1-5
 writing test.pdf...
 pages: 1,2,3,4,5
 ```
@@ -55,7 +55,7 @@ pages: 1,2,3,4,5
 
 Remove all annotations:
 ```
-$ pdfcpu annot remove test.pdf
+$ pdfcpu annotations remove test.pdf
 writing test.pdf...
 pages: all
 ```

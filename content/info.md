@@ -21,7 +21,7 @@ pdfcpu info inFile... [flags]
 |:----------------------------------------  |:--------------------|:--------
 | [p(ages)](/getting_started/page_selection) | page selection      | no
 | fonts                                     | include font info   | no
-| j(son)                                    | produce JSON output | no
+| json                                      | output JSON         | no
 
 <br>
 
@@ -129,11 +129,11 @@ $ pdfcpu info test.pdf --json
 		"version": "pdfcpu v0.5.0 dev",
 		"creation": "2023-08-20 00:24:45 CEST"
 	},
-	"Infos": [
+	"infos": [
 		{
 			"source": "test.pdf",
-			"version": 1.7,
-			"pages": 1,
+			"version": "1.7",
+			"pageCount": 1,
 			"title": "",
 			"author": "",
 			"subject": "",
@@ -157,6 +157,7 @@ $ pdfcpu info test.pdf --json
 			"names": false,
 			"encrypted": false,
 			"permissions": 0,
+			"unit": "points"
 		}
 	]
 }
