@@ -297,6 +297,15 @@ pdfcpu config reset [flags]
 
 <br>
 
+## Shell Completion
+
+Generate shell completion scripts:
+```
+pdfcpu completion [bash|zsh|fish|powershell] [flags]
+```
+
+<br>
+
 ## [Info](/info)
 
 Print file details:
