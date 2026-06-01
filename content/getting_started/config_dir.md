@@ -34,7 +34,8 @@ Please check out the [config list](/config/config_list) command.
 
 Certificates are needed for processing digital signatures.
 
-The pdfcpu binary does not bundle trusted certificates.
+Standard builds start with an empty trusted certificate store.
+Builds created with `-tags pdfcpu_eutl` initialize this store with an embedded snapshot of EU Trusted List certificate bundles.
 pdfcpu keeps trusted certificates in the configuration directory below `certs`.
 You can inspect the current store with [certificates list](/core/certs), restore the store with [certificates reset](/core/certs), and add missing certificates with [certificates import](/core/certs).
 

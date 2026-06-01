@@ -36,8 +36,12 @@ pdfcpu certificates reset
 ## Examples
 
 pdfcpu uses a certificate store located in the pdfcpu configuration directory.
-The binary itself does not bundle trusted certificates.
-This keeps trust material outside of the executable and makes it explicit which certificates are used for signature validation.
+Standard builds start with an empty trusted certificate store.
+Builds created with `-tags pdfcpu_eutl` initialize this store with an embedded snapshot of EU Trusted List certificate bundles.
+This makes it explicit which certificates are used for local signature checks.
+
+The certificate store is used for pdfcpu's local certificate-chain checks.
+Importing a certificate does not by itself establish legal validity, eIDAS compliance, or an enterprise trust policy.
 
 Use `pdfcpu certificates list` to inspect the certificates currently managed by pdfcpu:
 
@@ -50,8 +54,8 @@ certDir: /Users/horstrutter/Library/Application Support/pdfcpu/certs
 
 <br>
 
-If a signature chain cannot be validated because a trusted root or intermediate certificate is missing, import the missing certificate material into pdfcpu.
-Imported certificates are stored below `.../pdfcpu/certs` and are used by subsequent signature validation runs.
+If a signature chain cannot be checked because a trusted root or intermediate certificate is missing, import the missing certificate material into pdfcpu.
+Imported certificates are stored below `.../pdfcpu/certs` and are used by subsequent signature checks for local chain building.
 
 <p align="center">
   <img style="border-color:silver" border="1" src="../resources/certs1.png" height="100">
@@ -69,7 +73,7 @@ imported 156 certificates
   <img style="border-color:silver" border="1" src="../resources/certs2.png" height="120">
 </p>
 
-Importing certificates also validates them meaning pdfcpu ensures it can handle any involved encryption/hashing algorithms.
+Importing certificates also parses them, meaning pdfcpu ensures it can handle the certificate file and any involved certificate algorithms.
 This is important because these evolve over time and corresponding support will need to be implemented after the fact.
 <br><br>
 Case in point - the elliptic curve algorithms which are constantly improved.
@@ -87,7 +91,7 @@ If you want to reset certificates managed by pdfcpu do this:
 
 ```sh
 $ pdfcpu certificates reset
-Are you ready to reset your certificates to your system root certificates?
+Are you ready to reset your trusted certificates to the build defaults?
 (yes/no): yes
 resetting..
 Finished
@@ -116,6 +120,4 @@ $ pdfcpu certificates inspect root.crt
 
 inspected 1 certificates
 ```
-
-
 

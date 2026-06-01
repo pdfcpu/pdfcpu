@@ -7,6 +7,25 @@ title: "Signatures"
 
 Validate digital signatures present in a PDF.
 
+pdfcpu's open source signature handling focuses on PDF signature integrity:
+* signed byte ranges
+* CMS/PKCS#7 processing
+* signer and certificate extraction
+* best-effort checks against the configured local certificate store and
+available revocation information.
+
+It reports trust-related evidence such as:
+* certificate chains
+* timestamps
+* revocation responses
+* DSS data
+* PAdES baseline indicators
+
+where available.
+
+This is not a legal-validity, eIDAS, enterprise policy, or full long-term
+validation (LTV) statement.
+
 PDF supports several types of signatures, each with a distinct purpose:
 
 ### Form Signature
@@ -18,9 +37,9 @@ A digital signature applied directly onto a page, often as an annotation or widg
 Its purpose is to authenticate the visible content of the page, ensuring that it has not been altered.  
 
 ### Document Timestamp Signature (DTS)
-A signature based on an [RFC 3161](https://datatracker.ietf.org/doc/html/rfc3161) `TimeStampToken` issued by a trusted timestamp authority (TSA).
-A DTS proves the existence of the document at a specific point in time, without binding it to a particular signer.   
-Usually associated with PDFs enabled for long term validation.
+A signature based on an [RFC 3161](https://datatracker.ietf.org/doc/html/rfc3161) `TimeStampToken`.
+A DTS is evidence that a document existed at a specific point in time, without binding it to a particular signer.
+Usually associated with PDFs prepared for long term validation.
 
 ### Usage Rights Signature
 A special signature used to enable extended features (such as form filling, commenting, and saving) in PDF viewers like Adobe Reader.
@@ -60,14 +79,17 @@ Compare the hash from the signature with a computed hash to detect any document 
 ### 2. Verify Crypto Signature
 Check that the signature was created using the correct private key and matches the data.
 
-### 3. Validate Certificate
-Check if the certificate is trustworthy and valid.  
-This includes verifying that it chains up to a trusted root certificate, is properly signed, has not expired, and has not been revoked.
+### 3. Check Certificate Evidence
+Check the signer certificate and report whether it chains up to a certificate in pdfcpu's configured local certificate store.
+pdfcpu also reports certificate validity dates and performs best-effort revocation checks when suitable CRL or OCSP information is available.
+
+These checks are useful for inspection and automation, but they are not a substitute for a dedicated trust policy, compliance profile, or legal-validity assessment.
 <br>
 
 ### Checking Revocation
 Certificates may be revoked for various reasons.  
-Checking the revocation status may require online access.  
+Checking the revocation status may require online access and depends on the certificate, the responder, and any embedded evidence in the PDF.
+
 You can configure your timeout values for [CRL](https://en.wikipedia.org/wiki/Certificate_revocation_list) and [OCSP](https://en.wikipedia.org/wiki/Online_Certificate_Status_Protocol) responders with these configuration parameters:
 
 - `timeoutCRL`
@@ -80,8 +102,7 @@ You may also configure your preferred certificate revocation checking mechanism 
 <br>
 
 > **Note:**  
-> pdfcpu will try to validate as much as possible even without the `-full` option.
-> A *fast mode* is conceivable.
+> Use `-full` for detailed signer, certificate, timestamp and revocation output.
 
 <br>
 
@@ -102,7 +123,7 @@ pdfcpu signatures validate inFile [flags]
 |:---------|:--------------------------|:------------|:-------------|
 | rmenc    | Remove encryption while removing signatures | false | no |
 | a(ll)    | Validate all signatures    | false       | no           |
-| f(ull)   | Comprehensive output       | false       | no           |
+| f(ull)   | Detailed output       | false       | no           |
 
 <br>
 
@@ -121,9 +142,9 @@ pdfcpu signatures validate inFile [flags]
 
 ### Certified and Authoritative Signatures
 
-A **certified signature** is a special type of signature that locks the document at a certain point, allowing only certain permitted changes afterward. It proves that the document was approved in its original form by the certifying party.
+A **certified signature** is a special type of signature that locks the document at a certain point, allowing only certain permitted changes afterward. It indicates that the document was approved in its original form by the certifying party.
 
-An **authoritative signature** is the first signature encountered in the document when no certified signature is present. It represents the most trusted signature in the absence of certification.
+An **authoritative signature** is the first signature encountered in the document when no certified signature is present. pdfcpu uses it as the primary signature to inspect when no certified signature is present.
 
 Any number of **approval signatures** may be applied after a certified signature.
 
@@ -135,7 +156,7 @@ If the `-all` option is set, **all** signatures in the PDF are validated.
 
 ## Limitations
 
-Current limitations mostly involve either older encryption standards restricted by the Go runtime for security reasons, or missing checks for permission violations after successful signature validation.
+Current limitations mostly involve either older encryption standards restricted by the Go runtime for security reasons, missing checks for permission violations after successful signature validation, or trust evidence that is detected but not fully policy-validated.
 
 - **Permissions Handling**:
   - **DocMDP**: Missing document checks for permissions levels 2 and 3.
@@ -144,37 +165,39 @@ Current limitations mostly involve either older encryption standards restricted 
 
 - **Catalog DSS**: Missing processing of the VRI (Validation-Related Information) structure.
 
+- **Timestamps and LTV**: Timestamp, DSS, CRL and OCSP evidence may be detected and reported, but pdfcpu OSS does not perform full RFC3161 trust validation, VRI processing, PAdES-B-LT/B-LTA validation, or enterprise policy validation.
+
 - **Elliptic Curve Encryption Algorithms**: support needs to be extended as standards keep evolving.
 
 - **Go Runtime Restrictions**: No support for SHA-1, which is considered insecure.
 
 ## PAdES Level
 
-While the PDF specification mainly focuses on PAdES-E-BES and PAdES-E-EPES for processing ETSI.CAdES.detached signatures, pdfcpu instead detects and reports the PAdES Baseline level:
+While the PDF specification mainly focuses on PAdES-E-BES and PAdES-E-EPES for processing ETSI.CAdES.detached signatures, pdfcpu detects and reports PAdES Baseline evidence:
 * B-B
 * B-T
 * B-LT
 * B-LTA
 
-PAdES-B levels (Basic, Timestamp, Long-Term, Long-Term-Archival) are more comprehensive, widely adopted, and better suited for ensuring long-term validity and document integrity.  
+PAdES-B levels (Basic, Timestamp, Long-Term, Long-Term-Archival) are widely adopted and useful for describing the evidence present in modern signed PDFs.
 
-Focusing on these levels improves compatibility with modern signature validation workflows and future-proofs pdfcpu for evolving standards.
+In the open source build, higher levels are reported as evidence indicators. They should not be read as a full long-term validation or compliance result.
 
 The PAdES baseline levels(profiles) are defined in [ETSI EN 319 142-1 V1.2.1 (2024-01)](https://www.etsi.org/deliver/etsi_en/319100_319199/31914201/01.02.01_60/en_31914201v010201p.pdf) 6.1.
 
-| PAdES Level | Description                         | Supported |
-|:------------|:------------------------------------|:----------|
-| B-B         | Basic electronic signature          | ☑️ |
-| B-T         | B-B with trusted timestamp or DTS   | ☑️ |
-| B-LT        | B-T with embedded CRL and OCSP data | ☑️ |
-| B-LTA       | B-LT with DTS                       | ☑️ |
+| PAdES Level | Description                         | OSS handling |
+|:------------|:------------------------------------|:-------------|
+| B-B         | Basic electronic signature          | validated/reported |
+| B-T         | B-B with timestamp evidence or DTS  | detected/reported |
+| B-LT        | B-T with embedded CRL and OCSP data | evidence detected/reported |
+| B-LTA       | B-LT with archive timestamp evidence | evidence detected/reported |
 
 > **Note:**  
-> pdfcpu currently focuses primarily on PAdES-B.
+> pdfcpu OSS currently focuses on signature integrity and PAdES-B-B validation. Full trust-policy and LTV validation belong to a dedicated trust validation layer.
 
 ## Examples
 
-We start with a valid PAdES-B-B conforming ETSI CAdES-detached signature:
+We start with an ETSI CAdES-detached signature for which pdfcpu reports valid signature integrity and PAdES-B-B evidence:
 
 ```sh
 $ pdfcpu signatures validate sample1.pdf
@@ -228,7 +251,7 @@ DocModified: false
                              Key Size:   256 bits
                              SelfSigned: false
                              Trust:      Status: ok
-                                         Reason: cert chain up to root CA is trusted
+                                        Reason: cert chain resolved by local trust store
                              Revocation: Status: ok
                                          Reason: not revoked (CRL check ok)
              RootCA:
@@ -250,12 +273,12 @@ DocModified: false
 
 ```
 
-We can see the PAdES level and the trusted certificate chain.  
-The output also shows that the certificate is not expired and passed the online revocation check.
+We can see the reported PAdES evidence and the certificate chain resolved against pdfcpu's local certificate store.
+The output also shows that the certificate is not expired and that the available CRL check returned ok.
 
 <br>
 
-Next we take a look at a signature that in addition to being PAdES B-B compliant also comes with an embedded trusted timestamp.
+Next we take a look at a signature that, in addition to PAdES B-B evidence, also contains timestamp evidence.
 
 ```sh
 $ pdfcpu signatures validate sample2.pdf
@@ -311,7 +334,7 @@ DocModified: false
                              Key Size:   256 bits
                              SelfSigned: false
                              Trust:      Status: ok
-                                         Reason: cert chain up to root CA is trusted
+                                        Reason: cert chain resolved by local trust store
                              Revocation: Status: ok
                                          Reason: not revoked (OCSP check ok)
              RootCA:
@@ -335,13 +358,13 @@ DocModified: false
 Using `-all` reveals that there is only one signature.   
 The signature contains a single signer, which is the expected behavior for ETSI CAdES-detached signatures.
 
-We see the trusted certificate chain, and also that the certificate is not expired and is considered **not revoked** after contacting the corresponding OCSP responder via HTTP.
+We see the certificate chain resolved against pdfcpu's local certificate store, and also that the certificate is not expired and the available OCSP responder returned a non-revoked status.
 
-We can see the validated and therefore trusted timestamp, which elevates the PAdES level from B-B to B-T. This could also be due to a separate valid DTS (Document Timestamp Signature).
+We can see timestamp evidence, which pdfcpu reports as B-T evidence. This could also be due to a separate DTS (Document Timestamp Signature).
 
 <br>
 
-Next, we have an example that uses a Document Timestamp Signature to prove that the signature existed at a certain time.
+Next, we have an example that contains a Document Timestamp Signature as timestamp evidence.
 
 ```sh
 
@@ -365,13 +388,14 @@ optimizing...
 
 In order to see the details for both signatures, you need to supply `--all` and `--full`.
 (Using a combination of short flags also works: `-af`)
-There is a good chance that this form signature is B-T or even higher, such as B-LT or B-LTA compliant.  
+This form signature may contain B-T or higher evidence, such as B-LT or B-LTA evidence.
 We skip this because it produces a rather long output.
+The `trusted` label shown for the document timestamp is pdfcpu's current CLI output for a successfully processed DTS and should be read in the context of the OSS limitations described above.
 
 <br>
 
 At last, we take a look at a PDF with a usage rights signature.
-This is not a signature in the traditional sense, but rather a trusted definition of permissions that PDF processors should obey.
+This is not a signature in the traditional sense, but rather a signed definition of permissions that PDF processors should obey.
 For example, you can use usage rights to explicitly allow saving a filled form.
 
 ```sh
@@ -380,7 +404,7 @@ optimizing...
 
 1 usage rights signature (invisible, signed)
    Status: validity of the signature is unknown
-   Reason: signers certificate chain is not in the trusted list of Root CAs
+   Reason: signers certificate chain is not in the configured local trusted certificate store
    Signed: 2022-12-15 17:08:57 +0000
 ```
 
@@ -395,7 +419,7 @@ optimizing...
 1:
        Type: usage rights signature (invisible, signed)
      Status: validity of the signature is unknown
-     Reason: signers certificate chain is not in the trusted list of Root CAs
+    Reason: signers certificate chain is not in the configured local trusted certificate store
      Signed: 2022-12-15 17:08:57 +0000
 DocModified: false
     Details:
@@ -468,12 +492,12 @@ DocModified: false
 A problem points to missing intermediate or root certificates. 
 The certificate is therefore **not trusted**.
 
-We can also see that the certificate is not expired, could not be found in any certificate revocation list, and is therefore considered **not revoked**.  
+We can also see that the certificate is not expired and that the available CRL check did not report it as revoked.
 
-Conclusion: If you import the missing certificates using [pdfcpu certificates import](/core/certs), the usage rights signature validation should succeed.
+Conclusion: If you import the missing certificates using [pdfcpu certificates import](/core/certs), pdfcpu should be able to complete its local certificate-chain check for this usage rights signature.
 
 > **Note:**  
-> This command only checks if the **usage rights signature** is valid.    
+> This command only checks the **usage rights signature** itself.
 > Any violation of **usage rights** defined as UR3 transform parameters are not checked at the moment (see [limitations](#limitations)).
 
 <br>

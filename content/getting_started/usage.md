@@ -245,7 +245,7 @@ pdfcpu pagemode reset inFile [ outFile ] [flags]
 
 ## [Signatures](/core/sign)
 
-Manage digital signatures:
+Manage digital signatures and validate signature integrity:
 ```
 pdfcpu signatures remove inFile [ outFile ] [flags]
 pdfcpu signatures validate inFile [flags]

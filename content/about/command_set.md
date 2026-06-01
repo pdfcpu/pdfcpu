@@ -28,7 +28,7 @@ title: "Command Set"
 * [Poster](/generate/poster) (create poster tiles for given paper size or dimensions)
 * [Resize](/core/resize) selected pages
 * [Rotate](/core/rotate) selected pages
-* [Signatures](/core/sign) (removes and validates digital signatures)
+* [Signatures](/core/sign) (remove signatures and validate signature integrity)
 * [Split](/core/split) multi-page PDF into several PDFs according to split span
 * [Trim](/core/trim) (generate a custom version of a PDF including selected pages)
 * [Validate](/core/validate) PDF files up to version 1.7 + basic validation version 2.0
