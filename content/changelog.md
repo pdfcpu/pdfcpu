@@ -42,7 +42,7 @@ Entries link to GitHub releases or commits where available.
   Refactor command plumbing and parameter handling. <br>
   Harden stream parsing, filter decoding, file path handling, and parser limits. <br>
   Reduce default binary size by moving bundled EUTL trust-list certificates behind the pdfcpu_eutl build tag.<br> 
-  Fix #1291, #1316, #1317, #1359, #1364, #1375, #1393, #1394, #1396, #1402. </p>
+  Fix #513, #801, #1291, #1296, #1316, #1317, #1327, #1359, #1364, #1373, #1375, #1393, #1394, #1396, #1402, #1410, #1411. </p>
 </article>
 
 <article class="changelog-entry">
