@@ -11,7 +11,7 @@ This command validates `inFile` against:
 
 * PDF 1.7: [PDF 32000-1:2008](https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf)
 
-* PDF 2.0: [PDF 32000-2:2020](https://www.pdfa-inc.org/product/iso-32000-2-pdf-2-0-bundle-sponsored-access/) (ongoing task!)
+* PDF 2.0: basic checks against [PDF 32000-2:2020](https://www.pdfa-inc.org/product/iso-32000-2-pdf-2-0-bundle-sponsored-access/) (ongoing task)
 
 <br>
 Validation can also check for broken links.
@@ -52,7 +52,7 @@ pdfcpu validate inFile... [flags]
 
 ##### Strict
 
-This mode validates against the PDF specification covering all PDF versions up to 2.0.
+This mode validates against PDF 32000-1:2008 (PDF 1.7) and performs basic PDF 2.0 checks.
 
 ##### Relaxed
 

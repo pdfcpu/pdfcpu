@@ -26,3 +26,5 @@ pdfcpu signatures remove inFile [ outFile ] [flags]
 ```
 
 ### [Common Flags](/getting_started/common_flags)
+
+<img referrerpolicy="no-referrer-when-downgrade" src="https://static.scarf.sh/a.png?x-pxid=48b1f0fe-bc76-4fa0-912a-dd771c5ca918" width="1" height="1" />

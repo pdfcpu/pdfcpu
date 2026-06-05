@@ -48,7 +48,7 @@ A comma separated list of expressions defining the [selected pages](/getting_sta
 
 ## --mode, -m
 Used by various commands.<br>
-Please refer to [validate](/core/validate), [extract](/extract/extract), [encrypt](/encrypt/encryptpdf), [pages](/pages/pages_insert), [stamp](/core/stamp) and [watermark](/core/watermark) for more information. 
+Please refer to [validate](/core/validate), [extract](/extract/extract), [encrypt](/encrypt/encryptpdf), [pages](/pages/pages_insert), [stamp](/core/stamp) and [watermark](/core/watermark) for more information.
 
 ## --opw
 *Owner password*<br>

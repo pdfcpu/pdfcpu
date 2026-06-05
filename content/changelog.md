@@ -34,7 +34,7 @@ Entries link to GitHub releases or commits where available.
 
 <article class="changelog-entry">
   <div class="changelog-meta">
-    <time datetime="2026-06-05">2026-06-05</time>
+    <time datetime="2026-06-09">2026-06-09</time>
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.13.0">v0.13.0</a>
   </div>

@@ -44,7 +44,7 @@ title: "About"
 }
 </style>
 
-pdfcpu is a PDF processor written in Go. It is built for command-line workflows,
+pdfcpu is PDF tooling for Go and the command line. It is built for command-line workflows,
 server-side automation, and Go applications that need direct control over PDF
 files without pulling in a heavyweight runtime.
 

@@ -54,6 +54,11 @@ Install the CLI tool:
     go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@latest
     pdfcpu version
 
+To build with the embedded EU Trusted List certificate bundles:
+
+    go install -tags pdfcpu_eutl github.com/pdfcpu/pdfcpu/cmd/pdfcpu@latest
+    pdfcpu version
+    
 ---
 
 ## Package Managers

@@ -4,8 +4,8 @@ title = "pdfcpu"
 disableKinds = ["taxonomy", "term"]
 
 [params]
-  description = "A PDF processor written in Go."
-  metaDescription = "pdfcpu is a simple PDF processing library written in Go supporting encryption. It provides both an API and a CLI. Supported are all versions up to PDF 1.7 (ISO-32000)."
+  description = "PDF tooling for Go and the command line."
+  metaDescription = "pdfcpu provides a Go API and CLI for validating, optimizing, splitting, merging, extracting, and transforming PDF files. It supports command-line workflows, server-side automation, and direct PDF control from Go applications."
   logo = "/resources/logoSmall.png"
   repositoryURL = "https://github.com/pdfcpu/pdfcpu"
   googleAnalyticsID = "UA-138739451-1"

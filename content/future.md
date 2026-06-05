@@ -5,15 +5,15 @@ title: "Future Directions"
 
 # Future Directions
 
-pdfcpu continues to evolve as an open source PDF processing library and command line tool.
+pdfcpu continues to evolve as PDF tooling for Go and the command line.
 This page outlines areas of ongoing interest and long-term technical direction.
 
-> **Note:** These items are exploratory and not commitments, promises, or guarantees.
-> Priorities may change and depend on available time, resources, feedback, and technical feasibility.
+> **Note:** These are exploratory and not commitments, promises, or guarantees.
+> Priorities may change and depend on resources, feedback, and technical feasibility.
 
-Areas of interest include:
+Areas of interest:
 
-## PDF Processing
+## PDF Capabilities
 
 * performance and memory use
 * compatibility with real-world PDF files
@@ -31,20 +31,18 @@ Areas of interest include:
 
 ## Trust
 
-* digital signature integrity
+* digital signature validation
 * certificate-chain handling
-* revocation evidence
-* timestamp evidence
+* revocation information processing
+* timestamp validation
 * long-term validation research
 
 ## Content Processing
 
-* page content analysis
-* document structure analysis
-* content extraction
-* document understanding
-* accessibility-related improvements
-* PDF/UA related structure and accessibility research
+* page and document analysis
+* document structure research
+* content extraction and processing research
+* structured document representation research
 
 ## Developer Experience
 
