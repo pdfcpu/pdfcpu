@@ -5,7 +5,9 @@ title: "Encrypt"
 
 # Encrypt
 
-This command encrypts `inFile` using the standard security handler as defined in [PDF 32000-2:2020](https://www.pdfa-inc.org/product/iso-32000-2-pdf-2-0-bundle-sponsored-access/). If provided the encrypted PDF will be written to `outFile` and `inFile` remains untouched. Have a look at some [examples](#examples).
+This command encrypts `inFile` using the standard security handler as defined in [PDF 32000-2:2020](https://www.pdfa-inc.org/product/iso-32000-2-pdf-2-0-bundle-sponsored-access/).
+By default, pdfcpu uses AES with a 256-bit key.
+If provided the encrypted PDF will be written to `outFile` and `inFile` remains untouched. Have a look at some [examples](#examples).
 
 **Owner Password** <br>
 Opens the document without restrictions/permissions, grants full access. <br>

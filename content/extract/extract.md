@@ -5,6 +5,8 @@ title: "Extract"
 
 # Extract
 
+Extract commands write selected PDF internals into files outside the document.
+
 This command lets you extract the following from a PDF file:
 
 * [images](/extract/extract_images)

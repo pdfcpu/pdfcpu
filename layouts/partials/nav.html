@@ -7,11 +7,41 @@
 <nav class="nav-top">
   {{ range hugo.Data.nav }}
     {{ $isCurrent := eq $current (printf "%s/" .url) }}
-    {{ $isSection := eq $section .section }}
-    <a href="{{ .url | relURL }}" class="{{ if or $isCurrent $isSection }}current{{ end }}">{{ .title }}</a><br>
-    {{ if and $isSection .pages }}
+    {{ $isOpen := or $isCurrent (and .section (eq $section .section)) }}
+    {{ range .pages }}
+      {{ $isChildCurrent := eq $current (printf "%s/" .url) }}
+      {{ $isChildSection := and .pages .section (eq $section .section) }}
+      {{ if or $isChildCurrent $isChildSection }}
+        {{ $isOpen = true }}
+      {{ end }}
       {{ range .pages }}
-        <div style="text-indent:25px;"><a href="{{ .url | relURL }}" class="{{ if eq $current (printf "%s/" .url) }}current{{ end }}">{{ .title }}</a></div>
+        {{ if eq $current (printf "%s/" .url) }}
+          {{ $isOpen = true }}
+        {{ end }}
+      {{ end }}
+    {{ end }}
+    <div class="nav-item nav-level-0">
+      <a href="{{ .url | relURL }}" class="{{ if or $isCurrent $isOpen }}current{{ end }}">{{ .title }}</a>
+    </div>
+    {{ if and $isOpen .pages }}
+      {{ range .pages }}
+        {{ $isChildCurrent := eq $current (printf "%s/" .url) }}
+        {{ $isChildOpen := $isChildCurrent }}
+        {{ range .pages }}
+          {{ if eq $current (printf "%s/" .url) }}
+            {{ $isChildOpen = true }}
+          {{ end }}
+        {{ end }}
+        <div class="nav-item nav-level-1">
+          <a href="{{ .url | relURL }}" class="{{ if or $isChildCurrent $isChildOpen }}current{{ end }}">{{ .title }}</a>
+        </div>
+        {{ if and $isChildOpen .pages }}
+          {{ range .pages }}
+            <div class="nav-item nav-level-2">
+              <a href="{{ .url | relURL }}" class="{{ if eq $current (printf "%s/" .url) }}current{{ end }}">{{ .title }}</a>
+            </div>
+          {{ end }}
+        {{ end }}
       {{ end }}
     {{ end }}
   {{ end }}

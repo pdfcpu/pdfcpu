@@ -5,6 +5,8 @@ title: "Papersizes"
 
 # Papersizes
 
+Paper sizes define the page formats used by rendering and layout commands.
+
 Commands like [Booklet](/generate/booklet), [Grid](/generate/grid), [Import](/generate/import), [N-up](/generate/nup) and [Poster](/generate/poster) rely on the output paper size for PDF rendering. This is also known as the *page format* and may be specified via the `f` parameter of the *command description string* and defaults to **A4**. Append P or L to enforce portrait or landscape mode.
 
 Print the list of supported paper sizes:

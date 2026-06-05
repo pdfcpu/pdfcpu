@@ -18,10 +18,11 @@ You can look up its location either like so:
 
 ```
 $ pdfcpu version
-pdfcpu: v0.12.0 dev
-commit: adbc7ca2 (2026-04-03T17:15:58Z)
-config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
-base  : go1.26.1
+version: v0.13.0 dev
+ config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
+ commit: f54bb349
+   date: 2026-06-02 22:21:59 UTC
+     go: go1.26.1
 ```
 
 `pdfcpu config list` will also print the config file path followed by its content.
@@ -32,12 +33,17 @@ Please check out the [config list](/config/config_list) command.
 
 ## Certificates
 
-Certificates are needed for processing digital signatures.
-
-Standard builds start with an empty trusted certificate store.
-Builds created with `-tags pdfcpu_eutl` initialize this store with an embedded snapshot of EU Trusted List certificate bundles.
+Certificates are needed for processing digital signatures.<br>
 pdfcpu keeps trusted certificates in the configuration directory below `certs`.
-You can inspect the current store with [certificates list](/core/certs), restore the store with [certificates reset](/core/certs), and add missing certificates with [certificates import](/core/certs).
+
+* Standard builds start with an empty trusted certificate store.
+* Builds created with `-tags pdfcpu_eutl` initialize this store with an embedded snapshot of EU Trusted List certificate bundles.
+
+Use:
+
+* [certificates list](/core/certs) to inspect the current store
+* [certificates reset](/core/certs) to restore the store
+* [certificates import](/core/certs) to add missing certificates
 
 Certificates are located in the dir tree below `certs`:
 

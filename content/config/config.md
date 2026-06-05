@@ -5,6 +5,6 @@ title: "Config"
 
 # Config
 
-This command lets you manage your configuration.
+Config commands inspect or reset pdfcpu's runtime configuration.
 
-List or reset your configuration.
+Use them when you want to review the active settings or restore the default configuration file.

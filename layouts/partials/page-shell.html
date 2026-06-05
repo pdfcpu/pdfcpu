@@ -48,6 +48,7 @@
         {{ partial "nav.html" . }}
 
         <a href="{{ "changelog" | relURL }}" class="{{ if eq .RelPermalink "/changelog/" }}current{{ end }}">Changelog</a><br>
+        <a href="{{ "future" | relURL }}" class="{{ if eq .RelPermalink "/future/" }}current{{ end }}">Future Directions</a><br>
       </header>
       <section class="{{ if .IsHome }}home-section{{ else }}content-section{{ end }}">
         {{ .Content }}

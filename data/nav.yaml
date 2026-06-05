@@ -26,139 +26,217 @@
       url: /getting_started/color
     - title: Configuration
       url: /getting_started/config_dir
-- title: Fonts
-  url: /fonts/fonts
-  section: fonts
+- title: Document
+  url: /core/document
   pages:
-    - title: List
-      url: /fonts/fonts_list
-    - title: Install
-      url: /fonts/fonts_install
-    - title: Cheat Sheets
-      url: /fonts/fonts_cheat
-- title: Core
-  url: /core/core
-  section: core
-  pages:
-    - title: Certificates
-      url: /core/certs
-    - title: Collect
-      url: /core/collect
-    - title: Crop
-      url: /core/crop
-    - title: Merge
-      url: /core/merge
-    - title: Optimize
-      url: /core/optimize
-    - title: Resize
-      url: /core/resize
-    - title: Rotate
-      url: /core/rotate
-    - title: Signatures
-      url: /core/sign
-    - title: Split
-      url: /core/split
-    - title: Stamp
-      url: /core/stamp
-    - title: Trim
-      url: /core/trim
     - title: Validate
       url: /core/validate
-    - title: Watermark
-      url: /core/watermark
-    - title: Zoom
-      url: /core/zoom
-- title: Generate
-  url: /generate/generate
-  section: generate
+      section: core
+    - title: Optimize
+      url: /core/optimize
+      section: core
+    - title: Info
+      url: /info
+      section: info
+    - title: Create
+      url: /create/create
+      section: create
+      pages:
+        - title: Getting Started
+          url: /create/create_general
+    - title: Merge
+      url: /core/merge
+      section: core
+    - title: Split
+      url: /core/split
+      section: core
+    - title: Trim
+      url: /core/trim
+      section: core
+    - title: Collect
+      url: /core/collect
+      section: core
+- title: Page
+  url: /pages/page
   pages:
-    - title: Booklet
-      url: /generate/booklet
-    - title: Cut
-      url: /generate/cut
-    - title: Grid
-      url: /generate/grid
-    - title: Import
-      url: /generate/import
-    - title: N-Down
-      url: /generate/ndown
+    - title: Pages
+      url: /pages/pages
+      section: pages
+      pages:
+        - title: Insert
+          url: /pages/pages_insert
+        - title: Remove
+          url: /pages/pages_remove
+    - title: Rotate
+      url: /core/rotate
+      section: core
     - title: N-Up
       url: /generate/nup
+      section: generate
+    - title: Booklet
+      url: /generate/booklet
+      section: generate
+    - title: Resize
+      url: /core/resize
+      section: core
     - title: Poster
       url: /generate/poster
-- title: Annotations
-  url: /annot/annot
-  section: annot
+      section: generate
+    - title: N-Down
+      url: /generate/ndown
+      section: generate
+    - title: Cut
+      url: /generate/cut
+      section: generate
+    - title: Crop
+      url: /core/crop
+      section: core
+    - title: Zoom
+      url: /core/zoom
+      section: core
+    - title: Boxes
+      url: /boxes/boxes
+      section: boxes
+      pages:
+        - title: List
+          url: /boxes/boxes_list
+        - title: Add
+          url: /boxes/boxes_add
+        - title: Remove
+          url: /boxes/boxes_remove
+- title: Content
+  url: /content
   pages:
-    - title: List
-      url: /annot/annot_list
-    - title: Remove
-      url: /annot/annot_remove
-- title: Attachments
-  url: /attach/attach
-  section: attach
+    - title: Watermark
+      url: /core/watermark
+      section: core
+    - title: Stamp
+      url: /core/stamp
+      section: core
+    - title: Annotations
+      url: /annot/annot
+      section: annot
+      pages:
+        - title: List
+          url: /annot/annot_list
+        - title: Remove
+          url: /annot/annot_remove
+    - title: Bookmarks
+      url: /bookmarks/bookmarks
+      section: bookmarks
+      pages:
+        - title: List
+          url: /bookmarks/bookmarks_list
+        - title: Export
+          url: /bookmarks/bookmarks_export
+        - title: Import
+          url: /bookmarks/bookmarks_import
+        - title: Remove
+          url: /bookmarks/bookmarks_remove
+    - title: Page Mode
+      url: /pagemode/pagemode
+      section: pagemode
+      pages:
+        - title: List
+          url: /pagemode/pagemode_list
+        - title: Set
+          url: /pagemode/pagemode_set
+        - title: Reset
+          url: /pagemode/pagemode_reset
+    - title: Page Layout
+      url: /pagelayout/pagelayout
+      section: pagelayout
+      pages:
+        - title: List
+          url: /pagelayout/pagelayout_list
+        - title: Set
+          url: /pagelayout/pagelayout_set
+        - title: Reset
+          url: /pagelayout/pagelayout_reset
+    - title: Viewer Preferences
+      url: /viewerpref/viewerpref
+      section: viewerpref
+      pages:
+        - title: List
+          url: /viewerpref/viewerpref_list
+        - title: Set
+          url: /viewerpref/viewerpref_set
+        - title: Reset
+          url: /viewerpref/viewerpref_reset
+- title: Resource
+  url: /resource
   pages:
-    - title: List
-      url: /attach/attach_list
-    - title: Add
-      url: /attach/attach_add
-    - title: Remove
-      url: /attach/attach_remove
-    - title: Extract
-      url: /attach/attach_extract
-- title: Bookmarks
-  url: /bookmarks/bookmarks
-  section: bookmarks
-  pages:
-    - title: List
-      url: /bookmarks/bookmarks_list
-    - title: Remove
-      url: /bookmarks/bookmarks_remove
-    - title: Export
-      url: /bookmarks/bookmarks_export
     - title: Import
-      url: /bookmarks/bookmarks_import
-- title: Boxes
-  url: /boxes/boxes
-  section: boxes
-  pages:
-    - title: List
-      url: /boxes/boxes_list
-    - title: Add
-      url: /boxes/boxes_add
-    - title: Remove
-      url: /boxes/boxes_remove
-- title: Config
-  url: /config/config
-  section: config
-  pages:
-    - title: List
-      url: /config/config_list
-    - title: Reset
-      url: /config/config_reset
-- title: Create
-  url: /create/create
-  section: create
-  pages:
-    - title: Getting Started
-      url: /create/create_general
-- title: Encryption
-  url: /encrypt/encrypt
-  section: encrypt
-  pages:
-    - title: Encrypt
-      url: /encrypt/encryptpdf
-    - title: Decrypt
-      url: /encrypt/decryptpdf
-    - title: Change Owner Password
-      url: /encrypt/change_opw
-    - title: Change User Password
-      url: /encrypt/change_upw
-    - title: Set Permissions
-      url: /encrypt/perm_set
-    - title: List Permissions
-      url: /encrypt/perm_list
-- title: Extraction
+      url: /generate/import
+      section: generate
+    - title: Grid
+      url: /generate/grid
+      section: generate
+    - title: Fonts
+      url: /fonts/fonts
+      section: fonts
+      pages:
+        - title: List
+          url: /fonts/fonts_list
+        - title: Install
+          url: /fonts/fonts_install
+        - title: Cheat Sheets
+          url: /fonts/fonts_cheat
+    - title: Images
+      url: /images/images
+      section: images
+      pages:
+        - title: List
+          url: /images/images_list
+        - title: Extract
+          url: /images/images_extract
+        - title: Update
+          url: /images/images_update
+    - title: Attachments
+      url: /attach/attach
+      section: attach
+      pages:
+        - title: List
+          url: /attach/attach_list
+        - title: Add
+          url: /attach/attach_add
+        - title: Remove
+          url: /attach/attach_remove
+        - title: Extract
+          url: /attach/attach_extract
+    - title: Portfolio
+      url: /portfolio/portfolio
+      section: portfolio
+      pages:
+        - title: List
+          url: /portfolio/portfolio_list
+        - title: Add
+          url: /portfolio/portfolio_add
+        - title: Remove
+          url: /portfolio/portfolio_remove
+        - title: Extract
+          url: /portfolio/portfolio_extract
+    - title: Keywords
+      url: /keywords/keywords
+      section: keywords
+      pages:
+        - title: List
+          url: /keywords/keywords_list
+        - title: Add
+          url: /keywords/keywords_add
+        - title: Remove
+          url: /keywords/keywords_remove
+    - title: Properties
+      url: /properties/properties
+      section: properties
+      pages:
+        - title: List
+          url: /properties/properties_list
+        - title: Add
+          url: /properties/properties_add
+        - title: Remove
+          url: /properties/properties_remove
+- title: Extract
   url: /extract/extract
   section: extract
   pages:
@@ -172,7 +250,7 @@
       url: /extract/extract_pages
     - title: Metadata
       url: /extract/extract_metadata
-- title: Forms
+- title: Form
   url: /form/form
   section: form
   pages:
@@ -192,89 +270,53 @@
       url: /form/form_fill
     - title: Multifill
       url: /form/form_multifill
-- title: Images
-  url: /images/images
-  section: images
+- title: Security
+  url: /encrypt/security
+  section: encrypt
+  pages:
+    - title: Encrypt
+      url: /encrypt/encryptpdf
+    - title: Decrypt
+      url: /encrypt/decryptpdf
+    - title: Change Owner Password
+      url: /encrypt/change_opw
+    - title: Change User Password
+      url: /encrypt/change_upw
+    - title: List Permissions
+      url: /encrypt/perm_list
+    - title: Set Permissions
+      url: /encrypt/perm_set
+- title: Trust
+  url: /core/trust
+  pages:
+    - title: Certificates
+      url: /core/certs
+      section: core
+      pages:
+        - title: List
+          url: /core/certs_list
+        - title: Inspect
+          url: /core/certs_inspect
+        - title: Import
+          url: /core/certs_import
+        - title: Reset
+          url: /core/certs_reset
+    - title: Signatures
+      url: /core/sign
+      section: core
+      pages:
+        - title: Validate
+          url: /core/sign_validate
+        - title: Remove
+          url: /core/sign_remove
+- title: Config
+  url: /config/config
+  section: config
   pages:
     - title: List
-      url: /images/images_list
-    - title: Extract
-      url: /images/images_extract
-    - title: Update
-      url: /images/images_update
-- title: Info
-  url: /info
-  section: info
-- title: Keywords
-  url: /keywords/keywords
-  section: keywords
-  pages:
-    - title: List
-      url: /keywords/keywords_list
-    - title: Add
-      url: /keywords/keywords_add
-    - title: Remove
-      url: /keywords/keywords_remove
-- title: Page Layout
-  url: /pagelayout/pagelayout
-  section: pagelayout
-  pages:
-    - title: List
-      url: /pagelayout/pagelayout_list
-    - title: Set
-      url: /pagelayout/pagelayout_set
+      url: /config/config_list
     - title: Reset
-      url: /pagelayout/pagelayout_reset
-- title: Page Mode
-  url: /pagemode/pagemode
-  section: pagemode
-  pages:
-    - title: List
-      url: /pagemode/pagemode_list
-    - title: Set
-      url: /pagemode/pagemode_set
-    - title: Reset
-      url: /pagemode/pagemode_reset
-- title: Pages
-  url: /pages/pages
-  section: pages
-  pages:
-    - title: Insert
-      url: /pages/pages_insert
-    - title: Remove
-      url: /pages/pages_remove
-- title: Papersizes
+      url: /config/config_reset
+- title: Paper
   url: /paper
   section: paper
-- title: Portfolio
-  url: /portfolio/portfolio
-  section: portfolio
-  pages:
-    - title: List
-      url: /portfolio/portfolio_list
-    - title: Add
-      url: /portfolio/portfolio_add
-    - title: Remove
-      url: /portfolio/portfolio_remove
-    - title: Extract
-      url: /portfolio/portfolio_extract
-- title: Properties
-  url: /properties/properties
-  section: properties
-  pages:
-    - title: List
-      url: /properties/properties_list
-    - title: Add
-      url: /properties/properties_add
-    - title: Remove
-      url: /properties/properties_remove
-- title: Viewer Preferences
-  url: /viewerpref/viewerpref
-  section: viewerpref
-  pages:
-    - title: List
-      url: /viewerpref/viewerpref_list
-    - title: Set
-      url: /viewerpref/viewerpref_set
-    - title: Reset
-      url: /viewerpref/viewerpref_reset

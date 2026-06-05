@@ -31,10 +31,10 @@ config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 #############################
 
 # Creation date
-created: 2026-03-31 00:33
+created: 2026-06-02 23:04
 
 # version (Do not edit!)
-version: v0.12.0 dev
+version: v0.13.0 dev
 
 # toggle for inFilename extension check (.pdf)
 checkFileNameExt: true
@@ -121,4 +121,14 @@ preferredCertRevocationChecker: crl
 # limit form field content for display purposes when using pdfcpu form list.
 # if > 0 affects the columns AltName, Default and Value.
 FormFieldListMaxColWidth: 0
+
+# encoded stream bytes read from a PDF.
+maxStreamBytes: 512 MB
+
+# decoded stream bytes produced by filters.
+maxDecodeBytes: 512 MB
+
+# decoded/rendered image dimensions and buffers.
+maxImagePixels: 100 MP
+maxImageBytes: 512 MB
 ```

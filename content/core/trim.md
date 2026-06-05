@@ -5,7 +5,13 @@ title: "Trim"
 
 # Trim
 
-Generate a trimmed version of `inFile` for selected pages. Have a look at some [examples](#examples).
+Generate a new PDF containing only the selected pages of `inFile`.
+
+`trim` removes pages from the document by page selection. It does not crop page content, change page boxes, or remove white margins on a page. Use `crop` for changing the visible page area.
+
+The output keeps the selected pages in their original order and writes them to `outFile`. If `outFile` is omitted, `inFile` is overwritten.
+
+Have a look at some [examples](#examples).
 
 ## Usage
 

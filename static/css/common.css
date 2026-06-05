@@ -3,6 +3,78 @@
     font-weight: bold;
 }
 
+.nav-item {
+    break-inside: avoid;
+}
+
+.nav-level-0 {
+    margin-top: 2px;
+}
+
+.nav-level-1 {
+    padding-left: 20px;
+}
+
+.nav-level-2 {
+    font-size: 93%;
+    padding-left: 40px;
+}
+
 .nav-bottom {
     font-size:90%;
+}
+
+.changelog-list {
+    margin-top: 18px;
+}
+
+.changelog-year {
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 1.35em;
+    margin: 30px 0 12px;
+    padding-bottom: 6px;
+}
+
+.changelog-entry {
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #2563eb;
+    border-radius: 6px;
+    margin: 12px 0;
+    padding: 14px 16px;
+}
+
+.changelog-meta {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 1.15em;
+    font-weight: 700;
+    margin-bottom: 9px;
+}
+
+.changelog-meta time {
+    color: #4b5563;
+    font-size: 90%;
+}
+
+.changelog-meta a {
+    font-size: 1.15em;
+    font-weight: 700;
+}
+
+.changelog-kind {
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 4px;
+    color: #3730a3;
+    font-size: 78%;
+    font-weight: bold;
+    padding: 1px 6px;
+    text-transform: uppercase;
+}
+
+.changelog-entry p {
+    margin: 0;
+    overflow-wrap: anywhere;
 }
