@@ -19,6 +19,7 @@ Areas of interest include:
 * compatibility with real-world PDF files
 * validation behavior
 * standards compliance
+* PDF/A related validation and processing research
 * improved PDF 2.0 coverage
 
 ## Security
@@ -43,6 +44,7 @@ Areas of interest include:
 * content extraction
 * document understanding
 * accessibility-related improvements
+* PDF/UA related structure and accessibility research
 
 ## Developer Experience
 
