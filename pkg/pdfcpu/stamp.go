@@ -1881,7 +1881,11 @@ func detectStampOCG(ctx *model.Context, arr types.Array) error {
 			return err
 		}
 
-		if o == nil {
+		if d == nil {
+			continue
+		}
+
+		if d.Type() == nil {
 			continue
 		}
 
@@ -2104,7 +2108,11 @@ func DetectWatermarks(ctx *model.Context) error {
 			return err
 		}
 
-		if o == nil {
+		if d == nil {
+			continue
+		}
+
+		if d.Type() == nil {
 			continue
 		}
 
