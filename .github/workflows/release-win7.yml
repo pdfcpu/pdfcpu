@@ -81,7 +81,7 @@ jobs:
           sha256sum "dist-win7/$archive.zip" > "dist-win7/$archive.zip.sha256"
 
       - name: Upload Windows 7 artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pdfcpu_Windows_x86_64_win7
           path: |
