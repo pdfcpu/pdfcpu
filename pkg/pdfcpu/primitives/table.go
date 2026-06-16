@@ -711,13 +711,14 @@ func (t *Table) renderGrid(p *model.Page, colWidths []float64, bWidth float64, b
 	}
 
 	// Draw horizontal lines.
-	maxRows := t.Rows
-	if t.Header != nil {
-		maxRows++
-	}
 	y := r.LL.Y + bWidth/2
-	for i := 1; i < maxRows; i++ {
+	for i := 1; i < t.Rows; i++ {
 		y += float64(t.LineHeight)
+		draw.DrawLine(p.Buf, r.LL.X, y, r.UR.X, y, 0, bCol, nil)
+	}
+
+	if t.Header != nil {
+		y += float64(t.Header.LineHeight)
 		draw.DrawLine(p.Buf, r.LL.X, y, r.UR.X, y, 0, bCol, nil)
 	}
 }
@@ -797,12 +798,7 @@ func (t *Table) renderValues(p *model.Page, pageNr int, fonts model.FontMap, col
 
 			colTd.Text, _ = format.Text(s, pdf.TimestampFormat, pageNr, pdf.pageCount())
 
-			row := i
-			if t.Header != nil {
-				row++
-			}
-
-			x, y := ll(row, j)
+			x, y := ll(i+1, j)
 			r := types.RectForWidthAndHeight(x, y, colWidths[j], float64(t.LineHeight))
 
 			bb := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, t.colAnchors[j])
