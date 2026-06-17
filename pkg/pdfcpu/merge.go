@@ -914,6 +914,39 @@ func createDividerPagesDict(ctx *model.Context, parentIndRef types.IndirectRef) 
 	return indRef, nil
 }
 
+// appendSourcePageTreeToDestPageTree splices the source PDF's root /Pages
+// node into the destination's root /Pages /Kids array, producing a flat
+// (shallow-but-wide) tree shape.
+//
+// FIX FOR DEGENERATE PAGE TREE (page-tree-fix fork branch, v0.11.1):
+//
+// The original implementation wrapped both the existing dest tree AND
+// the source tree in a NEW /Pages node on every merge call, then pointed
+// the catalog at that new wrapper:
+//
+//	new_wrapper
+//	  Kids: [old_dest_root, source_root]
+//
+// After N merge calls, this produces a left-skewed binary tree of
+// depth N+1. Recursive PDF parsers (qpdf, Adobe Acrobat) overflow
+// their stack when walking trees deeper than a few thousand levels.
+// Empirically: a witness-pack merge of 2,404 single-page inputs
+// produced a 2,405-deep tree that crashed qpdf with stack overflow
+// and would not open in Acrobat Reader.
+//
+// FIX: Keep dest's root /Pages node unchanged across merges. Reparent
+// the source's root /Pages to be a child of dest root, and append it
+// to dest_root.Kids. After N merges, dest_root.Kids has N entries
+// (plus dividers if requested) — a wide-but-shallow tree.
+//
+// Source root's own subtree is preserved as-is. This means:
+//
+//  1. Any inheritable attributes set on the source root (/Resources,
+//     /MediaBox, /CropBox, /Rotate) propagate correctly to its
+//     descendant pages — same semantics as the original wrapper.
+//  2. Source PDFs with their own deep page trees still come through
+//     correctly. Tree depth at dest is bounded by max(source depth) + 1,
+//     not N.
 func appendSourcePageTreeToDestPageTree(ctxSrc, ctxDest *model.Context, dividerPage bool) error {
 	if log.DebugEnabled() {
 		log.Debug.Println("appendSourcePageTreeToDestPageTree begin")
@@ -934,57 +967,62 @@ func appendSourcePageTreeToDestPageTree(ctxSrc, ctxDest *model.Context, dividerP
 		return errors.Errorf("pdfcpu: corrupt page node at obj #%d\n", indRefPageTreeRootDictDest.ObjectNumber)
 	}
 
-	c := ctxDest.PageCount
-
-	d := types.NewDict()
-	d.InsertName("Type", "Pages")
-	kids := types.Array{*indRefPageTreeRootDictDest}
-
-	indRef, err := ctxDest.IndRefForNewObject(d)
-	if err != nil {
-		return err
+	// Pull dest's existing /Kids array. We will append to this rather
+	// than wrap it in a new node.
+	destKidsObj, ok := pageTreeRootDictDest["Kids"]
+	if !ok {
+		return errors.Errorf("pdfcpu: dest /Pages obj #%d missing /Kids", indRefPageTreeRootDictDest.ObjectNumber)
+	}
+	destKids, ok := destKidsObj.(types.Array)
+	if !ok {
+		return errors.Errorf("pdfcpu: dest /Pages obj #%d /Kids is not an Array", indRefPageTreeRootDictDest.ObjectNumber)
 	}
 
+	addedPageCount := 0
+
+	// Optional divider page between previous content and this source.
+	// Same as the original implementation but parented to dest root
+	// rather than a new wrapper.
 	if dividerPage {
-		dividerPagesNodeIndRef, err := createDividerPagesDict(ctxDest, *indRef)
+		dividerPagesNodeIndRef, err := createDividerPagesDict(ctxDest, *indRefPageTreeRootDictDest)
 		if err != nil {
 			return err
 		}
-		kids = append(kids, *dividerPagesNodeIndRef)
-		c++
+		destKids = append(destKids, *dividerPagesNodeIndRef)
+		addedPageCount++
 	}
-
-	pageTreeRootDictDest["Parent"] = *indRef
 
 	indRefPageTreeRootDictSource, err := ctxSrc.Pages()
 	if err != nil {
 		return err
 	}
 
-	d.Insert("Kids", append(kids, *indRefPageTreeRootDictSource))
-
 	pageTreeRootDictSource, err := ctxSrc.XRefTable.DereferenceDict(*indRefPageTreeRootDictSource)
 	if err != nil {
 		return err
 	}
-
-	pageTreeRootDictSource["Parent"] = *indRef
 
 	pageCountSource := pageTreeRootDictSource.IntEntry("Count")
 	if pageCountSource == nil || *pageCountSource != ctxSrc.PageCount {
 		return errors.Errorf("pdfcpu: corrupt page node at obj #%d\n", indRefPageTreeRootDictSource.ObjectNumber)
 	}
 
-	c += ctxSrc.PageCount
-	d.InsertInt("Count", c)
-	ctxDest.PageCount = c
+	// Reparent source root to dest root. The original code parented BOTH
+	// source root and the previous dest root under a new wrapper; here
+	// only source root needs to update — dest root stays as the catalog's
+	// /Pages reference, so its lack of /Parent is correct.
+	pageTreeRootDictSource["Parent"] = *indRefPageTreeRootDictDest
 
-	rootDict, err := ctxDest.Catalog()
-	if err != nil {
-		return err
-	}
+	// Append source root as a kid of dest root — splice, not wrap.
+	destKids = append(destKids, *indRefPageTreeRootDictSource)
+	addedPageCount += ctxSrc.PageCount
 
-	rootDict["Pages"] = *indRef
+	// Persist the updated /Kids and /Count on dest's root /Pages.
+	pageTreeRootDictDest["Kids"] = destKids
+	pageTreeRootDictDest["Count"] = types.Integer(ctxDest.PageCount + addedPageCount)
+	ctxDest.PageCount += addedPageCount
+
+	// Catalog's /Pages reference stays pointed at dest root — unchanged.
 
 	if log.DebugEnabled() {
 		log.Debug.Println("appendSourcePageTreeToDestPageTree end")
