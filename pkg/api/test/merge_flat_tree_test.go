@@ -14,20 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Regression test for the degenerate-page-tree merge bug.
+// Tests for the merge page-tree shape and inheritance contract.
 //
-// Before the page-tree-fix patch, appendSourcePageTreeToDestPageTree
-// wrapped both the existing dest tree AND the source tree in a NEW
-// /Pages node on every merge call, producing a left-skewed binary
-// tree of depth N+1 for N inputs. Recursive PDF parsers (qpdf,
-// Adobe Acrobat) overflow their stack on trees deeper than a few
-// thousand levels. A real-world witness-pack merge of 2,404 single-
-// page inputs produced a 2,405-deep tree that crashed qpdf with
-// stack overflow and would not open in Acrobat.
+// MergeCreate/Append calls appendSourcePageTreeToDestPageTree per
+// input. These tests assert three invariants of that function:
 //
-// The fix splices source root /Pages into dest root's /Kids array
-// without wrapping. This test merges N inputs and asserts the
-// resulting page tree depth stays small.
+//   1. Depth at dest is bounded — does not grow with the number of
+//      inputs. Recursive consumers (qpdf, Adobe Acrobat) walk the
+//      page tree with a bounded stack and fail on deep trees.
+//   2. Inherited page attributes (/Resources, /MediaBox, /CropBox,
+//      /Rotate) declared on a source's root /Pages still resolve
+//      correctly at each merged leaf page.
+//   3. Every leaf's /Parent chain terminates at the catalog's /Pages
+//      root with no broken links.
 
 package test
 
@@ -85,18 +84,16 @@ func pageTreeDepth(t *testing.T, ctx *model.Context, indRef types.IndirectRef, c
 
 func TestMergeProducesFlatPageTree(t *testing.T) {
 	const (
-		// 100 inputs is enough to reliably catch the bug: pre-fix this
-		// would produce a 101-deep tree. We don't need to go to the
-		// thousands here — the bug is linear in N, so 100 is plenty
-		// of signal while keeping the test fast.
+		// 100 inputs gives a clear signal — a depth-bound regression
+		// would be linear in N, so 100 is enough to detect without
+		// scaling up further.
 		numInputs = 100
 
-		// Max acceptable depth: 1 (dest root /Pages) + source's own
-		// depth (typically 2: /Pages → /Page for stock test PDFs) =
-		// 3 in the typical case. Buffer to 10 to absorb test PDFs
-		// with slightly nested page trees of their own without flag-
-		// ging false positives. Anything close to numInputs means
-		// the wrap-on-every-merge bug regressed.
+		// Expected: 1 (dest root /Pages) + source's own depth
+		// (typically 2: /Pages → /Page) = 3 in the typical case.
+		// Buffered to 10 to absorb test PDFs with slightly nested
+		// page trees without false positives. Anything approaching
+		// numInputs indicates a depth-bound regression.
 		maxAcceptableDepth = 10
 	)
 
@@ -141,10 +138,8 @@ func TestMergeProducesFlatPageTree(t *testing.T) {
 }
 
 func TestMergeProducesFlatPageTree_WithDivider(t *testing.T) {
-	// Same as above but with dividerPage = true. The original code
-	// wrapped dest + divider + source in the new wrapper; the fix
-	// appends the divider directly to dest root's /Kids. Result
-	// should still be flat.
+	// Same as above with dividerPage = true — divider is appended
+	// directly to dest root's /Kids. Result should still be flat.
 
 	const (
 		numInputs          = 20
@@ -202,20 +197,17 @@ func rectsEqual(a, b *types.Rectangle) bool {
 	}
 }
 
-// TestMergePreservesInheritedPageAttrs guards the inherited-attribute
-// contract from the page-tree-fix. After merge, each output page must
-// resolve the SAME inherited attributes (/MediaBox, /CropBox, /Rotate,
-// /Resources) as its source page did pre-merge.
+// TestMergePreservesInheritedPageAttrs asserts that after merge each
+// output page resolves the same inherited attributes (/MediaBox,
+// /CropBox, /Rotate, /Resources) as its source page did pre-merge.
 //
-// Fixture choice: BuildingWebappsWithGo.pdf declares /MediaBox at the
-// source root /Pages and omits it from the leaf /Page dicts, so the
-// inheritance walk is genuinely exercised. If the fix ever regressed
-// to flatten source_root (dropping its attrs), this test would fail
-// because the leaf /Page dicts would lose /MediaBox.
+// Fixture: BuildingWebappsWithGo.pdf declares /MediaBox at the source
+// root /Pages and omits it from leaf /Page dicts, so the inheritance
+// walk is genuinely exercised. A regression that flattened source_root
+// (dropping its inheritable attrs) would cause leaf /Page dicts to
+// lose /MediaBox post-merge and this test would fail.
 //
-// The test also asserts ctxDest.PageCount and the merged /Pages
-// /Count agree with N*srcPages — the count-bookkeeping half of the
-// maintainer's review ask.
+// Also asserts ctxDest.PageCount equals N * srcPages.
 func TestMergePreservesInheritedPageAttrs(t *testing.T) {
 	const numInputs = 3
 
@@ -314,11 +306,9 @@ func TestMergePreservesInheritedPageAttrs(t *testing.T) {
 // at the catalog's /Pages root — no broken links, no chain that loops
 // or detours through an orphan node.
 //
-// This is the structural half of the maintainer's "update parent
-// links/counts correctly" ask. The depth test catches degenerate
-// shape; this catches a broken-pointer regression that would leave
-// pdfcpu unable to walk back up the tree even though the file
-// validates.
+// The depth test catches degenerate shape; this catches a broken-
+// pointer regression that would leave pdfcpu unable to walk back up
+// the tree even though the file validates.
 func TestMergePageTreeParentLinks(t *testing.T) {
 	const numInputs = 5
 
