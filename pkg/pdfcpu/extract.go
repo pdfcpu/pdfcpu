@@ -608,6 +608,10 @@ func ExtractFormFonts(ctx *model.Context) ([]Font, error) {
 
 // ExtractPages extracts pageNrs into a new single page context.
 func ExtractPages(ctx *model.Context, pageNrs []int, usePgCache bool) (*model.Context, error) {
+	if len(pageNrs) == 0 {
+		return nil, errors.New("pdfcpu: ExtractPages: missing page numbers")
+	}
+
 	ctxDest, err := CreateContextWithXRefTable(ctx.Conf, types.PaperSize["A4"])
 	if err != nil {
 		return nil, err

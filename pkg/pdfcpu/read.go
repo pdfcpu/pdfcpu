@@ -37,8 +37,9 @@ import (
 )
 
 const (
-	defaultBufSize = 1 << 10 // 1 KiB
-	maxBufSize     = 1 << 20 // 1 MiB
+	defaultBufSize     = 1 << 10 // 1 KiB
+	maxBufSize         = 1 << 20 // 1 MiB
+	maxObjectBufferLen = 64 << 20
 )
 
 var (
@@ -46,6 +47,8 @@ var (
 	ErrMissingXRefSection    = errors.New("pdfcpu: can't detect last xref section")
 	ErrReferenceDoesNotExist = errors.New("pdfcpu: referenced object does not exist")
 	ErrWrongPassword         = errors.New("pdfcpu: please provide the correct password")
+	errObjectBufferLimit     = errors.New("pdfcpu: object buffer limit exceeded")
+	errTruncatedStreamMarker = errors.New("pdfcpu: truncated stream marker")
 
 	zero int64 = 0
 )
@@ -771,7 +774,7 @@ func parseXRefStream(c context.Context, ctx *model.Context, rd io.Reader, offset
 		log.Read.Printf("parseXRefStream: begin at offset %d\n", *offset)
 	}
 
-	buf, endInd, streamInd, streamOffset, err := buffer(c, rd)
+	buf, endInd, streamInd, streamOffset, err := buffer(c, rd, maxObjectBufferLen)
 	if err != nil {
 		return nil, err
 	}
@@ -1774,30 +1777,36 @@ func growBufBy(buf []byte, size int, rd io.Reader) ([]byte, error) {
 	return append(buf, b...), nil
 }
 
-func nextStreamOffset(line string, streamInd int) (off int) {
-	off = streamInd + len("stream")
+func nextStreamOffset(line string, streamInd int) (int, error) {
+	const marker = "stream"
+	if streamInd < 0 || streamInd > len(line)-len(marker) || line[streamInd:streamInd+len(marker)] != marker {
+		return 0, errors.New("pdfcpu: corrupt stream marker")
+	}
+	off := streamInd + len(marker)
 
-	// Skip optional blanks.
-	// TODO Should we skip optional whitespace instead?
-	for ; line[off] == 0x20; off++ {
+	// Relaxed compatibility: tolerate optional ASCII spaces before the required EOL.
+	for off < len(line) && line[off] == 0x20 {
+		off++
+	}
+	if off == len(line) {
+		return 0, errTruncatedStreamMarker
 	}
 
 	// Skip 0A eol.
 	if line[off] == '\n' {
-		off++
-		return
+		return off + 1, nil
 	}
 
 	// Skip 0D eol.
 	if line[off] == '\r' {
 		off++
 		// Skip 0D0A eol.
-		if line[off] == '\n' {
+		if off < len(line) && line[off] == '\n' {
 			off++
 		}
 	}
 
-	return
+	return off, nil
 }
 
 func lastStreamMarker(streamInd *int, endInd int, line string) {
@@ -1828,8 +1837,37 @@ func lastStreamMarker(streamInd *int, endInd int, line string) {
 
 }
 
+func growObjectBuffer(buf []byte, growSize int, rd io.Reader, maxObjectBytes int64) ([]byte, error) {
+	remaining := maxObjectBytes - int64(len(buf))
+	if remaining <= 0 {
+		return nil, errors.Wrapf(errObjectBufferLimit, "maximum length %d", maxObjectBytes)
+	}
+	if int64(growSize) > remaining {
+		growSize = int(remaining)
+	}
+	return growBufBy(buf, growSize, rd)
+}
+
+func streamOffsetForBuffer(buf []byte, line string, streamInd int, rd io.Reader, maxObjectBytes int64) ([]byte, int64, error) {
+	for {
+		off, err := nextStreamOffset(line, streamInd)
+		if err == nil {
+			return buf, int64(off), nil
+		}
+		if !errors.Is(err, errTruncatedStreamMarker) {
+			return nil, 0, err
+		}
+
+		buf, err = growObjectBuffer(buf, defaultBufSize, rd, maxObjectBytes)
+		if err != nil {
+			return nil, 0, err
+		}
+		line = string(buf)
+	}
+}
+
 // Provide a PDF file buffer of sufficient size for parsing an object w/o stream.
-func buffer(c context.Context, rd io.Reader) (buf []byte, endInd int, streamInd int, streamOffset int64, err error) {
+func buffer(c context.Context, rd io.Reader, maxObjectBytes int64) (buf []byte, endInd int, streamInd int, streamOffset int64, err error) {
 	// process: # gen obj ... obj dict ... {stream ... data ... endstream} ... endobj
 	//                                    streamInd                            endInd
 	//                                  -1 if absent                        -1 if absent
@@ -1844,7 +1882,7 @@ func buffer(c context.Context, rd io.Reader) (buf []byte, endInd int, streamInd 
 			return nil, 0, 0, 0, err
 		}
 
-		if buf, err = growBufBy(buf, growSize, rd); err != nil {
+		if buf, err = growObjectBuffer(buf, growSize, rd, maxObjectBytes); err != nil {
 			return nil, 0, 0, 0, err
 		}
 
@@ -1875,21 +1913,10 @@ func buffer(c context.Context, rd io.Reader) (buf []byte, endInd int, streamInd 
 
 			// streamOffset ... the offset where the actual stream data begins.
 			//                  is right after the eol after "stream".
-
-			slack := 10 // for optional whitespace + eol (max 2 chars)
-			need := streamInd + len("stream") + slack
-
-			if len(line) < need {
-
-				// to prevent buffer overflow.
-				if buf, err = growBufBy(buf, need-len(line), rd); err != nil {
-					return nil, 0, 0, 0, err
-				}
-
-				line = string(buf)
+			buf, streamOffset, err = streamOffsetForBuffer(buf, line, streamInd, rd, maxObjectBytes)
+			if err != nil {
+				return nil, 0, 0, 0, err
 			}
-
-			streamOffset = int64(nextStreamOffset(line, streamInd))
 		}
 	}
 
@@ -2127,7 +2154,7 @@ func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr in
 	//                                    streamInd                        endInd
 	//                                  -1 if absent                    -1 if absent
 	var buf []byte
-	if buf, endInd, streamInd, streamOffset, err = buffer(c, rd); err != nil {
+	if buf, endInd, streamInd, streamOffset, err = buffer(c, rd, maxObjectBufferLen); err != nil {
 		return nil, 0, 0, 0, err
 	}
 

@@ -51,3 +51,24 @@ func TestParseContent(t *testing.T) {
 		t.Fatalf("want:\n%s\ngot:\n%s\n", want, got)
 	}
 }
+
+// TestParseCorruptContent verifies safe handling of truncated content expressions.
+func TestParseCorruptContent(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{"TJ", "[(text)"},
+		{"BI", "BI"},
+		{"BIData", "BI ID"},
+		{"BIColorSpace", "BI /CS "},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := parseContent(tt.content); err == nil {
+				t.Fatal("expected corrupt content error")
+			}
+		})
+	}
+}

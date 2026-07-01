@@ -723,20 +723,26 @@ func InstallTrueTypeCollection(fontDir, fn string) error {
 		return fmt.Errorf("pdfcpu: corrupt ttc file: %s", fn)
 	}
 
-	c := int(binary.BigEndian.Uint32(b[8:]))
-
-	b = make([]byte, c*4)
-	n, err = f.ReadAt(b, 12)
+	fi, err := f.Stat()
 	if err != nil {
 		return err
 	}
-	if n != c*4 {
+	count := binary.BigEndian.Uint32(b[8:])
+	offsetTableEnd := int64(12) + int64(count)*4
+	if count == 0 || offsetTableEnd > fi.Size() {
 		return fmt.Errorf("pdfcpu: corrupt ttc file: %s", fn)
 	}
 
 	// Process contained fonts.
-	for i := range c {
-		off := int64(binary.BigEndian.Uint32(b[i*4:]))
+	var offsetBytes [4]byte
+	for i := uint32(0); i < count; i++ {
+		if _, err := f.ReadAt(offsetBytes[:], int64(12)+int64(i)*4); err != nil {
+			return err
+		}
+		off := int64(binary.BigEndian.Uint32(offsetBytes[:]))
+		if off < offsetTableEnd || off > fi.Size()-12 {
+			return fmt.Errorf("pdfcpu: corrupt ttc file: %s", fn)
+		}
 		header, tables, err := headerAndTables(fn, f, off)
 		if err != nil {
 			return err

@@ -689,8 +689,13 @@ func PagesForPageCollection(pageCount int, pageSelection []string) ([]int, error
 	return collectedPages, nil
 }
 
-// PagesForPageRange returns a slice of page numbers for a page range.
+// PagesForPageRange returns a slice of page numbers for a valid page range.
+// It returns nil for non-positive or descending ranges.
 func PagesForPageRange(from, thru int) []int {
+	if from < 1 || thru < from {
+		return nil
+	}
+
 	s := make([]int, thru-from+1)
 	for i := 0; i < len(s); i++ {
 		s[i] = from + i

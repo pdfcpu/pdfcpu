@@ -124,19 +124,24 @@ func skipTJ(l *string) error {
 	s := *l
 	for {
 		s = strings.TrimLeftFunc(s, whitespaceOrEOL)
-		if s[0] == ']' {
-			s = s[1:]
-			break
+		if len(s) == 0 {
+			return errTJExpressionCorrupt
 		}
-		if s[0] == '(' {
+		switch s[0] {
+		case ']':
+			s = s[1:]
+			*l = s
+			return nil
+		case '(':
 			if err := skipStringLiteral(&s); err != nil {
 				return err
 			}
-		}
-		if s[0] == '<' {
+			continue
+		case '<':
 			if err := skipHexStringLiteral(&s); err != nil {
 				return err
 			}
+			continue
 		}
 		i, _ := positionToNextWhitespaceOrChar(s, "<(]")
 		if i < 0 {
@@ -144,8 +149,6 @@ func skipTJ(l *string) error {
 		}
 		s = s[i:]
 	}
-	*l = s
-	return nil
 }
 
 func lookupEI(l *string) (int, error) {
@@ -176,21 +179,38 @@ func lookupEI(l *string) (int, error) {
 	return 0, errBIExpressionCorrupt
 }
 
+func skipBIColorSpaceName(s string, prn PageResourceNames) (string, error) {
+	s, _ = trimLeftSpace(s, false)
+	if len(s) < 2 || s[0] != '/' {
+		return "", errBIExpressionCorrupt
+	}
+	s = s[1:]
+	i, _ := positionToNextWhitespaceOrChar(s, "/")
+	if i < 0 {
+		return "", errBIExpressionCorrupt
+	}
+	name := s[:i]
+	if !types.MemberOf(name, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK", "Indexed", "G", "RGB", "CMYK", "I"}) {
+		prn["ColorSpace"][name] = true
+	}
+	return s[i:], nil
+}
+
 func skipBI(l *string, prn PageResourceNames) error {
 	s := *l
 	//fmt.Printf("skipBI <%s>\n", s)
 	for {
 		s = strings.TrimLeftFunc(s, whitespaceOrEOLOrClosingBracket)
-		if strings.HasPrefix(s, "ID") && whitespaceOrEOL(rune(s[2])) {
+		if len(s) == 0 {
+			return errBIExpressionCorrupt
+		}
+		if len(s) > 2 && strings.HasPrefix(s, "ID") && whitespaceOrEOL(rune(s[2])) {
 			i, err := lookupEI(&s)
 			if err != nil {
 				return err
 			}
 			s = s[i+2:]
 			break
-		}
-		if len(s) == 0 {
-			return errBIExpressionCorrupt
 		}
 		if s[0] == '/' {
 			s = s[1:]
@@ -200,17 +220,12 @@ func skipBI(l *string, prn PageResourceNames) error {
 			}
 			token := s[:i]
 			if token == "CS" || token == "ColorSpace" {
-				s = s[i:]
-				s, _ = trimLeftSpace(s, false)
-				s = s[1:]
-				i, _ = positionToNextWhitespaceOrChar(s, "/")
-				if i < 0 {
-					return errBIExpressionCorrupt
+				s1, err := skipBIColorSpaceName(s[i:], prn)
+				if err != nil {
+					return err
 				}
-				name := s[:i]
-				if !types.MemberOf(name, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK", "Indexed", "G", "RGB", "CMYK", "I"}) {
-					prn["ColorSpace"][name] = true
-				}
+				s = s1
+				continue
 			}
 			s = s[i:]
 			continue
@@ -223,6 +238,25 @@ func skipBI(l *string, prn PageResourceNames) error {
 	}
 	*l = s
 	return nil
+}
+
+func skipInlineImage(l *string, prn PageResourceNames) (bool, error) {
+	s := *l
+	if !strings.HasPrefix(s, "BI") {
+		return false, nil
+	}
+	if len(s) == 2 {
+		return false, errBIExpressionCorrupt
+	}
+	if s[2] != '/' && !whitespaceOrEOL(rune(s[2])) {
+		return false, nil
+	}
+	s = s[2:]
+	if err := skipBI(&s, prn); err != nil {
+		return false, err
+	}
+	*l = s
+	return true, nil
 }
 
 func positionToNextContentToken(line *string, prn PageResourceNames) (bool, error) {
@@ -262,12 +296,11 @@ func positionToNextContentToken(line *string, prn PageResourceNames) (bool, erro
 			}
 			continue
 		}
-		if strings.HasPrefix(l, "BI") && (l[2] == '/' || whitespaceOrEOL(rune(l[2]))) {
-			// Handle inline image
-			l = l[2:]
-			if err := skipBI(&l, prn); err != nil {
-				return true, err
-			}
+		ok, err := skipInlineImage(&l, prn)
+		if err != nil {
+			return true, err
+		}
+		if ok {
 			continue
 		}
 		*line = l
