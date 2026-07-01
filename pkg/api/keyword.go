@@ -92,11 +92,11 @@ func AddKeywordsFile(inFile, outFile string, files []string, conf *model.Configu
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -175,11 +175,11 @@ func RemoveKeywordsFile(inFile, outFile string, keywords []string, conf *model.C
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}

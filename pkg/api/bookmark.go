@@ -172,11 +172,11 @@ func ImportBookmarksFile(inFilePDF, inFileJSON, outFilePDF string, replace bool,
 		return err
 	}
 
-	tmpFile := inFilePDF + ".tmp"
+	tmpFile := ""
 	if outFilePDF != "" && inFilePDF != outFilePDF {
 		tmpFile = outFilePDF
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFilePDF, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -248,11 +248,11 @@ func AddBookmarksFile(inFile, outFile string, bms []pdfcpu.Bookmark, replace boo
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -324,11 +324,11 @@ func RemoveBookmarksFile(inFile, outFile string, conf *model.Configuration) (err
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}

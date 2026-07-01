@@ -76,7 +76,7 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 		logWritingTo(outFile)
@@ -84,7 +84,7 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 		logWritingTo(inFile)
 	}
 
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}

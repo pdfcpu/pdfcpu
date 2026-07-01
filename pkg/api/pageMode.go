@@ -132,11 +132,11 @@ func SetPageModeFile(inFile, outFile string, val model.PageMode, conf *model.Con
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -202,11 +202,11 @@ func ResetPageModeFile(inFile, outFile string, conf *model.Configuration) (err e
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}

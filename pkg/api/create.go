@@ -109,10 +109,10 @@ func CreateFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configurat
 		rs = f1
 	}
 
-	tmpFile := inFilePDF + ".tmp"
+	tmpFile := ""
 	handleOutFilePDF(inFilePDF, outFilePDF, &tmpFile)
 
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFilePDF, tmpFile); err != nil {
 		if f1 != nil {
 			_ = f1.Close()
 		}

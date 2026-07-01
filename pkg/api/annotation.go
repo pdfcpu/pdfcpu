@@ -129,7 +129,7 @@ func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model
 	var f1, f2 *os.File
 	ok := false
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 		logWritingTo(outFile)
@@ -149,7 +149,7 @@ func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model
 		return err
 	}
 
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -248,7 +248,7 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationR
 	var f1, f2 *os.File
 	ok := false
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
@@ -269,7 +269,7 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationR
 		return err
 	}
 
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -391,7 +391,7 @@ func RemoveAnnotationsFile(inFile, outFile string, selectedPages, idsAndTypes []
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 		logWritingTo(outFile)
@@ -415,7 +415,7 @@ func RemoveAnnotationsFile(inFile, outFile string, selectedPages, idsAndTypes []
 		return err
 	}
 
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}

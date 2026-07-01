@@ -136,7 +136,6 @@ func importImagesInputFile(outFile string) (io.ReadSeeker, *os.File, string, err
 			return nil, nil, "", err
 		}
 		rs = f
-		tmpFile += ".tmp"
 		logImportImages("appending", outFile)
 		return rs, f, tmpFile, nil
 	}
@@ -195,7 +194,11 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdfcpu.Import, con
 		return err
 	}
 
-	f2, err := os.Create(tmpFile)
+	inFile := ""
+	if f1 != nil {
+		inFile = outFile
+	}
+	f2, tmpFile, err := createOutputFile(inFile, tmpFile)
 	if err != nil {
 		if f1 != nil {
 			f1.Close()

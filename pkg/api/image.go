@@ -140,14 +140,14 @@ func UpdateImagesFile(inFile, imageFile, outFile string, objNr, pageNr int, id s
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 		logWritingTo(outFile)
 	} else {
 		logWritingTo(inFile)
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		_ = f0.Close()
 		return err

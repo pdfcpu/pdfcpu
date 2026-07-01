@@ -71,14 +71,14 @@ func AddWatermarksMapFile(inFile, outFile string, m map[int]*model.Watermark, co
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 		logWritingTo(outFile)
 	} else {
 		logWritingTo(inFile)
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -148,14 +148,14 @@ func AddWatermarksSliceMapFile(inFile, outFile string, m map[int][]*model.Waterm
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 		logWritingTo(outFile)
 	} else {
 		logWritingTo(inFile)
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -231,14 +231,14 @@ func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *model
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 		logWritingTo(outFile)
 	} else {
 		logWritingTo(inFile)
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -309,14 +309,14 @@ func RemoveWatermarksFile(inFile, outFile string, selectedPages []string, conf *
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 		logWritingTo(outFile)
 	} else {
 		logWritingTo(inFile)
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}

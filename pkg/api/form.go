@@ -112,13 +112,13 @@ func RemoveFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
 	logWritingTo(outFile)
 
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -195,13 +195,13 @@ func LockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
 	logWritingTo(outFile)
 
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -278,13 +278,13 @@ func UnlockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
 	logWritingTo(outFile)
 
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -361,12 +361,12 @@ func ResetFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf 
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
 	logWritingTo(outFile)
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -667,12 +667,12 @@ func FillFormFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configur
 	}
 	rs := f1
 
-	tmpFile := inFilePDF + ".tmp"
+	tmpFile := ""
 	if outFilePDF != "" && inFilePDF != outFilePDF {
 		tmpFile = outFilePDF
 	}
 	logWritingTo(outFilePDF)
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFilePDF, tmpFile); err != nil {
 		_ = f1.Close()
 		_ = f0.Close()
 		return err

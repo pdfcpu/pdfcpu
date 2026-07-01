@@ -111,7 +111,7 @@ func AddBoxesFile(inFile, outFile string, selectedPages []string, pb *model.Page
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 		logWritingTo(outFile)
@@ -119,7 +119,7 @@ func AddBoxesFile(inFile, outFile string, selectedPages []string, pb *model.Page
 		logWritingTo(inFile)
 	}
 
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -194,7 +194,7 @@ func RemoveBoxesFile(inFile, outFile string, selectedPages []string, pb *model.P
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 		logWritingTo(outFile)
@@ -202,7 +202,7 @@ func RemoveBoxesFile(inFile, outFile string, selectedPages []string, pb *model.P
 		logWritingTo(inFile)
 	}
 
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -277,7 +277,7 @@ func CropFile(inFile, outFile string, selectedPages []string, b *model.Box, conf
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 		logWritingTo(outFile)
@@ -285,7 +285,7 @@ func CropFile(inFile, outFile string, selectedPages []string, b *model.Box, conf
 		logWritingTo(inFile)
 	}
 
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}

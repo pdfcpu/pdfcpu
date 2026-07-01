@@ -35,7 +35,7 @@ func installDefaultCertificates() error {
 	}
 
 	euDir := filepath.Join(TrustedCertDir, "eu")
-	if err := os.MkdirAll(euDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(euDir, 0755); err != nil {
 		return err
 	}
 
@@ -54,5 +54,5 @@ func installDefaultCertificate(name, dir string) error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(dir, name), content, 0666)
+	return os.WriteFile(filepath.Join(dir, name), content, 0644)
 }

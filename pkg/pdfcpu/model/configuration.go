@@ -402,7 +402,7 @@ version: %s
 			VersionStr)
 
 		bb := append([]byte(s), configFileBytes...)
-		if err := os.WriteFile(path, bb, os.ModePerm); err != nil {
+		if err := os.WriteFile(path, bb, 0600); err != nil {
 			return err
 		}
 		f, err = os.Open(path)
@@ -461,7 +461,7 @@ func initCertificates() error {
 // If path/pdfcpu/config.yaml is not found, it will be created.
 func EnsureDefaultConfigAt(path string, override bool) error {
 	configDir := filepath.Join(path, "pdfcpu")
-	if err := os.MkdirAll(configDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return err
 	}
 	if err := ensureConfigFileAt(filepath.Join(configDir, "config.yml"), override); err != nil {
@@ -472,7 +472,7 @@ func EnsureDefaultConfigAt(path string, override bool) error {
 	// Other userfonts have to be installed via `pdfcpu font install` or copied over from another pdfcpu config dir.
 	// Userfonts are loaded into memory lazily.
 	font.UserFontDir = filepath.Join(configDir, "fonts")
-	if err := os.MkdirAll(font.UserFontDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(font.UserFontDir, 0755); err != nil {
 		return err
 	}
 	if err := ensureFontDirInitialized(); err != nil {
@@ -482,7 +482,7 @@ func EnsureDefaultConfigAt(path string, override bool) error {
 	// Initialize pdfcpu config/cert dir, then extract and install certificates.
 	// Certificates are loaded into memory lazily.
 	TrustedCertDir = filepath.Join(configDir, "certs")
-	if err := os.MkdirAll(TrustedCertDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(TrustedCertDir, 0755); err != nil {
 		return err
 	}
 	if err := initCertificates(); err != nil {

@@ -215,14 +215,17 @@ func MergeAppendFile(inFiles []string, outFile string, dividerPage bool, conf *m
 	if fileExists(outFile) {
 		overWrite = true
 		destFile = outFile
-		tmpFile += ".tmp"
 		if log.CLIEnabled() {
 			log.CLI.Printf("appending to %s...\n", outFile)
 		}
 	} else {
 		logWritingTo(outFile)
 	}
-	if f, err = os.Create(tmpFile); err != nil {
+	inFile := ""
+	if overWrite {
+		inFile = outFile
+	}
+	if f, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		return err
 	}
 

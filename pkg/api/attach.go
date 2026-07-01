@@ -133,11 +133,11 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -217,11 +217,11 @@ func RemoveAttachmentsFile(inFile, outFile string, files []string, conf *model.C
 		return err
 	}
 
-	tmpFile := inFile + ".tmp"
+	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, err = os.Create(tmpFile); err != nil {
+	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
 		_ = f1.Close()
 		return err
 	}
@@ -294,7 +294,7 @@ func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, con
 		}
 		fileName := filepath.Join(outDir, fn)
 
-		f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+		f, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			return err
 		}

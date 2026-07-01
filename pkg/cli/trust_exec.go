@@ -136,7 +136,7 @@ func ListCertificatesAll(json bool, conf *model.Configuration) ([]string, error)
 
 	// Process *.pem and *.p7c
 
-	if err := os.MkdirAll(model.TrustedCertDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(model.TrustedCertDir, 0755); err != nil {
 		return nil, err
 	}
 
@@ -180,7 +180,7 @@ func ListCertificatesAll(json bool, conf *model.Configuration) ([]string, error)
 }
 
 func listCertificatesAllJSON() ([]string, error) {
-	if err := os.MkdirAll(model.TrustedCertDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(model.TrustedCertDir, 0755); err != nil {
 		return nil, err
 	}
 
