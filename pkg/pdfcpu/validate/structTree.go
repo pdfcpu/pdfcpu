@@ -508,6 +508,14 @@ func validateStructElementDictDepth(xRefTable *model.XRefTable, d types.Dict, us
 	return validateStructElementDictPart2(xRefTable, d, dictName)
 }
 
+func handleInvalidStructTreeObject(xRefTable *model.XRefTable, err error) error {
+	if xRefTable.ValidationMode == model.ValidationStrict {
+		return err
+	}
+	model.ShowDigestedSpecViolationError(xRefTable, err)
+	return nil
+}
+
 func validateStructTreeRootDictEntryKArray(xRefTable *model.XRefTable, a types.Array, useIDs bool) error {
 
 	for _, o := range a {
@@ -535,10 +543,16 @@ func validateStructTreeRootDictEntryKArray(xRefTable *model.XRefTable, a types.A
 				break
 			}
 
-			return errors.Errorf("pdfcpu: validateStructTreeRootDictEntryKArray: invalid dictType %s (should be \"StructElem\")\n", *dictType)
+			err := errors.Errorf("pdfcpu: validateStructTreeRootDictEntryKArray: invalid dictType %s (should be \"StructElem\")\n", *dictType)
+			if err = handleInvalidStructTreeObject(xRefTable, err); err != nil {
+				return err
+			}
 
 		default:
-			return errors.New("pdfcpu: validateStructTreeRootDictEntryKArray: unsupported PDF object")
+			err := errors.New("pdfcpu: validateStructTreeRootDictEntryKArray: unsupported PDF object")
+			if err = handleInvalidStructTreeObject(xRefTable, err); err != nil {
+				return err
+			}
 
 		}
 	}
@@ -570,7 +584,8 @@ func validateStructTreeRootDictEntryK(xRefTable *model.XRefTable, o types.Object
 			break
 		}
 
-		return errors.Errorf("validateStructTreeRootDictEntryK: invalid dictType %s (should be \"StructElem\")\n", *dictType)
+		err := errors.Errorf("validateStructTreeRootDictEntryK: invalid dictType %s (should be \"StructElem\")\n", *dictType)
+		return handleInvalidStructTreeObject(xRefTable, err)
 
 	case types.Array:
 
@@ -580,7 +595,8 @@ func validateStructTreeRootDictEntryK(xRefTable *model.XRefTable, o types.Object
 		}
 
 	default:
-		return errors.New("pdfcpu: validateStructTreeRootDictEntryK: unsupported PDF object")
+		err := errors.New("pdfcpu: validateStructTreeRootDictEntryK: unsupported PDF object")
+		return handleInvalidStructTreeObject(xRefTable, err)
 
 	}
 

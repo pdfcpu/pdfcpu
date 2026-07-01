@@ -63,6 +63,27 @@ func validatePageLabelDict(xRefTable *model.XRefTable, o types.Object) error {
 	return err
 }
 
+func validateNumberTreeKey(xRefTable *model.XRefTable, o types.Object, name string) (int, bool, error) {
+	o, err := xRefTable.Dereference(o)
+	if err != nil {
+		return 0, false, err
+	}
+
+	i, ok := o.(types.Integer)
+	if ok {
+		return i.Value(), true, nil
+	}
+
+	err = errors.Errorf("pdfcpu: validateNumberTreeDictNumsEntry: corrupt key <%v>\n", o)
+	if name != "StructTree" {
+		return 0, false, err
+	}
+	if err = handleInvalidStructTreeObject(xRefTable, err); err != nil {
+		return 0, false, err
+	}
+	return 0, false, nil
+}
+
 func validateNumberTreeDictNumsEntry(xRefTable *model.XRefTable, d types.Dict, name string, useIDs bool) (firstKey, lastKey int, err error) {
 
 	// Nums: array of the form [key1 value1 key2 value2 ... key n value n]
@@ -97,22 +118,21 @@ func validateNumberTreeDictNumsEntry(xRefTable *model.XRefTable, d types.Dict, n
 	for i, o := range a {
 
 		if i%2 == 0 {
-
-			o, err = xRefTable.Dereference(o)
+			var key int
+			var valid bool
+			key, valid, err = validateNumberTreeKey(xRefTable, o, name)
 			if err != nil {
 				return 0, 0, err
 			}
-
-			i, ok := o.(types.Integer)
-			if !ok {
-				return 0, 0, errors.Errorf("pdfcpu: validateNumberTreeDictNumsEntry: corrupt key <%v>\n", o)
+			if !valid {
+				continue
 			}
 
 			if firstKey == 0 {
-				firstKey = i.Value()
+				firstKey = key
 			}
 
-			lastKey = i.Value()
+			lastKey = key
 
 			continue
 		}
