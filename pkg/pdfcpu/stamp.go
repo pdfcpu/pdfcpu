@@ -694,9 +694,24 @@ func createPDFRes(ctx, otherCtx *model.Context, pageNrSrc, pageNrDest int, migra
 	}
 
 	pdfRes.Bb = viewPort(inhPAttrs)
+	if pdfRes.Bb == nil {
+		return errors.Errorf("pdfcpu: PDF stamp page %d: missing media box", pageNrSrc)
+	}
 	wm.PdfRes[pageNrDest] = pdfRes
 
 	return nil
+}
+
+func pdfResourcePageCount(destPageCount, srcPageCount, startPageNrSrc, startPageNrDest int) (int, error) {
+	if startPageNrSrc < 1 || startPageNrSrc > srcPageCount {
+		return 0, errors.Errorf("pdfcpu: invalid PDF stamp source page number: %d", startPageNrSrc)
+	}
+	if startPageNrDest < 1 || startPageNrDest > destPageCount {
+		return 0, errors.Errorf("pdfcpu: invalid PDF stamp destination page number: %d", startPageNrDest)
+	}
+	srcPages := srcPageCount - startPageNrSrc + 1
+	destPages := destPageCount - startPageNrDest + 1
+	return min(srcPages, destPages), nil
 }
 
 func createPDFResForWM(ctx *model.Context, wm *model.Watermark) error {
@@ -718,7 +733,7 @@ func createPDFResForWM(ctx *model.Context, wm *model.Watermark) error {
 	}
 
 	if err := otherCtx.EnsurePageCount(); err != nil {
-		return nil
+		return err
 	}
 
 	migrated := map[int]int{}
@@ -727,12 +742,22 @@ func createPDFResForWM(ctx *model.Context, wm *model.Watermark) error {
 		return createPDFRes(ctx, otherCtx, wm.PdfPageNrSrc, wm.PdfPageNrSrc, migrated, wm)
 	}
 
-	destPageNr := wm.PdfMultiStartPageNrDest
-	for srcPageNr := wm.PdfMultiStartPageNrSrc; srcPageNr <= min(ctx.PageCount, otherCtx.PageCount); srcPageNr++ {
+	pageCount, err := pdfResourcePageCount(
+		ctx.PageCount,
+		otherCtx.PageCount,
+		wm.PdfMultiStartPageNrSrc,
+		wm.PdfMultiStartPageNrDest,
+	)
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < pageCount; i++ {
+		srcPageNr := wm.PdfMultiStartPageNrSrc + i
+		destPageNr := wm.PdfMultiStartPageNrDest + i
 		if err := createPDFRes(ctx, otherCtx, srcPageNr, destPageNr, migrated, wm); err != nil {
 			return err
 		}
-		destPageNr++
 	}
 
 	return nil
@@ -1017,9 +1042,26 @@ func drawBoundingBox(b *bytes.Buffer, wm model.Watermark, bb *types.Rectangle) {
 	)
 }
 
-func calcFormBoundingBox(xRefTable *model.XRefTable, w io.Writer, timestampFormat string, pageNr, pageCount int, wm *model.Watermark) bool {
+func pdfResourceForPage(wm *model.Watermark, pageNr int) (model.PdfResources, error) {
+	i := wm.PdfResIndex(pageNr)
+	pdfRes, ok := wm.PdfRes[i]
+	if !ok {
+		return model.PdfResources{}, errors.Errorf("pdfcpu: missing PDF stamp resource for destination page %d", pageNr)
+	}
+	if pdfRes.Bb == nil {
+		return model.PdfResources{}, errors.Errorf("pdfcpu: PDF stamp resource for destination page %d: missing bounding box", pageNr)
+	}
+	return pdfRes, nil
+}
+
+func calcFormBoundingBox(xRefTable *model.XRefTable, w io.Writer, timestampFormat string, pageNr, pageCount int, wm *model.Watermark) (bool, error) {
 	var unique bool
-	if wm.IsImage() || wm.IsPDF() {
+	if wm.IsPDF() {
+		if _, err := pdfResourceForPage(wm, pageNr); err != nil {
+			return false, err
+		}
+		wm.CalcBoundingBox(pageNr)
+	} else if wm.IsImage() {
 		wm.CalcBoundingBox(pageNr)
 	} else {
 		var td model.TextDescriptor
@@ -1027,12 +1069,22 @@ func calcFormBoundingBox(xRefTable *model.XRefTable, w io.Writer, timestampForma
 		// Render td into b and return the bounding box.
 		wm.Bb = model.WriteMultiLine(xRefTable, w, types.RectForDim(wm.Vp.Width(), wm.Vp.Height()), nil, td)
 	}
-	return unique
+	return unique, nil
+}
+
+func writeFormContent(w io.Writer, pageNr int, wm model.Watermark) error {
+	if !wm.IsImage() && !wm.IsPDF() {
+		return nil
+	}
+	return formContent(w, pageNr, wm)
 }
 
 func createForm(ctx *model.Context, pageNr, pageCount int, wm *model.Watermark, withBB bool) error {
 	var b bytes.Buffer
-	unique := calcFormBoundingBox(ctx.XRefTable, &b, ctx.Configuration.TimestampFormat, pageNr, pageCount, wm)
+	unique, err := calcFormBoundingBox(ctx.XRefTable, &b, ctx.Configuration.TimestampFormat, pageNr, pageCount, wm)
+	if err != nil {
+		return err
+	}
 
 	// The forms bounding box is dependent on the page dimensions.
 	bb := wm.Bb
@@ -1048,10 +1100,8 @@ func createForm(ctx *model.Context, pageNr, pageCount int, wm *model.Watermark, 
 		}
 	}
 
-	if wm.IsImage() || wm.IsPDF() {
-		if err := formContent(&b, pageNr, *wm); err != nil {
-			return err
-		}
+	if err := writeFormContent(&b, pageNr, *wm); err != nil {
+		return err
 	}
 
 	ir, err := createFormResDict(ctx, pageNr, wm)
