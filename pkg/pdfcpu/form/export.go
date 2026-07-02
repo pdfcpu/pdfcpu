@@ -222,16 +222,28 @@ func locateAPN(xRefTable *model.XRefTable, d types.Dict) (types.Dict, error) {
 	if !ok {
 		return nil, errors.New("corrupt AP field: missing entry \"N\"")
 	}
-	d2, err := xRefTable.DereferenceDict(obj)
+
+	obj, err = xRefTable.Dereference(obj)
 	if err != nil {
 		return nil, err
 	}
-
-	if len(d2) == 0 {
+	if obj == nil {
 		return nil, errors.New("corrupt AP field: missing entry \"N\"")
 	}
 
-	return d2, nil
+	switch obj := obj.(type) {
+	case types.Dict:
+		if len(obj) == 0 {
+			return nil, errors.New("corrupt AP field: missing entry \"N\"")
+		}
+		return obj, nil
+
+	case types.StreamDict:
+		// A single appearance stream does not provide named appearance states.
+		return nil, nil
+	}
+
+	return nil, errors.Errorf("corrupt AP field: entry \"N\" has unsupported type %T", obj)
 }
 
 func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, bool, error) {

@@ -58,6 +58,67 @@ func TestFormFieldHelpersRejectRecursionDepth(t *testing.T) {
 	}
 }
 
+func TestExtractRadioButtonGroupOptionsSingleAppearanceStream(t *testing.T) {
+	ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	widget := types.Dict{
+		"AP": types.Dict{
+			"N": types.StreamDict{},
+		},
+	}
+	radioButtonGroup := types.Dict{
+		"Kids": types.Array{widget},
+		"V":    types.Name("Choice"),
+	}
+
+	opts, explicit, err := extractRadioButtonGroupOptions(ctx.XRefTable, radioButtonGroup)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if explicit {
+		t.Fatal("single appearance stream reported explicit options")
+	}
+	if len(opts) != 0 {
+		t.Fatalf("got options %v, want none", opts)
+	}
+
+	rbg, err := extractRadioButtonGroup(ctx.XRefTable, 1, radioButtonGroup, "1", "choice", "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rbg.Value != "Choice" {
+		t.Fatalf("got value %q, want %q", rbg.Value, "Choice")
+	}
+}
+
+func TestLocateAPNAppearanceStateDict(t *testing.T) {
+	ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	states := types.Dict{
+		"Off":    types.StreamDict{},
+		"Choice": types.StreamDict{},
+	}
+	widget := types.Dict{
+		"AP": types.Dict{
+			"N": states,
+		},
+	}
+
+	got, err := locateAPN(ctx.XRefTable, widget)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != len(states) {
+		t.Fatalf("got %d appearance states, want %d", len(got), len(states))
+	}
+}
+
 func cyclicFormContext(t *testing.T) (*model.XRefTable, types.Array) {
 	t.Helper()
 
