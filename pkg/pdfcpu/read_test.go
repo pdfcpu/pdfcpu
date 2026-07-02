@@ -65,6 +65,62 @@ func TestReadContext(t *testing.T) {
 	}
 }
 
+func TestExtractXRefStreamEntriesDefaultType(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const objCount = 67
+	xsd := &types.XRefStreamDict{
+		Objects: make([]int, objCount),
+		W:       [3]int{0, 3, 0},
+	}
+	buf := make([]byte, 0, objCount*3)
+	offsets := make([]int64, objCount)
+	for objNr := 0; objNr < objCount; objNr++ {
+		xsd.Objects[objNr] = objNr
+		offset := int64(1 + objNr*257)
+		offsets[objNr] = offset
+		buf = append(buf, byte(offset>>16), byte(offset>>8), byte(offset))
+	}
+
+	if err := extractXRefTableEntriesFromXRefStream(buf, 0, xsd, ctx, 0); err != nil {
+		t.Fatal(err)
+	}
+	if len(ctx.Table) != objCount {
+		t.Fatalf("got %d xref entries, want %d", len(ctx.Table), objCount)
+	}
+	for objNr, wantOffset := range offsets {
+		entry := ctx.Table[objNr]
+		if entry == nil {
+			t.Fatalf("missing xref entry for object %d", objNr)
+		}
+		if entry.Free || entry.Compressed {
+			t.Fatalf("object %d: expected an in-use xref entry", objNr)
+		}
+		if entry.Offset == nil || *entry.Offset != wantOffset {
+			t.Fatalf("object %d: got offset %v, want %d", objNr, entry.Offset, wantOffset)
+		}
+	}
+}
+
+func TestExtractXRefStreamEntriesRejectsZeroWidths(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	xsd := &types.XRefStreamDict{W: [3]int{0, 0, 0}}
+	err = extractXRefTableEntriesFromXRefStream(nil, 0, xsd, ctx, 0)
+	if err == nil {
+		t.Fatal("expected an invalid W array error")
+	}
+	if !strings.Contains(err.Error(), "invalid W array") {
+		t.Fatalf("got %v, want invalid W array error", err)
+	}
+}
+
 // TestReadLargeDictObject verifies large dictionary objects are handled.
 func TestReadLargeDictObject(t *testing.T) {
 	// Test with "stream" and "endobj" inside the dictionary.
