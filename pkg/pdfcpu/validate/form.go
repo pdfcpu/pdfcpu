@@ -713,9 +713,26 @@ func validateFormEntries(xRefTable *model.XRefTable, d types.Dict, dictName stri
 	return validateFormXFA(xRefTable, d, sinceVersion)
 }
 
-func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+func handleSelfReferentialAcroForm(xRefTable *model.XRefTable, rootDict types.Dict) (bool, error) {
+	if ir := rootDict.IndirectRefEntry("AcroForm"); ir != nil && xRefTable.Root != nil && *ir == *xRefTable.Root {
+		const msg = "pdfcpu: AcroForm references root catalog"
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return true, errors.New(msg)
+		}
+		model.ShowDigestedSpecViolation(msg)
+		rootDict.Delete("AcroForm")
+		return true, nil
+	}
+	return false, nil
+}
 
+func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 12.7.2 Interactive Form Dictionary
+
+	handled, err := handleSelfReferentialAcroForm(xRefTable, rootDict)
+	if handled {
+		return err
+	}
 
 	d, err := validateDictEntry(xRefTable, rootDict, "rootDict", "AcroForm", OPTIONAL, sinceVersion, nil)
 	if err != nil || d == nil {

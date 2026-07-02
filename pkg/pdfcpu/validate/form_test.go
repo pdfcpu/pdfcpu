@@ -44,3 +44,51 @@ func TestValidateFormFieldDictRejectsCycle(t *testing.T) {
 		t.Fatalf("got %v, want ErrFormFieldCycle", err)
 	}
 }
+
+func selfReferentialAcroForm(t *testing.T) (*model.XRefTable, types.Dict) {
+	t.Helper()
+
+	ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ir := types.NewIndirectRef(1, 0)
+	rootDict := types.Dict{
+		"Type":     types.Name("Catalog"),
+		"AcroForm": *ir,
+		"Fields":   types.Array{*types.NewIndirectRef(4, 0)},
+	}
+	if _, err := ctx.IndRefForObject(1, rootDict); err != nil {
+		t.Fatal(err)
+	}
+	ctx.Root = ir
+	ctx.RootDict = rootDict
+
+	return ctx.XRefTable, rootDict
+}
+
+func TestValidateFormRejectsSelfReferentialAcroFormStrict(t *testing.T) {
+	xRefTable, rootDict := selfReferentialAcroForm(t)
+	xRefTable.ValidationMode = model.ValidationStrict
+
+	err := validateForm(xRefTable, rootDict, OPTIONAL, model.V12)
+	if err == nil || !strings.Contains(err.Error(), "AcroForm references root catalog") {
+		t.Fatalf("got %v, want self-referential AcroForm error", err)
+	}
+}
+
+func TestValidateFormRepairsSelfReferentialAcroFormRelaxed(t *testing.T) {
+	xRefTable, rootDict := selfReferentialAcroForm(t)
+	xRefTable.ValidationMode = model.ValidationRelaxed
+
+	if err := validateForm(xRefTable, rootDict, OPTIONAL, model.V12); err != nil {
+		t.Fatal(err)
+	}
+	if _, found := rootDict.Find("AcroForm"); found {
+		t.Fatal("self-referential AcroForm not removed")
+	}
+	if xRefTable.Form != nil {
+		t.Fatal("self-referential AcroForm registered as form")
+	}
+}
