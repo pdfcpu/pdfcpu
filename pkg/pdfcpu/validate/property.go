@@ -63,7 +63,7 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 
 		case "Contents":
 			logProp("known", key, val)
-			if _, err = validateStreamDict(xRefTable, val); err != nil {
+			if err = validateStringOrStreamEntry(xRefTable, d, "propertiesDict", "Contents", OPTIONAL, model.V10); err != nil {
 				return err
 			}
 
