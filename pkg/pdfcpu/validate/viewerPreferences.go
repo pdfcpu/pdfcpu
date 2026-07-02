@@ -161,7 +161,7 @@ func validatePrinterPreferences(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 	sinceVersion = model.V17
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V15
+		sinceVersion = model.V14
 	}
 	n, err = validateNameEntry(xRefTable, d, dictName, "Duplex", OPTIONAL, sinceVersion, validate)
 	if err != nil {
