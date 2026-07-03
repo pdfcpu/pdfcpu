@@ -588,7 +588,6 @@ func validateNameTreeValue(name string, xRefTable *model.XRefTable, o types.Obje
 }
 
 func validateNameTreeDictNamesEntry(xRefTable *model.XRefTable, d types.Dict, name string, node *model.Node) (string, string, error) {
-
 	//fmt.Printf("validateNameTreeDictNamesEntry begin %s\n", d)
 
 	// Names: array of the form [key1 value1 key2 value2 ... key n value n]
@@ -606,13 +605,17 @@ func validateNameTreeDictNamesEntry(xRefTable *model.XRefTable, d types.Dict, na
 	}
 
 	// arr length needs to be even because of contained key value pairs.
-	if len(a)%2 == 1 {
-		return "", "", errors.Errorf("pdfcpu: validateNameTreeDictNamesEntry: Names array entry length needs to be even, length=%d\n", len(a))
+	entries := len(a)
+	if entries%2 == 1 {
+		if xRefTable.ValidationMode != model.ValidationRelaxed || name != "JavaScript" {
+			return "", "", errors.Errorf("pdfcpu: validateNameTreeDictNamesEntry: Names array entry length needs to be even, length=%d\n", len(a))
+		}
+		entries--
 	}
 
 	var key, firstKey, lastKey string
 
-	for i := 0; i < len(a); i++ {
+	for i := 0; i < entries; i++ {
 		o := a[i]
 
 		if i%2 == 0 {
