@@ -658,7 +658,7 @@ func readGob(fileName string, fd *ttf) error {
 	return dec.Decode(fd)
 }
 
-func installTrueTypeRep(fontDir, fontName string, header []byte, tables map[string]*table) error {
+func installTrueTypeRep(fontDir, fontName string, header []byte, tables map[string]*table, logInstall bool) error {
 	fd := ttf{}
 	//fmt.Println(fontName)
 	for _, v := range []string{"head", "OS/2", "post", "name", "hhea", "maxp", "hmtx", "cmap"} {
@@ -673,7 +673,7 @@ func installTrueTypeRep(fontDir, fontName string, header []byte, tables map[stri
 	}
 	fd.FontFile = bb
 
-	if log.CLIEnabled() {
+	if logInstall && log.CLIEnabled() {
 		log.CLI.Println(fd.PostscriptName)
 	}
 
@@ -747,7 +747,7 @@ func InstallTrueTypeCollection(fontDir, fn string) error {
 		if err != nil {
 			return err
 		}
-		if err := installTrueTypeRep(fontDir, fn, header, tables); err != nil {
+		if err := installTrueTypeRep(fontDir, fn, header, tables, true); err != nil {
 			return err
 		}
 	}
@@ -767,17 +767,26 @@ func InstallTrueTypeFont(fontDir, fontName string) error {
 	if err != nil {
 		return err
 	}
-	return installTrueTypeRep(fontDir, fontName, header, tables)
+	return installTrueTypeRep(fontDir, fontName, header, tables, true)
 }
 
 // InstallFontFromBytes saves an internal representation of TrueType font fontName to the pdfcpu config dir.
 func InstallFontFromBytes(fontDir, fontName string, bb []byte) error {
+	return installFontFromBytes(fontDir, fontName, bb, true)
+}
+
+// InstallFontFromBytesQuiet saves an internal representation of TrueType font fontName without logging.
+func InstallFontFromBytesQuiet(fontDir, fontName string, bb []byte) error {
+	return installFontFromBytes(fontDir, fontName, bb, false)
+}
+
+func installFontFromBytes(fontDir, fontName string, bb []byte, logInstall bool) error {
 	rd := bytes.NewReader(bb)
 	header, tables, err := headerAndTables(fontName, rd, 0)
 	if err != nil {
 		return err
 	}
-	return installTrueTypeRep(fontDir, fontName, header, tables)
+	return installTrueTypeRep(fontDir, fontName, header, tables, logInstall)
 }
 
 func ttfTables(tableCount int, bb []byte) (map[string]*table, error) {

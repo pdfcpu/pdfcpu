@@ -434,10 +434,10 @@ func ensureFontDirInitialized() error {
 	if onlyHidden(files) {
 		// Ensure Roboto font for form filling.
 		fontname := "Roboto-Regular"
-		if log.CLIEnabled() {
-			log.CLI.Printf("installing user font:")
+		if log.DebugEnabled() && log.CLIEnabled() {
+			log.CLI.Printf("installing user font: %s\n", fontname)
 		}
-		if err := font.InstallFontFromBytes(font.UserFontDir, fontname, robotoFontFileBytes); err != nil {
+		if err := font.InstallFontFromBytesQuiet(font.UserFontDir, fontname, robotoFontFileBytes); err != nil {
 			return err
 		}
 	}

@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"bytes"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -54,6 +55,20 @@ func runPDFCPU(t *testing.T, args ...string) ([]byte, error) {
 	cmd := exec.Command(pdfcpuBin, append([]string{"--conf", "disable"}, args...)...)
 	cmd.Env = os.Environ()
 	return cmd.CombinedOutput()
+}
+
+func runPDFCPUWithConfig(t *testing.T, configDir string, args ...string) ([]byte, []byte, error) {
+	t.Helper()
+	cmd := exec.Command(pdfcpuBin, append([]string{"--conf", configDir}, args...)...)
+	cmd.Env = os.Environ()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	return stdout.Bytes(), stderr.Bytes(), err
 }
 
 func repoFile(t *testing.T, elems ...string) string {
