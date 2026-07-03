@@ -43,15 +43,35 @@ const (
 )
 
 var (
-	ErrCorruptHeader         = errors.New("pdfcpu: no header version available")
-	ErrMissingXRefSection    = errors.New("pdfcpu: can't detect last xref section")
+	// ErrCorruptHeader reports a missing or malformed PDF header.
+	ErrCorruptHeader = errors.New("pdfcpu: no header version available")
+	// ErrPostScriptInput reports a PostScript input stream passed to the PDF reader.
+	ErrPostScriptInput = errors.New("pdfcpu: PostScript input is not supported; convert to PDF before processing")
+	// ErrMissingXRefSection reports a PDF without a detectable final xref section.
+	ErrMissingXRefSection = errors.New("pdfcpu: can't detect last xref section")
+	// ErrReferenceDoesNotExist reports a reference to a missing indirect object.
 	ErrReferenceDoesNotExist = errors.New("pdfcpu: referenced object does not exist")
-	ErrWrongPassword         = errors.New("pdfcpu: please provide the correct password")
+	// ErrWrongPassword reports failed PDF password authentication.
+	ErrWrongPassword = errors.New("pdfcpu: please provide the correct password")
+
 	errObjectBufferLimit     = errors.New("pdfcpu: object buffer limit exceeded")
 	errTruncatedStreamMarker = errors.New("pdfcpu: truncated stream marker")
 
 	zero int64 = 0
 )
+
+func hasPostScriptHeader(buf []byte) bool {
+	buf = bytes.TrimPrefix(buf, []byte{0xEF, 0xBB, 0xBF})
+	buf = bytes.TrimLeft(buf, "\x00\t\n\f\r ")
+	if !bytes.HasPrefix(buf, []byte("%!")) {
+		return false
+	}
+	i := bytes.IndexAny(buf, "\x0A\x0D")
+	if i < 0 {
+		i = len(buf)
+	}
+	return bytes.Contains(buf[:i], []byte("PS-Adobe"))
+}
 
 // ReadFile reads in a PDF file and builds an internal structure holding its cross reference table aka the PDF model context.
 func ReadFile(inFile string, conf *model.Configuration) (*model.Context, error) {
@@ -1282,6 +1302,9 @@ func scanForVersion(rs io.ReadSeeker, prefix string) ([]byte, int, error) {
 			return nil, 0, ErrCorruptHeader
 		}
 		curBuf = buf[:n]
+		if off == 0 && hasPostScriptHeader(curBuf) {
+			return nil, 0, ErrPostScriptInput
+		}
 		for {
 			i := bytes.IndexByte(curBuf, '%')
 			if i < 0 {

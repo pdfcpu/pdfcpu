@@ -65,6 +65,25 @@ func TestReadContext(t *testing.T) {
 	}
 }
 
+func TestHeaderVersionRejectsPostScript(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+	}{
+		{"Plain", "%!PS-Adobe-3.0\n%%Title: report.txt\n"},
+		{"BOMAndWhitespace", "\xef\xbb\xbf \r\n%!PS-Adobe-3.0\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, _, err := headerVersion(strings.NewReader(tt.in))
+			if !errors.Is(err, ErrPostScriptInput) {
+				t.Fatalf("got %v, want ErrPostScriptInput", err)
+			}
+		})
+	}
+}
+
 func TestExtractXRefStreamEntriesDefaultType(t *testing.T) {
 	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
 	if err != nil {
