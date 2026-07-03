@@ -370,13 +370,38 @@ func (tf *TextField) renderBackground(w io.Writer, bgCol, boCol *color.SimpleCol
 	}
 }
 
+func textFieldRunes(s string, rtl bool) []rune {
+	rr := []rune(s)
+	if rtl {
+		for i, j := 0, len(rr)-1; i < j; i, j = i+1, j-1 {
+			rr[i], rr[j] = rr[j], rr[i]
+		}
+	}
+	return rr
+}
+
+func (tf *TextField) renderCombLine(xRefTable *model.XRefTable, x, y float64, rr []rune, embed bool, buf io.Writer) {
+	f := tf.Font
+	limit := min(len(rr), tf.MaxLen)
+	dx := tf.BoundingBox.Width() / float64(tf.MaxLen)
+	for j := range limit {
+		s := model.PrepBytes(xRefTable, string(rr[j]), f.Name, embed, false, f.FillFont)
+		fmt.Fprintf(buf, "%.2f %.2f Td (%s) Tj ", x, y, s)
+		y = 0
+		x = dx
+	}
+}
+
 func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y float64, lines []string, buf io.Writer) {
 	f := tf.Font
 	cjk := pdffont.CJK(f.Script, f.Lang)
 	for i := 0; i < len(lines); i++ {
 		s := lines[i]
 		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
-		s = model.PrepBytes(xRefTable, s, f.Name, !cjk, f.RTL(), f.FillFont)
+		rr := textFieldRunes(s, f.RTL())
+		if !(tf.Comb && tf.MaxLen > 0 && tf.HorAlign == types.AlignLeft) {
+			s = model.PrepBytes(xRefTable, s, f.Name, !cjk, f.RTL(), f.FillFont)
+		}
 		x := 2 * boWidth
 		if x == 0 {
 			x = 2
@@ -397,13 +422,7 @@ func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y f
 
 		if tf.Comb && tf.MaxLen > 0 && tf.HorAlign == types.AlignLeft {
 			x = 0.5
-			dx := w / float64(tf.MaxLen)
-			y0 := y
-			for j := 0; j < len(s) && j < tf.MaxLen; j++ {
-				fmt.Fprintf(buf, "%.2f %.2f Td (%c) Tj ", x, y0, s[j])
-				y0 = 0
-				x = dx
-			}
+			tf.renderCombLine(xRefTable, x, y, rr, !cjk, buf)
 			fmt.Fprint(buf, "ET ")
 		} else {
 			fmt.Fprintf(buf, "%.2f %.2f Td (%s) Tj ET ", x, y, s)
