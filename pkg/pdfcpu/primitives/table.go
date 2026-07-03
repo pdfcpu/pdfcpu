@@ -722,6 +722,26 @@ func (t *Table) renderGrid(p *model.Page, colWidths []float64, bWidth float64, b
 	}
 }
 
+func (t *Table) cellLowerLeft(r *types.Rectangle, colWidths []float64, bWidth float64, row, col int) (float64, float64) {
+	var x float64
+	for i := range col {
+		x += colWidths[i]
+	}
+	y := r.UR.Y - bWidth/2 - float64(row*t.LineHeight)
+	if t.Header != nil {
+		y -= float64(t.Header.LineHeight)
+	}
+	return r.LL.X + bWidth/2 + x, y
+}
+
+func (t *Table) valueCellLowerLeft(r *types.Rectangle, colWidths []float64, bWidth float64, row, col int) (float64, float64) {
+	return t.cellLowerLeft(r, colWidths, bWidth, row+1, col)
+}
+
+func (t *Table) headerCellLowerLeft(r *types.Rectangle, colWidths []float64, bWidth float64, col int) (float64, float64) {
+	return t.cellLowerLeft(r, colWidths, bWidth, 0, col)
+}
+
 func (t *Table) prepareTextDescriptor() (model.TextDescriptor, error) {
 	td := model.TextDescriptor{
 		Scale:      1.,
@@ -797,12 +817,7 @@ func (t *Table) renderValues(p *model.Page, pageNr int, fonts model.FontMap, col
 
 			colTd.Text, _ = format.Text(s, pdf.TimestampFormat, pageNr, pdf.pageCount())
 
-			row := i
-			if t.Header != nil {
-				row++
-			}
-
-			x, y := ll(row, j)
+			x, y := ll(i, j)
 			r := types.RectForWidthAndHeight(x, y, colWidths[j], float64(t.LineHeight))
 
 			bb := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, t.colAnchors[j])
@@ -819,7 +834,7 @@ func (t *Table) renderValues(p *model.Page, pageNr int, fonts model.FontMap, col
 	return nil
 }
 
-func (t *Table) renderHeader(p *model.Page, pageNr int, fonts model.FontMap, colWidths []float64, td model.TextDescriptor, ll func(row, col int) (float64, float64)) error {
+func (t *Table) renderHeader(p *model.Page, pageNr int, fonts model.FontMap, colWidths []float64, td model.TextDescriptor, ll func(col int) (float64, float64)) error {
 	pdf := t.pdf
 	th := t.Header
 
@@ -871,7 +886,7 @@ func (t *Table) renderHeader(p *model.Page, pageNr int, fonts model.FontMap, col
 		th.calcColumnPadding(&colTd, i)
 		colTd.Text, _ = format.Text(s, pdf.TimestampFormat, pageNr, pdf.pageCount())
 
-		x, y := ll(0, i)
+		x, y := ll(i)
 		r := types.RectForWidthAndHeight(x, y, colWidths[i], float64(th.LineHeight))
 
 		a := t.colAnchors[i]
@@ -946,26 +961,22 @@ func (t *Table) render(p *model.Page, pageNr int, fonts model.FontMap) error {
 		return err
 	}
 
-	ll := func(row, col int) (float64, float64) {
-		var x float64
-		for i := range col {
-			x += colWidths[i]
-		}
-		y := r.UR.Y - bWidth/2 - float64(row*t.LineHeight)
-		if t.Header != nil {
-			y -= float64(t.Header.LineHeight)
-		}
-		return r.LL.X + bWidth/2 + x, y
+	valueLL := func(row, col int) (float64, float64) {
+		return t.valueCellLowerLeft(r, colWidths, bWidth, row, col)
+	}
+
+	headerLL := func(col int) (float64, float64) {
+		return t.headerCellLowerLeft(r, colWidths, bWidth, col)
 	}
 
 	if len(t.Values) > 0 {
-		if err := t.renderValues(p, pageNr, fonts, colWidths, td, ll); err != nil {
+		if err := t.renderValues(p, pageNr, fonts, colWidths, td, valueLL); err != nil {
 			return err
 		}
 	}
 
 	if t.Header != nil {
-		if err := t.renderHeader(p, pageNr, fonts, colWidths, td, ll); err != nil {
+		if err := t.renderHeader(p, pageNr, fonts, colWidths, td, headerLL); err != nil {
 			return err
 		}
 	}
