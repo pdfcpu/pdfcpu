@@ -396,7 +396,6 @@ func validateOptionalContentConfigurationDict(xRefTable *model.XRefTable, d type
 }
 
 func validateOCProperties(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// aka optional content properties dict.
 
 	// => 8.11.4 Configuring Optional Content
@@ -413,9 +412,9 @@ func validateOCProperties(xRefTable *model.XRefTable, rootDict types.Dict, requi
 	dictName := "optContentPropertiesDict"
 
 	// "OCGs" required array of already written indRefs
-	r := true
+	r := REQUIRED
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		r = false
+		r = OPTIONAL
 	}
 	_, err = validateIndRefArrayEntry(xRefTable, d, dictName, "OCGs", r, sinceVersion, nil)
 	if err != nil {
@@ -423,13 +422,15 @@ func validateOCProperties(xRefTable *model.XRefTable, rootDict types.Dict, requi
 	}
 
 	// "D" required dict, default viewing optional content configuration dict.
-	d1, err := validateDictEntry(xRefTable, d, dictName, "D", REQUIRED, sinceVersion, nil)
+	d1, err := validateDictEntry(xRefTable, d, dictName, "D", r, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
-	err = validateOptionalContentConfigurationDict(xRefTable, d1, sinceVersion)
-	if err != nil {
-		return err
+	if d1 != nil {
+		err = validateOptionalContentConfigurationDict(xRefTable, d1, sinceVersion)
+		if err != nil {
+			return err
+		}
 	}
 
 	// "Configs" optional array of alternate optional content configuration dicts.
