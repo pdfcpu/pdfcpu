@@ -351,13 +351,20 @@ func validateDV(xRefTable *model.XRefTable, d types.Dict, dictName string, termi
 	return nil
 }
 
-func validateFormFieldDictEntries(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, terminalNode, oneKid bool, inFieldType *types.Name, requiresDA bool) (outFieldType *types.Name, hasDA bool, err error) {
+func validateFormFieldType(xRefTable *model.XRefTable) func(string) bool {
+	return func(s string) bool {
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			return true
+		}
+		return types.MemberOf(s, []string{"Btn", "Tx", "Ch", "Sig"})
+	}
+}
 
+func validateFormFieldDictEntries(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, terminalNode, oneKid bool, inFieldType *types.Name, requiresDA bool) (outFieldType *types.Name, hasDA bool, err error) {
 	dictName := "formFieldDict"
 
 	// FT: name, Btn,Tx,Ch,Sig
-	validate := func(s string) bool { return types.MemberOf(s, []string{"Btn", "Tx", "Ch", "Sig"}) }
-	fieldType, err := validateNameEntry(xRefTable, d, dictName, "FT", terminalNode && inFieldType == nil, model.V10, validate)
+	fieldType, err := validateNameEntry(xRefTable, d, dictName, "FT", terminalNode && inFieldType == nil, model.V10, validateFormFieldType(xRefTable))
 	if err != nil {
 		return nil, false, err
 	}

@@ -45,6 +45,33 @@ func TestValidateFormFieldDictRejectsCycle(t *testing.T) {
 	}
 }
 
+func TestValidateFormFieldDictAllowsPrivateFieldTypeRelaxed(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		mode    int
+		wantErr bool
+	}{
+		{"strict", model.ValidationStrict, true},
+		{"relaxed", model.ValidationRelaxed, false},
+	} {
+		ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		ctx.XRefTable.ValidationMode = tt.mode
+		v := model.V10
+		ctx.XRefTable.HeaderVersion = &v
+
+		_, _, err = validateFormFieldDictEntries(ctx.XRefTable, 0, 0, types.Dict{
+			"FT": types.Name("KSI"),
+		}, true, false, nil, false)
+		if gotErr := err != nil; gotErr != tt.wantErr {
+			t.Fatalf("validate private field type mode=%s err=%v", tt.name, err)
+		}
+	}
+}
+
 func selfReferentialAcroForm(t *testing.T) (*model.XRefTable, types.Dict) {
 	t.Helper()
 
