@@ -146,8 +146,7 @@ func createSMaskObject(xRefTable *XRefTable, buf []byte, w, h, bpc int) (*types.
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-// CreateFlateImageStreamDict returns a flate stream dict.
-func CreateFlateImageStreamDict(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int, cs string) (*types.StreamDict, error) {
+func createFlateImageStreamDict(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int, cs types.Object) (*types.StreamDict, error) {
 	var softMaskIndRef *types.IndirectRef
 	if sm != nil {
 		var err error
@@ -165,7 +164,7 @@ func CreateFlateImageStreamDict(xRefTable *XRefTable, buf, sm []byte, w, h, bpc 
 				"Width":            types.Integer(w),
 				"Height":           types.Integer(h),
 				"BitsPerComponent": types.Integer(bpc),
-				"ColorSpace":       types.Name(cs),
+				"ColorSpace":       cs,
 			},
 		),
 		Content:        buf,
@@ -187,6 +186,11 @@ func CreateFlateImageStreamDict(xRefTable *XRefTable, buf, sm []byte, w, h, bpc 
 	}
 
 	return sd, nil
+}
+
+// CreateFlateImageStreamDict returns a flate stream dict.
+func CreateFlateImageStreamDict(xRefTable *XRefTable, buf, sm []byte, w, h, bpc int, cs string) (*types.StreamDict, error) {
+	return createFlateImageStreamDict(xRefTable, buf, sm, w, h, bpc, types.Name(cs))
 }
 
 // CreateDCTImageStreamDict returns a DCT encoded stream dict.
@@ -470,6 +474,51 @@ func writeCMYKImageBuf(img image.Image) []byte {
 	return buf
 }
 
+func writePalettedImageBuf(xRefTable *XRefTable, img *image.Paletted) ([]byte, []byte) {
+	b := img.Bounds()
+	w, h := b.Dx(), b.Dy()
+	buf := make([]byte, w*h)
+	var sm []byte
+	var softMask bool
+
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		off := img.PixOffset(b.Min.X, y)
+		copy(buf[(y-b.Min.Y)*w:(y-b.Min.Y+1)*w], img.Pix[off:off+w])
+
+		for x := b.Min.X; x < b.Max.X; x++ {
+			if xRefTable == nil {
+				continue
+			}
+			_, _, _, a := img.Palette[img.ColorIndexAt(x, y)].RGBA()
+			alpha := uint8(a >> 8)
+			if !softMask {
+				if alpha == 0xFF {
+					continue
+				}
+				softMask = true
+				sm = bytes.Repeat([]byte{0xFF}, (y-b.Min.Y)*w+x-b.Min.X)
+			}
+			sm = append(sm, alpha)
+		}
+	}
+
+	return buf, sm
+}
+
+func indexedColorSpace(p color.Palette) types.Array {
+	lookup := make([]byte, 0, len(p)*3)
+	for _, c := range p {
+		c := color.NRGBAModel.Convert(c).(color.NRGBA)
+		lookup = append(lookup, c.R, c.G, c.B)
+	}
+	return types.Array{
+		types.Name(IndexedCS),
+		types.Name(DeviceRGBCS),
+		types.Integer(len(p) - 1),
+		types.NewHexLiteral(lookup),
+	}
+}
+
 func convertToRGBA(img image.Image) *image.RGBA {
 	b := img.Bounds()
 	m := image.NewRGBA(b)
@@ -572,15 +621,19 @@ func convertToSepia(img image.Image) *image.RGBA {
 }
 
 func createImageStreamDict(xRefTable *XRefTable, buf, softMask []byte, w, h, bpc int, format, cs string) (*types.StreamDict, error) {
+	return createImageStreamDictWithColorSpace(xRefTable, buf, softMask, w, h, bpc, format, types.Name(cs))
+}
+
+func createImageStreamDictWithColorSpace(xRefTable *XRefTable, buf, softMask []byte, w, h, bpc int, format string, cs types.Object) (*types.StreamDict, error) {
 	var (
 		sd  *types.StreamDict
 		err error
 	)
 	switch format {
 	case "jpeg":
-		sd, err = CreateDCTImageStreamDict(xRefTable, buf, w, h, bpc, cs)
+		sd, err = CreateDCTImageStreamDict(xRefTable, buf, w, h, bpc, string(cs.(types.Name)))
 	default:
-		sd, err = CreateFlateImageStreamDict(xRefTable, buf, softMask, w, h, bpc, cs)
+		sd, err = createFlateImageStreamDict(xRefTable, buf, softMask, w, h, bpc, cs)
 	}
 	return sd, err
 }
@@ -689,6 +742,83 @@ func handleCMYKImage(img *image.CMYK) ([]byte, []byte, int, string, error) {
 	// Opaque CMYK color, having 8 bits for each of cyan, magenta, yellow and black.
 	buf := writeCMYKImageBuf(img)
 	return buf, nil, 8, DeviceCMYKCS, nil
+}
+
+func createPalettedImageStreamDict(xRefTable *XRefTable, img *image.Paletted) (*types.StreamDict, error) {
+	buf, sm := writePalettedImageBuf(xRefTable, img)
+	b := img.Bounds()
+	return createImageStreamDictWithColorSpace(
+		xRefTable,
+		buf,
+		sm,
+		b.Dx(),
+		b.Dy(),
+		8,
+		"png",
+		indexedColorSpace(img.Palette),
+	)
+}
+
+func createImageResourcesForPalettedPNG(xRefTable *XRefTable, c image.Config, img *image.Paletted) ([]ImageResource, error) {
+	sd, err := createPalettedImageStreamDict(xRefTable, img)
+	if err != nil {
+		return nil, err
+	}
+	indRef, err := xRefTable.IndRefForNewObject(*sd)
+	if err != nil {
+		return nil, err
+	}
+	res := Resource{ID: "Im0", IndRef: indRef}
+	ir := ImageResource{Res: res, Width: c.Width, Height: c.Height}
+	return []ImageResource{ir}, nil
+}
+
+func palettedPNGStreamDict(xRefTable *XRefTable, format string, img image.Image) (*types.StreamDict, bool, error) {
+	if format != "png" {
+		return nil, false, nil
+	}
+	im, ok := img.(*image.Paletted)
+	if !ok {
+		return nil, false, nil
+	}
+	sd, err := createPalettedImageStreamDict(xRefTable, im)
+	return sd, true, err
+}
+
+func normalizeGrayImage(img image.Image) (image.Image, image.Image) {
+	var imgA image.Image
+	if hasAlpha(img.ColorModel()) {
+		imgA = extractAlpha(img)
+	}
+
+	switch img.(type) {
+	case *image.Gray, *image.Gray16:
+		return img, imgA
+	default:
+		return convertToGray(img), imgA
+	}
+}
+
+func createStreamDictForDecodedImage(xRefTable *XRefTable, c image.Config, format string, bb bytes.Buffer, img image.Image) (*types.StreamDict, error) {
+	if sd, ok, err := palettedPNGStreamDict(xRefTable, format, img); ok || err != nil {
+		return sd, err
+	}
+
+	gray := checkIfGray(img)
+	if format == "jpeg" && !gray {
+		return createDCTImageStreamDictForJPEG(xRefTable, c, bb)
+	}
+
+	var imgA image.Image
+	if gray {
+		img, imgA = normalizeGrayImage(img)
+	}
+
+	imgBuf, softMask, bpc, cs, err := createImageBuf(xRefTable, img, imgA, format)
+	if err != nil {
+		return nil, err
+	}
+	return createImageStreamDict(xRefTable, imgBuf, softMask, c.Width, c.Height, bpc, format, cs)
 }
 
 func createImageBuf(xRefTable *XRefTable, img image.Image, imgA image.Image, format string) ([]byte, []byte, int, string, error) {
@@ -863,6 +993,12 @@ func createImageResources(xRefTable *XRefTable, c image.Config, bb bytes.Buffer,
 		return nil, err
 	}
 
+	if !gray && !sepia && format == "png" {
+		if img, ok := img.(*image.Paletted); ok {
+			return createImageResourcesForPalettedPNG(xRefTable, c, img)
+		}
+	}
+
 	if gray {
 		switch img.(type) {
 		case *image.Gray, *image.Gray16:
@@ -906,7 +1042,6 @@ func createImageResources(xRefTable *XRefTable, c image.Config, bb bytes.Buffer,
 
 // CreateImageResources creates a new XObject for given image data represented by r and applies optional filters.
 func CreateImageResources(xRefTable *XRefTable, r io.Reader, gray, sepia bool) ([]ImageResource, error) {
-
 	var bb bytes.Buffer
 	tee := io.TeeReader(r, &bb)
 
@@ -960,36 +1095,7 @@ func CreateImageStreamDict(xRefTable *XRefTable, r io.Reader) (*types.StreamDict
 		return nil, 0, 0, errors.New("pdfcpu: unexpected width or height")
 	}
 
-	gray := checkIfGray(img)
-
-	if format == "jpeg" && !gray {
-		sd, err := createDCTImageStreamDictForJPEG(xRefTable, c, bb)
-		if err != nil {
-			return nil, 0, 0, err
-		}
-		return sd, w, h, nil
-	}
-
-	var imgA image.Image
-
-	if gray {
-		if hasAlpha(img.ColorModel()) {
-			imgA = extractAlpha(img)
-		}
-
-		switch img.(type) {
-		case *image.Gray, *image.Gray16:
-		default:
-			img = convertToGray(img)
-		}
-	}
-
-	imgBuf, softMask, bpc, cs, err := createImageBuf(xRefTable, img, imgA, format)
-	if err != nil {
-		return nil, 0, 0, err
-	}
-
-	sd, err := createImageStreamDict(xRefTable, imgBuf, softMask, w, h, bpc, format, cs)
+	sd, err := createStreamDictForDecodedImage(xRefTable, c, format, bb, img)
 	if err != nil {
 		return nil, 0, 0, err
 	}
