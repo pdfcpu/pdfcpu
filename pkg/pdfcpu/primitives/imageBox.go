@@ -22,10 +22,9 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
@@ -264,56 +263,52 @@ func (ib *ImageBox) checkForExistingImage(sd *types.StreamDict, w, h int) (*type
 }
 
 func (ib *ImageBox) resource() (io.ReadCloser, error) {
-	pdf := ib.pdf
-	var f io.ReadCloser
-	if strings.HasPrefix(ib.Src, "http") {
-		if pdf.Offline {
-			if log.CLIEnabled() {
-				log.CLI.Printf("pdfcpu is offline, can't get %s\n", ib.Src)
-			}
-			return nil, nil
-		}
-		client := pdf.httpClient
-		if client == nil {
-			pdf.httpClient = &http.Client{
-				Timeout: time.Duration(pdf.Timeout) * time.Second,
-			}
-			client = pdf.httpClient
-		}
-		req, err := http.NewRequest(http.MethodGet, ib.Src, nil)
+	if u, ok, err := imageBoxRemoteURL(ib.Src); ok || err != nil {
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("User-Agent", imageBoxUserAgent)
-		resp, err := client.Do(req)
-		if err != nil {
-			if e, ok := err.(net.Error); ok && e.Timeout() {
-				if log.CLIEnabled() {
-					log.CLI.Printf("timeout: %s\n", ib.Src)
-				}
-			} else {
-				if log.CLIEnabled() {
-					log.CLI.Printf("%v: %s\n", err, ib.Src)
-				}
-			}
-			return nil, err
-		}
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			if log.CLIEnabled() {
-				log.CLI.Printf("http status %d: %s\n", resp.StatusCode, ib.Src)
-			}
-			return nil, nil
-		}
-		f = resp.Body
-	} else {
-		var err error
-		f, err = os.Open(ib.Src)
-		if err != nil {
-			return nil, err
-		}
+		return ib.remoteResource(u)
 	}
-	return f, nil
+
+	return os.Open(ib.Src)
+}
+
+func (ib *ImageBox) remoteResource(u *url.URL) (io.ReadCloser, error) {
+	pdf := ib.pdf
+	if pdf.Offline {
+		if log.CLIEnabled() {
+			log.CLI.Printf("pdfcpu is offline, can't get %s\n", ib.Src)
+		}
+		return nil, nil
+	}
+
+	client := pdf.imageBoxHTTPClient()
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", imageBoxUserAgent)
+	resp, err := client.Do(req)
+	if err != nil {
+		if e, ok := err.(net.Error); ok && e.Timeout() {
+			if log.CLIEnabled() {
+				log.CLI.Printf("timeout: %s\n", ib.Src)
+			}
+			return nil, err
+		}
+		if log.CLIEnabled() {
+			log.CLI.Printf("%v: %s\n", err, ib.Src)
+		}
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		if log.CLIEnabled() {
+			log.CLI.Printf("http status %d: %s\n", resp.StatusCode, ib.Src)
+		}
+		return nil, nil
+	}
+	return resp.Body, nil
 }
 
 func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int) (*model.ImageResource, error) {
