@@ -131,7 +131,7 @@ func TestAddSimpleBookmarks(t *testing.T) {
 func TestAddBookmarkTree2Levels(t *testing.T) {
 	msg := "TestAddBookmarkTree2Levels"
 	inFile := filepath.Join(inDir, "CenterOfWhy.pdf")
-	outFile := filepath.Join("..", "..", "samples", "bookmarks", "bookmarkTree.pdf")
+	outFile := filepath.Join("..", "..", "samples", "bookmarks", "bookmarkTree2Levels.pdf")
 
 	bms := []pdfcpu.Bookmark{
 		{PageFrom: 1, Title: "Page 1: Level 1", Color: &color.Green,
