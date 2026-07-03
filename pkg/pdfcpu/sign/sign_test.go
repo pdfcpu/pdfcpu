@@ -18,10 +18,15 @@ package sign
 
 import (
 	"bytes"
+	"crypto/x509"
 	"math"
+	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+	"github.com/pkg/errors"
 )
 
 func byteRange(values ...types.Object) types.Array {
@@ -64,5 +69,46 @@ func TestBytesForByteRangeRejectsInvalidRanges(t *testing.T) {
 				t.Fatal("expected invalid ByteRange error")
 			}
 		})
+	}
+}
+
+// TestHandleCertVerifyErrReportsUnknownAuthority verifies trust-store failures are user actionable.
+func TestHandleCertVerifyErrReportsUnknownAuthority(t *testing.T) {
+	cert := &x509.Certificate{SerialNumber: big.NewInt(42)}
+	signer := &model.Signer{}
+	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
+	err := errors.Wrap(x509.UnknownAuthorityError{Cert: cert}, "wrapped")
+
+	handleCertVerifyErr(err, cert, signer, result)
+
+	if result.Reason != model.SignatureReasonCertNotTrusted {
+		t.Fatalf("got reason %s, want %s", result.Reason, model.SignatureReasonCertNotTrusted)
+	}
+	if len(signer.Problems) != 2 {
+		t.Fatalf("got %d problems, want 2: %v", len(signer.Problems), signer.Problems)
+	}
+	if !strings.Contains(signer.Problems[0], "certificate chain is not trusted") {
+		t.Fatalf("missing not trusted problem: %q", signer.Problems[0])
+	}
+	if signer.Problems[1] != certImportHint {
+		t.Fatalf("got hint %q, want %q", signer.Problems[1], certImportHint)
+	}
+}
+
+// TestHandleCertParseErrReportsMalformedCertificate verifies x509 parse errors are classified as certificate problems.
+func TestHandleCertParseErrReportsMalformedCertificate(t *testing.T) {
+	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
+	err := errors.New("x509: SAN rfc822Name is malformed")
+
+	handleCertParseErr(err, result)
+
+	if result.Reason != model.SignatureReasonCertInvalid {
+		t.Fatalf("got reason %s, want %s", result.Reason, model.SignatureReasonCertInvalid)
+	}
+	if len(result.Problems) != 1 {
+		t.Fatalf("got %d problems, want 1: %v", len(result.Problems), result.Problems)
+	}
+	if !strings.Contains(result.Problems[0], "certificate data is malformed") {
+		t.Fatalf("missing malformed certificate problem: %q", result.Problems[0])
 	}
 }

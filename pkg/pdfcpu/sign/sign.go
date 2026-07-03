@@ -37,7 +37,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-const CertifiedSigPermsNotSupported = "Certified signature detected. Permission validation not supported."
+const (
+	// CertifiedSigPermsNotSupported reports unsupported certified signature permission validation.
+	CertifiedSigPermsNotSupported = "Certified signature detected. Permission validation not supported."
+	certImportHint                = "import missing trusted certificates with \"pdfcpu certificates import <file>\""
+)
 
 func validateCertChains(
 	chains [][]*x509.Certificate, // All chain paths for cert leading to a root CA.
@@ -362,27 +366,36 @@ func publicKeySize(cert *x509.Certificate) (int, error) {
 }
 
 func handleCertVerifyErr(err error, cert *x509.Certificate, signer *model.Signer, result *model.SignatureValidationResult) {
-	switch certErr := err.(type) {
-	case x509.UnknownAuthorityError:
+	var unknownAuthorityErr x509.UnknownAuthorityError
+	if errors.As(err, &unknownAuthorityErr) {
 		if result.Reason == model.SignatureReasonUnknown {
 			result.Reason = model.SignatureReasonCertNotTrusted
 		}
-	case x509.CertificateInvalidError:
-		if certErr.Reason == x509.Expired {
-			if result.Reason == model.SignatureReasonUnknown {
-				result.Reason = model.SignatureReasonCertExpired
-			}
-		} else {
-			if result.Reason == model.SignatureReasonUnknown {
-				result.Reason = model.SignatureReasonCertInvalid
-			}
-		}
-	default:
+		signer.AddProblem(fmt.Sprintf("certificate chain is not trusted for %s: %v", certInfo(cert), err))
+		signer.AddProblem(certImportHint)
+		return
+	}
+
+	var certInvalidErr x509.CertificateInvalidError
+	if errors.As(err, &certInvalidErr) && certInvalidErr.Reason == x509.Expired {
 		if result.Reason == model.SignatureReasonUnknown {
-			result.Reason = model.SignatureReasonCertInvalid
+			result.Reason = model.SignatureReasonCertExpired
 		}
+		signer.AddProblem(fmt.Sprintf("certificate verification failed for %s: %v", certInfo(cert), err))
+		return
+	}
+
+	if result.Reason == model.SignatureReasonUnknown {
+		result.Reason = model.SignatureReasonCertInvalid
 	}
 	signer.AddProblem(fmt.Sprintf("certificate verification failed for %s: %v", certInfo(cert), err))
+}
+
+func handleCertParseErr(err error, result *model.SignatureValidationResult) {
+	if result.Reason == model.SignatureReasonUnknown {
+		result.Reason = model.SignatureReasonCertInvalid
+	}
+	result.AddProblem(fmt.Sprintf("certificate data is malformed: %v", err))
 }
 
 func certInfo(cert *x509.Certificate) string {
@@ -529,8 +542,12 @@ func extractOCSPsFromDSS(ctx *model.Context) ([][]byte, error) {
 func validateP7(sigDict types.Dict, result *model.SignatureValidationResult) *pkcs7.PKCS7 {
 	p7, err := p7(sigDict)
 	if err != nil {
+		if isCertParseErr(err) {
+			handleCertParseErr(err, result)
+			return nil
+		}
 		result.Reason = model.SignatureReasonInternal
-		result.AddProblem(fmt.Sprintf("pkcs5: %v", err))
+		result.AddProblem(fmt.Sprintf("pkcs7: %v", err))
 		return nil
 	}
 
@@ -547,4 +564,8 @@ func validateP7(sigDict types.Dict, result *model.SignatureValidationResult) *pk
 	}
 
 	return p7
+}
+
+func isCertParseErr(err error) bool {
+	return strings.Contains(err.Error(), "x509:")
 }

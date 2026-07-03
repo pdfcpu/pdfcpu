@@ -61,7 +61,11 @@ func ValidateX509RSASHA1Signature(
 
 	p1Certs, err := parseP1Certificates(sigDict)
 	if err != nil {
-		result.Reason = model.SignatureReasonCertNotTrusted
+		if isCertParseErr(err) {
+			handleCertParseErr(err, result)
+		} else {
+			result.Reason = model.SignatureReasonCertNotTrusted
+		}
 		result.AddProblem(fmt.Sprintf("cannot verify certificate %v", err))
 		result.AddProblem("skipped certificate revocation check")
 		return nil
