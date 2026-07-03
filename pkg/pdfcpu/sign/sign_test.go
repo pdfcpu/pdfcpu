@@ -18,11 +18,15 @@ package sign
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"math"
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -110,5 +114,108 @@ func TestHandleCertParseErrReportsMalformedCertificate(t *testing.T) {
 	}
 	if !strings.Contains(result.Problems[0], "certificate data is malformed") {
 		t.Fatalf("missing malformed certificate problem: %q", result.Problems[0])
+	}
+}
+
+// TestBuildP7CertChainsSetsPrimarySignerIdentity verifies signer identity reporting.
+func TestBuildP7CertChainsSetsPrimarySignerIdentity(t *testing.T) {
+	root, leaf := testCertChain(t, "Root CA", "Alice Signer")
+	roots := x509.NewCertPool()
+	roots.AddCert(root)
+	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
+
+	chains := buildP7CertChains(true, leaf, []*x509.Certificate{root, leaf}, roots, &model.Signer{}, nil, result)
+
+	if len(chains) == 0 {
+		t.Fatal("expected trusted certificate chain")
+	}
+	if got := result.Details.SignerIdentity; got != "Alice Signer" {
+		t.Fatalf("got signer identity %q, want Alice Signer", got)
+	}
+}
+
+// TestBuildP7CertChainsDoesNotSetIdentityForUntrustedCert verifies issue 1271 behavior.
+func TestBuildP7CertChainsDoesNotSetIdentityForUntrustedCert(t *testing.T) {
+	root, leaf := testCertChain(t, "Root CA", "Alice Signer")
+	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
+
+	chains := buildP7CertChains(true, leaf, []*x509.Certificate{root, leaf}, x509.NewCertPool(), &model.Signer{}, nil, result)
+
+	if len(chains) != 0 {
+		t.Fatal("expected no trusted certificate chain")
+	}
+	if got := result.Details.SignerIdentity; got != "" {
+		t.Fatalf("got signer identity %q, want empty", got)
+	}
+}
+
+// TestBuildP7CertChainsDoesNotOverwriteSignerIdentity verifies secondary signer handling.
+func TestBuildP7CertChainsDoesNotOverwriteSignerIdentity(t *testing.T) {
+	root, leaf := testCertChain(t, "Root CA", "Alice Signer")
+	roots := x509.NewCertPool()
+	roots.AddCert(root)
+	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
+	result.Details.SignerIdentity = "Primary Signer"
+
+	chains := buildP7CertChains(false, leaf, []*x509.Certificate{root, leaf}, roots, &model.Signer{}, nil, result)
+
+	if len(chains) == 0 {
+		t.Fatal("expected trusted certificate chain")
+	}
+	if got := result.Details.SignerIdentity; got != "Primary Signer" {
+		t.Fatalf("got signer identity %q, want Primary Signer", got)
+	}
+}
+
+func testCertChain(t *testing.T, rootCN, leafCN string) (*x509.Certificate, *x509.Certificate) {
+	t.Helper()
+
+	rootKey := testRSAKey(t)
+	rootTemplate := testCertTemplate(rootCN, true)
+	rootDER, err := x509.CreateCertificate(rand.Reader, rootTemplate, rootTemplate, &rootKey.PublicKey, rootKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, err := x509.ParseCertificate(rootDER)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	leafKey := testRSAKey(t)
+	leafTemplate := testCertTemplate(leafCN, false)
+	leafDER, err := x509.CreateCertificate(rand.Reader, leafTemplate, root, &leafKey.PublicKey, rootKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf, err := x509.ParseCertificate(leafDER)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return root, leaf
+}
+
+func testRSAKey(t *testing.T) *rsa.PrivateKey {
+	t.Helper()
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return key
+}
+
+func testCertTemplate(commonName string, ca bool) *x509.Certificate {
+	keyUsage := x509.KeyUsageDigitalSignature
+	if ca {
+		keyUsage |= x509.KeyUsageCertSign
+	}
+	return &x509.Certificate{
+		SerialNumber:          big.NewInt(time.Now().UnixNano()),
+		Subject:               pkix.Name{CommonName: commonName},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              keyUsage,
+		BasicConstraintsValid: true,
+		IsCA:                  ca,
 	}
 }
