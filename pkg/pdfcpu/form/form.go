@@ -17,6 +17,7 @@ limitations under the License.
 package form
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -29,7 +30,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // FieldType represents a form field type.
@@ -133,7 +133,7 @@ func fullyQualifiedFieldNameDepth(xRefTable *model.XRefTable, indRef types.Indir
 		return false, err
 	}
 	if len(d) == 0 {
-		return false, errors.Errorf("pdfcpu: corrupt field")
+		return false, fmt.Errorf("pdfcpu: corrupt field")
 	}
 
 	thisID := indRef.ObjectNumber.String()
@@ -714,7 +714,7 @@ func collectPageField(
 	if ft == nil {
 		ft = d.NameEntry("FT")
 		if ft == nil {
-			return errors.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", f.ID, d)
+			return fmt.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", f.ID, d)
 		}
 	}
 
@@ -1676,7 +1676,7 @@ func resetPageFields(
 		if ft == nil {
 			ft = d.NameEntry("FT")
 			if ft == nil {
-				return errors.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
+				return fmt.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
 			}
 		}
 
@@ -1759,7 +1759,7 @@ func ensureAP(ctx *model.Context, d types.Dict, fi *fieldInfo, fonts map[string]
 	if ft == nil {
 		ft = d.NameEntry("FT")
 		if ft == nil {
-			return errors.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
+			return fmt.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
 		}
 	}
 
@@ -1906,7 +1906,7 @@ func deleteAP(d types.Dict, fi *fieldInfo) error {
 	if ft == nil {
 		ft = d.NameEntry("FT")
 		if ft == nil {
-			return errors.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
+			return fmt.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
 		}
 	}
 	if *ft == "Ch" {

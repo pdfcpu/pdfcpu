@@ -19,6 +19,7 @@ package sign
 import (
 	"crypto/x509"
 	"encoding/asn1"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -26,7 +27,6 @@ import (
 	"github.com/hhrutter/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 type AlgorithmIdentifier struct {

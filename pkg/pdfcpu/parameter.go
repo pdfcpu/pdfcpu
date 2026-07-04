@@ -17,9 +17,8 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type parameterMap[T any] map[string]func(string, *T) error
@@ -33,13 +32,13 @@ func handleParameter[T any](m map[string]func(string, *T) error, paramPrefix, pa
 			continue
 		}
 		if param != "" {
-			return errors.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
+			return fmt.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
 		}
 		param = k
 	}
 
 	if param == "" {
-		return errors.Errorf("pdfcpu: unknown parameter prefix \"%s\"", paramPrefix)
+		return fmt.Errorf("pdfcpu: unknown parameter prefix \"%s\"", paramPrefix)
 	}
 
 	return m[param](paramValueStr, v)

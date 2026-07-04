@@ -18,6 +18,8 @@ package form
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"path/filepath"
 	"strconv"
@@ -27,7 +29,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -243,7 +244,7 @@ func locateAPN(xRefTable *model.XRefTable, d types.Dict) (types.Dict, error) {
 		return nil, nil
 	}
 
-	return nil, errors.Errorf("corrupt AP field: entry \"N\" has unsupported type %T", obj)
+	return nil, fmt.Errorf("corrupt AP field: entry \"N\" has unsupported type %T", obj)
 }
 
 func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, bool, error) {

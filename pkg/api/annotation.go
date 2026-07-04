@@ -17,13 +17,13 @@ limitations under the License.
 package api
 
 import (
+	"errors"
 	"io"
 	"os"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pkg/errors"
 )
 
 // Annotations returns page annotations of rs for selected pages.

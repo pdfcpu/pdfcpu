@@ -18,12 +18,11 @@ package primitives
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 func imageBoxRemoteURL(s string) (*url.URL, bool, error) {
@@ -42,10 +41,10 @@ func imageBoxRemoteURL(s string) (*url.URL, bool, error) {
 
 func validateImageBoxRemoteURL(u *url.URL) error {
 	if u.User != nil {
-		return errors.Errorf("pdfcpu: image URL must not contain credentials: %s", u.Redacted())
+		return fmt.Errorf("pdfcpu: image URL must not contain credentials: %s", u.Redacted())
 	}
 	if u.Hostname() == "" {
-		return errors.Errorf("pdfcpu: image URL missing host: %s", u.Redacted())
+		return fmt.Errorf("pdfcpu: image URL missing host: %s", u.Redacted())
 	}
 	if err := rejectPrivateImageBoxHost(u.Hostname()); err != nil {
 		return err
@@ -62,7 +61,7 @@ func rejectPrivateImageBoxHost(host string) error {
 
 func rejectPrivateImageBoxIP(host string, ip net.IP) error {
 	if imageBoxBlockedIP(ip) {
-		return errors.Errorf("pdfcpu: image URL resolves to disallowed address: %s", host)
+		return fmt.Errorf("pdfcpu: image URL resolves to disallowed address: %s", host)
 	}
 	return nil
 }
@@ -121,7 +120,7 @@ func imageBoxDialContext(dialer *net.Dialer) func(context.Context, string, strin
 
 func rejectImageBoxIPs(host string, ips []net.IPAddr) error {
 	if len(ips) == 0 {
-		return errors.Errorf("pdfcpu: image URL host does not resolve: %s", host)
+		return fmt.Errorf("pdfcpu: image URL host does not resolve: %s", host)
 	}
 	for _, ip := range ips {
 		if err := rejectPrivateImageBoxIP(host, ip.IP); err != nil {

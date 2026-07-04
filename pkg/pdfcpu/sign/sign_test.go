@@ -22,6 +22,8 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
+	"fmt"
 	"math"
 	"math/big"
 	"strings"
@@ -30,7 +32,6 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func byteRange(values ...types.Object) types.Array {
@@ -81,7 +82,7 @@ func TestHandleCertVerifyErrReportsUnknownAuthority(t *testing.T) {
 	cert := &x509.Certificate{SerialNumber: big.NewInt(42)}
 	signer := &model.Signer{}
 	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
-	err := errors.Wrap(x509.UnknownAuthorityError{Cert: cert}, "wrapped")
+	err := fmt.Errorf("wrapped: %w", x509.UnknownAuthorityError{Cert: cert})
 
 	handleCertVerifyErr(err, cert, signer, result)
 

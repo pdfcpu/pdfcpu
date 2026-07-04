@@ -25,7 +25,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func logWriteStats(ctx *model.Context) {
@@ -239,12 +238,12 @@ func AppendStatsFile(ctx *model.Context) error {
 	if err != nil {
 
 		if os.IsExist(err) {
-			return errors.Errorf("can't open %s\n%s", fileName, err)
+			return fmt.Errorf("can't open %s\n%s", fileName, err)
 		}
 
 		file, err = os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 		if err != nil {
-			return errors.Errorf("can't create %s\n%s", fileName, err)
+			return fmt.Errorf("can't create %s\n%s", fileName, err)
 		}
 
 		_, err = file.WriteString(*statsHeadLine())

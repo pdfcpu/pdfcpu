@@ -17,11 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func validatePageLabelDict(xRefTable *model.XRefTable, o types.Object) error {
@@ -74,7 +74,7 @@ func validateNumberTreeKey(xRefTable *model.XRefTable, o types.Object, name stri
 		return i.Value(), true, nil
 	}
 
-	err = errors.Errorf("pdfcpu: validateNumberTreeDictNumsEntry: corrupt key <%v>\n", o)
+	err = fmt.Errorf("pdfcpu: validateNumberTreeDictNumsEntry: corrupt key <%v>\n", o)
 	if name != "StructTree" {
 		return 0, false, err
 	}
@@ -103,7 +103,7 @@ func validateNumberTreeDictNumsEntry(xRefTable *model.XRefTable, d types.Dict, n
 	// arr length needs to be even because of contained key value pairs.
 	if len(a)%2 == 1 {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return 0, 0, errors.Errorf("pdfcpu: validateNumberTreeDictNumsEntry: Nums array entry length needs to be even, length=%d\n", len(a))
+			return 0, 0, fmt.Errorf("pdfcpu: validateNumberTreeDictNumsEntry: Nums array entry length needs to be even, length=%d\n", len(a))
 		}
 		model.ShowDigestedSpecViolation("number tree \"Num\" entry array length needs to be even")
 		model.ShowSkipped("invalid number tree")
@@ -177,7 +177,7 @@ func validateNumberTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict,
 	if firstKey < fk || lastKey > lk {
 		msg := fmt.Sprintf("validateNumberTreeDictLimitsEntry: invalid leaf node: firstKey(%d vs. %d) lastKey(%d vs. %d)", firstKey, fk, lastKey, lk)
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return errors.Errorf("pdfcpu: %s\n", msg)
+			return fmt.Errorf("pdfcpu: %s\n", msg)
 		}
 		model.ShowDigestedSpecViolation(msg)
 	}

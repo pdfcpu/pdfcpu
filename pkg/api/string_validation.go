@@ -17,15 +17,15 @@ limitations under the License.
 package api
 
 import (
+	"errors"
+	"fmt"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 func validateNoEmptyStrings(ss []string, name string) error {
 	for _, s := range ss {
 		if strings.TrimSpace(s) == "" {
-			return errors.Errorf("pdfcpu: %s must not be empty", name)
+			return fmt.Errorf("pdfcpu: %s must not be empty", name)
 		}
 	}
 	return nil

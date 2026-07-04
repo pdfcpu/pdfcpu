@@ -23,7 +23,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // DocumentProperty ensures a property name that may be modified.
@@ -220,7 +219,7 @@ func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 
 	if hasPieceInfo && !hasModDate {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return errors.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
+			return fmt.Errorf("validateDocumentInfoObject: missing required entry \"ModDate\"")
 		}
 		model.ShowDigestedSpecViolation("infoDict with \"PieceInfo\" but missing \"ModDate\"")
 	}

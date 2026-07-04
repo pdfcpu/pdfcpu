@@ -18,12 +18,12 @@ package model
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // This gets rid of the gopkg.in/yaml.v2 dependency for wasm builds.
@@ -41,7 +41,7 @@ func handleVersion(v string, c *Configuration) error {
 func handleCheckFileNameExt(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
+		return fmt.Errorf("config key %s is boolean", k)
 	}
 	c.CheckFileNameExt = v == "true"
 	return nil
@@ -50,7 +50,7 @@ func handleCheckFileNameExt(k, v string, c *Configuration) error {
 func handleConfReader15(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
+		return fmt.Errorf("config key %s is boolean", k)
 	}
 	c.Reader15 = v == "true"
 	return nil
@@ -59,7 +59,7 @@ func handleConfReader15(k, v string, c *Configuration) error {
 func handleConfDecodeAllStreams(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
+		return fmt.Errorf("config key %s is boolean", k)
 	}
 	c.DecodeAllStreams = v == "true"
 	return nil
@@ -68,7 +68,7 @@ func handleConfDecodeAllStreams(k, v string, c *Configuration) error {
 func handleConfPostProcessValidate(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
+		return fmt.Errorf("config key %s is boolean", k)
 	}
 	c.PostProcessValidate = v == "true"
 	return nil
@@ -82,7 +82,7 @@ func handleConfValidationMode(v string, c *Configuration) error {
 	case "validationrelaxed":
 		c.ValidationMode = ValidationRelaxed
 	default:
-		return errors.Errorf("invalid validationMode: %s", v)
+		return fmt.Errorf("invalid validationMode: %s", v)
 	}
 	return nil
 }
@@ -97,7 +97,7 @@ func handleConfEol(v string, c *Configuration) error {
 	case "eolcrlf":
 		c.Eol = types.EolCRLF
 	default:
-		return errors.Errorf("invalid eol: %s", v)
+		return fmt.Errorf("invalid eol: %s", v)
 	}
 	return nil
 }
@@ -105,7 +105,7 @@ func handleConfEol(v string, c *Configuration) error {
 func handleConfWriteObjectStream(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
+		return fmt.Errorf("config key %s is boolean", k)
 	}
 	c.WriteObjectStream = v == "true"
 	return nil
@@ -114,7 +114,7 @@ func handleConfWriteObjectStream(k, v string, c *Configuration) error {
 func handleConfWriteXRefStream(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
+		return fmt.Errorf("config key %s is boolean", k)
 	}
 	c.WriteXRefStream = v == "true"
 	return nil
@@ -123,7 +123,7 @@ func handleConfWriteXRefStream(k, v string, c *Configuration) error {
 func handleConfEncryptUsingAES(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
-		return errors.Errorf("config key %s is boolean", k)
+		return fmt.Errorf("config key %s is boolean", k)
 	}
 	c.EncryptUsingAES = v == "true"
 	return nil
@@ -132,10 +132,10 @@ func handleConfEncryptUsingAES(k, v string, c *Configuration) error {
 func handleConfEncryptKeyLength(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
 	if err != nil {
-		return errors.Errorf("encryptKeyLength is numeric, got: %s", v)
+		return fmt.Errorf("encryptKeyLength is numeric, got: %s", v)
 	}
 	if !types.IntMemberOf(i, []int{40, 128, 256}) {
-		return errors.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", v)
+		return fmt.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", v)
 	}
 	c.EncryptKeyLength = i
 	return nil
@@ -144,7 +144,7 @@ func handleConfEncryptKeyLength(v string, c *Configuration) error {
 func handleFormFieldListMaxColWidth(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
 	if err != nil || i < 0 {
-		return errors.Errorf("FormFieldListMaxColWidth is numeric >= 0, got: %s", v)
+		return fmt.Errorf("FormFieldListMaxColWidth is numeric >= 0, got: %s", v)
 	}
 	c.FormFieldListMaxColWidth = i
 	return nil
@@ -153,7 +153,7 @@ func handleFormFieldListMaxColWidth(v string, c *Configuration) error {
 func handleTimeout(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
 	if err != nil || i <= 0 {
-		return errors.Errorf("timeout is numeric > 0, got: %s", v)
+		return fmt.Errorf("timeout is numeric > 0, got: %s", v)
 	}
 	c.Timeout = i
 	return nil
@@ -162,7 +162,7 @@ func handleTimeout(v string, c *Configuration) error {
 func handleTimeoutCRL(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
 	if err != nil || i <= 0 {
-		return errors.Errorf("timeoutCRL is numeric > 0, got: %s", v)
+		return fmt.Errorf("timeoutCRL is numeric > 0, got: %s", v)
 	}
 	c.TimeoutCRL = i
 	return nil
@@ -171,7 +171,7 @@ func handleTimeoutCRL(v string, c *Configuration) error {
 func handleTimeoutOCSP(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
 	if err != nil || i <= 0 {
-		return errors.Errorf("timeoutOCSP is numeric > 0, got: %s", v)
+		return fmt.Errorf("timeoutOCSP is numeric > 0, got: %s", v)
 	}
 	c.TimeoutOCSP = i
 	return nil
@@ -180,12 +180,12 @@ func handleTimeoutOCSP(v string, c *Configuration) error {
 func parseReadableInt64(s string) (int64, error) {
 	ss := strings.Fields(strings.ToUpper(strings.TrimSpace(s)))
 	if len(ss) == 0 || len(ss) > 2 {
-		return 0, errors.Errorf("invalid numeric value: %s", s)
+		return 0, fmt.Errorf("invalid numeric value: %s", s)
 	}
 
 	n, err := strconv.ParseInt(ss[0], 10, 64)
 	if err != nil || n <= 0 {
-		return 0, errors.Errorf("numeric value must be > 0: %s", s)
+		return 0, fmt.Errorf("numeric value must be > 0: %s", s)
 	}
 	if len(ss) == 1 {
 		return n, nil
@@ -203,11 +203,11 @@ func parseReadableInt64(s string) (int64, error) {
 	case "MP", "MPIXELS":
 		m = 1000 * 1000
 	default:
-		return 0, errors.Errorf("unsupported numeric unit: %s", ss[1])
+		return 0, fmt.Errorf("unsupported numeric unit: %s", ss[1])
 	}
 
 	if n > (1<<63-1)/m {
-		return 0, errors.Errorf("numeric value overflows int64: %s", s)
+		return 0, fmt.Errorf("numeric value overflows int64: %s", s)
 	}
 	return n * m, nil
 }
@@ -215,7 +215,7 @@ func parseReadableInt64(s string) (int64, error) {
 func handleLimitInt64(k, v string, dst *int64) error {
 	i, err := parseReadableInt64(v)
 	if err != nil {
-		return errors.Wrapf(err, "%s", k)
+		return fmt.Errorf("%s: %w", k, err)
 	}
 	*dst = i
 	return nil
@@ -224,7 +224,7 @@ func handleLimitInt64(k, v string, dst *int64) error {
 func handleLimitInt(k, v string, dst *int) error {
 	i, err := strconv.Atoi(v)
 	if err != nil || i <= 0 {
-		return errors.Errorf("%s is numeric > 0, got: %s", k, v)
+		return fmt.Errorf("%s is numeric > 0, got: %s", k, v)
 	}
 	*dst = i
 	return nil
@@ -233,7 +233,7 @@ func handleLimitInt(k, v string, dst *int) error {
 func handleConfPermissions(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
 	if err != nil {
-		return errors.Errorf("permissions is numeric, got: %s", v)
+		return fmt.Errorf("permissions is numeric, got: %s", v)
 	}
 	c.Permissions = PermissionFlags(i)
 	return nil
@@ -251,7 +251,7 @@ func handleConfUnit(v string, c *Configuration) error {
 	case "mm":
 		c.Unit = types.MILLIMETRES
 	default:
-		return errors.Errorf("invalid unit: %s", v)
+		return fmt.Errorf("invalid unit: %s", v)
 	}
 	return nil
 }
@@ -266,7 +266,7 @@ func handlePreferredCertRevocationChecker(v string, c *Configuration) error {
 	case "":
 		c.PreferredCertRevocationChecker = CRL
 	default:
-		return errors.Errorf("invalid preferredCertRevocationChecker: %s", v)
+		return fmt.Errorf("invalid preferredCertRevocationChecker: %s", v)
 	}
 	return nil
 }
@@ -284,7 +284,7 @@ func handleDateFormat(v string, c *Configuration) error {
 func boolean(k, v string) (bool, error) {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
-		return false, errors.Errorf("config key %s is boolean", k)
+		return false, fmt.Errorf("config key %s is boolean", k)
 	}
 	return v == "true", nil
 }
@@ -473,12 +473,12 @@ func parseConfigFile(r io.Reader, configPath string) error {
 		}
 		ss := strings.Split(t, ": ")
 		if len(ss) != 2 {
-			return errors.Errorf("invalid entry: <%s>", t)
+			return fmt.Errorf("invalid entry: <%s>", t)
 		}
 		k := strings.TrimSpace(ss[0])
 		v := strings.TrimSpace(ss[1])
 		if len(k) == 0 || len(v) == 0 {
-			return errors.Errorf("invalid entry: <%s>", t)
+			return fmt.Errorf("invalid entry: <%s>", t)
 		}
 		if err := parseKeyValue(k, v, &conf); err != nil {
 			return err

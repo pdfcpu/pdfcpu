@@ -16,7 +16,10 @@
 
 package primitives
 
-import "github.com/pkg/errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type Margin struct {
 	Name                     string
@@ -32,7 +35,7 @@ func (m *Margin) validate() error {
 
 	if m.Width < 0 {
 		if m.Top > 0 || m.Right > 0 || m.Bottom > 0 || m.Left > 0 {
-			return errors.Errorf("pdfcpu: individual margins not allowed for width: %f", m.Width)
+			return fmt.Errorf("pdfcpu: individual margins not allowed for width: %f", m.Width)
 		}
 	}
 

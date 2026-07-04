@@ -17,12 +17,12 @@ limitations under the License.
 package model
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // AnnotationFlags represents the PDF annotation flags.
@@ -397,7 +397,7 @@ func (ann Annotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.Indirec
 	if ann.ModificationDate != "" {
 		_, ok := types.DateTime(ann.ModificationDate, xRefTable.ValidationMode == ValidationRelaxed)
 		if !ok {
-			return nil, errors.Errorf("pdfcpu: annotation renderDict - validateDateEntry: <%s> invalid date", ann.ModificationDate)
+			return nil, fmt.Errorf("pdfcpu: annotation renderDict - validateDateEntry: <%s> invalid date", ann.ModificationDate)
 		}
 		modDate = ann.ModificationDate
 	}

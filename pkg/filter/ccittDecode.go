@@ -17,10 +17,10 @@ limitations under the License.
 package filter
 
 import (
+	"errors"
 	"io"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pkg/errors"
 	"golang.org/x/image/ccitt"
 )
 

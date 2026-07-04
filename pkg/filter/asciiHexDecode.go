@@ -19,9 +19,8 @@ package filter
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"io"
-
-	"github.com/pkg/errors"
 )
 
 type asciiHexDecode struct {

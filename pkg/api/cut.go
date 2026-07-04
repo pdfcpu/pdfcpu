@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -29,7 +30,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func prepareForCut(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) (*model.Context, types.IntSet, error) {
@@ -59,7 +59,7 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 	}
 
 	if cut.Scale < 1 {
-		return errors.Errorf("pdfcpu: invalid scale factor %.2f: i >= 1.0\n", cut.Scale)
+		return fmt.Errorf("pdfcpu: invalid scale factor %.2f: i >= 1.0\n", cut.Scale)
 	}
 
 	if conf == nil {

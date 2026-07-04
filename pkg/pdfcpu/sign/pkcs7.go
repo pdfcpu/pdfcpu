@@ -19,6 +19,7 @@ package sign
 import (
 	"crypto/x509"
 	"encoding/asn1"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -26,7 +27,6 @@ import (
 	"github.com/hhrutter/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // ValidatePKCS7Signatures validates contained signatures using subFilter adbe.pkcs7.sha1, adbe.pkcs7.detached and ETSI.CAdES.detached.
@@ -94,12 +94,12 @@ func p7(sigDict types.Dict) (*pkcs7.PKCS7, error) {
 
 	signature, err := hl.Bytes()
 	if err != nil {
-		return nil, errors.Errorf("invalid content data: %v", err)
+		return nil, fmt.Errorf("invalid content data: %v", err)
 	}
 
 	p7, err := pkcs7.Parse(signature)
 	if err != nil {
-		return nil, errors.Errorf("failed to parse PKCS#7: %v", err)
+		return nil, fmt.Errorf("failed to parse PKCS#7: %v", err)
 	}
 
 	return p7, nil
@@ -253,15 +253,15 @@ func verifyP7Digest(p7Signer pkcs7.SignerInfo, p7Content []byte, data []byte, de
 		if err := pkcs7.VerifyMessageDigestDetached(p7Signer, p7Content); err != nil {
 			var mdErr *pkcs7.MessageDigestMismatchError
 			if errors.As(err, &mdErr) {
-				return model.SignatureReasonDocModified, errors.Errorf("pkcs7: message digest verification failure: %v\n", err)
+				return model.SignatureReasonDocModified, fmt.Errorf("pkcs7: message digest verification failure: %v\n", err)
 			}
-			return model.SignatureReasonInternal, errors.Errorf("pkcs7: message digest verification: %v\n", err)
+			return model.SignatureReasonInternal, fmt.Errorf("pkcs7: message digest verification: %v\n", err)
 		}
 
 	} else {
 
 		if err := pkcs7.VerifyMessageDigestEmbedded(p7Content, data); err != nil {
-			return model.SignatureReasonDocModified, errors.Errorf("pkcs7: message digest verification failure: %v\n", err)
+			return model.SignatureReasonDocModified, fmt.Errorf("pkcs7: message digest verification failure: %v\n", err)
 		}
 
 	}
@@ -383,11 +383,11 @@ func extractTimestampTokenTime(data []byte) (time.Time, error) {
 	var defTime time.Time
 	p7, err := pkcs7.Parse(data)
 	if err != nil {
-		return defTime, errors.Errorf("failed to parse timestamp token: %v", err)
+		return defTime, fmt.Errorf("failed to parse timestamp token: %v", err)
 	}
 
 	if len(p7.Signers) != 1 {
-		return defTime, errors.Errorf("malformed timestamp token")
+		return defTime, fmt.Errorf("malformed timestamp token")
 	}
 	signer := p7.Signers[0]
 
@@ -395,7 +395,7 @@ func extractTimestampTokenTime(data []byte) (time.Time, error) {
 		if attr.Type.Equal(oidSigningTime) {
 			var rawValue asn1.RawValue
 			if _, err := asn1.Unmarshal(attr.Value.Bytes, &rawValue); err != nil {
-				return defTime, errors.Errorf("failed to unmarshal signing time: %v", err)
+				return defTime, fmt.Errorf("failed to unmarshal signing time: %v", err)
 			}
 			if rawValue.Tag == asn1.TagUTCTime {
 				return time.Parse("060102150405Z", string(rawValue.Bytes))
@@ -403,7 +403,7 @@ func extractTimestampTokenTime(data []byte) (time.Time, error) {
 			if rawValue.Tag == asn1.TagGeneralizedTime {
 				return time.Parse("20060102150405Z", string(rawValue.Bytes))
 			}
-			return defTime, errors.Errorf("unexpected tag for signing time: %d", rawValue.Tag)
+			return defTime, fmt.Errorf("unexpected tag for signing time: %d", rawValue.Tag)
 		}
 	}
 

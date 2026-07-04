@@ -82,7 +82,7 @@ func TestListCertificatesJSON(t *testing.T) {
 		t.Fatalf("%s: want cert dir %s, got %s\n", msg, certDir, list.TrustedCertDir)
 	}
 	if list.TotalInstalledCerts == 0 || len(list.Files) != 1 {
-		t.Fatalf("%s: missing certificates: %+v\n", msg, list)
+		t.Fatalf("%s: missing certificates: %v\n", msg, list)
 	}
 }
 

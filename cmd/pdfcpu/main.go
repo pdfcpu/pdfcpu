@@ -73,7 +73,7 @@ func shortCommit(s string) string {
 func main() {
 	if err := Execute(); err != nil {
 		if needStackTrace {
-			fmt.Fprintf(os.Stderr, "Fatal: %+v\n", err)
+			fmt.Fprintf(os.Stderr, "Fatal: %v\n", err)
 		} else {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}

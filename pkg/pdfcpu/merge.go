@@ -17,13 +17,13 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // EnsureOutlines ensures outlines.
@@ -927,7 +927,7 @@ func pageTreeRoot(ctx *model.Context) (*types.IndirectRef, types.Dict, error) {
 
 	pageCount := d.IntEntry("Count")
 	if pageCount == nil || *pageCount != ctx.PageCount {
-		return nil, nil, errors.Errorf("pdfcpu: corrupt page node at obj #%d\n", indRef.ObjectNumber)
+		return nil, nil, fmt.Errorf("pdfcpu: corrupt page node at obj #%d\n", indRef.ObjectNumber)
 	}
 
 	return indRef, d, nil
@@ -974,12 +974,12 @@ func ensureNeutralPageTreeRoot(ctx *model.Context, indRef *types.IndirectRef, d 
 func pageTreeKids(d types.Dict, indRef types.IndirectRef) (types.Array, error) {
 	obj, ok := d["Kids"]
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: page node at obj #%d missing /Kids", indRef.ObjectNumber)
+		return nil, fmt.Errorf("pdfcpu: page node at obj #%d missing /Kids", indRef.ObjectNumber)
 	}
 
 	kids, ok := obj.(types.Array)
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: page node at obj #%d /Kids is not an Array", indRef.ObjectNumber)
+		return nil, fmt.Errorf("pdfcpu: page node at obj #%d /Kids is not an Array", indRef.ObjectNumber)
 	}
 
 	return kids, nil

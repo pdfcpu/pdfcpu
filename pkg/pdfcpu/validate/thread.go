@@ -17,9 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func validateEntryV(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version, pBeadIndRef *types.IndirectRef, objNumber int) error {
@@ -30,7 +32,7 @@ func validateEntryV(xRefTable *model.XRefTable, d types.Dict, dictName string, r
 	}
 
 	if *previousBeadIndRef != *pBeadIndRef {
-		return errors.Errorf("pdfcpu: validateEntryV: obj#%d invalid entry V, corrupt previous Bead indirect reference", objNumber)
+		return fmt.Errorf("pdfcpu: validateEntryV: obj#%d invalid entry V, corrupt previous Bead indirect reference", objNumber)
 	}
 
 	return nil
@@ -48,7 +50,7 @@ func validateBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef, pBea
 		return err
 	}
 	if d == nil {
-		return errors.Errorf("pdfcpu: validateBeadDict: obj#%d missing dict", objNumber)
+		return fmt.Errorf("pdfcpu: validateBeadDict: obj#%d missing dict", objNumber)
 	}
 
 	// Validate optional entry Type, must be "Bead".
@@ -63,7 +65,7 @@ func validateBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef, pBea
 		return err
 	}
 	if indRefT != nil && *indRefT != *threadIndRef {
-		return errors.Errorf("pdfcpu: validateBeadDict: obj#%d invalid entry T (backpointer to ThreadDict)", objNumber)
+		return fmt.Errorf("pdfcpu: validateBeadDict: obj#%d invalid entry T (backpointer to ThreadDict)", objNumber)
 	}
 
 	// Validate required entry R, must be rectangle.
@@ -201,7 +203,7 @@ func validateThreadDict(xRefTable *model.XRefTable, o types.Object, sinceVersion
 
 	fBeadIndRef := d.IndirectRefEntry("F")
 	if fBeadIndRef == nil {
-		return errors.Errorf("pdfcpu: validateThreadDict: obj#%d required indirect entry \"F\" missing", objNumber)
+		return fmt.Errorf("pdfcpu: validateThreadDict: obj#%d required indirect entry \"F\" missing", objNumber)
 	}
 
 	// Validate the list of beads starting with the first bead dict.

@@ -17,12 +17,13 @@
 package primitives
 
 import (
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/format"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // HorizontalBand is a horizontal region used for header and footer.
@@ -63,7 +64,7 @@ func (hb *HorizontalBand) validate() error {
 	}
 
 	if hb.Height <= 0 {
-		return errors.Errorf("pdfcpu: missing header/footer height")
+		return fmt.Errorf("pdfcpu: missing header/footer height")
 	}
 
 	return nil
@@ -79,19 +80,19 @@ func (hb *HorizontalBand) renderAnchoredImageBox(
 
 	ib := hb.pdf.ImageBoxPool[imageName]
 	if ib == nil {
-		return errors.Errorf("pdfcpu: HorizontalBand - unable to resolve $%s", imageName)
+		return fmt.Errorf("pdfcpu: HorizontalBand - unable to resolve $%s", imageName)
 	}
 
 	if ib.Margin != nil && ib.Margin.Name != "" {
-		return errors.Errorf("pdfcpu: HorizontalBand - unsupported named margin %s", ib.Margin.Name)
+		return fmt.Errorf("pdfcpu: HorizontalBand - unsupported named margin %s", ib.Margin.Name)
 	}
 
 	if ib.Border != nil && ib.Border.Name != "" {
-		return errors.Errorf("pdfcpu: HorizontalBand - unsupported named border %s", ib.Border.Name)
+		return fmt.Errorf("pdfcpu: HorizontalBand - unsupported named border %s", ib.Border.Name)
 	}
 
 	if ib.Padding != nil && ib.Padding.Name != "" {
-		return errors.Errorf("pdfcpu: HorizontalBand - unsupported named padding %s", ib.Padding.Name)
+		return fmt.Errorf("pdfcpu: HorizontalBand - unsupported named padding %s", ib.Padding.Name)
 	}
 
 	// push state

@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -32,7 +33,6 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/sanitize"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -695,7 +695,7 @@ func installTrueTypeRep(fontDir, fontName string, header []byte, tables map[stri
 	}
 
 	if !reflect.DeepEqual(fd, fdNew) {
-		return errors.Errorf("pdfcpu: %s can't be installed", fontName)
+		return fmt.Errorf("pdfcpu: %s can't be installed", fontName)
 	}
 
 	return nil
@@ -881,7 +881,7 @@ func resolveCompoundGlyph(fontName string, bb []byte, usedGIDs map[uint16]bool,
 
 		offFrom, offThru := glyphOffsets(int(gid), locaFull, glyfsFull, numGlyphs, indexToLocFormat)
 		if offThru < offFrom {
-			return errors.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
+			return fmt.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
 		}
 		if offFrom == offThru {
 			// not available
@@ -911,7 +911,7 @@ func resolveCompoundGlyphs(fontName string, usedGIDs map[uint16]bool, locaFull, 
 	for _, gid := range gids {
 		offFrom, offThru := glyphOffsets(int(gid), locaFull, glyfsFull, numGlyphs, indexToLocFormat)
 		if offThru < offFrom {
-			return errors.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
+			return fmt.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
 		}
 		if offFrom == offThru {
 			continue
@@ -931,22 +931,22 @@ func resolveCompoundGlyphs(fontName string, usedGIDs map[uint16]bool, locaFull, 
 func glyfAndLoca(fontName string, tables map[string]*table, usedGIDs map[uint16]bool) error {
 	head, ok := tables["head"]
 	if !ok {
-		return errors.Errorf("pdfcpu: missing \"head\" table for font: %s", fontName)
+		return fmt.Errorf("pdfcpu: missing \"head\" table for font: %s", fontName)
 	}
 
 	maxp, ok := tables["maxp"]
 	if !ok {
-		return errors.Errorf("pdfcpu: missing \"maxp\" table for font: %s", fontName)
+		return fmt.Errorf("pdfcpu: missing \"maxp\" table for font: %s", fontName)
 	}
 
 	glyfsFull, ok := tables["glyf"]
 	if !ok {
-		return errors.Errorf("pdfcpu: missing \"glyf\" table for font: %s", fontName)
+		return fmt.Errorf("pdfcpu: missing \"glyf\" table for font: %s", fontName)
 	}
 
 	locaFull, ok := tables["loca"]
 	if !ok {
-		return errors.Errorf("pdfcpu: missing \"loca\" table for font: %s", fontName)
+		return fmt.Errorf("pdfcpu: missing \"loca\" table for font: %s", fontName)
 	}
 
 	indexToLocFormat := int(head.uint16(50))
@@ -973,7 +973,7 @@ func glyfAndLoca(fontName string, tables map[string]*table, usedGIDs map[uint16]
 	for _, gid := range gids {
 		offFrom, offThru := glyphOffsets(gid, locaFull, glyfsFull, numGlyphs, indexToLocFormat)
 		if offThru < offFrom {
-			return errors.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
+			return fmt.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
 		}
 		if offThru != offFrom {
 			// We have a glyph outline.
@@ -1040,7 +1040,7 @@ func createTTF(header []byte, tables map[string]*table) ([]byte, error) {
 			return nil, err
 		}
 		if n != len(t.data) || n != int(t.padded) {
-			return nil, errors.Errorf("pdfcpu: unable to write %s data\n", tag)
+			return nil, fmt.Errorf("pdfcpu: unable to write %s data\n", tag)
 		}
 	}
 

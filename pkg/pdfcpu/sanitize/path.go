@@ -17,11 +17,11 @@ limitations under the License.
 package sanitize
 
 import (
+	"errors"
 	"strings"
 	"unicode"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pkg/errors"
 )
 
 func logDebugError(s string, err error) error {

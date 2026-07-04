@@ -18,6 +18,7 @@ package font
 
 import (
 	"encoding/gob"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -31,8 +32,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/sanitize"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-
-	"github.com/pkg/errors"
 )
 
 // TTFLight represents a TrueType font w/o font file.

@@ -17,6 +17,8 @@
 package api
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -24,8 +26,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-
-	"github.com/pkg/errors"
 )
 
 // WatermarkContext applies wm for selected pages to ctx.
@@ -448,7 +448,7 @@ func parseWatermark(mode int, modeParm, desc string, onTop bool, u types.Display
 	case model.WMPDF:
 		return pdfcpu.ParsePDFWatermarkDetails(modeParm, desc, onTop, u)
 	}
-	return nil, errors.Errorf("pdfcpu: unsupported watermark mode: %d", mode)
+	return nil, fmt.Errorf("pdfcpu: unsupported watermark mode: %d", mode)
 }
 
 func watermark(mode int, modeParm, desc string, onTop, update bool, u types.DisplayUnit) (*model.Watermark, error) {

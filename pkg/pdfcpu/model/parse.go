@@ -18,12 +18,11 @@ package model
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
-
-	"github.com/pkg/errors"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -1088,7 +1087,7 @@ func xRefStreamSize(sd *types.StreamDict, limits ResourceLimits) (int, error) {
 		return 0, errors.New("pdfcpu: ParseXRefStreamDict: invalid \"Size\"")
 	}
 	if size > limits.MaxObjectCount {
-		return 0, errors.Errorf("pdfcpu: ParseXRefStreamDict: \"Size\" %d exceeds limit %d", size, limits.MaxObjectCount)
+		return 0, fmt.Errorf("pdfcpu: ParseXRefStreamDict: \"Size\" %d exceeds limit %d", size, limits.MaxObjectCount)
 	}
 	return size, nil
 }
@@ -1119,7 +1118,7 @@ func xRefStreamObjectsFromIndex(indArr types.Array, size int, limits ResourceLim
 			return nil, errXrefStreamCorruptIndex
 		}
 		if total+n > limits.MaxXRefEntries {
-			return nil, errors.Errorf("pdfcpu: ParseXRefStreamDict: xref entry count %d exceeds limit %d", total+n, limits.MaxXRefEntries)
+			return nil, fmt.Errorf("pdfcpu: ParseXRefStreamDict: xref entry count %d exceeds limit %d", total+n, limits.MaxXRefEntries)
 		}
 
 		for j := 0; j < n; j++ {
@@ -1134,7 +1133,7 @@ func xRefStreamObjectsFromIndex(indArr types.Array, size int, limits ResourceLim
 
 func xRefStreamObjectsFromSize(size int, limits ResourceLimits) ([]int, error) {
 	if size > limits.MaxXRefEntries {
-		return nil, errors.Errorf("pdfcpu: ParseXRefStreamDict: xref entry count %d exceeds limit %d", size, limits.MaxXRefEntries)
+		return nil, fmt.Errorf("pdfcpu: ParseXRefStreamDict: xref entry count %d exceeds limit %d", size, limits.MaxXRefEntries)
 	}
 
 	objs := make([]int, 0, size)
@@ -1204,10 +1203,10 @@ func ObjectStreamDictWithLimits(sd *types.StreamDict, limits ResourceLimits) (*t
 		return nil, errObjStreamMissingN
 	}
 	if *sd.N() <= 0 || *sd.N() > limits.MaxObjectStreamCount {
-		return nil, errors.Errorf("pdfcpu: object stream N %d exceeds limit %d", *sd.N(), limits.MaxObjectStreamCount)
+		return nil, fmt.Errorf("pdfcpu: object stream N %d exceeds limit %d", *sd.N(), limits.MaxObjectStreamCount)
 	}
 	if *sd.First() < 0 || int64(*sd.First()) > limits.MaxObjectStreamFirst {
-		return nil, errors.Errorf("pdfcpu: object stream First %d exceeds limit %d", *sd.First(), limits.MaxObjectStreamFirst)
+		return nil, fmt.Errorf("pdfcpu: object stream First %d exceeds limit %d", *sd.First(), limits.MaxObjectStreamFirst)
 	}
 
 	osd := types.ObjectStreamDict{

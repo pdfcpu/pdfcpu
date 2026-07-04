@@ -17,11 +17,11 @@ limitations under the License.
 package model
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pkg/errors"
 )
 
 // VersionStr is the current pdfcpu version.

@@ -17,6 +17,8 @@ limitations under the License.
 package api
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -26,7 +28,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pkg/errors"
 )
 
 // Images returns all embedded images of rs.
@@ -107,7 +108,7 @@ func ensurePageNrAndId(pageNr *int, id *string, imageFile string) (err error) {
 	ss := strings.Split(s, "_")
 
 	if len(ss) < 3 {
-		return errors.Errorf("pdfcpu: invalid image filename:%s - must conform to output filename of \"pdfcpu extract\"", imageFile)
+		return fmt.Errorf("pdfcpu: invalid image filename:%s - must conform to output filename of \"pdfcpu extract\"", imageFile)
 	}
 
 	*id = ss[len(ss)-1]

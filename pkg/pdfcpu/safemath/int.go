@@ -17,9 +17,8 @@ limitations under the License.
 package safemath
 
 import (
+	"errors"
 	"math"
-
-	"github.com/pkg/errors"
 )
 
 // AddInt returns a+b unless either operand is negative or the result would overflow int.

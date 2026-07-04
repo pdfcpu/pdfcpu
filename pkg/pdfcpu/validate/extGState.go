@@ -17,9 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // see 8.4.5 Graphics State Parameter Dictionaries
@@ -63,7 +65,7 @@ func validateBGEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, 
 
 	case types.Name:
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			err = errors.Errorf("pdfcpu: validateBGEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+			err = fmt.Errorf("pdfcpu: validateBGEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 			break
 		}
 		s := o.Value()
@@ -78,7 +80,7 @@ func validateBGEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, 
 		err = processFunction(xRefTable, o)
 
 	default:
-		err = errors.Errorf("pdfcpu: validateBGEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		err = fmt.Errorf("pdfcpu: validateBGEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -107,7 +109,7 @@ func validateBG2Entry(xRefTable *model.XRefTable, d types.Dict, dictName string,
 		err = processFunction(xRefTable, o)
 
 	default:
-		err = errors.Errorf("pdfcpu: validateBG2Entry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		err = fmt.Errorf("pdfcpu: validateBG2Entry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -125,7 +127,7 @@ func validateUCREntry(xRefTable *model.XRefTable, d types.Dict, dictName string,
 
 	case types.Name:
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			err = errors.Errorf("pdfcpu: validateUCREntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+			err = fmt.Errorf("pdfcpu: validateUCREntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 			break
 		}
 		s := o.Value()
@@ -140,7 +142,7 @@ func validateUCREntry(xRefTable *model.XRefTable, d types.Dict, dictName string,
 		err = processFunction(xRefTable, o)
 
 	default:
-		err = errors.Errorf("pdfcpu: validateUCREntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		err = fmt.Errorf("pdfcpu: validateUCREntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -169,7 +171,7 @@ func validateUCR2Entry(xRefTable *model.XRefTable, d types.Dict, dictName string
 		err = processFunction(xRefTable, o)
 
 	default:
-		err = errors.Errorf("pdfcpu: validateUCR2Entry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		err = fmt.Errorf("pdfcpu: validateUCR2Entry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -216,7 +218,7 @@ func validateTransferFunction(xRefTable *model.XRefTable, o types.Object) (err e
 		err = processFunction(xRefTable, o)
 
 	default:
-		return errors.Errorf("validateTransferFunction: corrupt entry: %v\n", o)
+		return fmt.Errorf("validateTransferFunction: corrupt entry: %v\n", o)
 
 	}
 
@@ -240,7 +242,7 @@ func validateTR(xRefTable *model.XRefTable, o types.Object) (err error) {
 	case types.Name:
 		s := o.Value()
 		if s != "Identity" {
-			return errors.Errorf("pdfcpu: validateTR: corrupt name\n")
+			return fmt.Errorf("pdfcpu: validateTR: corrupt name\n")
 		}
 
 	case types.Array:
@@ -263,7 +265,7 @@ func validateTR(xRefTable *model.XRefTable, o types.Object) (err error) {
 			if o, ok := o.(types.Name); ok {
 				s := o.Value()
 				if s != "Identity" {
-					return errors.Errorf("pdfcpu: validateTR: corrupt name\n")
+					return fmt.Errorf("pdfcpu: validateTR: corrupt name\n")
 				}
 				continue
 			}
@@ -282,7 +284,7 @@ func validateTR(xRefTable *model.XRefTable, o types.Object) (err error) {
 		err = processFunction(xRefTable, o)
 
 	default:
-		return errors.Errorf("validateTR: corrupt entry %v\n", o)
+		return fmt.Errorf("validateTR: corrupt entry %v\n", o)
 
 	}
 
@@ -302,7 +304,7 @@ func validateTREntry(xRefTable *model.XRefTable, d types.Dict, dictName string, 
 func validateTR2Name(name types.Name) error {
 	s := name.Value()
 	if s != "Identity" && s != "Default" {
-		return errors.Errorf("pdfcpu: validateTR2: corrupt name\n")
+		return fmt.Errorf("pdfcpu: validateTR2: corrupt name\n")
 	}
 	return nil
 }
@@ -354,7 +356,7 @@ func validateTR2(xRefTable *model.XRefTable, o types.Object) (err error) {
 		err = processFunction(xRefTable, o)
 
 	default:
-		return errors.Errorf("validateTR2: corrupt entry %v\n", o)
+		return fmt.Errorf("validateTR2: corrupt entry %v\n", o)
 
 	}
 
@@ -389,7 +391,7 @@ func validateSpotFunctionEntry(xRefTable *model.XRefTable, d types.Dict, dictNam
 		}
 		s := o.Value()
 		if !validateSpotFunctionName(s) {
-			return errors.Errorf("validateSpotFunctionEntry: corrupt name\n")
+			return fmt.Errorf("validateSpotFunctionEntry: corrupt name\n")
 		}
 
 	case types.Dict:
@@ -399,7 +401,7 @@ func validateSpotFunctionEntry(xRefTable *model.XRefTable, d types.Dict, dictNam
 		err = processFunction(xRefTable, o)
 
 	default:
-		return errors.Errorf("validateSpotFunctionEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		return fmt.Errorf("validateSpotFunctionEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -565,7 +567,7 @@ func validateHalfToneDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion
 		err = validateType5HalftoneDict(xRefTable, d, sinceVersion)
 
 	default:
-		err = errors.Errorf("validateHalfToneDict: unknown halftoneTyp: %d\n", *halftoneType)
+		err = fmt.Errorf("validateHalfToneDict: unknown halftoneTyp: %d\n", *halftoneType)
 
 	}
 
@@ -600,7 +602,7 @@ func validateHalfToneStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict
 		err = validateType16HalftoneStreamDict(xRefTable, sd, sinceVersion)
 
 	default:
-		err = errors.Errorf("validateHalfToneStreamDict: unknown halftoneTyp: %d\n", *halftoneType)
+		err = fmt.Errorf("validateHalfToneStreamDict: unknown halftoneTyp: %d\n", *halftoneType)
 
 	}
 
@@ -620,7 +622,7 @@ func validateHalfToneEntry(xRefTable *model.XRefTable, d types.Dict, dictName st
 
 	case types.Name:
 		if o.Value() != "Default" {
-			return errors.Errorf("pdfcpu: validateHalfToneEntry: undefined name: %s\n", o)
+			return fmt.Errorf("pdfcpu: validateHalfToneEntry: undefined name: %s\n", o)
 		}
 
 	case types.Dict:
@@ -660,7 +662,7 @@ func validateBlendModeEntry(xRefTable *model.XRefTable, d types.Dict, dictName s
 		}
 
 	default:
-		return errors.Errorf("validateBlendModeEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		return fmt.Errorf("validateBlendModeEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -689,7 +691,7 @@ func validateSoftMaskTransferFunctionEntry(xRefTable *model.XRefTable, d types.D
 		err = processFunction(xRefTable, o)
 
 	default:
-		return errors.Errorf("pdfcpu: validateSoftMaskTransferFunctionEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		return fmt.Errorf("pdfcpu: validateSoftMaskTransferFunctionEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 
@@ -760,14 +762,14 @@ func validateSoftMaskEntry(xRefTable *model.XRefTable, d types.Dict, dictName st
 	case types.Name:
 		s := o.Value()
 		if !validateBlendMode(s) {
-			return errors.Errorf("pdfcpu: validateSoftMaskEntry: invalid soft mask: %s\n", s)
+			return fmt.Errorf("pdfcpu: validateSoftMaskEntry: invalid soft mask: %s\n", s)
 		}
 
 	case types.Dict:
 		err = validateSoftMaskDict(xRefTable, o)
 
 	default:
-		err = errors.Errorf("pdfcpu: validateSoftMaskEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
+		err = fmt.Errorf("pdfcpu: validateSoftMaskEntry: dict=%s corrupt entry \"%s\"\n", dictName, entryName)
 
 	}
 

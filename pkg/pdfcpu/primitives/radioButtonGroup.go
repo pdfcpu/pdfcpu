@@ -18,13 +18,13 @@ package primitives
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // Note:
@@ -72,7 +72,7 @@ func (rbg *RadioButtonGroup) validateID() error {
 		return errors.New("pdfcpu: missing field id")
 	}
 	if rbg.pdf.DuplicateField(rbg.ID) {
-		return errors.Errorf("pdfcpu: duplicate form field: %s", rbg.ID)
+		return fmt.Errorf("pdfcpu: duplicate form field: %s", rbg.ID)
 	}
 	rbg.pdf.FieldIDs[rbg.ID] = true
 	return nil
@@ -80,7 +80,7 @@ func (rbg *RadioButtonGroup) validateID() error {
 
 func (rbg *RadioButtonGroup) validatePosition() error {
 	if rbg.Position[0] < 0 || rbg.Position[1] < 0 {
-		return errors.Errorf("pdfcpu: field: %s pos value < 0", rbg.ID)
+		return fmt.Errorf("pdfcpu: field: %s pos value < 0", rbg.ID)
 	}
 	rbg.x, rbg.y = rbg.Position[0], rbg.Position[1]
 	return nil
@@ -94,7 +94,7 @@ func parseRadioButtonOrientation(s string) (types.Orientation, error) {
 	case "v", "vert", "vertical":
 		o = types.Vertical
 	default:
-		return o, errors.Errorf("pdfcpu: unknown radiobutton orientation (hor, vert): %s", s)
+		return o, fmt.Errorf("pdfcpu: unknown radiobutton orientation (hor, vert): %s", s)
 	}
 	return o, nil
 }
@@ -113,7 +113,7 @@ func (rbg *RadioButtonGroup) validateOrientation() error {
 
 func (rbg *RadioButtonGroup) validateWidth() error {
 	if rbg.Width <= 0 {
-		return errors.Errorf("pdfcpu: field: %s width <= 0", rbg.ID)
+		return fmt.Errorf("pdfcpu: field: %s width <= 0", rbg.ID)
 	}
 	return nil
 }
@@ -147,7 +147,7 @@ func (rbg *RadioButtonGroup) validateButtonsDefaultAndValue() error {
 
 func (rbg *RadioButtonGroup) validateTab() error {
 	if rbg.Tab < 0 {
-		return errors.Errorf("pdfcpu: field: %s negative tab value", rbg.ID)
+		return fmt.Errorf("pdfcpu: field: %s negative tab value", rbg.ID)
 	}
 	if rbg.Tab == 0 {
 		return nil
@@ -157,7 +157,7 @@ func (rbg *RadioButtonGroup) validateTab() error {
 		page.Tabs = types.IntSet{}
 	} else {
 		if page.Tabs[rbg.Tab] {
-			return errors.Errorf("pdfcpu: field: %s duplicate tab value %d", rbg.ID, rbg.Tab)
+			return fmt.Errorf("pdfcpu: field: %s duplicate tab value %d", rbg.ID, rbg.Tab)
 		}
 	}
 	page.Tabs[rbg.Tab] = true
@@ -233,7 +233,7 @@ func (rbg *RadioButtonGroup) prepareMargin() (float64, float64, float64, float64
 			mName := m.Name[1:]
 			m0 := rbg.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBot, mLeft, errors.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBot, mLeft, fmt.Errorf("pdfcpu: unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}

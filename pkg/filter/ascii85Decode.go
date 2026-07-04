@@ -19,9 +19,8 @@ package filter
 import (
 	"bytes"
 	"encoding/ascii85"
+	"errors"
 	"io"
-
-	"github.com/pkg/errors"
 )
 
 type ascii85Decode struct {

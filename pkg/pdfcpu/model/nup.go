@@ -26,9 +26,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
-
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 type orientation int
@@ -321,7 +319,7 @@ func (ctx *Context) NUpTilePDFBytesForPDF(
 		return err
 	}
 	if d == nil {
-		return errors.Errorf("pdfcpu: unknown page number: %d\n", pageNr)
+		return fmt.Errorf("pdfcpu: unknown page number: %d\n", pageNr)
 	}
 
 	// Retrieve content stream bytes.

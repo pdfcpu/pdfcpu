@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -28,7 +29,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 var impParamMap = parameterMap[Import]{
@@ -98,17 +98,17 @@ func ParsePageDim(v string, u types.DisplayUnit) (*types.Dim, string, error) {
 
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
-		return nil, v, errors.Errorf("pdfcpu: illegal dimension string: need 2 positive values, %s\n", v)
+		return nil, v, fmt.Errorf("pdfcpu: illegal dimension string: need 2 positive values, %s\n", v)
 	}
 
 	w, err := strconv.ParseFloat(ss[0], 64)
 	if err != nil || w <= 0 {
-		return nil, v, errors.Errorf("pdfcpu: dimension X must be a positive numeric value: %s\n", ss[0])
+		return nil, v, fmt.Errorf("pdfcpu: dimension X must be a positive numeric value: %s\n", ss[0])
 	}
 
 	h, err := strconv.ParseFloat(ss[1], 64)
 	if err != nil || h <= 0 {
-		return nil, v, errors.Errorf("pdfcpu: dimension Y must be a positive numeric value: %s\n", ss[1])
+		return nil, v, fmt.Errorf("pdfcpu: dimension Y must be a positive numeric value: %s\n", ss[1])
 	}
 
 	d := types.Dim{Width: types.ToUserSpace(w, u), Height: types.ToUserSpace(h, u)}
@@ -138,7 +138,7 @@ func parsePositionOffsetImp(s string, imp *Import) error {
 
 	d := strings.Split(s, " ")
 	if len(d) != 2 {
-		return errors.Errorf("pdfcpu: illegal position offset string: need 2 numeric values, %s\n", s)
+		return fmt.Errorf("pdfcpu: illegal position offset string: need 2 numeric values, %s\n", s)
 	}
 
 	f, err := strconv.ParseFloat(d[0], 64)

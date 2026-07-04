@@ -18,10 +18,11 @@ package model
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func processDictRefCounts(xRefTable *XRefTable, d types.Dict, depth int) error {
@@ -164,7 +165,7 @@ func (xRefTable *XRefTable) DereferenceBoolean(o types.Object, sinceVersion Vers
 
 	b, ok := o.(types.Boolean)
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: dereferenceBoolean: wrong type <%v>", o)
+		return nil, fmt.Errorf("pdfcpu: dereferenceBoolean: wrong type <%v>", o)
 	}
 
 	// Version check
@@ -185,7 +186,7 @@ func (xRefTable *XRefTable) DereferenceInteger(o types.Object) (*types.Integer, 
 
 	i, ok := o.(types.Integer)
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: dereferenceInteger: wrong type <%v>", o)
+		return nil, fmt.Errorf("pdfcpu: dereferenceInteger: wrong type <%v>", o)
 	}
 
 	return &i, nil
@@ -210,7 +211,7 @@ func (xRefTable *XRefTable) DereferenceNumber(o types.Object) (float64, error) {
 		f = o.Value()
 
 	default:
-		err = errors.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", o)
+		err = fmt.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", o)
 
 	}
 
@@ -227,7 +228,7 @@ func (xRefTable *XRefTable) DereferenceName(o types.Object, sinceVersion Version
 
 	n, ok := o.(types.Name)
 	if !ok {
-		return n, errors.Errorf("pdfcpu: dereferenceName: wrong type <%v>", o)
+		return n, fmt.Errorf("pdfcpu: dereferenceName: wrong type <%v>", o)
 	}
 
 	// Version check
@@ -237,7 +238,7 @@ func (xRefTable *XRefTable) DereferenceName(o types.Object, sinceVersion Version
 
 	// Validation
 	if validate != nil && !validate(n.Value()) {
-		return n, errors.Errorf("pdfcpu: dereferenceName: invalid <%s>", n.Value())
+		return n, fmt.Errorf("pdfcpu: dereferenceName: invalid <%s>", n.Value())
 	}
 
 	return n, nil
@@ -253,7 +254,7 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(o types.Object, sinceVersio
 
 	s, ok := o.(types.StringLiteral)
 	if !ok {
-		return s, errors.Errorf("pdfcpu: dereferenceStringLiteral: wrong type <%v>", o)
+		return s, fmt.Errorf("pdfcpu: dereferenceStringLiteral: wrong type <%v>", o)
 	}
 
 	// Ensure UTF16 correctness.
@@ -269,7 +270,7 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(o types.Object, sinceVersio
 
 	// Validation
 	if validate != nil && !validate(s1) {
-		return s, errors.Errorf("pdfcpu: dereferenceStringLiteral: invalid <%s>", s1)
+		return s, fmt.Errorf("pdfcpu: dereferenceStringLiteral: invalid <%s>", s1)
 	}
 
 	return s, nil
@@ -298,7 +299,7 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj types.Object, sinc
 		}
 
 	default:
-		return "", errors.Errorf("pdfcpu: dereferenceStringOrHexLiteral: wrong type %T", obj)
+		return "", fmt.Errorf("pdfcpu: dereferenceStringOrHexLiteral: wrong type %T", obj)
 
 	}
 
@@ -309,7 +310,7 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj types.Object, sinc
 
 	// Validation
 	if validate != nil && !validate(s) {
-		return "", errors.Errorf("pdfcpu: dereferenceStringOrHexLiteral: invalid <%s>", s)
+		return "", fmt.Errorf("pdfcpu: dereferenceStringOrHexLiteral: invalid <%s>", s)
 	}
 
 	return s, nil
@@ -323,7 +324,7 @@ func Text(o types.Object) (string, error) {
 	case types.HexLiteral:
 		return types.HexLiteralToString(obj)
 	default:
-		return "", errors.Errorf("pdfcpu: corrupt text: %v\n", obj)
+		return "", fmt.Errorf("pdfcpu: corrupt text: %v\n", obj)
 	}
 }
 
@@ -360,7 +361,7 @@ func (xRefTable *XRefTable) DereferenceArray(o types.Object) (types.Array, error
 
 	a, ok := o.(types.Array)
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: dereferenceArray: wrong type %T <%v>", o, o)
+		return nil, fmt.Errorf("pdfcpu: dereferenceArray: wrong type %T <%v>", o, o)
 	}
 
 	return a, nil
@@ -376,7 +377,7 @@ func (xRefTable *XRefTable) DereferenceDict(o types.Object) (types.Dict, error) 
 
 	d, ok := o.(types.Dict)
 	if !ok {
-		return nil, errors.Errorf("pdfcpu: dereferenceDict: wrong type %T <%v>", o, o)
+		return nil, fmt.Errorf("pdfcpu: dereferenceDict: wrong type %T <%v>", o, o)
 	}
 
 	return d, nil
@@ -394,7 +395,7 @@ func (xRefTable *XRefTable) DereferenceDictWithIncr(o types.Object) (types.Dict,
 
 	d, ok := o.(types.Dict)
 	if !ok {
-		return nil, 0, errors.Errorf("pdfcpu: dereferenceDictWithIncr: wrong type %T <%v>", o, o)
+		return nil, 0, fmt.Errorf("pdfcpu: dereferenceDictWithIncr: wrong type %T <%v>", o, o)
 	}
 
 	return d, incr, nil
@@ -412,11 +413,11 @@ func (xRefTable *XRefTable) DereferenceFontDict(indRef types.IndirectRef) (types
 
 	if xRefTable.ValidationMode == ValidationStrict {
 		if d.Type() == nil {
-			return nil, errors.Errorf("pdfcpu: DereferenceFontDict: missing dict type %s\n", indRef)
+			return nil, fmt.Errorf("pdfcpu: DereferenceFontDict: missing dict type %s\n", indRef)
 		}
 
 		if *d.Type() != "Font" {
-			return nil, errors.Errorf("pdfcpu: DereferenceFontDict: expected Type=Font, unexpected Type: %s", *d.Type())
+			return nil, fmt.Errorf("pdfcpu: DereferenceFontDict: expected Type=Font, unexpected Type: %s", *d.Type())
 		}
 	}
 
@@ -439,7 +440,7 @@ func (xRefTable *XRefTable) DereferencePageNodeDict(indRef types.IndirectRef) (t
 	}
 
 	if *dictType != "Pages" && *dictType != "Page" {
-		return nil, errors.Errorf("pdfcpu: DereferencePageNodeDict: unexpected Type: %s", *dictType)
+		return nil, fmt.Errorf("pdfcpu: DereferencePageNodeDict: unexpected Type: %s", *dictType)
 	}
 
 	return d, nil
@@ -460,12 +461,13 @@ func (xRefTable *XRefTable) dereferenceDestArray(o types.Object) (types.Array, e
 		}
 		arr, ok := o1.(types.Array)
 		if !ok {
-			errors.Errorf("pdfcpu: invalid dest array:\n%s\n", o)
+			fmt.
+				Errorf("pdfcpu: invalid dest array:\n%s\n", o)
 		}
 		return arr, nil
 	}
 
-	return nil, errors.Errorf("pdfcpu: invalid dest array:\n%s\n", o)
+	return nil, fmt.Errorf("pdfcpu: invalid dest array:\n%s\n", o)
 }
 
 // DereferenceDestArray resolves the destination for key.
@@ -480,14 +482,14 @@ func (xRefTable *XRefTable) DereferenceDestArray(key string) (types.Array, error
 		return xRefTable.dereferenceDestArray(o)
 	}
 
-	return nil, errors.Errorf("pdfcpu: invalid named destination for: %s", key)
+	return nil, fmt.Errorf("pdfcpu: invalid named destination for: %s", key)
 }
 
 // DereferenceDictEntry returns a dereferenced dict entry.
 func (xRefTable *XRefTable) DereferenceDictEntry(d types.Dict, key string) (types.Object, error) {
 	o, found := d.Find(key)
 	if !found || o == nil {
-		return nil, errors.Errorf("pdfcpu: dict=%s entry=%s missing.", d, key)
+		return nil, fmt.Errorf("pdfcpu: dict=%s entry=%s missing.", d, key)
 	}
 	return xRefTable.Dereference(o)
 }
@@ -516,7 +518,7 @@ func (xRefTable *XRefTable) DereferenceStringEntryBytes(d types.Dict, key string
 
 	}
 
-	return nil, errors.Errorf("pdfcpu: DereferenceStringEntryBytes dict=%s entry=%s, wrong type %T <%v>", d, key, o, o)
+	return nil, fmt.Errorf("pdfcpu: DereferenceStringEntryBytes dict=%s entry=%s, wrong type %T <%v>", d, key, o, o)
 }
 
 // DestName returns the destination name for o.

@@ -17,13 +17,13 @@
 package api
 
 import (
+	"errors"
 	"io"
 	"os"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pkg/errors"
 )
 
 // Rotate rotates selected pages of rs clockwise by rotation degrees and writes the result to w.

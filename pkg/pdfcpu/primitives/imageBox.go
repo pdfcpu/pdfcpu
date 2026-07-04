@@ -17,6 +17,7 @@
 package primitives
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -32,7 +33,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 var imageBoxUserAgent = "pdfcpu/" + model.VersionStr + " (+https://github.com/pdfcpu/pdfcpu)"
@@ -440,7 +440,7 @@ func (ib *ImageBox) prepareMargin() (float64, float64, float64, float64, error) 
 			mName := m.Name[1:]
 			m0 := ib.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBot, mLeft, errors.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBot, mLeft, fmt.Errorf("pdfcpu: unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}
@@ -475,7 +475,7 @@ func (ib *ImageBox) prepareBorder() (float64, *color.SimpleColor, types.LineJoin
 			bName := b.Name[1:]
 			b0 := ib.border(bName)
 			if b0 == nil {
-				return bWidth, bCol, bStyle, errors.Errorf("pdfcpu: unknown named border %s", bName)
+				return bWidth, bCol, bStyle, fmt.Errorf("pdfcpu: unknown named border %s", bName)
 			}
 			b.mergeIn(b0)
 		}
@@ -508,7 +508,7 @@ func (ib *ImageBox) preparePadding() (float64, float64, float64, float64, error)
 			pName := p.Name[1:]
 			p0 := ib.padding(pName)
 			if p0 == nil {
-				return pTop, pRight, pBot, pLeft, errors.Errorf("pdfcpu: unknown named padding %s", pName)
+				return pTop, pRight, pBot, pLeft, fmt.Errorf("pdfcpu: unknown named padding %s", pName)
 			}
 			p.mergeIn(p0)
 		}

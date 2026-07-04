@@ -17,12 +17,12 @@
 package api
 
 import (
+	"errors"
 	"io"
 	"os"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pkg/errors"
 )
 
 // Properties returns rs's properties as recorded in infoDict.

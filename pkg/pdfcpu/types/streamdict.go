@@ -19,13 +19,12 @@ package types
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-
-	"github.com/pkg/errors"
 )
 
 // PDFFilter represents a PDF stream filter object.
@@ -164,12 +163,12 @@ func (l *LazyObjectStreamObject) GetData() ([]byte, error) {
 	var data []byte
 	if l.endOffset == -1 {
 		if l.startOffset < 0 || l.startOffset > len(l.osd.Content) {
-			return nil, errors.Errorf("pdfcpu: object stream offset %d out of bounds", l.startOffset)
+			return nil, fmt.Errorf("pdfcpu: object stream offset %d out of bounds", l.startOffset)
 		}
 		data = l.osd.Content[l.startOffset:]
 	} else {
 		if l.startOffset < 0 || l.startOffset > l.endOffset || l.endOffset > len(l.osd.Content) {
-			return nil, errors.Errorf("pdfcpu: object stream offset range [%d:%d] out of bounds", l.startOffset, l.endOffset)
+			return nil, fmt.Errorf("pdfcpu: object stream offset range [%d:%d] out of bounds", l.startOffset, l.endOffset)
 		}
 		data = l.osd.Content[l.startOffset:l.endOffset]
 	}
@@ -471,7 +470,7 @@ func (sd *StreamDict) DecodeLengthWithLimit(maxLen, maxDecodeBytes int64) ([]byt
 // IndexedObject returns the object at given index from a ObjectStreamDict.
 func (osd *ObjectStreamDict) IndexedObject(index int) (Object, error) {
 	if osd.ObjArray == nil || index < 0 || index >= len(osd.ObjArray) {
-		return nil, errors.Errorf("IndexedObject(%d): object not available", index)
+		return nil, fmt.Errorf("IndexedObject(%d): object not available", index)
 	}
 	return osd.ObjArray[index], nil
 }

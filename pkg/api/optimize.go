@@ -17,6 +17,8 @@
 package api
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -24,7 +26,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pkg/errors"
 )
 
 // Optimize reads a PDF stream from rs and writes the optimized PDF stream to w.
@@ -57,7 +58,7 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err err
 	if ctx.StatsFileName != "" {
 		err = pdfcpu.AppendStatsFile(ctx)
 		if err != nil {
-			return errors.Wrap(err, "Write stats failed.")
+			return fmt.Errorf("Write stats failed.: %w", err)
 		}
 	}
 

@@ -24,6 +24,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -34,7 +35,6 @@ import (
 	"github.com/hhrutter/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -189,11 +189,11 @@ func byteRangeValues(arr types.Array) ([4]int64, error) {
 	for i, o := range arr {
 		v, ok := o.(types.Integer)
 		if !ok {
-			return values, errors.Errorf("pdfcpu: invalid signature ByteRange entry %d", i)
+			return values, fmt.Errorf("pdfcpu: invalid signature ByteRange entry %d", i)
 		}
 		values[i] = int64(v.Value())
 		if values[i] < 0 {
-			return values, errors.Errorf("pdfcpu: negative signature ByteRange entry %d", i)
+			return values, fmt.Errorf("pdfcpu: negative signature ByteRange entry %d", i)
 		}
 	}
 	return values, nil
@@ -227,7 +227,7 @@ func validateByteRange(values [4]int64) (int64, error) {
 func copyByteRange(w io.Writer, ra io.ReaderAt, off, size int64) error {
 	n, err := io.CopyN(w, io.NewSectionReader(ra, off, size), size)
 	if err != nil {
-		return errors.Wrap(err, "pdfcpu: invalid signature ByteRange")
+		return fmt.Errorf("pdfcpu: invalid signature ByteRange: %w", err)
 	}
 	if n != size {
 		return errors.New("pdfcpu: short signature ByteRange")
@@ -361,7 +361,7 @@ func publicKeySize(cert *x509.Certificate) (int, error) {
 	case *dsa.PublicKey:
 		return pubKey.Y.BitLen(), nil
 	default:
-		return 0, errors.Errorf("unknown public key type %T", pubKey)
+		return 0, fmt.Errorf("unknown public key type %T", pubKey)
 	}
 }
 

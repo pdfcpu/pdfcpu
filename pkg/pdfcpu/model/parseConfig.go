@@ -21,12 +21,12 @@ package model
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -72,7 +72,7 @@ func (i *int64Value) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var n int64
 	if err := unmarshal(&n); err == nil {
 		if n <= 0 {
-			return errors.Errorf("numeric value must be > 0: %d", n)
+			return fmt.Errorf("numeric value must be > 0: %d", n)
 		}
 		*i = int64Value(n)
 		return nil
@@ -94,12 +94,12 @@ func (i *int64Value) UnmarshalYAML(unmarshal func(interface{}) error) error {
 func parseReadableInt64(s string) (int64, error) {
 	ss := strings.Fields(strings.ToUpper(strings.TrimSpace(s)))
 	if len(ss) == 0 || len(ss) > 2 {
-		return 0, errors.Errorf("invalid numeric value: %s", s)
+		return 0, fmt.Errorf("invalid numeric value: %s", s)
 	}
 
 	n, err := strconv.ParseInt(ss[0], 10, 64)
 	if err != nil || n <= 0 {
-		return 0, errors.Errorf("numeric value must be > 0: %s", s)
+		return 0, fmt.Errorf("numeric value must be > 0: %s", s)
 	}
 	if len(ss) == 1 {
 		return n, nil
@@ -117,11 +117,11 @@ func parseReadableInt64(s string) (int64, error) {
 	case "MP", "MPIXELS":
 		m = 1000 * 1000
 	default:
-		return 0, errors.Errorf("unsupported numeric unit: %s", ss[1])
+		return 0, fmt.Errorf("unsupported numeric unit: %s", ss[1])
 	}
 
 	if n > (1<<63-1)/m {
-		return 0, errors.Errorf("numeric value overflows int64: %s", s)
+		return 0, fmt.Errorf("numeric value overflows int64: %s", s)
 	}
 	return n * m, nil
 }
@@ -229,30 +229,30 @@ func parseConfigFile(r io.Reader, configPath string) error {
 	}
 
 	if !types.MemberOf(c.ValidationMode, []string{"ValidationStrict", "ValidationRelaxed"}) {
-		return errors.Errorf("invalid validationMode: %s", c.ValidationMode)
+		return fmt.Errorf("invalid validationMode: %s", c.ValidationMode)
 	}
 
 	if !types.MemberOf(c.Eol, []string{"EolLF", "EolCR", "EolCRLF"}) {
-		return errors.Errorf("invalid eol: %s", c.Eol)
+		return fmt.Errorf("invalid eol: %s", c.Eol)
 	}
 
 	if !types.MemberOf(c.Unit, []string{"points", "inches", "cm", "mm"}) {
-		return errors.Errorf("invalid unit: %s", c.Unit)
+		return fmt.Errorf("invalid unit: %s", c.Unit)
 	}
 
 	if !types.IntMemberOf(c.EncryptKeyLength, []int{40, 128, 256}) {
-		return errors.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
+		return fmt.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
 	}
 
 	if !types.MemberOf(c.PreferredCertRevocationChecker, []string{"crl", "ocsp"}) {
 		if c.PreferredCertRevocationChecker != "" {
-			return errors.Errorf("invalid preferred certificate revocation checker: %s", c.PreferredCertRevocationChecker)
+			return fmt.Errorf("invalid preferred certificate revocation checker: %s", c.PreferredCertRevocationChecker)
 		}
 		c.PreferredCertRevocationChecker = "crl"
 	}
 
 	if c.FormFieldListMaxColWidth < 0 {
-		return errors.Errorf("formFieldListMaxColWidth must be >= 0: %d", c.FormFieldListMaxColWidth)
+		return fmt.Errorf("formFieldListMaxColWidth must be >= 0: %d", c.FormFieldListMaxColWidth)
 	}
 
 	loadedDefaultConfig = loadedConfig(c, configPath)

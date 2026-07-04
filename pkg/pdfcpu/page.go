@@ -17,12 +17,12 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 var pParamMap = parameterMap[PageConfiguration]{
@@ -128,7 +128,7 @@ func addPages(
 			return err
 		}
 		if d == nil {
-			return errors.Errorf("pdfcpu: unknown page number: %d\n", i)
+			return fmt.Errorf("pdfcpu: unknown page number: %d\n", i)
 		}
 
 		obj, err := migrateIndRef(pageIndRef, ctxSrc, ctxDest, migrated)

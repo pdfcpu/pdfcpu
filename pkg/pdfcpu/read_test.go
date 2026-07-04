@@ -39,7 +39,7 @@ func TestReadFileContext(t *testing.T) {
 	defer cancel()
 
 	if doc, err := ReadFileWithContext(ctx, inFile, nil); err == nil {
-		t.Errorf("reading should have failed, got %+v", doc)
+		t.Errorf("reading should have failed, got %v", doc)
 	} else if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("should have failed with timeout, got %s", err)
 	}
@@ -59,7 +59,7 @@ func TestReadContext(t *testing.T) {
 	defer cancel()
 
 	if doc, err := ReadWithContext(ctx, fp, nil); err == nil {
-		t.Errorf("reading should have failed, got %+v", doc)
+		t.Errorf("reading should have failed, got %v", doc)
 	} else if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("should have failed with timeout, got %s", err)
 	}

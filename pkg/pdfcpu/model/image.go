@@ -19,13 +19,13 @@ package model
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"image/jpeg"
 	_ "image/png"
-
 	"io"
 	"math"
 	"os"
@@ -33,11 +33,9 @@ import (
 	"strings"
 
 	"github.com/hhrutter/tiff"
-
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/safemath"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 	_ "golang.org/x/image/webp"
 )
 
@@ -65,7 +63,7 @@ type Image struct {
 
 func validateImageResourceLimits(xRefTable *XRefTable, c image.Config) error {
 	if c.Width <= 0 || c.Height <= 0 {
-		return errors.Errorf("pdfcpu: image has invalid dimensions %dx%d", c.Width, c.Height)
+		return fmt.Errorf("pdfcpu: image has invalid dimensions %dx%d", c.Width, c.Height)
 	}
 
 	limits := DefaultResourceLimits()
@@ -78,7 +76,7 @@ func validateImageResourceLimits(xRefTable *XRefTable, c image.Config) error {
 		return err
 	}
 	if pixels > limits.MaxImagePixels {
-		return errors.Errorf("pdfcpu: image pixel count %d exceeds limit %d", pixels, limits.MaxImagePixels)
+		return fmt.Errorf("pdfcpu: image pixel count %d exceeds limit %d", pixels, limits.MaxImagePixels)
 	}
 
 	renderBytes, err := safemath.MultiplyInt64(pixels, 4)
@@ -86,7 +84,7 @@ func validateImageResourceLimits(xRefTable *XRefTable, c image.Config) error {
 		return err
 	}
 	if renderBytes > limits.MaxImageBytes {
-		return errors.Errorf("pdfcpu: image byte size %d exceeds limit %d", renderBytes, limits.MaxImageBytes)
+		return fmt.Errorf("pdfcpu: image byte size %d exceeds limit %d", renderBytes, limits.MaxImageBytes)
 	}
 
 	return nil
@@ -648,7 +646,7 @@ func encodeJPEG(img image.Image) ([]byte, string, error) {
 	case *image.CMYK:
 		cs = DeviceCMYKCS
 	default:
-		return nil, "", errors.Errorf("pdfcpu: unexpected color model for JPEG: %s", cs)
+		return nil, "", fmt.Errorf("pdfcpu: unexpected color model for JPEG: %s", cs)
 	}
 	var buf bytes.Buffer
 	err := jpeg.Encode(&buf, img, nil)
@@ -839,7 +837,7 @@ func createImageBuf(xRefTable *XRefTable, img image.Image, imgA image.Image, for
 		return handleCMYKImage(im)
 
 	default:
-		return nil, nil, 0, "", errors.Errorf("pdfcpu: unsupported image type: %T", im)
+		return nil, nil, 0, "", fmt.Errorf("pdfcpu: unsupported image type: %T", im)
 	}
 }
 

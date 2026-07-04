@@ -18,6 +18,7 @@ package primitives
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"unicode/utf8"
@@ -26,7 +27,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 // ListBox represents a specific choice form field including a positioned label.
@@ -71,7 +71,7 @@ func (lb *ListBox) SetFontID(s string) {
 
 func (lb *ListBox) validateDefault() error {
 	if len(lb.Options) == 0 {
-		return errors.Errorf("pdfcpu: field: %s missing options", lb.ID)
+		return fmt.Errorf("pdfcpu: field: %s missing options", lb.ID)
 	}
 
 	dv := []string{}
@@ -89,12 +89,12 @@ func (lb *ListBox) validateDefault() error {
 
 	for _, v := range dv {
 		if !types.MemberOf(v, lb.Options) {
-			return errors.Errorf("pdfcpu: field: %s invalid default: %s", lb.ID, v)
+			return fmt.Errorf("pdfcpu: field: %s invalid default: %s", lb.ID, v)
 		}
 	}
 
 	if !lb.Multi && len(dv) > 1 {
-		return errors.Errorf("pdfcpu: field %s only 1 value allowed", lb.ID)
+		return fmt.Errorf("pdfcpu: field %s only 1 value allowed", lb.ID)
 	}
 
 	lb.Defaults = dv
@@ -104,7 +104,7 @@ func (lb *ListBox) validateDefault() error {
 
 func (lb *ListBox) validateValue() error {
 	if len(lb.Options) == 0 {
-		return errors.Errorf("pdfcpu: field: %s missing options", lb.ID)
+		return fmt.Errorf("pdfcpu: field: %s missing options", lb.ID)
 	}
 
 	vv := []string{}
@@ -122,12 +122,12 @@ func (lb *ListBox) validateValue() error {
 
 	for _, v := range vv {
 		if !types.MemberOf(v, lb.Options) {
-			return errors.Errorf("pdfcpu: field: %s invalid default: %s", lb.ID, v)
+			return fmt.Errorf("pdfcpu: field: %s invalid default: %s", lb.ID, v)
 		}
 	}
 
 	if !lb.Multi && len(vv) > 1 {
-		return errors.Errorf("pdfcpu: field %s only 1 value allowed", lb.ID)
+		return fmt.Errorf("pdfcpu: field %s only 1 value allowed", lb.ID)
 	}
 
 	lb.Values = vv
@@ -140,7 +140,7 @@ func (lb *ListBox) validateID() error {
 		return errors.New("pdfcpu: missing field id")
 	}
 	if lb.pdf.DuplicateField(lb.ID) {
-		return errors.Errorf("pdfcpu: duplicate form field: %s", lb.ID)
+		return fmt.Errorf("pdfcpu: duplicate form field: %s", lb.ID)
 	}
 	lb.pdf.FieldIDs[lb.ID] = true
 	return nil
@@ -148,7 +148,7 @@ func (lb *ListBox) validateID() error {
 
 func (lb *ListBox) validatePosition() error {
 	if lb.Position[0] < 0 || lb.Position[1] < 0 {
-		return errors.Errorf("pdfcpu: field: %s pos value < 0", lb.ID)
+		return fmt.Errorf("pdfcpu: field: %s pos value < 0", lb.ID)
 	}
 	lb.x, lb.y = lb.Position[0], lb.Position[1]
 	return nil
@@ -156,14 +156,14 @@ func (lb *ListBox) validatePosition() error {
 
 func (lb *ListBox) validateWidth() error {
 	if lb.Width == 0 {
-		return errors.Errorf("pdfcpu: field: %s width == 0", lb.ID)
+		return fmt.Errorf("pdfcpu: field: %s width == 0", lb.ID)
 	}
 	return nil
 }
 
 func (lb *ListBox) validateHeight() error {
 	if lb.Height < 0 {
-		return errors.Errorf("pdfcpu: field: %s height < 0", lb.ID)
+		return fmt.Errorf("pdfcpu: field: %s height < 0", lb.ID)
 	}
 	return nil
 }
@@ -232,7 +232,7 @@ func (lb *ListBox) validateLabel() error {
 
 func (lb *ListBox) validateTab() error {
 	if lb.Tab < 0 {
-		return errors.Errorf("pdfcpu: field: %s negative tab value", lb.ID)
+		return fmt.Errorf("pdfcpu: field: %s negative tab value", lb.ID)
 	}
 	if lb.Tab == 0 {
 		return nil
@@ -242,7 +242,7 @@ func (lb *ListBox) validateTab() error {
 		page.Tabs = types.IntSet{}
 	} else {
 		if page.Tabs[lb.Tab] {
-			return errors.Errorf("pdfcpu: field: %s duplicate tab value %d", lb.ID, lb.Tab)
+			return fmt.Errorf("pdfcpu: field: %s duplicate tab value %d", lb.ID, lb.Tab)
 		}
 	}
 	page.Tabs[lb.Tab] = true
@@ -346,7 +346,7 @@ func (lb *ListBox) calcMargin() (float64, float64, float64, float64, error) {
 			mName := m.Name[1:]
 			m0 := lb.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBottom, mLeft, errors.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, fmt.Errorf("pdfcpu: unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}

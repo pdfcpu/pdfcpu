@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -37,7 +38,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 const stampWithBBox = false
@@ -104,7 +104,7 @@ func parseTextHorAlignment(s string, wm *model.Watermark) error {
 	case "j", "justify":
 		a = types.AlignJustify
 	default:
-		return errors.Errorf("pdfcpu: unknown horizontal alignment (l,r,c,j): %s", s)
+		return fmt.Errorf("pdfcpu: unknown horizontal alignment (l,r,c,j): %s", s)
 	}
 
 	wm.HAlign = &a
@@ -127,7 +127,7 @@ func parsePositionAnchorWM(s string, wm *model.Watermark) error {
 func parsePositionOffsetWM(s string, wm *model.Watermark) error {
 	d := strings.Split(s, " ")
 	if len(d) != 2 {
-		return errors.Errorf("pdfcpu: illegal position offset string: need 2 numeric values, %s\n", s)
+		return fmt.Errorf("pdfcpu: illegal position offset string: need 2 numeric values, %s\n", s)
 	}
 
 	f, err := strconv.ParseFloat(d[0], 64)
@@ -152,7 +152,7 @@ func parseScaleFactorWM(s string, wm *model.Watermark) (err error) {
 
 func parseFontName(s string, wm *model.Watermark) error {
 	if !font.SupportedFont(s) {
-		return errors.Errorf("pdfcpu: %s is unsupported, please refer to \"pdfcpu fonts list\".\n", s)
+		return fmt.Errorf("pdfcpu: %s is unsupported, please refer to \"pdfcpu fonts list\".\n", s)
 	}
 	wm.FontName = s
 	if strings.HasSuffix(strings.ToUpper(wm.FontName), "GB2312") {
@@ -165,7 +165,7 @@ func parseFontName(s string, wm *model.Watermark) error {
 func parseScriptName(s string, wm *model.Watermark) error {
 	script := strings.ToUpper(s)
 	if !pdffont.SupportedScript(script) {
-		return errors.Errorf("pdfcpu: unsupported font script \"%s\" - Supported are: HANS, HANT, HIRA, KANA, JPAN, HANG, KORE \n", script)
+		return fmt.Errorf("pdfcpu: unsupported font script \"%s\" - Supported are: HANS, HANT, HIRA, KANA, JPAN, HANG, KORE \n", script)
 	}
 
 	wm.ScriptName = script
@@ -175,7 +175,7 @@ func parseScriptName(s string, wm *model.Watermark) error {
 
 func parseURL(s string, wm *model.Watermark) error {
 	if !wm.OnTop {
-		return errors.Errorf("pdfcpu: \"url\" supported for stamps only.\n")
+		return fmt.Errorf("pdfcpu: \"url\" supported for stamps only.\n")
 	}
 	if !strings.HasPrefix(s, "https://") {
 		s = "https://" + s
@@ -201,16 +201,16 @@ func parseFontSize(s string, wm *model.Watermark) error {
 func parseScaleFactor(s string) (float64, bool, error) {
 	ss := strings.Split(s, " ")
 	if len(ss) > 2 {
-		return 0, false, errors.Errorf("pdfcpu: invalid factor string %s: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}\n", s)
+		return 0, false, fmt.Errorf("pdfcpu: invalid factor string %s: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}\n", s)
 	}
 
 	sc, err := strconv.ParseFloat(ss[0], 64)
 	if err != nil {
-		return 0, false, errors.Errorf("pdfcpu: scale factor must be a float value: %s\n", ss[0])
+		return 0, false, fmt.Errorf("pdfcpu: scale factor must be a float value: %s\n", ss[0])
 	}
 
 	if sc <= 0 {
-		return 0, false, errors.Errorf("pdfcpu: invalid scale factor %.2f: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}\n", sc)
+		return 0, false, fmt.Errorf("pdfcpu: invalid scale factor %.2f: 0.0 < i <= 1.0 {rel} | 0.0 < i {abs}\n", sc)
 	}
 
 	var scaleAbs bool
@@ -229,11 +229,11 @@ func parseScaleFactor(s string) (float64, bool, error) {
 		scaleAbs = false
 
 	default:
-		return 0, false, errors.Errorf("pdfcpu: illegal scale mode: abs|rel, %s\n", ss[1])
+		return 0, false, fmt.Errorf("pdfcpu: illegal scale mode: abs|rel, %s\n", ss[1])
 	}
 
 	if !scaleAbs && sc > 1 {
-		return 0, false, errors.Errorf("pdfcpu: invalid relative scale factor %.2f: 0.0 < i <= 1\n", sc)
+		return 0, false, fmt.Errorf("pdfcpu: invalid relative scale factor %.2f: 0.0 < i <= 1\n", sc)
 	}
 
 	return sc, scaleAbs, nil
@@ -286,10 +286,10 @@ func parseRotation(s string, wm *model.Watermark) error {
 
 	r, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return errors.Errorf("pdfcpu: rotation must be a float value: %s\n", s)
+		return fmt.Errorf("pdfcpu: rotation must be a float value: %s\n", s)
 	}
 	if r < -180 || r > 180 {
-		return errors.Errorf("pdfcpu: illegal rotation: -180 <= r <= 180 degrees, %s\n", s)
+		return fmt.Errorf("pdfcpu: illegal rotation: -180 <= r <= 180 degrees, %s\n", s)
 	}
 
 	wm.Rotation = r
@@ -306,7 +306,7 @@ func parseDiagonal(s string, wm *model.Watermark) error {
 
 	d, err := strconv.Atoi(s)
 	if err != nil {
-		return errors.Errorf("pdfcpu: illegal diagonal value: allowed 1 or 2, %s\n", s)
+		return fmt.Errorf("pdfcpu: illegal diagonal value: allowed 1 or 2, %s\n", s)
 	}
 	if d != model.DiagonalLLToUR && d != model.DiagonalULToLR {
 		return errors.New("pdfcpu: diagonal: 1..lower left to upper right, 2..upper left to lower right")
@@ -322,10 +322,10 @@ func parseDiagonal(s string, wm *model.Watermark) error {
 func parseOpacity(s string, wm *model.Watermark) error {
 	o, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return errors.Errorf("pdfcpu: opacity must be a float value: %s\n", s)
+		return fmt.Errorf("pdfcpu: opacity must be a float value: %s\n", s)
 	}
 	if o < 0 || o > 1 {
-		return errors.Errorf("pdfcpu: illegal opacity: 0.0 <= r <= 1.0, %s\n", s)
+		return fmt.Errorf("pdfcpu: illegal opacity: 0.0 <= r <= 1.0, %s\n", s)
 	}
 	wm.Opacity = o
 
@@ -335,7 +335,7 @@ func parseOpacity(s string, wm *model.Watermark) error {
 func parseRenderMode(s string, wm *model.Watermark) error {
 	m, err := strconv.Atoi(s)
 	if err != nil {
-		return errors.Errorf("pdfcpu: illegal render mode value: allowed 0,1,2, %s\n", s)
+		return fmt.Errorf("pdfcpu: illegal render mode value: allowed 0,1,2, %s\n", s)
 	}
 	rm := draw.RenderMode(m)
 	if rm != draw.RMFill && rm != draw.RMStroke && rm != draw.RMFillAndStroke {
@@ -351,7 +351,7 @@ func parseMargins(s string, wm *model.Watermark) error {
 
 	m := strings.Split(s, " ")
 	if len(m) == 0 || len(m) > 4 {
-		return errors.Errorf("pdfcpu: margins: need 1,2,3 or 4 int values, %s\n", s)
+		return fmt.Errorf("pdfcpu: margins: need 1,2,3 or 4 int values, %s\n", s)
 	}
 
 	f1, err := strconv.ParseFloat(m[0], 64)
@@ -414,7 +414,7 @@ func parseBorder(s string, wm *model.Watermark) error {
 
 	b := strings.Split(s, " ")
 	if len(b) == 0 || len(b) > 5 {
-		return errors.Errorf("pdfcpu: borders: need 1,2,3,4 or 5 int values, %s\n", s)
+		return fmt.Errorf("pdfcpu: borders: need 1,2,3,4 or 5 int values, %s\n", s)
 	}
 
 	wm.BorderWidth, err = strconv.ParseFloat(b[0], 64)
@@ -459,7 +459,7 @@ func watermarkModeParamName(mode int) string {
 // ValidateWatermarkModeParam validates the user supplied watermark/stamp mode parameter.
 func ValidateWatermarkModeParam(mode int, modeParm string, onTop bool) error {
 	if strings.TrimSpace(modeParm) == "" {
-		return errors.Errorf("pdfcpu: %s %s must not be empty", onTopString(onTop), watermarkModeParamName(mode))
+		return fmt.Errorf("pdfcpu: %s %s must not be empty", onTopString(onTop), watermarkModeParamName(mode))
 	}
 	return nil
 }
@@ -516,7 +516,7 @@ func onTopString(onTop bool) string {
 
 func parseWatermarkError(onTop bool) error {
 	s := onTopString(onTop)
-	return errors.Errorf("Invalid %s configuration string. Please consult pdfcpu help %s.\n", s, s)
+	return fmt.Errorf("Invalid %s configuration string. Please consult pdfcpu help %s.\n", s, s)
 }
 
 func setTextWatermark(s string, wm *model.Watermark) {
@@ -592,7 +592,7 @@ func setPDFWatermark(s string, wm *model.Watermark) error {
 	if i < 1 {
 		// No colon => multi stamp
 		if strings.ToLower(filepath.Ext(s)) != ".pdf" {
-			return errors.Errorf("%s is not a PDF file", s)
+			return fmt.Errorf("%s is not a PDF file", s)
 		}
 		wm.FileName = s
 		return nil
@@ -607,7 +607,7 @@ func setPDFWatermark(s string, wm *model.Watermark) error {
 	pageNumberStr := s[i+1:]
 	j, err := strconv.Atoi(pageNumberStr)
 	if err != nil {
-		return errors.Errorf("unable to detect PDF page number: %s\n", pageNumberStr)
+		return fmt.Errorf("unable to detect PDF page number: %s\n", pageNumberStr)
 	}
 
 	s = s[:i]
@@ -616,7 +616,7 @@ func setPDFWatermark(s string, wm *model.Watermark) error {
 		// single stamp
 		wm.PdfPageNrSrc = j
 		if strings.ToLower(filepath.Ext(s)) != ".pdf" {
-			return errors.Errorf("%s is not a PDF file", s)
+			return fmt.Errorf("%s is not a PDF file", s)
 		}
 		wm.FileName = s
 		return nil
@@ -628,12 +628,12 @@ func setPDFWatermark(s string, wm *model.Watermark) error {
 	pageNumberStr = s[i+1:]
 	wm.PdfMultiStartPageNrSrc, err = strconv.Atoi(pageNumberStr)
 	if err != nil {
-		return errors.Errorf("unable to detect PDF page number: %s\n", pageNumberStr)
+		return fmt.Errorf("unable to detect PDF page number: %s\n", pageNumberStr)
 	}
 
 	s = s[:i]
 	if strings.ToLower(filepath.Ext(s)) != ".pdf" {
-		return errors.Errorf("%s is not a PDF file", s)
+		return fmt.Errorf("%s is not a PDF file", s)
 	}
 	wm.FileName = s
 
@@ -667,7 +667,7 @@ func createPDFRes(ctx, otherCtx *model.Context, pageNrSrc, pageNrDest int, migra
 		return err
 	}
 	if d == nil {
-		return errors.Errorf("pdfcpu: unknown page number: %d\n", pageNrSrc)
+		return fmt.Errorf("pdfcpu: unknown page number: %d\n", pageNrSrc)
 	}
 
 	// Take into account existing rotation.
@@ -695,7 +695,7 @@ func createPDFRes(ctx, otherCtx *model.Context, pageNrSrc, pageNrDest int, migra
 
 	pdfRes.Bb = viewPort(inhPAttrs)
 	if pdfRes.Bb == nil {
-		return errors.Errorf("pdfcpu: PDF stamp page %d: missing media box", pageNrSrc)
+		return fmt.Errorf("pdfcpu: PDF stamp page %d: missing media box", pageNrSrc)
 	}
 	wm.PdfRes[pageNrDest] = pdfRes
 
@@ -704,10 +704,10 @@ func createPDFRes(ctx, otherCtx *model.Context, pageNrSrc, pageNrDest int, migra
 
 func pdfResourcePageCount(destPageCount, srcPageCount, startPageNrSrc, startPageNrDest int) (int, error) {
 	if startPageNrSrc < 1 || startPageNrSrc > srcPageCount {
-		return 0, errors.Errorf("pdfcpu: invalid PDF stamp source page number: %d", startPageNrSrc)
+		return 0, fmt.Errorf("pdfcpu: invalid PDF stamp source page number: %d", startPageNrSrc)
 	}
 	if startPageNrDest < 1 || startPageNrDest > destPageCount {
-		return 0, errors.Errorf("pdfcpu: invalid PDF stamp destination page number: %d", startPageNrDest)
+		return 0, fmt.Errorf("pdfcpu: invalid PDF stamp destination page number: %d", startPageNrDest)
 	}
 	srcPages := srcPageCount - startPageNrSrc + 1
 	destPages := destPageCount - startPageNrDest + 1
@@ -1046,10 +1046,10 @@ func pdfResourceForPage(wm *model.Watermark, pageNr int) (model.PdfResources, er
 	i := wm.PdfResIndex(pageNr)
 	pdfRes, ok := wm.PdfRes[i]
 	if !ok {
-		return model.PdfResources{}, errors.Errorf("pdfcpu: missing PDF stamp resource for destination page %d", pageNr)
+		return model.PdfResources{}, fmt.Errorf("pdfcpu: missing PDF stamp resource for destination page %d", pageNr)
 	}
 	if pdfRes.Bb == nil {
-		return model.PdfResources{}, errors.Errorf("pdfcpu: PDF stamp resource for destination page %d: missing bounding box", pageNr)
+		return model.PdfResources{}, fmt.Errorf("pdfcpu: PDF stamp resource for destination page %d: missing bounding box", pageNr)
 	}
 	return pdfRes, nil
 }
@@ -1413,7 +1413,7 @@ func handleLink(ctx *model.Context, pageIndRef *types.IndirectRef, d types.Dict,
 
 func addPageWatermark(ctx *model.Context, pageNr int, wm model.Watermark) error {
 	if pageNr > ctx.PageCount {
-		return errors.Errorf("pdfcpu: invalid page number: %d", pageNr)
+		return fmt.Errorf("pdfcpu: invalid page number: %d", pageNr)
 	}
 
 	if log.DebugEnabled() {
@@ -1528,7 +1528,7 @@ func AddWatermarks(ctx *model.Context, selectedPages types.IntSet, wm *model.Wat
 // AddWatermarksMap adds watermarks in m to corresponding pages.
 func AddWatermarksMap(ctx *model.Context, m map[int]*model.Watermark) error {
 	if len(m) == 0 {
-		return errors.Errorf("pdfcpu: no watermarks available")
+		return fmt.Errorf("pdfcpu: no watermarks available")
 	}
 
 	// Calc onTop and opacity.
@@ -1599,7 +1599,7 @@ func AddWatermarksSliceMap(ctx *model.Context, m map[int][]*model.Watermark) err
 	}
 
 	if !hasWatermarks {
-		return errors.Errorf("pdfcpu: no watermarks available")
+		return fmt.Errorf("pdfcpu: no watermarks available")
 	}
 
 	ocgIndRef, err := prepareOCPropertiesInRoot(ctx, onTop)
@@ -1646,7 +1646,7 @@ func AddWatermarksSliceMap(ctx *model.Context, m map[int][]*model.Watermark) err
 func removeResDictEntry(ctx *model.Context, d types.Dict, entry string, ids []string, i int) error {
 	o, ok := d.Find(entry)
 	if !ok {
-		return errors.Errorf("pdfcpu: page %d: corrupt resource dict", i)
+		return fmt.Errorf("pdfcpu: page %d: corrupt resource dict", i)
 	}
 
 	d1, err := ctx.DereferenceDict(o)
@@ -1771,7 +1771,7 @@ func locatePageContentAndResourceDict(ctx *model.Context, pageNr int) (types.Obj
 
 	o, found := d.Find("Resources")
 	if !found {
-		return nil, nil, nil, errors.Errorf("pdfcpu: page %d: no resource dict found\n", pageNr)
+		return nil, nil, nil, fmt.Errorf("pdfcpu: page %d: no resource dict found\n", pageNr)
 	}
 
 	resDict, err := ctx.DereferenceDict(o)
@@ -1781,7 +1781,7 @@ func locatePageContentAndResourceDict(ctx *model.Context, pageNr int) (types.Obj
 
 	o, found = d.Find("Contents")
 	if !found {
-		return nil, nil, nil, errors.Errorf("pdfcpu: page %d: no page watermark found", pageNr)
+		return nil, nil, nil, fmt.Errorf("pdfcpu: page %d: no page watermark found", pageNr)
 	}
 
 	return o, pageDictIndRef, resDict, nil
@@ -2086,7 +2086,7 @@ func detectPageTreeWatermarks(ctx *model.Context, root *types.IndirectRef) error
 		// Dereference next page node dict.
 		ir, ok := o.(types.IndirectRef)
 		if !ok {
-			return errors.Errorf("pdfcpu: detectPageTreeWatermarks: corrupt page node dict")
+			return fmt.Errorf("pdfcpu: detectPageTreeWatermarks: corrupt page node dict")
 		}
 
 		pageNodeDict, err := ctx.DereferenceDict(ir)

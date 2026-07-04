@@ -16,7 +16,10 @@ limitations under the License.
 
 package model
 
-import "github.com/pkg/errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // ErrMaxRecursionDepthExceeded signals excessive parser or object graph nesting.
 var ErrMaxRecursionDepthExceeded = errors.New("pdfcpu: max recursion depth exceeded")
@@ -49,7 +52,7 @@ func CheckRecursionDepth(name string, depth, maxDepth int) error {
 		maxDepth = DefaultResourceLimits().MaxRecursionDepth
 	}
 	if depth > maxDepth {
-		return errors.Wrapf(ErrMaxRecursionDepthExceeded, "%s depth %d exceeds limit %d", name, depth, maxDepth)
+		return fmt.Errorf("%s depth %d exceeds limit %d: %w", name, depth, maxDepth, ErrMaxRecursionDepthExceeded)
 	}
 	return nil
 }
@@ -74,10 +77,10 @@ func (v *PageTreeVisit) Enter(objNr int) error {
 		return nil
 	}
 	if v.ancestors[objNr] {
-		return errors.Wrapf(ErrPageTreeCycle, "obj#%d", objNr)
+		return fmt.Errorf("obj#%d: %w", objNr, ErrPageTreeCycle)
 	}
 	if v.seen[objNr] {
-		return errors.Wrapf(ErrPageTreeDuplicate, "obj#%d", objNr)
+		return fmt.Errorf("obj#%d: %w", objNr, ErrPageTreeDuplicate)
 	}
 	v.ancestors[objNr] = true
 	v.seen[objNr] = true
@@ -110,7 +113,7 @@ func (v *FormFieldVisit) Enter(objNr int) error {
 		return nil
 	}
 	if v.ancestors[objNr] {
-		return errors.Wrapf(ErrFormFieldCycle, "obj#%d", objNr)
+		return fmt.Errorf("obj#%d: %w", objNr, ErrFormFieldCycle)
 	}
 	v.ancestors[objNr] = true
 	return nil
@@ -122,7 +125,7 @@ func (v *FormFieldVisit) Check(objNr int) error {
 		return nil
 	}
 	if v.ancestors[objNr] {
-		return errors.Wrapf(ErrFormFieldCycle, "obj#%d", objNr)
+		return fmt.Errorf("obj#%d: %w", objNr, ErrFormFieldCycle)
 	}
 	return nil
 }

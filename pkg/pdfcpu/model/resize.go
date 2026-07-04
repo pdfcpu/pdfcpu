@@ -17,12 +17,13 @@ limitations under the License.
 package model
 
 import (
+	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 type Resize struct {
@@ -45,17 +46,17 @@ func parsePageDimRes(v string, u types.DisplayUnit) (*types.Dim, string, error) 
 
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
-		return nil, v, errors.Errorf("pdfcpu: illegal dimension string: need 2 values one may be 0, %s\n", v)
+		return nil, v, fmt.Errorf("pdfcpu: illegal dimension string: need 2 values one may be 0, %s\n", v)
 	}
 
 	w, err := strconv.ParseFloat(ss[0], 64)
 	if err != nil || w < 0 {
-		return nil, v, errors.Errorf("pdfcpu: dimension width must be >= 0: %s\n", ss[0])
+		return nil, v, fmt.Errorf("pdfcpu: dimension width must be >= 0: %s\n", ss[0])
 	}
 
 	h, err := strconv.ParseFloat(ss[1], 64)
 	if err != nil || h < 0 {
-		return nil, v, errors.Errorf("pdfcpu: dimension height must >= 0: %s\n", ss[1])
+		return nil, v, fmt.Errorf("pdfcpu: dimension height must >= 0: %s\n", ss[1])
 	}
 
 	d := types.Dim{Width: types.ToUserSpace(w, u), Height: types.ToUserSpace(h, u)}
@@ -102,7 +103,7 @@ func parsePageFormatRes(s string, res *Resize) error {
 
 	d, ok := types.PaperSize[v]
 	if !ok {
-		return errors.Errorf("pdfcpu: page format %s is unsupported.\n", v)
+		return fmt.Errorf("pdfcpu: page format %s is unsupported.\n", v)
 	}
 
 	if (d.Portrait() && landscape) || (d.Landscape() && portrait) {
@@ -120,11 +121,11 @@ func parseScaleFactorSimple(s string) (float64, error) {
 
 	sc, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return 0, errors.Errorf("pdfcpu: scale factor must be a float value: %s\n", s)
+		return 0, fmt.Errorf("pdfcpu: scale factor must be a float value: %s\n", s)
 	}
 
 	if sc <= 0 || sc == 1 {
-		return 0, errors.Errorf("pdfcpu: invalid scale factor %.2f: 0.0 < i < 1.0 or i > 1.0\n", sc)
+		return 0, fmt.Errorf("pdfcpu: invalid scale factor %.2f: 0.0 < i < 1.0 or i > 1.0\n", sc)
 	}
 
 	return sc, nil

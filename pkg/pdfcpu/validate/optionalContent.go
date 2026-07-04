@@ -17,9 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func validateOptionalContentGroupIntent(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
@@ -39,7 +41,7 @@ func validateOptionalContentGroupIntent(xRefTable *model.XRefTable, d types.Dict
 
 	case types.Name:
 		if !validate(o.Value()) {
-			return errors.Errorf("validateOptionalContentGroupIntent: invalid intent: %s", o.Value())
+			return fmt.Errorf("validateOptionalContentGroupIntent: invalid intent: %s", o.Value())
 		}
 
 	case types.Array:
@@ -52,11 +54,11 @@ func validateOptionalContentGroupIntent(xRefTable *model.XRefTable, d types.Dict
 
 			n, ok := v.(types.Name)
 			if !ok {
-				return errors.Errorf("pdfcpu: validateOptionalContentGroupIntent: invalid type at index %d\n", i)
+				return fmt.Errorf("pdfcpu: validateOptionalContentGroupIntent: invalid type at index %d\n", i)
 			}
 
 			if !validate(n.Value()) {
-				return errors.Errorf("pdfcpu: validateOptionalContentGroupIntent: invalid intent: %s", n.Value())
+				return fmt.Errorf("pdfcpu: validateOptionalContentGroupIntent: invalid intent: %s", n.Value())
 			}
 		}
 

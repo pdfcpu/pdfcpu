@@ -17,10 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"github.com/pkg/errors"
 )
 
 func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
@@ -75,11 +76,11 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 
 		case "OCG":
 			logProp("unsupported", key, val)
-			return errors.Errorf("validatePropertiesDict: unsupported key \"%s\"\n", key)
+			return fmt.Errorf("validatePropertiesDict: unsupported key \"%s\"\n", key)
 
 		case "OCMD":
 			logProp("unsupported", key, val)
-			return errors.Errorf("validatePropertiesDict: unsupported key \"%s\"\n", key)
+			return fmt.Errorf("validatePropertiesDict: unsupported key \"%s\"\n", key)
 
 		//case "MCID": -> default
 		//case "Alt": -> default

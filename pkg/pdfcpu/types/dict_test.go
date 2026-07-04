@@ -16,9 +16,7 @@ limitations under the License.
 
 package types
 
-import (
-	"testing"
-)
+import "testing"
 
 // TestEncodeDict verifies encode dict.
 func TestEncodeDict(t *testing.T) {
@@ -28,6 +26,6 @@ func TestEncodeDict(t *testing.T) {
 	expected := `<</A#28#29 1>>`
 	s := dict.PDFString()
 	if s != expected {
-		t.Errorf("expected %s for %+v, got %s", expected, dict, s)
+		t.Errorf("expected %s for %v, got %s", expected, dict, s)
 	}
 }
