@@ -87,3 +87,68 @@ func TestPDFResourceForPage(t *testing.T) {
 		t.Fatalf("got bounding box %v, want %v", got.Bb, want)
 	}
 }
+
+func TestNormalAppearanceObjectReturnsDirectStream(t *testing.T) {
+	xRefTable := &model.XRefTable{}
+	appearance := types.StreamDict{
+		Dict: types.Dict{
+			"Subtype": types.Name("Form"),
+			"BBox":    types.NewNumberArray(0, 0, 10, 10),
+		},
+	}
+	ann := types.Dict{
+		"AP": types.Dict{"N": appearance},
+	}
+
+	got, found, err := normalAppearanceObject(xRefTable, ann)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !found {
+		t.Fatal("expected normal appearance")
+	}
+	sd, ok := got.(types.StreamDict)
+	if !ok {
+		t.Fatalf("got %T, want types.StreamDict", got)
+	}
+	if sd.Subtype() == nil || *sd.Subtype() != "Form" {
+		t.Fatalf("got %v, want %v", got, appearance)
+	}
+}
+
+func TestNormalAppearanceObjectSelectsAppearanceState(t *testing.T) {
+	xRefTable := &model.XRefTable{}
+	off := types.StreamDict{Dict: types.Dict{
+		"Subtype": types.Name("Form"),
+		"BBox":    types.NewNumberArray(0, 0, 10, 10),
+	}}
+	yes := types.StreamDict{Dict: types.Dict{
+		"Subtype": types.Name("Form"),
+		"BBox":    types.NewNumberArray(0, 0, 20, 20),
+	}}
+	ann := types.Dict{
+		"AS": types.Name("Yes"),
+		"AP": types.Dict{"N": types.Dict{
+			"Off": off,
+			"Yes": yes,
+		}},
+	}
+
+	got, found, err := normalAppearanceObject(xRefTable, ann)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !found {
+		t.Fatal("expected normal appearance")
+	}
+	sd, ok := got.(types.StreamDict)
+	if !ok {
+		t.Fatalf("got %T, want types.StreamDict", got)
+	}
+	if sd.Subtype() == nil || *sd.Subtype() != "Form" {
+		t.Fatalf("got %v, want %v", got, yes)
+	}
+	if sd.ArrayEntry("BBox")[2] != types.Float(20) {
+		t.Fatalf("got %v, want %v", got, yes)
+	}
+}

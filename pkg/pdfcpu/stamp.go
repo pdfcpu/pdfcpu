@@ -655,6 +655,189 @@ func setWatermarkType(mode int, s string, wm *model.Watermark) (err error) {
 	return err
 }
 
+func appearanceState(d, normalAppearanceDict types.Dict) string {
+	if as := d.NameEntry("AS"); as != nil {
+		if _, found := normalAppearanceDict.Find(*as); found {
+			return *as
+		}
+	}
+
+	for k := range normalAppearanceDict {
+		if k != "Off" {
+			return k
+		}
+	}
+
+	return "Off"
+}
+
+func normalAppearanceObject(xRefTable *model.XRefTable, d types.Dict) (types.Object, bool, error) {
+	o, found := d.Find("AP")
+	if !found {
+		return nil, false, nil
+	}
+
+	d1, err := xRefTable.DereferenceDict(o)
+	if err != nil {
+		return nil, false, err
+	}
+
+	o, found = d1.Find("N")
+	if !found {
+		return nil, false, nil
+	}
+
+	o1, err := xRefTable.Dereference(o)
+	if err != nil {
+		return nil, false, err
+	}
+
+	normalAppearanceDict, ok := o1.(types.Dict)
+	if !ok {
+		_, ok = o1.(types.StreamDict)
+		return o, ok, nil
+	}
+
+	o, found = normalAppearanceDict.Find(appearanceState(d, normalAppearanceDict))
+	return o, found, nil
+}
+
+func ensureResourceDict(d types.Dict) types.Dict {
+	if d != nil {
+		return d
+	}
+	return types.Dict{}
+}
+
+func ensureXObjectResourceDict(ctx *model.Context, resDict types.Dict) (types.Dict, error) {
+	o, found := resDict.Find("XObject")
+	if !found {
+		d := types.Dict{}
+		resDict["XObject"] = d
+		return d, nil
+	}
+
+	d, err := ctx.DereferenceDict(o)
+	if err != nil {
+		return nil, err
+	}
+	resDict["XObject"] = d
+	return d, nil
+}
+
+func xObjectRefForAppearance(o types.Object, ctxSrc, ctxDest *model.Context, migrated map[int]int) (types.IndirectRef, error) {
+	o, err := migrateObject(o, ctxSrc, ctxDest, migrated)
+	if err != nil {
+		return types.IndirectRef{}, err
+	}
+
+	if ir, ok := o.(types.IndirectRef); ok {
+		return ir, nil
+	}
+
+	ir, err := ctxDest.IndRefForNewObject(o)
+	if err != nil {
+		return types.IndirectRef{}, err
+	}
+	return *ir, nil
+}
+
+func annotationRect(xRefTable *model.XRefTable, d types.Dict) (*types.Rectangle, error) {
+	a, err := xRefTable.DereferenceArray(d["Rect"])
+	if err != nil || len(a) != 4 {
+		return nil, err
+	}
+	return xRefTable.RectForArray(a)
+}
+
+func appearanceBBox(xRefTable *model.XRefTable, ir types.IndirectRef) (*types.Rectangle, error) {
+	sd, err := xRefTable.DereferenceXObjectDict(ir)
+	if err != nil || sd == nil {
+		return nil, err
+	}
+
+	a, err := xRefTable.DereferenceArray(sd.Dict["BBox"])
+	if err != nil || len(a) != 4 {
+		return nil, err
+	}
+	return xRefTable.RectForArray(a)
+}
+
+func appendAppearanceDo(w io.Writer, id string, rect, bbox *types.Rectangle) {
+	sx := rect.Width() / bbox.Width()
+	sy := rect.Height() / bbox.Height()
+	tx := rect.LL.X - bbox.LL.X*sx
+	ty := rect.LL.Y - bbox.LL.Y*sy
+	fmt.Fprintf(w, " q %.5f 0 0 %.5f %.5f %.5f cm /%s Do Q ", sx, sy, tx, ty, id)
+}
+
+func appendAnnotationAppearance(
+	w io.Writer,
+	ann types.Dict,
+	resDict types.Dict,
+	ctxSrc, ctxDest *model.Context,
+	migrated map[int]int,
+) error {
+	o, found, err := normalAppearanceObject(ctxSrc.XRefTable, ann)
+	if err != nil || !found {
+		return err
+	}
+
+	rect, err := annotationRect(ctxSrc.XRefTable, ann)
+	if err != nil || rect == nil || !rect.Visible() {
+		return err
+	}
+
+	xo, err := ensureXObjectResourceDict(ctxDest, resDict)
+	if err != nil {
+		return err
+	}
+
+	id := xo.NewIDForPrefix("Fm", 0)
+	ir, err := xObjectRefForAppearance(o, ctxSrc, ctxDest, migrated)
+	if err != nil {
+		return err
+	}
+	xo[id] = ir
+
+	bbox, err := appearanceBBox(ctxDest.XRefTable, ir)
+	if err != nil || bbox == nil || !bbox.Visible() {
+		return err
+	}
+
+	appendAppearanceDo(w, id, rect, bbox)
+	return nil
+}
+
+func appendAnnotationAppearances(
+	w io.Writer,
+	pageDict types.Dict,
+	resDict types.Dict,
+	ctxSrc, ctxDest *model.Context,
+	migrated map[int]int,
+) error {
+	o, found := pageDict.Find("Annots")
+	if !found {
+		return nil
+	}
+
+	annots, err := ctxSrc.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+
+	for _, o := range annots {
+		ann, err := ctxSrc.DereferenceDict(o)
+		if err != nil {
+			return err
+		}
+		if err := appendAnnotationAppearance(w, ann, resDict, ctxSrc, ctxDest, migrated); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func createPDFRes(ctx, otherCtx *model.Context, pageNrSrc, pageNrDest int, migrated map[int]int, wm *model.Watermark) error {
 	pdfRes := model.PdfResources{}
 	xRefTable := ctx.XRefTable
@@ -680,18 +863,24 @@ func createPDFRes(ctx, otherCtx *model.Context, pageNrSrc, pageNrDest int, migra
 	}
 
 	// Migrate external resource dict into ctx.
+	inhPAttrs.Resources = ensureResourceDict(inhPAttrs.Resources)
 	if _, err = migrateObject(inhPAttrs.Resources, otherCtx, ctx, migrated); err != nil {
 		return err
 	}
 
-	// Create an object for resource dict in xRefTable.
-	if inhPAttrs.Resources != nil {
-		ir, err := xRefTable.IndRefForNewObject(inhPAttrs.Resources)
-		if err != nil {
-			return err
-		}
-		pdfRes.ResDict = ir
+	var b bytes.Buffer
+	b.Write(pdfRes.Content)
+	if err := appendAnnotationAppearances(&b, d, inhPAttrs.Resources, otherCtx, ctx, migrated); err != nil {
+		return err
 	}
+	pdfRes.Content = b.Bytes()
+
+	// Create an object for resource dict in xRefTable.
+	ir, err := xRefTable.IndRefForNewObject(inhPAttrs.Resources)
+	if err != nil {
+		return err
+	}
+	pdfRes.ResDict = ir
 
 	pdfRes.Bb = viewPort(inhPAttrs)
 	if pdfRes.Bb == nil {
