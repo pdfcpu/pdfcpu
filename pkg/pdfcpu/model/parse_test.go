@@ -84,6 +84,29 @@ func TestPageTreeLookupRejectsRecursionDepth(t *testing.T) {
 	}
 }
 
+// TestPageDictRejectsUnresolvedPage verifies PageDict returns an error instead of nil page data.
+func TestPageDictRejectsUnresolvedPage(t *testing.T) {
+	xRefTable := newXRefTable(NewDefaultConfiguration())
+	pages, err := xRefTable.IndRefForObject(1, types.Dict{
+		"Type":  types.Name("Pages"),
+		"Count": types.Integer(1),
+		"Kids":  types.Array{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	xRefTable.RootDict = types.Dict{"Pages": *pages}
+	xRefTable.PageCount = 1
+
+	d, indRef, attrs, err := xRefTable.PageDict(1, false)
+	if err == nil {
+		t.Fatal("expected unresolved page error")
+	}
+	if d != nil || indRef != nil || attrs != nil {
+		t.Fatalf("got %v, %v, %v; want nil page data", d, indRef, attrs)
+	}
+}
+
 // TestPageTreeMutationRejectsRecursionDepth verifies page tree mutation respects recursion limits.
 func TestPageTreeMutationRejectsRecursionDepth(t *testing.T) {
 	xRefTable := newXRefTable(NewDefaultConfiguration())

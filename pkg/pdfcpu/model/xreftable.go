@@ -2164,6 +2164,9 @@ func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (types.Dic
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	if pageDict == nil || pageDictindRef == nil {
+		return nil, nil, nil, errors.New("pdfcpu: page not found")
+	}
 
 	return pageDict, pageDictindRef, &inhPAttrs, nil
 }
@@ -2185,8 +2188,14 @@ func (xRefTable *XRefTable) PageDictIndRef(page int) (*types.IndirectRef, error)
 	// any content stream of this page and any possible forms or type 3 fonts referenced.
 	consolidateRes := false
 	_, ir, err := xRefTable.processPageTreeForPageDict(pageRootDictIndRef, &inhPAttrs, &pageCount, page, consolidateRes)
+	if err != nil {
+		return nil, err
+	}
+	if ir == nil {
+		return nil, errors.New("pdfcpu: page not found")
+	}
 
-	return ir, err
+	return ir, nil
 }
 
 // Calculate logical page number for page dict object number.
