@@ -166,29 +166,73 @@ func addPages(
 	return nil
 }
 
+func destinationPageMigrated(arr types.Array, migrated map[int]int) bool {
+	indRef, ok := arr[0].(types.IndirectRef)
+	return !ok || migrated[indRef.ObjectNumber.Value()] > 0
+}
+
+func migrateNamedDestArray(arr types.Array, migrated map[int]int) bool {
+	if len(arr) == 0 || !destinationPageMigrated(arr, migrated) {
+		return false
+	}
+	arr[0] = patchObject(arr[0], migrated)
+	return true
+}
+
+func migrateNamedDestValue(xRefTable *model.XRefTable, v *types.Object, migrated map[int]int) (bool, error) {
+	// destination array
+	arr, err := xRefTable.DereferenceArray(*v)
+	if err == nil {
+		if !migrateNamedDestArray(arr, migrated) {
+			return false, nil
+		}
+		*v = arr
+		return true, nil
+	}
+
+	// destination dict with a D array.
+	d, err := xRefTable.DereferenceDict(*v)
+	if err != nil {
+		return false, err
+	}
+
+	arr = d.ArrayEntry("D")
+	if !migrateNamedDestArray(arr, migrated) {
+		return false, nil
+	}
+	*v = d
+	return true, nil
+}
+
 func migrateNamedDests(ctxSrc *model.Context, n *model.Node, migrated map[int]int) error {
+	var remove []string
+
 	patchValues := func(xRefTable *model.XRefTable, k string, v *types.Object) error {
 		if *v == nil {
 			// Skip corrupt node.
 			return nil
 		}
-		arr, err := xRefTable.DereferenceArray(*v)
-		if err == nil {
-			arr[0] = patchObject(arr[0], migrated)
-			*v = arr
-			return nil
-		}
-		d, err := xRefTable.DereferenceDict(*v)
+		keep, err := migrateNamedDestValue(xRefTable, v, migrated)
 		if err != nil {
 			return err
 		}
-		arr = d.ArrayEntry("D")
-		arr[0] = patchObject(arr[0], migrated)
-		*v = d
+		if !keep {
+			remove = append(remove, k)
+		}
 		return nil
 	}
 
-	return n.Process(ctxSrc.XRefTable, patchValues)
+	if err := n.Process(ctxSrc.XRefTable, patchValues); err != nil {
+		return err
+	}
+
+	for _, k := range remove {
+		if _, _, err := n.Remove(ctxSrc.XRefTable, k); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // AddPages adds pages and corresponding resources from ctxSrc to ctxDest.

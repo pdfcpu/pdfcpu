@@ -17,11 +17,14 @@ limitations under the License.
 package test
 
 import (
+	"bytes"
+	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -65,6 +68,67 @@ func TestInsertRemovePages(t *testing.T) {
 	if n1 != n2 {
 		t.Fatalf("%s %s: pageCount want:%d got:%d\n", msg, inFile, n1, n2)
 	}
+}
+
+// TestRemovePagesDropsNamedDestsForRemovedPages verifies that stale named destinations do not break kept links.
+func TestRemovePagesDropsNamedDestsForRemovedPages(t *testing.T) {
+	msg := "TestRemovePagesDropsNamedDestsForRemovedPages"
+	inFile := filepath.Join(inDir, "Walden.pdf")
+
+	f, err := os.Open(inFile)
+	if err != nil {
+		t.Fatalf("%s open: %v\n", msg, err)
+	}
+	defer f.Close()
+
+	ctx, err := api.ReadValidateAndOptimize(f, model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatalf("%s read: %v\n", msg, err)
+	}
+
+	if err := ctx.LocateNameTree("Dests", true); err != nil {
+		t.Fatalf("%s locate dests: %v\n", msg, err)
+	}
+
+	_, keptPage, _, err := ctx.PageDict(1, false)
+	if err != nil {
+		t.Fatalf("%s page 1: %v\n", msg, err)
+	}
+	_, removedPage, _, err := ctx.PageDict(ctx.PageCount, false)
+	if err != nil {
+		t.Fatalf("%s page %d: %v\n", msg, ctx.PageCount, err)
+	}
+
+	if err := ctx.Names["Dests"].Add(ctx.XRefTable, "kept", destArray(*keptPage), nil, nil); err != nil {
+		t.Fatalf("%s add kept dest: %v\n", msg, err)
+	}
+	if err := ctx.Names["Dests"].Add(ctx.XRefTable, "removed", destArray(*removedPage), nil, nil); err != nil {
+		t.Fatalf("%s add removed dest: %v\n", msg, err)
+	}
+
+	ctxNew, err := pdfcpu.ExtractPages(ctx, []int{1}, false)
+	if err != nil {
+		t.Fatalf("%s extract: %v\n", msg, err)
+	}
+
+	if _, err := ctxNew.DereferenceDestArray("kept"); err != nil {
+		t.Fatalf("%s kept dest: %v\n", msg, err)
+	}
+	if _, ok := ctxNew.Names["Dests"].Value("removed"); ok {
+		t.Fatalf("%s removed page destination still present\n", msg)
+	}
+
+	var buf bytes.Buffer
+	if err := api.WriteContext(ctxNew, &buf); err != nil {
+		t.Fatalf("%s write: %v\n", msg, err)
+	}
+	if err := api.Validate(bytes.NewReader(buf.Bytes()), nil); err != nil {
+		t.Fatalf("%s validate: %v\n", msg, err)
+	}
+}
+
+func destArray(page types.IndirectRef) types.Array {
+	return types.Array{page, types.Name("Fit")}
 }
 
 // TestInsertCustomBlankPage verifies insert custom blank page.
