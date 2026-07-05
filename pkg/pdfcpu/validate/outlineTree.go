@@ -156,29 +156,27 @@ func leaf(firstChild, lastChild *types.IndirectRef, objNumber, validationMode in
 	return false, nil
 }
 
-func evalOutlineCount(xRefTable *model.XRefTable, c, visc int, count int, total, visible *int) error {
-	if visc == 0 {
-		if count == 0 {
-			if xRefTable.ValidationMode == model.ValidationStrict {
-				return errors.New("pdfcpu: validateOutlineTree: non-empty outline item dict needs \"Count\" <> 0")
-			}
-			count = c
+func evalOutlineCount(xRefTable *model.XRefTable, d types.Dict, c, visc int, count int, total, visible *int, fixed *bool) error {
+	expected := c + visc
+	if count == 0 {
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return errors.New("pdfcpu: validateOutlineTree: non-empty outline item dict needs \"Count\" <> 0")
 		}
-		if count != c && count != -c {
-			if xRefTable.ValidationMode == model.ValidationStrict {
-				return fmt.Errorf("pdfcpu: validateOutlineTree: non-empty outline item dict got \"Count\" %d, want %d or %d", count, c, -c)
-			}
-			count = c
-		}
-		if count == c {
-			*total += c
-		}
+		count = expected
+		d["Count"] = types.Integer(count)
+		*fixed = true
 	}
 
-	if visc > 0 {
-		if count != c+visc {
-			return fmt.Errorf("pdfcpu: validateOutlineTree: non-empty outline item dict got \"Count\" %d, want %d", count, c+visc)
+	if count != expected && count != -expected {
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return fmt.Errorf("pdfcpu: validateOutlineTree: non-empty outline item dict got \"Count\" %d, want %d or %d", count, expected, -expected)
 		}
+		count = expected
+		d["Count"] = types.Integer(count)
+		*fixed = true
+	}
+
+	if count > 0 {
 		*total += c
 		*visible += visc
 	}
@@ -230,6 +228,8 @@ func validateOutlineTreeDepth(xRefTable *model.XRefTable, first, last *types.Ind
 				if xRefTable.ValidationMode == model.ValidationStrict {
 					return 0, 0, errors.New("pdfcpu: validateOutlineTree: empty outline item dict \"Count\" must be 0")
 				}
+				delete(d, "Count")
+				*fixed = true
 			}
 			continue
 		}
@@ -243,7 +243,7 @@ func validateOutlineTreeDepth(xRefTable *model.XRefTable, first, last *types.Ind
 			return 0, 0, err
 		}
 
-		if err := evalOutlineCount(xRefTable, c, visc, count, &total, &visible); err != nil {
+		if err := evalOutlineCount(xRefTable, d, c, visc, count, &total, &visible, fixed); err != nil {
 			return 0, 0, err
 		}
 
