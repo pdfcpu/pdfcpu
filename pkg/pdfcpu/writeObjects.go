@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -151,6 +152,24 @@ func stopObjectStream(ctx *model.Context) error {
 	return nil
 }
 
+func addObjectStreamObject(osd types.ObjectStreamDict, objNumber int, obj types.Object) (types.ObjectStreamDict, error) {
+	offset := len(osd.Content)
+	if osd.ObjCount > 0 {
+		osd.Prolog = append(osd.Prolog, ' ')
+	}
+	osd.Prolog = strconv.AppendInt(osd.Prolog, int64(objNumber), 10)
+	osd.Prolog = append(osd.Prolog, ' ')
+	osd.Prolog = strconv.AppendInt(osd.Prolog, int64(offset), 10)
+
+	var err error
+	osd.Content, err = appendPDFObject(osd.Content, obj)
+	if err != nil {
+		return osd, err
+	}
+	osd.ObjCount++
+	return osd, nil
+}
+
 func writeToObjectStream(ctx *model.Context, objNumber, genNumber int) (ok bool, err error) {
 	if log.WriteEnabled() {
 		log.Write.Printf("addToObjectStream begin, obj#:%d gen#:%d\n", objNumber, genNumber)
@@ -185,9 +204,8 @@ func writeToObjectStream(ctx *model.Context, objNumber, genNumber int) (ok bool,
 		entry.ObjectStreamInd = &i
 		w.SetWriteOffset(objNumber) // for a compressed obj this is supposed to be a fake offset. value does not matter.
 
-		// Append to prolog & content
-		s := entry.Object.PDFString()
-		if err = objStreamDict.AddObject(objNumber, s); err != nil {
+		objStreamDict, err = addObjectStreamObject(objStreamDict, objNumber, entry.Object)
+		if err != nil {
 			return false, err
 		}
 
