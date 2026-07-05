@@ -21,10 +21,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 // TestMergeCreateNew verifies merge create new.
@@ -152,6 +154,95 @@ func TestMergeCreateDuplicateBookmarkDestinations(t *testing.T) {
 		if bm.PageFrom != i+1 {
 			t.Fatalf("%s: bookmark %d page = %d, want %d", msg, i, bm.PageFrom, i+1)
 		}
+	}
+}
+
+func writeOrphanWidgetFieldPDF(t *testing.T, inFile, outFile string) {
+	t.Helper()
+
+	ctx, err := api.ReadContextFile(inFile)
+	if err != nil {
+		t.Fatalf("ReadContextFile: %v", err)
+	}
+	ctx.RootDict.Delete("AcroForm")
+	ctx.XRefTable.Form = nil
+	if err := api.WriteContextFile(ctx, outFile); err != nil {
+		t.Fatalf("WriteContextFile: %v", err)
+	}
+}
+
+func widgetFieldNames(t *testing.T, ctx *model.Context) []string {
+	t.Helper()
+
+	var names []string
+	for _, entry := range ctx.Table {
+		if entry.Free {
+			continue
+		}
+		d, ok := entry.Object.(types.Dict)
+		if !ok {
+			continue
+		}
+		if typ := d.NameEntry("Subtype"); typ == nil || *typ != "Widget" {
+			continue
+		}
+		name, err := d.StringOrHexLiteralEntry("T")
+		if err != nil {
+			t.Fatalf("StringOrHexLiteralEntry: %v", err)
+		}
+		if name != nil {
+			names = append(names, *name)
+		}
+	}
+	return names
+}
+
+func assertUniqueWidgetFieldNames(t *testing.T, names []string) {
+	t.Helper()
+
+	seen := map[string]bool{}
+	for _, name := range names {
+		if seen[name] {
+			t.Fatalf("duplicate widget field name %q in %v", name, names)
+		}
+		seen[name] = true
+	}
+}
+
+func containsNamespacedWidgetField(names []string) bool {
+	for _, name := range names {
+		if strings.Contains(name, ".") {
+			return true
+		}
+	}
+	return false
+}
+
+// TestMergeCreateRenamesOrphanWidgetFields verifies orphan widget fields do not get linked by name after merging.
+func TestMergeCreateRenamesOrphanWidgetFields(t *testing.T) {
+	msg := "TestMergeCreateRenamesOrphanWidgetFields"
+	inFile := filepath.Join(samplesDir, "form", "primitives", "textfield.pdf")
+	orphanFile := filepath.Join(outDir, "orphanWidgetFields.pdf")
+	writeOrphanWidgetFieldPDF(t, inFile, orphanFile)
+
+	outFile := filepath.Join(outDir, "outOrphanWidgetFields.pdf")
+	if err := api.MergeCreateFile([]string{orphanFile, orphanFile}, outFile, false, nil); err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	ctx, err := api.ReadContextFile(outFile)
+	if err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+
+	names := widgetFieldNames(t, ctx)
+	if len(names) < 2 {
+		t.Fatalf("%s: got %d widget field names, want at least 2", msg, len(names))
+	}
+	assertUniqueWidgetFieldNames(t, names)
+
+	if !containsNamespacedWidgetField(names) {
+		t.Fatalf("%s: no widget field name is namespaced: %v", msg, names)
 	}
 }
 

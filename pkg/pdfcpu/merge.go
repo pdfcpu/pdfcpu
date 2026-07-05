@@ -528,6 +528,78 @@ func mergeInFields(ctxDest *model.Context, arrFieldsSrc, arrFieldsDest types.Arr
 	return nil
 }
 
+func fieldWidgetObjNrs(ctx *model.Context, fields types.Array, m types.IntSet) error {
+	for _, obj := range fields {
+		ir, ok := obj.(types.IndirectRef)
+		if !ok {
+			continue
+		}
+		m[ir.ObjectNumber.Value()] = true
+		d, err := ctx.DereferenceDict(ir)
+		if err != nil {
+			return err
+		}
+		kids, err := ctx.DereferenceArray(d["Kids"])
+		if err != nil {
+			return err
+		}
+		if len(kids) > 0 {
+			if err := fieldWidgetObjNrs(ctx, kids, m); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func sourceFieldWidgetObjNrs(ctx *model.Context) (types.IntSet, error) {
+	m := types.IntSet{}
+	if ctx.Form == nil {
+		return m, nil
+	}
+	obj, found := ctx.Form.Find("Fields")
+	if !found {
+		return m, nil
+	}
+	fields, err := ctx.DereferenceArray(obj)
+	if err != nil {
+		return nil, err
+	}
+	return m, fieldWidgetObjNrs(ctx, fields, m)
+}
+
+func renameOrphanWidgetField(d types.Dict, namespace string) error {
+	if typ := d.NameEntry("Subtype"); typ == nil || *typ != "Widget" {
+		return nil
+	}
+	name, err := d.StringOrHexLiteralEntry("T")
+	if err != nil || name == nil || *name == "" {
+		return err
+	}
+	d["T"] = types.StringLiteral(namespace + "." + *name)
+	return nil
+}
+
+func renameSourceOrphanWidgetFields(ctx *model.Context, namespace string) error {
+	fieldWidgets, err := sourceFieldWidgetObjNrs(ctx)
+	if err != nil {
+		return err
+	}
+	for objNr, entry := range ctx.Table {
+		if entry.Free || fieldWidgets[objNr] {
+			continue
+		}
+		d, ok := entry.Object.(types.Dict)
+		if !ok {
+			continue
+		}
+		if err := renameOrphanWidgetField(d, namespace); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func mergeDests(ctxSource, ctxDest *model.Context) error {
 	rootDictSource, rootDictDest, err := rootDicts(ctxSource, ctxDest)
 	if err != nil {
@@ -1123,10 +1195,14 @@ func mergeDuplicateObjNumberIntSets(ctxSrc, ctxDest *model.Context) {
 // zip         ... zip 2 files together (eg. 1A,1B,2A,2B,3A,3B...)
 // dividerPage ... insert blank page between merged files (not applicable for zipping)
 func MergeXRefTables(fName string, ctxSrc, ctxDest *model.Context, zip, dividerPage bool) (err error) {
+	origDestPageCount := ctxDest.PageCount
+
 	patchSourceObjectNumbers(ctxSrc, ctxDest)
+	if err = renameSourceOrphanWidgetFields(ctxSrc, fmt.Sprintf("%d", origDestPageCount)); err != nil {
+		return err
+	}
 	appendSourceObjectsToDest(ctxSrc, ctxDest)
 
-	origDestPageCount := ctxDest.PageCount
 	if dividerPage {
 		origDestPageCount++
 	}
