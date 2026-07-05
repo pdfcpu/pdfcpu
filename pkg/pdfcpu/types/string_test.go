@@ -110,6 +110,58 @@ func TestUnescapeStringWithOctal(t *testing.T) {
 	}
 }
 
+// TestStringLiteralToStringPDFDocEncoding verifies PDFDocEncoding fallback for non-UTF16 string literals.
+func TestStringLiteralToStringPDFDocEncoding(t *testing.T) {
+	tests := []struct {
+		name string
+		in   StringLiteral
+		want string
+	}{
+		{
+			name: "ASCII",
+			in:   StringLiteral("625,50"),
+			want: "625,50",
+		},
+		{
+			name: "Euro",
+			in:   StringLiteral("625,50 \xa0"),
+			want: "625,50 \u20ac",
+		},
+		{
+			name: "UTF8",
+			in:   StringLiteral("caf\u00e9"),
+			want: "caf\u00e9",
+		},
+		{
+			name: "UTF16BE",
+			in:   StringLiteral(EncodeUTF16String("625,50 \u20ac")),
+			want: "625,50 \u20ac",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := StringLiteralToString(tt.in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tt.want {
+				t.Fatalf("got %q; want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestHexLiteralToStringPDFDocEncoding verifies PDFDocEncoding fallback for non-UTF16 hex literals.
+func TestHexLiteralToStringPDFDocEncoding(t *testing.T) {
+	got, err := HexLiteralToString(HexLiteral("3632352c353020a0"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "625,50 \u20ac" {
+		t.Fatalf("got %q; want %q", got, "625,50 \u20ac")
+	}
+}
+
 // TestDecodeName verifies decode name.
 func TestDecodeName(t *testing.T) {
 	tests := []struct {

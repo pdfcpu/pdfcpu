@@ -136,13 +136,13 @@ func StringLiteralToString(sl StringLiteral) (string, error) {
 	if IsUTF16BE(bb) {
 		return decodeUTF16String(bb)
 	}
-	// if no acceptable UTF16 encoding found, ensure utf8 encoding.
+	// If no acceptable UTF16 encoding is found, accept real-world UTF8 before
+	// falling back to PDFDocEncoding.
 	bb = bytes.TrimPrefix(bb, []byte{239, 187, 191})
-	s := string(bb)
-	if !utf8.ValidString(s) {
-		s = CP1252ToUTF8(s)
+	if utf8.Valid(bb) && !hasPDFDocEncodingControlByte(bb) {
+		return string(bb), nil
 	}
-	return s, nil
+	return decodePDFDocEncoding(bb), nil
 }
 
 // HexLiteralToString returns a possibly UTF16 encoded string for a hex string.
@@ -161,8 +161,11 @@ func HexLiteralToString(hl HexLiteral) (string, error) {
 	}
 
 	bb = bytes.TrimPrefix(bb, []byte{239, 187, 191})
+	if utf8.Valid(bb) && !hasPDFDocEncodingControlByte(bb) {
+		return string(bb), nil
+	}
 
-	return string(bb), nil
+	return decodePDFDocEncoding(bb), nil
 }
 
 // StringOrHexLiteral returns the string value for a string or hex literal.
