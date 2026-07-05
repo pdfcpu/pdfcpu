@@ -26,7 +26,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// This gets rid of the gopkg.in/yaml.v2 dependency for wasm builds.
+// This gets rid of the YAML dependency for wasm builds.
 
 func handleCreationDate(v string, c *Configuration) error {
 	c.CreationDate = v

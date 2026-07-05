@@ -27,7 +27,7 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"gopkg.in/yaml.v2"
+	"go.yaml.in/yaml/v3"
 )
 
 type configuration struct {
@@ -68,9 +68,9 @@ type configuration struct {
 type int64Value int64
 
 // UnmarshalYAML unmarshals a positive int64 value.
-func (i *int64Value) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (i *int64Value) UnmarshalYAML(value *yaml.Node) error {
 	var n int64
-	if err := unmarshal(&n); err == nil {
+	if err := value.Decode(&n); err == nil {
 		if n <= 0 {
 			return fmt.Errorf("numeric value must be > 0: %d", n)
 		}
@@ -79,7 +79,7 @@ func (i *int64Value) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	var s string
-	if err := unmarshal(&s); err != nil {
+	if err := value.Decode(&s); err != nil {
 		return err
 	}
 
