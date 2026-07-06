@@ -347,7 +347,7 @@ func handleDumpCommand(conf *model.Configuration, args []string) error {
 	vals := dumpMode(args[0])
 	objNr, err := strconv.Atoi(args[1])
 	if err != nil {
-		return errors.New("No dump for you! - One year!")
+		return fmt.Errorf("invalid dump object number %q: %w", args[1], err)
 	}
 	vals[1] = objNr
 

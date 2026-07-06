@@ -32,13 +32,13 @@ func handleParameter[T any](m map[string]func(string, *T) error, paramPrefix, pa
 			continue
 		}
 		if param != "" {
-			return fmt.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
+			return fmt.Errorf("ambiguous parameter prefix \"%s\"", paramPrefix)
 		}
 		param = k
 	}
 
 	if param == "" {
-		return fmt.Errorf("pdfcpu: unknown parameter prefix \"%s\"", paramPrefix)
+		return fmt.Errorf("unknown parameter prefix \"%s\"", paramPrefix)
 	}
 
 	return m[param](paramValueStr, v)

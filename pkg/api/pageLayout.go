@@ -17,7 +17,6 @@
 package api
 
 import (
-	"errors"
 	"io"
 	"os"
 
@@ -31,7 +30,7 @@ func PageLayout(rs io.ReadSeeker, conf *model.Configuration) (pl *model.PageLayo
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: PageLayout: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -65,7 +64,7 @@ func ListPageLayout(rs io.ReadSeeker, conf *model.Configuration) (ss []string, e
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ListPageLayout: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -103,7 +102,11 @@ func SetPageLayout(rs io.ReadSeeker, w io.Writer, val model.PageLayout, conf *mo
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: SetPageLayout: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -173,7 +176,11 @@ func ResetPageLayout(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ResetPageLayout: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {

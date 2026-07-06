@@ -17,7 +17,6 @@
 package api
 
 import (
-	"errors"
 	"io"
 	"os"
 
@@ -31,7 +30,7 @@ func PageMode(rs io.ReadSeeker, conf *model.Configuration) (pm *model.PageMode, 
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: PageMode: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -65,7 +64,7 @@ func ListPageMode(rs io.ReadSeeker, conf *model.Configuration) (ss []string, err
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ListPageMode: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -103,7 +102,11 @@ func SetPageMode(rs io.ReadSeeker, w io.Writer, val model.PageMode, conf *model.
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: SetPageMode: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -173,7 +176,11 @@ func ResetPageMode(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (er
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ResetPageMode: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {

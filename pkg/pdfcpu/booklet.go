@@ -30,7 +30,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-var errInvalidBookletAdvanced = errors.New("pdfcpu booklet advanced cannot have binding along the top (portrait short-edge, landscape long-edge). use plain booklet instead.")
+var errInvalidBookletAdvanced = errors.New("booklet advanced cannot have binding along the top (portrait short-edge, landscape long-edge). use plain booklet instead")
 
 var NUpValuesForBooklets = []int{2, 4, 6, 8}
 
@@ -65,7 +65,7 @@ func PDFBookletConfig(val int, desc string, conf *model.Configuration) (*model.N
 		for i, v := range NUpValuesForBooklets {
 			ss[i] = strconv.Itoa(v)
 		}
-		return nil, fmt.Errorf("pdfcpu: n must be one of %s", strings.Join(ss, ", "))
+		return nil, fmt.Errorf("n must be one of %s", strings.Join(ss, ", "))
 	}
 	if err := ParseNUpValue(val, nup); err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func PDFBookletConfig(val int, desc string, conf *model.Configuration) (*model.N
 	// 6up special cases
 	if nup.IsBooklet() && val == 6 && nup.IsTopFoldBinding() {
 		// You can't top fold a 6up with 3 rows.
-		return nup, fmt.Errorf("pdfcpu booklet: n=6 must have binding on side (portrait long-edge or landscape short-edge)")
+		return nup, fmt.Errorf("booklet: n=6 must have binding on side (portrait long-edge or landscape short-edge)")
 	}
 	// bookletadvanced
 	if nup.BookletType == model.BookletAdvanced && val == 4 && nup.IsTopFoldBinding() {
@@ -459,7 +459,6 @@ func bookletPages(
 	nup *model.NUp,
 	pagesDict types.Dict,
 	pagesIndRef *types.IndirectRef) (int, error) {
-
 	var buf bytes.Buffer
 	formsResDict := types.NewDict()
 	rr := nup.RectsForGrid()
@@ -577,7 +576,7 @@ func BookletFromImages(ctx *model.Context, fileNames []string, nup *model.NUp, p
 func BookletFromPDF(ctx *model.Context, selectedPages types.IntSet, nup *model.NUp) error {
 	n := int(nup.Grid.Width * nup.Grid.Height)
 	if !(n == 2 || n == 4 || n == 6 || n == 8) {
-		return fmt.Errorf("pdfcpu: booklet must have n={2,4,6,8} pages per sheet, got %d", n)
+		return fmt.Errorf("booklet must have n={2,4,6,8} pages per sheet, got %d", n)
 	}
 
 	var mb *types.Rectangle

@@ -41,7 +41,7 @@ func (p Panic) Unwrap() error {
 func Fail(format string, args ...interface{}) {
 	panic(Panic{
 		// Use %w if you want to allow wrapping other errors passed in args
-		Err:   fmt.Errorf("pdfcpu: "+format, args...),
+		Err:   fmt.Errorf(format, args...),
 		Stack: debug.Stack(),
 	})
 }

@@ -332,7 +332,7 @@ func (t table) parseNamingTable(fd *ttf) error {
 		}
 	}
 
-	return errors.New("pdfcpu: unable to identify postscript name")
+	return errors.New("unable to identify postscript name")
 }
 
 func (t table) parseHorizontalHeaderTable(fd *ttf) error {
@@ -515,7 +515,7 @@ func (t table) parseCharToGlyphMappingTable(fd *ttf) error {
 		return t.parseCMapFormat4(fd)
 	}
 
-	return fmt.Errorf("pdfcpu: unsupported cmap table")
+	return fmt.Errorf("unsupported cmap table")
 }
 
 func calcTableChecksum(tag string, b []byte) uint32 {
@@ -544,17 +544,17 @@ func headerAndTables(fn string, r io.ReaderAt, baseOff int64) ([]byte, map[strin
 		return nil, nil, err
 	}
 	if n != 12 {
-		return nil, nil, fmt.Errorf("pdfcpu: corrupt ttf file: %s", fn)
+		return nil, nil, fmt.Errorf("corrupt ttf file: %s", fn)
 	}
 
 	st := string(header[:4])
 
 	if st == sfntVersionCFF {
-		return nil, nil, fmt.Errorf("pdfcpu: %s is based on OpenType CFF and unsupported at the moment :(", fn)
+		return nil, nil, fmt.Errorf("%s is based on OpenType CFF and unsupported at the moment :(", fn)
 	}
 
 	if st != sfntVersionTrueType && st != sfntVersionTrueTypeApple {
-		return nil, nil, fmt.Errorf("pdfcpu: unrecognized font format: %s", fn)
+		return nil, nil, fmt.Errorf("unrecognized font format: %s", fn)
 	}
 
 	c := int(binary.BigEndian.Uint16(header[4:]))
@@ -565,7 +565,7 @@ func headerAndTables(fn string, r io.ReaderAt, baseOff int64) ([]byte, map[strin
 		return nil, nil, err
 	}
 	if n != c*16 {
-		return nil, nil, fmt.Errorf("pdfcpu: corrupt ttf file: %s", fn)
+		return nil, nil, fmt.Errorf("corrupt ttf file: %s", fn)
 	}
 
 	byteCount := uint32(12)
@@ -586,7 +586,7 @@ func headerAndTables(fn string, r io.ReaderAt, baseOff int64) ([]byte, map[strin
 			return nil, nil, err
 		}
 		if n != int(ll) {
-			return nil, nil, fmt.Errorf("pdfcpu: corrupt table: %s", tag)
+			return nil, nil, fmt.Errorf("corrupt table: %s", tag)
 		}
 		sum := calcTableChecksum(tag, t)
 		if sum != chk {
@@ -608,10 +608,10 @@ func parse(tags map[string]*table, tag string, fd *ttf) error {
 		if tag == "OS/2" {
 			return nil
 		}
-		return fmt.Errorf("pdfcpu: tag: %s unavailable", tag)
+		return fmt.Errorf("tag: %s unavailable", tag)
 	}
 	if t.data == nil {
-		return fmt.Errorf("pdfcpu: tag: %s no data", tag)
+		return fmt.Errorf("tag: %s no data", tag)
 	}
 
 	var err error
@@ -695,7 +695,7 @@ func installTrueTypeRep(fontDir, fontName string, header []byte, tables map[stri
 	}
 
 	if !reflect.DeepEqual(fd, fdNew) {
-		return fmt.Errorf("pdfcpu: %s can't be installed", fontName)
+		return fmt.Errorf("%s can't be installed", fontName)
 	}
 
 	return nil
@@ -716,11 +716,11 @@ func InstallTrueTypeCollection(fontDir, fn string) error {
 		return err
 	}
 	if n != 12 {
-		return fmt.Errorf("pdfcpu: corrupt ttc file: %s", fn)
+		return fmt.Errorf("corrupt ttc file: %s", fn)
 	}
 
 	if string(b[:4]) != ttcTag {
-		return fmt.Errorf("pdfcpu: corrupt ttc file: %s", fn)
+		return fmt.Errorf("corrupt ttc file: %s", fn)
 	}
 
 	fi, err := f.Stat()
@@ -730,7 +730,7 @@ func InstallTrueTypeCollection(fontDir, fn string) error {
 	count := binary.BigEndian.Uint32(b[8:])
 	offsetTableEnd := int64(12) + int64(count)*4
 	if count == 0 || offsetTableEnd > fi.Size() {
-		return fmt.Errorf("pdfcpu: corrupt ttc file: %s", fn)
+		return fmt.Errorf("corrupt ttc file: %s", fn)
 	}
 
 	// Process contained fonts.
@@ -741,7 +741,7 @@ func InstallTrueTypeCollection(fontDir, fn string) error {
 		}
 		off := int64(binary.BigEndian.Uint32(offsetBytes[:]))
 		if off < offsetTableEnd || off > fi.Size()-12 {
-			return fmt.Errorf("pdfcpu: corrupt ttc file: %s", fn)
+			return fmt.Errorf("corrupt ttc file: %s", fn)
 		}
 		header, tables, err := headerAndTables(fn, f, off)
 		if err != nil {
@@ -881,7 +881,7 @@ func resolveCompoundGlyph(fontName string, bb []byte, usedGIDs map[uint16]bool,
 
 		offFrom, offThru := glyphOffsets(int(gid), locaFull, glyfsFull, numGlyphs, indexToLocFormat)
 		if offThru < offFrom {
-			return fmt.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
+			return fmt.Errorf("illegal glyfOffset for font: %s", fontName)
 		}
 		if offFrom == offThru {
 			// not available
@@ -911,7 +911,7 @@ func resolveCompoundGlyphs(fontName string, usedGIDs map[uint16]bool, locaFull, 
 	for _, gid := range gids {
 		offFrom, offThru := glyphOffsets(int(gid), locaFull, glyfsFull, numGlyphs, indexToLocFormat)
 		if offThru < offFrom {
-			return fmt.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
+			return fmt.Errorf("illegal glyfOffset for font: %s", fontName)
 		}
 		if offFrom == offThru {
 			continue
@@ -931,22 +931,22 @@ func resolveCompoundGlyphs(fontName string, usedGIDs map[uint16]bool, locaFull, 
 func glyfAndLoca(fontName string, tables map[string]*table, usedGIDs map[uint16]bool) error {
 	head, ok := tables["head"]
 	if !ok {
-		return fmt.Errorf("pdfcpu: missing \"head\" table for font: %s", fontName)
+		return fmt.Errorf("missing \"head\" table for font: %s", fontName)
 	}
 
 	maxp, ok := tables["maxp"]
 	if !ok {
-		return fmt.Errorf("pdfcpu: missing \"maxp\" table for font: %s", fontName)
+		return fmt.Errorf("missing \"maxp\" table for font: %s", fontName)
 	}
 
 	glyfsFull, ok := tables["glyf"]
 	if !ok {
-		return fmt.Errorf("pdfcpu: missing \"glyf\" table for font: %s", fontName)
+		return fmt.Errorf("missing \"glyf\" table for font: %s", fontName)
 	}
 
 	locaFull, ok := tables["loca"]
 	if !ok {
-		return fmt.Errorf("pdfcpu: missing \"loca\" table for font: %s", fontName)
+		return fmt.Errorf("missing \"loca\" table for font: %s", fontName)
 	}
 
 	indexToLocFormat := int(head.uint16(50))
@@ -973,7 +973,7 @@ func glyfAndLoca(fontName string, tables map[string]*table, usedGIDs map[uint16]
 	for _, gid := range gids {
 		offFrom, offThru := glyphOffsets(gid, locaFull, glyfsFull, numGlyphs, indexToLocFormat)
 		if offThru < offFrom {
-			return fmt.Errorf("pdfcpu: illegal glyfOffset for font: %s", fontName)
+			return fmt.Errorf("illegal glyfOffset for font: %s", fontName)
 		}
 		if offThru != offFrom {
 			// We have a glyph outline.
@@ -1040,7 +1040,7 @@ func createTTF(header []byte, tables map[string]*table) ([]byte, error) {
 			return nil, err
 		}
 		if n != len(t.data) || n != int(t.padded) {
-			return nil, fmt.Errorf("pdfcpu: unable to write %s data\n", tag)
+			return nil, fmt.Errorf("unable to write %s data", tag)
 		}
 	}
 

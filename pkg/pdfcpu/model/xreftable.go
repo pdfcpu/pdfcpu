@@ -36,7 +36,10 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-var ErrNoContent = errors.New("pdfcpu: page without content")
+var ErrNoContent = errors.New("page without content")
+
+// ErrPageNotFound reports a requested page number or page dictionary was not found.
+var ErrPageNotFound = errors.New("page not found")
 
 var zero int64 = 0
 
@@ -313,7 +316,7 @@ func (xRefTable *XRefTable) Find(objNr int) (*XRefTableEntry, bool) {
 func (xRefTable *XRefTable) FindObject(objNr int) (types.Object, error) {
 	entry, ok := xRefTable.Find(objNr)
 	if !ok {
-		return nil, fmt.Errorf("FindObject: obj#%d not registered in xRefTable", objNr)
+		return nil, fmt.Errorf("findObject: obj#%d not registered in xRefTable", objNr)
 	}
 	return entry.Object, nil
 }
@@ -325,7 +328,7 @@ func (xRefTable *XRefTable) Free(objNr int) (*XRefTableEntry, error) {
 		return nil, nil
 	}
 	if !entry.Free {
-		return nil, fmt.Errorf("Free: object #%d found, but not free.", objNr)
+		return nil, fmt.Errorf("free: object #%d found, but not free", objNr)
 	}
 	return entry, nil
 }
@@ -415,7 +418,7 @@ func (xRefTable *XRefTable) InsertAndUseRecycled(xRefTableEntry XRefTableEntry) 
 	objNr = int(*freeListHeadEntry.Offset)
 	entry, found := xRefTable.FindTableEntryLight(objNr)
 	if !found {
-		return 0, fmt.Errorf("InsertAndRecycle: no entry for obj #%d\n", objNr)
+		return 0, fmt.Errorf("insertAndRecycle: no entry for obj #%d", objNr)
 	}
 
 	// The new free list head entry becomes the old head entry's successor.
@@ -513,7 +516,7 @@ func (xRefTable *XRefTable) locateObjForIndRef(ir types.IndirectRef) (types.Obje
 
 	entry, found := xRefTable.FindTableEntryLight(objNr)
 	if !found {
-		return nil, fmt.Errorf("pdfcpu: locateObjForIndRef: no xref entry found for obj #%d\n", objNr)
+		return nil, fmt.Errorf("locateObjForIndRef: no xref entry found for obj #%d", objNr)
 	}
 
 	// Check for multiple indRefs.
@@ -542,7 +545,7 @@ func (xRefTable *XRefTable) FreeObject(objNr int) error {
 
 	entry, found := xRefTable.FindTableEntryLight(objNr)
 	if !found {
-		return fmt.Errorf("FreeObject: no entry for obj #%d\n", objNr)
+		return fmt.Errorf("freeObject: no entry for obj #%d", objNr)
 	}
 
 	if entry.Free {
@@ -739,11 +742,11 @@ func (xRefTable *XRefTable) handleDanglingFree(m types.IntSet, head *XRefTableEn
 
 		entry, found := xRefTable.FindTableEntryLight(i)
 		if !found {
-			return fmt.Errorf("pdfcpu: ensureValidFreeList: no xref entry found for obj #%d\n", i)
+			return fmt.Errorf("handleDanglingFree: no xref entry found for obj #%d", i)
 		}
 
 		if !entry.Free {
-			return fmt.Errorf("pdfcpu: ensureValidFreeList: xref entry is not free for obj #%d\n", i)
+			return fmt.Errorf("handleDanglingFree: xref entry is not free for obj #%d", i)
 		}
 
 		if *entry.Generation == types.FreeHeadGeneration {
@@ -786,7 +789,7 @@ func (xRefTable *XRefTable) validateFreeList(f int, m types.IntSet, e *XRefTable
 			return nil, 0, err
 		}
 		if e == nil {
-			return nil, 0, fmt.Errorf("pdfcpu: ensureValidFreeList: no xref entry found for obj #%d\n", f)
+			return nil, 0, fmt.Errorf("ensureValidFreeList: no xref entry found for obj #%d", f)
 		}
 
 		f = int(*e.Offset)
@@ -925,10 +928,10 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 func (xRefTable *XRefTable) IsObjValid(objNr, genNr int) (bool, error) {
 	entry, found := xRefTable.FindTableEntry(objNr, genNr)
 	if !found {
-		return false, fmt.Errorf("pdfcpu: IsObjValid: no entry for obj#%d\n", objNr)
+		return false, fmt.Errorf("isObjValid: no entry for obj#%d", objNr)
 	}
 	if entry.Free {
-		return false, fmt.Errorf("pdfcpu: IsObjValid: unexpected free entry for obj#%d\n", objNr)
+		return false, fmt.Errorf("isObjValid: unexpected free entry for obj#%d", objNr)
 	}
 	return entry.Valid, nil
 }
@@ -942,10 +945,10 @@ func (xRefTable *XRefTable) IsValid(ir types.IndirectRef) (bool, error) {
 func (xRefTable *XRefTable) IsObjBeingValidated(objNr, genNr int) (bool, error) {
 	entry, found := xRefTable.FindTableEntry(objNr, genNr)
 	if !found {
-		return false, fmt.Errorf("pdfcpu: IsObjBeingValidated: no entry for obj#%d\n", objNr)
+		return false, fmt.Errorf("isObjBeingValidated: no entry for obj#%d", objNr)
 	}
 	if entry.Free {
-		return false, fmt.Errorf("pdfcpu: IsObjBeingValidated: unexpected free entry for obj#%d\n", objNr)
+		return false, fmt.Errorf("isObjBeingValidated: unexpected free entry for obj#%d", objNr)
 	}
 	return entry.BeingValidated, nil
 }
@@ -959,10 +962,10 @@ func (xRefTable *XRefTable) IsBeingValidated(ir types.IndirectRef) (bool, error)
 func (xRefTable *XRefTable) SetValid(ir types.IndirectRef) error {
 	entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
 	if !found {
-		return fmt.Errorf("pdfcpu: SetValid: no entry for obj#%d\n", ir.ObjectNumber.Value())
+		return fmt.Errorf("setValid: no entry for obj#%d", ir.ObjectNumber.Value())
 	}
 	if entry.Free {
-		return fmt.Errorf("pdfcpu: SetValid: unexpected free entry for obj#%d\n", ir.ObjectNumber.Value())
+		return fmt.Errorf("setValid: unexpected free entry for obj#%d", ir.ObjectNumber.Value())
 	}
 	entry.Valid = true
 	entry.BeingValidated = false
@@ -974,10 +977,10 @@ func (xRefTable *XRefTable) SetValid(ir types.IndirectRef) error {
 func (xRefTable *XRefTable) SetBeingValidated(ir types.IndirectRef) error {
 	entry, found := xRefTable.FindTableEntry(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
 	if !found {
-		return fmt.Errorf("pdfcpu: SetBeingValidated: no entry for obj#%d\n", ir.ObjectNumber.Value())
+		return fmt.Errorf("setBeingValidated: no entry for obj#%d", ir.ObjectNumber.Value())
 	}
 	if entry.Free {
-		return fmt.Errorf("pdfcpu: SetBeingValidated: unexpected free entry for obj#%d\n", ir.ObjectNumber.Value())
+		return fmt.Errorf("setBeingValidated: unexpected free entry for obj#%d", ir.ObjectNumber.Value())
 	}
 	entry.BeingValidated = true
 	entry.Valid = false
@@ -992,7 +995,7 @@ func (xRefTable *XRefTable) DereferenceStreamDict(o types.Object) (*types.Stream
 	if !ok {
 		sd, ok := o.(types.StreamDict)
 		if !ok {
-			return nil, false, fmt.Errorf("pdfcpu: DereferenceStreamDict: wrong type <%v> %T", o, o)
+			return nil, false, fmt.Errorf("dereferenceStreamDict: wrong type <%v> %T", o, o)
 		}
 		return &sd, false, nil
 	}
@@ -1010,7 +1013,7 @@ func (xRefTable *XRefTable) DereferenceStreamDict(o types.Object) (*types.Stream
 	}
 	sd, ok := entry.Object.(types.StreamDict)
 	if !ok {
-		return nil, false, fmt.Errorf("pdfcpu: DereferenceStreamDict: wrong type <%v> %T", o, entry.Object)
+		return nil, false, fmt.Errorf("dereferenceStreamDict: wrong type <%v> %T", o, entry.Object)
 	}
 
 	return &sd, ev, nil
@@ -1031,11 +1034,11 @@ func (xRefTable *XRefTable) DereferenceXObjectDict(indRef types.IndirectRef) (*t
 		if xRefTable.ValidationMode == ValidationRelaxed {
 			return sd, nil
 		}
-		return nil, fmt.Errorf("pdfcpu: DereferenceXObjectDict: missing stream dict Subtype %s\n", indRef)
+		return nil, fmt.Errorf("dereferenceXObjectDict: missing stream dict Subtype %s", indRef)
 	}
 
 	if *subType != "Image" && *subType != "Form" {
-		return nil, fmt.Errorf("pdfcpu: DereferenceXObjectDict: unexpected stream dict Subtype %s\n", *subType)
+		return nil, fmt.Errorf("dereferenceXObjectDict: unexpected stream dict Subtype %s", *subType)
 	}
 
 	return sd, nil
@@ -1048,7 +1051,7 @@ func (xRefTable *XRefTable) Catalog() (types.Dict, error) {
 	}
 
 	if xRefTable.Root == nil {
-		return nil, errors.New("pdfcpu: Catalog: missing root dict")
+		return nil, errors.New("missing root dict")
 	}
 
 	o, _, err := xRefTable.indRefToObject(xRefTable.Root, true)
@@ -1058,7 +1061,7 @@ func (xRefTable *XRefTable) Catalog() (types.Dict, error) {
 
 	d, ok := o.(types.Dict)
 	if !ok {
-		return nil, errors.New("pdfcpu: catalog: corrupt root catalog")
+		return nil, errors.New("corrupt root dict")
 	}
 
 	xRefTable.RootDict = d
@@ -1075,7 +1078,7 @@ func (xRefTable *XRefTable) EncryptDict() (types.Dict, error) {
 
 	d, ok := o.(types.Dict)
 	if !ok {
-		return nil, errors.New("pdfcpu: encryptDict: corrupt encrypt dict")
+		return nil, errors.New("corrupt encrypt dict")
 	}
 
 	return d, nil
@@ -1358,7 +1361,7 @@ func (xRefTable *XRefTable) bindNameTreeNodeDict(name string, n *Node, root bool
 			return nil, err
 		}
 		if namesDict == nil {
-			return nil, errors.New("pdfcpu: root entry \"Names\" corrupt")
+			return nil, errors.New("root entry \"Names\" corrupt")
 		}
 		namesDict.Update(name, n.D)
 	}
@@ -1557,7 +1560,7 @@ func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 	}
 
 	if namesDict == nil {
-		return errors.New("pdfcpu: removeNameTree: root entry \"Names\" corrupt")
+		return errors.New("removeNameTree: root entry \"Names\" corrupt")
 	}
 
 	// We have an existing name dict.
@@ -1684,7 +1687,7 @@ func (xRefTable *XRefTable) IDFirstElement() (id []byte, err error) {
 
 	sl, ok := xRefTable.ID[0].(types.StringLiteral)
 	if !ok {
-		return nil, errors.New("pdfcpu: ID must contain hex literals or string literals")
+		return nil, errors.New("id must contain hex literals or string literals")
 	}
 
 	bb, err := types.Unescape(sl.Value())
@@ -1783,7 +1786,7 @@ func (xRefTable *XRefTable) consolidateResources(obj types.Object, pAttrs *Inher
 		}
 		d2, ok := pAttrs.Resources[k].(types.Dict)
 		if !ok {
-			return fmt.Errorf("pdfcpu: checkInheritedPageAttrs: expected Dict d2: %T", pAttrs.Resources[k])
+			return fmt.Errorf("consolidateResources: expected Dict d2: %T", pAttrs.Resources[k])
 		}
 		// Weave sub dict d1 into inherited sub dict d2.
 		// Any existing resource names will be overridden.
@@ -1834,12 +1837,12 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 			pAttrs.Rotate = obj.Value()
 		case types.Float:
 			if xRefTable.ValidationMode == ValidationStrict {
-				return fmt.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+				return fmt.Errorf("dereferenceNumber: wrong type <%v>", obj)
 			}
 
 			pAttrs.Rotate = int(math.Round(obj.Value()))
 		default:
-			return fmt.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+			return fmt.Errorf("dereferenceNumber: wrong type <%v>", obj)
 		}
 	}
 
@@ -1864,7 +1867,7 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 func (xRefTable *XRefTable) decodeContentStream(sd *types.StreamDict, pageNr int) error {
 	err := sd.Decode()
 	if err == filter.ErrUnsupportedFilter {
-		return errors.New("pdfcpu: unsupported filter: unable to decode content")
+		return errors.New("unsupported filter: unable to decode content")
 	}
 	if err != nil {
 		if xRefTable.ValidationMode == ValidationStrict {
@@ -1921,7 +1924,7 @@ func (xRefTable *XRefTable) PageContent(d types.Dict, pageNr int) ([]byte, error
 		}
 
 	default:
-		return nil, fmt.Errorf("pdfcpu: page content must be stream dict or array")
+		return nil, fmt.Errorf("page content must be stream dict or array")
 	}
 
 	if len(bb) == 0 {
@@ -1935,7 +1938,7 @@ func (xRefTable *XRefTable) consolidateResourceSubDict(d types.Dict, key string,
 	o := d[key]
 	if o == nil {
 		if prn.HasResources(key) {
-			return fmt.Errorf("pdfcpu: page %d: missing required resource subdict: %s\n%s", pageNr, key, prn)
+			return fmt.Errorf("page %d: missing required resource subdict: %s: %s", pageNr, key, prn)
 		}
 		return nil
 	}
@@ -1960,7 +1963,7 @@ func (xRefTable *XRefTable) consolidateResourceSubDict(d types.Dict, key string,
 		if !set[k] {
 			s := fmt.Sprintf("page %d: missing required %s: %s", pageNr, key, k)
 			if xRefTable.ValidationMode == ValidationStrict {
-				return errors.New("pdfcpu: " + s)
+				return errors.New(s)
 			}
 			ShowSkipped(s)
 		}
@@ -2035,7 +2038,7 @@ func errForUnexpectedPageObjectType(validationMode int, objType string, indRef t
 	}
 
 	if objType == "Template" {
-		return fmt.Errorf("Template page tree nodes not supported: %s", indRef)
+		return fmt.Errorf("template page tree nodes not supported: %s", indRef)
 	}
 
 	if objType == "" {
@@ -2117,7 +2120,7 @@ func (xRefTable *XRefTable) processPageTreeForPageDictDepth(root *types.Indirect
 
 		indRef, ok := o.(types.IndirectRef)
 		if !ok {
-			return nil, nil, fmt.Errorf("pdfcpu: processPageTreeForPageDict: corrupt page node dict")
+			return nil, nil, fmt.Errorf("processPageTreeForPageDictDepth: corrupt page node dict")
 		}
 
 		pageDict, pageDictIndRef, err := xRefTable.processPageTreeKidForPageDict(indRef, pAttrs, p, page, consolidateRes, depth, visit)
@@ -2145,7 +2148,7 @@ func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (types.Dic
 	)
 
 	if pageNr <= 0 || pageNr > xRefTable.PageCount {
-		return nil, nil, nil, errors.New("pdfcpu: page not found")
+		return nil, nil, nil, ErrPageNotFound
 	}
 
 	// Get an indirect reference to the page tree root dict.
@@ -2165,7 +2168,7 @@ func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (types.Dic
 		return nil, nil, nil, err
 	}
 	if pageDict == nil || pageDictindRef == nil {
-		return nil, nil, nil, errors.New("pdfcpu: page not found")
+		return nil, nil, nil, ErrPageNotFound
 	}
 
 	return pageDict, pageDictindRef, &inhPAttrs, nil
@@ -2192,7 +2195,7 @@ func (xRefTable *XRefTable) PageDictIndRef(page int) (*types.IndirectRef, error)
 		return nil, err
 	}
 	if ir == nil {
-		return nil, errors.New("pdfcpu: page not found")
+		return nil, ErrPageNotFound
 	}
 
 	return ir, nil
@@ -2226,7 +2229,7 @@ func (xRefTable *XRefTable) processPageTreeForPageNumberDepth(root *types.Indire
 		// Dereference next page node dict.
 		indRef, ok := o.(types.IndirectRef)
 		if !ok {
-			return 0, fmt.Errorf("pdfcpu: processPageTreeForPageNumber: corrupt page node dict")
+			return 0, fmt.Errorf("processPageTreeForPageNumberDepth: corrupt page node dict")
 		}
 
 		objNr := indRef.ObjectNumber.Value()
@@ -2290,7 +2293,7 @@ func (xRefTable *XRefTable) EnsurePageCount() error {
 
 	pageCount := d.IntEntry("Count")
 	if pageCount == nil {
-		return errors.New("pdfcpu: pageDict: missing \"Count\"")
+		return errors.New("pageDict: missing \"Count\"")
 	}
 
 	xRefTable.PageCount = *pageCount
@@ -2322,7 +2325,7 @@ func (xRefTable *XRefTable) collectPageBoundariesForPage(d types.Dict, pb []Page
 		pb[p].Media = &Box{Rect: r, Inherited: false}
 	}
 	if pb[p].Media == nil {
-		return errors.New("pdfcpu: collectMediaBoxesForPageTree: mediaBox is nil")
+		return errors.New("collectPageBoundariesForPage: mediaBox is nil")
 	}
 
 	if inhCropBox != nil {
@@ -2411,7 +2414,7 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTreeKids(
 		// Dereference next page node dict.
 		indRef, ok := o.(types.IndirectRef)
 		if !ok {
-			return fmt.Errorf("pdfcpu: collectPageBoundariesForPageTreeKids: corrupt page node dict")
+			return fmt.Errorf("collectPageBoundariesForPageTreeKids: corrupt page node dict")
 		}
 
 		pageNodeDict, err := xRefTable.DereferenceDict(indRef)
@@ -2472,12 +2475,12 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(
 			r = obj.Value()
 		case types.Float:
 			if xRefTable.ValidationMode == ValidationStrict {
-				return fmt.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+				return fmt.Errorf("dereferenceNumber: wrong type <%v>", obj)
 			}
 
 			r = int(math.Round(obj.Value()))
 		default:
-			return fmt.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", obj)
+			return fmt.Errorf("dereferenceNumber: wrong type <%v>", obj)
 		}
 	}
 
@@ -2498,7 +2501,7 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(
 
 	kids, ok := o.(types.Array)
 	if !ok {
-		return errors.New("pdfcpu: validatePagesDict: corrupt \"Kids\" entry")
+		return errors.New("collectPageBoundariesForPageTree: corrupt \"Kids\" entry")
 	}
 
 	return xRefTable.collectPageBoundariesForPageTreeKids(kids, inhMediaBox, inhCropBox, pb, r, p, selectedPages, depth, visit)
@@ -2585,7 +2588,7 @@ func (xRefTable *XRefTable) EmptyPage(parentIndRef *types.IndirectRef, mediaBox 
 func (xRefTable *XRefTable) pageMediaBox(d types.Dict) (*types.Rectangle, error) {
 	o, found := d.Find("MediaBox")
 	if !found {
-		return nil, fmt.Errorf("pdfcpu: pageMediaBox: missing mediaBox")
+		return nil, fmt.Errorf("pageMediaBox: missing mediaBox")
 	}
 
 	a, err := xRefTable.DereferenceArray(o)
@@ -2655,7 +2658,7 @@ func (xRefTable *XRefTable) appendBlankPagesForKid(a *types.Array, o types.Objec
 	// Dereference next page node dict.
 	ir, ok := o.(types.IndirectRef)
 	if !ok {
-		return 0, fmt.Errorf("pdfcpu: insertBlankPages: corrupt page node dict")
+		return 0, fmt.Errorf("appendBlankPagesForKid: corrupt page node dict")
 	}
 
 	pageNodeDict, err := xRefTable.DereferenceDict(ir)
@@ -2806,7 +2809,7 @@ func (xRefTable *XRefTable) insertPagesDepth(parent *types.IndirectRef, p *int, 
 		// Dereference next page node dict.
 		ir, ok := o.(types.IndirectRef)
 		if !ok {
-			return 0, fmt.Errorf("pdfcpu: InsertPagesIntoPageTree: corrupt page node dict")
+			return 0, fmt.Errorf("insertPagesDepth: corrupt page node dict")
 		}
 
 		pageNodeDict, err := xRefTable.DereferenceDict(ir)
@@ -3005,7 +3008,7 @@ func (xRefTable *XRefTable) AppendContent(pageDict types.Dict, bb []byte) error 
 		entry.Object = sd
 
 	default:
-		return fmt.Errorf("pdfcpu: corrupt page \"Content\"")
+		return fmt.Errorf("corrupt page \"Content\"")
 	}
 
 	return nil

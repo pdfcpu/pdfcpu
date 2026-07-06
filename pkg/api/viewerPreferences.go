@@ -29,14 +29,14 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-var ErrNoOp = errors.New("pdfcpu: no operation")
+var ErrNoOp = errors.New("no operation")
 
 // ViewerPreferences returns rs's viewer preferences.
 func ViewerPreferences(rs io.ReadSeeker, conf *model.Configuration) (vp *model.ViewerPreferences, v *model.Version, err error) {
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, nil, errors.New("pdfcpu: ViewerPreferences: missing rs")
+		return nil, nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -81,7 +81,7 @@ func ListViewerPreferences(rs io.ReadSeeker, all bool, conf *model.Configuration
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ListViewerPreferences: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -171,11 +171,11 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: SetViewerPreferences: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if w == nil {
-		return errors.New("pdfcpu: SetViewerPreferences: missing w")
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -210,11 +210,11 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 // SetViewerPreferencesFromJSONBytes sets rs's viewer preferences corresponding to jsonBytes and writes the result to w.
 func SetViewerPreferencesFromJSONBytes(rs io.ReadSeeker, w io.Writer, jsonBytes []byte, conf *model.Configuration) error {
 	if rs == nil {
-		return errors.New("pdfcpu: SetViewerPreferencesFromJSONBytes: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if w == nil {
-		return errors.New("pdfcpu: SetViewerPreferencesFromJSONBytes: missing w")
+		return ErrMissingPDFWriter
 	}
 
 	if !json.Valid(jsonBytes) {
@@ -233,15 +233,15 @@ func SetViewerPreferencesFromJSONBytes(rs io.ReadSeeker, w io.Writer, jsonBytes 
 // SetViewerPreferencesFromJSONReader sets rs's viewer preferences corresponding to rd and writes the result to w.
 func SetViewerPreferencesFromJSONReader(rs io.ReadSeeker, w io.Writer, rd io.Reader, conf *model.Configuration) error {
 	if rs == nil {
-		return errors.New("pdfcpu: SetViewerPreferencesFromJSONReader: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if w == nil {
-		return errors.New("pdfcpu: SetViewerPreferencesFromJSONReader: missing w")
+		return ErrMissingPDFWriter
 	}
 
 	if rd == nil {
-		return errors.New("pdfcpu: SetViewerPreferencesFromJSONReader: missing rd")
+		return errors.New("missing JSON reader")
 	}
 
 	var buf bytes.Buffer
@@ -345,7 +345,7 @@ func SetViewerPreferencesFileFromJSONBytes(inFile, outFile string, jsonBytes []b
 // SetViewerPreferencesFileFromJSONFile sets inFile's viewer preferences corresponding to inFileJSON and writes the result to outFile.
 func SetViewerPreferencesFileFromJSONFile(inFilePDF, outFilePDF, inFileJSON string, conf *model.Configuration) error {
 	if inFileJSON == "" {
-		return errors.New("pdfcpu: SetViewerPreferencesFileFromJSONFile: missing inFileJSON")
+		return errors.New("missing JSON input file")
 	}
 
 	bb, err := os.ReadFile(inFileJSON)
@@ -361,11 +361,11 @@ func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configura
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ResetViewerPreferences: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if w == nil {
-		return errors.New("pdfcpu: ResetViewerPreferences: missing w")
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {

@@ -242,7 +242,6 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 
 // AnnotationsForSelectedPages annotations for selected pages.
 func AnnotationsForSelectedPages(ctx *model.Context, selectedPages types.IntSet) map[int]model.PgAnnots {
-
 	var pageNrs []int
 	for k := range ctx.PageAnnots {
 		pageNrs = append(pageNrs, k)
@@ -545,13 +544,12 @@ func addAnnotationToDirectObj(
 	pageNr int,
 	ar model.AnnotationRenderer,
 	incr bool) error {
-
 	i, err := findAnnotByID(ctx, ar.ID(), annots)
 	if err != nil {
 		return err
 	}
 	if i >= 0 {
-		return fmt.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
+		return fmt.Errorf("page %d: duplicate annotation with id:%s", pageNr, ar.ID())
 	}
 	pageDict.Update("Annots", append(annots, *annotIndRef))
 	if incr {
@@ -570,7 +568,6 @@ func AddAnnotation(
 	pageNr int,
 	ar model.AnnotationRenderer,
 	incr bool) (*types.IndirectRef, types.Dict, error) {
-
 	// Create xreftable entry for annotation.
 	annotIndRef, d, err := createAnnot(ctx, ar, pageDictIndRef)
 	if err != nil {
@@ -617,12 +614,12 @@ func AddAnnotation(
 		return nil, nil, err
 	}
 	if i >= 0 {
-		return nil, nil, fmt.Errorf("page %d: duplicate annotation with id:%s\n", pageNr, ar.ID())
+		return nil, nil, fmt.Errorf("page %d: duplicate annotation with id:%s", pageNr, ar.ID())
 	}
 
 	entry, ok := ctx.FindTableEntryForIndRef(&ir)
 	if !ok {
-		return nil, nil, fmt.Errorf("page %d: can't dereference Annots indirect reference(obj#:%d)\n", pageNr, ir.ObjectNumber)
+		return nil, nil, fmt.Errorf("page %d: can't dereference Annots indirect reference(obj#:%d)", pageNr, ir.ObjectNumber)
 	}
 	entry.Object = append(annots, *annotIndRef)
 	if incr {
@@ -662,7 +659,7 @@ func AddAnnotations(ctx *model.Context, selectedPages types.IntSet, ar model.Ann
 			continue
 		}
 		if k > ctx.PageCount {
-			return false, fmt.Errorf("pdfcpu: invalid page number: %d", k)
+			return false, fmt.Errorf("invalid page number %d", k)
 		}
 
 		pageDictIndRef, err := ctx.PageDictIndRef(k)
@@ -697,7 +694,7 @@ func AddAnnotationsMap(ctx *model.Context, m map[int][]model.AnnotationRenderer,
 	for i, annots := range m {
 
 		if i > ctx.PageCount {
-			return false, fmt.Errorf("pdfcpu: invalid page number: %d", i)
+			return false, fmt.Errorf("invalid page number %d", i)
 		}
 
 		pageDictIndRef, err := ctx.PageDictIndRef(i)
@@ -731,7 +728,6 @@ func removeAllAnnotations(
 	pageDictObjNr,
 	pageNr int,
 	incr bool) (bool, error) {
-
 	var err error
 	obj, found := pageDict.Find("Annots")
 	if !found {
@@ -791,7 +787,6 @@ func removeAnnotationsByType(
 	pageNr int,
 	annots types.Array,
 	incr bool) (types.Array, bool, error) {
-
 	pgAnnots, found := ctx.PageAnnots[pageNr]
 	if !found {
 		return annots, false, nil
@@ -812,7 +807,7 @@ func removeAnnotationsByType(
 				return nil, false, err
 			}
 			if i < 0 {
-				return nil, false, errors.New("pdfcpu: missing annot indRef")
+				return nil, false, errors.New("removeAnnotationsByType: missing annot indRef")
 			}
 			if err := ctx.DeleteObject(indRef); err != nil {
 				return nil, false, err
@@ -846,7 +841,6 @@ func removeAnnotationByID(
 	pageNr int,
 	annots types.Array,
 	incr bool) (types.Array, bool, error) {
-
 	i, err := findAnnotByID(ctx, id, annots)
 	if err != nil || i < 0 {
 		return annots, false, err
@@ -884,7 +878,6 @@ func removeAnnotationsByID(
 	pageNr int,
 	annots types.Array,
 	incr bool) (types.Array, bool, error) {
-
 	var (
 		ok, ok1 bool
 		err     error
@@ -923,7 +916,6 @@ func removeAnnotationsByObjNr(
 	pageNr int,
 	annots types.Array,
 	incr bool) (types.Array, bool, error) {
-
 	var ok bool
 	for objNr, v := range objNrSet {
 		if !v || objNr < 0 {
@@ -971,7 +963,6 @@ func removeAnnotationsFromAnnots(
 	pageNr int,
 	annots types.Array,
 	incr bool) (types.Array, bool, error) {
-
 	var (
 		ok1, ok2, ok3 bool
 		err           error
@@ -1014,7 +1005,6 @@ func removeAnnotationsFromIndAnnots(ctx *model.Context,
 	pageDict types.Dict,
 	pageDictObjNr int,
 	indRef types.IndirectRef) (bool, error) {
-
 	ann, ok, err := removeAnnotationsFromAnnots(ctx, annotTypes, ids, objNrSet, pageNr, annots, incr)
 	if err != nil {
 		return false, err
@@ -1060,7 +1050,6 @@ func RemoveAnnotationsFromPageDict(
 	pageDictObjNr,
 	pageNr int,
 	incr bool) (bool, error) {
-
 	//fmt.Printf("ids:%v objNrSet:%v\n", ids, objNrSet)
 
 	if len(annotTypes) == 0 && len(ids) == 0 && len(objNrSet) == 0 {
@@ -1142,7 +1131,6 @@ func prepForRemoveAnnotations(ctx *model.Context, idsAndTypes []string, objNrs [
 // RemoveAnnotations removes annotations for selected pages by id, type or object number.
 // All annotations for selected pages are removed if neither idsAndTypes nor objNrs are provided.
 func RemoveAnnotations(ctx *model.Context, selectedPages types.IntSet, idsAndTypes []string, objNrs []int, incr bool) (bool, error) {
-
 	annTypes, ids, objNrSet, removeAll := prepForRemoveAnnotations(ctx, idsAndTypes, objNrs, incr)
 
 	var removed bool

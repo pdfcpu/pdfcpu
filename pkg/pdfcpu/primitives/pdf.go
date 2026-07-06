@@ -156,7 +156,7 @@ func (pdf *PDF) parseColor(s string) (*color.SimpleColor, error) {
 func (pdf *PDF) resolveFileName(s string) (string, error) {
 	filePath, ok := pdf.FileNames[s]
 	if !ok {
-		return "", fmt.Errorf("pdfcpu: can't resolve filename: %s", s)
+		return "", fmt.Errorf("can't resolve filename: %s", s)
 	}
 	if filePath[0] != '$' {
 		return filePath, nil
@@ -165,7 +165,7 @@ func (pdf *PDF) resolveFileName(s string) (string, error) {
 	filePath = filePath[1:]
 	i := strings.Index(filePath, "/")
 	if i <= 0 {
-		return "", fmt.Errorf("pdfcpu: corrupt filename: %s", s)
+		return "", fmt.Errorf("corrupt filename: %s", s)
 	}
 
 	dirName := filePath[:i]
@@ -173,7 +173,7 @@ func (pdf *PDF) resolveFileName(s string) (string, error) {
 
 	dirPath, ok := pdf.DirNames[dirName]
 	if !ok {
-		return "", fmt.Errorf("pdfcpu: can't resolve dirname: %s", dirName)
+		return "", fmt.Errorf("can't resolve dirname: %s", dirName)
 	}
 
 	s1 := filepath.Join(dirPath, fileName)
@@ -280,7 +280,7 @@ func (pdf *PDF) validateFooter() error {
 func (pdf *PDF) validateBorders() error {
 	if pdf.Border != nil {
 		if len(pdf.Borders) > 0 {
-			return errors.New("pdfcpu: Please supply either \"border\" or \"borders\"")
+			return errors.New("please supply either \"border\" or \"borders\"")
 		}
 		pdf.Border.pdf = pdf
 		if err := pdf.Border.validate(); err != nil {
@@ -301,7 +301,7 @@ func (pdf *PDF) validateBorders() error {
 func (pdf *PDF) validateMargins() error {
 	if pdf.Margin != nil {
 		if len(pdf.Margins) > 0 {
-			return errors.New("pdfcpu: Please supply either \"margin\" or \"margins\"")
+			return errors.New("please supply either \"margin\" or \"margins\"")
 		}
 		if err := pdf.Margin.validate(); err != nil {
 			return err
@@ -320,7 +320,7 @@ func (pdf *PDF) validateMargins() error {
 func (pdf *PDF) validatePaddings() error {
 	if pdf.Padding != nil {
 		if len(pdf.Paddings) > 0 {
-			return errors.New("pdfcpu: Please supply either \"padding\" or \"paddings\"")
+			return errors.New("please supply either \"padding\" or \"paddings\"")
 		}
 		if err := pdf.Padding.validate(); err != nil {
 			return err
@@ -454,7 +454,7 @@ func (pdf *PDF) Validate() error {
 	}
 
 	if len(pdf.Pages) == 0 {
-		return errors.New("pdfcpu: Please supply \"pages\"")
+		return errors.New("please supply \"pages\"")
 	}
 
 	// What follows is a quirky way of turning a map of pages into a sorted slice of pages
@@ -465,7 +465,7 @@ func (pdf *PDF) Validate() error {
 	for pageNr, p := range pdf.Pages {
 		nr, err := strconv.Atoi(pageNr)
 		if err != nil {
-			return fmt.Errorf("pdfcpu: invalid page number: %s", pageNr)
+			return fmt.Errorf("invalid page number: %s", pageNr)
 		}
 		pageNrs = append(pageNrs, nr)
 		p.number = nr
@@ -513,7 +513,7 @@ func (pdf *PDF) calcFont(f *FormFont) error {
 	fName := f.Name[1:]
 	f0 := pdf.Fonts[fName]
 	if f0 == nil {
-		return fmt.Errorf("pdfcpu: unknown font %s", fName)
+		return fmt.Errorf("unknown font %s", fName)
 	}
 	f.Name = f0.Name
 	if f.Size == 0 {

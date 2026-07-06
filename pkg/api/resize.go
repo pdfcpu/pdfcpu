@@ -17,7 +17,6 @@ limitations under the License.
 package api
 
 import (
-	"errors"
 	"io"
 	"os"
 
@@ -32,7 +31,11 @@ func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: Resize: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {

@@ -33,10 +33,10 @@ import (
 )
 
 var (
-	errNoBookmarks       = errors.New("pdfcpu: no bookmarks available")
-	errInvalidBookmark   = errors.New("pdfcpu: invalid bookmark")
-	errExistingBookmarks = errors.New("pdfcpu: existing bookmarks")
-	errCircularBookmarks = errors.New("pdfcpu: circular outline item list")
+	errNoBookmarks       = errors.New("no bookmarks available")
+	errInvalidBookmark   = errors.New("invalid bookmark")
+	errExistingBookmarks = errors.New("existing bookmarks")
+	errCircularBookmarks = errors.New("circular outline item list")
 )
 
 type Header struct {
@@ -134,7 +134,7 @@ func destArray(ctx *model.Context, dest types.Object) (types.Array, error) {
 	case types.Array:
 		return dest, nil
 	}
-	return nil, fmt.Errorf("unable to resolve destination array %v\n", dest)
+	return nil, fmt.Errorf("unable to resolve destination array %v", dest)
 }
 
 // PageNrFromDestination returns the page number of a destination.
@@ -152,7 +152,7 @@ func PageNrFromDestination(ctx *model.Context, dest types.Object) (int, error) {
 		return ctx.PageNumber(ir.ObjectNumber.Value())
 	}
 
-	return 0, fmt.Errorf("unable to extract dest pageNr of %v\n", dest)
+	return 0, fmt.Errorf("unable to extract dest pageNr of %v", dest)
 }
 
 func title(ctx *model.Context, d types.Dict) (string, error) {
@@ -704,7 +704,7 @@ func addBookmarkTree(ctx *model.Context, bmTree *BookmarkTree, replace bool) err
 
 func parseBookmarksFromJSON(bb []byte) (*BookmarkTree, error) {
 	if !json.Valid(bb) {
-		return nil, fmt.Errorf("pdfcpu: invalid JSON encoding detected.")
+		return nil, fmt.Errorf("invalid JSON encoding")
 	}
 
 	bmTree := &BookmarkTree{}

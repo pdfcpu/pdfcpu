@@ -176,7 +176,7 @@ func setTrustStatus(certDetails *model.CertificateDetails, result *model.Signatu
 func signedData(ra io.ReaderAt, sigDict types.Dict) ([]byte, error) {
 	arr := sigDict.ArrayEntry("ByteRange")
 	if len(arr) != 4 {
-		return nil, errors.New("pdfcpu: invalid signature dict - missing \"ByteRange\"")
+		return nil, errors.New("invalid signature dict - missing \"ByteRange\"")
 	}
 	return bytesForByteRange(ra, arr)
 }
@@ -184,16 +184,16 @@ func signedData(ra io.ReaderAt, sigDict types.Dict) ([]byte, error) {
 func byteRangeValues(arr types.Array) ([4]int64, error) {
 	var values [4]int64
 	if len(arr) != len(values) {
-		return values, errors.New("pdfcpu: invalid signature ByteRange")
+		return values, errors.New("invalid signature ByteRange")
 	}
 	for i, o := range arr {
 		v, ok := o.(types.Integer)
 		if !ok {
-			return values, fmt.Errorf("pdfcpu: invalid signature ByteRange entry %d", i)
+			return values, fmt.Errorf("invalid signature ByteRange entry %d", i)
 		}
 		values[i] = int64(v.Value())
 		if values[i] < 0 {
-			return values, fmt.Errorf("pdfcpu: negative signature ByteRange entry %d", i)
+			return values, fmt.Errorf("negative signature ByteRange entry %d", i)
 		}
 	}
 	return values, nil
@@ -201,7 +201,7 @@ func byteRangeValues(arr types.Array) ([4]int64, error) {
 
 func byteRangeEnd(off, size int64) (int64, error) {
 	if off > math.MaxInt64-size {
-		return 0, errors.New("pdfcpu: signature ByteRange overflow")
+		return 0, errors.New("signature ByteRange overflow")
 	}
 	return off + size, nil
 }
@@ -212,14 +212,14 @@ func validateByteRange(values [4]int64) (int64, error) {
 		return 0, err
 	}
 	if end1 > values[2] {
-		return 0, errors.New("pdfcpu: overlapping signature ByteRange")
+		return 0, errors.New("overlapping signature ByteRange")
 	}
 	if _, err := byteRangeEnd(values[2], values[3]); err != nil {
 		return 0, err
 	}
 	total, err := byteRangeEnd(values[1], values[3])
 	if err != nil || total > int64(math.MaxInt) {
-		return 0, errors.New("pdfcpu: signature ByteRange size overflow")
+		return 0, errors.New("signature ByteRange size overflow")
 	}
 	return total, nil
 }
@@ -227,17 +227,17 @@ func validateByteRange(values [4]int64) (int64, error) {
 func copyByteRange(w io.Writer, ra io.ReaderAt, off, size int64) error {
 	n, err := io.CopyN(w, io.NewSectionReader(ra, off, size), size)
 	if err != nil {
-		return fmt.Errorf("pdfcpu: invalid signature ByteRange: %w", err)
+		return fmt.Errorf("invalid signature ByteRange: %w", err)
 	}
 	if n != size {
-		return errors.New("pdfcpu: short signature ByteRange")
+		return errors.New("short signature ByteRange")
 	}
 	return nil
 }
 
 func bytesForByteRange(ra io.ReaderAt, arr types.Array) ([]byte, error) {
 	if ra == nil {
-		return nil, errors.New("pdfcpu: missing signature reader")
+		return nil, errors.New("missing signature reader")
 	}
 	values, err := byteRangeValues(arr)
 	if err != nil {

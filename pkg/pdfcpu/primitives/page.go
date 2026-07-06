@@ -68,7 +68,7 @@ func (page *PDFPage) resolveFileName(s string) (string, error) {
 	filePath = filePath[1:]
 	i := strings.Index(filePath, "/")
 	if i <= 0 {
-		return "", fmt.Errorf("pdfcpu: corrupt filename: %s", s)
+		return "", fmt.Errorf("corrupt filename: %s", s)
 	}
 
 	dirName := filePath[:i]
@@ -76,7 +76,7 @@ func (page *PDFPage) resolveFileName(s string) (string, error) {
 
 	dirPath, ok := page.pdf.DirNames[dirName]
 	if !ok {
-		return "", fmt.Errorf("pdfcpu: can't resolve dirname: %s", dirName)
+		return "", fmt.Errorf("can't resolve dirname: %s", dirName)
 	}
 
 	s1 := filepath.Join(dirPath, fileName)
@@ -132,7 +132,7 @@ func (page *PDFPage) validateFonts() error {
 func (page *PDFPage) validateBorders() error {
 	if page.Border != nil {
 		if len(page.Borders) > 0 {
-			return errors.New("pdfcpu: Please supply either page \"border\" or \"borders\"")
+			return errors.New("please supply either page \"border\" or \"borders\"")
 		}
 		page.Border.pdf = page.pdf
 		if err := page.Border.validate(); err != nil {
@@ -153,7 +153,7 @@ func (page *PDFPage) validateBorders() error {
 func (page *PDFPage) validateMargins() error {
 	if page.Margin != nil {
 		if len(page.Margins) > 0 {
-			return errors.New("pdfcpu: Please supply either page \"margin\" or \"margins\"")
+			return errors.New("please supply either page \"margin\" or \"margins\"")
 		}
 		if err := page.Margin.validate(); err != nil {
 			return err
@@ -172,7 +172,7 @@ func (page *PDFPage) validateMargins() error {
 func (page *PDFPage) validatePaddings() error {
 	if page.Padding != nil {
 		if len(page.Paddings) > 0 {
-			return errors.New("pdfcpu: Please supply either page \"padding\" or \"paddings\"")
+			return errors.New("please supply either page \"padding\" or \"paddings\"")
 		}
 		if err := page.Padding.validate(); err != nil {
 			return err
@@ -294,7 +294,7 @@ func (page *PDFPage) validate() error {
 	}
 
 	if page.Content == nil {
-		return errors.New("pdfcpu: Please supply page \"content\"")
+		return errors.New("please supply page \"content\"")
 	}
 
 	page.Content.page = page

@@ -145,7 +145,7 @@ func validatePredictor(predictor int) error {
 		return nil
 	}
 
-	return fmt.Errorf("pdfcpu: filter FlateDecode: undefined \"Predictor\" %d", predictor)
+	return fmt.Errorf("flateDecode: undefined \"Predictor\" %d", predictor)
 }
 
 func predictorRowParams(predictor, colors, bpc, columns int) (rowSize, rowLen, bytesPerPixel int, err error) {
@@ -284,7 +284,7 @@ func processRow(pr, cr []byte, p, colors, bytesPerPixel int) ([]byte, error) {
 		filterPaeth(cdat, pdat, bytesPerPixel)
 
 	default:
-		return nil, fmt.Errorf("pdfcpu: filter FlateDecode: unexpected PNG predictor %d", f)
+		return nil, fmt.Errorf("flateDecode: unexpected PNG predictor %d", f)
 	}
 
 	return cdat, nil
@@ -299,7 +299,7 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 	if !found {
 		colors = 1
 	} else if colors <= 0 {
-		return 0, 0, 0, fmt.Errorf("pdfcpu: filter FlateDecode: \"Colors\" must be > 0")
+		return 0, 0, 0, fmt.Errorf("flateDecode: \"Colors\" must be > 0")
 	}
 
 	// BitsPerComponent, int
@@ -310,7 +310,7 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 	if !found {
 		bpc = 8
 	} else if !intMemberOf(bpc, []int{1, 2, 4, 8, 16}) {
-		return 0, 0, 0, fmt.Errorf("pdfcpu: filter FlateDecode: Unexpected \"BitsPerComponent\": %d", bpc)
+		return 0, 0, 0, fmt.Errorf("flateDecode: unexpected \"BitsPerComponent\": %d", bpc)
 	}
 
 	// Columns, int
@@ -319,7 +319,7 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 	if !found {
 		columns = 1
 	} else if columns <= 0 {
-		return 0, 0, 0, fmt.Errorf("pdfcpu: filter FlateDecode: \"Columns\" must be > 0")
+		return 0, 0, 0, fmt.Errorf("flateDecode: \"Columns\" must be > 0")
 	}
 
 	return colors, bpc, columns, nil
@@ -367,7 +367,7 @@ func (f flate) decodePostProcessRows(r io.Reader, maxLen int64, m, predictor, co
 		}
 
 		if n != m {
-			return nil, fmt.Errorf("pdfcpu: filter FlateDecode: read error, expected %d bytes, got: %d", m, n)
+			return nil, fmt.Errorf("flateDecode: read error, expected %d bytes, got: %d", m, n)
 		}
 
 		if err := process(&b, pr, cr, predictor, colors, bytesPerPixel); err != nil {
@@ -421,7 +421,7 @@ func (f flate) decodePostProcess(r io.Reader, maxLen int64) (io.Reader, error) {
 
 	if maxLen < 0 && b.Len()%rowSize > 0 {
 		log.Info.Printf("failed postprocessing: %d %d\n", b.Len(), rowSize)
-		return nil, errors.New("pdfcpu: filter FlateDecode: postprocessing failed")
+		return nil, errors.New("flateDecode: postprocessing failed")
 	}
 
 	return b, nil

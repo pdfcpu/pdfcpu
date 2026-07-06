@@ -65,7 +65,7 @@ func (f ascii85Decode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error
 	bb = bytes.TrimRight(bb, "\r\n")
 
 	if !bytes.HasSuffix(bb, []byte(eodASCII85)) {
-		return nil, errors.New("pdfcpu: Decode: missing eod marker")
+		return nil, errors.New("ascii85Decode: missing eod marker")
 	}
 
 	// Strip eod sequence: "~>"

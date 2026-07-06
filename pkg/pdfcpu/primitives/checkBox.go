@@ -59,10 +59,10 @@ type AP struct {
 
 func (cb *CheckBox) validateID() error {
 	if cb.ID == "" {
-		return errors.New("pdfcpu: missing field id")
+		return errors.New("missing field id")
 	}
 	if cb.pdf.DuplicateField(cb.ID) {
-		return fmt.Errorf("pdfcpu: duplicate form field: %s", cb.ID)
+		return fmt.Errorf("duplicate form field: %s", cb.ID)
 	}
 	cb.pdf.FieldIDs[cb.ID] = true
 	return nil
@@ -70,7 +70,7 @@ func (cb *CheckBox) validateID() error {
 
 func (cb *CheckBox) validatePosition() error {
 	if cb.Position[0] < 0 || cb.Position[1] < 0 {
-		return fmt.Errorf("pdfcpu: field: %s pos value < 0", cb.ID)
+		return fmt.Errorf("field: %s pos value < 0", cb.ID)
 	}
 	cb.x, cb.y = cb.Position[0], cb.Position[1]
 	return nil
@@ -87,7 +87,7 @@ func (cb *CheckBox) validateMargin() error {
 
 func (cb *CheckBox) validateWidth() error {
 	if cb.Width <= 0 {
-		return fmt.Errorf("pdfcpu: field: %s width <= 0", cb.ID)
+		return fmt.Errorf("field: %s width <= 0", cb.ID)
 	}
 	return nil
 }
@@ -104,7 +104,7 @@ func (cb *CheckBox) validateLabel() error {
 
 func (cb *CheckBox) validateTab() error {
 	if cb.Tab < 0 {
-		return fmt.Errorf("pdfcpu: field: %s negative tab value", cb.ID)
+		return fmt.Errorf("field: %s negative tab value", cb.ID)
 	}
 	if cb.Tab == 0 {
 		return nil
@@ -114,7 +114,7 @@ func (cb *CheckBox) validateTab() error {
 		page.Tabs = types.IntSet{}
 	} else {
 		if page.Tabs[cb.Tab] {
-			return fmt.Errorf("pdfcpu: field: %s duplicate tab value %d", cb.ID, cb.Tab)
+			return fmt.Errorf("field: %s duplicate tab value %d", cb.ID, cb.Tab)
 		}
 	}
 	page.Tabs[cb.Tab] = true
@@ -159,7 +159,7 @@ func (cb *CheckBox) calcMargin() (float64, float64, float64, float64, error) {
 			mName := m.Name[1:]
 			m0 := cb.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBottom, mLeft, fmt.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, fmt.Errorf("unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}
@@ -765,7 +765,7 @@ func (cb *CheckBox) render(p *model.Page, pageNr int, fonts model.FontMap) error
 func CalcCheckBoxASNames(ctx *model.Context, d types.Dict) (types.Name, types.Name, error) {
 	obj, found := d.Find("AP")
 	if !found {
-		return "", "", errors.New("pdfcpu: corrupt form field: missing entry \"AP\"") /////////// !!!!!
+		return "", "", errors.New("corrupt form field: missing entry \"AP\"") /////////// !!!!!
 	}
 	d, err := ctx.DereferenceDict(obj)
 	if err != nil {
@@ -776,7 +776,7 @@ func CalcCheckBoxASNames(ctx *model.Context, d types.Dict) (types.Name, types.Na
 		obj, found = d.Find("N")
 	}
 	if !found {
-		return "", "", errors.New("pdfcpu: corrupt form field: missing entries \"N\" and \"N\"")
+		return "", "", errors.New("corrupt form field: missing entries \"N\" and \"N\"")
 	}
 	d, err = ctx.DereferenceDict(obj)
 	if err != nil {

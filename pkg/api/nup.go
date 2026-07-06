@@ -17,6 +17,7 @@
 package api
 
 import (
+	"errors"
 	"io"
 	"os"
 
@@ -95,6 +96,14 @@ func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model
 func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
+	if nup == nil {
+		return errors.New("missing n-up configuration")
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -113,6 +122,10 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 		}
 
 	} else {
+
+		if rs == nil {
+			return ErrMissingPDFReadSeeker
+		}
 
 		if ctx, err = ReadAndValidate(rs, conf); err != nil {
 			return err

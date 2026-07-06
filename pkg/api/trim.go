@@ -17,7 +17,6 @@
 package api
 
 import (
-	"errors"
 	"io"
 	"os"
 	"sort"
@@ -34,7 +33,11 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Con
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: Trim: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {

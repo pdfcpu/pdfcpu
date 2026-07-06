@@ -57,7 +57,7 @@ func TestFilterSupport(t *testing.T) {
 		{filter.DCT, nil},
 		{filter.JBIG2, filter.ErrUnsupportedFilter},
 		{filter.JPX, filter.ErrUnsupportedFilter},
-		{"INVALID_FILTER", errors.New("Invalid filter: <INVALID_FILTER>")},
+		{"INVALID_FILTER", errors.New("invalid filter: <INVALID_FILTER>")},
 	}
 	for _, tt := range filtersTests {
 		_, err := filter.NewFilter(tt.filterName, nil)

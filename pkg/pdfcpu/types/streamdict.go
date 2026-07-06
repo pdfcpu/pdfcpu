@@ -163,12 +163,12 @@ func (l *LazyObjectStreamObject) GetData() ([]byte, error) {
 	var data []byte
 	if l.endOffset == -1 {
 		if l.startOffset < 0 || l.startOffset > len(l.osd.Content) {
-			return nil, fmt.Errorf("pdfcpu: object stream offset %d out of bounds", l.startOffset)
+			return nil, fmt.Errorf("object stream offset %d out of bounds", l.startOffset)
 		}
 		data = l.osd.Content[l.startOffset:]
 	} else {
 		if l.startOffset < 0 || l.startOffset > l.endOffset || l.endOffset > len(l.osd.Content) {
-			return nil, fmt.Errorf("pdfcpu: object stream offset range [%d:%d] out of bounds", l.startOffset, l.endOffset)
+			return nil, fmt.Errorf("object stream offset range [%d:%d] out of bounds", l.startOffset, l.endOffset)
 		}
 		data = l.osd.Content[l.startOffset:l.endOffset]
 	}
@@ -324,7 +324,7 @@ func fixParms(f PDFFilter, parms map[string]int, sd *StreamDict) error {
 		if !ok {
 			ip := sd.IntEntry("Height")
 			if ip == nil {
-				return errors.New("pdfcpu: ccitt: \"Height\" required")
+				return errors.New("ccitt: \"Height\" required")
 			}
 			parms["Rows"] = *ip
 		}

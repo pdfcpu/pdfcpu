@@ -34,7 +34,11 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: InsertPages: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -120,7 +124,11 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: RemovePages: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -214,7 +222,7 @@ func PageCount(rs io.ReadSeeker, conf *model.Configuration) (count int, err erro
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return 0, errors.New("pdfcpu: PageCount: missing rs")
+		return 0, ErrMissingPDFReadSeeker
 	}
 
 	ctx, err := ReadAndValidate(rs, conf)
@@ -241,7 +249,7 @@ func PageDims(rs io.ReadSeeker, conf *model.Configuration) (pd []types.Dim, err 
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: PageDims: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	ctx, err := ReadAndValidate(rs, conf)
@@ -255,7 +263,7 @@ func PageDims(rs io.ReadSeeker, conf *model.Configuration) (pd []types.Dim, err 
 	}
 
 	if len(pd) != ctx.PageCount {
-		return nil, errors.New("pdfcpu: corrupt page dimensions")
+		return nil, errors.New("corrupt page dimensions")
 	}
 
 	return pd, nil

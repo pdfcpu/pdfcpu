@@ -27,8 +27,8 @@ import (
 )
 
 var (
-	ErrNoOutlines = errors.New("pdfcpu: no outlines available")
-	ErrOutlines   = errors.New("pdfcpu: existing outlines")
+	ErrNoOutlines = errors.New("no outlines available")
+	ErrOutlines   = errors.New("existing outlines")
 )
 
 // Bookmarks returns rs's bookmark hierarchy.
@@ -36,7 +36,7 @@ func Bookmarks(rs io.ReadSeeker, conf *model.Configuration) (bms []pdfcpu.Bookma
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: Bookmarks: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -58,11 +58,11 @@ func ExportBookmarksJSON(rs io.ReadSeeker, w io.Writer, source string, conf *mod
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ExportBookmarksJSON: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if w == nil {
-		return errors.New("pdfcpu: ExportBookmarksJSON: missing w")
+		return errors.New("missing JSON writer")
 	}
 
 	if conf == nil {
@@ -129,11 +129,15 @@ func ImportBookmarks(rs io.ReadSeeker, rd io.Reader, w io.Writer, replace bool, 
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ImportBookmarks: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if rd == nil {
-		return errors.New("pdfcpu: ImportBookmarks: missing rd")
+		return errors.New("missing bookmark input")
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -213,7 +217,11 @@ func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdfcpu.Bookmark, replace 
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: AddBookmarks: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -224,7 +232,7 @@ func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdfcpu.Bookmark, replace 
 	conf.Cmd = model.ADDBOOKMARKS
 
 	if len(bms) == 0 {
-		return errors.New("pdfcpu: AddBookmarks: missing bms")
+		return errors.New("missing bookmarks")
 	}
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
@@ -289,7 +297,11 @@ func RemoveBookmarks(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: AddBookmarks: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {

@@ -36,7 +36,7 @@ import (
 func ParseResizeConfig(s string, u types.DisplayUnit) (*model.Resize, error) {
 
 	if s == "" {
-		return nil, errors.New("pdfcpu: missing resize configuration string")
+		return nil, errors.New("missing resize configuration string")
 	}
 
 	res := &model.Resize{Unit: u}
@@ -45,7 +45,7 @@ func ParseResizeConfig(s string, u types.DisplayUnit) (*model.Resize, error) {
 
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
-			return nil, errors.New("pdfcpu: Invalid resize configuration string. Please consult pdfcpu help resize")
+			return nil, errors.New("invalid resize configuration string")
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
@@ -57,11 +57,11 @@ func ParseResizeConfig(s string, u types.DisplayUnit) (*model.Resize, error) {
 	}
 
 	if res.Scale > 0 && res.PageSize != "" {
-		return nil, errors.New("pdfcpu: resize - please supply either scale factor or dimensions or form size ")
+		return nil, errors.New("resize - please supply either scale factor or dimensions or form size ")
 	}
 
 	if res.UserDim && res.PageSize != "" {
-		return nil, errors.New("pdfcpu: resize - please supply either dimensions or form size ")
+		return nil, errors.New("resize - please supply either dimensions or form size ")
 	}
 
 	return res, nil
@@ -169,7 +169,7 @@ func resizeAnnotationRect(ctx *model.Context, d types.Dict, m matrix.Matrix) err
 		return err
 	}
 	if len(arr) != 4 {
-		return errors.New("pdfcpu: resize: invalid annotation rect")
+		return errors.New("resize: invalid annotation rect")
 	}
 
 	r, err := ctx.RectForArray(arr)
@@ -191,7 +191,7 @@ func resizeAnnotationQuadPoints(ctx *model.Context, d types.Dict, m matrix.Matri
 		return err
 	}
 	if len(arr)%8 != 0 {
-		return errors.New("pdfcpu: resize: invalid annotation quadpoints")
+		return errors.New("resize: invalid annotation quadpoints")
 	}
 
 	a := types.Array{}

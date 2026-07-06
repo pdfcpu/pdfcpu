@@ -35,7 +35,7 @@ func Images(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration)
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ListImages: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -63,7 +63,15 @@ func UpdateImages(rs io.ReadSeeker, rd io.Reader, w io.Writer, objNr, pageNr int
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: UpdateImages: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if rd == nil {
+		return ErrMissingImageInput
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -85,7 +93,7 @@ func UpdateImages(rs io.ReadSeeker, rd io.Reader, w io.Writer, objNr, pageNr int
 	}
 
 	if pageNr == 0 || id == "" {
-		return errors.New("pdfcpu: UpdateImages: missing pageNr or id ")
+		return errors.New("missing page number or image id")
 	}
 
 	if err := pdfcpu.UpdateImagesByPageNrAndId(ctx, rd, pageNr, id); err != nil {
@@ -108,7 +116,7 @@ func ensurePageNrAndId(pageNr *int, id *string, imageFile string) (err error) {
 	ss := strings.Split(s, "_")
 
 	if len(ss) < 3 {
-		return fmt.Errorf("pdfcpu: invalid image filename:%s - must conform to output filename of \"pdfcpu extract\"", imageFile)
+		return fmt.Errorf("invalid image filename %s: expected at least three underscore-separated segments", imageFile)
 	}
 
 	*id = ss[len(ss)-1]
@@ -123,7 +131,6 @@ func ensurePageNrAndId(pageNr *int, id *string, imageFile string) (err error) {
 
 // UpdateImagesFile replaces the XObject identified by objNr or (pageNr and resourceId).
 func UpdateImagesFile(inFile, imageFile, outFile string, objNr, pageNr int, id string, conf *model.Configuration) (err error) {
-
 	if objNr < 1 {
 		if err = ensurePageNrAndId(&pageNr, &id, imageFile); err != nil {
 			return err

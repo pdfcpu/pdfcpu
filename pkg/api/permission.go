@@ -17,7 +17,6 @@
 package api
 
 import (
-	"errors"
 	"io"
 	"os"
 
@@ -27,7 +26,7 @@ import (
 // Permissions returns user access permissions for rs.
 func Permissions(rs io.ReadSeeker, conf *model.Configuration) (int, error) {
 	if rs == nil {
-		return 0, errors.New("pdfcpu: Permissions: missing rs")
+		return 0, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -53,11 +52,15 @@ func Permissions(rs io.ReadSeeker, conf *model.Configuration) (int, error) {
 // A configuration containing the current passwords is required.
 func SetPermissions(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 	if rs == nil {
-		return errors.New("pdfcpu: SetPermissions: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
-		return errors.New("pdfcpu: missing configuration for setting permissions")
+		return ErrMissingConfiguration
 	}
 	conf.Cmd = model.SETPERMISSIONS
 
@@ -74,7 +77,7 @@ func SetPermissions(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) er
 // A configuration containing the current passwords is required.
 func SetPermissionsFile(inFile, outFile string, conf *model.Configuration) (err error) {
 	if conf == nil {
-		return errors.New("pdfcpu: missing configuration for setting permissions")
+		return ErrMissingConfiguration
 	}
 
 	var f1, f2 *os.File
@@ -126,7 +129,7 @@ func SetPermissionsFile(inFile, outFile string, conf *model.Configuration) (err 
 // GetPermissions returns the permissions for rs.
 func GetPermissions(rs io.ReadSeeker, conf *model.Configuration) (*int16, error) {
 	if rs == nil {
-		return nil, errors.New("pdfcpu: GetPermissions: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {

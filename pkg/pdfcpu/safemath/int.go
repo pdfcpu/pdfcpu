@@ -21,10 +21,12 @@ import (
 	"math"
 )
 
+var errIntegerOverflow = errors.New("integer overflow")
+
 // AddInt returns a+b unless either operand is negative or the result would overflow int.
 func AddInt(a, b int) (int, error) {
 	if a < 0 || b < 0 || a > math.MaxInt-b {
-		return 0, errors.New("pdfcpu: integer overflow")
+		return 0, errIntegerOverflow
 	}
 	return a + b, nil
 }
@@ -32,7 +34,7 @@ func AddInt(a, b int) (int, error) {
 // MultiplyInt returns a*b unless either operand is negative or the result would overflow int.
 func MultiplyInt(a, b int) (int, error) {
 	if a < 0 || b < 0 || a != 0 && b > math.MaxInt/a {
-		return 0, errors.New("pdfcpu: integer overflow")
+		return 0, errIntegerOverflow
 	}
 	return a * b, nil
 }
@@ -40,7 +42,7 @@ func MultiplyInt(a, b int) (int, error) {
 // MultiplyInt64 returns a*b unless either operand is negative or the result would overflow int64.
 func MultiplyInt64(a, b int64) (int64, error) {
 	if a < 0 || b < 0 || a != 0 && b > math.MaxInt64/a {
-		return 0, errors.New("pdfcpu: integer overflow")
+		return 0, errIntegerOverflow
 	}
 	return a * b, nil
 }

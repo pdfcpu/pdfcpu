@@ -781,7 +781,7 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 		if ft == nil {
 			ft = d.NameEntry("FT")
 			if ft == nil {
-				return errors.New("pdfcpu: corrupt form field: missing entry FT")
+				return errors.New("corrupt form field: missing entry FT")
 			}
 		}
 

@@ -47,10 +47,10 @@ func parseHorCut(v string, cut *Cut) (err error) {
 	for _, s := range strings.Split(v, " ") {
 		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			return fmt.Errorf("pdfcpu: cut position must be a float value: %s\n", s)
+			return fmt.Errorf("cut position must be a float value: %s", s)
 		}
 		if f <= 0 || f >= 1 {
-			return fmt.Errorf("pdfcpu: invalid cut position %.2f: 0 < i < 1.0\n", f)
+			return fmt.Errorf("invalid cut position %.2f: 0 < i < 1.0", f)
 		}
 		cut.Hor = append(cut.Hor, f)
 	}
@@ -63,10 +63,10 @@ func parseVertCut(v string, cut *Cut) (err error) {
 	for _, s := range strings.Split(v, " ") {
 		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			return fmt.Errorf("pdfcpu: cut position must be a float value: %s\n", s)
+			return fmt.Errorf("cut position must be a float value: %s", s)
 		}
 		if f <= 0 || f >= 1 {
-			return fmt.Errorf("pdfcpu: invalid cut position %.2f: 0 < i < 1.0\n", f)
+			return fmt.Errorf("invalid cut position %.2f: 0 < i < 1.0", f)
 		}
 		cut.Vert = append(cut.Vert, f)
 	}
@@ -78,17 +78,17 @@ func parsePageDimCut(v string, u types.DisplayUnit) (*types.Dim, string, error) 
 
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
-		return nil, v, fmt.Errorf("pdfcpu: illegal dimension string: need 2 values one may be 0, %s\n", v)
+		return nil, v, fmt.Errorf("illegal dimension string: need 2 values one may be 0, %s", v)
 	}
 
 	w, err := strconv.ParseFloat(ss[0], 64)
 	if err != nil || w < 0 {
-		return nil, v, fmt.Errorf("pdfcpu: dimension width must be >= 0: %s\n", ss[0])
+		return nil, v, fmt.Errorf("dimension width must be >= 0: %s", ss[0])
 	}
 
 	h, err := strconv.ParseFloat(ss[1], 64)
 	if err != nil || h < 0 {
-		return nil, v, fmt.Errorf("pdfcpu: dimension height must >= 0: %s\n", ss[1])
+		return nil, v, fmt.Errorf("dimension height must >= 0: %s", ss[1])
 	}
 
 	d := types.Dim{Width: types.ToUserSpace(w, u), Height: types.ToUserSpace(h, u)}
@@ -125,7 +125,7 @@ func parsePageFormatCut(s string, cut *Cut) error {
 
 	d, ok := types.PaperSize[v]
 	if !ok {
-		return fmt.Errorf("pdfcpu: page format %s is unsupported.\n", v)
+		return fmt.Errorf("page format %s is unsupported", v)
 	}
 
 	if (d.Portrait() && landscape) || (d.Landscape() && portrait) {
@@ -142,11 +142,11 @@ func parseScaleFactorCut(s string, cut *Cut) (err error) {
 
 	sc, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return fmt.Errorf("pdfcpu: scale factor must be a float value: %s\n", s)
+		return fmt.Errorf("scale factor must be a float value: %s", s)
 	}
 
 	if sc < 1 {
-		return fmt.Errorf("pdfcpu: invalid scale factor %.2f: i >= 1.0\n", sc)
+		return fmt.Errorf("invalid scale factor %.2f: i >= 1.0", sc)
 	}
 
 	cut.Scale = sc
@@ -169,7 +169,7 @@ func parseBorderCut(s string, cut *Cut) error {
 	case "off", "false", "f":
 		cut.Border = false
 	default:
-		return errors.New("pdfcpu: cut border, please provide one of: on/off true/false t/f")
+		return errors.New("cut border, please provide one of: on/off true/false t/f")
 	}
 
 	return nil
@@ -182,7 +182,7 @@ func parseMarginCut(s string, cut *Cut) error {
 	}
 
 	if f < 0 {
-		return errors.New("pdfcpu: cut margin, Please provide a positive value")
+		return errors.New("cut margin, Please provide a positive value")
 	}
 
 	cut.Margin = types.ToUserSpace(f, cut.Unit)

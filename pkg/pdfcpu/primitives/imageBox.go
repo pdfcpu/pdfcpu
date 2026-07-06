@@ -87,7 +87,7 @@ func (ib *ImageBox) resolveFileName(s string) (string, error) {
 func (ib *ImageBox) parseAnchor() (types.Anchor, error) {
 	if ib.Position[0] != 0 || ib.Position[1] != 0 {
 		var a types.Anchor
-		return a, errors.New("pdfcpu: Please supply \"pos\" or \"anchor\"")
+		return a, errors.New("please supply \"pos\" or \"anchor\"")
 	}
 	return types.ParseAnchor(ib.Anchor)
 }
@@ -98,7 +98,7 @@ func (ib *ImageBox) validate() error {
 	ib.y = ib.Position[1]
 
 	if ib.Name == "$" {
-		return errors.New("pdfcpu: invalid image reference $")
+		return errors.New("invalid image reference $")
 	}
 
 	// TODO Validate width, height inside content box
@@ -440,7 +440,7 @@ func (ib *ImageBox) prepareMargin() (float64, float64, float64, float64, error) 
 			mName := m.Name[1:]
 			m0 := ib.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBot, mLeft, fmt.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBot, mLeft, fmt.Errorf("unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}
@@ -475,7 +475,7 @@ func (ib *ImageBox) prepareBorder() (float64, *color.SimpleColor, types.LineJoin
 			bName := b.Name[1:]
 			b0 := ib.border(bName)
 			if b0 == nil {
-				return bWidth, bCol, bStyle, fmt.Errorf("pdfcpu: unknown named border %s", bName)
+				return bWidth, bCol, bStyle, fmt.Errorf("unknown named border %s", bName)
 			}
 			b.mergeIn(b0)
 		}
@@ -508,7 +508,7 @@ func (ib *ImageBox) preparePadding() (float64, float64, float64, float64, error)
 			pName := p.Name[1:]
 			p0 := ib.padding(pName)
 			if p0 == nil {
-				return pTop, pRight, pBot, pLeft, fmt.Errorf("pdfcpu: unknown named padding %s", pName)
+				return pTop, pRight, pBot, pLeft, fmt.Errorf("unknown named padding %s", pName)
 			}
 			p.mergeIn(p0)
 		}

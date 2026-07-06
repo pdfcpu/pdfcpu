@@ -64,7 +64,7 @@ func (hb *HorizontalBand) validate() error {
 	}
 
 	if hb.Height <= 0 {
-		return fmt.Errorf("pdfcpu: missing header/footer height")
+		return fmt.Errorf("missing header/footer height")
 	}
 
 	return nil
@@ -80,19 +80,19 @@ func (hb *HorizontalBand) renderAnchoredImageBox(
 
 	ib := hb.pdf.ImageBoxPool[imageName]
 	if ib == nil {
-		return fmt.Errorf("pdfcpu: HorizontalBand - unable to resolve $%s", imageName)
+		return fmt.Errorf("horizontalBand - unable to resolve $%s", imageName)
 	}
 
 	if ib.Margin != nil && ib.Margin.Name != "" {
-		return fmt.Errorf("pdfcpu: HorizontalBand - unsupported named margin %s", ib.Margin.Name)
+		return fmt.Errorf("horizontalBand - unsupported named margin %s", ib.Margin.Name)
 	}
 
 	if ib.Border != nil && ib.Border.Name != "" {
-		return fmt.Errorf("pdfcpu: HorizontalBand - unsupported named border %s", ib.Border.Name)
+		return fmt.Errorf("horizontalBand - unsupported named border %s", ib.Border.Name)
 	}
 
 	if ib.Padding != nil && ib.Padding.Name != "" {
-		return fmt.Errorf("pdfcpu: HorizontalBand - unsupported named padding %s", ib.Padding.Name)
+		return fmt.Errorf("horizontalBand - unsupported named padding %s", ib.Padding.Name)
 	}
 
 	// push state

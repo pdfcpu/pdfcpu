@@ -397,7 +397,7 @@ func (ann Annotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.Indirec
 	if ann.ModificationDate != "" {
 		_, ok := types.DateTime(ann.ModificationDate, xRefTable.ValidationMode == ValidationRelaxed)
 		if !ok {
-			return nil, fmt.Errorf("pdfcpu: annotation renderDict - validateDateEntry: <%s> invalid date", ann.ModificationDate)
+			return nil, fmt.Errorf("annotation renderDict - validateDateEntry: <%s> invalid date", ann.ModificationDate)
 		}
 		modDate = ann.ModificationDate
 	}
@@ -869,7 +869,7 @@ func (ann FreeTextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types
 
 	if ann.Text == "" {
 		if ann.Contents == "" {
-			return nil, errors.New("pdfcpu: FreeTextAnnotation missing \"text\"")
+			return nil, errors.New("free text annotation missing \"text\"")
 		}
 		ann.Text = ann.Contents
 	}
@@ -1014,15 +1014,15 @@ func NewLineAnnotation(
 
 func (ann LineAnnotation) validateLeaderLineAttrs() error {
 	if ann.LeaderLineExtensionLength < 0 {
-		return errors.New("pdfcpu: LineAnnotation leader line extension length must not be negative.")
+		return errors.New("line annotation leader line extension length must not be negative")
 	}
 
 	if ann.LeaderLineExtensionLength > 0 && ann.LeaderLineLength == 0 {
-		return errors.New("pdfcpu: LineAnnotation leader line length missing.")
+		return errors.New("line annotation leader line length missing")
 	}
 
 	if ann.LeaderLineOffset < 0 {
-		return errors.New("pdfcpu: LineAnnotation leader line offset must not be negative.")
+		return errors.New("line annotation leader line offset must not be negative")
 	}
 
 	return nil
@@ -1340,7 +1340,7 @@ func (ann PolygonAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.
 	}
 
 	if len(ann.Vertices) > 0 && len(ann.Path) > 0 {
-		return nil, errors.New("pdfcpu: PolygonAnnotation supports \"Vertices\" or \"Path\" only")
+		return nil, errors.New("polygon annotation supports \"Vertices\" or \"Path\" only")
 	}
 
 	if len(ann.Vertices) > 0 {
@@ -1464,7 +1464,7 @@ func (ann PolyLineAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types
 	}
 
 	if len(ann.Vertices) > 0 && len(ann.Path) > 0 {
-		return nil, errors.New("pdfcpu: PolyLineAnnotation supports \"Vertices\" or \"Path\" only")
+		return nil, errors.New("polyline annotation supports \"Vertices\" or \"Path\" only")
 	}
 
 	if len(ann.Vertices) > 0 {

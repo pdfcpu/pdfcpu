@@ -17,7 +17,6 @@ limitations under the License.
 package api
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -153,6 +152,7 @@ func ValidateSignatures(inFile string, all bool, conf *model.Configuration) (svr
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	ctx, err := ReadValidateAndOptimize(f, conf)
 	if err != nil {
@@ -160,7 +160,7 @@ func ValidateSignatures(inFile string, all bool, conf *model.Configuration) (svr
 	}
 
 	if len(ctx.Signatures) == 0 && !ctx.SignatureExist && !ctx.AppendOnly {
-		return nil, errors.New("pdfcpu: No signatures present.")
+		return nil, ErrNoSignatures
 	}
 
 	return pdfcpu.ValidateSignatures(f, ctx, all)
@@ -187,10 +187,10 @@ func RemoveSignatures(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) 
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: RemoveSignatures: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 	if w == nil {
-		return errors.New("pdfcpu: AddSignatures: missing w")
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {

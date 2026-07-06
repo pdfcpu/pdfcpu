@@ -31,7 +31,7 @@ func Keywords(rs io.ReadSeeker, conf *model.Configuration) (ss []string, err err
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ListKeywords: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -54,8 +54,13 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Conf
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: AddKeywords: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if err := validateNoEmptyStrings(files, "keyword"); err != nil {
 		return err
 	}
@@ -133,8 +138,13 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: RemoveKeywords: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if err := validateNoEmptyStrings(keywords, "keyword"); err != nil {
 		return err
 	}

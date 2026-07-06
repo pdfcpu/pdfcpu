@@ -37,7 +37,6 @@ func validateBitsPerFlag(i int) bool {
 }
 
 func validateShadingDictCommonEntries(xRefTable *model.XRefTable, dict types.Dict) (shadType int, err error) {
-
 	dictName := "shadingDictCommonEntries"
 
 	shadingType, err := validateIntegerEntry(xRefTable, dict, dictName, "ShadingType", REQUIRED, model.V10, func(i int) bool { return i >= 1 && i <= 7 })
@@ -66,7 +65,6 @@ func validateShadingDictCommonEntries(xRefTable *model.XRefTable, dict types.Dic
 }
 
 func validateFunctionBasedShadingDict(xRefTable *model.XRefTable, dict types.Dict) error {
-
 	dictName := "functionBasedShadingDict"
 
 	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Domain", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 4 })
@@ -83,7 +81,6 @@ func validateFunctionBasedShadingDict(xRefTable *model.XRefTable, dict types.Dic
 }
 
 func validateAxialShadingDict(xRefTable *model.XRefTable, dict types.Dict) error {
-
 	dictName := "axialShadingDict"
 
 	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Coords", REQUIRED, model.V10, func(a types.Array) bool { return len(a) == 4 })
@@ -107,7 +104,6 @@ func validateAxialShadingDict(xRefTable *model.XRefTable, dict types.Dict) error
 }
 
 func validateRadialShadingDict(xRefTable *model.XRefTable, dict types.Dict) error {
-
 	dictName := "radialShadingDict"
 
 	_, err := validateNumberArrayEntry(xRefTable, dict, dictName, "Coords", REQUIRED, model.V10, func(a types.Array) bool { return len(a) == 6 })
@@ -131,7 +127,6 @@ func validateRadialShadingDict(xRefTable *model.XRefTable, dict types.Dict) erro
 }
 
 func validateShadingDict(xRefTable *model.XRefTable, dict types.Dict) error {
-
 	// Shading 1-3
 
 	shadingType, err := validateShadingDictCommonEntries(xRefTable, dict)
@@ -150,14 +145,13 @@ func validateShadingDict(xRefTable *model.XRefTable, dict types.Dict) error {
 		err = validateRadialShadingDict(xRefTable, dict)
 
 	default:
-		return fmt.Errorf("validateShadingDict: unexpected shadingType: %d\n", shadingType)
+		return fmt.Errorf("unexpected shadingType: %d", shadingType)
 	}
 
 	return err
 }
 
 func validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable *model.XRefTable, dict types.Dict) error {
-
 	dictName := "freeFormGouraudShadedTriangleMeshesDict"
 
 	_, err := validateIntegerEntry(xRefTable, dict, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
@@ -184,7 +178,6 @@ func validateFreeFormGouroudShadedTriangleMeshesDict(xRefTable *model.XRefTable,
 }
 
 func validateLatticeFormGouraudShadedTriangleMeshesDict(xRefTable *model.XRefTable, dict types.Dict) error {
-
 	dictName := "latticeFormGouraudShadedTriangleMeshesDict"
 
 	_, err := validateIntegerEntry(xRefTable, dict, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
@@ -211,7 +204,6 @@ func validateLatticeFormGouraudShadedTriangleMeshesDict(xRefTable *model.XRefTab
 }
 
 func validateCoonsPatchMeshesDict(xRefTable *model.XRefTable, dict types.Dict) error {
-
 	dictName := "coonsPatchMeshesDict"
 
 	_, err := validateIntegerEntry(xRefTable, dict, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
@@ -238,7 +230,6 @@ func validateCoonsPatchMeshesDict(xRefTable *model.XRefTable, dict types.Dict) e
 }
 
 func validateTensorProductPatchMeshesDict(xRefTable *model.XRefTable, dict types.Dict) error {
-
 	dictName := "tensorProductPatchMeshesDict"
 
 	_, err := validateIntegerEntry(xRefTable, dict, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
@@ -265,7 +256,6 @@ func validateTensorProductPatchMeshesDict(xRefTable *model.XRefTable, dict types
 }
 
 func validateShadingStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {
-
 	// Shading 2, 4-7
 
 	dict := sd.Dict
@@ -293,14 +283,13 @@ func validateShadingStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict)
 		err = validateTensorProductPatchMeshesDict(xRefTable, dict)
 
 	default:
-		return fmt.Errorf("pdfcpu: validateShadingStreamDict: unexpected shadingType: %d\n", shadingType)
+		return fmt.Errorf("unexpected shadingType: %d", shadingType)
 	}
 
 	return err
 }
 
 func validateShading(xRefTable *model.XRefTable, obj types.Object) error {
-
 	// see 8.7.4.3 Shading Dictionaries
 
 	obj, err := xRefTable.Dereference(obj)
@@ -317,7 +306,7 @@ func validateShading(xRefTable *model.XRefTable, obj types.Object) error {
 		err = validateShadingStreamDict(xRefTable, &obj)
 
 	default:
-		return errors.New("pdfcpu: validateShading: corrupt obj typ, must be dict or stream dict")
+		return errors.New("corrupt obj typ, must be dict or stream dict")
 
 	}
 
@@ -325,7 +314,6 @@ func validateShading(xRefTable *model.XRefTable, obj types.Object) error {
 }
 
 func validateShadingResourceDict(xRefTable *model.XRefTable, obj types.Object, sinceVersion model.Version) error {
-
 	// see 8.7.4.3 Shading Dictionaries
 
 	// Version check

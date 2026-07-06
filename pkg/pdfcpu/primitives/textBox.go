@@ -58,7 +58,7 @@ type TextBox struct {
 func (tb *TextBox) validateAnchor() error {
 	if tb.Anchor != "" {
 		if tb.Position[0] != 0 || tb.Position[1] != 0 {
-			return errors.New("pdfcpu: Please supply \"pos\" or \"anchor\"")
+			return errors.New("please supply \"pos\" or \"anchor\"")
 		}
 		a, err := types.ParseAnchor(tb.Anchor)
 		if err != nil {
@@ -77,7 +77,7 @@ func (tb *TextBox) validateFont() error {
 			return err
 		}
 	} else if !strings.HasPrefix(tb.Name, "$") {
-		return errors.New("pdfcpu: textbox missing font definition")
+		return errors.New("textbox missing font definition")
 	}
 	return nil
 }
@@ -135,7 +135,7 @@ func (tb *TextBox) validate() error {
 	tb.y = tb.Position[1]
 
 	if tb.Name == "$" {
-		return errors.New("pdfcpu: invalid text reference $")
+		return errors.New("invalid text reference $")
 	}
 
 	if err := tb.validateAnchor(); err != nil {
@@ -250,7 +250,7 @@ func (tb *TextBox) calcFont() error {
 		fName := f.Name[1:]
 		f0 := tb.font(fName)
 		if f0 == nil {
-			return fmt.Errorf("pdfcpu: unknown font name %s", fName)
+			return fmt.Errorf("unknown font name %s", fName)
 		}
 		f.Name = f0.Name
 		if f.Size == 0 {
@@ -340,7 +340,7 @@ func (tb *TextBox) prepareTextDescriptor(p *model.Page, pageNr int, fonts model.
 			bName := b.Name[1:]
 			b0 := tb.border(bName)
 			if b0 == nil {
-				return nil, fmt.Errorf("pdfcpu: unknown named border %s", bName)
+				return nil, fmt.Errorf("unknown named border %s", bName)
 			}
 			b.mergeIn(b0)
 		}
@@ -361,7 +361,7 @@ func (tb *TextBox) prepareTextDescriptor(p *model.Page, pageNr int, fonts model.
 			pName := p.Name[1:]
 			p0 := tb.padding(pName)
 			if p0 == nil {
-				return nil, fmt.Errorf("pdfcpu: unknown named padding %s", pName)
+				return nil, fmt.Errorf("unknown named padding %s", pName)
 			}
 			p.mergeIn(p0)
 		}
@@ -380,7 +380,7 @@ func (tb *TextBox) calcMargin() (float64, float64, float64, float64, error) {
 			mName := m.Name[1:]
 			m0 := tb.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBottom, mLeft, fmt.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, fmt.Errorf("unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}

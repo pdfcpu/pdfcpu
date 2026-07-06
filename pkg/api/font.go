@@ -210,7 +210,7 @@ func CreateUserFontDemoFiles(dir, fn string) error {
 	ttf, ok := font.UserFontMetrics[fn]
 	font.UserFontMetricsLock.RUnlock()
 	if !ok {
-		return fmt.Errorf("pdfcpu: font %s not available\n", fn)
+		return fmt.Errorf("font %s not available", fn)
 	}
 	// Create a single page PDF for each Unicode plane with existing glyphs.
 	for i := range ttf.Planes {
@@ -228,7 +228,9 @@ func CreateUserFontDemoFiles(dir, fn string) error {
 			return err
 		}
 		fileName := filepath.Join(dir, fn+"_"+planeString(i)+".pdf")
-		log.CLI.Printf("%s\n", fileName)
+		if log.CLIEnabled() {
+			log.CLI.Printf("%s\n", fileName)
+		}
 		if err := CreatePDFFile(xRefTable, fileName, nil); err != nil {
 			return err
 		}

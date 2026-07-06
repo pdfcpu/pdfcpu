@@ -17,7 +17,6 @@
 package api
 
 import (
-	"errors"
 	"io"
 	"os"
 
@@ -31,7 +30,11 @@ func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: Collect: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {

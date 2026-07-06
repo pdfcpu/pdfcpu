@@ -220,7 +220,7 @@ func ColorSpaceComponents(xRefTable *model.XRefTable, sd *types.StreamDict) (int
 func imageWidth(ctx *model.Context, sd *types.StreamDict, objNr int) (int, error) {
 	obj, ok := sd.Find("Width")
 	if !ok {
-		return 0, fmt.Errorf("pdfcpu: missing image width obj#%d", objNr)
+		return 0, fmt.Errorf("missing image width obj#%d", objNr)
 	}
 	i, err := ctx.DereferenceInteger(obj)
 	if err != nil {
@@ -232,7 +232,7 @@ func imageWidth(ctx *model.Context, sd *types.StreamDict, objNr int) (int, error
 func imageHeight(ctx *model.Context, sd *types.StreamDict, objNr int) (int, error) {
 	obj, ok := sd.Find("Height")
 	if !ok {
-		return 0, fmt.Errorf("pdfcpu: missing image height obj#%d", objNr)
+		return 0, fmt.Errorf("missing image height obj#%d", objNr)
 	}
 	i, err := ctx.DereferenceInteger(obj)
 	if err != nil {
@@ -541,7 +541,7 @@ func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*F
 			return nil, err
 		}
 		if sd == nil {
-			return nil, fmt.Errorf("extractFontData: corrupt font obj#%d for font: %s\n", objNr, fontObject.FontName)
+			return nil, fmt.Errorf("extractFontData: corrupt font obj#%d for font: %s", objNr, fontObject.FontName)
 		}
 
 		// Decode streamDict if used filter is supported only.
@@ -609,7 +609,7 @@ func ExtractFormFonts(ctx *model.Context) ([]Font, error) {
 // ExtractPages extracts pageNrs into a new single page context.
 func ExtractPages(ctx *model.Context, pageNrs []int, usePgCache bool) (*model.Context, error) {
 	if len(pageNrs) == 0 {
-		return nil, errors.New("pdfcpu: ExtractPages: missing page numbers")
+		return nil, errors.New("missing page numbers")
 	}
 
 	ctxDest, err := CreateContextWithXRefTable(ctx.Conf, types.PaperSize["A4"])

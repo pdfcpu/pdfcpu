@@ -40,10 +40,10 @@ const (
 )
 
 // ErrUnsupportedFilter signals unsupported filter encountered.
-var ErrUnsupportedFilter = errors.New("pdfcpu: filter not supported")
+var ErrUnsupportedFilter = errors.New("filter not supported")
 
 // ErrDecodeLimitExceeded signals that decoded filter output exceeds the configured decode limit.
-var ErrDecodeLimitExceeded = errors.New("pdfcpu: filter decode limit exceeded")
+var ErrDecodeLimitExceeded = errors.New("filter decode limit exceeded")
 
 const DefaultMaxDecodeBytes int64 = 512 << 20 // 512 MiB
 
@@ -101,7 +101,7 @@ func NewFilter(filterName string, parms map[string]int, maxDecodeBytes ...int64)
 		err = ErrUnsupportedFilter
 
 	default:
-		err = fmt.Errorf("Invalid filter: <%s>", filterName)
+		err = fmt.Errorf("invalid filter: <%s>", filterName)
 	}
 
 	return filter, err

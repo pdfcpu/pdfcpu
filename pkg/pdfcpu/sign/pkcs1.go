@@ -118,7 +118,7 @@ func parseP1Certificates(sigDict types.Dict) ([]*x509.Certificate, error) {
 	obj, ok := sigDict.Find("Cert")
 	if !ok {
 		//  TODO Find certificate by other means.
-		return nil, errors.New("pdfcpu: missing \"Cert\"")
+		return nil, errors.New("missing \"Cert\"")
 	}
 
 	var chain []*x509.Certificate
@@ -148,7 +148,7 @@ func parseP1Certificates(sigDict types.Dict) ([]*x509.Certificate, error) {
 		chain = append(chain, cert)
 
 	default:
-		return nil, errors.New("pdfcpu: invalid entry: \"Cert\"")
+		return nil, errors.New("invalid entry: \"Cert\"")
 	}
 
 	return chain, nil
@@ -210,7 +210,7 @@ func verifyRSASHA1Signature(ra io.ReaderAt, sigDict types.Dict, rsaPubKey *rsa.P
 
 	// Confirm that the signature was created using the private key corresponding to the public key from the certificate.
 	if err := rsa.VerifyPKCS1v15(rsaPubKey, crypto.SHA1, hashed[:], bb); err != nil {
-		return model.SignatureReasonDocModified, fmt.Errorf("RSA PKCS#1v15 signature verification failure: %v\n", err)
+		return model.SignatureReasonDocModified, fmt.Errorf("RSA PKCS#1v15 signature verification failure: %v", err)
 	}
 
 	return model.SignatureReasonDocNotModified, nil

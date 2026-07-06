@@ -25,7 +25,6 @@ import (
 )
 
 func validateOptionalContentGroupIntent(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
-
 	// see 8.11.2.1
 
 	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
@@ -41,7 +40,7 @@ func validateOptionalContentGroupIntent(xRefTable *model.XRefTable, d types.Dict
 
 	case types.Name:
 		if !validate(o.Value()) {
-			return fmt.Errorf("validateOptionalContentGroupIntent: invalid intent: %s", o.Value())
+			return fmt.Errorf("invalid intent: %s", o.Value())
 		}
 
 	case types.Array:
@@ -54,23 +53,22 @@ func validateOptionalContentGroupIntent(xRefTable *model.XRefTable, d types.Dict
 
 			n, ok := v.(types.Name)
 			if !ok {
-				return fmt.Errorf("pdfcpu: validateOptionalContentGroupIntent: invalid type at index %d\n", i)
+				return fmt.Errorf("invalid type at index %d", i)
 			}
 
 			if !validate(n.Value()) {
-				return fmt.Errorf("pdfcpu: validateOptionalContentGroupIntent: invalid intent: %s", n.Value())
+				return fmt.Errorf("invalid intent: %s", n.Value())
 			}
 		}
 
 	default:
-		return errors.New("pdfcpu: validateOptionalContentGroupIntent: invalid type")
+		return errors.New("invalid type")
 	}
 
 	return nil
 }
 
 func validateOptionalContentGroupUsageDict(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
-
 	// see 8.11.4.4
 
 	d1, err := validateDictEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
@@ -129,7 +127,6 @@ func validateOptionalContentGroupUsageDict(xRefTable *model.XRefTable, d types.D
 }
 
 func validateOptionalContentGroupDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
-
 	// see 8.11 Optional Content
 
 	dictName := "optionalContentGroupDict"
@@ -157,7 +154,6 @@ func validateOptionalContentGroupDict(xRefTable *model.XRefTable, d types.Dict, 
 }
 
 func validateOptionalContentGroupArray(xRefTable *model.XRefTable, d types.Dict, dictName, dictEntry string, sinceVersion model.Version) error {
-
 	a, err := validateArrayEntry(xRefTable, d, dictName, dictEntry, OPTIONAL, sinceVersion, nil)
 	if err != nil || a == nil {
 		return err
@@ -189,7 +185,6 @@ func validateOptionalContentGroupArray(xRefTable *model.XRefTable, d types.Dict,
 }
 
 func validateOCGs(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, sinceVersion model.Version) error {
-
 	// see 8.11.2.2
 
 	o, _, err := d.Entry(dictName, entryName, OPTIONAL)
@@ -217,7 +212,6 @@ func validateOCGs(xRefTable *model.XRefTable, d types.Dict, dictName, entryName 
 }
 
 func validateOptionalContentMembershipDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
-
 	// see 8.11.2.2
 
 	dictName := "OCMDict"
@@ -242,7 +236,6 @@ func validateOptionalContentMembershipDict(xRefTable *model.XRefTable, d types.D
 }
 
 func validateOptionalContent(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
-
 	d1, err := validateDictEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d1 == nil {
 		return err
@@ -262,7 +255,6 @@ func validateOptionalContent(xRefTable *model.XRefTable, d types.Dict, dictName,
 }
 
 func validateUsageApplicationDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
-
 	dictName := "usageAppDict"
 
 	// Event, required, name
@@ -284,7 +276,6 @@ func validateUsageApplicationDict(xRefTable *model.XRefTable, d types.Dict, sinc
 }
 
 func validateUsageApplicationDictArray(xRefTable *model.XRefTable, d types.Dict, dictName, dictEntry string, required bool, sinceVersion model.Version) error {
-
 	a, err := validateArrayEntry(xRefTable, d, dictName, dictEntry, required, sinceVersion, nil)
 	if err != nil || a == nil {
 		return err
@@ -316,7 +307,6 @@ func validateUsageApplicationDictArray(xRefTable *model.XRefTable, d types.Dict,
 }
 
 func validateOptionalContentConfigurationDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
-
 	dictName := "optContentConfigDict"
 
 	// Name, optional, string

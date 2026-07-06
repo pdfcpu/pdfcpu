@@ -52,7 +52,7 @@ var ISO639Codes = []string{"ab", "aa", "af", "ak", "sq", "am", "ar", "an", "hy",
 
 func (f *FormFont) validateISO639() error {
 	if !types.MemberOf(f.Lang, ISO639Codes) {
-		return fmt.Errorf("pdfcpu: invalid ISO-639 code: %s", f.Lang)
+		return fmt.Errorf("invalid ISO-639 code: %s", f.Lang)
 	}
 	return nil
 }
@@ -62,26 +62,26 @@ func (f *FormFont) validateScriptSupport() error {
 	fd, ok := font.UserFontMetrics[f.Name]
 	font.UserFontMetricsLock.RUnlock()
 	if !ok {
-		return fmt.Errorf("pdfcpu: userfont %s not available", f.Name)
+		return fmt.Errorf("userfont %s not available", f.Name)
 	}
 	ok, err := fd.SupportsScript(f.Script)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("pdfcpu: userfont (%s) does not support script: %s", f.Name, f.Script)
+		return fmt.Errorf("userfont (%s) does not support script: %s", f.Name, f.Script)
 	}
 	return nil
 }
 
 func (f *FormFont) validate() error {
 	if f.Name == "$" {
-		return errors.New("pdfcpu: invalid font reference $")
+		return errors.New("invalid font reference $")
 	}
 
 	if f.Name != "" && f.Name[0] != '$' {
 		if !font.SupportedFont(f.Name) {
-			return fmt.Errorf("pdfcpu: font %s is unsupported, please refer to \"pdfcpu fonts list\".\n", f.Name)
+			return fmt.Errorf("font %s is unsupported, please refer to \"pdfcpu fonts list\"", f.Name)
 		}
 		if font.IsUserFont(f.Name) {
 			if f.Lang != "" {
@@ -98,7 +98,7 @@ func (f *FormFont) validate() error {
 			}
 		}
 		if f.Size <= 0 {
-			return fmt.Errorf("pdfcpu: invalid font size: %d", f.Size)
+			return fmt.Errorf("invalid font size: %d", f.Size)
 		}
 	}
 
@@ -294,7 +294,7 @@ func extractFormFontDetails(
 			}
 
 			if fName == "" {
-				return "", "", "", "", nil, fmt.Errorf("pdfcpu: Unable to detect fontName for: %s", fontID)
+				return "", "", "", "", nil, fmt.Errorf("unable to detect fontName for: %s", fontID)
 			}
 		}
 
@@ -352,7 +352,7 @@ func fontFromDA(s string) (string, FormFont, error) {
 func calcFontDetailsFromDA(ctx *model.Context, d types.Dict, da *string, needUTF8 bool, fonts map[string]types.IndirectRef) (string, *FormFont, bool, *types.IndirectRef, error) {
 	s := locateDA(ctx, d, da)
 	if s == nil {
-		return "", nil, false, nil, errors.New("pdfcpu: missing \"DA\"")
+		return "", nil, false, nil, errors.New("missing \"DA\"")
 	}
 
 	fontID, f, err := fontFromDA(*s)
@@ -365,7 +365,7 @@ func calcFontDetailsFromDA(ctx *model.Context, d types.Dict, da *string, needUTF
 		return "", nil, false, nil, err
 	}
 	if fontIndRef == nil {
-		return "", nil, false, nil, errors.New("pdfcpu: unable to detect indirect reference for font")
+		return "", nil, false, nil, errors.New("unable to detect indirect reference for font")
 	}
 
 	fillFont := formFontIndRef(ctx.XRefTable, fontID) != nil

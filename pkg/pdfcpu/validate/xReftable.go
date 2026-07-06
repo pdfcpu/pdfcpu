@@ -176,15 +176,14 @@ func metaDataModifiedAfterInfoDict(xRefTable *model.XRefTable) (bool, error) {
 }
 
 func setRootVersion(xRefTable *model.XRefTable, s string) error {
-
 	rootVersion, err := model.PDFVersion(s)
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return fmt.Errorf("identifyRootVersion: unknown PDF Root version: %s\n: %w", s, err)
+			return fmt.Errorf("identifyRootVersion: unknown PDF Root version: %s: %w", s, err)
 		}
 		rootVersion, err = model.PDFVersionRelaxed(s)
 		if err != nil {
-			return fmt.Errorf("identifyRootVersion: unknown PDF Root version: %s\n: %w", s, err)
+			return fmt.Errorf("identifyRootVersion: unknown PDF Root version: %s: %w", s, err)
 		}
 	}
 
@@ -257,7 +256,7 @@ func validatePageLabels(xRefTable *model.XRefTable, rootDict types.Dict, require
 	ir := rootDict.IndirectRefEntry("PageLabels")
 	if ir == nil {
 		if required {
-			return fmt.Errorf("validatePageLabels: required entry \"PageLabels\" missing")
+			return fmt.Errorf("required entry \"PageLabels\" missing")
 		}
 		return nil
 	}
@@ -299,7 +298,7 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 
 		if ok := validateNameTreeName(treeName); !ok {
 			if xRefTable.ValidationMode == model.ValidationStrict {
-				return fmt.Errorf("validateNames: unknown name tree name: %s\n", treeName)
+				return fmt.Errorf("unknown name tree name: %s", treeName)
 			}
 			continue
 		}
@@ -438,7 +437,7 @@ func validateOpenAction(xRefTable *model.XRefTable, rootDict types.Dict, require
 		err = validateDestinationArray(xRefTable, o)
 
 	default:
-		err = errors.New("pdfcpu: validateOpenAction: unexpected object")
+		err = errors.New("unexpected object")
 	}
 
 	return err
@@ -736,7 +735,7 @@ func validatePermissions(xRefTable *model.XRefTable, rootDict types.Dict, requir
 	i++
 
 	if i == 0 {
-		return errors.New("pdfcpu: validatePermissions: unsupported permissions detected")
+		return errors.New("unsupported permissions detected")
 	}
 
 	return nil
@@ -751,7 +750,7 @@ func validateLegal(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 		return err
 	}
 
-	return errors.New("pdfcpu: \"Legal\" not supported")
+	return errors.New("\"Legal\" not supported")
 }
 
 func validateRequirementDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
@@ -864,7 +863,7 @@ func validateCollectionSchemaDict(xRefTable *model.XRefTable, d types.Dict) erro
 			}
 
 			if n != "CollectionSchema" {
-				return errors.New("pdfcpu: validateCollectionSchemaDict: invalid entry \"Type\"")
+				return errors.New("invalid entry \"Type\"")
 			}
 
 			continue
@@ -986,7 +985,7 @@ func validateAF(xRefTable *model.XRefTable, rootDict types.Dict, required bool, 
 		return err
 	}
 
-	return errors.New("pdfcpu: PDF2.0 \"AF\" not supported")
+	return errors.New("PDF2.0 \"AF\" not supported")
 }
 
 func validateDPartRoot(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
@@ -997,7 +996,7 @@ func validateDPartRoot(xRefTable *model.XRefTable, rootDict types.Dict, required
 		return err
 	}
 
-	return errors.New("pdfcpu: PDF2.0 \"DPartRoot\" not supported")
+	return errors.New("PDF2.0 \"DPartRoot\" not supported")
 }
 
 func logURIError(xRefTable *model.XRefTable, pages []int) {

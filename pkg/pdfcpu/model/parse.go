@@ -29,24 +29,24 @@ import (
 )
 
 var (
-	errArrayCorrupt            = errors.New("pdfcpu: parse: corrupt array")
-	errArrayNotTerminated      = errors.New("pdfcpu: parse: unterminated array")
-	errDictionaryCorrupt       = errors.New("pdfcpu: parse: corrupt dictionary")
-	errDictionaryNotTerminated = errors.New("pdfcpu: parse: unterminated dictionary")
-	errDictionaryDuplicateKey  = errors.New("pdfcpu: parse: duplicate key")
-	errHexLiteralCorrupt       = errors.New("pdfcpu: parse: corrupt hex literal")
-	errHexLiteralNotTerminated = errors.New("pdfcpu: parse: hex literal not terminated")
-	errNameObjectCorrupt       = errors.New("pdfcpu: parse: corrupt name object")
-	errNoArray                 = errors.New("pdfcpu: parse: no array")
-	errNoDictionary            = errors.New("pdfcpu: parse: no dictionary")
-	errStringLiteralCorrupt    = errors.New("pdfcpu: parse: corrupt string literal, possibly unbalanced parenthesis")
-	errBufNotAvailable         = errors.New("pdfcpu: parse: no buffer available")
-	errXrefStreamMissingW      = errors.New("pdfcpu: parse: xref stream dict missing entry W")
-	errXrefStreamCorruptW      = errors.New("pdfcpu: parse: xref stream dict corrupt entry W: expecting array of 3 int")
-	errXrefStreamCorruptIndex  = errors.New("pdfcpu: parse: xref stream dict corrupt entry Index")
-	errObjStreamMissingN       = errors.New("pdfcpu: parse: obj stream dict missing entry W")
-	errObjStreamMissingFirst   = errors.New("pdfcpu: parse: obj stream dict missing entry First")
-	ErrCorruptObjectOffset     = errors.New("pdfcpu: corrupt object offset")
+	errArrayCorrupt            = errors.New("parse: corrupt array")
+	errArrayNotTerminated      = errors.New("parse: unterminated array")
+	errDictionaryCorrupt       = errors.New("parse: corrupt dictionary")
+	errDictionaryNotTerminated = errors.New("parse: unterminated dictionary")
+	errDictionaryDuplicateKey  = errors.New("parse: duplicate key")
+	errHexLiteralCorrupt       = errors.New("parse: corrupt hex literal")
+	errHexLiteralNotTerminated = errors.New("parse: hex literal not terminated")
+	errNameObjectCorrupt       = errors.New("parse: corrupt name object")
+	errNoArray                 = errors.New("parse: no array")
+	errNoDictionary            = errors.New("parse: no dictionary")
+	errStringLiteralCorrupt    = errors.New("parse: corrupt string literal, possibly unbalanced parenthesis")
+	errBufNotAvailable         = errors.New("parse: no buffer available")
+	errXrefStreamMissingW      = errors.New("parse: xref stream dict missing entry W")
+	errXrefStreamCorruptW      = errors.New("parse: xref stream dict corrupt entry W: expecting array of 3 int")
+	errXrefStreamCorruptIndex  = errors.New("parse: xref stream dict corrupt entry Index")
+	errObjStreamMissingN       = errors.New("parse: obj stream dict missing entry W")
+	errObjStreamMissingFirst   = errors.New("parse: obj stream dict missing entry First")
+	ErrCorruptObjectOffset     = errors.New("corrupt object offset")
 )
 
 func positionToNextWhitespace(s string) (int, string) {
@@ -240,13 +240,13 @@ func detectObj(s string) (string, string, error) {
 		return s[:i], s[i+2:], nil
 	}
 
-	return "", "", errors.New("pdfcpu: ParseObjectAttributes: can't find \"obj\"")
+	return "", "", errors.New("parseObjectAttributes: can't find \"obj\"")
 }
 
 func cleanObjProlog(s string) (string, error) {
 	s, _ = trimLeftSpace(s, false)
 	if len(s) == 0 {
-		return "", errors.New("pdfcpu: ParseObjectAttributes: can't find object number")
+		return "", errors.New("parseObjectAttributes: can't find object number")
 	}
 
 	var b strings.Builder
@@ -262,7 +262,7 @@ func cleanObjProlog(s string) (string, error) {
 func ParseObjectAttributes(line *string) (*int, *int, error) {
 	// TODO always called twice ?
 	if line == nil || len(*line) == 0 {
-		return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: buf not available")
+		return nil, nil, errors.New("buf not available")
 	}
 
 	if log.ParseEnabled() {
@@ -301,12 +301,12 @@ func ParseObjectAttributes(line *string) (*int, *int, error) {
 		l = l[i:]
 		l, _ = trimLeftSpace(l, false)
 		if len(l) == 0 {
-			return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: can't find generation number")
+			return nil, nil, errors.New("can't find generation number")
 		}
 
 		i, _ = positionToNextWhitespaceOrChar(l, "%")
 		if i <= 0 {
-			return nil, nil, errors.New("pdfcpu: ParseObjectAttributes: can't find end of generation number")
+			return nil, nil, errors.New("can't find end of generation number")
 		}
 
 		genNr, err = strconv.Atoi(l[:i])
@@ -895,7 +895,6 @@ func parseHexLiteralOrDict(c context.Context, l *string, level, maxDepth int) (v
 }
 
 func parseBooleanOrNull(l string) (types.Object, string, bool) {
-
 	if len(l) < 4 {
 		return nil, "", false
 	}
@@ -1079,15 +1078,15 @@ func ParseXRefStreamDict(sd *types.StreamDict) (*types.XRefStreamDict, error) {
 func xRefStreamSize(sd *types.StreamDict, limits ResourceLimits) (int, error) {
 	sizePtr := sd.Size()
 	if sizePtr == nil {
-		return 0, errors.New("pdfcpu: ParseXRefStreamDict: \"Size\" not available")
+		return 0, errors.New("\"Size\" not available")
 	}
 
 	size := *sizePtr
 	if size <= 0 {
-		return 0, errors.New("pdfcpu: ParseXRefStreamDict: invalid \"Size\"")
+		return 0, errors.New("invalid \"Size\"")
 	}
 	if size > limits.MaxObjectCount {
-		return 0, fmt.Errorf("pdfcpu: ParseXRefStreamDict: \"Size\" %d exceeds limit %d", size, limits.MaxObjectCount)
+		return 0, fmt.Errorf("\"Size\" %d exceeds limit %d", size, limits.MaxObjectCount)
 	}
 	return size, nil
 }
@@ -1118,7 +1117,7 @@ func xRefStreamObjectsFromIndex(indArr types.Array, size int, limits ResourceLim
 			return nil, errXrefStreamCorruptIndex
 		}
 		if total+n > limits.MaxXRefEntries {
-			return nil, fmt.Errorf("pdfcpu: ParseXRefStreamDict: xref entry count %d exceeds limit %d", total+n, limits.MaxXRefEntries)
+			return nil, fmt.Errorf("xref entry count %d exceeds limit %d", total+n, limits.MaxXRefEntries)
 		}
 
 		for j := 0; j < n; j++ {
@@ -1133,7 +1132,7 @@ func xRefStreamObjectsFromIndex(indArr types.Array, size int, limits ResourceLim
 
 func xRefStreamObjectsFromSize(size int, limits ResourceLimits) ([]int, error) {
 	if size > limits.MaxXRefEntries {
-		return nil, fmt.Errorf("pdfcpu: ParseXRefStreamDict: xref entry count %d exceeds limit %d", size, limits.MaxXRefEntries)
+		return nil, fmt.Errorf("xref entry count %d exceeds limit %d", size, limits.MaxXRefEntries)
 	}
 
 	objs := make([]int, 0, size)
@@ -1203,10 +1202,10 @@ func ObjectStreamDictWithLimits(sd *types.StreamDict, limits ResourceLimits) (*t
 		return nil, errObjStreamMissingN
 	}
 	if *sd.N() <= 0 || *sd.N() > limits.MaxObjectStreamCount {
-		return nil, fmt.Errorf("pdfcpu: object stream N %d exceeds limit %d", *sd.N(), limits.MaxObjectStreamCount)
+		return nil, fmt.Errorf("object stream N %d exceeds limit %d", *sd.N(), limits.MaxObjectStreamCount)
 	}
 	if *sd.First() < 0 || int64(*sd.First()) > limits.MaxObjectStreamFirst {
-		return nil, fmt.Errorf("pdfcpu: object stream First %d exceeds limit %d", *sd.First(), limits.MaxObjectStreamFirst)
+		return nil, fmt.Errorf("object stream First %d exceeds limit %d", *sd.First(), limits.MaxObjectStreamFirst)
 	}
 
 	osd := types.ObjectStreamDict{

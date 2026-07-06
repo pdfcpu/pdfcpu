@@ -17,7 +17,6 @@ limitations under the License.
 package api
 
 import (
-	"errors"
 	"io"
 	"os"
 
@@ -32,7 +31,11 @@ func Zoom(rs io.ReadSeeker, w io.Writer, selectedPages []string, zoom *model.Zoo
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: Zoom: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {

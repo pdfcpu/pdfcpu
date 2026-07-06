@@ -30,12 +30,12 @@ type Padding struct {
 func (p *Padding) validate() error {
 
 	if p.Name == "$" {
-		return errors.New("pdfcpu: invalid padding reference $")
+		return errors.New("invalid padding reference $")
 	}
 
 	if p.Width < 0 {
 		if p.Top > 0 || p.Right > 0 || p.Bottom > 0 || p.Left > 0 {
-			return fmt.Errorf("pdfcpu: invalid padding width: %f", p.Width)
+			return fmt.Errorf("invalid padding width: %f", p.Width)
 		}
 	}
 

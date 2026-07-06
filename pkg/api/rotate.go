@@ -17,7 +17,6 @@
 package api
 
 import (
-	"errors"
 	"io"
 	"os"
 
@@ -31,7 +30,11 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: Rotate: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {

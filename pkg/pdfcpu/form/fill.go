@@ -89,7 +89,7 @@ func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error
 	for pageNr := range pages {
 		nr, err := strconv.Atoi(pageNr)
 		if err != nil {
-			return nil, fmt.Errorf("pdfcpu: invalid page number: %s", pageNr)
+			return nil, fmt.Errorf("invalid page number: %s", pageNr)
 		}
 		pageNrs = append(pageNrs, nr)
 	}
@@ -179,7 +179,7 @@ func parseHeight(s string, ib *primitives.ImageBox) error {
 func parsePositionAnchor(s string, ib *primitives.ImageBox) error {
 	d := strings.Split(s, " ")
 	if len(d) < 1 || len(d) > 2 {
-		return fmt.Errorf("pdfcpu: illegal position string: need 1 or 2 values, %s\n", s)
+		return fmt.Errorf("illegal position string: need 1 or 2 values, %s", s)
 	}
 	if len(d) == 1 {
 		_, err := types.ParsePositionAnchor(s)
@@ -205,7 +205,7 @@ func parsePositionAnchor(s string, ib *primitives.ImageBox) error {
 func parsePositionOffset(s string, ib *primitives.ImageBox) error {
 	d := strings.Split(s, " ")
 	if len(d) != 2 {
-		return fmt.Errorf("pdfcpu: illegal position offset string: need 2 numeric values, %s\n", s)
+		return fmt.Errorf("illegal position offset string: need 2 numeric values, %s", s)
 	}
 
 	f, err := strconv.ParseFloat(d[0], 64)
@@ -234,7 +234,7 @@ func parseImgBorder(s string, ib *primitives.ImageBox) error {
 
 	b := strings.Split(s, " ")
 	if len(b) == 0 || len(b) > 5 {
-		return fmt.Errorf("pdfcpu: borders: need between 1 and 5 components, %s\n", s)
+		return fmt.Errorf("borders: need between 1 and 5 components, %s", s)
 	}
 
 	ib.Border = &primitives.Border{}
@@ -245,7 +245,7 @@ func parseImgBorder(s string, ib *primitives.ImageBox) error {
 		return err
 	}
 	if border.Width == 0 {
-		return errors.New("pdfcpu: borders: need width > 0")
+		return errors.New("borders: need width > 0")
 	}
 
 	if len(b) == 1 {
@@ -288,13 +288,13 @@ func (m imageBoxParamMap) processImageBoxArg(paramPrefix, paramValueStr string, 
 			continue
 		}
 		if len(param) > 0 {
-			return fmt.Errorf("pdfcpu: ambiguous parameter prefix \"%s\"", paramPrefix)
+			return fmt.Errorf("ambiguous parameter prefix \"%s\"", paramPrefix)
 		}
 		param = k
 	}
 
 	if param == "" {
-		return fmt.Errorf("pdfcpu: unknown parameter prefix \"%s\"", paramPrefix)
+		return fmt.Errorf("unknown parameter prefix \"%s\"", paramPrefix)
 	}
 
 	return m[param](paramValueStr, ib)
@@ -303,17 +303,17 @@ func (m imageBoxParamMap) processImageBoxArg(paramPrefix, paramValueStr string, 
 func imageBox(s, src, url string) (*primitives.ImageBox, string, error) {
 
 	if !strings.HasPrefix(s, "@img") || len(s) < 6 {
-		return nil, "", fmt.Errorf("pdfcpu: parsing cvs fieldNames: missing @img: <%s>", s)
+		return nil, "", fmt.Errorf("parsing cvs fieldNames: missing @img: <%s>", s)
 	}
 
 	s = s[4:]
 	if s[0] != '(' || s[len(s)-1] != ')' {
-		return nil, "", fmt.Errorf("pdfcpu: parsing cvs fieldNames: invalid @img: <%s>", s)
+		return nil, "", fmt.Errorf("parsing cvs fieldNames: invalid @img: <%s>", s)
 	}
 
 	s = s[1 : len(s)-1]
 	if len(s) == 0 {
-		return nil, "", fmt.Errorf("pdfcpu: parsing cvs fieldNames: empty @img: <%s>", s)
+		return nil, "", fmt.Errorf("parsing cvs fieldNames: empty @img: <%s>", s)
 	}
 
 	ib := primitives.ImageBox{Src: src, Dx: 0, Dy: 0, Width: 0, Height: 0}
@@ -325,7 +325,7 @@ func imageBox(s, src, url string) (*primitives.ImageBox, string, error) {
 	for _, s := range ss {
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
-			return nil, "", fmt.Errorf("pdfcpu: parsing cvs fieldNames: invalid @img: <%s>", s)
+			return nil, "", fmt.Errorf("parsing cvs fieldNames: invalid @img: <%s>", s)
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
@@ -1114,7 +1114,7 @@ func fillWidgetAnnots(
 		if ft == nil {
 			ft = d.NameEntry("FT")
 			if ft == nil {
-				return fmt.Errorf("pdfcpu: corrupt form field %s: missing entry FT\n%s", id, d)
+				return fmt.Errorf("corrupt form field %s: missing entry FT: %s", id, d)
 			}
 		}
 

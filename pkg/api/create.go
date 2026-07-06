@@ -47,7 +47,11 @@ func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configurati
 	defer fault.Catch(&err)
 
 	if rd == nil {
-		return errors.New("pdfcpu: Create: missing rd")
+		return errors.New("missing JSON input")
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -88,6 +92,32 @@ func handleOutFilePDF(inFilePDF, outFilePDF string, tmpFile *string) {
 	}
 }
 
+func closeCreateFiles(ok bool, f0, f1, f2 *os.File, tmpFile, inFilePDF, outFilePDF string, err *error) {
+	if !ok {
+		_ = f2.Close()
+		if f1 != nil {
+			_ = f1.Close()
+		}
+		_ = f0.Close()
+		_ = os.Remove(tmpFile)
+		return
+	}
+	if *err = f2.Close(); *err != nil {
+		return
+	}
+	if f1 != nil {
+		if *err = f1.Close(); *err != nil {
+			return
+		}
+	}
+	if *err = f0.Close(); *err != nil {
+		return
+	}
+	if outFilePDF == "" || inFilePDF == outFilePDF {
+		*err = os.Rename(tmpFile, inFilePDF)
+	}
+}
+
 // CreateFile renders the PDF structure represented by inFileJSON into outFilePDF.
 // If inFilePDF is present, new PDF content will be appended including any empty pages needed.
 // inFileJSON represents PDF page content which may include form data.
@@ -105,7 +135,9 @@ func CreateFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configurat
 		if f1, err = os.Open(inFilePDF); err != nil {
 			return err
 		}
-		log.CLI.Printf("reading %s...\n", inFilePDF)
+		if log.CLIEnabled() {
+			log.CLI.Printf("reading %s...\n", inFilePDF)
+		}
 		rs = f1
 	}
 
@@ -121,29 +153,7 @@ func CreateFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configurat
 	}
 
 	defer func() {
-		if !ok {
-			_ = f2.Close()
-			if f1 != nil {
-				_ = f1.Close()
-			}
-			_ = f0.Close()
-			_ = os.Remove(tmpFile)
-			return
-		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if f1 != nil {
-			if err = f1.Close(); err != nil {
-				return
-			}
-		}
-		if err = f0.Close(); err != nil {
-			return
-		}
-		if outFilePDF == "" || inFilePDF == outFilePDF {
-			err = os.Rename(tmpFile, inFilePDF)
-		}
+		closeCreateFiles(ok, f0, f1, f2, tmpFile, inFilePDF, outFilePDF, &err)
 	}()
 
 	if err = Create(rs, f0, f2, conf); err != nil {

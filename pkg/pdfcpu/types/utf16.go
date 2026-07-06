@@ -29,7 +29,7 @@ import (
 )
 
 // ErrInvalidUTF16BE represents an error that gets raised for invalid UTF-16BE byte sequences.
-var ErrInvalidUTF16BE = errors.New("pdfcpu: invalid UTF-16BE detected")
+var ErrInvalidUTF16BE = errors.New("invalid UTF-16BE detected")
 
 // IsStringUTF16BE checks a string for Big Endian byte order BOM.
 func IsStringUTF16BE(s string) bool {
@@ -77,19 +77,19 @@ func decodeUTF16String(b []byte) (string, error) {
 
 		// Ensure bytes needed in order to decode surrogate pair.
 		if i+2 >= len(b) {
-			return "", fmt.Errorf("decodeUTF16String: corrupt UTF16BE byte length on unicode point 1: %v", b)
+			return "", fmt.Errorf("corrupt UTF16BE byte length on unicode point 1: %v", b)
 		}
 
 		// Ensure high surrogate is leading in possible surrogate pair.
 		if val >= 0xDC00 && val <= 0xDFFF {
-			return "", fmt.Errorf("decodeUTF16String: corrupt UTF16BE on unicode point 1: %v", b)
+			return "", fmt.Errorf("corrupt UTF16BE on unicode point 1: %v", b)
 		}
 
 		// Supplementary Planes
 		u16 = append(u16, val)
 		val = (uint16(b[i+2]) << 8) + uint16(b[i+3])
 		if val < 0xDC00 || val > 0xDFFF {
-			return "", fmt.Errorf("decodeUTF16String: corrupt UTF16BE on unicode point 2: %v", b)
+			return "", fmt.Errorf("corrupt UTF16BE on unicode point 2: %v", b)
 		}
 
 		u16 = append(u16, val)
@@ -178,5 +178,5 @@ func StringOrHexLiteral(obj Object) (*string, error) {
 		s, err := HexLiteralToString(hl)
 		return &s, err
 	}
-	return nil, errors.New("pdfcpu: expected StringLiteral or HexLiteral")
+	return nil, errors.New("expected StringLiteral or HexLiteral")
 }

@@ -55,11 +55,11 @@ func (z *Zoom) EnsureFactorAndMargins(w, h float64) error {
 func parseHMargin(s string, zoom *Zoom) error {
 	m, err := strconv.ParseFloat(s, 64)
 	if err != nil || m == 0 {
-		return fmt.Errorf("pdfcpu: \"hmargin\" must be a numeric value and must not be 0, got %s\n", s)
+		return fmt.Errorf("\"hmargin\" must be a numeric value and must not be 0, got %s", s)
 	}
 
 	if zoom.VMargin != 0 {
-		return errors.New("pdfcpu: only one of \"hmargin\" and \"vmargin\" allowed")
+		return errors.New("only one of \"hmargin\" and \"vmargin\" allowed")
 	}
 
 	zoom.HMargin = types.ToUserSpace(m, zoom.Unit)
@@ -69,11 +69,11 @@ func parseHMargin(s string, zoom *Zoom) error {
 func parseVMargin(s string, zoom *Zoom) error {
 	m, err := strconv.ParseFloat(s, 64)
 	if err != nil || m == 0 {
-		return fmt.Errorf("pdfcpu: \"vmargin\" must be a numeric value and must not be 0, got %s\n", s)
+		return fmt.Errorf("\"vmargin\" must be a numeric value and must not be 0, got %s", s)
 	}
 
 	if zoom.HMargin != 0 {
-		return errors.New("pdfcpu: only one of \"hmargin\" and \"vmargin\" allowed")
+		return errors.New("only one of \"hmargin\" and \"vmargin\" allowed")
 	}
 
 	zoom.VMargin = types.ToUserSpace(m, zoom.Unit)
@@ -83,11 +83,11 @@ func parseVMargin(s string, zoom *Zoom) error {
 func parseZoomFactor(s string, zoom *Zoom) (err error) {
 	zf, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return fmt.Errorf("pdfcpu: zoom factor must be a float value: %s\n", s)
+		return fmt.Errorf("zoom factor must be a float value: %s", s)
 	}
 
 	if zf <= 0 || zf == 1 {
-		return fmt.Errorf("pdfcpu: invalid zoom factor %.2f: 0.0 < i < 1.0 or i > 1.0\n", zf)
+		return fmt.Errorf("invalid zoom factor %.2f: 0.0 < i < 1.0 or i > 1.0", zf)
 	}
 
 	zoom.Factor = zf
@@ -110,7 +110,7 @@ func parseBorderZoom(s string, zoom *Zoom) error {
 	case "off", "false", "f":
 		zoom.Border = false
 	default:
-		return errors.New("pdfcpu: zoom border, please provide one of: on/off true/false t/f")
+		return errors.New("zoom border, please provide one of: on/off true/false t/f")
 	}
 
 	return nil

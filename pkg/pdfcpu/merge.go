@@ -999,7 +999,7 @@ func pageTreeRoot(ctx *model.Context) (*types.IndirectRef, types.Dict, error) {
 
 	pageCount := d.IntEntry("Count")
 	if pageCount == nil || *pageCount != ctx.PageCount {
-		return nil, nil, fmt.Errorf("pdfcpu: corrupt page node at obj #%d\n", indRef.ObjectNumber)
+		return nil, nil, fmt.Errorf("corrupt page node at obj #%d", indRef.ObjectNumber)
 	}
 
 	return indRef, d, nil
@@ -1046,12 +1046,12 @@ func ensureNeutralPageTreeRoot(ctx *model.Context, indRef *types.IndirectRef, d 
 func pageTreeKids(d types.Dict, indRef types.IndirectRef) (types.Array, error) {
 	obj, ok := d["Kids"]
 	if !ok {
-		return nil, fmt.Errorf("pdfcpu: page node at obj #%d missing /Kids", indRef.ObjectNumber)
+		return nil, fmt.Errorf("page node at obj #%d missing /Kids", indRef.ObjectNumber)
 	}
 
 	kids, ok := obj.(types.Array)
 	if !ok {
-		return nil, fmt.Errorf("pdfcpu: page node at obj #%d /Kids is not an Array", indRef.ObjectNumber)
+		return nil, fmt.Errorf("page node at obj #%d /Kids is not an Array", indRef.ObjectNumber)
 	}
 
 	return kids, nil
@@ -1191,6 +1191,18 @@ func mergeDuplicateObjNumberIntSets(ctxSrc, ctxDest *model.Context) {
 	}
 }
 
+func mergeConfiguredOutlines(fName string, origDestPageCount int, ctxSrc, ctxDest *model.Context, zip bool) error {
+	if zip || !ctxDest.Configuration.CreateBookmarks {
+		return nil
+	}
+
+	if ctxDest.Configuration.MergeBookmarkMode == model.MergeBookmarkModePreserve {
+		return mergeOutlinesPreserve(ctxSrc, ctxDest)
+	}
+
+	return mergeOutlinesWrapped(fName, origDestPageCount+1, ctxSrc, ctxDest)
+}
+
 // MergeXRefTables merges Context ctxSrc into ctxDest by appending its page tree.
 // zip         ... zip 2 files together (eg. 1A,1B,2A,2B,3A,3B...)
 // dividerPage ... insert blank page between merged files (not applicable for zipping)
@@ -1229,15 +1241,8 @@ func MergeXRefTables(fName string, ctxSrc, ctxDest *model.Context, zip, dividerP
 		return err
 	}
 
-	if !zip && ctxDest.Configuration.CreateBookmarks {
-		if ctxDest.Configuration.MergeBookmarkMode == model.MergeBookmarkModePreserve {
-			err = mergeOutlinesPreserve(ctxSrc, ctxDest)
-		} else {
-			err = mergeOutlinesWrapped(fName, origDestPageCount+1, ctxSrc, ctxDest)
-		}
-		if err != nil {
-			return err
-		}
+	if err = mergeConfiguredOutlines(fName, origDestPageCount, ctxSrc, ctxDest, zip); err != nil {
+		return err
 	}
 
 	// Mark src's root object as free.

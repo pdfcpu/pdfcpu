@@ -74,7 +74,7 @@ func removeEmptyContentStreams(ctx *model.Context, pageDict types.Dict, obj type
 		objNr := ir.ObjectNumber.Value()
 		entry, found := ctx.FindTableEntry(objNr, ir.GenerationNumber.Value())
 		if !found {
-			return fmt.Errorf("removeEmptyContentStreams: obj#:%d illegal indRef for Contents\n", pageObjNumber)
+			return fmt.Errorf("removeEmptyContentStreams: obj#:%d illegal indRef for Contents", pageObjNumber)
 		}
 
 		contentStreamDict, ok := entry.Object.(types.StreamDict)
@@ -90,7 +90,7 @@ func removeEmptyContentStreams(ctx *model.Context, pageDict types.Dict, obj type
 
 		contentArr, ok = entry.Object.(types.Array)
 		if !ok {
-			return fmt.Errorf("removeEmptyContentStreams: obj#:%d page content entry neither stream dict nor array.\n", pageObjNumber)
+			return fmt.Errorf("removeEmptyContentStreams: obj#:%d page content entry neither stream dict nor array", pageObjNumber)
 		}
 
 	} else if contentArr, ok = obj.(types.Array); !ok {
@@ -103,18 +103,18 @@ func removeEmptyContentStreams(ctx *model.Context, pageDict types.Dict, obj type
 
 		ir, ok := c.(types.IndirectRef)
 		if !ok {
-			return fmt.Errorf("removeEmptyContentStreams: obj#:%d corrupt page content array entry\n", pageObjNumber)
+			return fmt.Errorf("removeEmptyContentStreams: obj#:%d corrupt page content array entry", pageObjNumber)
 		}
 
 		objNr := ir.ObjectNumber.Value()
 		entry, found := ctx.FindTableEntry(objNr, ir.GenerationNumber.Value())
 		if !found {
-			return fmt.Errorf("removeEmptyContentStreams: obj#:%d illegal indRef for Contents\n", pageObjNumber)
+			return fmt.Errorf("removeEmptyContentStreams: obj#:%d illegal indRef for Contents", pageObjNumber)
 		}
 
 		contentStreamDict, ok := entry.Object.(types.StreamDict)
 		if !ok {
-			return fmt.Errorf("identifyPageContent: obj#:%d page content entry is no stream dict\n", pageObjNumber)
+			return fmt.Errorf("identifyPageContent: obj#:%d page content entry is no stream dict", pageObjNumber)
 		}
 
 		if err := contentStreamDict.Decode(); err != nil {
@@ -156,7 +156,7 @@ func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber 
 		objNr := ir.ObjectNumber.Value()
 		entry, found := ctx.FindTableEntry(objNr, ir.GenerationNumber.Value())
 		if !found {
-			return fmt.Errorf("identifyPageContent: obj#:%d illegal indRef for Contents\n", pageObjNumber)
+			return fmt.Errorf("identifyPageContent: obj#:%d illegal indRef for Contents", pageObjNumber)
 		}
 
 		contentStreamDict, ok := entry.Object.(types.StreamDict)
@@ -178,11 +178,11 @@ func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber 
 
 		contentArr, ok = entry.Object.(types.Array)
 		if !ok {
-			return fmt.Errorf("identifyPageContent: obj#:%d page content entry neither stream dict nor array.\n", pageObjNumber)
+			return fmt.Errorf("identifyPageContent: obj#:%d page content entry neither stream dict nor array", pageObjNumber)
 		}
 
 	} else if contentArr, ok = o.(types.Array); !ok {
-		return fmt.Errorf("identifyPageContent: obj#:%d corrupt page content array\n", pageObjNumber)
+		return fmt.Errorf("identifyPageContent: obj#:%d corrupt page content array", pageObjNumber)
 	}
 
 	// TODO Activate content array optimization as soon as we have a proper test file.
@@ -193,18 +193,18 @@ func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber 
 
 	// 	ir, ok := c.(IndirectRef)
 	// 	if !ok {
-	// 		return fmt.Errorf("identifyPageContent: obj#:%d corrupt page content array entry\n", pageObjNumber)
+	// 		return fmt.Errorf("identifyPageContent: obj#:%d corrupt page content array entry", pageObjNumber)
 	// 	}
 
 	// 	objNr := ir.ObjectNumber.Value()
 	// 	entry, found := ctx.FindTableEntry(objNr, ir.GenerationNumber.Value())
 	// 	if !found {
-	// 		return fmt.Errorf("identifyPageContent: obj#:%d illegal indRef for Contents\n", pageObjNumber)
+	// 		return fmt.Errorf("identifyPageContent: obj#:%d illegal indRef for Contents", pageObjNumber)
 	// 	}
 
 	// 	contentStreamDict, ok := entry.Object.(StreamDict)
 	// 	if !ok {
-	// 		return fmt.Errorf("identifyPageContent: obj#:%d page content entry is no stream dict\n", pageObjNumber)
+	// 		return fmt.Errorf("identifyPageContent: obj#:%d page content entry is no stream dict", pageObjNumber)
 	// 	}
 
 	// 	ir1, err := optimizeContentStreamUsage(ctx, &contentStreamDict, objNr)
@@ -830,7 +830,7 @@ func processFontResources(ctx *model.Context, obj types.Object, pageNr, pageObjN
 	}
 
 	if d == nil {
-		return fmt.Errorf("pdfcpu: processFontResources: font resource dict is null for page %d pageObj %d\n", pageNr, pageObjNumber)
+		return fmt.Errorf("font resource dict is null for page %d pageObj %d", pageNr, pageObjNumber)
 	}
 
 	return optimizeFontResourcesDict(ctx, d, pageNr, rNamePrefix)
@@ -843,7 +843,7 @@ func processXObjectResources(ctx *model.Context, obj types.Object, pageNr, pageO
 	}
 
 	if d == nil {
-		return fmt.Errorf("pdfcpu: processXObjectResources: xObject resource dict is null for page %d pageObj %d\n", pageNr, pageObjNumber)
+		return fmt.Errorf("xObject resource dict is null for page %d pageObj %d", pageNr, pageObjNumber)
 	}
 
 	return optimizeXObjectResourcesDict(ctx, d, pageNr, pageObjNumber, rNamePrefix, visitedRes)
@@ -856,7 +856,7 @@ func processExtGStateResources(ctx *model.Context, obj types.Object, pageNr, pag
 	}
 
 	if d == nil {
-		return fmt.Errorf("pdfcpu: processExtGStateResources: extGState resource dict is null for page %d pageObj %d\n", pageNr, pageObjNumber)
+		return fmt.Errorf("processExtGStateResources: extGState resource dict is null for page %d pageObj %d", pageNr, pageObjNumber)
 	}
 
 	return optimizeExtGStateResourcesDict(ctx, d, pageNr, pageObjNumber, rNamePrefix, visitedRes)
@@ -947,7 +947,7 @@ func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNr int) (int, 
 
 	_, found := pagesDict.Find("Count")
 	if !found {
-		return pageNr, errors.New("pdfcpu: parsePagesDict: missing Count")
+		return pageNr, errors.New("parsePagesDict: missing Count")
 	}
 
 	ctx.Optimize.Cache = map[int]bool{}
@@ -955,12 +955,12 @@ func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNr int) (int, 
 	// Iterate over page tree.
 	o, found := pagesDict.Find("Kids")
 	if !found {
-		return pageNr, fmt.Errorf("pdfcpu: corrupt \"Kids\" entry %s", pagesDict)
+		return pageNr, fmt.Errorf("corrupt \"Kids\" entry %s", pagesDict)
 	}
 
 	kids, err := ctx.DereferenceArray(o)
 	if err != nil || kids == nil {
-		return pageNr, fmt.Errorf("pdfcpu: corrupt \"Kids\" entry: %s", pagesDict)
+		return pageNr, fmt.Errorf("corrupt \"Kids\" entry: %s", pagesDict)
 	}
 
 	for _, v := range kids {
@@ -1197,7 +1197,7 @@ func streamLengthFontFile(xRefTable *model.XRefTable, indirectRef *types.Indirec
 	}
 
 	if sd == nil || (*sd).StreamLength == nil {
-		return nil, fmt.Errorf("pdfcpu: streamLengthFontFile: fontFile Streamlength is nil for object %d\n", objectNumber)
+		return nil, fmt.Errorf("fontFile Streamlength is nil for object %d", objectNumber)
 	}
 
 	if log.OptimizeEnabled() {

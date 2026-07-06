@@ -17,7 +17,6 @@ limitations under the License.
 package validate
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -63,25 +62,25 @@ func validateDestType(a types.Array, destType types.Name) error {
 	case "Fit":
 	case "FitB":
 		if len(a) > 2 {
-			return fmt.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+			return fmt.Errorf("%s - invalid length: %d", destType, len(a))
 		}
 	case "FitH":
 	case "FitV":
 	case "FitBH":
 	case "FitBV":
 		if len(a) > 3 {
-			return fmt.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+			return fmt.Errorf("%s - invalid length: %d", destType, len(a))
 		}
 	case "XYZ":
 		if len(a) > 5 {
-			return fmt.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+			return fmt.Errorf("%s - invalid length: %d", destType, len(a))
 		}
 	case "FitR":
 		if len(a) > 6 {
-			return fmt.Errorf("pdfcpu: validateDestinationArray: %s - invalid length: %d", destType, len(a))
+			return fmt.Errorf("%s - invalid length: %d", destType, len(a))
 		}
 	default:
-		return fmt.Errorf("pdfcpu: validateDestinationArray     j- invalid mode: %s", destType)
+		return fmt.Errorf("invalid mode: %s", destType)
 	}
 
 	return nil
@@ -90,7 +89,7 @@ func validateDestType(a types.Array, destType types.Name) error {
 func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 	if !validateDestinationArrayLength(a) {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return fmt.Errorf("pdfcpu: validateDestinationArray: invalid length: %d", len(a))
+			return fmt.Errorf("invalid length: %d", len(a))
 		}
 		return nil
 	}
@@ -103,14 +102,13 @@ func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 
 	name, ok := a[1].(types.Name)
 	if !ok {
-		return fmt.Errorf("pdfcpu: validateDestinationArray: second element must be a name %v", a[1])
+		return fmt.Errorf("second element must be a name %v", a[1])
 	}
 
 	return validateDestType(a, name)
 }
 
 func validateDestinationDict(xRefTable *model.XRefTable, d types.Dict) error {
-
 	// D, required, array
 	a, err := validateArrayEntry(xRefTable, d, "DestinationDict", "D", REQUIRED, model.V10, nil)
 	if err != nil || a == nil {
@@ -121,7 +119,6 @@ func validateDestinationDict(xRefTable *model.XRefTable, d types.Dict) error {
 }
 
 func validateDestination(xRefTable *model.XRefTable, o types.Object, forAction bool) (string, error) {
-
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {
 		return "", err
@@ -140,7 +137,7 @@ func validateDestination(xRefTable *model.XRefTable, o types.Object, forAction b
 
 	case types.Dict:
 		if forAction {
-			return "", errors.New("pdfcpu: validateDestination: unsupported PDF object")
+			return "", errUnsupportedPDFObject
 		}
 		err = validateDestinationDict(xRefTable, o)
 
@@ -148,7 +145,7 @@ func validateDestination(xRefTable *model.XRefTable, o types.Object, forAction b
 		err = validateDestinationArray(xRefTable, o)
 
 	default:
-		err = errors.New("pdfcpu: validateDestination: unsupported PDF object")
+		err = errUnsupportedPDFObject
 
 	}
 
@@ -156,7 +153,6 @@ func validateDestination(xRefTable *model.XRefTable, o types.Object, forAction b
 }
 
 func validateActionDestinationEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
-
 	// see 12.3.2
 
 	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)

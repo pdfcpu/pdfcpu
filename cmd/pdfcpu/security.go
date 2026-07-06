@@ -276,7 +276,7 @@ func handleEncryptCommand(conf *model.Configuration, args []string, opts *encryp
 	}
 
 	if conf.OwnerPW == "" {
-		return errors.New("missing non-empty owner password!")
+		return errors.New("missing non-empty owner password")
 	}
 
 	if err := validateEncryptFlags(opts); err != nil {

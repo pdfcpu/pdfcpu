@@ -76,11 +76,11 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 
 		case "OCG":
 			logProp("unsupported", key, val)
-			return fmt.Errorf("validatePropertiesDict: unsupported key \"%s\"\n", key)
+			return fmt.Errorf("unsupported key \"%s\"", key)
 
 		case "OCMD":
 			logProp("unsupported", key, val)
-			return fmt.Errorf("validatePropertiesDict: unsupported key \"%s\"\n", key)
+			return fmt.Errorf("unsupported key \"%s\"", key)
 
 		//case "MCID": -> default
 		//case "Alt": -> default

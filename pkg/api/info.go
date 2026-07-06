@@ -17,7 +17,6 @@
 package api
 
 import (
-	"errors"
 	"io"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -30,7 +29,7 @@ func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, fonts bo
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: PDFInfo: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {

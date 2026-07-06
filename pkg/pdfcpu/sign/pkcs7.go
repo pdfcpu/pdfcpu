@@ -253,15 +253,15 @@ func verifyP7Digest(p7Signer pkcs7.SignerInfo, p7Content []byte, data []byte, de
 		if err := pkcs7.VerifyMessageDigestDetached(p7Signer, p7Content); err != nil {
 			var mdErr *pkcs7.MessageDigestMismatchError
 			if errors.As(err, &mdErr) {
-				return model.SignatureReasonDocModified, fmt.Errorf("pkcs7: message digest verification failure: %v\n", err)
+				return model.SignatureReasonDocModified, fmt.Errorf("pkcs7: message digest verification failure: %v", err)
 			}
-			return model.SignatureReasonInternal, fmt.Errorf("pkcs7: message digest verification: %v\n", err)
+			return model.SignatureReasonInternal, fmt.Errorf("pkcs7: message digest verification: %v", err)
 		}
 
 	} else {
 
 		if err := pkcs7.VerifyMessageDigestEmbedded(p7Content, data); err != nil {
-			return model.SignatureReasonDocModified, fmt.Errorf("pkcs7: message digest verification failure: %v\n", err)
+			return model.SignatureReasonDocModified, fmt.Errorf("pkcs7: message digest verification failure: %v", err)
 		}
 
 	}

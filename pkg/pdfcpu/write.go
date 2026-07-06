@@ -72,7 +72,7 @@ func WriteContext(ctx *model.Context) (err error) {
 
 		file, err := os.Create(fileName)
 		if err != nil {
-			return fmt.Errorf("can't create %s\n%s: %w", fileName, err, err)
+			return fmt.Errorf("can't create %s: %w", fileName, err)
 		}
 
 		ctx.Write.Writer = bufio.NewWriter(file)
@@ -209,7 +209,7 @@ func ensureFileID(ctx *model.Context) error {
 	// Update ctx.ID
 	a := ctx.ID
 	if len(a) != 2 {
-		return errors.New("pdfcpu: ID must be an array with 2 elements")
+		return errors.New("id must be an array with 2 elements")
 	}
 
 	a[1] = fid
@@ -257,7 +257,7 @@ func writePages(ctx *model.Context, rootDict types.Dict) error {
 	// Page tree root (the top "Pages" dict) must be indirect reference.
 	indRef := rootDict.IndirectRefEntry("Pages")
 	if indRef == nil {
-		return errors.New("pdfcpu: writePages: missing indirect obj for pages dict")
+		return errors.New("missing indirect obj for pages dict")
 	}
 
 	// Embed all page tree objects into objects stream.
@@ -350,7 +350,7 @@ func writeRootObject(ctx *model.Context) error {
 	}
 
 	if d == nil {
-		return fmt.Errorf("pdfcpu: writeRootObject: unable to dereference root dict")
+		return fmt.Errorf("unable to dereference root dict")
 	}
 
 	dictName := "rootDict"
@@ -466,7 +466,7 @@ func writeXRefSubsection(ctx *model.Context, start int, size int) error {
 		entry := ctx.XRefTable.Table[i]
 
 		if entry.Compressed {
-			return errors.New("pdfcpu: writeXRefSubsection: compressed entries present")
+			return errors.New("compressed entries present")
 		}
 
 		var s string
@@ -740,7 +740,7 @@ func createXRefStream(ctx *model.Context, i1, i2, i3 int, objNrs []int) ([]byte,
 
 			off, found := ctx.Write.Table[j]
 			if !found {
-				return nil, nil, fmt.Errorf("pdfcpu: createXRefStream: missing write offset for obj #%d\n", i)
+				return nil, nil, fmt.Errorf("missing write offset for obj #%d", i)
 			}
 
 			// in use, uncompressed
@@ -918,7 +918,7 @@ func setupEncryption(ctx *model.Context) error {
 	var err error
 
 	if ok := validateAlgorithm(ctx); !ok {
-		return errors.New("pdfcpu: unsupported encryption algorithm (PDF 2.0 assumes AES/256)")
+		return errors.New("unsupported encryption algorithm (PDF 2.0 assumes AES/256)")
 	}
 
 	d := newEncryptDict(
@@ -933,7 +933,7 @@ func setupEncryption(ctx *model.Context) error {
 	}
 
 	if ctx.ID == nil {
-		return errors.New("pdfcpu: encrypt: missing ID")
+		return errors.New("encrypt: missing ID")
 	}
 
 	if ctx.E.ID, err = ctx.IDFirstElement(); err != nil {
@@ -963,7 +963,7 @@ func setupEncryption(ctx *model.Context) error {
 
 func updateEncryption(ctx *model.Context) error {
 	if ctx.Encrypt == nil {
-		return errors.New("pdfcpu: This file is not encrypted - nothing written.")
+		return errors.New("this file is not encrypted - nothing written")
 	}
 
 	d, err := ctx.EncryptDict()
@@ -1038,7 +1038,6 @@ func removeEncryptionWarning(ctx *model.Context) {
 	}
 }
 func handleEncryption(ctx *model.Context) error {
-
 	switch ctx.Cmd {
 
 	case model.ENCRYPT:

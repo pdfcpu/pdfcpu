@@ -17,7 +17,6 @@
 package api
 
 import (
-	"errors"
 	"io"
 	"os"
 
@@ -30,6 +29,10 @@ import (
 
 // BookletFromImages creates a booklet from images.
 func BookletFromImages(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (*model.Context, error) {
+	if nup == nil {
+		return nil, ErrMissingBookletConfiguration
+	}
+
 	if nup.PageDim == nil {
 		// Set default paper size.
 		nup.PageDim = types.PaperSize[nup.PageSize]
@@ -61,7 +64,15 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: Booklet: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
+	if nup == nil {
+		return ErrMissingBookletConfiguration
 	}
 
 	if conf == nil {
@@ -102,6 +113,10 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 
 // BookletFile rearranges PDF pages or images into a booklet layout and writes the result to outFile.
 func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
+	if len(inFiles) == 0 {
+		return ErrMissingPDFInput
+	}
+
 	var f1, f2 *os.File
 	ok := false
 

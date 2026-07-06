@@ -35,14 +35,14 @@ func ensureFontIndRef(xRefTable *model.XRefTable, fontName string, frPage model.
 
 	frGlobal, ok := fonts[fontName]
 	if !ok {
-		return nil, fmt.Errorf("pdfcpu: missing global font: %s", fontName)
+		return nil, fmt.Errorf("missing global font: %s", fontName)
 	}
 
 	// Do we have an already created indRef or an indRef from AP form fonts or fonts we are reusing?
 	if frGlobal.Res.IndRef != nil {
 
 		if frPage.Res.IndRef != nil && *frPage.Res.IndRef != *frGlobal.Res.IndRef {
-			return nil, fmt.Errorf("pdfcpu: multiple objstreams for font: %s detected: ", fontName)
+			return nil, fmt.Errorf("multiple objstreams for font: %s detected: ", fontName)
 		}
 
 		if font.IsUserFont(fontName) && frGlobal.FontFile != nil {
@@ -451,7 +451,7 @@ func cacheResIDs(ctx *model.Context, pdf *primitives.PDF) error {
 func parseFromJSON(ctx *model.Context, bb []byte) (*primitives.PDF, error) {
 
 	if !json.Valid(bb) {
-		return nil, fmt.Errorf("pdfcpu: invalid JSON encoding detected.")
+		return nil, fmt.Errorf("invalid JSON encoding detected")
 	}
 
 	pdf := &primitives.PDF{
@@ -693,7 +693,7 @@ func updateForm(
 
 	for k, v := range d1 {
 		if !fontResDict.Insert(k, v) {
-			return fmt.Errorf("pdfcpu: duplicate font resource id detected: %s", k)
+			return fmt.Errorf("duplicate font resource id detected: %s", k)
 		}
 	}
 

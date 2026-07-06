@@ -60,7 +60,6 @@ func ByteForOctalString(octalBytes string) (b byte) {
 
 // Escape applies all defined escape sequences to s.
 func Escape(s string) (*string, error) {
-
 	var b bytes.Buffer
 
 	for i := 0; i < len(s); i++ {
@@ -94,7 +93,6 @@ func Escape(s string) (*string, error) {
 }
 
 func escaped(c byte) (bool, byte) {
-
 	switch c {
 	case 'n':
 		c = 0x0A
@@ -163,7 +161,7 @@ func Unescape(s string) ([]byte, error) {
 				esc = true
 			} else { // Escaped \
 				if len(octalCode) > 0 {
-					return nil, fmt.Errorf("Unescape: illegal \\ in octal code sequence detected %X", octalCode)
+					return nil, fmt.Errorf("illegal \\ in octal code sequence detected %X", octalCode)
 				}
 				b.WriteByte(c)
 				esc = false
@@ -186,7 +184,7 @@ func Unescape(s string) ([]byte, error) {
 
 		// Relax for issue 305 and also accept "\ ".
 		//if !enc && !strings.ContainsRune(" nrtbf()01234567", rune(c)) {
-		//	return nil, fmt.Errorf("Unescape: illegal escape sequence \\%c detected: <%s>", c, s)
+		//	return nil, fmt.Errorf("illegal escape sequence \\%c detected: <%s>", c, s)
 		//}
 
 		var octal bool

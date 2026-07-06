@@ -38,10 +38,10 @@ import (
 )
 
 var (
-	ErrNoFormData           = errors.New("pdfcpu: missing form data")
-	ErrNoFormFieldsAffected = errors.New("pdfcpu: no form fields affected")
-	ErrInvalidCSV           = errors.New("pdfcpu: invalid csv input file")
-	ErrInvalidJSON          = errors.New("pdfcpu: invalid JSON encoding")
+	ErrNoFormData           = errors.New("missing form data")
+	ErrNoFormFieldsAffected = errors.New("no form fields affected")
+	ErrInvalidCSV           = errors.New("invalid csv input file")
+	ErrInvalidJSON          = errors.New("invalid JSON encoding")
 )
 
 // FormFields returns all form fields of rs.
@@ -49,7 +49,7 @@ func FormFields(rs io.ReadSeeker, conf *model.Configuration) (fields []form.Fiel
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: FormFields: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -72,8 +72,13 @@ func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: RemoveFormFields: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if err := validateNoEmptyStrings(fieldIDsOrNames, "form field ID or name"); err != nil {
 		return err
 	}
@@ -155,8 +160,13 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, con
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: LockFormFields: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if err := validateNoEmptyStrings(fieldIDsOrNames, "form field ID or name"); err != nil {
 		return err
 	}
@@ -238,8 +248,13 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: UnlockFormFields: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if err := validateNoEmptyStrings(fieldIDsOrNames, "form field ID or name"); err != nil {
 		return err
 	}
@@ -321,8 +336,13 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, co
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ResetFormFields: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if err := validateNoEmptyStrings(fieldIDsOrNames, "form field ID or name"); err != nil {
 		return err
 	}
@@ -403,7 +423,7 @@ func ExportForm(rs io.ReadSeeker, source string, conf *model.Configuration) (for
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ExportForm: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -432,11 +452,11 @@ func ExportFormJSON(rs io.ReadSeeker, w io.Writer, source string, conf *model.Co
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ExportFormJSON: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if w == nil {
-		return errors.New("pdfcpu: ExportFormJSON: missing w")
+		return errors.New("missing JSON writer")
 	}
 
 	if conf == nil {
@@ -509,7 +529,7 @@ func validateComboBoxValues(f form.Form) error {
 				if err == nil && i < len(cb.Options) {
 					return nil
 				}
-				return fmt.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: [%v]\n", cb.Name, cb.Value, strings.Join(cb.Options, ", "))
+				return fmt.Errorf("fill field name: \"%s\" unknown value: \"%s\" - options: [%v]", cb.Name, cb.Value, strings.Join(cb.Options, ", "))
 			}
 		}
 	}
@@ -528,7 +548,7 @@ func validateListBoxValues(f form.Form) error {
 					if err == nil && i < len(lb.Options) {
 						return nil
 					}
-					return fmt.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: [%v]\n", lb.Name, v, strings.Join(lb.Options, ", "))
+					return fmt.Errorf("fill field name: \"%s\" unknown value: \"%s\" - options: [%v]", lb.Name, v, strings.Join(lb.Options, ", "))
 				}
 			}
 		}
@@ -547,7 +567,7 @@ func validateRadioButtonGroupValues(f form.Form) error {
 				if err == nil && i < len(rbg.Options) {
 					return nil
 				}
-				return fmt.Errorf("pdfcpu: fill field name: \"%s\" unknown value: \"%s\" - options: [%v]\n", rbg.Name, rbg.Value, strings.Join(rbg.Options, ", "))
+				return fmt.Errorf("fill field name: \"%s\" unknown value: \"%s\" - options: [%v]", rbg.Name, rbg.Value, strings.Join(rbg.Options, ", "))
 			}
 		}
 	}
@@ -578,16 +598,39 @@ func fillPostProc(ctx *model.Context, pp []*model.Page) error {
 	return ValidateContext(ctx)
 }
 
+func formGroupFromReader(rd io.Reader) (*form.FormGroup, error) {
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, rd); err != nil {
+		return nil, err
+	}
+
+	bb := buf.Bytes()
+	if !json.Valid(bb) {
+		return nil, ErrInvalidJSON
+	}
+
+	formGroup := form.FormGroup{}
+	if err := json.Unmarshal(bb, &formGroup); err != nil {
+		return nil, err
+	}
+
+	return &formGroup, nil
+}
+
 // FillForm populates the form rs with data from rd and writes the result to w.
 func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: FillForm: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if rd == nil {
-		return errors.New("pdfcpu: FillForm: missing rd")
+		return errors.New("missing form input")
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -603,20 +646,8 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 	// TODO not necessarily so
 	ctx.RemoveSignature()
 
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, rd); err != nil {
-		return err
-	}
-
-	bb := buf.Bytes()
-
-	if !json.Valid(bb) {
-		return ErrInvalidJSON
-	}
-
-	formGroup := form.FormGroup{}
-
-	if err := json.Unmarshal(bb, &formGroup); err != nil {
+	formGroup, err := formGroupFromReader(rd)
+	if err != nil {
 		return err
 	}
 

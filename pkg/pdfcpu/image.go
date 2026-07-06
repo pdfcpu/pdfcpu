@@ -271,7 +271,7 @@ func ListImages(ctx *model.Context, selectedPages types.IntSet) ([]string, error
 func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
 	imgObj := ctx.Optimize.ImageObjects[objNr]
 	if imgObj == nil {
-		return fmt.Errorf("pdfcpu: unknown image object for objNr=%d", objNr)
+		return fmt.Errorf("unknown image object for objNr=%d", objNr)
 	}
 
 	d := imgObj.ImageDict
@@ -280,11 +280,11 @@ func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
 	height := d.IntEntry("Height")
 
 	if width == nil || height == nil {
-		return errors.New("pdfcpu: corrupt image dict")
+		return errors.New("corrupt image dict")
 	}
 
 	if *width != w || *height != h {
-		return fmt.Errorf("pdfcpu: invalid image dimensions, want(%d,%d), got(%d,%d)", w, h, *width, *height)
+		return fmt.Errorf("invalid image dimensions, want(%d,%d), got(%d,%d)", w, h, *width, *height)
 	}
 
 	return nil
@@ -305,8 +305,7 @@ func UpdateImagesByObjNr(ctx *model.Context, rd io.Reader, objNr int) error {
 	genNr := 0
 	entry, ok := ctx.FindTableEntry(objNr, genNr)
 	if !ok {
-		fmt.
-			Errorf("pdfcpu: invalid objNr=%d", objNr)
+		return fmt.Errorf("invalid objNr=%d", objNr)
 	}
 
 	entry.Object = *sd
@@ -356,7 +355,7 @@ func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id 
 			d["Resources"] = d2
 			return nil
 		}
-		return fmt.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
+		return fmt.Errorf("page %d: unknown resource %s", pageNr, id)
 	}
 
 	resDict, err := ctx.DereferenceDict(obj)
@@ -372,7 +371,7 @@ func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id 
 			resDict["XObject"] = d
 			return nil
 		}
-		return fmt.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
+		return fmt.Errorf("page %d: unknown resource %s", pageNr, id)
 	}
 
 	imgResDict, err := ctx.DereferenceDict(obj1)
@@ -398,5 +397,5 @@ func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id 
 		return nil
 	}
 
-	return fmt.Errorf("pdfcpu: page %d: unknown resource %s\n", pageNr, id)
+	return fmt.Errorf("page %d: unknown resource %s", pageNr, id)
 }

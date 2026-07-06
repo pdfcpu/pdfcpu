@@ -238,12 +238,12 @@ func AppendStatsFile(ctx *model.Context) error {
 	if err != nil {
 
 		if os.IsExist(err) {
-			return fmt.Errorf("can't open %s\n%s", fileName, err)
+			return fmt.Errorf("can't open %s: %w", fileName, err)
 		}
 
 		file, err = os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 		if err != nil {
-			return fmt.Errorf("can't create %s\n%s", fileName, err)
+			return fmt.Errorf("can't create %s: %w", fileName, err)
 		}
 
 		_, err = file.WriteString(*statsHeadLine())

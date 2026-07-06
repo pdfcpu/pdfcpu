@@ -34,7 +34,7 @@ import (
 func ParseZoomConfig(s string, u types.DisplayUnit) (*model.Zoom, error) {
 
 	if s == "" {
-		return nil, errors.New("pdfcpu: missing zoom configuration string")
+		return nil, errors.New("missing zoom configuration string")
 	}
 
 	zoom := &model.Zoom{Unit: u}
@@ -43,7 +43,7 @@ func ParseZoomConfig(s string, u types.DisplayUnit) (*model.Zoom, error) {
 
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
-			return nil, errors.New("pdfcpu: Invalid zoom configuration string. Please consult pdfcpu help zoom")
+			return nil, errors.New("invalid zoom configuration string")
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
@@ -55,7 +55,7 @@ func ParseZoomConfig(s string, u types.DisplayUnit) (*model.Zoom, error) {
 	}
 
 	if zoom.Factor != 0 && (zoom.HMargin != 0 || zoom.VMargin != 0) {
-		return nil, errors.New("pdfcpu: please supply either zoom \"factor\" or \"hmargin\" or \"vmargin\"")
+		return nil, errors.New("please supply either zoom \"factor\" or \"hmargin\" or \"vmargin\"")
 	}
 
 	return zoom, nil

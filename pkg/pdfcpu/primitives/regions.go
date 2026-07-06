@@ -45,7 +45,7 @@ func parseRegionOrientation(s string) (types.Orientation, error) {
 	case "v", "vert", "vertical":
 		o = types.Vertical
 	default:
-		return o, fmt.Errorf("pdfcpu: unknown region orientation (hor, vert): %s", s)
+		return o, fmt.Errorf("unknown region orientation (hor, vert): %s", s)
 	}
 	return o, nil
 }
@@ -56,7 +56,7 @@ func (r *Regions) validate() error {
 
 	// trim json string necessary?
 	if r.Orientation == "" {
-		return fmt.Errorf("pdfcpu: region is missing orientation")
+		return fmt.Errorf("region is missing orientation")
 	}
 	o, err := parseRegionOrientation(r.Orientation)
 	if err != nil {
@@ -65,7 +65,7 @@ func (r *Regions) validate() error {
 	r.horizontal = o == types.Horizontal
 
 	if r.Divider == nil {
-		return errors.New("pdfcpu: region is missing divider")
+		return errors.New("region is missing divider")
 	}
 	r.Divider.pdf = pdf
 	if err := r.Divider.validate(); err != nil {
@@ -74,7 +74,7 @@ func (r *Regions) validate() error {
 
 	if r.horizontal {
 		if r.Left == nil {
-			return fmt.Errorf("pdfcpu: regions %s is missing Left", r.Name)
+			return fmt.Errorf("regions %s is missing Left", r.Name)
 		}
 		r.Left.page = r.page
 		r.Left.parent = r.parent
@@ -82,7 +82,7 @@ func (r *Regions) validate() error {
 			return err
 		}
 		if r.Right == nil {
-			return fmt.Errorf("pdfcpu: regions %s is missing Right", r.Name)
+			return fmt.Errorf("regions %s is missing Right", r.Name)
 		}
 		r.Right.page = r.page
 		r.Right.parent = r.parent
@@ -90,7 +90,7 @@ func (r *Regions) validate() error {
 	}
 
 	if r.Top == nil {
-		return fmt.Errorf("pdfcpu: regions %s is missing Top", r.Name)
+		return fmt.Errorf("regions %s is missing Top", r.Name)
 	}
 	r.Top.page = r.page
 	r.Top.parent = r.parent
@@ -98,7 +98,7 @@ func (r *Regions) validate() error {
 		return err
 	}
 	if r.Bottom == nil {
-		return fmt.Errorf("pdfcpu: regions %s is missing Bottom", r.Name)
+		return fmt.Errorf("regions %s is missing Bottom", r.Name)
 	}
 	r.Bottom.page = r.page
 	r.Bottom.parent = r.parent

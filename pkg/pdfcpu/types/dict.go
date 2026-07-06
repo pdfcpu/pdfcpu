@@ -421,7 +421,7 @@ func (d Dict) IsLinearizationParmDict() bool {
 func (d *Dict) IncrementBy(key string, i int) error {
 	v := d.IntEntry(key)
 	if v == nil {
-		return fmt.Errorf("IncrementBy: unknown key: %s", key)
+		return fmt.Errorf("incrementBy: unknown key: %s", key)
 	}
 	*v += i
 	d.Update(key, Integer(*v))

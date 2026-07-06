@@ -25,21 +25,19 @@ import (
 )
 
 func validateEntryV(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version, pBeadIndRef *types.IndirectRef, objNumber int) error {
-
 	previousBeadIndRef, err := validateIndRefEntry(xRefTable, d, dictName, "V", required, sinceVersion)
 	if err != nil {
 		return err
 	}
 
 	if *previousBeadIndRef != *pBeadIndRef {
-		return fmt.Errorf("pdfcpu: validateEntryV: obj#%d invalid entry V, corrupt previous Bead indirect reference", objNumber)
+		return fmt.Errorf("obj#%d invalid entry V, corrupt previous Bead indirect reference", objNumber)
 	}
 
 	return nil
 }
 
 func validateBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef, pBeadIndRef, lBeadIndRef *types.IndirectRef) error {
-
 	objNumber := beadIndRef.ObjectNumber.Value()
 
 	dictName := "beadDict"
@@ -50,7 +48,7 @@ func validateBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef, pBea
 		return err
 	}
 	if d == nil {
-		return fmt.Errorf("pdfcpu: validateBeadDict: obj#%d missing dict", objNumber)
+		return fmt.Errorf("obj#%d missing dict", objNumber)
 	}
 
 	// Validate optional entry Type, must be "Bead".
@@ -65,7 +63,7 @@ func validateBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef, pBea
 		return err
 	}
 	if indRefT != nil && *indRefT != *threadIndRef {
-		return fmt.Errorf("pdfcpu: validateBeadDict: obj#%d invalid entry T (backpointer to ThreadDict)", objNumber)
+		return fmt.Errorf("obj#%d invalid entry T (backpointer to ThreadDict)", objNumber)
 	}
 
 	// Validate required entry R, must be rectangle.
@@ -113,7 +111,6 @@ func validateBeadChainIntegrity(beadIndRef, pBeadIndRef, nBeadIndRef *types.Indi
 }
 
 func validateFirstBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef *types.IndirectRef) error {
-
 	dictName := "firstBeadDict"
 	sinceVersion := model.V10
 
@@ -123,7 +120,7 @@ func validateFirstBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef 
 	}
 
 	if d == nil {
-		return errors.New("pdfcpu: validateFirstBeadDict: missing dict")
+		return errors.New("missing dict")
 	}
 
 	_, err = validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Bead" })
@@ -137,7 +134,7 @@ func validateFirstBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef 
 	}
 
 	if *indRefT != *threadIndRef {
-		return errors.New("pdfcpu: validateFirstBeadDict: invalid entry T (backpointer to ThreadDict)")
+		return errors.New("invalid entry T (backpointer to ThreadDict)")
 	}
 
 	_, err = validateRectangleEntry(xRefTable, d, dictName, "R", REQUIRED, sinceVersion, nil)
@@ -165,19 +162,18 @@ func validateFirstBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef 
 	}
 
 	if !validateBeadChainIntegrity(beadIndRef, pBeadIndRef, nBeadIndRef) {
-		return errors.New("pdfcpu: validateFirstBeadDict: corrupt chain of beads")
+		return errors.New("corrupt chain of beads")
 	}
 
 	return validateBeadDict(xRefTable, nBeadIndRef, threadIndRef, beadIndRef, pBeadIndRef)
 }
 
 func validateThreadDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
-
 	dictName := "threadDict"
 
 	threadIndRef, ok := o.(types.IndirectRef)
 	if !ok {
-		return errors.New("pdfcpu: validateThreadDict: not an indirect ref")
+		return errors.New("not an indirect ref")
 	}
 
 	objNumber := threadIndRef.ObjectNumber.Value()
@@ -203,7 +199,7 @@ func validateThreadDict(xRefTable *model.XRefTable, o types.Object, sinceVersion
 
 	fBeadIndRef := d.IndirectRefEntry("F")
 	if fBeadIndRef == nil {
-		return fmt.Errorf("pdfcpu: validateThreadDict: obj#%d required indirect entry \"F\" missing", objNumber)
+		return fmt.Errorf("obj#%d required indirect entry \"F\" missing", objNumber)
 	}
 
 	// Validate the list of beads starting with the first bead dict.
@@ -211,13 +207,12 @@ func validateThreadDict(xRefTable *model.XRefTable, o types.Object, sinceVersion
 }
 
 func validateThreads(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	// => 12.4.3 Articles
 
 	ir := rootDict.IndirectRefEntry("Threads")
 	if ir == nil {
 		if required {
-			return errors.New("pdfcpu: validateThreads: required entry \"Threads\" missing")
+			return errors.New("required entry \"Threads\" missing")
 		}
 		return nil
 	}

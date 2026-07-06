@@ -17,7 +17,6 @@
 package api
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -34,7 +33,11 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err err
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: Optimize: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -58,7 +61,7 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err err
 	if ctx.StatsFileName != "" {
 		err = pdfcpu.AppendStatsFile(ctx)
 		if err != nil {
-			return fmt.Errorf("Write stats failed.: %w", err)
+			return fmt.Errorf("write stats: %w", err)
 		}
 	}
 

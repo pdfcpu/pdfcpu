@@ -149,7 +149,7 @@ func Dispatch(cmd *Command) (out []string, err error) {
 		return f(cmd)
 	}
 
-	return nil, fmt.Errorf("pdfcpu: dispatch: unknown command mode %d\n", cmd.Mode)
+	return nil, fmt.Errorf("pdfcpu: dispatch: unknown command mode %d", cmd.Mode)
 }
 
 func dispatchAttachments(cmd *Command) (out []string, err error) {

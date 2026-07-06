@@ -31,7 +31,7 @@ func Annotations(rs io.ReadSeeker, selectedPages []string, conf *model.Configura
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: Annotations: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -57,7 +57,11 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann m
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: AddAnnotations: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -80,7 +84,7 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann m
 		return err
 	}
 	if !ok {
-		return errors.New("pdfcpu: AddAnnotations: No annotations added")
+		return errors.New("no annotations added")
 	}
 
 	return Write(ctx, w, conf)
@@ -91,7 +95,7 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 	defer fault.Catch(&err)
 
 	if rws == nil {
-		return errors.New("pdfcpu: AddAnnotationsAsIncrement: missing rws")
+		return ErrMissingPDFReadWriteSeeker
 	}
 
 	if conf == nil {
@@ -105,7 +109,7 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 	}
 
 	if *ctx.HeaderVersion < model.V14 {
-		return errors.New("Incremental writing not supported for PDF version < V1.4 (Hint: Use pdfcpu optimize then try again)")
+		return errors.New("incremental writing not supported for PDF version < V1.4")
 	}
 
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
@@ -118,7 +122,7 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 		return err
 	}
 	if !ok {
-		return errors.New("pdfcpu: AddAnnotationsAsIncrement: No annotations added")
+		return errors.New("no annotations added")
 	}
 
 	return WriteIncr(ctx, rws, conf)
@@ -186,7 +190,11 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.Annotati
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: AddAnnotationsMap: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -204,7 +212,7 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.Annotati
 		return err
 	}
 	if !ok {
-		return errors.New("pdfcpu: AddAnnotationsMap: No annotations added")
+		return errors.New("no annotations added")
 	}
 
 	return Write(ctx, w, conf)
@@ -215,7 +223,7 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.Anno
 	defer fault.Catch(&err)
 
 	if rws == nil {
-		return errors.New("pdfcpu: AddAnnotationsMapAsIncrement: missing rws")
+		return ErrMissingPDFReadWriteSeeker
 	}
 
 	if conf == nil {
@@ -229,7 +237,7 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.Anno
 	}
 
 	if *ctx.HeaderVersion < model.V14 {
-		return errors.New("Increment writing not supported for PDF version < V1.4 (Hint: Use pdfcpu optimize then try again)")
+		return errors.New("incremental writing not supported for PDF version < V1.4")
 	}
 
 	ok, err := pdfcpu.AddAnnotationsMap(ctx, m, true)
@@ -237,7 +245,7 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.Anno
 		return err
 	}
 	if !ok {
-		return errors.New("pdfcpu: AddAnnotationsMapAsIncrement: No annotations added")
+		return errors.New("no annotations added")
 	}
 
 	return WriteIncr(ctx, rws, conf)
@@ -307,8 +315,13 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: RemoveAnnotations: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if err := validateNoEmptyStrings(idsAndTypes, "annotation ID or type"); err != nil {
 		return err
 	}
@@ -333,7 +346,7 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes
 		return err
 	}
 	if !ok {
-		return errors.New("pdfcpu: RemoveAnnotations: No annotation removed")
+		return errors.New("no annotation removed")
 	}
 
 	return Write(ctx, w, conf)
@@ -345,8 +358,9 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 	defer fault.Catch(&err)
 
 	if rws == nil {
-		return errors.New("pdfcpu: RemoveAnnotationsAsIncrement: missing rws")
+		return ErrMissingPDFReadWriteSeeker
 	}
+
 	if err := validateNoEmptyStrings(idsAndTypes, "annotation ID or type"); err != nil {
 		return err
 	}
@@ -362,7 +376,7 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 	}
 
 	if *ctx.HeaderVersion < model.V14 {
-		return errors.New("pdfcpu: Incremental writing unsupported for PDF version < V1.4 (Hint: Use pdfcpu optimize then try again)")
+		return errors.New("incremental writing not supported for PDF version < V1.4")
 	}
 
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
@@ -375,7 +389,7 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 		return err
 	}
 	if !ok {
-		return errors.New("pdfcpu: RemoveAnnotationsAsIncrement: No annotation removed")
+		return errors.New("no annotation removed")
 	}
 
 	return WriteIncr(ctx, rws, conf)

@@ -25,7 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-var errNameTreeDuplicateKey = errors.New("pdfcpu: name: duplicate key")
+var errNameTreeDuplicateKey = errors.New("name: duplicate key")
 
 const maxEntries = 3
 

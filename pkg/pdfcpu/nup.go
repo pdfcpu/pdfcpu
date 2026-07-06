@@ -35,8 +35,8 @@ import (
 )
 
 var (
-	errInvalidGridDims  = errors.New("pdfcpu grid: dimensions must be: m > 0, n > 0")
-	errInvalidNUpConfig = errors.New("pdfcpu: invalid configuration string")
+	errInvalidGridDims  = errors.New("grid: dimensions must be: m > 0, n > 0")
+	errInvalidNUpConfig = errors.New("invalid configuration string")
 )
 
 var (
@@ -73,7 +73,7 @@ var nupParamMap = parameterMap[model.NUp]{
 
 func parsePageFormatNUp(s string, nup *model.NUp) (err error) {
 	if nup.UserDim {
-		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
+		return errAmbiguousPageDim
 	}
 	nup.PageDim, nup.PageSize, err = types.ParsePageFormat(s)
 	nup.UserDim = true
@@ -82,7 +82,7 @@ func parsePageFormatNUp(s string, nup *model.NUp) (err error) {
 
 func parseDimensionsNUp(s string, nup *model.NUp) (err error) {
 	if nup.UserDim {
-		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
+		return errAmbiguousPageDim
 	}
 	nup.PageDim, nup.PageSize, err = ParsePageDim(s, nup.InpUnit)
 	nup.UserDim = true
@@ -101,7 +101,7 @@ func parseOrientation(s string, nup *model.NUp) error {
 	case "dl":
 		nup.Orient = model.DownLeft
 	default:
-		return fmt.Errorf("pdfcpu: unknown nUp orientation: %s", s)
+		return fmt.Errorf("unknown nUp orientation: %s", s)
 	}
 
 	return nil
@@ -114,7 +114,7 @@ func parseEnforce(s string, nup *model.NUp) error {
 	case "off", "false", "f":
 		nup.Enforce = false
 	default:
-		return errors.New("pdfcpu: enforce best-fit orientation of content, please provide one of: on/off true/false")
+		return errors.New("enforce best-fit orientation of content, please provide one of: on/off true/false")
 	}
 
 	return nil
@@ -127,7 +127,7 @@ func parseElementBorder(s string, nup *model.NUp) error {
 	case "off", "false", "f":
 		nup.Border = false
 	default:
-		return errors.New("pdfcpu: nUp border, please provide one of: on/off true/false t/f")
+		return errors.New("nUp border, please provide one of: on/off true/false t/f")
 	}
 
 	return nil
@@ -145,7 +145,7 @@ func parseElementBorderOnCropbox(s string, nup *model.NUp) error {
 
 	b := strings.Split(s, " ")
 	if len(b) == 0 || len(b) > 5 {
-		return fmt.Errorf("pdfcpu: borders: need 1,2,3,4 or 5 int values, %s\n", s)
+		return fmt.Errorf("borders: need 1,2,3,4 or 5 int values, %s", s)
 	}
 
 	switch b[0] {
@@ -162,7 +162,7 @@ func parseElementBorderOnCropbox(s string, nup *model.NUp) error {
 		return err
 	}
 	if width == 0 {
-		return errors.New("pdfcpu: borders: need width > 0")
+		return errors.New("borders: need width > 0")
 	}
 	nup.BorderOnCropbox.Width = width
 
@@ -192,7 +192,7 @@ func parseBookletGuides(s string, nup *model.NUp) error {
 	case "off", "false", "f":
 		nup.BookletGuides = false
 	default:
-		return errors.New("pdfcpu: booklet guides, please provide one of: on/off true/false t/f")
+		return errors.New("booklet guides, please provide one of: on/off true/false t/f")
 	}
 
 	return nil
@@ -205,7 +205,7 @@ func parseBookletMultifolio(s string, nup *model.NUp) error {
 	case "off", "false", "f":
 		nup.MultiFolio = false
 	default:
-		return errors.New("pdfcpu: booklet guides, please provide one of: on/off true/false t/f")
+		return errors.New("booklet guides, please provide one of: on/off true/false t/f")
 	}
 
 	return nil
@@ -214,7 +214,7 @@ func parseBookletMultifolio(s string, nup *model.NUp) error {
 func parseBookletFolioSize(s string, nup *model.NUp) error {
 	i, err := strconv.Atoi(s)
 	if err != nil {
-		return fmt.Errorf("pdfcpu: illegal folio size: must be an numeric value, %s\n", s)
+		return fmt.Errorf("illegal folio size: must be an numeric value, %s", s)
 	}
 
 	nup.FolioSize = i
@@ -230,7 +230,7 @@ func parseBookletType(s string, nup *model.NUp) error {
 	case "perfectbound":
 		nup.BookletType = model.BookletPerfectBound
 	default:
-		return errors.New("pdfcpu: booklet type, please provide one of: booklet perfectbound")
+		return errors.New("booklet type, please provide one of: booklet perfectbound")
 	}
 	return nil
 }
@@ -242,7 +242,7 @@ func parseBookletBinding(s string, nup *model.NUp) error {
 	case "long":
 		nup.BookletBinding = model.LongEdge
 	default:
-		return errors.New("pdfcpu: booklet binding, please provide one of: short long")
+		return errors.New("booklet binding, please provide one of: short long")
 	}
 	return nil
 }
@@ -254,7 +254,7 @@ func parseElementMargin(s string, nup *model.NUp) error {
 	}
 
 	if f < 0 {
-		return errors.New("pdfcpu: nUp margin, Please provide a positive value")
+		return errors.New("nUp margin, Please provide a positive value")
 	}
 
 	nup.Margin = types.ToUserSpace(f, nup.InpUnit)
@@ -314,7 +314,7 @@ func PDFNUpConfig(val int, desc string, conf *model.Configuration) (*model.NUp, 
 		for i, v := range NUpValues {
 			ss[i] = strconv.Itoa(v)
 		}
-		return nil, fmt.Errorf("pdfcpu: n must be one of %s", strings.Join(ss, ", "))
+		return nil, fmt.Errorf("n must be one of %s", strings.Join(ss, ", "))
 	}
 	return nup, ParseNUpValue(val, nup)
 }
@@ -756,7 +756,7 @@ func NUpFromPDF(ctx *model.Context, selectedPages types.IntSet, nup *model.NUp) 
 			return err
 		}
 		if d == nil {
-			return fmt.Errorf("unknown page number: %d\n", 1)
+			return fmt.Errorf("unknown page number: %d", 1)
 		}
 
 		cropBox := inhPAttrs.MediaBox

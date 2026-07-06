@@ -16,7 +16,18 @@ limitations under the License.
 
 package pdfcpu
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
+
+func TestValidateEncryptLengthClassifiesUnsupportedEncryption(t *testing.T) {
+	t.Parallel()
+	_, err := validateEncryptLength(nil, 7)
+	if !errors.Is(err, ErrUnsupportedEncryption) {
+		t.Fatalf("got %v, want ErrUnsupportedEncryption", err)
+	}
+}
 
 func TestPasswordHashEqual(t *testing.T) {
 	t.Parallel()

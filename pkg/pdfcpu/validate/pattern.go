@@ -73,7 +73,7 @@ func validateTilingPatternDict(xRefTable *model.XRefTable, sd *types.StreamDict,
 
 	o, ok := sd.Find("Resources")
 	if !ok {
-		return errors.New("pdfcpu: validateTilingPatternDict: missing required entry Resources")
+		return errors.New("missing required entry Resources")
 	}
 
 	_, err = validateResourceDict(xRefTable, o)
@@ -118,14 +118,13 @@ func validateShadingPatternDict(xRefTable *model.XRefTable, d types.Dict, sinceV
 	// Shading: required, dict or stream dict.
 	o, ok := d.Find("Shading")
 	if !ok {
-		return fmt.Errorf("pdfcpu: validateShadingPatternDict: missing required entry \"Shading\".")
+		return fmt.Errorf("missing required entry \"Shading\"")
 	}
 
 	return validateShading(xRefTable, o)
 }
 
 func validatePattern(xRefTable *model.XRefTable, o types.Object) error {
-
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {
 		return err
@@ -140,7 +139,7 @@ func validatePattern(xRefTable *model.XRefTable, o types.Object) error {
 		err = validateShadingPatternDict(xRefTable, o, model.V13)
 
 	default:
-		err = errors.New("pdfcpu: validatePattern: corrupt obj typ, must be dict or stream dict")
+		err = errors.New("corrupt obj typ, must be dict or stream dict")
 
 	}
 
@@ -148,7 +147,6 @@ func validatePattern(xRefTable *model.XRefTable, o types.Object) error {
 }
 
 func validatePatternResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
-
 	// see 8.7 Patterns
 
 	// Version check

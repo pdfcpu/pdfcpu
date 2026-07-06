@@ -130,7 +130,7 @@ func validateEnforcePrintScaling(xRefTable *model.XRefTable, d types.Dict, dictN
 
 	if len(arr) > 0 {
 		if vp.PrintScaling != nil && *vp.PrintScaling == model.PrintScalingAppDefault {
-			return errors.New("pdfcpu: viewpreference \"Enforce[\"PrintScaling\"]\" needs \"PrintScaling\" <> \"AppDefault\"")
+			return errors.New("viewpreference \"Enforce[\"PrintScaling\"]\" needs \"PrintScaling\" <> \"AppDefault\"")
 		}
 		vp.Enforce = types.NewNameArray("PrintScaling")
 	}
@@ -256,7 +256,7 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 		for _, v := range arr {
 			n, ok := v.(types.Name)
 			if !ok {
-				return errors.New("pdfcpu: corrupt viewer preferences")
+				return errors.New("corrupt viewer preferences")
 			}
 			d[n.Value()] = types.Boolean(true)
 		}

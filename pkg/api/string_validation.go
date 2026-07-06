@@ -25,7 +25,7 @@ import (
 func validateNoEmptyStrings(ss []string, name string) error {
 	for _, s := range ss {
 		if strings.TrimSpace(s) == "" {
-			return fmt.Errorf("pdfcpu: %s must not be empty", name)
+			return fmt.Errorf("%s must not be empty", name)
 		}
 	}
 	return nil
@@ -35,7 +35,7 @@ func validateAttachmentFileNames(files []string) error {
 	for _, file := range files {
 		fileName := strings.TrimSpace(strings.SplitN(file, ",", 2)[0])
 		if fileName == "" {
-			return errors.New("pdfcpu: attachment filename must not be empty")
+			return errors.New("attachment filename must not be empty")
 		}
 	}
 	return nil
@@ -44,10 +44,10 @@ func validateAttachmentFileNames(files []string) error {
 func validateProperties(properties map[string]string) error {
 	for k, v := range properties {
 		if strings.TrimSpace(k) == "" {
-			return errors.New("pdfcpu: property name must not be empty")
+			return errors.New("property name must not be empty")
 		}
 		if strings.TrimSpace(v) == "" {
-			return errors.New("pdfcpu: property value must not be empty")
+			return errors.New("property value must not be empty")
 		}
 	}
 	return nil

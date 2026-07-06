@@ -48,7 +48,7 @@ func (th *TableHeader) validateColumnPaddings(cols int) error {
 	}
 
 	if len(th.ColPaddings) != cols {
-		return errors.New("pdfcpu: table header colPaddings must be specified for each column.")
+		return errors.New("table header colPaddings must be specified for each column")
 	}
 
 	for i, p := range th.ColPaddings {
@@ -65,13 +65,13 @@ func (th *TableHeader) validateColumnPaddings(cols int) error {
 
 func (th *TableHeader) validate(pdf *PDF, cols int) error {
 	if th.Values == nil || len(th.Values) != cols {
-		return fmt.Errorf("pdfcpu: wants %d table header values", cols)
+		return fmt.Errorf("wants %d table header values", cols)
 	}
 
 	if len(th.ColAnchors) > 0 {
 		th.colAnchors = make([]types.Anchor, cols)
 		if len(th.ColAnchors) != cols {
-			return errors.New("pdfcpu: table header colAnchors must be specified for each column.")
+			return errors.New("table header colAnchors must be specified for each column")
 		}
 		for i, s := range th.ColAnchors {
 			a, err := types.ParseAnchor(s)
@@ -102,7 +102,7 @@ func (th *TableHeader) validate(pdf *PDF, cols int) error {
 	}
 
 	if th.LineHeight < 0 {
-		return errors.New("pdfcpu: table header \"lheight\" must be positive.")
+		return errors.New("table header \"lheight\" must be positive")
 	}
 
 	return nil
@@ -181,7 +181,7 @@ func (t *Table) Height() float64 {
 func (t *Table) validateAnchor() error {
 	if t.Anchor != "" {
 		if t.Position[0] != 0 || t.Position[1] != 0 {
-			return errors.New("pdfcpu: Please supply table \"pos\" or \"anchor\"")
+			return errors.New("please supply table \"pos\" or \"anchor\"")
 		}
 		a, err := types.ParseAnchor(t.Anchor)
 		if err != nil {
@@ -197,17 +197,17 @@ func (t *Table) validateColWidths() error {
 	// Missing colWidths results in uniform grid.
 	if len(t.ColWidths) > 0 {
 		if len(t.ColWidths) != t.Cols {
-			return errors.New("pdfcpu: table colWidths must be specified for each column.")
+			return errors.New("table colWidths must be specified for each column")
 		}
 		total := 0
 		for _, w := range t.ColWidths {
 			if w <= 0 || w >= 100 {
-				return errors.New("pdfcpu: table colWidths 0 < wi < 1")
+				return errors.New("table colWidths 0 < wi < 1")
 			}
 			total += w
 		}
 		if total != 100 {
-			return errors.New("pdfcpu: table colWidths % total must be 100.")
+			return errors.New("table colWidths % total must be 100")
 		}
 	}
 	return nil
@@ -220,7 +220,7 @@ func (t *Table) validateColAnchors() error {
 	}
 	if len(t.ColAnchors) > 0 {
 		if len(t.ColAnchors) != t.Cols {
-			return errors.New("pdfcpu: table colAnchors must be specified for each column.")
+			return errors.New("table colAnchors must be specified for each column")
 		}
 		for i, s := range t.ColAnchors {
 			a, err := types.ParseAnchor(s)
@@ -236,14 +236,14 @@ func (t *Table) validateColAnchors() error {
 func (t *Table) validateColPaddings() error {
 	if len(t.ColPaddings) > 0 {
 		if len(t.ColPaddings) != t.Cols {
-			return errors.New("pdfcpu: table colPaddings must be specified for each column.")
+			return errors.New("table colPaddings must be specified for each column")
 		}
 		for i, p := range t.ColPaddings {
 			if p == nil {
 				continue
 			}
 			if err := p.validate(); err != nil {
-				return fmt.Errorf("pdfcpu: table %s on colPaddings index %d", err.Error(), i)
+				return fmt.Errorf("table %s on colPaddings index %d", err.Error(), i)
 			}
 		}
 	}
@@ -263,11 +263,11 @@ func (t *Table) validateColumns() error {
 func (t *Table) validateValues() error {
 	if t.Values != nil {
 		if len(t.Values) > t.Rows {
-			return fmt.Errorf("pdfcpu: table value overflow (for more than %d rows)", t.Rows)
+			return fmt.Errorf("table value overflow (for more than %d rows)", t.Rows)
 		}
 		for _, vv := range t.Values {
 			if len(vv) > t.Cols {
-				return fmt.Errorf("pdfcpu: table value overflow (for more than %d cols)", t.Cols)
+				return fmt.Errorf("table value overflow (for more than %d cols)", t.Cols)
 			}
 		}
 	}
@@ -281,7 +281,7 @@ func (t *Table) validateFont() error {
 			return err
 		}
 	} else if !strings.HasPrefix(t.Name, "$") {
-		return errors.New("pdfcpu: missing table font definition")
+		return errors.New("missing table font definition")
 	}
 	return nil
 }
@@ -363,7 +363,7 @@ func (t *Table) validate() error {
 	t.y = t.Position[1]
 
 	if t.Name == "$" {
-		return errors.New("pdfcpu: invalid table reference $")
+		return errors.New("invalid table reference $")
 	}
 
 	if err := t.validateAnchor(); err != nil {
@@ -373,14 +373,14 @@ func (t *Table) validate() error {
 	// TODO validate width against content box width
 
 	if t.Rows < 1 {
-		return errors.New("pdfcpu: table \"rows\" missing.")
+		return errors.New("table \"rows\" missing")
 	}
 	if t.Cols < 1 {
-		return errors.New("pdfcpu: table \"cols\" missing.")
+		return errors.New("table \"cols\" missing")
 	}
 
 	if t.LineHeight <= 0 {
-		return errors.New("pdfcpu: table \"lheight\" missing.")
+		return errors.New("table \"lheight\" missing")
 	}
 
 	if t.Header != nil {
@@ -503,7 +503,7 @@ func (t *Table) calcFont() error {
 		fName := f.Name[1:]
 		f0 := t.font(fName)
 		if f0 == nil {
-			return fmt.Errorf("pdfcpu: unknown table font name %s", fName)
+			return fmt.Errorf("unknown table font name %s", fName)
 		}
 		f.Name = f0.Name
 		if f.Size == 0 {
@@ -536,7 +536,7 @@ func (t *Table) calcBorder() (float64, *color.SimpleColor, types.LineJoinStyle, 
 			bName := b.Name[1:]
 			b0 := t.border(bName)
 			if b0 == nil {
-				return bWidth, bCol, bStyle, fmt.Errorf("pdfcpu: unknown named table border %s", bName)
+				return bWidth, bCol, bStyle, fmt.Errorf("unknown named table border %s", bName)
 			}
 			b.mergeIn(b0)
 		}
@@ -560,7 +560,7 @@ func (t *Table) calcMargin() (float64, float64, float64, float64, error) {
 			mName := m.Name[1:]
 			m0 := t.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBottom, mLeft, fmt.Errorf("pdfcpu: unknown named table margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, fmt.Errorf("unknown named table margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}
@@ -762,7 +762,7 @@ func (t *Table) calcTextDescriptorPadding(td *model.TextDescriptor, p *Padding) 
 		pName := p.Name[1:]
 		p0 := t.padding(pName)
 		if p0 == nil {
-			return fmt.Errorf("pdfcpu: unknown named table padding %s", pName)
+			return fmt.Errorf("unknown named table padding %s", pName)
 		}
 		p.mergeIn(p0)
 	}
@@ -822,11 +822,11 @@ func (t *Table) renderValues(p *model.Page, pageNr int, fonts model.FontMap, col
 			bb := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, t.colAnchors[j])
 
 			if bb.Width() > colWidths[j] {
-				return fmt.Errorf("pdfcpu: table cell width overflow - reduce padding or text: %s", colTd.Text)
+				return fmt.Errorf("table cell width overflow - reduce padding or text: %s", colTd.Text)
 			}
 
 			if bb.Height() > float64(t.LineHeight) {
-				return fmt.Errorf("pdfcpu: table cell height overflow - increase table lheight over : %f", bb.Height())
+				return fmt.Errorf("table cell height overflow - increase table lheight over : %f", bb.Height())
 			}
 		}
 	}
@@ -846,7 +846,7 @@ func (t *Table) renderHeader(p *model.Page, pageNr int, fonts model.FontMap, col
 		fName := f1.Name[1:]
 		f0 := t.font(fName)
 		if f0 == nil {
-			return fmt.Errorf("pdfcpu: unknown font name %s", fName)
+			return fmt.Errorf("unknown font name %s", fName)
 		}
 		f1.Name = f0.Name
 		f1.Script = f0.Script
@@ -896,11 +896,11 @@ func (t *Table) renderHeader(p *model.Page, pageNr int, fonts model.FontMap, col
 		bb := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, a)
 
 		if bb.Width() > colWidths[i] {
-			return fmt.Errorf("pdfcpu: table header cell width overflow - reduce padding or text: %s", colTd.Text)
+			return fmt.Errorf("table header cell width overflow - reduce padding or text: %s", colTd.Text)
 		}
 
 		if bb.Height() > float64(th.LineHeight) {
-			return fmt.Errorf("pdfcpu: table header cell height overflow - increase table header lheight over : %f", bb.Height())
+			return fmt.Errorf("table header cell height overflow - increase table header lheight over : %f", bb.Height())
 		}
 	}
 

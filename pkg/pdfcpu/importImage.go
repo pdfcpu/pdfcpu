@@ -45,6 +45,8 @@ var impParamMap = parameterMap[Import]{
 	"bgcolor":         parseImportBackgroundColor,
 }
 
+var errAmbiguousPageDim = errors.New("only one of formsize(papersize) or dimensions allowed")
+
 // Import represents the command details for the command "ImportImage".
 type Import struct {
 	PageDim  *types.Dim        // page dimensions in display unit.
@@ -86,7 +88,7 @@ func (imp Import) String() string {
 
 func parsePageFormatImp(s string, imp *Import) (err error) {
 	if imp.UserDim {
-		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
+		return errAmbiguousPageDim
 	}
 	imp.PageDim, imp.PageSize, err = types.ParsePageFormat(s)
 	imp.UserDim = true
@@ -98,17 +100,17 @@ func ParsePageDim(v string, u types.DisplayUnit) (*types.Dim, string, error) {
 
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
-		return nil, v, fmt.Errorf("pdfcpu: illegal dimension string: need 2 positive values, %s\n", v)
+		return nil, v, fmt.Errorf("illegal dimension string: need 2 positive values, %s", v)
 	}
 
 	w, err := strconv.ParseFloat(ss[0], 64)
 	if err != nil || w <= 0 {
-		return nil, v, fmt.Errorf("pdfcpu: dimension X must be a positive numeric value: %s\n", ss[0])
+		return nil, v, fmt.Errorf("dimension x must be a positive numeric value: %s", ss[0])
 	}
 
 	h, err := strconv.ParseFloat(ss[1], 64)
 	if err != nil || h <= 0 {
-		return nil, v, fmt.Errorf("pdfcpu: dimension Y must be a positive numeric value: %s\n", ss[1])
+		return nil, v, fmt.Errorf("dimension y must be a positive numeric value: %s", ss[1])
 	}
 
 	d := types.Dim{Width: types.ToUserSpace(w, u), Height: types.ToUserSpace(h, u)}
@@ -118,7 +120,7 @@ func ParsePageDim(v string, u types.DisplayUnit) (*types.Dim, string, error) {
 
 func parseDimensionsImp(s string, imp *Import) (err error) {
 	if imp.UserDim {
-		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
+		return errAmbiguousPageDim
 	}
 	imp.PageDim, imp.PageSize, err = ParsePageDim(s, imp.InpUnit)
 	imp.UserDim = true
@@ -138,7 +140,7 @@ func parsePositionOffsetImp(s string, imp *Import) error {
 
 	d := strings.Split(s, " ")
 	if len(d) != 2 {
-		return fmt.Errorf("pdfcpu: illegal position offset string: need 2 numeric values, %s\n", s)
+		return fmt.Errorf("illegal position offset string: need 2 numeric values, %s", s)
 	}
 
 	f, err := strconv.ParseFloat(d[0], 64)
@@ -173,7 +175,7 @@ func parseGray(s string, imp *Import) error {
 	case "off", "false", "f":
 		imp.Gray = false
 	default:
-		return errors.New("pdfcpu: import gray, please provide one of: on/off true/false")
+		return errors.New("import gray, please provide one of: on/off true/false")
 	}
 
 	return nil
@@ -186,7 +188,7 @@ func parseSepia(s string, imp *Import) error {
 	case "off", "false", "f":
 		imp.Sepia = false
 	default:
-		return errors.New("pdfcpu: import sepia, please provide one of: on/off true/false")
+		return errors.New("import sepia, please provide one of: on/off true/false")
 	}
 
 	return nil
@@ -217,7 +219,7 @@ func ParseImportDetails(s string, u types.DisplayUnit) (*Import, error) {
 
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
-			return nil, errors.New("pdfcpu: Invalid import configuration string. Please consult pdfcpu help import")
+			return nil, errors.New("invalid import configuration string")
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])

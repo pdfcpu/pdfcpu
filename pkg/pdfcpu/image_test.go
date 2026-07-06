@@ -239,7 +239,7 @@ func streamDictForJPGFile(xRefTable *model.XRefTable, fileName string) (*types.S
 		cs = model.DeviceCMYKCS
 
 	default:
-		return nil, errors.New("pdfcpu: unexpected color model for JPEG")
+		return nil, errors.New("unexpected color model for JPEG")
 
 	}
 

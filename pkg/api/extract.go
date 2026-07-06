@@ -18,7 +18,6 @@ package api
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -113,7 +112,7 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *model.Conf
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ExtractImagesRaw: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -150,7 +149,7 @@ func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(mo
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ExtractImages: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -217,7 +216,7 @@ func ExtractFonts(rs io.ReadSeeker, selectedPages []string, digestFont func(pdfc
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ExtractFonts: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -278,6 +277,10 @@ func ExtractFontsFile(inFile, outDir string, selectedPages []string, conf *model
 
 // ExtractPage extracts the page with pageNr out of ctx into an io.Reader.
 func ExtractPage(ctx *model.Context, pageNr int) (io.Reader, error) {
+	if ctx == nil {
+		return nil, ErrMissingPDFContext
+	}
+
 	ctxNew, err := pdfcpu.ExtractPages(ctx, []int{pageNr}, false)
 	if err != nil {
 		return nil, err
@@ -296,7 +299,7 @@ func ExtractPages(rs io.ReadSeeker, selectedPages []string, digestPage func(io.R
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ExtractPages: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -362,7 +365,7 @@ func ExtractContent(rs io.ReadSeeker, selectedPages []string, digestContent func
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ExtractContent: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -422,7 +425,7 @@ func ExtractMetadata(rs io.ReadSeeker, digestMetadata func(pdfcpu.Metadata) erro
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: ExtractMetadata: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {

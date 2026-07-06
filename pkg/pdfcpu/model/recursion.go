@@ -22,16 +22,16 @@ import (
 )
 
 // ErrMaxRecursionDepthExceeded signals excessive parser or object graph nesting.
-var ErrMaxRecursionDepthExceeded = errors.New("pdfcpu: max recursion depth exceeded")
+var ErrMaxRecursionDepthExceeded = errors.New("max recursion depth exceeded")
 
 // ErrPageTreeCycle signals a page tree node cycle.
-var ErrPageTreeCycle = errors.New("pdfcpu: circular page tree")
+var ErrPageTreeCycle = errors.New("circular page tree")
 
 // ErrPageTreeDuplicate signals a page tree node reachable from multiple parents.
-var ErrPageTreeDuplicate = errors.New("pdfcpu: duplicate page tree node")
+var ErrPageTreeDuplicate = errors.New("duplicate page tree node")
 
 // ErrFormFieldCycle signals a form field tree cycle.
-var ErrFormFieldCycle = errors.New("pdfcpu: circular form field tree")
+var ErrFormFieldCycle = errors.New("circular form field tree")
 
 // MaxRecursionDepth returns the configured recursion depth limit.
 func (xRefTable *XRefTable) MaxRecursionDepth() int {

@@ -33,17 +33,43 @@ import (
 )
 
 func prepareForCut(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) (*model.Context, types.IntSet, error) {
+	if rs == nil {
+		return nil, nil, ErrMissingPDFReadSeeker
+	}
+
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("read source PDF context: %w", err)
 	}
 
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("parse page selection: %w", err)
 	}
 
 	return ctx, pages, nil
+}
+
+func writePosterPage(ctxSrc *model.Context, pageNr int, outDir, fileName string, cut *model.Cut, conf *model.Configuration) error {
+	ctxDest, err := pdfcpu.PosterPage(ctxSrc, pageNr, cut)
+	if err != nil {
+		return fmt.Errorf("create poster page %d: %w", pageNr, err)
+	}
+
+	outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, pageNr))
+	logWritingTo(outFile)
+
+	if conf.PostProcessValidate {
+		if err = ValidateContext(ctxDest); err != nil {
+			return fmt.Errorf("validate output page %d: %w", pageNr, err)
+		}
+	}
+
+	if err := WriteContextFile(ctxDest, outFile); err != nil {
+		return fmt.Errorf("write output file %s: %w", outFile, err)
+	}
+
+	return nil
 }
 
 // Poster applies cut for selected pages of rs and generates corresponding poster tiles in outDir.
@@ -51,15 +77,19 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: Poster: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if cut == nil {
+		return errors.New("missing cut configuration")
 	}
 
 	if cut.PageSize == "" && !cut.UserDim {
-		return errors.New("pdfcpu: poster - please supply either dimensions or form size ")
+		return errors.New("missing dimensions or form size")
 	}
 
 	if cut.Scale < 1 {
-		return fmt.Errorf("pdfcpu: invalid scale factor %.2f: i >= 1.0\n", cut.Scale)
+		return fmt.Errorf("invalid scale factor %.2f: must be >= 1.0", cut.Scale)
 	}
 
 	if conf == nil {
@@ -74,7 +104,9 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 	}
 
 	if len(pages) == 0 {
-		log.CLI.Println("aborted: nothing to cut!")
+		if log.CLIEnabled() {
+			log.CLI.Println("aborted: nothing to cut!")
+		}
 		return nil
 	}
 
@@ -82,21 +114,7 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 		if !v {
 			continue
 		}
-		ctxDest, err := pdfcpu.PosterPage(ctxSrc, pageNr, cut)
-		if err != nil {
-			return err
-		}
-
-		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, pageNr))
-		logWritingTo(outFile)
-
-		if conf.PostProcessValidate {
-			if err = ValidateContext(ctxDest); err != nil {
-				return err
-			}
-		}
-
-		if err := WriteContextFile(ctxDest, outFile); err != nil {
+		if err := writePosterPage(ctxSrc, pageNr, outDir, fileName, cut, conf); err != nil {
 			return err
 		}
 	}
@@ -108,17 +126,23 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 func PosterFile(inFile, outDir, outFile string, selectedPages []string, cut *model.Cut, conf *model.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("open input file: %w", err)
 	}
 	defer f.Close()
 
-	log.CLI.Printf("ndown %s into %s/ ...\n", inFile, outDir)
+	if log.CLIEnabled() {
+		log.CLI.Printf("creating poster pages from %s into %s/ ...\n", inFile, outDir)
+	}
 
 	if outFile == "" {
 		outFile = strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 	}
 
-	return Poster(f, outDir, outFile, selectedPages, cut, conf)
+	if err := Poster(f, outDir, outFile, selectedPages, cut, conf); err != nil {
+		return fmt.Errorf("create poster output: %w", err)
+	}
+
+	return nil
 }
 
 // NDown applies n & cutConf for selected pages of rs and writes results to outDir.
@@ -126,7 +150,17 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu NDown: Please provide rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if cut == nil {
+		return errors.New("missing cut configuration")
+	}
+
+	switch n {
+	case 2, 3, 4, 6, 8, 9, 12, 16:
+	default:
+		return fmt.Errorf("invalid n-down value %d: must be one of 2, 3, 4, 6, 8, 9, 12, 16", n)
 	}
 
 	if conf == nil {
@@ -153,12 +187,12 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 		}
 		ctxDest, err := pdfcpu.NDownPage(ctxSrc, pageNr, n, cut)
 		if err != nil {
-			return err
+			return fmt.Errorf("create n-down page %d: %w", pageNr, err)
 		}
 
 		if conf.PostProcessValidate {
 			if err = ValidateContext(ctxDest); err != nil {
-				return err
+				return fmt.Errorf("validate output page %d: %w", pageNr, err)
 			}
 		}
 
@@ -167,7 +201,7 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 			log.CLI.Printf("writing %s\n", outFile)
 		}
 		if err := WriteContextFile(ctxDest, outFile); err != nil {
-			return err
+			return fmt.Errorf("write output file %s: %w", outFile, err)
 		}
 	}
 
@@ -178,7 +212,7 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 func NDownFile(inFile, outDir, outFile string, selectedPages []string, n int, cut *model.Cut, conf *model.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("open input file: %w", err)
 	}
 	defer f.Close()
 
@@ -190,15 +224,19 @@ func NDownFile(inFile, outDir, outFile string, selectedPages []string, n int, cu
 		outFile = strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 	}
 
-	return NDown(f, outDir, outFile, selectedPages, n, cut, conf)
+	if err := NDown(f, outDir, outFile, selectedPages, n, cut, conf); err != nil {
+		return fmt.Errorf("create n-down output: %w", err)
+	}
+
+	return nil
 }
 
-func validateCut(cut *model.Cut) error {
+func validateAndNormalizeCut(cut *model.Cut) error {
 	sort.Float64s(cut.Hor)
 
 	for _, f := range cut.Hor {
 		if f < 0 || f >= 1 {
-			return errors.New("pdfcpu: Invalid cut points. Please consult pdfcpu help cut")
+			return errors.New("invalid cut points: values must be >= 0 and < 1")
 		}
 	}
 	if len(cut.Hor) == 0 || cut.Hor[0] > 0 {
@@ -208,11 +246,33 @@ func validateCut(cut *model.Cut) error {
 	sort.Float64s(cut.Vert)
 	for _, f := range cut.Vert {
 		if f < 0 || f >= 1 {
-			return errors.New("pdfcpu: Invalid cut points. Please consult pdfcpu help cut")
+			return errors.New("invalid cut points: values must be >= 0 and < 1")
 		}
 	}
 	if len(cut.Vert) == 0 || cut.Vert[0] > 0 {
 		cut.Vert = append([]float64{0}, cut.Vert...)
+	}
+
+	return nil
+}
+
+func writeCutPage(ctxSrc *model.Context, pageNr int, outDir, fileName string, cut *model.Cut, conf *model.Configuration) error {
+	ctxDest, err := pdfcpu.CutPage(ctxSrc, pageNr, cut)
+	if err != nil {
+		return fmt.Errorf("cut page %d: %w", pageNr, err)
+	}
+
+	if conf.PostProcessValidate {
+		if err = ValidateContext(ctxDest); err != nil {
+			return fmt.Errorf("validate output page %d: %w", pageNr, err)
+		}
+	}
+
+	outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, pageNr))
+	logWritingTo(outFile)
+
+	if err := WriteContextFile(ctxDest, outFile); err != nil {
+		return fmt.Errorf("write output file %s: %w", outFile, err)
 	}
 
 	return nil
@@ -223,15 +283,19 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: Cut: missing rs")
+		return ErrMissingPDFReadSeeker
+	}
+
+	if cut == nil {
+		return errors.New("missing cut configuration")
 	}
 
 	if len(cut.Hor) == 0 && len(cut.Vert) == 0 {
-		return errors.New("pdfcpu: Invalid cut configuration string: missing hor/ver cutpoints. Please consult pdfcpu help cut")
+		return errors.New("invalid cut configuration: missing horizontal or vertical cut points")
 	}
 
-	if err := validateCut(cut); err != nil {
-		return err
+	if err := validateAndNormalizeCut(cut); err != nil {
+		return fmt.Errorf("validate cut configuration: %w", err)
 	}
 
 	if conf == nil {
@@ -246,7 +310,9 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 	}
 
 	if len(pages) == 0 {
-		log.CLI.Println("aborted: nothing to cut!")
+		if log.CLIEnabled() {
+			log.CLI.Println("aborted: nothing to cut!")
+		}
 		return nil
 	}
 
@@ -254,21 +320,7 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 		if !v {
 			continue
 		}
-		ctxDest, err := pdfcpu.CutPage(ctxSrc, pageNr, cut)
-		if err != nil {
-			return err
-		}
-
-		if conf.PostProcessValidate {
-			if err = ValidateContext(ctxDest); err != nil {
-				return err
-			}
-		}
-
-		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, pageNr))
-		logWritingTo(outFile)
-
-		if err := WriteContextFile(ctxDest, outFile); err != nil {
+		if err := writeCutPage(ctxSrc, pageNr, outDir, fileName, cut, conf); err != nil {
 			return err
 		}
 	}
@@ -280,7 +332,7 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 func CutFile(inFile, outDir, outFile string, selectedPages []string, cut *model.Cut, conf *model.Configuration) error {
 	f, err := os.Open(inFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("open input file: %w", err)
 	}
 	defer f.Close()
 
@@ -292,5 +344,9 @@ func CutFile(inFile, outDir, outFile string, selectedPages []string, cut *model.
 		outFile = strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 	}
 
-	return Cut(f, outDir, outFile, selectedPages, cut, conf)
+	if err := Cut(f, outDir, outFile, selectedPages, cut, conf); err != nil {
+		return fmt.Errorf("cut pages: %w", err)
+	}
+
+	return nil
 }

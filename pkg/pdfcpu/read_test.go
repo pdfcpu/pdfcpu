@@ -84,6 +84,47 @@ func TestHeaderVersionRejectsPostScript(t *testing.T) {
 	}
 }
 
+func TestHandleUnencryptedFileClassifiesErrors(t *testing.T) {
+	ctx := &model.Context{Configuration: model.NewDefaultConfiguration()}
+
+	ctx.Cmd = model.DECRYPT
+	if err := handleUnencryptedFile(ctx); !errors.Is(err, ErrNotEncrypted) {
+		t.Fatalf("got %v, want ErrNotEncrypted", err)
+	}
+
+	ctx.Cmd = model.ENCRYPT
+	if err := handleUnencryptedFile(ctx); !errors.Is(err, ErrOwnerPasswordRequired) {
+		t.Fatalf("got %v, want ErrOwnerPasswordRequired", err)
+	}
+}
+
+func TestCheckForEncryptionClassifiesEncryptedError(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx.Cmd = model.ENCRYPT
+	ctx.Encrypt = types.NewIndirectRef(1, 0)
+
+	if err := checkForEncryption(context.Background(), ctx); !errors.Is(err, ErrEncrypted) {
+		t.Fatalf("got %v, want ErrEncrypted", err)
+	}
+}
+
+func TestHandlePermissionsClassifiesPermissionDenied(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx.Cmd = model.ADDATTACHMENTS
+	ctx.OwnerPW = "opw"
+	ctx.E = &model.Enc{R: 4}
+
+	if err := handlePermissions(ctx); !errors.Is(err, ErrPermissionDenied) {
+		t.Fatalf("got %v, want ErrPermissionDenied", err)
+	}
+}
+
 func TestExtractXRefStreamEntriesDefaultType(t *testing.T) {
 	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
 	if err != nil {

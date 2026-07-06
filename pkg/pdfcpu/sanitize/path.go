@@ -70,7 +70,7 @@ func pathPart(s string) string {
 func Path(s string) (string, error) {
 	orig := s
 	if strings.ContainsRune(s, 0) {
-		return "", logDebugError(orig, errors.New("pdfcpu: path contains NUL byte"))
+		return "", logDebugError(orig, errors.New("path contains NUL byte"))
 	}
 
 	s = strings.ReplaceAll(s, "\\", "/")
@@ -96,7 +96,7 @@ func Path(s string) (string, error) {
 	}
 
 	if len(cleanParts) == 0 {
-		return "", logDebugError(orig, errors.New("pdfcpu: path contains no usable filename"))
+		return "", logDebugError(orig, errors.New("path contains no usable filename"))
 	}
 
 	return strings.Join(cleanParts, "_"), nil

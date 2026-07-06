@@ -46,23 +46,23 @@ func (b *Buttons) Rtl() bool {
 func (b *Buttons) validate(defValue, value string) error {
 
 	if len(b.Values) < 2 {
-		return errors.New("pdfcpu: radiobuttongroups.buttons missing values")
+		return errors.New("radiobuttongroups.buttons missing values")
 	}
 
 	if defValue != "" {
 		if !types.MemberOf(defValue, b.Values) {
-			return fmt.Errorf("pdfcpu: radiobuttongroups invalid default: %s", defValue)
+			return fmt.Errorf("radiobuttongroups invalid default: %s", defValue)
 		}
 	}
 
 	if value != "" {
 		if !types.MemberOf(value, b.Values) {
-			return fmt.Errorf("pdfcpu: radiobuttongroups invalid value: %s", value)
+			return fmt.Errorf("radiobuttongroups invalid value: %s", value)
 		}
 	}
 
 	if b.Label == nil {
-		return errors.New("pdfcpu: radiobuttongroups.buttons: missing label")
+		return errors.New("radiobuttongroups.buttons: missing label")
 	}
 
 	b.Label.pdf = b.pdf
@@ -72,7 +72,7 @@ func (b *Buttons) validate(defValue, value string) error {
 
 	pos := b.Label.relPos
 	if pos == types.RelPosTop || pos == types.RelPosBottom {
-		return errors.New("pdfcpu: radiobuttongroups.buttons.label: pos must be left or right")
+		return errors.New("radiobuttongroups.buttons.label: pos must be left or right")
 	}
 
 	b.Label.HorAlign = types.AlignLeft

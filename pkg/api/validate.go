@@ -17,7 +17,6 @@
 package api
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -34,7 +33,7 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: Validate: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -92,7 +91,9 @@ func ValidateFile(inFile string, conf *model.Configuration) error {
 		conf = model.NewDefaultConfiguration()
 	}
 
-	log.CLI.Printf("validating(mode=%s) %s ...\n", conf.ValidationModeString(), inFile)
+	if log.CLIEnabled() {
+		log.CLI.Printf("validating(mode=%s) %s ...\n", conf.ValidationModeString(), inFile)
+	}
 
 	f, err := os.Open(inFile)
 	if err != nil {
@@ -105,7 +106,9 @@ func ValidateFile(inFile string, conf *model.Configuration) error {
 		return err
 	}
 
-	log.CLI.Println("validation ok")
+	if log.CLIEnabled() {
+		log.CLI.Println("validation ok")
+	}
 
 	return nil
 }
@@ -117,7 +120,7 @@ func ValidateFiles(inFiles []string, conf *model.Configuration) error {
 	}
 
 	for i, fn := range inFiles {
-		if i > 0 {
+		if i > 0 && log.CLIEnabled() {
 			log.CLI.Println()
 		}
 		if err := ValidateFile(fn, conf); err != nil {
@@ -134,7 +137,7 @@ func ValidateFiles(inFiles []string, conf *model.Configuration) error {
 // DumpObject writes an object from rs to stdout.
 func DumpObject(rs io.ReadSeeker, mode, objNr int, conf *model.Configuration) error {
 	if rs == nil {
-		return errors.New("pdfcpu: DumpObject: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {

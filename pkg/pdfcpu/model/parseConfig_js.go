@@ -144,7 +144,7 @@ func handleConfEncryptKeyLength(v string, c *Configuration) error {
 func handleFormFieldListMaxColWidth(v string, c *Configuration) error {
 	i, err := strconv.Atoi(v)
 	if err != nil || i < 0 {
-		return fmt.Errorf("FormFieldListMaxColWidth is numeric >= 0, got: %s", v)
+		return fmt.Errorf("formFieldListMaxColWidth is numeric >= 0, got: %s", v)
 	}
 	c.FormFieldListMaxColWidth = i
 	return nil

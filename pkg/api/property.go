@@ -22,13 +22,16 @@ import (
 	"os"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 // Properties returns rs's properties as recorded in infoDict.
-func Properties(rs io.ReadSeeker, conf *model.Configuration) (map[string]string, error) {
+func Properties(rs io.ReadSeeker, conf *model.Configuration) (m map[string]string, err error) {
+	defer fault.Catch(&err)
+
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ListProperties: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -46,10 +49,17 @@ func Properties(rs io.ReadSeeker, conf *model.Configuration) (map[string]string,
 }
 
 // AddProperties adds properties to rs's infodict and writes the result to w.
-func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, conf *model.Configuration) error {
+func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, conf *model.Configuration) (err error) {
+	defer fault.Catch(&err)
+
 	if rs == nil {
-		return errors.New("pdfcpu: AddProperties: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if err := validateProperties(properties); err != nil {
 		return err
 	}
@@ -123,10 +133,17 @@ func AddPropertiesFile(inFile, outFile string, properties map[string]string, con
 }
 
 // RemoveProperties deletes properties from rs's infodict and writes the result to w.
-func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *model.Configuration) error {
+func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *model.Configuration) (err error) {
+	defer fault.Catch(&err)
+
 	if rs == nil {
-		return errors.New("pdfcpu: RemoveProperties: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if err := validateNoEmptyStrings(properties, "property name"); err != nil {
 		return err
 	}

@@ -319,7 +319,7 @@ func (ctx *Context) NUpTilePDFBytesForPDF(
 		return err
 	}
 	if d == nil {
-		return fmt.Errorf("pdfcpu: unknown page number: %d\n", pageNr)
+		return fmt.Errorf("unknown page number: %d", pageNr)
 	}
 
 	// Retrieve content stream bytes.

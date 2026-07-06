@@ -44,6 +44,11 @@ const (
 	FTRadioButtonGroup
 )
 
+var (
+	errNoFormFieldsAvailable = errors.New("no form fields available")
+	errFormFieldsNotRemoved  = errors.New("some form fields could not be removed")
+)
+
 // String returns the string value of ft.
 func (ft FieldType) String() string {
 	var s string
@@ -98,12 +103,12 @@ type FieldMeta struct {
 func Fields(xRefTable *model.XRefTable) (types.Array, error) {
 
 	if xRefTable.Form == nil {
-		return nil, errors.New("pdfcpu: no form available")
+		return nil, errors.New("no form available")
 	}
 
 	o, ok := xRefTable.Form.Find("Fields")
 	if !ok {
-		return nil, errors.New("pdfcpu: no form fields available")
+		return nil, errNoFormFieldsAvailable
 	}
 
 	fields, err := xRefTable.DereferenceArray(o)
@@ -112,7 +117,7 @@ func Fields(xRefTable *model.XRefTable) (types.Array, error) {
 	}
 
 	if len(fields) == 0 {
-		return nil, errors.New("pdfcpu: no form fields available")
+		return nil, errNoFormFieldsAvailable
 	}
 
 	return fields, nil
@@ -133,7 +138,7 @@ func fullyQualifiedFieldNameDepth(xRefTable *model.XRefTable, indRef types.Indir
 		return false, err
 	}
 	if len(d) == 0 {
-		return false, fmt.Errorf("pdfcpu: corrupt field")
+		return false, fmt.Errorf("corrupt field")
 	}
 
 	thisID := indRef.ObjectNumber.String()
@@ -714,7 +719,7 @@ func collectPageField(
 	if ft == nil {
 		ft = d.NameEntry("FT")
 		if ft == nil {
-			return fmt.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", f.ID, d)
+			return fmt.Errorf("corrupt form field %s: missing entry \"FT\": %s", f.ID, d)
 		}
 	}
 
@@ -1368,7 +1373,7 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 	}
 
 	if len(indRefsClone) > 0 {
-		return false, errors.New("pdfcpu: Some form fields could not be removed")
+		return false, errFormFieldsNotRemoved
 	}
 
 	if len(fields) == 0 {
@@ -1404,7 +1409,7 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 	}
 
 	if len(m) > 0 {
-		return false, errors.New("pdfcpu: Some form fields could not be removed")
+		return false, errFormFieldsNotRemoved
 	}
 
 	// pdfcpu provides all appearance streams for form fields.
@@ -1676,7 +1681,7 @@ func resetPageFields(
 		if ft == nil {
 			ft = d.NameEntry("FT")
 			if ft == nil {
-				return fmt.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
+				return fmt.Errorf("corrupt form field %s: missing entry \"FT\": %s", fi.id, d)
 			}
 		}
 
@@ -1759,7 +1764,7 @@ func ensureAP(ctx *model.Context, d types.Dict, fi *fieldInfo, fonts map[string]
 	if ft == nil {
 		ft = d.NameEntry("FT")
 		if ft == nil {
-			return fmt.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
+			return fmt.Errorf("corrupt form field %s: missing entry \"FT\": %s", fi.id, d)
 		}
 	}
 
@@ -1906,7 +1911,7 @@ func deleteAP(d types.Dict, fi *fieldInfo) error {
 	if ft == nil {
 		ft = d.NameEntry("FT")
 		if ft == nil {
-			return fmt.Errorf("pdfcpu: corrupt form field %s: missing entry \"FT\"\n%s", fi.id, d)
+			return fmt.Errorf("corrupt form field %s: missing entry \"FT\": %s", fi.id, d)
 		}
 	}
 	if *ft == "Ch" {

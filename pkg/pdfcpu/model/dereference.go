@@ -91,7 +91,7 @@ func ProcessRefCounts(xRefTable *XRefTable, o types.Object) {
 
 func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef, decodeLazy bool) (types.Object, int, error) {
 	if ir == nil {
-		return nil, 0, errors.New("pdfcpu: indRefToObject: input argument is nil")
+		return nil, 0, errors.New("input argument is nil")
 	}
 
 	// 7.3.10
@@ -157,7 +157,6 @@ func (xRefTable *XRefTable) DereferenceForWrite(o types.Object) (types.Object, e
 
 // DereferenceBoolean resolves and validates a boolean object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceBoolean(o types.Object, sinceVersion Version) (*types.Boolean, error) {
-
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {
 		return nil, err
@@ -165,7 +164,7 @@ func (xRefTable *XRefTable) DereferenceBoolean(o types.Object, sinceVersion Vers
 
 	b, ok := o.(types.Boolean)
 	if !ok {
-		return nil, fmt.Errorf("pdfcpu: dereferenceBoolean: wrong type <%v>", o)
+		return nil, fmt.Errorf("wrong type <%v>", o)
 	}
 
 	// Version check
@@ -178,7 +177,6 @@ func (xRefTable *XRefTable) DereferenceBoolean(o types.Object, sinceVersion Vers
 
 // DereferenceInteger resolves and validates an integer object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceInteger(o types.Object) (*types.Integer, error) {
-
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {
 		return nil, err
@@ -186,7 +184,7 @@ func (xRefTable *XRefTable) DereferenceInteger(o types.Object) (*types.Integer, 
 
 	i, ok := o.(types.Integer)
 	if !ok {
-		return nil, fmt.Errorf("pdfcpu: dereferenceInteger: wrong type <%v>", o)
+		return nil, fmt.Errorf("wrong type <%v>", o)
 	}
 
 	return &i, nil
@@ -194,7 +192,6 @@ func (xRefTable *XRefTable) DereferenceInteger(o types.Object) (*types.Integer, 
 
 // DereferenceNumber resolves a number object, which may be an indirect reference and returns a float64.
 func (xRefTable *XRefTable) DereferenceNumber(o types.Object) (float64, error) {
-
 	var (
 		f   float64
 		err error
@@ -211,7 +208,7 @@ func (xRefTable *XRefTable) DereferenceNumber(o types.Object) (float64, error) {
 		f = o.Value()
 
 	default:
-		err = fmt.Errorf("pdfcpu: dereferenceNumber: wrong type <%v>", o)
+		err = fmt.Errorf("wrong type <%v>", o)
 
 	}
 
@@ -220,7 +217,6 @@ func (xRefTable *XRefTable) DereferenceNumber(o types.Object) (float64, error) {
 
 // DereferenceName resolves and validates a name object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceName(o types.Object, sinceVersion Version, validate func(string) bool) (n types.Name, err error) {
-
 	o, err = xRefTable.Dereference(o)
 	if err != nil || o == nil {
 		return n, err
@@ -228,7 +224,7 @@ func (xRefTable *XRefTable) DereferenceName(o types.Object, sinceVersion Version
 
 	n, ok := o.(types.Name)
 	if !ok {
-		return n, fmt.Errorf("pdfcpu: dereferenceName: wrong type <%v>", o)
+		return n, fmt.Errorf("wrong type <%v>", o)
 	}
 
 	// Version check
@@ -238,7 +234,7 @@ func (xRefTable *XRefTable) DereferenceName(o types.Object, sinceVersion Version
 
 	// Validation
 	if validate != nil && !validate(n.Value()) {
-		return n, fmt.Errorf("pdfcpu: dereferenceName: invalid <%s>", n.Value())
+		return n, fmt.Errorf("invalid <%s>", n.Value())
 	}
 
 	return n, nil
@@ -246,7 +242,6 @@ func (xRefTable *XRefTable) DereferenceName(o types.Object, sinceVersion Version
 
 // DereferenceStringLiteral resolves and validates a string literal object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceStringLiteral(o types.Object, sinceVersion Version, validate func(string) bool) (s types.StringLiteral, err error) {
-
 	o, err = xRefTable.Dereference(o)
 	if err != nil || o == nil {
 		return s, err
@@ -254,7 +249,7 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(o types.Object, sinceVersio
 
 	s, ok := o.(types.StringLiteral)
 	if !ok {
-		return s, fmt.Errorf("pdfcpu: dereferenceStringLiteral: wrong type <%v>", o)
+		return s, fmt.Errorf("wrong type <%v>", o)
 	}
 
 	// Ensure UTF16 correctness.
@@ -270,7 +265,7 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(o types.Object, sinceVersio
 
 	// Validation
 	if validate != nil && !validate(s1) {
-		return s, fmt.Errorf("pdfcpu: dereferenceStringLiteral: invalid <%s>", s1)
+		return s, fmt.Errorf("invalid <%s>", s1)
 	}
 
 	return s, nil
@@ -278,7 +273,6 @@ func (xRefTable *XRefTable) DereferenceStringLiteral(o types.Object, sinceVersio
 
 // DereferenceStringOrHexLiteral resolves and validates a string or hex literal object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj types.Object, sinceVersion Version, validate func(string) bool) (s string, err error) {
-
 	o, err := xRefTable.Dereference(obj)
 	if err != nil || o == nil {
 		return "", err
@@ -299,7 +293,7 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj types.Object, sinc
 		}
 
 	default:
-		return "", fmt.Errorf("pdfcpu: dereferenceStringOrHexLiteral: wrong type %T", obj)
+		return "", fmt.Errorf("wrong type %T", obj)
 
 	}
 
@@ -310,7 +304,7 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj types.Object, sinc
 
 	// Validation
 	if validate != nil && !validate(s) {
-		return "", fmt.Errorf("pdfcpu: dereferenceStringOrHexLiteral: invalid <%s>", s)
+		return "", fmt.Errorf("invalid <%s>", s)
 	}
 
 	return s, nil
@@ -324,7 +318,7 @@ func Text(o types.Object) (string, error) {
 	case types.HexLiteral:
 		return types.HexLiteralToString(obj)
 	default:
-		return "", fmt.Errorf("pdfcpu: corrupt text: %v\n", obj)
+		return "", fmt.Errorf("corrupt text: %v", obj)
 	}
 }
 
@@ -353,7 +347,6 @@ func (xRefTable *XRefTable) DereferenceCSVSafeText(o types.Object) (string, erro
 
 // DereferenceArray resolves and validates an array object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceArray(o types.Object) (types.Array, error) {
-
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {
 		return nil, err
@@ -361,7 +354,7 @@ func (xRefTable *XRefTable) DereferenceArray(o types.Object) (types.Array, error
 
 	a, ok := o.(types.Array)
 	if !ok {
-		return nil, fmt.Errorf("pdfcpu: dereferenceArray: wrong type %T <%v>", o, o)
+		return nil, fmt.Errorf("wrong type %T <%v>", o, o)
 	}
 
 	return a, nil
@@ -369,7 +362,6 @@ func (xRefTable *XRefTable) DereferenceArray(o types.Object) (types.Array, error
 
 // DereferenceDict resolves and validates a dictionary object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceDict(o types.Object) (types.Dict, error) {
-
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {
 		return nil, err
@@ -377,7 +369,7 @@ func (xRefTable *XRefTable) DereferenceDict(o types.Object) (types.Dict, error) 
 
 	d, ok := o.(types.Dict)
 	if !ok {
-		return nil, fmt.Errorf("pdfcpu: dereferenceDict: wrong type %T <%v>", o, o)
+		return nil, fmt.Errorf("wrong type %T <%v>", o, o)
 	}
 
 	return d, nil
@@ -387,7 +379,6 @@ func (xRefTable *XRefTable) DereferenceDict(o types.Object) (types.Dict, error) 
 // It also returns the number of the written PDF Increment this object is part of.
 // The higher the increment number the older the object.
 func (xRefTable *XRefTable) DereferenceDictWithIncr(o types.Object) (types.Dict, int, error) {
-
 	o, incr, err := xRefTable.DereferenceWithIncr(o)
 	if err != nil || o == nil {
 		return nil, 0, err
@@ -395,7 +386,7 @@ func (xRefTable *XRefTable) DereferenceDictWithIncr(o types.Object) (types.Dict,
 
 	d, ok := o.(types.Dict)
 	if !ok {
-		return nil, 0, fmt.Errorf("pdfcpu: dereferenceDictWithIncr: wrong type %T <%v>", o, o)
+		return nil, 0, fmt.Errorf("wrong type %T <%v>", o, o)
 	}
 
 	return d, incr, nil
@@ -413,11 +404,11 @@ func (xRefTable *XRefTable) DereferenceFontDict(indRef types.IndirectRef) (types
 
 	if xRefTable.ValidationMode == ValidationStrict {
 		if d.Type() == nil {
-			return nil, fmt.Errorf("pdfcpu: DereferenceFontDict: missing dict type %s\n", indRef)
+			return nil, fmt.Errorf("missing dict type %s", indRef)
 		}
 
 		if *d.Type() != "Font" {
-			return nil, fmt.Errorf("pdfcpu: DereferenceFontDict: expected Type=Font, unexpected Type: %s", *d.Type())
+			return nil, fmt.Errorf("expected Type=Font, unexpected Type: %s", *d.Type())
 		}
 	}
 
@@ -436,11 +427,11 @@ func (xRefTable *XRefTable) DereferencePageNodeDict(indRef types.IndirectRef) (t
 
 	dictType := d.Type()
 	if dictType == nil {
-		return nil, errors.New("pdfcpu: DereferencePageNodeDict: Missing dict type")
+		return nil, errors.New("missing dict type")
 	}
 
 	if *dictType != "Pages" && *dictType != "Page" {
-		return nil, fmt.Errorf("pdfcpu: DereferencePageNodeDict: unexpected Type: %s", *dictType)
+		return nil, fmt.Errorf("unexpected Type: %s", *dictType)
 	}
 
 	return d, nil
@@ -461,13 +452,12 @@ func (xRefTable *XRefTable) dereferenceDestArray(o types.Object) (types.Array, e
 		}
 		arr, ok := o1.(types.Array)
 		if !ok {
-			fmt.
-				Errorf("pdfcpu: invalid dest array:\n%s\n", o)
+			return nil, fmt.Errorf("invalid dest array: %s", o)
 		}
 		return arr, nil
 	}
 
-	return nil, fmt.Errorf("pdfcpu: invalid dest array:\n%s\n", o)
+	return nil, fmt.Errorf("invalid dest array: %s", o)
 }
 
 // DereferenceDestArray resolves the destination for key.
@@ -482,14 +472,14 @@ func (xRefTable *XRefTable) DereferenceDestArray(key string) (types.Array, error
 		return xRefTable.dereferenceDestArray(o)
 	}
 
-	return nil, fmt.Errorf("pdfcpu: invalid named destination for: %s", key)
+	return nil, fmt.Errorf("invalid named destination for: %s", key)
 }
 
 // DereferenceDictEntry returns a dereferenced dict entry.
 func (xRefTable *XRefTable) DereferenceDictEntry(d types.Dict, key string) (types.Object, error) {
 	o, found := d.Find(key)
 	if !found || o == nil {
-		return nil, fmt.Errorf("pdfcpu: dict=%s entry=%s missing.", d, key)
+		return nil, fmt.Errorf("dict=%s entry=%s missing", d, key)
 	}
 	return xRefTable.Dereference(o)
 }
@@ -518,7 +508,7 @@ func (xRefTable *XRefTable) DereferenceStringEntryBytes(d types.Dict, key string
 
 	}
 
-	return nil, fmt.Errorf("pdfcpu: DereferenceStringEntryBytes dict=%s entry=%s, wrong type %T <%v>", d, key, o, o)
+	return nil, fmt.Errorf("dereferenceStringEntryBytes dict=%s entry=%s, wrong type %T <%v>", d, key, o, o)
 }
 
 // DestName returns the destination name for o.

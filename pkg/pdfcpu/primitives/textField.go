@@ -71,10 +71,10 @@ func (tf *TextField) SetFontID(s string) {
 
 func (tf *TextField) validateID() error {
 	if tf.ID == "" {
-		return errors.New("pdfcpu: missing field id")
+		return errors.New("missing field id")
 	}
 	if tf.pdf.DuplicateField(tf.ID) {
-		return fmt.Errorf("pdfcpu: duplicate form field: %s", tf.ID)
+		return fmt.Errorf("duplicate form field: %s", tf.ID)
 	}
 	tf.pdf.FieldIDs[tf.ID] = true
 	return nil
@@ -82,7 +82,7 @@ func (tf *TextField) validateID() error {
 
 func (tf *TextField) validatePosition() error {
 	if tf.Position[0] < 0 || tf.Position[1] < 0 {
-		return fmt.Errorf("pdfcpu: field: %s pos value < 0", tf.ID)
+		return fmt.Errorf("field: %s pos value < 0", tf.ID)
 	}
 	tf.x, tf.y = tf.Position[0], tf.Position[1]
 	return nil
@@ -90,14 +90,14 @@ func (tf *TextField) validatePosition() error {
 
 func (tf *TextField) validateWidth() error {
 	if tf.Width == 0 {
-		return fmt.Errorf("pdfcpu: field: %s width == 0", tf.ID)
+		return fmt.Errorf("field: %s width == 0", tf.ID)
 	}
 	return nil
 }
 
 func (tf *TextField) validateHeight() error {
 	if tf.Height < 0 {
-		return fmt.Errorf("pdfcpu: field: %s height < 0", tf.ID)
+		return fmt.Errorf("field: %s height < 0", tf.ID)
 	}
 	return nil
 }
@@ -166,7 +166,7 @@ func (tf *TextField) validateLabel() error {
 
 func (tf *TextField) validateTab() error {
 	if tf.Tab < 0 {
-		return fmt.Errorf("pdfcpu: field: %s negative tab value", tf.ID)
+		return fmt.Errorf("field: %s negative tab value", tf.ID)
 	}
 	if tf.Tab == 0 {
 		return nil
@@ -176,7 +176,7 @@ func (tf *TextField) validateTab() error {
 		page.Tabs = types.IntSet{}
 	} else {
 		if page.Tabs[tf.Tab] {
-			return fmt.Errorf("pdfcpu: field: %s duplicate tab value %d", tf.ID, tf.Tab)
+			return fmt.Errorf("field: %s duplicate tab value %d", tf.ID, tf.Tab)
 		}
 	}
 	page.Tabs[tf.Tab] = true
@@ -282,7 +282,7 @@ func (tf *TextField) calcMargin() (float64, float64, float64, float64, error) {
 			mName := m.Name[1:]
 			m0 := tf.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBottom, mLeft, fmt.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, fmt.Errorf("unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}
@@ -660,7 +660,7 @@ func (tf *TextField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 
 	if tf.Value != "" {
 		if tf.MaxLen > 0 && len(tf.Value) > tf.MaxLen {
-			return nil, fmt.Errorf("pdfcpu: field overflow at %s, maxLen = %d", tf.ID, tf.MaxLen)
+			return nil, fmt.Errorf("field overflow at %s, maxLen = %d", tf.ID, tf.MaxLen)
 		}
 		s, err := types.EscapedUTF16String(tf.Value)
 		if err != nil {
@@ -821,7 +821,7 @@ func (tf *TextField) prepForRender(p *model.Page, pageNr int, fonts model.FontMa
 
 	if tf.Multiline {
 		if tf.Height == 0 {
-			return fmt.Errorf("pdfcpu: field: %s height == 0", tf.ID)
+			return fmt.Errorf("field: %s height == 0", tf.ID)
 		}
 		h = tf.Height
 	}
@@ -1088,7 +1088,7 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine,
 
 	s := locateDA(ctx, d, da)
 	if s == nil {
-		return errors.New("pdfcpu: textfield missing \"DA\"")
+		return errors.New("textfield missing \"DA\"")
 	}
 
 	fontID, f, err := fontFromDA(*s)
@@ -1118,7 +1118,7 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine,
 	tf.RTL = pdffont.RTL(lang)
 
 	if !font.SupportedFont(name) {
-		return fmt.Errorf("pdfcpu: font unavailable: %s", name)
+		return fmt.Errorf("font unavailable: %s", name)
 	}
 
 	bb, err := tf.renderN(ctx.XRefTable)

@@ -18,6 +18,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -31,6 +32,10 @@ import (
 
 // appendTo appends rs to ctxDest's page tree.
 func appendTo(rs io.ReadSeeker, fName string, ctxDest *model.Context, dividerPage bool) error {
+	if rs == nil {
+		return ErrMissingPDFReadSeeker
+	}
+
 	ctxSource, err := ReadAndValidate(rs, ctxDest.Configuration)
 	if err != nil {
 		return err
@@ -61,12 +66,12 @@ func appendFile(fName string, ctxDest *model.Context, dividerPage bool) error {
 func MergeRaw(rsc []io.ReadSeeker, w io.Writer, dividerPage bool, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
-	if rsc == nil {
-		return errors.New("pdfcpu: MergeRaw: missing rsc")
+	if len(rsc) == 0 {
+		return fmt.Errorf("missing PDF inputs: %w", ErrMissingPDFInput)
 	}
 
 	if w == nil {
-		return errors.New("pdfcpu: MergeRaw: missing w")
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -99,6 +104,10 @@ func MergeRaw(rsc []io.ReadSeeker, w io.Writer, dividerPage bool, conf *model.Co
 }
 
 func prepDestContext(destFile string, rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
+	if rs == nil {
+		return nil, ErrMissingPDFReadSeeker
+	}
+
 	ctxDest, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, err
@@ -117,12 +126,22 @@ func prepDestContext(destFile string, rs io.ReadSeeker, conf *model.Configuratio
 	return ctxDest, nil
 }
 
+func mergeDestFile(destFile string, inFiles []string) (string, []string, error) {
+	if destFile != "" {
+		return destFile, inFiles, nil
+	}
+	if len(inFiles) == 0 {
+		return "", nil, ErrMissingPDFInput
+	}
+	return inFiles[0], inFiles[1:], nil
+}
+
 // Merge concatenates inFiles.
 // if destFile is supplied it appends the result to destfile (=MERGEAPPEND)
 // if no destFile supplied it writes the result to the first entry of inFiles (=MERGECREATE).
 func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configuration, dividerPage bool) error {
 	if w == nil {
-		return errors.New("pdfcpu: Merge: Please provide w")
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {
@@ -133,9 +152,11 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 
 	if destFile != "" {
 		conf.Cmd = model.MERGEAPPEND
-	} else {
-		destFile = inFiles[0]
-		inFiles = inFiles[1:]
+	}
+	var err error
+	destFile, inFiles, err = mergeDestFile(destFile, inFiles)
+	if err != nil {
+		return err
 	}
 
 	if conf.CreateBookmarks && log.CLIEnabled() {
@@ -257,13 +278,15 @@ func MergeCreateZip(rs1, rs2 io.ReadSeeker, w io.Writer, conf *model.Configurati
 	defer fault.Catch(&err)
 
 	if rs1 == nil {
-		return errors.New("pdfcpu: MergeCreateZip: missing rs1")
+		return errors.New("missing first PDF read seeker")
 	}
+
 	if rs2 == nil {
-		return errors.New("pdfcpu: MergeCreateZip: missing rs2")
+		return errors.New("missing second PDF read seeker")
 	}
+
 	if w == nil {
-		return errors.New("pdfcpu: MergeCreateZip: missing w")
+		return ErrMissingPDFWriter
 	}
 
 	if conf == nil {

@@ -49,7 +49,7 @@ func appendPDFObject(dst []byte, obj types.Object) ([]byte, error) {
 	case types.LazyObjectStreamObject:
 		return appendLazyObjectStreamObject(dst, obj)
 	default:
-		return nil, fmt.Errorf("pdfcpu: unsupported PDF object type %T", obj)
+		return nil, fmt.Errorf("unsupported PDF object type %T", obj)
 	}
 }
 

@@ -47,6 +47,35 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
 )
 
+var (
+	// ErrMissingConfiguration signals a missing pdfcpu configuration.
+	ErrMissingConfiguration = errors.New("missing configuration")
+
+	// ErrMissingPDFReadSeeker signals a missing required PDF input reader.
+	ErrMissingPDFReadSeeker = errors.New("missing PDF read seeker")
+
+	// ErrMissingPDFWriter signals a missing required PDF output writer.
+	ErrMissingPDFWriter = errors.New("missing PDF writer")
+
+	// ErrMissingPDFContext signals a missing required PDF context.
+	ErrMissingPDFContext = errors.New("missing PDF context")
+
+	// ErrMissingPDFReadWriteSeeker signals a missing required PDF input/output seeker.
+	ErrMissingPDFReadWriteSeeker = errors.New("missing PDF read write seeker")
+
+	// ErrMissingPDFInput signals a missing required PDF input file.
+	ErrMissingPDFInput = errors.New("missing PDF input")
+
+	// ErrMissingBookletConfiguration signals a missing booklet configuration.
+	ErrMissingBookletConfiguration = errors.New("missing booklet configuration")
+
+	// ErrMissingImageInput signals a missing required image input.
+	ErrMissingImageInput = errors.New("missing image input")
+
+	// ErrNoSignatures signals absent signatures.
+	ErrNoSignatures = errors.New("no signatures present")
+)
+
 func logDisclaimerPDF20() {
 	disclaimer := `
 ***************************** Disclaimer ****************************
@@ -71,7 +100,7 @@ func logDisclaimerPDF20() {
 func ReadContext(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
 	defer fault.Catch(&err)
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ReadContext: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 	return pdfcpu.Read(rs, conf)
 }
@@ -106,6 +135,10 @@ func ReadContextFile(inFile string) (*model.Context, error) {
 
 // ValidateContext validates ctx.
 func ValidateContext(ctx *model.Context) error {
+	if ctx == nil {
+		return ErrMissingPDFContext
+	}
+
 	if ctx.XRefTable.Version() == model.V20 {
 		logDisclaimerPDF20()
 	}
@@ -114,6 +147,10 @@ func ValidateContext(ctx *model.Context) error {
 
 // OptimizeContext optimizes ctx.
 func OptimizeContext(ctx *model.Context) error {
+	if ctx == nil {
+		return ErrMissingPDFContext
+	}
+
 	if log.CLIEnabled() {
 		log.CLI.Println("optimizing...")
 	}
@@ -141,6 +178,14 @@ func PatchFile(fileName string, bb []byte, offset int64) error {
 
 // WriteContext writes ctx to w.
 func WriteContext(ctx *model.Context, w io.Writer) error {
+	if ctx == nil {
+		return ErrMissingPDFContext
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if f, ok := w.(*os.File); ok {
 		// In order to retrieve the written file size.
 		ctx.Write.Fp = f
@@ -152,6 +197,14 @@ func WriteContext(ctx *model.Context, w io.Writer) error {
 
 // WriteIncrement writes a PDF increment for ctx to w.
 func WriteIncrement(ctx *model.Context, w io.Writer) error {
+	if ctx == nil {
+		return ErrMissingPDFContext
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	ctx.Write.Writer = bufio.NewWriter(w)
 	defer ctx.Write.Flush()
 	return pdfcpu.WriteIncrement(ctx)
@@ -171,8 +224,15 @@ func WriteContextFile(ctx *model.Context, outFile string) error {
 func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
 	defer fault.Catch(&err)
 
+	if rs == nil {
+		return nil, ErrMissingPDFReadSeeker
+	}
+
 	if ctx, err = ReadContext(rs, conf); err != nil {
 		return nil, err
+	}
+	if conf == nil {
+		conf = ctx.Configuration
 	}
 
 	if err := ValidateContext(ctx); err != nil {
@@ -183,7 +243,7 @@ func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Co
 
 		if len(ctx.Signatures) == 0 {
 			if conf.Cmd == model.REMOVESIGNATURES {
-				return nil, errors.New("pdfcpu: no signatures to remove")
+				return nil, ErrNoSignatures
 			}
 			if log.CLIEnabled() {
 				log.CLI.Println("no signatures to remove...")
@@ -216,8 +276,12 @@ func cmdAssumingOptimization(cmd model.CommandMode) bool {
 // ReadValidateAndOptimize returns an optimized model.Context of rs ready for processing a specific command.
 // conf.Cmd is expected to be configured properly.
 func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
+	if rs == nil {
+		return nil, ErrMissingPDFReadSeeker
+	}
+
 	if conf == nil {
-		return nil, errors.New("pdfcpu: ReadValidateAndOptimize: missing conf")
+		return nil, ErrMissingConfiguration
 	}
 
 	ctx, err = ReadAndValidate(rs, conf)
@@ -250,6 +314,14 @@ func logWritingTo(s string) {
 
 // Write writes ctx using w.
 func Write(ctx *model.Context, w io.Writer, conf *model.Configuration) error {
+	if ctx == nil {
+		return ErrMissingPDFContext
+	}
+
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if log.StatsEnabled() {
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}
@@ -259,6 +331,18 @@ func Write(ctx *model.Context, w io.Writer, conf *model.Configuration) error {
 
 // WriteIncr writes ctx as increment using rws.
 func WriteIncr(ctx *model.Context, rws io.ReadWriteSeeker, conf *model.Configuration) error {
+	if ctx == nil {
+		return ErrMissingPDFContext
+	}
+
+	if rws == nil {
+		return ErrMissingPDFReadWriteSeeker
+	}
+
+	if conf == nil {
+		return ErrMissingConfiguration
+	}
+
 	if log.StatsEnabled() {
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
 	}

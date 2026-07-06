@@ -79,7 +79,7 @@ func (c *Content) validateBorders() error {
 	pdf := c.page.pdf
 	if c.Border != nil {
 		if len(c.Borders) > 0 {
-			return errors.New("pdfcpu: Please supply either content \"border\" or \"borders\"")
+			return errors.New("please supply either content \"border\" or \"borders\"")
 		}
 		c.Border.pdf = pdf
 		if err := c.Border.validate(); err != nil {
@@ -100,7 +100,7 @@ func (c *Content) validateBorders() error {
 func (c *Content) validateMargins() error {
 	if c.Margin != nil {
 		if len(c.Margins) > 0 {
-			return errors.New("pdfcpu: Please supply either page \"margin\" or \"margins\"")
+			return errors.New("please supply either page \"margin\" or \"margins\"")
 		}
 		if err := c.Margin.validate(); err != nil {
 			return err
@@ -119,7 +119,7 @@ func (c *Content) validateMargins() error {
 func (c *Content) validatePaddings() error {
 	if c.Padding != nil {
 		if len(c.Paddings) > 0 {
-			return errors.New("pdfcpu: Please supply either page \"padding\" or \"paddings\"")
+			return errors.New("please supply either page \"padding\" or \"paddings\"")
 		}
 		if err := c.Padding.validate(); err != nil {
 			return err
@@ -137,56 +137,56 @@ func (c *Content) validatePaddings() error {
 
 func (c *Content) validatePrimitives(s string) error {
 	if len(c.SimpleBoxPool) > 0 {
-		return fmt.Errorf("pdfcpu: \"boxes\" %s", s)
+		return fmt.Errorf("\"boxes\" %s", s)
 	}
 	if len(c.SimpleBoxes) > 0 {
-		return fmt.Errorf("pdfcpu: \"box\" %s", s)
+		return fmt.Errorf("\"box\" %s", s)
 	}
 	if len(c.TextBoxPool) > 0 {
-		return fmt.Errorf("pdfcpu: \"texts\" %s", s)
+		return fmt.Errorf("\"texts\" %s", s)
 	}
 	if len(c.TextBoxes) > 0 {
-		return fmt.Errorf("pdfcpu: \"text\" %s", s)
+		return fmt.Errorf("\"text\" %s", s)
 	}
 	if len(c.ImageBoxPool) > 0 {
-		return fmt.Errorf("pdfcpu: \"images\" %s", s)
+		return fmt.Errorf("\"images\" %s", s)
 	}
 	if len(c.ImageBoxes) > 0 {
-		return fmt.Errorf("pdfcpu: \"image\" %s", s)
+		return fmt.Errorf("\"image\" %s", s)
 	}
 	if len(c.TablePool) > 0 {
-		return fmt.Errorf("pdfcpu: \"tables\" %s", s)
+		return fmt.Errorf("\"tables\" %s", s)
 	}
 	if len(c.Tables) > 0 {
-		return fmt.Errorf("pdfcpu: \"table\" %s", s)
+		return fmt.Errorf("\"table\" %s", s)
 	}
 	return nil
 }
 
 func (c *Content) validateFormPrimitives(s string) error {
 	if len(c.FieldGroupPool) > 0 {
-		return fmt.Errorf("pdfcpu: \"fieldgroups\" %s", s)
+		return fmt.Errorf("\"fieldgroups\" %s", s)
 	}
 	if len(c.FieldGroups) > 0 {
-		return fmt.Errorf("pdfcpu: \"fieldgroup\" %s", s)
+		return fmt.Errorf("\"fieldgroup\" %s", s)
 	}
 	if len(c.TextFields) > 0 {
-		return fmt.Errorf("pdfcpu: \"textfield\" %s", s)
+		return fmt.Errorf("\"textfield\" %s", s)
 	}
 	if len(c.DateFields) > 0 {
-		return fmt.Errorf("pdfcpu: \"datefield\" %s", s)
+		return fmt.Errorf("\"datefield\" %s", s)
 	}
 	if len(c.CheckBoxes) > 0 {
-		return fmt.Errorf("pdfcpu: \"checkbox\" %s", s)
+		return fmt.Errorf("\"checkbox\" %s", s)
 	}
 	if len(c.RadioButtonGroups) > 0 {
-		return fmt.Errorf("pdfcpu: \"radiobuttongroup\" %s", s)
+		return fmt.Errorf("\"radiobuttongroup\" %s", s)
 	}
 	if len(c.ComboBoxes) > 0 {
-		return fmt.Errorf("pdfcpu: \"combobox\" %s", s)
+		return fmt.Errorf("\"combobox\" %s", s)
 	}
 	if len(c.ListBoxes) > 0 {
-		return fmt.Errorf("pdfcpu: \"listbox\" %s", s)
+		return fmt.Errorf("\"listbox\" %s", s)
 	}
 	return nil
 }
@@ -612,7 +612,7 @@ func (c *Content) calcFont(ff map[string]*FormFont) {
 func (c *Content) mergeIn(fName string, f *FormFont) error {
 	f0 := c.namedFont(fName)
 	if f0 == nil {
-		return fmt.Errorf("pdfcpu: missing named font \"input\"")
+		return fmt.Errorf("missing named font \"input\"")
 	}
 	f.Name = f0.Name
 	if f.Size == 0 {
@@ -650,7 +650,7 @@ func (c *Content) calcInputFont(f *FormFont) (*FormFont, error) {
 		// Use inherited named font "input".
 		f = c.namedFont("input")
 		if f == nil {
-			return nil, fmt.Errorf("pdfcpu: missing named font \"input\"")
+			return nil, fmt.Errorf("missing named font \"input\"")
 		}
 	}
 
@@ -669,7 +669,7 @@ func (c *Content) calcLabelFont(f *FormFont) (*FormFont, error) {
 			// Use inherited named font "label".
 			f0 = c.namedFont("label")
 			if f0 == nil {
-				return nil, fmt.Errorf("pdfcpu: missing named font \"label\"")
+				return nil, fmt.Errorf("missing named font \"label\"")
 			}
 			f.Name = f0.Name
 			if f.Size == 0 {
@@ -687,7 +687,7 @@ func (c *Content) calcLabelFont(f *FormFont) (*FormFont, error) {
 			fName := f.Name[1:]
 			f0 := c.namedFont(fName)
 			if f0 == nil {
-				return nil, fmt.Errorf("pdfcpu: unknown font name %s", fName)
+				return nil, fmt.Errorf("unknown font name %s", fName)
 			}
 			f.Name = f0.Name
 			if f.Size == 0 {
@@ -704,7 +704,7 @@ func (c *Content) calcLabelFont(f *FormFont) (*FormFont, error) {
 		// Use inherited named font "label".
 		f = c.namedFont("label")
 		if f == nil {
-			return nil, fmt.Errorf("pdfcpu: missing named font \"label\"")
+			return nil, fmt.Errorf("missing named font \"label\"")
 		}
 	}
 
@@ -1058,7 +1058,7 @@ func (c *Content) renderSimpleBoxes(p *model.Page) error {
 			sbName := sb.Name[1:]
 			sb0 := c.namedSimpleBox(sbName)
 			if sb0 == nil {
-				return fmt.Errorf("pdfcpu: unknown named box %s", sbName)
+				return fmt.Errorf("unknown named box %s", sbName)
 			}
 			sb.mergeIn(sb0)
 		}
@@ -1079,7 +1079,7 @@ func (c *Content) renderTextBoxes(p *model.Page, pageNr int, fonts model.FontMap
 			tbName := tb.Name[1:]
 			tb0 := c.namedTextBox(tbName)
 			if tb0 == nil {
-				return fmt.Errorf("pdfcpu: unknown named text %s", tbName)
+				return fmt.Errorf("unknown named text %s", tbName)
 			}
 			tb.mergeIn(tb0)
 		}
@@ -1100,7 +1100,7 @@ func (c *Content) renderImageBoxes(p *model.Page, pageNr int, images model.Image
 			ibName := ib.Name[1:]
 			ib0 := c.namedImageBox(ibName)
 			if ib0 == nil {
-				return fmt.Errorf("pdfcpu: unknown named image %s", ibName)
+				return fmt.Errorf("unknown named image %s", ibName)
 			}
 			ib.mergeIn(ib0)
 		}
@@ -1121,7 +1121,7 @@ func (c *Content) renderTables(p *model.Page, pageNr int, fonts model.FontMap) e
 			tName := t.Name[1:]
 			t0 := c.namedTable(tName)
 			if t0 == nil {
-				return fmt.Errorf("pdfcpu: unknown named table %s", tName)
+				return fmt.Errorf("unknown named table %s", tName)
 			}
 			t.mergeIn(t0)
 		}
@@ -1214,7 +1214,7 @@ func (c *Content) renderFieldGroups(p *model.Page, pageNr int, fonts model.FontM
 			fgName := fg.Name[1:]
 			fg0 := c.namedFieldGroup(fgName)
 			if fg0 == nil {
-				return fmt.Errorf("pdfcpu: unknown named field group %s", fgName)
+				return fmt.Errorf("unknown named field group %s", fgName)
 			}
 			fg.mergeIn(fg0)
 		}

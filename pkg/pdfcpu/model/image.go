@@ -63,7 +63,7 @@ type Image struct {
 
 func validateImageResourceLimits(xRefTable *XRefTable, c image.Config) error {
 	if c.Width <= 0 || c.Height <= 0 {
-		return fmt.Errorf("pdfcpu: image has invalid dimensions %dx%d", c.Width, c.Height)
+		return fmt.Errorf("image has invalid dimensions %dx%d", c.Width, c.Height)
 	}
 
 	limits := DefaultResourceLimits()
@@ -76,7 +76,7 @@ func validateImageResourceLimits(xRefTable *XRefTable, c image.Config) error {
 		return err
 	}
 	if pixels > limits.MaxImagePixels {
-		return fmt.Errorf("pdfcpu: image pixel count %d exceeds limit %d", pixels, limits.MaxImagePixels)
+		return fmt.Errorf("image pixel count %d exceeds limit %d", pixels, limits.MaxImagePixels)
 	}
 
 	renderBytes, err := safemath.MultiplyInt64(pixels, 4)
@@ -84,7 +84,7 @@ func validateImageResourceLimits(xRefTable *XRefTable, c image.Config) error {
 		return err
 	}
 	if renderBytes > limits.MaxImageBytes {
-		return fmt.Errorf("pdfcpu: image byte size %d exceeds limit %d", renderBytes, limits.MaxImageBytes)
+		return fmt.Errorf("image byte size %d exceeds limit %d", renderBytes, limits.MaxImageBytes)
 	}
 
 	return nil
@@ -646,7 +646,7 @@ func encodeJPEG(img image.Image) ([]byte, string, error) {
 	case *image.CMYK:
 		cs = DeviceCMYKCS
 	default:
-		return nil, "", fmt.Errorf("pdfcpu: unexpected color model for JPEG: %s", cs)
+		return nil, "", fmt.Errorf("unexpected color model for JPEG: %s", cs)
 	}
 	var buf bytes.Buffer
 	err := jpeg.Encode(&buf, img, nil)
@@ -837,7 +837,7 @@ func createImageBuf(xRefTable *XRefTable, img image.Image, imgA image.Image, for
 		return handleCMYKImage(im)
 
 	default:
-		return nil, nil, 0, "", fmt.Errorf("pdfcpu: unsupported image type: %T", im)
+		return nil, nil, 0, "", fmt.Errorf("unsupported image type: %T", im)
 	}
 }
 
@@ -856,7 +856,7 @@ func colorSpaceForJPEGColorModel(cm color.Model) string {
 func createDCTImageStreamDictForJPEG(xRefTable *XRefTable, c image.Config, bb bytes.Buffer) (*types.StreamDict, error) {
 	cs := colorSpaceForJPEGColorModel(c.ColorModel)
 	if cs == "" {
-		return nil, errors.New("pdfcpu: unexpected color model for JPEG")
+		return nil, errors.New("unexpected color model for JPEG")
 	}
 
 	return CreateDCTImageStreamDict(xRefTable, bb.Bytes(), c.Width, c.Height, 8, cs)
@@ -1020,7 +1020,7 @@ func createImageResources(xRefTable *XRefTable, c image.Config, bb bytes.Buffer,
 
 	w, h := img.Bounds().Dx(), img.Bounds().Dy()
 	if w != c.Width || h != c.Height {
-		return nil, errors.New("pdfcpu: unexpected width or height")
+		return nil, errors.New("unexpected width or height")
 	}
 
 	sd, err := createImageStreamDict(xRefTable, imgBuf, softMask, w, h, bpc, format, cs)
@@ -1090,7 +1090,7 @@ func CreateImageStreamDict(xRefTable *XRefTable, r io.Reader) (*types.StreamDict
 
 	w, h := img.Bounds().Dx(), img.Bounds().Dy()
 	if w != c.Width || h != c.Height {
-		return nil, 0, 0, errors.New("pdfcpu: unexpected width or height")
+		return nil, 0, 0, errors.New("unexpected width or height")
 	}
 
 	sd, err := createStreamDictForDecodedImage(xRefTable, c, format, bb, img)

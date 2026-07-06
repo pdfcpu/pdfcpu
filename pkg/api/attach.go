@@ -35,7 +35,7 @@ func Attachments(rs io.ReadSeeker, conf *model.Configuration) (aa []model.Attach
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: Attachments: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
 
 	if conf == nil {
@@ -57,12 +57,13 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return errors.New("pdfcpu: AddAttachments: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if w == nil {
-		return errors.New("pdfcpu: AddAttachments: missing w")
+		return ErrMissingPDFWriter
 	}
+
 	if err := validateAttachmentFileNames(files); err != nil {
 		return err
 	}
@@ -114,7 +115,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 	}
 
 	if !ok {
-		return errors.New("pdfcpu: AddAttachments: No attachment added")
+		return errors.New("no attachment added")
 	}
 
 	return Write(ctx, w, conf)
@@ -172,13 +173,15 @@ func AddAttachmentsFile(inFile, outFile string, files []string, coll bool, conf 
 // RemoveAttachments deletes embedded files from a PDF context read from rs and writes the result to w.
 func RemoveAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
+
 	if rs == nil {
-		return errors.New("pdfcpu: RemoveAttachments: missing rs")
+		return ErrMissingPDFReadSeeker
 	}
 
 	if w == nil {
-		return errors.New("pdfcpu: RemoveAttachments: missing w")
+		return ErrMissingPDFWriter
 	}
+
 	if err := validateNoEmptyStrings(files, "attachment filename"); err != nil {
 		return err
 	}
@@ -198,7 +201,7 @@ func RemoveAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *mode
 		return err
 	}
 	if !ok {
-		return errors.New("pdfcpu: RemoveAttachments: No attachment removed")
+		return errors.New("no attachment removed")
 	}
 
 	return Write(ctx, w, conf)
@@ -258,8 +261,9 @@ func ExtractAttachmentsRaw(rs io.ReadSeeker, outDir string, fileNames []string, 
 	defer fault.Catch(&err)
 
 	if rs == nil {
-		return nil, errors.New("pdfcpu: ExtractAttachmentsRaw: missing rs")
+		return nil, ErrMissingPDFReadSeeker
 	}
+
 	if err := validateNoEmptyStrings(fileNames, "attachment filename"); err != nil {
 		return nil, err
 	}
@@ -280,6 +284,10 @@ func ExtractAttachmentsRaw(rs io.ReadSeeker, outDir string, fileNames []string, 
 // ExtractAttachments extracts embedded files from a PDF context read from rs into outDir.
 func ExtractAttachments(rs io.ReadSeeker, outDir string, fileNames []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
+
+	if rs == nil {
+		return ErrMissingPDFReadSeeker
+	}
 
 	aa, err := ExtractAttachmentsRaw(rs, outDir, fileNames, conf)
 	if err != nil {

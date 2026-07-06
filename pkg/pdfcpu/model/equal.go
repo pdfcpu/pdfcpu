@@ -105,7 +105,7 @@ func EqualObjects(o1, o2 types.Object, xRefTable *XRefTable, pairs []int) (ok bo
 		ok, err = equalArrays(o1.(types.Array), o2.(types.Array), xRefTable, pairs)
 
 	default:
-		err = fmt.Errorf("equalObjects: unhandled compare for type %s\n", o1Type)
+		err = fmt.Errorf("unhandled compare for type %s", o1Type)
 	}
 
 	return ok, err
@@ -141,7 +141,7 @@ func equalStreamDicts(sd1, sd2 *types.StreamDict, xRefTable *XRefTable, pairs []
 	}
 
 	if sd1.Raw == nil || sd2 == nil {
-		return false, errors.New("pdfcpu: EqualStreamDicts: stream dict not loaded")
+		return false, errors.New("stream dict not loaded")
 	}
 
 	return bytes.Equal(sd1.Raw, sd2.Raw), nil
@@ -155,7 +155,7 @@ func equalFontNames(v1, v2 types.Object, xRefTable *XRefTable) (bool, error) {
 
 	bf1, ok := v1.(types.Name)
 	if !ok {
-		return false, fmt.Errorf("equalFontNames: type cast problem")
+		return false, fmt.Errorf("type cast problem")
 	}
 
 	v2, err = xRefTable.Dereference(v2)
@@ -165,7 +165,7 @@ func equalFontNames(v1, v2 types.Object, xRefTable *XRefTable) (bool, error) {
 
 	bf2, ok := v2.(types.Name)
 	if !ok {
-		return false, fmt.Errorf("equalFontNames: type cast problem")
+		return false, fmt.Errorf("type cast problem")
 	}
 
 	// Ignore fontname prefix

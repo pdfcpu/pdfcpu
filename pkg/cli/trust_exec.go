@@ -69,7 +69,7 @@ func listPEM(fName string, ss *[]string) (int, error) {
 	}
 
 	if len(bb) == 0 {
-		return 0, errors.New("is empty\n")
+		return 0, errors.New("is empty")
 	}
 
 	ss1 := []string{}
@@ -107,7 +107,7 @@ func listP7C(fName string, ss *[]string) (int, error) {
 	}
 
 	if len(bb) == 0 {
-		return 0, errors.New("is empty\n")
+		return 0, errors.New("is empty")
 	}
 
 	p7, err := pkcs7.Parse(bb)

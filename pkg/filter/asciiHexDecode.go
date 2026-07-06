@@ -38,7 +38,7 @@ func (f asciiHexDecode) Encode(r io.Reader) (io.Reader, error) {
 	}
 
 	if len(bb) > maxInt/2 {
-		return nil, errors.New("pdfcpu: filter ASCIIHexDecode: encoded length overflow")
+		return nil, errors.New("asciiHexDecode: length overflow")
 	}
 
 	dst := make([]byte, hex.EncodedLen(len(bb)))
@@ -90,7 +90,7 @@ func (f asciiHexDecode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, erro
 	}
 
 	if maxLen > int64(maxInt) || maxLen > maxInt64/2 {
-		return nil, errors.New("pdfcpu: filter ASCIIHexDecode: decode length overflow")
+		return nil, errors.New("asciiHexDecode: length overflow")
 	}
 	dst := make([]byte, maxLen)
 

@@ -38,6 +38,10 @@ func Import(s string, u types.DisplayUnit) (*pdfcpu.Import, error) {
 func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.Import, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}

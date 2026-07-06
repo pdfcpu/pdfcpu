@@ -32,7 +32,9 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-var ErrUnknownFileType = errors.New("pdfcpu: unsupported file type")
+var ErrUnknownFileType = errors.New("unsupported file type")
+
+var errNoCertificatesToSave = errors.New("no certificates to save")
 
 var loadCertsOnce sync.Once
 var loadCertsErr error
@@ -133,7 +135,7 @@ func decodePKCS7Block(s string) ([]byte, error) {
 	end := strings.Index(s, PKCS7_SUFFIX)
 
 	if start == -1 || end == -1 || end <= start {
-		return nil, fmt.Errorf("decodePKCS7Block: PEM block not found")
+		return nil, fmt.Errorf("PEM block not found")
 	}
 
 	s = s[start+len(PKCS7_PREFIX) : end]
@@ -185,7 +187,7 @@ func LoadCertificatesFile(filename string) ([]*x509.Certificate, error) {
 
 func saveCertsAsPEM(certs []*x509.Certificate, filename string, overwrite bool) (bool, error) {
 	if len(certs) == 0 {
-		return false, errors.New("no certificates to save")
+		return false, errNoCertificatesToSave
 	}
 
 	if !overwrite {
@@ -217,7 +219,7 @@ func saveCertsAsP7C(certs []*x509.Certificate, filename string, overwrite bool) 
 	// TODO encodeBase64 bool (PEM)
 
 	if len(certs) == 0 {
-		return false, errors.New("no certificates to save")
+		return false, errNoCertificatesToSave
 	}
 
 	p7, err := pkcs7.NewSignedData()

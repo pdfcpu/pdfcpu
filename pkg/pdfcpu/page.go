@@ -55,7 +55,7 @@ func (p PageConfiguration) String() string {
 
 func parsePageFormat(s string, p *PageConfiguration) (err error) {
 	if p.UserDim {
-		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
+		return errAmbiguousPageDim
 	}
 	p.PageDim, p.PageSize, err = types.ParsePageFormat(s)
 	p.UserDim = true
@@ -64,7 +64,7 @@ func parsePageFormat(s string, p *PageConfiguration) (err error) {
 
 func parseDimensions(s string, p *PageConfiguration) (err error) {
 	if p.UserDim {
-		return errors.New("pdfcpu: only one of formsize(papersize) or dimensions allowed")
+		return errAmbiguousPageDim
 	}
 	p.PageDim, p.PageSize, err = ParsePageDim(s, p.InpUnit)
 	p.UserDim = true
@@ -85,7 +85,7 @@ func ParsePageConfiguration(s string, u types.DisplayUnit) (*PageConfiguration, 
 
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
-			return nil, errors.New("pdfcpu: Invalid page configuration string. Please consult pdfcpu help pages")
+			return nil, errors.New("invalid page configuration string")
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
@@ -128,7 +128,7 @@ func addPages(
 			return err
 		}
 		if d == nil {
-			return fmt.Errorf("pdfcpu: unknown page number: %d\n", i)
+			return fmt.Errorf("unknown page number: %d", i)
 		}
 
 		obj, err := migrateIndRef(pageIndRef, ctxSrc, ctxDest, migrated)

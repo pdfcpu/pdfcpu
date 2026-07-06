@@ -25,7 +25,6 @@ import (
 )
 
 func validatePageLabelDict(xRefTable *model.XRefTable, o types.Object) error {
-
 	// see 12.4.2 Page Labels
 
 	d, err := xRefTable.DereferenceDict(o)
@@ -74,7 +73,7 @@ func validateNumberTreeKey(xRefTable *model.XRefTable, o types.Object, name stri
 		return i.Value(), true, nil
 	}
 
-	err = fmt.Errorf("pdfcpu: validateNumberTreeDictNumsEntry: corrupt key <%v>\n", o)
+	err = fmt.Errorf("corrupt key <%v>", o)
 	if name != "StructTree" {
 		return 0, false, err
 	}
@@ -85,11 +84,10 @@ func validateNumberTreeKey(xRefTable *model.XRefTable, o types.Object, name stri
 }
 
 func validateNumberTreeDictNumsEntry(xRefTable *model.XRefTable, d types.Dict, name string, useIDs bool) (firstKey, lastKey int, err error) {
-
 	// Nums: array of the form [key1 value1 key2 value2 ... key n value n]
 	o, found := d.Find("Nums")
 	if !found {
-		return 0, 0, errors.New("pdfcpu: validateNumberTreeDictNumsEntry: missing \"Kids\" or \"Nums\" entry")
+		return 0, 0, errors.New("missing \"Kids\" or \"Nums\" entry")
 	}
 
 	a, err := xRefTable.DereferenceArray(o)
@@ -97,13 +95,13 @@ func validateNumberTreeDictNumsEntry(xRefTable *model.XRefTable, d types.Dict, n
 		return 0, 0, err
 	}
 	if a == nil {
-		return 0, 0, errors.New("pdfcpu: validateNumberTreeDictNumsEntry: missing \"Nums\" array")
+		return 0, 0, errors.New("missing \"Nums\" array")
 	}
 
 	// arr length needs to be even because of contained key value pairs.
 	if len(a)%2 == 1 {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return 0, 0, fmt.Errorf("pdfcpu: validateNumberTreeDictNumsEntry: Nums array entry length needs to be even, length=%d\n", len(a))
+			return 0, 0, fmt.Errorf("nums array entry length needs to be even, length=%d", len(a))
 		}
 		model.ShowDigestedSpecViolation("number tree \"Num\" entry array length needs to be even")
 		model.ShowSkipped("invalid number tree")
@@ -158,7 +156,6 @@ func validateNumberTreeDictNumsEntry(xRefTable *model.XRefTable, d types.Dict, n
 }
 
 func validateNumberTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict, firstKey, lastKey int) error {
-
 	a, err := validateIntegerArrayEntry(xRefTable, d, "numberTreeDict", "Limits", REQUIRED, model.V10, func(a types.Array) bool { return len(a) == 2 })
 	if err != nil {
 		return err
@@ -177,7 +174,7 @@ func validateNumberTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict,
 	if firstKey < fk || lastKey > lk {
 		msg := fmt.Sprintf("validateNumberTreeDictLimitsEntry: invalid leaf node: firstKey(%d vs. %d) lastKey(%d vs. %d)", firstKey, fk, lastKey, lk)
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return fmt.Errorf("pdfcpu: %s\n", msg)
+			return fmt.Errorf("%s", msg)
 		}
 		model.ShowDigestedSpecViolation(msg)
 	}
@@ -205,7 +202,7 @@ func validateNumberTreeDepth(xRefTable *model.XRefTable, name string, d types.Di
 			return 0, 0, err
 		}
 		if a == nil {
-			return 0, 0, errors.New("pdfcpu: validateNumberTree: missing \"Kids\" array")
+			return 0, 0, errors.New("missing \"Kids\" array")
 		}
 
 		for _, o := range a {

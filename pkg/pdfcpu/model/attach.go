@@ -106,7 +106,7 @@ func (xRefTable *XRefTable) NewFileSpecDictForAttachment(a Attachment) (types.Di
 }
 
 func getModDate(xRefTable *XRefTable, obj types.Object) (*time.Time, error) {
-	errInvalidModDate := errors.New("pdfcpu: invalid date ModDate")
+	errInvalidModDate := errors.New("invalid date ModDate")
 	o, err := xRefTable.Dereference(obj)
 	if err != nil || o == nil {
 		return nil, errInvalidModDate
@@ -315,7 +315,7 @@ func (ctx *Context) RemoveAttachments(ids []string) (bool, error) {
 		}
 	}
 	if xRefTable.Names["EmbeddedFiles"] == nil {
-		return false, fmt.Errorf("no attachments available.")
+		return false, fmt.Errorf("no attachments available")
 	}
 
 	if len(ids) == 0 {
@@ -356,7 +356,7 @@ func (ctx *Context) ExtractAttachments(ids []string) ([]Attachment, error) {
 		}
 	}
 	if xRefTable.Names["EmbeddedFiles"] == nil {
-		return nil, fmt.Errorf("no attachments available.")
+		return nil, fmt.Errorf("no attachments available")
 	}
 
 	aa := []Attachment{}
@@ -415,7 +415,7 @@ func (ctx *Context) ExtractAttachment(a Attachment) (*Attachment, error) {
 		return nil, err
 	}
 	if len(aa) > 1 {
-		return nil, fmt.Errorf("pdfcpu: unexpected number of attachments: %d", len(aa))
+		return nil, fmt.Errorf("unexpected number of attachments: %d", len(aa))
 	}
 	return &aa[0], nil
 }

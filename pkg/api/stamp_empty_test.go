@@ -78,7 +78,7 @@ func TestWatermarkReaderConstructorsRejectNil(t *testing.T) {
 				_, err := ImageWatermarkForReader(nil, "", false, false, types.POINTS)
 				return err
 			},
-			want: "pdfcpu: missing image reader",
+			want: "missing image reader",
 		},
 		{
 			name: "PDF read seeker",
@@ -86,7 +86,7 @@ func TestWatermarkReaderConstructorsRejectNil(t *testing.T) {
 				_, err := PDFWatermarkForReadSeeker(nil, 1, "", false, false, types.POINTS)
 				return err
 			},
-			want: "pdfcpu: missing PDF read seeker",
+			want: "missing PDF read seeker",
 		},
 		{
 			name: "PDF multi read seeker",
@@ -94,14 +94,14 @@ func TestWatermarkReaderConstructorsRejectNil(t *testing.T) {
 				_, err := PDFMultiWatermarkForReadSeeker(nil, 1, 1, "", false, false, types.POINTS)
 				return err
 			},
-			want: "pdfcpu: missing PDF read seeker",
+			want: "missing PDF read seeker",
 		},
 		{
 			name: "PDF read seeker file helper",
 			fn: func() error {
 				return AddPDFWatermarksForReadSeekerFile("", "", nil, false, nil, 1, "", nil)
 			},
-			want: "pdfcpu: missing PDF read seeker",
+			want: "missing PDF read seeker",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

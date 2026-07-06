@@ -41,7 +41,7 @@ type Bar struct {
 func (b *Bar) validate() error {
 
 	if b.X != 0 && b.Y != 0 || b.X < 0 || b.Y < 0 {
-		return fmt.Errorf("pdfcpu: bar: supply positive values for either x (vertical bar) or y (horizontal)")
+		return fmt.Errorf("bar: supply positive values for either x (vertical bar) or y (horizontal)")
 	}
 
 	if b.Color != "" {
@@ -62,7 +62,7 @@ func (b *Bar) validate() error {
 		case "bevel":
 			b.style = types.LJBevel
 		default:
-			return fmt.Errorf("pdfcpu: invalid bar style: %s (should be \"miter\", \"round\" or \"bevel\")", b.Style)
+			return fmt.Errorf("invalid bar style: %s (should be \"miter\", \"round\" or \"bevel\")", b.Style)
 		}
 	}
 

@@ -214,7 +214,7 @@ func fontFileNames(args []string) []string {
 func handleInstallFontsCommand(conf *model.Configuration, args []string) error {
 	fileNames := fontFileNames(args)
 	if len(fileNames) == 0 {
-		return errors.New("Please supply a *.ttf or *.tcc fontname!")
+		return errors.New("please supply a *.ttf or *.tcc fontname")
 	}
 
 	return runCommand(cli.InstallFontsCommand(fileNames, conf))
@@ -609,7 +609,7 @@ func parsePropertyAssignment(arg string) (string, string, error) {
 		return "", "", errors.New("property name must not be empty")
 	}
 	if !validate.DocumentProperty(k) {
-		return "", "", fmt.Errorf("property name \"%s\" not allowed!", k)
+		return "", "", fmt.Errorf("property name \"%s\" not allowed", k)
 	}
 	v := strings.TrimSpace(ss[1])
 	if v == "" {
@@ -650,7 +650,7 @@ func propertyKeys(args []string) ([]string, error) {
 			return nil, errors.New("property name must not be empty")
 		}
 		if !validate.DocumentProperty(k) {
-			return nil, fmt.Errorf("property name \"%s\" not allowed!", k)
+			return nil, fmt.Errorf("property name \"%s\" not allowed", k)
 		}
 		keys = append(keys, k)
 	}

@@ -66,10 +66,10 @@ func (cb *ComboBox) SetFontID(s string) {
 
 func (cb *ComboBox) validateID() error {
 	if cb.ID == "" {
-		return errors.New("pdfcpu: missing field id")
+		return errors.New("missing field id")
 	}
 	if cb.pdf.DuplicateField(cb.ID) {
-		return fmt.Errorf("pdfcpu: duplicate form field: %s", cb.ID)
+		return fmt.Errorf("duplicate form field: %s", cb.ID)
 	}
 	cb.pdf.FieldIDs[cb.ID] = true
 	return nil
@@ -77,7 +77,7 @@ func (cb *ComboBox) validateID() error {
 
 func (cb *ComboBox) validatePosition() error {
 	if cb.Position[0] < 0 || cb.Position[1] < 0 {
-		return fmt.Errorf("pdfcpu: field: %s pos value < 0", cb.ID)
+		return fmt.Errorf("field: %s pos value < 0", cb.ID)
 	}
 	cb.x, cb.y = cb.Position[0], cb.Position[1]
 	return nil
@@ -85,22 +85,22 @@ func (cb *ComboBox) validatePosition() error {
 
 func (cb *ComboBox) validateWidth() error {
 	if cb.Width == 0 {
-		return fmt.Errorf("pdfcpu: field: %s width == 0", cb.ID)
+		return fmt.Errorf("field: %s width == 0", cb.ID)
 	}
 	return nil
 }
 
 func (cb *ComboBox) validateOptionsValueAndDefault() error {
 	if len(cb.Options) == 0 {
-		return fmt.Errorf("pdfcpu: field: %s missing options", cb.ID)
+		return fmt.Errorf("field: %s missing options", cb.ID)
 	}
 
 	if len(cb.Value) > 0 && !types.MemberOf(cb.Value, cb.Options) {
-		return fmt.Errorf("pdfcpu: field: %s invalid value: %s", cb.ID, cb.Value)
+		return fmt.Errorf("field: %s invalid value: %s", cb.ID, cb.Value)
 	}
 
 	if len(cb.Default) > 0 && !types.MemberOf(cb.Default, cb.Options) {
-		return fmt.Errorf("pdfcpu: field: %s invalid default: %s", cb.ID, cb.Default)
+		return fmt.Errorf("field: %s invalid default: %s", cb.ID, cb.Default)
 	}
 
 	return nil
@@ -170,7 +170,7 @@ func (cb *ComboBox) validateLabel() error {
 
 func (cb *ComboBox) validateTab() error {
 	if cb.Tab < 0 {
-		return fmt.Errorf("pdfcpu: field: %s negative tab value", cb.ID)
+		return fmt.Errorf("field: %s negative tab value", cb.ID)
 	}
 	if cb.Tab == 0 {
 		return nil
@@ -180,7 +180,7 @@ func (cb *ComboBox) validateTab() error {
 		page.Tabs = types.IntSet{}
 	} else {
 		if page.Tabs[cb.Tab] {
-			return fmt.Errorf("pdfcpu: field: %s duplicate tab value %d", cb.ID, cb.Tab)
+			return fmt.Errorf("field: %s duplicate tab value %d", cb.ID, cb.Tab)
 		}
 	}
 	page.Tabs[cb.Tab] = true
@@ -276,7 +276,7 @@ func (cb *ComboBox) calcMargin() (float64, float64, float64, float64, error) {
 			mName := m.Name[1:]
 			m0 := cb.margin(mName)
 			if m0 == nil {
-				return mTop, mRight, mBottom, mLeft, fmt.Errorf("pdfcpu: unknown named margin %s", mName)
+				return mTop, mRight, mBottom, mLeft, fmt.Errorf("unknown named margin %s", mName)
 			}
 			m.mergeIn(m0)
 		}

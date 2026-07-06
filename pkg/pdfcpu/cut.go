@@ -36,7 +36,7 @@ import (
 func ParseCutConfigForPoster(s string, u types.DisplayUnit) (*model.Cut, error) {
 
 	if s == "" {
-		return nil, errors.New("pdfcpu: missing poster configuration string")
+		return nil, errors.New("missing poster configuration string")
 	}
 
 	cut := &model.Cut{Unit: u, Scale: 1.0}
@@ -45,7 +45,7 @@ func ParseCutConfigForPoster(s string, u types.DisplayUnit) (*model.Cut, error) 
 
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
-			return nil, errors.New("pdfcpu: Invalid poster configuration string. Please consult pdfcpu help poster")
+			return nil, errors.New("invalid poster configuration string")
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
@@ -66,7 +66,7 @@ func ParseCutConfigForN(n int, s string, u types.DisplayUnit) (*model.Cut, error
 	cut := &model.Cut{Unit: u}
 
 	if !types.IntMemberOf(n, []int{2, 3, 4, 6, 8, 9, 12, 16}) {
-		return nil, errors.New("pdfcpu: invalid n: Please choose one of 2, 3, 4, 6, 8, 9, 12, 16")
+		return nil, errors.New("invalid n: choose one of 2, 3, 4, 6, 8, 9, 12, 16")
 	}
 
 	if s == "" {
@@ -77,7 +77,7 @@ func ParseCutConfigForN(n int, s string, u types.DisplayUnit) (*model.Cut, error
 
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
-			return nil, errors.New("pdfcpu: Invalid ndown configuration string. Please consult pdfcpu help ndown")
+			return nil, errors.New("invalid ndown configuration string")
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
@@ -96,7 +96,7 @@ func ParseCutConfigForN(n int, s string, u types.DisplayUnit) (*model.Cut, error
 func ParseCutConfig(s string, u types.DisplayUnit) (*model.Cut, error) {
 
 	if s == "" {
-		return nil, errors.New("pdfcpu: missing cut configuration string")
+		return nil, errors.New("missing cut configuration string")
 	}
 
 	cut := &model.Cut{Unit: u}
@@ -105,7 +105,7 @@ func ParseCutConfig(s string, u types.DisplayUnit) (*model.Cut, error) {
 
 		ss1 := strings.Split(s, ":")
 		if len(ss1) != 2 {
-			return nil, errors.New("pdfcpu: Invalid cut configuration string. Please consult pdfcpu help cut")
+			return nil, errors.New("invalid cut configuration string")
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
@@ -247,7 +247,7 @@ func prepForCut(ctxSrc *model.Context, pageNr int) (
 		return nil, nil, nil, nil, nil, nil, err
 	}
 	if d == nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("pdfcpu: unknown page number: %d\n", pageNr)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("unknown page number: %d", pageNr)
 	}
 	d.Delete("Annots")
 
@@ -484,7 +484,7 @@ func CutPage(ctxSrc *model.Context, pageNr int, cut *model.Cut) (*model.Context,
 	return ctxDest, nil
 }
 
-func createNDownCuts(n int, cropBox *types.Rectangle, cut *model.Cut) {
+func createNDownCuts(n int, cropBox *types.Rectangle, cut *model.Cut) error {
 	var s1, s2 []float64
 
 	switch n {
@@ -512,6 +512,8 @@ func createNDownCuts(n int, cropBox *types.Rectangle, cut *model.Cut) {
 	case 16:
 		s1 = append(s1, 0, .25, .5, .75)
 		s2 = append(s2, 0, .25, .5, .75)
+	default:
+		return errors.New("n-down value must be one of 2, 3, 4, 6, 9, 12, 16s")
 	}
 
 	if cropBox.Portrait() {
@@ -519,6 +521,8 @@ func createNDownCuts(n int, cropBox *types.Rectangle, cut *model.Cut) {
 	} else {
 		cut.Hor, cut.Vert = s2, s1
 	}
+
+	return nil
 }
 
 // NDownPage creates NDown tiles for pageNr and n.
@@ -546,7 +550,9 @@ func NDownPage(ctxSrc *model.Context, pageNr, n int, cut *model.Cut) (*model.Con
 		return nil, err
 	}
 
-	createNDownCuts(n, cropBox, cut)
+	if err := createNDownCuts(n, cropBox, cut); err != nil {
+		return nil, err
+	}
 
 	migrated := map[int]int{}
 
@@ -606,7 +612,7 @@ func PosterPage(ctxSrc *model.Context, pageNr int, cut *model.Cut) (*model.Conte
 	// Ensure cut.PageDim fits into scaled cropBox.
 	dim := cut.PageDim
 	if dim.Width > cropBox.Width() || dim.Height > cropBox.Height() {
-		return nil, errors.New("pdfcpu: selected poster tile dimensions too big")
+		return nil, errors.New("selected poster tile dimensions too big")
 	}
 
 	rotate := inhPAttrs.Rotate

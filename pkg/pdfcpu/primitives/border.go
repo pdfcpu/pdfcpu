@@ -37,7 +37,7 @@ type Border struct {
 func (b *Border) validate() error {
 
 	if b.Name == "$" {
-		return errors.New("pdfcpu: invalid border reference $")
+		return errors.New("invalid border reference $")
 	}
 
 	if b.Color != "" {
@@ -58,7 +58,7 @@ func (b *Border) validate() error {
 		case "bevel":
 			b.style = types.LJBevel
 		default:
-			return fmt.Errorf("pdfcpu: invalid border style: %s (should be \"miter\", \"round\" or \"bevel\")", b.Style)
+			return fmt.Errorf("invalid border style: %s (should be \"miter\", \"round\" or \"bevel\")", b.Style)
 		}
 	}
 
