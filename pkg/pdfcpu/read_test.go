@@ -65,6 +65,13 @@ func TestReadContext(t *testing.T) {
 	}
 }
 
+func TestReadClassifiesEmptyInput(t *testing.T) {
+	_, err := Read(bytes.NewReader(nil), nil)
+	if !errors.Is(err, ErrEmptyInput) {
+		t.Fatalf("got %v, want ErrEmptyInput", err)
+	}
+}
+
 func TestHeaderVersionRejectsPostScript(t *testing.T) {
 	tests := []struct {
 		name string

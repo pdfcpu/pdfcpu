@@ -49,6 +49,9 @@ var (
 	// ErrPostScriptInput reports a PostScript input stream passed to the PDF reader.
 	ErrPostScriptInput = errors.New("PostScript input is not supported; convert to PDF before processing")
 
+	// ErrEmptyInput reports an empty input stream passed to the PDF reader.
+	ErrEmptyInput = errors.New("the file could not be opened because it is empty")
+
 	// ErrMissingXRefSection reports a PDF without a detectable final xref section.
 	ErrMissingXRefSection = errors.New("can't detect last xref section")
 
@@ -133,7 +136,7 @@ func ReadWithContext(c context.Context, rs io.ReadSeeker, conf *model.Configurat
 	}
 
 	if ctx.Read.FileSize == 0 {
-		return nil, errors.New("the file could not be opened because it is empty")
+		return nil, ErrEmptyInput
 	}
 
 	if log.InfoEnabled() {
@@ -146,7 +149,7 @@ func ReadWithContext(c context.Context, rs io.ReadSeeker, conf *model.Configurat
 
 	// Populate xRefTable.
 	if err = readXRefTable(c, ctx); err != nil {
-		return nil, fmt.Errorf("read: xRefTable failed: %w", err)
+		return nil, fmt.Errorf("xref table: %w", err)
 	}
 
 	// Make all objects explicitly available (load into memory) in corresponding xRefTable entries.
@@ -1388,7 +1391,7 @@ func headerVersion(rs io.ReadSeeker) (v *model.Version, eolCount int, offset int
 
 	pdfVersion, err := model.PDFVersion(string(s[len(prefix) : len(prefix)+3]))
 	if err != nil {
-		return nil, 0, 0, fmt.Errorf("headerVersion: unknown PDF Header Version: %w", err)
+		return nil, 0, 0, fmt.Errorf("unknown PDF header version: %w", err)
 	}
 
 	s = s[8:]
@@ -1786,7 +1789,7 @@ func readXRefTable(c context.Context, ctx *model.Context) (err error) {
 
 	err = buildXRefTableStartingAt(c, ctx, offset)
 	if err == io.EOF {
-		return fmt.Errorf("readXRefTable: unexpected eof: %w", err)
+		return fmt.Errorf("xref table: unexpected eof: %w", err)
 	}
 	if err != nil {
 		return
@@ -2353,7 +2356,7 @@ func dereferencedObject(c context.Context, ctx *model.Context, objNr int) (types
 
 		o, err := ParseObjectWithContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
 		if err != nil {
-			return nil, fmt.Errorf("dereferencedObject: problem dereferencing object %d: %w", objNr, err)
+			return nil, fmt.Errorf("problem dereferencing object %d: %w", objNr, err)
 		}
 
 		if o == nil {

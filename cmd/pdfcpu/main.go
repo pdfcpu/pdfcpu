@@ -18,10 +18,12 @@ limitations under the License.
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"runtime/debug"
 
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
@@ -70,13 +72,22 @@ func shortCommit(s string) string {
 	return s[:8]
 }
 
+func printError(err error) {
+	if !needStackTrace {
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return
+	}
+
+	fmt.Fprintf(os.Stderr, "Fatal: %v\n", err)
+	var p fault.Panic
+	if errors.As(err, &p) && len(p.Stack) > 0 {
+		fmt.Fprintf(os.Stderr, "\nStack Trace:\n%s", p.Stack)
+	}
+}
+
 func main() {
 	if err := Execute(); err != nil {
-		if needStackTrace {
-			fmt.Fprintf(os.Stderr, "Fatal: %v\n", err)
-		} else {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-		}
+		printError(err)
 		os.Exit(1)
 	}
 }

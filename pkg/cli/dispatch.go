@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"runtime/debug"
 
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
@@ -133,7 +134,14 @@ var dispatchTable = map[model.CommandMode]dispatchFunc{
 func Dispatch(cmd *Command) (out []string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("unexpected panic attack: %v\n%s", r, debug.Stack())
+			if p, ok := r.(fault.Panic); ok {
+				err = p
+				return
+			}
+			err = fault.Panic{
+				Err:   fmt.Errorf("unexpected panic attack: %v", r),
+				Stack: debug.Stack(),
+			}
 		}
 	}()
 
