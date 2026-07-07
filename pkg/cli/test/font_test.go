@@ -17,9 +17,13 @@ limitations under the License.
 package test
 
 import (
+	"errors"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 )
 
@@ -33,13 +37,16 @@ func TestInstallFontsCommand(t *testing.T) {
 	}
 }
 
-// TestInstallTTCFontsCommand verifies install ttc fonts command.
-func TestInstallTTCFontsCommand(t *testing.T) {
-	msg := "TestInstallTTCFontsCommand"
+// TestInstallTTCFontsCommandReportsMissingInput verifies install errors reach CLI callers.
+func TestInstallTTCFontsCommandReportsMissingInput(t *testing.T) {
 	userFontName := filepath.Join(fontDir, "Songti.ttc")
 	cmd := cli.InstallFontsCommand([]string{userFontName}, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
-		t.Fatalf("%s install fonts: %v\n", msg, err)
+	_, err := cli.Dispatch(cmd)
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
+	}
+	if !strings.Contains(err.Error(), userFontName) {
+		t.Fatalf("expected font filename context, got %q", err)
 	}
 }
 
@@ -52,12 +59,15 @@ func TestListFontsCommand(t *testing.T) {
 	}
 }
 
-// TestCreateCheatSheetsFontsCommand verifies create cheat sheets fonts command.
-func TestCreateCheatSheetsFontsCommand(t *testing.T) {
-	msg := "TestCreateCheatSheetsFontsCommand"
+// TestCreateCheatSheetsFontsCommandReportsUnknownFont verifies unknown fonts reach CLI callers.
+func TestCreateCheatSheetsFontsCommandReportsUnknownFont(t *testing.T) {
 	userFontName := filepath.Join(fontDir, "Songti.ttc")
 	cmd := cli.CreateCheatSheetsFontsCommand([]string{userFontName}, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
-		t.Fatalf("%s create cheat sheets fonts: %v\n", msg, err)
+	_, err := cli.Dispatch(cmd)
+	if !errors.Is(err, api.ErrUserFontNotFound) {
+		t.Fatalf("expected %v, got %v", api.ErrUserFontNotFound, err)
+	}
+	if !strings.Contains(err.Error(), userFontName) {
+		t.Fatalf("expected font name context, got %q", err)
 	}
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -66,17 +67,20 @@ func handleProperties(xRefTable *model.XRefTable, key string, val types.Object) 
 	v, err := xRefTable.DereferenceStringOrHexLiteral(val, model.V10, nil)
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return err
+			return fmt.Errorf("dereference string or hex literal: %w", err)
 		}
 		_, err = xRefTable.Dereference(val)
-		return err
+		if err != nil {
+			return fmt.Errorf("dereference: %w", err)
+		}
+		return nil
 	}
 
 	if v != "" {
 
 		k, err := types.DecodeName(key)
 		if err != nil {
-			return err
+			return fmt.Errorf("decode name: %w", err)
 		}
 
 		xRefTable.Properties[k] = v
@@ -88,7 +92,7 @@ func handleProperties(xRefTable *model.XRefTable, key string, val types.Object) 
 func validateKeywords(xRefTable *model.XRefTable, v types.Object) (err error) {
 	xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V10, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("dereference string or hex literal: %w", err)
 	}
 
 	ss := strings.FieldsFunc(xRefTable.Keywords, func(c rune) bool { return c == ',' || c == ';' || c == '\r' })
@@ -123,7 +127,7 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 	// text string, optional, since V1.1
 	case "Keywords":
 		if err := validateKeywords(xRefTable, v); err != nil {
-			return hasModDate, err
+			return hasModDate, fmt.Errorf("document info entry %q: %w", k, err)
 		}
 
 	// text string, optional
@@ -155,14 +159,17 @@ func validateDocInfoDictEntry(xRefTable *model.XRefTable, k string, v types.Obje
 		err = handleProperties(xRefTable, k, v)
 	}
 
+	if err != nil {
+		return hasModDate, fmt.Errorf("document info entry %q: %w", k, err)
+	}
+
 	return hasModDate, err
 }
 
 func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (bool, error) {
-	// Document info object is optional.
 	d, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("document info: dereference dict: %w", err)
 	}
 	if d == nil {
 		xRefTable.Info = nil
@@ -175,7 +182,7 @@ func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (boo
 
 		hmd, err := validateDocInfoDictEntry(xRefTable, k, v)
 
-		if err == types.ErrInvalidUTF16BE {
+		if errors.Is(err, types.ErrInvalidUTF16BE) {
 			// Fix for #264:
 			err = nil
 		}
@@ -193,7 +200,6 @@ func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (boo
 }
 
 func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
-	// Document info object is optional.
 	if xRefTable.Info == nil {
 		return nil
 	}
@@ -214,12 +220,12 @@ func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 
 	hasPieceInfo, err := xRefTable.CatalogHasPieceInfo()
 	if err != nil {
-		return err
+		return fmt.Errorf("document info: catalog PieceInfo lookup: %w", err)
 	}
 
 	if hasPieceInfo && !hasModDate {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return fmt.Errorf("missing required entry \"ModDate\"")
+			return errors.New("document info: missing required entry \"ModDate\"")
 		}
 		model.ShowDigestedSpecViolation("infoDict with \"PieceInfo\" but missing \"ModDate\"")
 	}
@@ -233,7 +239,7 @@ func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 
 // DocumentPageLayout returns true for valid page layout values.
 func DocumentPageLayout(s string) bool {
-	return types.MemberOf(strings.ToLower(s), []string{"singlepage", "twocolumnleft", "twocolumnright", "twopageleft", "twopageright"})
+	return types.MemberOf(strings.ToLower(s), []string{"singlepage", "onecolumn", "twocolumnleft", "twocolumnright", "twopageleft", "twopageright"})
 }
 
 // DocumentPageMode returns true for valid page mode values.

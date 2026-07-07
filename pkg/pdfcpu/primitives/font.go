@@ -19,6 +19,7 @@ package primitives
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -50,6 +51,41 @@ var ISO639Codes = []string{"ab", "aa", "af", "ak", "sq", "am", "ar", "an", "hy",
 	"ro", "rm", "rn", "ru", "se", "sm", "sg", "sa", "sc", "sr", "sn", "sd", "si", "sk", "sl", "so", "st", "es", "su", "sw", "ss", "sv", "tl", "ty", "tg", "ta", "tt",
 	"te", "th", "bo", "ti", "to", "ts", "tn", "tr", "tk", "tw", "ug", "uk", "ur", "uz", "ve", "vi", "vo", "wa", "cy", "wo", "xh", "yi", "yo", "za", "zu"}
 
+func fontLineMetrics(fontName string, fontSize int) (float64, float64, error) {
+	bb, err := font.BoundingBox(fontName)
+	if err != nil {
+		return 0, 0, fmt.Errorf("font %s: bounding box: %w", fontName, err)
+	}
+	lineHeight := font.UserSpaceUnits(bb.Height(), fontSize)
+	descent := font.UserSpaceUnits(-bb.LL.Y, fontSize)
+	return lineHeight, descent, nil
+}
+
+func fontSizeForLineHeight(fontName string, lineHeight float64) (int, error) {
+	bb, err := font.BoundingBox(fontName)
+	if err != nil {
+		return 0, fmt.Errorf("font %s: bounding box: %w", fontName, err)
+	}
+	if bb.Height() == 0 {
+		return 0, fmt.Errorf("font %s: empty bounding box", fontName)
+	}
+	return int(math.Round(lineHeight / (bb.Height() / 1000))), nil
+}
+
+func alignedFieldTextX(align types.HAlignment, width, textWidth, borderWidth float64) float64 {
+	x := 2 * borderWidth
+	if x == 0 {
+		x = 2
+	}
+	switch align {
+	case types.AlignCenter:
+		x = width/2 - textWidth/2
+	case types.AlignRight:
+		x = width - textWidth - 2
+	}
+	return x
+}
+
 func (f *FormFont) validateISO639() error {
 	if !types.MemberOf(f.Lang, ISO639Codes) {
 		return fmt.Errorf("invalid ISO-639 code: %s", f.Lang)
@@ -58,13 +94,14 @@ func (f *FormFont) validateISO639() error {
 }
 
 func (f *FormFont) validateScriptSupport() error {
-	font.UserFontMetricsLock.RLock()
-	fd, ok := font.UserFontMetrics[f.Name]
-	font.UserFontMetricsLock.RUnlock()
+	fd, ok, err := font.UserFont(f.Name)
+	if err != nil {
+		return fmt.Errorf("userfont %s: load metrics: %w", f.Name, err)
+	}
 	if !ok {
 		return fmt.Errorf("userfont %s not available", f.Name)
 	}
-	ok, err := fd.SupportsScript(f.Script)
+	ok, err = fd.SupportsScript(f.Script)
 	if err != nil {
 		return err
 	}
@@ -80,10 +117,18 @@ func (f *FormFont) validate() error {
 	}
 
 	if f.Name != "" && f.Name[0] != '$' {
-		if !font.SupportedFont(f.Name) {
+		supported, err := font.SupportedFont(f.Name)
+		if err != nil {
+			return fmt.Errorf("font %s: load metrics: %w", f.Name, err)
+		}
+		if !supported {
 			return fmt.Errorf("font %s is unsupported, please refer to \"pdfcpu fonts list\"", f.Name)
 		}
-		if font.IsUserFont(f.Name) {
+		userFont, err := font.IsUserFont(f.Name)
+		if err != nil {
+			return fmt.Errorf("font %s: load metrics: %w", f.Name, err)
+		}
+		if userFont {
 			if f.Lang != "" {
 				f.Lang = strings.ToLower(f.Lang)
 				if err := f.validateISO639(); err != nil {
@@ -156,7 +201,11 @@ func FormFontDetails(xRefTable *model.XRefTable, indRef types.IndirectRef) (stri
 	}
 
 	var fLang string
-	if font.IsUserFont(fName) {
+	userFont, err := font.IsUserFont(fName)
+	if err != nil {
+		return "", "", "", fmt.Errorf("font %s: load metrics: %w", fName, err)
+	}
+	if userFont {
 		fLang, err = pdffont.Lang(xRefTable, fontDict)
 		if err != nil {
 			return "", "", "", err

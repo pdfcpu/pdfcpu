@@ -18,9 +18,13 @@ package model
 
 import (
 	"encoding/xml"
+	"errors"
 	"strings"
 	"time"
 )
+
+// ErrMissingMetadata signals a missing required metadata buffer.
+var ErrMissingMetadata = errors.New("missing metadata")
 
 type UserDate time.Time
 
@@ -101,18 +105,19 @@ type XMPMeta struct {
 	RDF     RDF
 }
 
-func removeTag(s, kw string) string {
+func removeTag(s, kw string) (string, bool) {
+	original := s
 	kwLen := len(kw)
 	i := strings.Index(s, kw)
 	if i < 0 {
-		return ""
+		return s, false
 	}
 
 	j := i + kwLen
 
 	i = strings.LastIndex(s[:i], "<")
 	if i < 0 {
-		return ""
+		return s, false
 	}
 
 	block1 := s[:i]
@@ -120,38 +125,42 @@ func removeTag(s, kw string) string {
 	s = s[j:]
 	i = strings.Index(s, kw)
 	if i < 0 {
-		return ""
+		return original, false
 	}
 
 	j = i + kwLen
 
 	block2 := s[j:]
 
-	s1 := block1 + block2
-
-	return s1
+	return block1 + block2, true
 }
 
-// RemoveKeywords removes keywords.
-func RemoveKeywords(metadata *[]byte) error {
-
-	// Opt for simple byte removal instead of xml de/encoding.
-
+func removeKeywords(metadata *[]byte) (bool, error) {
+	if metadata == nil {
+		return false, ErrMissingMetadata
+	}
+	// Callers supply catalog XMP that has already passed validation. Do not reparse it
+	// here; remove known tag fragments directly, treating missing or malformed fragments
+	// as no-ops.
 	s := string(*metadata)
 	if len(s) == 0 {
-		return nil
+		return false, nil
 	}
 
-	s = removeTag(s, "Keywords>")
-	if len(s) == 0 {
-		return nil
+	var removed bool
+	if s, removed = removeTag(s, "Keywords>"); !removed {
+		return false, nil
 	}
 
 	// Possible Acrobat bug.
 	// Acrobat seems to use dc:subject for keywords but ***does not*** show the content in Subject.
-	s = removeTag(s, "subject>")
-
+	s, _ = removeTag(s, "subject>")
 	*metadata = []byte(s)
+	return true, nil
+}
 
-	return nil
+// RemoveKeywords removes keywords.
+func RemoveKeywords(metadata *[]byte) error {
+	_, err := removeKeywords(metadata)
+	return err
 }

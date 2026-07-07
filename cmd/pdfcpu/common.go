@@ -19,6 +19,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -288,16 +289,26 @@ func configureDisplayUnit(conf *model.Configuration) error {
 	return nil
 }
 
-// runCommand dispatches a CLI command and writes command output.
-func runCommand(cmd *cli.Command) error {
+type commandDispatch func(*cli.Command) ([]string, error)
+
+func runCommandWithOutput(cmd *cli.Command, w io.Writer, dispatch commandDispatch, suppressOutput bool) error {
 	if cmd == nil {
 		return errors.New("pdfcpu: missing command")
 	}
-	out, err := cli.Dispatch(cmd)
-	if out != nil && !quiet {
-		for _, s := range out {
-			fmt.Fprintln(os.Stdout, s)
+	out, dispatchErr := dispatch(cmd)
+	var writeErr error
+	if out != nil && !suppressOutput {
+		for i, s := range out {
+			if _, err := fmt.Fprintln(w, s); err != nil {
+				writeErr = fmt.Errorf("write command output line %d: %w", i+1, err)
+				break
+			}
 		}
 	}
-	return err
+	return errors.Join(dispatchErr, writeErr)
+}
+
+// runCommand dispatches a CLI command and writes command output.
+func runCommand(cmd *cli.Command) error {
+	return runCommandWithOutput(cmd, os.Stdout, cli.Dispatch, quiet)
 }

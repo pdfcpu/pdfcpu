@@ -28,8 +28,13 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 )
 
-// ErrInvalidUTF16BE represents an error that gets raised for invalid UTF-16BE byte sequences.
-var ErrInvalidUTF16BE = errors.New("invalid UTF-16BE detected")
+var (
+	// ErrInvalidUTF8 signals an invalid UTF-8 string.
+	ErrInvalidUTF8 = errors.New("invalid UTF-8")
+
+	// ErrInvalidUTF16BE represents an error that gets raised for invalid UTF-16BE byte sequences.
+	ErrInvalidUTF16BE = errors.New("invalid UTF-16BE detected")
+)
 
 // IsStringUTF16BE checks a string for Big Endian byte order BOM.
 func IsStringUTF16BE(s string) bool {
@@ -124,6 +129,9 @@ func EncodeUTF16String(s string) string {
 
 // EscapedUTF16String returns the escaped utf16 string for s.
 func EscapedUTF16String(s string) (*string, error) {
+	if !utf8.ValidString(s) {
+		return nil, ErrInvalidUTF8
+	}
 	return Escape(EncodeUTF16String(s))
 }
 

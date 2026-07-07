@@ -17,11 +17,20 @@ limitations under the License.
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"runtime/debug"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+)
+
+var (
+	// ErrMissingCommand signals a missing CLI command.
+	ErrMissingCommand = errors.New("missing command")
+
+	// ErrUnsupportedCommandMode signals a command mode unsupported by a dispatcher.
+	ErrUnsupportedCommandMode = errors.New("unsupported command mode")
 )
 
 type dispatchFunc func(*Command) ([]string, error)
@@ -47,6 +56,7 @@ var dispatchTable = map[model.CommandMode]dispatchFunc{
 	model.REMOVEPAGES:       dispatchPages,
 	model.ROTATE:            Rotate,
 	model.NUP:               NUp,
+	model.GRID:              Grid,
 	model.BOOKLET:           Booklet,
 	model.RESIZE:            Resize,
 	model.POSTER:            Poster,
@@ -146,7 +156,7 @@ func Dispatch(cmd *Command) (out []string, err error) {
 	}()
 
 	if cmd == nil {
-		return nil, fmt.Errorf("pdfcpu: dispatch: missing command")
+		return nil, fmt.Errorf("pdfcpu: dispatch: %w", ErrMissingCommand)
 	}
 	if cmd.Conf == nil {
 		cmd.Conf = model.NewDefaultConfiguration()
@@ -157,7 +167,7 @@ func Dispatch(cmd *Command) (out []string, err error) {
 		return f(cmd)
 	}
 
-	return nil, fmt.Errorf("pdfcpu: dispatch: unknown command mode %d", cmd.Mode)
+	return nil, fmt.Errorf("pdfcpu: dispatch: mode %d: %w", cmd.Mode, ErrUnsupportedCommandMode)
 }
 
 func dispatchAttachments(cmd *Command) (out []string, err error) {
@@ -262,6 +272,9 @@ func dispatchImages(cmd *Command) (out []string, err error) {
 }
 
 func dispatchKeywords(cmd *Command) (out []string, err error) {
+	if cmd == nil {
+		return nil, fmt.Errorf("dispatch keywords: %w", ErrMissingCommand)
+	}
 	switch cmd.Mode {
 
 	case model.LISTKEYWORDS:
@@ -273,6 +286,8 @@ func dispatchKeywords(cmd *Command) (out []string, err error) {
 	case model.REMOVEKEYWORDS:
 		out, err = RemoveKeywords(cmd)
 
+	default:
+		return nil, fmt.Errorf("dispatch keywords: mode %d: %w", cmd.Mode, ErrUnsupportedCommandMode)
 	}
 
 	return out, err

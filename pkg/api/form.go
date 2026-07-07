@@ -17,7 +17,6 @@
 package api
 
 import (
-	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -38,10 +37,26 @@ import (
 )
 
 var (
-	ErrNoFormData           = errors.New("missing form data")
+	// ErrNoFormData signals missing form data for a form fill operation.
+	ErrNoFormData = errors.New("missing form data")
+
+	// ErrMissingFormInput signals a missing required form input reader or file.
+	ErrMissingFormInput = errors.New("missing form input")
+
+	// ErrNoFormFieldsAffected signals that a form operation did not change any fields.
 	ErrNoFormFieldsAffected = errors.New("no form fields affected")
-	ErrInvalidCSV           = errors.New("invalid csv input file")
-	ErrInvalidJSON          = errors.New("invalid JSON encoding")
+
+	// ErrUnsupportedFormDataFormat signals an unsupported form data format.
+	ErrUnsupportedFormDataFormat = errors.New("unsupported data format")
+
+	// ErrInvalidCSV signals malformed or incomplete CSV form data.
+	ErrInvalidCSV = errors.New("invalid csv input file")
+
+	// ErrInvalidJSON signals invalid JSON form data.
+	ErrInvalidJSON = errors.New("invalid JSON encoding")
+
+	// ErrInvalidFormData signals structurally invalid decoded form data.
+	ErrInvalidFormData = errors.New("invalid form data")
 )
 
 // FormFields returns all form fields of rs.
@@ -59,12 +74,39 @@ func FormFields(rs io.ReadSeeker, conf *model.Configuration) (fields []form.Fiel
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list form fields: %w", err)
 	}
 
 	fields, _, err = form.FormFields(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list form fields: collect fields: %w", err)
+	}
 
-	return fields, err
+	return fields, nil
+}
+
+// ListFormFields returns a rendered list of all form fields in rs.
+func ListFormFields(rs io.ReadSeeker, conf *model.Configuration) (fields []string, err error) {
+	defer fault.Catch(&err)
+	if rs == nil {
+		return nil, ErrMissingPDFReadSeeker
+	}
+
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.LISTFORMFIELDS
+
+	ctx, err := ReadValidateAndOptimize(rs, conf)
+	if err != nil {
+		return nil, fmt.Errorf("list form fields: %w", err)
+	}
+
+	fields, err = form.ListFormFields(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list form fields: %w", err)
+	}
+	return fields, nil
 }
 
 // RemoveFormFields deletes form fields in rs and writes the result to w.
@@ -90,69 +132,74 @@ func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("remove form fields: %w", err)
 	}
 
 	ok, err := form.RemoveFormFields(ctx, fieldIDsOrNames)
 	if err != nil {
-		return err
+		return fmt.Errorf("remove form fields: update fields: %w", err)
 	}
 	if !ok {
-		return ErrNoFormFieldsAffected
+		return fmt.Errorf("remove form fields: %w", ErrNoFormFieldsAffected)
 	}
 
-	return Write(ctx, w, conf)
+	if err := Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("remove form fields: write output: %w", err)
+	}
+	return nil
 }
 
-// RemoveFormFieldsFile deletes form fields in inFile and writes the result to outFile.
-func RemoveFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
-	var f1, f2 *os.File
-	ok := false
+type formFieldMutation func(io.ReadSeeker, io.Writer, []string, *model.Configuration) error
 
+func mutateFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration, operation string, mutate formFieldMutation) (err error) {
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
 	if err := validateNoEmptyStrings(fieldIDsOrNames, "form field ID or name"); err != nil {
 		return err
 	}
 
-	if f1, err = os.Open(inFile); err != nil {
-		return err
+	f1, err := os.Open(inFile)
+	if err != nil {
+		return fmt.Errorf("%s: open input %s: %w", operation, inFile, err)
 	}
 
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-	}
-	logWritingTo(outFile)
-
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
+		logWritingTo(outFile)
+	} else {
+		logWritingTo(inFile)
 	}
 
+	staged, err := openStagedOutput(f1, inFile, tmpFile, operation)
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("%s: create output: %w", operation, err),
+			closeFile(f1, operation+": close input"),
+		)
+	}
+	f2 := staged.output.file
+
+	ok := false
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
+		err = staged.commit()
 	}()
 
-	if err = RemoveFormFields(f1, f2, fieldIDsOrNames, conf); err != nil {
+	if err = mutate(f1, f2, fieldIDsOrNames, conf); err != nil {
 		return err
 	}
-
 	ok = true
-
 	return nil
+}
+
+// RemoveFormFieldsFile deletes form fields in inFile and writes the result to outFile.
+func RemoveFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
+	return mutateFormFieldsFile(inFile, outFile, fieldIDsOrNames, conf, "remove form fields", RemoveFormFields)
 }
 
 // LockFormFields turns form fields in rs into read-only and writes the result to w.
@@ -178,72 +225,29 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, con
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("lock form fields: %w", err)
 	}
 
 	ok, err := form.LockFormFields(ctx, fieldIDsOrNames)
 	if err != nil {
-		return err
+		return fmt.Errorf("lock form fields: update fields: %w", err)
 	}
 	if !ok {
-		return ErrNoFormFieldsAffected
+		return fmt.Errorf("lock form fields: %w", ErrNoFormFieldsAffected)
 	}
 
-	return Write(ctx, w, conf)
+	if err := Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("lock form fields: write output: %w", err)
+	}
+	return nil
 }
 
 // LockFormFieldsFile turns form fields of inFile into read-only and writes the result to outFile.
 func LockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
-	var f1, f2 *os.File
-	ok := false
-
-	if err := validateNoEmptyStrings(fieldIDsOrNames, "form field ID or name"); err != nil {
-		return err
-	}
-
-	if f1, err = os.Open(inFile); err != nil {
-		return err
-	}
-
-	tmpFile := ""
-	if outFile != "" && inFile != outFile {
-		tmpFile = outFile
-	}
-	logWritingTo(outFile)
-
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
-	}
-
-	defer func() {
-		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
-			return
-		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
-	}()
-
-	if err = LockFormFields(f1, f2, fieldIDsOrNames, conf); err != nil {
-		return err
-	}
-
-	ok = true
-
-	return nil
+	return mutateFormFieldsFile(inFile, outFile, fieldIDsOrNames, conf, "lock form fields", LockFormFields)
 }
 
-// UnlockFormFields makess form fields in rs writeable and writes the result to w.
+// UnlockFormFields makes form fields in rs writable and writes the result to w.
 func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
@@ -266,69 +270,26 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("unlock form fields: %w", err)
 	}
 
 	ok, err := form.UnlockFormFields(ctx, fieldIDsOrNames)
 	if err != nil {
-		return err
+		return fmt.Errorf("unlock form fields: update fields: %w", err)
 	}
 	if !ok {
-		return ErrNoFormFieldsAffected
+		return fmt.Errorf("unlock form fields: %w", ErrNoFormFieldsAffected)
 	}
 
-	return Write(ctx, w, conf)
+	if err := Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("unlock form fields: write output: %w", err)
+	}
+	return nil
 }
 
-// UnlockFormFieldsFile makes form fields of inFile writeable and writes the result to outFile.
+// UnlockFormFieldsFile makes form fields of inFile writable and writes the result to outFile.
 func UnlockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
-	var f1, f2 *os.File
-	ok := true
-
-	if err := validateNoEmptyStrings(fieldIDsOrNames, "form field ID or name"); err != nil {
-		return err
-	}
-
-	if f1, err = os.Open(inFile); err != nil {
-		return err
-	}
-
-	tmpFile := ""
-	if outFile != "" && inFile != outFile {
-		tmpFile = outFile
-	}
-	logWritingTo(outFile)
-
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
-	}
-
-	defer func() {
-		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
-			return
-		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
-	}()
-
-	if err = UnlockFormFields(f1, f2, fieldIDsOrNames, conf); err != nil {
-		return err
-	}
-
-	ok = true
-
-	return nil
+	return mutateFormFieldsFile(inFile, outFile, fieldIDsOrNames, conf, "unlock form fields", UnlockFormFields)
 }
 
 // ResetFormFields resets form fields of rs and writes the result to w.
@@ -354,68 +315,26 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, co
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("reset form fields: %w", err)
 	}
 
 	ok, err := form.ResetFormFields(ctx, fieldIDsOrNames)
 	if err != nil {
-		return err
+		return fmt.Errorf("reset form fields: update fields: %w", err)
 	}
 	if !ok {
-		return ErrNoFormFieldsAffected
+		return fmt.Errorf("reset form fields: %w", ErrNoFormFieldsAffected)
 	}
 
-	return Write(ctx, w, conf)
+	if err := Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("reset form fields: write output: %w", err)
+	}
+	return nil
 }
 
 // ResetFormFieldsFile resets form fields of inFile and writes the result to outFile.
 func ResetFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
-	var f1, f2 *os.File
-	ok := false
-
-	if err := validateNoEmptyStrings(fieldIDsOrNames, "form field ID or name"); err != nil {
-		return err
-	}
-
-	if f1, err = os.Open(inFile); err != nil {
-		return err
-	}
-
-	tmpFile := ""
-	if outFile != "" && inFile != outFile {
-		tmpFile = outFile
-	}
-	logWritingTo(outFile)
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
-	}
-
-	defer func() {
-		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
-			return
-		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
-	}()
-
-	if err = ResetFormFields(f1, f2, fieldIDsOrNames, conf); err != nil {
-		return err
-	}
-
-	ok = true
-
-	return nil
+	return mutateFormFieldsFile(inFile, outFile, fieldIDsOrNames, conf, "reset form fields", ResetFormFields)
 }
 
 // ExportForm extracts form data originating from source from rs.
@@ -433,9 +352,18 @@ func ExportForm(rs io.ReadSeeker, source string, conf *model.Configuration) (for
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("export form: %w", err)
 	}
 
+	formGroup, err = exportedFormGroup(ctx, source)
+	if err != nil {
+		return nil, fmt.Errorf("export form: collect data: %w", err)
+	}
+
+	return formGroup, nil
+}
+
+func exportedFormGroup(ctx *model.Context, source string) (*form.FormGroup, error) {
 	formGroup, ok, err := form.ExportForm(ctx.XRefTable, source)
 	if err != nil {
 		return nil, err
@@ -443,8 +371,20 @@ func ExportForm(rs io.ReadSeeker, source string, conf *model.Configuration) (for
 	if !ok {
 		return nil, ErrNoFormFieldsAffected
 	}
-
 	return formGroup, nil
+}
+
+type formJSONExporter func(*model.XRefTable, string, io.Writer) (bool, error)
+
+func exportFormJSONResult(xRefTable *model.XRefTable, source string, w io.Writer, export formJSONExporter) error {
+	ok, err := export(xRefTable, source, w)
+	if err != nil {
+		return fmt.Errorf("export form: %w", err)
+	}
+	if !ok {
+		return fmt.Errorf("export form: collect data: %w", ErrNoFormFieldsAffected)
+	}
+	return nil
 }
 
 // ExportFormJSON extracts form data originating from source from rs and writes the result to w.
@@ -456,7 +396,7 @@ func ExportFormJSON(rs io.ReadSeeker, w io.Writer, source string, conf *model.Co
 	}
 
 	if w == nil {
-		return errors.New("missing JSON writer")
+		return ErrMissingJSONWriter
 	}
 
 	if conf == nil {
@@ -466,47 +406,44 @@ func ExportFormJSON(rs io.ReadSeeker, w io.Writer, source string, conf *model.Co
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("export form: %w", err)
 	}
 
-	ok, err := form.ExportFormJSON(ctx.XRefTable, source, w)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return ErrNoFormFieldsAffected
-	}
-
-	return nil
+	return exportFormJSONResult(ctx.XRefTable, source, w, form.ExportFormJSON)
 }
 
 // ExportFormFile extracts form data from inFilePDF and writes the result to outFileJSON.
 func ExportFormFile(inFilePDF, outFileJSON string, conf *model.Configuration) (err error) {
-	var f1, f2 *os.File
-	ok := false
-
-	if f1, err = os.Open(inFilePDF); err != nil {
-		return err
+	if inFilePDF == "" {
+		return ErrMissingPDFInput
 	}
 
-	if f2, err = os.Create(outFileJSON); err != nil {
-		_ = f1.Close()
-		return err
+	if outFileJSON == "" {
+		return ErrMissingJSONOutput
 	}
+
+	f1, err := os.Open(inFilePDF)
+	if err != nil {
+		return fmt.Errorf("export form: open input %s: %w", inFilePDF, err)
+	}
+
+	staged, err := openStagedOutput(f1, inFilePDF, outFileJSON, "export form")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("export form: create output %s: %w", outFileJSON, err),
+			closeFile(f1, "export form: close input"),
+		)
+	}
+	f2 := staged.output.file
 	logWritingTo(outFileJSON)
 
+	ok := false
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
+		err = staged.commit()
 	}()
 
 	if err = ExportFormJSON(f1, f2, inFilePDF, conf); err != nil {
@@ -518,38 +455,78 @@ func ExportFormFile(inFilePDF, outFileJSON string, conf *model.Configuration) (e
 	return nil
 }
 
+func validOptionValue(value string, options []string) bool {
+	if types.MemberOf(value, options) {
+		return true
+	}
+	i, err := strconv.Atoi(value)
+	return err == nil && i >= 0 && i < len(options)
+}
+
+func unknownOptionValueError(fieldType string, fieldIndex int, name, value string, options []string) error {
+	return fmt.Errorf("%s %d name: %q invalid value: %q - options: [%s]: %w", fieldType, fieldIndex+1, name, value, strings.Join(options, ", "), ErrInvalidFormData)
+}
+
+func validateFormData(f form.Form) error {
+	for i, field := range f.TextFields {
+		if field == nil {
+			return fmt.Errorf("text field %d: %w", i+1, ErrInvalidFormData)
+		}
+	}
+	for i, field := range f.DateFields {
+		if field == nil {
+			return fmt.Errorf("date field %d: %w", i+1, ErrInvalidFormData)
+		}
+	}
+	for i, field := range f.CheckBoxes {
+		if field == nil {
+			return fmt.Errorf("checkbox %d: %w", i+1, ErrInvalidFormData)
+		}
+	}
+	for i, field := range f.RadioButtonGroups {
+		if field == nil {
+			return fmt.Errorf("radio-button group %d: %w", i+1, ErrInvalidFormData)
+		}
+	}
+	for i, field := range f.ComboBoxes {
+		if field == nil {
+			return fmt.Errorf("combo box %d: %w", i+1, ErrInvalidFormData)
+		}
+	}
+	for i, field := range f.ListBoxes {
+		if field == nil {
+			return fmt.Errorf("list box %d: %w", i+1, ErrInvalidFormData)
+		}
+	}
+	return nil
+}
+
 func validateComboBoxValues(f form.Form) error {
-	for _, cb := range f.ComboBoxes {
+	for i, cb := range f.ComboBoxes {
+		if cb == nil {
+			return fmt.Errorf("combo box %d: missing field: %w", i+1, ErrInvalidFormData)
+		}
 		if cb.Value == "" || cb.Editable {
 			continue
 		}
-		if len(cb.Options) > 0 {
-			if !types.MemberOf(cb.Value, cb.Options) {
-				i, err := strconv.Atoi(cb.Value)
-				if err == nil && i < len(cb.Options) {
-					return nil
-				}
-				return fmt.Errorf("fill field name: \"%s\" unknown value: \"%s\" - options: [%v]", cb.Name, cb.Value, strings.Join(cb.Options, ", "))
-			}
+		if len(cb.Options) > 0 && !validOptionValue(cb.Value, cb.Options) {
+			return unknownOptionValueError("combo box", i, cb.Name, cb.Value, cb.Options)
 		}
 	}
 	return nil
 }
 
 func validateListBoxValues(f form.Form) error {
-	for _, lb := range f.ListBoxes {
+	for i, lb := range f.ListBoxes {
+		if lb == nil {
+			return fmt.Errorf("list box %d: missing field: %w", i+1, ErrInvalidFormData)
+		}
 		if len(lb.Values) == 0 {
 			continue
 		}
-		if len(lb.Options) > 0 {
-			for _, v := range lb.Values {
-				if !types.MemberOf(v, lb.Options) {
-					i, err := strconv.Atoi(v)
-					if err == nil && i < len(lb.Options) {
-						return nil
-					}
-					return fmt.Errorf("fill field name: \"%s\" unknown value: \"%s\" - options: [%v]", lb.Name, v, strings.Join(lb.Options, ", "))
-				}
+		for _, value := range lb.Values {
+			if len(lb.Options) > 0 && !validOptionValue(value, lb.Options) {
+				return unknownOptionValueError("list box", i, lb.Name, value, lb.Options)
 			}
 		}
 	}
@@ -557,18 +534,15 @@ func validateListBoxValues(f form.Form) error {
 }
 
 func validateRadioButtonGroupValues(f form.Form) error {
-	for _, rbg := range f.RadioButtonGroups {
+	for i, rbg := range f.RadioButtonGroups {
+		if rbg == nil {
+			return fmt.Errorf("radio-button group %d: missing field: %w", i+1, ErrInvalidFormData)
+		}
 		if rbg.Value == "" {
 			continue
 		}
-		if len(rbg.Options) > 0 {
-			if !types.MemberOf(rbg.Value, rbg.Options) {
-				i, err := strconv.Atoi(rbg.Value)
-				if err == nil && i < len(rbg.Options) {
-					return nil
-				}
-				return fmt.Errorf("fill field name: \"%s\" unknown value: \"%s\" - options: [%v]", rbg.Name, rbg.Value, strings.Join(rbg.Options, ", "))
-			}
+		if len(rbg.Options) > 0 && !validOptionValue(rbg.Value, rbg.Options) {
+			return unknownOptionValueError("radio-button group", i, rbg.Name, rbg.Value, rbg.Options)
 		}
 	}
 	return nil
@@ -592,29 +566,39 @@ func validateOptionValues(f form.Form) error {
 
 func fillPostProc(ctx *model.Context, pp []*model.Page) error {
 	if _, _, err := create.UpdatePageTree(ctx, pp, nil); err != nil {
-		return err
+		return fmt.Errorf("fill form: update page tree: %w", err)
 	}
-
-	return ValidateContext(ctx)
+	if err := ValidateContext(ctx); err != nil {
+		return fmt.Errorf("fill form: validate output: %w", err)
+	}
+	return nil
 }
 
 func formGroupFromReader(rd io.Reader) (*form.FormGroup, error) {
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, rd); err != nil {
-		return nil, err
-	}
-
-	bb := buf.Bytes()
-	if !json.Valid(bb) {
-		return nil, ErrInvalidJSON
+	bb, err := io.ReadAll(rd)
+	if err != nil {
+		return nil, fmt.Errorf("fill form: read form data: %w", err)
 	}
 
 	formGroup := form.FormGroup{}
 	if err := json.Unmarshal(bb, &formGroup); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fill form: decode JSON: %w", errors.Join(ErrInvalidJSON, err))
 	}
-
 	return &formGroup, nil
+}
+
+func validatedFillForm(formGroup *form.FormGroup) (form.Form, error) {
+	if len(formGroup.Forms) == 0 {
+		return form.Form{}, fmt.Errorf("fill form: %w", ErrNoFormData)
+	}
+	f := formGroup.Forms[0]
+	if err := validateFormData(f); err != nil {
+		return form.Form{}, fmt.Errorf("fill form: validate form data: %w", err)
+	}
+	if err := validateOptionValues(f); err != nil {
+		return form.Form{}, fmt.Errorf("fill form: validate option values: %w", err)
+	}
+	return f, nil
 }
 
 // FillForm populates the form rs with data from rd and writes the result to w.
@@ -626,7 +610,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 	}
 
 	if rd == nil {
-		return errors.New("missing form input")
+		return fmt.Errorf("fill form: %w", ErrMissingFormInput)
 	}
 
 	if w == nil {
@@ -640,7 +624,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("fill form: %w", err)
 	}
 
 	// TODO not necessarily so
@@ -651,25 +635,20 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return err
 	}
 
-	if len(formGroup.Forms) == 0 {
-		return ErrNoFormData
-	}
-
-	f := formGroup.Forms[0]
-
-	if err := validateOptionValues(f); err != nil {
+	f, err := validatedFillForm(formGroup)
+	if err != nil {
 		return err
 	}
 
 	ok, pp, err := form.FillForm(ctx, form.FillDetails(&f, nil), f.Pages, form.JSON)
 	if err != nil {
-		return err
+		return fmt.Errorf("fill form: fill fields: %w", err)
 	}
 	if !ok {
 		if log.CLIEnabled() {
 			log.CLI.Println("nothing written")
 		}
-		return ErrNoFormFieldsAffected
+		return fmt.Errorf("fill form: %w", ErrNoFormFieldsAffected)
 	}
 
 	if log.CLIEnabled() {
@@ -680,58 +659,63 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return err
 	}
 
-	return Write(ctx, w, conf)
+	if err := Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("fill form: write output: %w", err)
+	}
+	return nil
 }
 
 // FillFormFile populates the form inFilePDF with data from inFileJSON and writes the result to outFilePDF.
 func FillFormFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configuration) (err error) {
-	var f0, f1, f2 *os.File
-	ok := false
-
-	if f0, err = os.Open(inFileJSON); err != nil {
-		return err
+	if inFilePDF == "" {
+		return ErrMissingPDFInput
 	}
 
-	if f1, err = os.Open(inFilePDF); err != nil {
-		_ = f0.Close()
-		return err
+	if inFileJSON == "" {
+		return ErrMissingJSONInput
 	}
-	rs := f1
+
+	f0, err := os.Open(inFileJSON)
+	if err != nil {
+		return fmt.Errorf("fill form: open form data %s: %w", inFileJSON, err)
+	}
+
+	f1, err := os.Open(inFilePDF)
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("fill form: open input %s: %w", inFilePDF, err),
+			closeFile(f0, "fill form: close form data"),
+		)
+	}
 
 	tmpFile := ""
 	if outFilePDF != "" && inFilePDF != outFilePDF {
 		tmpFile = outFilePDF
+		logWritingTo(outFilePDF)
+	} else {
+		logWritingTo(inFilePDF)
 	}
-	logWritingTo(outFilePDF)
-	if f2, tmpFile, err = createOutputFile(inFilePDF, tmpFile); err != nil {
-		_ = f1.Close()
-		_ = f0.Close()
-		return err
+	staged, err := openStagedOutput(f1, inFilePDF, tmpFile, "fill form")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("fill form: create output: %w", err),
+			closeFile(f1, "fill form: close input"),
+			closeFile(f0, "fill form: close form data"),
+		)
 	}
+	f2 := staged.output.file
+	staged = staged.withInput(f0, "fill form: close form data")
 
+	ok := false
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			_ = f0.Close()
-			os.Remove(tmpFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if err = f0.Close(); err != nil {
-			return
-		}
-		if outFilePDF == "" || inFilePDF == outFilePDF {
-			err = os.Rename(tmpFile, inFilePDF)
-		}
+		err = staged.commit()
 	}()
 
-	if err = FillForm(rs, f0, f2, conf); err != nil {
+	if err = FillForm(f1, f0, f2, conf); err != nil {
 		return err
 	}
 
@@ -741,112 +725,175 @@ func FillFormFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configur
 }
 
 func parseFormGroup(rd io.Reader) (*form.FormGroup, error) {
+	bb, err := io.ReadAll(rd)
+	if err != nil {
+		return nil, fmt.Errorf("multi-fill form: read form data: %w", err)
+	}
+
 	formGroup := &form.FormGroup{}
-
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, rd); err != nil {
-		return nil, err
-	}
-
-	bb := buf.Bytes()
-
-	if !json.Valid(bb) {
-		return nil, ErrInvalidJSON
-	}
-
 	if err := json.Unmarshal(bb, formGroup); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("multi-fill form: decode JSON: %w", errors.Join(ErrInvalidJSON, err))
 	}
 
 	if len(formGroup.Forms) == 0 {
-		return nil, ErrNoFormData
+		return nil, fmt.Errorf("multi-fill form: %w", ErrNoFormData)
 	}
-
 	return formGroup, nil
+}
+
+// rollbackMultiFillOutputs removes the intermediate files belonging to the
+// multi-file form transaction. It is intentionally separate from stagedOutput.
+func rollbackMultiFillOutputs(outFiles []string) error {
+	var errs []error
+	for i, fileName := range outFiles {
+		context := fmt.Sprintf("multi-fill form: remove intermediate %d %s", i+1, fileName)
+		errs = append(errs, removeFile(fileName, context))
+	}
+	return errors.Join(errs...)
 }
 
 func mergeForms(outDir, fileName string, outFiles []string, conf *model.Configuration) error {
 	fileName = sanitizeFilenamePart(fileName, "form")
 	outFile := filepath.Join(outDir, fileName+".pdf")
 	if err := MergeCreateFile(outFiles, outFile, false, conf); err != nil {
-		return err
+		return fmt.Errorf("multi-fill form: merge outputs: %w", err)
 	}
-	if log.CLIEnabled() {
-		log.CLI.Println("cleaning up...")
+	return nil
+}
+
+func multiFillJSONOutputFile(outDir, fileName, requested string, formNr int) string {
+	if requested == "" {
+		return filepath.Join(outDir, fmt.Sprintf("%s_%02d.pdf", fileName, formNr))
 	}
-	for _, fn := range outFiles {
-		if err := os.Remove(fn); err != nil {
-			return err
+
+	outFile, err := sanitize.Path(requested)
+	if err != nil {
+		outFile = fmt.Sprintf("form_%02d", formNr)
+	}
+	if !strings.HasSuffix(strings.ToLower(outFile), ".pdf") {
+		outFile += ".pdf"
+	}
+	return filepath.Join(outDir, outFile)
+}
+
+func multiFillCSVOutputFile(outDir, fileName, requested string, recordNr int) string {
+	if requested == "" {
+		return filepath.Join(outDir, fmt.Sprintf("%s_%02d.pdf", fileName, recordNr))
+	}
+
+	outFile, err := sanitize.Path(requested)
+	if err != nil {
+		outFile = fmt.Sprintf("form_%02d", recordNr)
+	}
+	return filepath.Join(outDir, outFile)
+}
+
+func multiFillPostProcess(ctx *model.Context, pp []*model.Page, context string, validate bool) error {
+	if _, _, err := create.UpdatePageTree(ctx, pp, nil); err != nil {
+		return fmt.Errorf("%s: update page tree: %w", context, err)
+	}
+	if validate {
+		if err := ValidateContext(ctx); err != nil {
+			return fmt.Errorf("%s: validate output: %w", context, err)
 		}
 	}
 	return nil
 }
 
-func multiFillFormJSON(inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration) error {
+func writeMultiFillOutput(ctx *model.Context, outFile, context string) error {
+	return writeMultiFillOutputWith(ctx, outFile, context, WriteContext)
+}
+
+func writeMultiFillOutputWith(ctx *model.Context, outFile, context string, writeContext func(*model.Context, io.Writer) error) error {
+	logWritingTo(outFile)
+	staged, err := openStagedOutput(nil, "", outFile, context)
+	if err != nil {
+		return fmt.Errorf("%s: create output %s: %w", context, outFile, err)
+	}
+
+	f := staged.output.file
+	staged.removeContext = context + ": remove temporary output"
+	staged.replaceContext = fmt.Sprintf("%s: replace output %s", context, outFile)
+	if err := writeContext(ctx, f); err != nil {
+		return staged.cleanup(fmt.Errorf("%s: write output %s: %w", context, outFile, err))
+	}
+	return staged.commit()
+}
+
+func multiFillJSONForm(inFilePDF string, f form.Form, outDir, fileName string, formNr int, conf *model.Configuration, writeContext func(*model.Context, io.Writer) error) (outFile string, err error) {
+	context := fmt.Sprintf("multi-fill form %d", formNr)
+	if err := validateFormData(f); err != nil {
+		return "", fmt.Errorf("%s: validate form data: %w", context, err)
+	}
+	rs, err := os.Open(inFilePDF)
+	if err != nil {
+		return "", fmt.Errorf("%s: open input %s: %w", context, inFilePDF, err)
+	}
+	defer func() {
+		err = errors.Join(err, closeFile(rs, context+": close input"))
+	}()
+
+	ctx, err := ReadValidateAndOptimize(rs, conf)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", context, err)
+	}
+
+	if err := validateOptionValues(f); err != nil {
+		return "", fmt.Errorf("%s: validate option values: %w", context, err)
+	}
+
+	ok, pp, err := form.FillForm(ctx, form.FillDetails(&f, nil), f.Pages, form.JSON)
+	if err != nil {
+		return "", fmt.Errorf("%s: fill fields: %w", context, err)
+	}
+	if !ok {
+		return "", fmt.Errorf("%s: %w", context, ErrNoFormFieldsAffected)
+	}
+
+	if err := multiFillPostProcess(ctx, pp, context, conf.PostProcessValidate); err != nil {
+		return "", err
+	}
+
+	outFile = multiFillJSONOutputFile(outDir, fileName, f.FileName, formNr)
+	if err := writeMultiFillOutputWith(ctx, outFile, context, writeContext); err != nil {
+		return "", err
+	}
+	return outFile, nil
+}
+
+func multiFillFormJSON(inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration) (err error) {
+	return multiFillFormJSONWith(inFilePDF, rd, outDir, fileName, merge, conf, WriteContext)
+}
+
+func multiFillFormJSONWith(inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration, writeContext func(*model.Context, io.Writer) error) (err error) {
 	formGroup, err := parseFormGroup(rd)
 	if err != nil {
 		return err
 	}
 
 	var outFiles []string
+	if merge {
+		defer func() {
+			if log.CLIEnabled() {
+				log.CLI.Println("cleaning up...")
+			}
+			err = errors.Join(err, rollbackMultiFillOutputs(outFiles))
+		}()
+	}
 
 	for i, f := range formGroup.Forms {
-
-		rs, err := os.Open(inFilePDF)
-		if err != nil {
-			return err
+		outFile, fillErr := multiFillJSONForm(inFilePDF, f, outDir, fileName, i+1, conf, writeContext)
+		if outFile != "" {
+			outFiles = append(outFiles, outFile)
 		}
-		defer rs.Close()
-
-		ctx, err := ReadValidateAndOptimize(rs, conf)
-		if err != nil {
-			return err
+		if fillErr != nil {
+			return fillErr
 		}
-
-		ok, pp, err := form.FillForm(ctx, form.FillDetails(&f, nil), f.Pages, form.JSON)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return ErrNoFormFieldsAffected
-		}
-
-		if _, _, err := create.UpdatePageTree(ctx, pp, nil); err != nil {
-			return err
-		}
-
-		if conf.PostProcessValidate {
-			if err = ValidateContext(ctx); err != nil {
-				return err
-			}
-		}
-
-		outFile := f.FileName
-		if outFile == "" {
-			outFile = filepath.Join(outDir, fmt.Sprintf("%s_%02d.pdf", fileName, i+1))
-		} else {
-			outFile, err = sanitize.Path(outFile)
-			if err != nil {
-				outFile = fmt.Sprintf("form_%02d", i+1)
-			}
-			if !strings.HasSuffix(strings.ToLower(outFile), ".pdf") {
-				outFile += ".pdf"
-			}
-			outFile = filepath.Join(outDir, fmt.Sprintf("%s", outFile))
-		}
-
-		logWritingTo(outFile)
-
-		if err := WriteContextFile(ctx, outFile); err != nil {
-			return err
-		}
-		outFiles = append(outFiles, outFile)
 	}
 
 	if merge {
 		return mergeForms(outDir, fileName, outFiles, conf)
 	}
-
 	return nil
 }
 
@@ -865,22 +912,70 @@ func parseCSVLines(rd io.Reader) ([][]string, error) {
 
 	csvLines, err := csv.NewReader(rd).ReadAll()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("multi-fill form: parse CSV: %w", errors.Join(ErrInvalidCSV, err))
 	}
 
 	if len(csvLines) < 2 {
-		return nil, ErrInvalidCSV
+		return nil, fmt.Errorf("multi-fill form: parse CSV: %w", ErrInvalidCSV)
 	}
 
 	fieldNames := csvLines[0]
 	if len(fieldNames) == 0 {
-		return nil, ErrInvalidCSV
+		return nil, fmt.Errorf("multi-fill form: parse CSV: %w", ErrInvalidCSV)
+	}
+	for i, fieldName := range fieldNames {
+		if fieldName == "" || fieldName == "*" {
+			return nil, fmt.Errorf("multi-fill form: parse CSV header column %d: %w", i+1, ErrInvalidCSV)
+		}
 	}
 
 	return csvLines, nil
 }
 
-func multiFillFormCSV(inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration) error {
+func multiFillCSVRecord(inFilePDF string, fieldNames, formRecord []string, outDir, fileName string, recordNr, rowNr int, conf *model.Configuration, writeContext func(*model.Context, io.Writer) error) (outFile string, err error) {
+	context := fmt.Sprintf("multi-fill CSV row %d", rowNr)
+	f, err := os.Open(inFilePDF)
+	if err != nil {
+		return "", fmt.Errorf("%s: open input %s: %w", context, inFilePDF, err)
+	}
+	defer func() {
+		err = errors.Join(err, closeFile(f, context+": close input"))
+	}()
+
+	ctx, err := ReadValidateAndOptimize(f, conf)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", context, err)
+	}
+
+	fieldMap, imgPageMap, requested, err := form.FieldMap(fieldNames, formRecord)
+	if err != nil {
+		return "", fmt.Errorf("%s: map fields: %w", context, errors.Join(ErrInvalidCSV, err))
+	}
+
+	ok, pp, err := form.FillForm(ctx, form.FillDetails(nil, fieldMap), imgPageMap, form.CSV)
+	if err != nil {
+		return "", fmt.Errorf("%s: fill fields: %w", context, err)
+	}
+	if !ok {
+		return "", fmt.Errorf("%s: %w", context, ErrNoFormFieldsAffected)
+	}
+
+	if err := multiFillPostProcess(ctx, pp, context, conf.PostProcessValidate); err != nil {
+		return "", err
+	}
+
+	outFile = multiFillCSVOutputFile(outDir, fileName, requested, recordNr)
+	if err := writeMultiFillOutputWith(ctx, outFile, context, writeContext); err != nil {
+		return "", err
+	}
+	return outFile, nil
+}
+
+func multiFillFormCSV(inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration) (err error) {
+	return multiFillFormCSVWith(inFilePDF, rd, outDir, fileName, merge, conf, WriteContext)
+}
+
+func multiFillFormCSVWith(inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration, writeContext func(*model.Context, io.Writer) error) (err error) {
 	csvLines, err := parseCSVLines(rd)
 	if err != nil {
 		return err
@@ -888,70 +983,45 @@ func multiFillFormCSV(inFilePDF string, rd io.Reader, outDir, fileName string, m
 
 	fieldNames := csvLines[0]
 	var outFiles []string
+	if merge {
+		defer func() {
+			if log.CLIEnabled() {
+				log.CLI.Println("cleaning up...")
+			}
+			err = errors.Join(err, rollbackMultiFillOutputs(outFiles))
+		}()
+	}
 
 	for i, formRecord := range csvLines[1:] {
-
-		f, err := os.Open(inFilePDF)
-		if err != nil {
-			return err
+		outFile, fillErr := multiFillCSVRecord(inFilePDF, fieldNames, formRecord, outDir, fileName, i+1, i+2, conf, writeContext)
+		if outFile != "" {
+			outFiles = append(outFiles, outFile)
 		}
-		defer f.Close()
-
-		ctx, err := ReadValidateAndOptimize(f, conf)
-		if err != nil {
-			return err
+		if fillErr != nil {
+			return fillErr
 		}
-
-		fieldMap, imgPageMap, outFile, err := form.FieldMap(fieldNames, formRecord)
-		if err != nil {
-			return err
-		}
-
-		ok, pp, err := form.FillForm(ctx, form.FillDetails(nil, fieldMap), imgPageMap, form.CSV)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return ErrNoFormFieldsAffected
-		}
-
-		if _, _, err := create.UpdatePageTree(ctx, pp, nil); err != nil {
-			return err
-		}
-
-		if conf.PostProcessValidate {
-			if err = ValidateContext(ctx); err != nil {
-				return err
-			}
-		}
-
-		if outFile == "" {
-			outFile = filepath.Join(outDir, fmt.Sprintf("%s_%02d.pdf", fileName, i+1))
-		} else {
-			outFile, err = sanitize.Path(outFile)
-			if err != nil {
-				outFile = fmt.Sprintf("form_%02d", i+1)
-			}
-			outFile = filepath.Join(outDir, fmt.Sprintf("%s", outFile))
-		}
-
-		logWritingTo(outFile)
-
-		if err := WriteContextFile(ctx, outFile); err != nil {
-			return err
-		}
-		outFiles = append(outFiles, outFile)
 	}
 
 	if merge {
 		return mergeForms(outDir, fileName, outFiles, conf)
 	}
-
 	return nil
 }
 
-// MultiFillForm populates multiples instances of inFilePDF's form with data from rd and writes the result to outDir.
+// MultiFillForm populates multiple instances of inFilePDF's form with data from rd and writes the result to outDir.
 func MultiFillForm(inFilePDF string, rd io.Reader, outDir, fileName string, format form.DataFormat, merge bool, conf *model.Configuration) error {
+	if inFilePDF == "" {
+		return ErrMissingPDFInput
+	}
+
+	if rd == nil {
+		return fmt.Errorf("multi-fill form: %w", ErrMissingFormInput)
+	}
+
+	if format != form.JSON && format != form.CSV {
+		return fmt.Errorf("multi-fill form: %w: %d", ErrUnsupportedFormDataFormat, format)
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -967,26 +1037,30 @@ func MultiFillForm(inFilePDF string, rd io.Reader, outDir, fileName string, form
 	return multiFillFormCSV(inFilePDF, rd, outDir, fileName, merge, conf)
 }
 
-// MultiFillFormFile populates multiples instances of inFilePDFs form with data from inFileData and writes the result to outDir.
+// MultiFillFormFile populates multiple instances of inFilePDF's form with data from inFileData and writes the result to outDir.
 // The output file will be written to outFilePDF with incrementing numerical suffix unless
-// the input json uses "filename" or the input csv contains a @filename field.
+// the input JSON uses "filename" or the input CSV contains a @filename field.
 func MultiFillFormFile(inFilePDF, inFileData, outDir, outFilePDF string, merge bool, conf *model.Configuration) (err error) {
+	if inFilePDF == "" {
+		return ErrMissingPDFInput
+	}
+
+	if inFileData == "" {
+		return ErrMissingFormInput
+	}
+
 	format := form.JSON
 	if strings.HasSuffix(strings.ToLower(inFileData), ".csv") {
 		format = form.CSV
 	}
 
-	var f *os.File
-
-	if f, err = os.Open(inFileData); err != nil {
-		return err
+	f, err := os.Open(inFileData)
+	if err != nil {
+		return fmt.Errorf("multi-fill form: open data %s: %w", inFileData, err)
 	}
 
 	defer func() {
-		cerr := f.Close()
-		if err == nil {
-			err = cerr
-		}
+		err = errors.Join(err, closeFile(f, "multi-fill form: close data"))
 	}()
 
 	s := "JSON"
@@ -1000,5 +1074,6 @@ func MultiFillFormFile(inFilePDF, inFileData, outDir, outFilePDF string, merge b
 		log.CLI.Printf("filling multiple forms via %s based on %s data from %s into %s/%s ...\n", inFilePDF, s, inFileData, outDir, outFileBase)
 	}
 
-	return MultiFillForm(inFilePDF, f, outDir, outFileBase, format, merge, conf)
+	err = MultiFillForm(inFilePDF, f, outDir, outFileBase, format, merge, conf)
+	return err
 }

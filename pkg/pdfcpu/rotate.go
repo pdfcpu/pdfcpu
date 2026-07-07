@@ -17,10 +17,20 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"fmt"
+
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func composePageRotation(current, delta int) int {
+	rotation := (current%360 + delta%360) % 360
+	if rotation < 0 {
+		rotation += 360
+	}
+	return rotation
+}
 
 func rotatePage(xRefTable *model.XRefTable, i, j int) error {
 	if log.DebugEnabled() {
@@ -33,19 +43,18 @@ func rotatePage(xRefTable *model.XRefTable, i, j int) error {
 		return err
 	}
 
-	d.Update("Rotate", types.Integer((inhPAttrs.Rotate+j)%360))
+	d.Update("Rotate", types.Integer(composePageRotation(inhPAttrs.Rotate, j)))
 
 	return nil
 }
 
 // RotatePages rotates all selected pages by a multiple of 90 degrees.
 func RotatePages(ctx *model.Context, selectedPages types.IntSet, rotation int) error {
-
 	for k, v := range selectedPages {
 		if v {
 			err := rotatePage(ctx.XRefTable, k, rotation)
 			if err != nil {
-				return err
+				return fmt.Errorf("page %d: page dict: %w", k, err)
 			}
 		}
 	}

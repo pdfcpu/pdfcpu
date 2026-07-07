@@ -18,6 +18,7 @@ package model
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -27,6 +28,12 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+// ErrMissingPDFContext signals a missing required PDF context.
+var ErrMissingPDFContext = errors.New("missing PDF context")
+
+// ErrMissingXRefTable signals a missing required PDF cross-reference table.
+var ErrMissingXRefTable = errors.New("missing PDF cross-reference table")
 
 // Context represents an environment for processing PDF files.
 type Context struct {

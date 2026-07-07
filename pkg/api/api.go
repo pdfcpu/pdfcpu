@@ -36,6 +36,7 @@ package api
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"sync"
@@ -48,32 +49,125 @@ import (
 )
 
 var (
+	// ErrMissingBookletConfiguration signals a missing booklet configuration.
+	ErrMissingBookletConfiguration = errors.New("missing booklet configuration")
+
+	// ErrBookletImageOutputConflict signals that booklet output aliases an image input.
+	ErrBookletImageOutputConflict = errors.New("booklet image output aliases input")
+
+	// ErrMissingGridConfiguration signals a missing grid configuration.
+	ErrMissingGridConfiguration = errors.New("missing grid configuration")
+
+	// ErrGridImageOutputConflict signals that grid output aliases an image input.
+	ErrGridImageOutputConflict = errors.New("grid image output aliases input")
+
+	// ErrMissingNUpConfiguration signals a missing n-up configuration.
+	ErrMissingNUpConfiguration = errors.New("missing n-up configuration")
+
+	// ErrMissingCutConfiguration signals a missing cut configuration.
+	ErrMissingCutConfiguration = errors.New("missing cut configuration")
+
+	// ErrInvalidCutConfiguration signals an invalid cut configuration.
+	ErrInvalidCutConfiguration = errors.New("invalid cut configuration")
+
+	// ErrMissingResizeConfiguration signals a missing resize configuration.
+	ErrMissingResizeConfiguration = errors.New("missing resize configuration")
+
+	// ErrInvalidResizeConfiguration signals an invalid resize configuration.
+	ErrInvalidResizeConfiguration = errors.New("invalid resize configuration")
+
+	// ErrInvalidPageConfiguration signals an invalid page configuration.
+	ErrInvalidPageConfiguration = errors.New("invalid page configuration")
+
+	// ErrMissingZoomConfiguration signals a missing zoom configuration.
+	ErrMissingZoomConfiguration = errors.New("missing zoom configuration")
+
+	// ErrInvalidZoomConfiguration signals an invalid zoom configuration.
+	ErrInvalidZoomConfiguration = errors.New("invalid zoom configuration")
+
+	// ErrNUpImageOutputConflict signals that n-up output aliases an image input.
+	ErrNUpImageOutputConflict = errors.New("n-up image output aliases input")
+
+	// ErrMissingPageBoundaries signals missing required page boundaries.
+	ErrMissingPageBoundaries = errors.New("missing page boundaries")
+
+	// ErrInvalidPageBoundaries signals invalid page boundaries for an operation.
+	ErrInvalidPageBoundaries = errors.New("invalid page boundaries")
+
+	// ErrMissingBoxConfiguration signals a missing box configuration.
+	ErrMissingBoxConfiguration = errors.New("missing box configuration")
+
 	// ErrMissingConfiguration signals a missing pdfcpu configuration.
 	ErrMissingConfiguration = errors.New("missing configuration")
 
-	// ErrMissingPDFReadSeeker signals a missing required PDF input reader.
-	ErrMissingPDFReadSeeker = errors.New("missing PDF read seeker")
-
-	// ErrMissingPDFWriter signals a missing required PDF output writer.
-	ErrMissingPDFWriter = errors.New("missing PDF writer")
-
-	// ErrMissingPDFContext signals a missing required PDF context.
-	ErrMissingPDFContext = errors.New("missing PDF context")
-
-	// ErrMissingPDFReadWriteSeeker signals a missing required PDF input/output seeker.
-	ErrMissingPDFReadWriteSeeker = errors.New("missing PDF read write seeker")
-
-	// ErrMissingPDFInput signals a missing required PDF input file.
-	ErrMissingPDFInput = errors.New("missing PDF input")
-
-	// ErrMissingBookletConfiguration signals a missing booklet configuration.
-	ErrMissingBookletConfiguration = errors.New("missing booklet configuration")
+	// ErrMissingDigestFunction signals a missing required digest function.
+	ErrMissingDigestFunction = errors.New("missing digest function")
 
 	// ErrMissingImageInput signals a missing required image input.
 	ErrMissingImageInput = errors.New("missing image input")
 
-	// ErrNoSignatures signals absent signatures.
-	ErrNoSignatures = errors.New("no signatures present")
+	// ErrMissingFontInput signals a missing required font input file.
+	ErrMissingFontInput = errors.New("missing font input")
+
+	// ErrUnsupportedFontFile signals an unsupported font input file.
+	ErrUnsupportedFontFile = errors.New("unsupported font file")
+
+	// ErrInvalidUnicodePlane signals an invalid Unicode plane.
+	ErrInvalidUnicodePlane = errors.New("invalid Unicode plane")
+
+	// ErrImportImagesOutputConflict signals that import-images output aliases an image input.
+	ErrImportImagesOutputConflict = errors.New("import images output aliases image input")
+
+	// ErrInvalidImportConfiguration signals an invalid image import configuration.
+	ErrInvalidImportConfiguration = errors.New("invalid import configuration")
+
+	// ErrInvalidImageSelection signals an invalid image object or page resource selection.
+	ErrInvalidImageSelection = errors.New("invalid image selection")
+
+	// ErrUpdateImagesOutputConflict signals that update-images output aliases the image input.
+	ErrUpdateImagesOutputConflict = errors.New("update images output aliases image input")
+
+	// ErrMissingImageReader signals a missing required image reader.
+	ErrMissingImageReader = pdfcpu.ErrMissingImageReader
+
+	// ErrMissingJSONInput signals a missing required JSON input file.
+	ErrMissingJSONInput = errors.New("missing JSON input")
+
+	// ErrMissingJSONOutput signals a missing required JSON output file.
+	ErrMissingJSONOutput = errors.New("missing JSON output")
+
+	// ErrMissingPDFContext signals a missing required PDF context.
+	ErrMissingPDFContext = pdfcpu.ErrMissingPDFContext
+
+	// ErrMissingXRefTable signals a missing required PDF cross-reference table.
+	ErrMissingXRefTable = pdfcpu.ErrMissingXRefTable
+
+	// ErrMissingPDFInput signals a missing required PDF input file.
+	ErrMissingPDFInput = errors.New("missing PDF input")
+
+	// ErrMissingPDFOutput signals a missing required PDF output file.
+	ErrMissingPDFOutput = errors.New("missing PDF output")
+
+	// ErrMissingPDFReadSeeker signals a missing required PDF input reader.
+	ErrMissingPDFReadSeeker = errors.New("missing PDF read seeker")
+
+	// ErrMissingPDFReadWriteSeeker signals a missing required PDF input/output seeker.
+	ErrMissingPDFReadWriteSeeker = errors.New("missing PDF read write seeker")
+
+	// ErrMissingPDFWriter signals a missing required PDF output writer.
+	ErrMissingPDFWriter = errors.New("missing PDF writer")
+
+	// ErrMissingReader signals a missing required reader.
+	ErrMissingReader = pdfcpu.ErrMissingReader
+
+	// ErrMissingWatermarkConfiguration signals a missing required watermark configuration.
+	ErrMissingWatermarkConfiguration = pdfcpu.ErrMissingWatermarkConfiguration
+
+	// ErrMissingWatermarks signals missing required watermarks.
+	ErrMissingWatermarks = pdfcpu.ErrMissingWatermarks
+
+	// ErrNoSignatures signals that a PDF has no signatures to process.
+	ErrNoSignatures = pdfcpu.ErrNoSignatures
 )
 
 func logDisclaimerPDF20() {
@@ -139,6 +233,10 @@ func ValidateContext(ctx *model.Context) error {
 		return ErrMissingPDFContext
 	}
 
+	if ctx.XRefTable == nil {
+		return ErrMissingXRefTable
+	}
+
 	if ctx.XRefTable.Version() == model.V20 {
 		logDisclaimerPDF20()
 	}
@@ -154,7 +252,10 @@ func OptimizeContext(ctx *model.Context) error {
 	if log.CLIEnabled() {
 		log.CLI.Println("optimizing...")
 	}
-	return pdfcpu.OptimizeXRefTable(ctx)
+	if err := pdfcpu.OptimizeXRefTable(ctx); err != nil {
+		return fmt.Errorf("optimize context: %w", err)
+	}
+	return nil
 }
 
 // PatchFile writes bb at offset.
@@ -177,7 +278,7 @@ func PatchFile(fileName string, bb []byte, offset int64) error {
 }
 
 // WriteContext writes ctx to w.
-func WriteContext(ctx *model.Context, w io.Writer) error {
+func WriteContext(ctx *model.Context, w io.Writer) (err error) {
 	if ctx == nil {
 		return ErrMissingPDFContext
 	}
@@ -191,12 +292,14 @@ func WriteContext(ctx *model.Context, w io.Writer) error {
 		ctx.Write.Fp = f
 	}
 	ctx.Write.Writer = bufio.NewWriter(w)
-	defer ctx.Write.Flush()
+	defer func() {
+		err = errors.Join(err, ctx.Write.Flush())
+	}()
 	return pdfcpu.WriteContext(ctx)
 }
 
 // WriteIncrement writes a PDF increment for ctx to w.
-func WriteIncrement(ctx *model.Context, w io.Writer) error {
+func WriteIncrement(ctx *model.Context, w io.Writer) (err error) {
 	if ctx == nil {
 		return ErrMissingPDFContext
 	}
@@ -206,18 +309,23 @@ func WriteIncrement(ctx *model.Context, w io.Writer) error {
 	}
 
 	ctx.Write.Writer = bufio.NewWriter(w)
-	defer ctx.Write.Flush()
+	defer func() {
+		err = errors.Join(err, ctx.Write.Flush())
+	}()
 	return pdfcpu.WriteIncrement(ctx)
 }
 
 // WriteContextFile writes ctx to outFile.
-func WriteContextFile(ctx *model.Context, outFile string) error {
-	f, err := os.Create(outFile)
+func WriteContextFile(ctx *model.Context, outFile string) (err error) {
+	staged, err := openStagedOutput(nil, "", outFile, "write context")
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	return WriteContext(ctx, f)
+	f := staged.output.file
+	if err := WriteContext(ctx, f); err != nil {
+		return staged.cleanup(err)
+	}
+	return staged.commit()
 }
 
 // ReadAndValidate returns a model.Context of rs ready for processing.
@@ -229,14 +337,14 @@ func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Co
 	}
 
 	if ctx, err = ReadContext(rs, conf); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read context: %w", err)
 	}
 	if conf == nil {
 		conf = ctx.Configuration
 	}
 
 	if err := ValidateContext(ctx); err != nil {
-		return nil, err
+		return nil, validationError(ctx, conf, err)
 	}
 
 	if conf.Cmd == model.REMOVESIGNATURES || ctx.RemoveSignatures && conf.Cmd.AllowRemoveSignatures() {
@@ -255,7 +363,7 @@ func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Co
 			log.CLI.Println("removing signatures...")
 		}
 		if err := ctx.RemoveAllSignatures(); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("remove signatures: %w", err)
 		}
 	}
 
@@ -276,6 +384,8 @@ func cmdAssumingOptimization(cmd model.CommandMode) bool {
 // ReadValidateAndOptimize returns an optimized model.Context of rs ready for processing a specific command.
 // conf.Cmd is expected to be configured properly.
 func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
+	defer fault.Catch(&err)
+
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
@@ -286,7 +396,7 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *
 
 	ctx, err = ReadAndValidate(rs, conf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("prepare PDF context: %w", err)
 	}
 
 	// With the exception of commands utilizing structs provided the Optimize step
@@ -300,7 +410,7 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *
 
 	// TODO move to form related commands.
 	if err := pdfcpu.CacheFormFonts(ctx); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cache form fonts: %w", err)
 	}
 
 	return ctx, nil

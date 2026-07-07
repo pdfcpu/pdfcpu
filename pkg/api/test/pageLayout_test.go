@@ -17,6 +17,8 @@ limitations under the License.
 package test
 
 import (
+	"bytes"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -67,5 +69,55 @@ func TestPageLayout(t *testing.T) {
 	}
 	if pl != nil {
 		t.Fatalf("%s %s: list page layout, unexpected: %s\n", msg, inFile, pl)
+	}
+}
+
+// TestPageLayoutOneColumnStream verifies setting and listing OneColumn using streams.
+func TestPageLayoutOneColumnStream(t *testing.T) {
+	f, err := os.Open(filepath.Join(inDir, "test.pdf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := f.Close(); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	var out bytes.Buffer
+	if err := api.SetPageLayout(f, &out, model.PageLayoutOneColumn, nil); err != nil {
+		t.Fatalf("set OneColumn page layout: %v", err)
+	}
+	ss, err := api.ListPageLayout(bytes.NewReader(out.Bytes()), nil)
+	if err != nil {
+		t.Fatalf("list OneColumn page layout: %v", err)
+	}
+	if len(ss) != 1 || ss[0] != "OneColumn" {
+		t.Fatalf("expected OneColumn, got %v", ss)
+	}
+}
+
+// TestPageLayoutOneColumnFile verifies setting and listing OneColumn using files.
+func TestPageLayoutOneColumnFile(t *testing.T) {
+	bb, err := os.ReadFile(filepath.Join(inDir, "test.pdf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	inFile := filepath.Join(dir, "in.pdf")
+	if err := os.WriteFile(inFile, bb, 0600); err != nil {
+		t.Fatal(err)
+	}
+	outFile := filepath.Join(dir, "out.pdf")
+
+	if err := api.SetPageLayoutFile(inFile, outFile, model.PageLayoutOneColumn, nil); err != nil {
+		t.Fatalf("set OneColumn page layout: %v", err)
+	}
+	ss, err := api.ListPageLayoutFile(outFile, nil)
+	if err != nil {
+		t.Fatalf("list OneColumn page layout: %v", err)
+	}
+	if len(ss) != 1 || ss[0] != "OneColumn" {
+		t.Fatalf("expected OneColumn, got %v", ss)
 	}
 }

@@ -17,10 +17,11 @@ limitations under the License.
 package test
 
 import (
+	"errors"
 	"fmt"
-	"testing"
-
+	"strconv"
 	"strings"
+	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -221,4 +222,64 @@ func TestCollectedPages(t *testing.T) {
 
 	testCollectedPages("1-,!l", pageCount, "[1 2 3 4]", t)
 	testCollectedPages("1-,nl", pageCount, "[1 2 3 4]", t)
+}
+
+func TestCollectedPagesRejectsEmptySelectionToken(t *testing.T) {
+	_, err := api.PagesForPageCollection(5, []string{""})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "page selection token 1: empty") {
+		t.Fatalf("expected empty page selection token error, got %q", err.Error())
+	}
+
+	_, err = api.PagesForPageCollection(5, []string{"1", ""})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "page selection token 2: empty") {
+		t.Fatalf("expected second token context, got %q", err.Error())
+	}
+}
+
+// TestPagesForPageSelectionIncludesTokenContext verifies ordinary page-selection token errors.
+func TestPagesForPageSelectionIncludesTokenContext(t *testing.T) {
+	tests := []struct {
+		name       string
+		selection  []string
+		want       string
+		conversion bool
+	}{
+		{
+			name:      "first token empty",
+			selection: []string{""},
+			want:      "page selection token 1: empty",
+		},
+		{
+			name:      "second token empty",
+			selection: []string{"1", ""},
+			want:      "page selection token 2: empty",
+		},
+		{
+			name:       "second token invalid",
+			selection:  []string{"1", "foo"},
+			want:       `page selection token 2 "foo"`,
+			conversion: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := api.PagesForPageSelection(5, tt.selection, true, false)
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("expected %q, got %v", tt.want, err)
+			}
+			if tt.conversion {
+				var numErr *strconv.NumError
+				if !errors.As(err, &numErr) {
+					t.Fatalf("expected conversion error, got %v", err)
+				}
+			}
+		})
+	}
 }

@@ -127,6 +127,7 @@ const (
 	REMOVEANNOTATIONS
 	ROTATE
 	NUP
+	GRID
 	BOOKLET
 	LISTBOOKMARKS
 	ADDBOOKMARKS
@@ -204,6 +205,10 @@ type Configuration struct {
 
 	// Validate against ISO-32000: strict or relaxed.
 	ValidationMode int
+
+	// UnsupportedResourcePolicy controls unsupported-resource handling during extraction.
+	// This is a runtime option and is not read from config.yml.
+	UnsupportedResourcePolicy UnsupportedResourcePolicy
 
 	// Enable validation right before writing.
 	PostProcessValidate bool
@@ -507,6 +512,7 @@ func newDefaultConfiguration() *Configuration {
 		Reader15:                        true,
 		DecodeAllStreams:                false,
 		ValidationMode:                  ValidationRelaxed,
+		UnsupportedResourcePolicy:       UnsupportedResourceSkip,
 		ValidateLinks:                   false,
 		Eol:                             types.EolLF,
 		WriteObjectStream:               true,

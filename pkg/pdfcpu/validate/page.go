@@ -98,7 +98,7 @@ func validateContents(obj types.Object, xRefTable *model.XRefTable, d types.Dict
 		}
 
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return false, fmt.Errorf("validatePageContents: empty page content array detected")
+			return false, fmt.Errorf("page contents: empty content array")
 		}
 
 		// Digest empty array.
@@ -110,7 +110,7 @@ func validateContents(obj types.Object, xRefTable *model.XRefTable, d types.Dict
 		s := strings.TrimSpace(obj.Value())
 
 		if len(s) > 0 || xRefTable.ValidationMode == model.ValidationStrict {
-			return false, fmt.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
+			return false, fmt.Errorf("page contents: expected stream dict or array, got %T", obj)
 		}
 
 		// Digest empty string literal.
@@ -120,7 +120,7 @@ func validateContents(obj types.Object, xRefTable *model.XRefTable, d types.Dict
 	case types.Dict:
 
 		if len(obj) > 0 || xRefTable.ValidationMode == model.ValidationStrict {
-			return false, fmt.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
+			return false, fmt.Errorf("page contents: expected stream dict or array, got %T", obj)
 		}
 
 		// Digest empty dict.
@@ -128,7 +128,7 @@ func validateContents(obj types.Object, xRefTable *model.XRefTable, d types.Dict
 		model.ShowRepaired("page dict \"Contents\"")
 
 	default:
-		return false, fmt.Errorf("validatePageContents: page content must be stream dict or array, got: %T", obj)
+		return false, fmt.Errorf("page contents: expected stream dict or array, got %T", obj)
 	}
 
 	return hasContents, nil
@@ -315,12 +315,12 @@ func validateTransitionDictEntryDi(d types.Dict) error {
 	case types.Integer:
 		validate := func(i int) bool { return types.IntMemberOf(i, []int{0, 90, 180, 270, 315}) }
 		if !validate(o.Value()) {
-			return errors.New("validateTransitionDict: entry Di int value undefined")
+			return errors.New("transition dict: entry Di int value undefined")
 		}
 
 	case types.Name:
 		if o.Value() != "None" {
-			return errors.New("validateTransitionDict: entry Di name value undefined")
+			return errors.New("transition dict: entry Di name value undefined")
 		}
 	}
 
@@ -500,7 +500,7 @@ func validatePageEntryPresSteps(xRefTable *model.XRefTable, d types.Dict, requir
 		return err
 	}
 
-	return errors.New("not supported")
+	return errors.New("presentation steps dict: missing supported entry NA")
 }
 
 func validatePageEntryUserUnit(xRefTable *model.XRefTable, d types.Dict, required bool, sinceVersion model.Version) error {
@@ -629,7 +629,7 @@ func validateMeasureDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion 
 			// unknown coord system
 			return nil
 		}
-		return fmt.Errorf("validateMeasureDict dict=%s entry=%s invalid dict entry: %s", dictName, "Subtype", coordSys.Value())
+		return fmt.Errorf("measure dict: entry Subtype invalid value: %s", coordSys.Value())
 	}
 
 	// R, text string, required, scale ratio
@@ -770,7 +770,7 @@ func handlePieceInfo(xRefTable *model.XRefTable, d types.Dict, dictName string) 
 	}
 
 	if hasPieceInfo && lm == nil && xRefTable.ValidationMode == model.ValidationStrict {
-		return errors.New("validatePageDict: missing \"LastModified\" (required by \"PieceInfo\")")
+		return errors.New("page dict: missing \"LastModified\" (required by \"PieceInfo\")")
 	}
 
 	return nil
@@ -780,7 +780,7 @@ func validatePageDict(xRefTable *model.XRefTable, d types.Dict, hasMediaBox bool
 	dictName := "pageDict"
 
 	if ir := d.IndirectRefEntry("Parent"); ir == nil {
-		return nil, errors.New("missing parent")
+		return nil, errors.New("page dict: missing parent")
 	}
 
 	// Contents
@@ -859,41 +859,41 @@ func validatePageDict(xRefTable *model.XRefTable, d types.Dict, hasMediaBox bool
 	return mediaBoxArr, nil
 }
 
-func validatePagesDictGeneralEntries(xRefTable *model.XRefTable, d types.Dict) (hasResources bool, mediaBoxArr types.Array, err error) {
+func validatePagesDictGeneralEntries(xRefTable *model.XRefTable, d types.Dict, objNr int) (hasResources bool, mediaBoxArr types.Array, err error) {
 	hasResources, err = validateResources(xRefTable, d)
 	if err != nil {
-		return false, nil, err
+		return false, nil, fmt.Errorf("page tree: node obj#%d Resources: %w", objNr, err)
 	}
 
 	// MediaBox: optional, rectangle
 	mediaBoxArr, err = validatePageEntryMediaBox(xRefTable, d, OPTIONAL, model.V10)
 	if err != nil {
-		return false, nil, err
+		return false, nil, fmt.Errorf("page tree: node obj#%d MediaBox: %w", objNr, err)
 	}
 
 	// CropBox: optional, rectangle
 	err = validatePageEntryCropBox(xRefTable, d, OPTIONAL, model.V10)
 	if err != nil {
-		return false, nil, err
+		return false, nil, fmt.Errorf("page tree: node obj#%d CropBox: %w", objNr, err)
 	}
 
 	// Rotate:  optional, integer
 	err = validatePageEntryRotate(xRefTable, d, OPTIONAL, model.V10)
 	if err != nil {
-		return false, nil, err
+		return false, nil, fmt.Errorf("page tree: node obj#%d Rotate: %w", objNr, err)
 	}
 
 	return hasResources, mediaBoxArr, nil
 }
 
-func dictTypeForPageNodeDict(d types.Dict) (string, error) {
+func dictTypeForPageNodeDict(d types.Dict, objNr int) (string, error) {
 	if d == nil {
-		return "", errors.New("pageNodeDict is null")
+		return "", fmt.Errorf("page tree: node obj#%d is null", objNr)
 	}
 
 	dictType := d.Type()
 	if dictType == nil {
-		return "", errors.New("missing pageNodeDict type")
+		return "", fmt.Errorf("page tree: node obj#%d: missing Type", objNr)
 	}
 
 	return *dictType, nil
@@ -909,28 +909,28 @@ func validateResources(xRefTable *model.XRefTable, d types.Dict) (hasResources b
 	return validateResourceDict(xRefTable, o)
 }
 
-func pagesDictKids(xRefTable *model.XRefTable, d types.Dict) types.Array {
+func pagesDictKids(xRefTable *model.XRefTable, d types.Dict) (types.Array, error) {
 	if xRefTable.ValidationMode != model.ValidationRelaxed {
-		return d.ArrayEntry("Kids")
+		return d.ArrayEntry("Kids"), nil
 	}
 	o, found := d.Find("Kids")
 	if !found {
-		return nil
+		return nil, nil
 	}
 	kids, err := xRefTable.DereferenceArray(o)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return kids
+	return kids, nil
 }
 
-func validateParent(pageNodeDict types.Dict, objNr int) error {
+func validateParent(pageNodeDict types.Dict, childObjNr, parentObjNr int) error {
 	parentIndRef := pageNodeDict.IndirectRefEntry("Parent")
 	if parentIndRef == nil {
-		return errors.New("validatePagesDict: missing parent node")
+		return fmt.Errorf("page tree: node obj#%d: missing parent node, expected obj#%d", childObjNr, parentObjNr)
 	}
-	if parentIndRef.ObjectNumber.Value() != objNr {
-		return errors.New("validatePagesDict: corrupt parent node")
+	if parentIndRef.ObjectNumber.Value() != parentObjNr {
+		return fmt.Errorf("page tree: node obj#%d: corrupt parent node, expected obj#%d, got obj#%d", childObjNr, parentObjNr, parentIndRef.ObjectNumber.Value())
 	}
 	return nil
 }
@@ -938,7 +938,7 @@ func validateParent(pageNodeDict types.Dict, objNr int) error {
 func detectPageNodeDict(xRefTable *model.XRefTable, indRef types.IndirectRef, objNr, parentObjNr int, mediaBoxArr types.Array, pageNr int) (types.Dict, error) {
 	pageNodeDict, err := xRefTable.DereferenceDict(indRef)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("page tree: kid obj#%d: dereference: %w", objNr, err)
 	}
 
 	if len(pageNodeDict) > 0 {
@@ -946,7 +946,7 @@ func detectPageNodeDict(xRefTable *model.XRefTable, indRef types.IndirectRef, ob
 	}
 
 	if xRefTable.ValidationMode == model.ValidationStrict {
-		return nil, fmt.Errorf("validatePagesDict: corrupt page %d (obj#%d)", pageNr, objNr)
+		return nil, fmt.Errorf("page tree: corrupt page %d (obj#%d)", pageNr, objNr)
 	}
 
 	var mediaBox *types.Rectangle
@@ -961,15 +961,19 @@ func detectPageNodeDict(xRefTable *model.XRefTable, indRef types.IndirectRef, ob
 		return nil, err
 	}
 
-	model.ShowRepaired(fmt.Sprintf("currupt page %d with blank page", pageNr))
+	model.ShowRepaired(fmt.Sprintf("corrupt page %d with blank page", pageNr))
 
-	return xRefTable.DereferenceDict(indRef)
+	pageNodeDict, err = xRefTable.DereferenceDict(indRef)
+	if err != nil {
+		return nil, fmt.Errorf("page tree: repaired kid obj#%d: dereference: %w", objNr, err)
+	}
+	return pageNodeDict, nil
 }
 
 func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr int, hasResources bool, mediaBoxArr types.Array, curPage *int, depth int, visit *model.PageTreeVisit) (types.Array, error) {
 	var a types.Array
 
-	for _, o := range kids {
+	for i, o := range kids {
 
 		if o == nil {
 			continue
@@ -977,7 +981,7 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr 
 
 		ir, ok := o.(types.IndirectRef)
 		if !ok {
-			return nil, errors.New("validatePagesDict: missing indirect reference for kid")
+			return nil, fmt.Errorf("page tree: parent obj#%d kid[%d]: expected indirect reference, got %T", parentObjNr, i, o)
 		}
 
 		objNr := ir.ObjectNumber.Value()
@@ -992,11 +996,11 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr 
 
 		a = append(a, ir)
 
-		if err := validateParent(pageNodeDict, parentObjNr); err != nil {
+		if err := validateParent(pageNodeDict, objNr, parentObjNr); err != nil {
 			return nil, err
 		}
 
-		dictType, err := dictTypeForPageNodeDict(pageNodeDict)
+		dictType, err := dictTypeForPageNodeDict(pageNodeDict, objNr)
 		if err != nil {
 			return nil, err
 		}
@@ -1005,7 +1009,7 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr 
 
 		case "Pages":
 			if err = validatePagesDictDepth(xRefTable, pageNodeDict, objNr, hasResources, mediaBoxArr, curPage, depth+1, visit); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("page tree: kid obj#%d: %w", objNr, err)
 			}
 
 		case "Page":
@@ -1013,17 +1017,17 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr 
 			xRefTable.CurPage = *curPage
 			dMediaBoxArr, err := validatePageDict(xRefTable, pageNodeDict, len(mediaBoxArr) > 0)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("page tree: page obj#%d: %w", objNr, err)
 			}
 			if len(mediaBoxArr) == 0 {
 				mediaBoxArr = dMediaBoxArr
 			}
 			if err := xRefTable.SetValid(ir); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("page tree: page obj#%d: mark valid: %w", objNr, err)
 			}
 
 		default:
-			return nil, fmt.Errorf("validatePagesDict: Unexpected dict type: %s", dictType)
+			return nil, fmt.Errorf("page tree: node obj#%d: unexpected dict type: %s", objNr, dictType)
 		}
 
 	}
@@ -1040,7 +1044,7 @@ func validatePagesDictDepth(xRefTable *model.XRefTable, d types.Dict, objNr int,
 	}
 	defer visit.Leave(objNr)
 
-	dHasResources, dMediaBoxArr, err := validatePagesDictGeneralEntries(xRefTable, d)
+	dHasResources, dMediaBoxArr, err := validatePagesDictGeneralEntries(xRefTable, d, objNr)
 	if err != nil {
 		return err
 	}
@@ -1053,9 +1057,12 @@ func validatePagesDictDepth(xRefTable *model.XRefTable, d types.Dict, objNr int,
 		mediaBoxArr = dMediaBoxArr
 	}
 
-	kids := pagesDictKids(xRefTable, d)
+	kids, err := pagesDictKids(xRefTable, d)
+	if err != nil {
+		return fmt.Errorf("page tree: dereference \"Kids\" entry: %w", err)
+	}
 	if kids == nil {
-		return errors.New("validatePagesDict: corrupt \"Kids\" entry")
+		return errors.New("page tree: corrupt \"Kids\" entry")
 	}
 
 	if len(kids) == 0 {
@@ -1074,16 +1081,16 @@ func validatePagesDict(xRefTable *model.XRefTable, d types.Dict, objNr int, hasR
 func repairPagesDict(xRefTable *model.XRefTable, obj types.Object, rootDict types.Dict) (types.Dict, int, error) {
 	d, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("page tree repair: dereference page root: %w", err)
 	}
 
 	if d == nil {
-		return nil, 0, errors.New("cannot dereference pageNodeDict")
+		return nil, 0, errors.New("page tree repair: cannot dereference page node")
 	}
 
 	indRef, err := xRefTable.IndRefForNewObject(d)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("page tree repair: create page root reference: %w", err)
 	}
 
 	rootDict["Pages"] = *indRef
@@ -1092,9 +1099,12 @@ func repairPagesDict(xRefTable *model.XRefTable, obj types.Object, rootDict type
 
 	// Patch kids.parents
 
-	kids := pagesDictKids(xRefTable, d)
+	kids, err := pagesDictKids(xRefTable, d)
+	if err != nil {
+		return nil, 0, fmt.Errorf("page tree repair: dereference \"Kids\" entry: %w", err)
+	}
 	if kids == nil {
-		return nil, 0, errors.New("corrupt \"Kids\" entry")
+		return nil, 0, errors.New("page tree repair: corrupt \"Kids\" entry")
 	}
 
 	for i := range kids {
@@ -1107,7 +1117,7 @@ func repairPagesDict(xRefTable *model.XRefTable, obj types.Object, rootDict type
 
 		ir, ok := o.(types.IndirectRef)
 		if !ok {
-			return nil, 0, errors.New("missing indirect reference for kid")
+			return nil, 0, fmt.Errorf("page tree repair: kid[%d]: expected indirect reference, got %T", i, o)
 		}
 
 		if log.ValidateEnabled() {
@@ -1121,10 +1131,10 @@ func repairPagesDict(xRefTable *model.XRefTable, obj types.Object, rootDict type
 
 		d, err := xRefTable.DereferenceDict(ir)
 		if err != nil {
-			return nil, 0, err
+			return nil, 0, fmt.Errorf("page tree repair: kid obj#%d: dereference: %w", objNumber, err)
 		}
 		if d == nil {
-			return nil, 0, errors.New("corrupt page node")
+			return nil, 0, fmt.Errorf("page tree repair: corrupt page node obj#%d", objNumber)
 		}
 
 		d["Parent"] = *indRef
@@ -1136,7 +1146,7 @@ func repairPagesDict(xRefTable *model.XRefTable, obj types.Object, rootDict type
 func validatePages(xRefTable *model.XRefTable, rootDict types.Dict) (types.Dict, error) {
 	obj, found := rootDict.Find("Pages")
 	if !found {
-		return nil, errors.New("missing \"Pages\"")
+		return nil, errors.New("page tree root: missing \"Pages\"")
 	}
 
 	var (
@@ -1148,7 +1158,7 @@ func validatePages(xRefTable *model.XRefTable, rootDict types.Dict) (types.Dict,
 	ir, ok := obj.(types.IndirectRef)
 	if !ok {
 		if xRefTable.ValidationMode != model.ValidationRelaxed {
-			return nil, errors.New("missing indirect reference \"Pages\"")
+			return nil, errors.New("page tree root: entry \"Pages\" must be an indirect reference")
 		}
 		pageRoot, objNr, err = repairPagesDict(xRefTable, obj, rootDict)
 		if err != nil {
@@ -1162,22 +1172,25 @@ func validatePages(xRefTable *model.XRefTable, rootDict types.Dict) (types.Dict,
 
 		pageRoot, err = xRefTable.DereferenceDict(obj)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("page tree root: obj#%d: dereference: %w", objNr, err)
 		}
 
 		if pageRoot == nil {
-			return nil, errors.New("cannot dereference pageNodeDict")
+			return nil, fmt.Errorf("page tree root: obj#%d: cannot dereference page node", objNr)
 		}
 	}
 
 	obj, found = pageRoot.Find("Count")
 	if !found {
-		return nil, errors.New("missing \"Count\" in page root dict")
+		return nil, fmt.Errorf("page tree root: obj#%d: missing \"Count\"", objNr)
 	}
 
 	i, err := xRefTable.DereferenceInteger(obj)
-	if err != nil || i == nil {
-		return nil, errors.New("corrupt \"Count\" in page root dict")
+	if err != nil {
+		return nil, fmt.Errorf("page tree root: obj#%d: corrupt \"Count\": %w", objNr, err)
+	}
+	if i == nil {
+		return nil, fmt.Errorf("page tree root: obj#%d: corrupt \"Count\"", objNr)
 	}
 
 	xRefTable.PageCount = i.Value()
@@ -1189,7 +1202,7 @@ func validatePages(xRefTable *model.XRefTable, rootDict types.Dict) (types.Dict,
 	}
 
 	if pc != xRefTable.PageCount {
-		return nil, errors.New("page tree invalid")
+		return nil, fmt.Errorf("page tree: counted %d pages, expected %d", pc, xRefTable.PageCount)
 	}
 
 	return pageRoot, err

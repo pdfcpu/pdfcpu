@@ -197,7 +197,10 @@ func (xRefTable *XRefTable) DereferenceNumber(o types.Object) (float64, error) {
 		err error
 	)
 
-	o, _ = xRefTable.Dereference(o)
+	o, err = xRefTable.Dereference(o)
+	if err != nil {
+		return 0, err
+	}
 
 	switch o := o.(type) {
 

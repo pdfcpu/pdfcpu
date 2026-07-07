@@ -18,6 +18,7 @@ package model
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -31,6 +32,25 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+type textRenderWriter struct {
+	io.Writer
+	err error
+}
+
+func (w *textRenderWriter) Write(p []byte) (int, error) {
+	if w.err != nil {
+		return 0, w.err
+	}
+	n, err := w.Writer.Write(p)
+	if err == nil && n != len(p) {
+		err = io.ErrShortWrite
+	}
+	if err != nil {
+		w.err = err
+	}
+	return n, err
+}
 
 // TextDescriptor contains all attributes needed for rendering a text column in PDF user space.
 type TextDescriptor struct {
@@ -67,16 +87,38 @@ type TextDescriptor struct {
 	HairCross      bool                // Draw haircross at X,Y
 }
 
-func deltaAlignMiddle(fontName string, fontSize, lines int, mTop, mBot float64) float64 {
-	return -font.Ascent(fontName, fontSize) + (float64(lines)*font.LineHeight(fontName, fontSize)+mTop+mBot)/2 - mTop
+func fontVerticalMetrics(fontName string, fontSize int) (float64, float64, error) {
+	bb, err := font.BoundingBox(fontName)
+	if err != nil {
+		return 0, 0, fmt.Errorf("font %s: vertical metrics: %w", fontName, err)
+	}
+	ascent := font.UserSpaceUnits(bb.Height()+bb.LL.Y, fontSize)
+	lineHeight := font.UserSpaceUnits(bb.Height(), fontSize)
+	return ascent, lineHeight, nil
 }
 
-func deltaAlignTop(fontName string, fontSize int, mTop float64) float64 {
-	return -font.Ascent(fontName, fontSize) - mTop
+func deltaAlignMiddle(fontName string, fontSize, lines int, mTop, mBot float64) (float64, error) {
+	ascent, lineHeight, err := fontVerticalMetrics(fontName, fontSize)
+	if err != nil {
+		return 0, err
+	}
+	return -ascent + (float64(lines)*lineHeight+mTop+mBot)/2 - mTop, nil
 }
 
-func deltaAlignBottom(fontName string, fontSize, lines int, mBot float64) float64 {
-	return -font.Ascent(fontName, fontSize) + float64(lines)*font.LineHeight(fontName, fontSize) + mBot
+func deltaAlignTop(fontName string, fontSize int, mTop float64) (float64, error) {
+	ascent, _, err := fontVerticalMetrics(fontName, fontSize)
+	if err != nil {
+		return 0, err
+	}
+	return -ascent - mTop, nil
+}
+
+func deltaAlignBottom(fontName string, fontSize, lines int, mBot float64) (float64, error) {
+	ascent, lineHeight, err := fontVerticalMetrics(fontName, fontSize)
+	if err != nil {
+		return 0, err
+	}
+	return -ascent + float64(lines)*lineHeight + mBot, nil
 }
 
 var unicodeToCP1252 = map[rune]byte{
@@ -157,15 +199,20 @@ func CalcBoundingBoxForRects(r1, r2 *types.Rectangle) *types.Rectangle {
 	return calcBoundingBoxForRectAndPoint(bbox, r2.UR)
 }
 
-func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, fontSize int) (*types.Rectangle, string) {
+func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, fontSize int) (*types.Rectangle, string, error) {
+	if len(lines) == 0 {
+		return nil, "", errors.New("calculate text bounding box: no text lines")
+	}
 	var (
 		box      *types.Rectangle
 		maxLine  string
 		maxWidth float64
 	)
-	// TODO Return error if lines == nil or empty.
-	for _, s := range lines {
-		bbox := CalcBoundingBox(s, x, y, fontName, fontSize)
+	for i, s := range lines {
+		bbox, err := CalcBoundingBox(s, x, y, fontName, fontSize)
+		if err != nil {
+			return nil, "", fmt.Errorf("line %d: %w", i+1, err)
+		}
 		if bbox.Width() > maxWidth {
 			maxWidth = bbox.Width()
 			maxLine = s
@@ -173,53 +220,100 @@ func calcBoundingBoxForLines(lines []string, x, y float64, fontName string, font
 		box = CalcBoundingBoxForRects(box, bbox)
 		y -= bbox.Height()
 	}
-	return box, maxLine
+	return box, maxLine, nil
+}
+
+func encodeUserFontRunes(s string) string {
+	bb := make([]byte, 0, utf8.RuneCountInString(s)*2)
+	for _, r := range s {
+		b := make([]byte, 2)
+		binary.BigEndian.PutUint16(b, uint16(r))
+		bb = append(bb, b...)
+	}
+	return string(bb)
+}
+
+func prepareEmbeddedUserFontBytes(xRefTable *XRefTable, s, fontName string) (string, error) {
+	if xRefTable == nil {
+		return "", fmt.Errorf("font %s: prepare embedded text: %w", fontName, ErrMissingXRefTable)
+	}
+	if xRefTable.UsedGIDs == nil {
+		xRefTable.UsedGIDs = map[string]map[uint16]bool{}
+	}
+	usedGIDs, ok := xRefTable.UsedGIDs[fontName]
+	if !ok {
+		usedGIDs = map[uint16]bool{}
+		xRefTable.UsedGIDs[fontName] = usedGIDs
+	}
+	ttf, ok, err := font.UserFont(fontName)
+	if err != nil {
+		return "", fmt.Errorf("font %s: load metrics: %w", fontName, err)
+	}
+	if !ok {
+		return "", fmt.Errorf("font %s: metrics not found: %w", fontName, font.ErrUnknownFont)
+	}
+	bb := make([]byte, 0, utf8.RuneCountInString(s)*2)
+	for _, r := range s {
+		gid, ok := ttf.Chars[uint32(r)]
+		if !ok {
+			continue
+		}
+		b := make([]byte, 2)
+		binary.BigEndian.PutUint16(b, gid)
+		bb = append(bb, b...)
+		usedGIDs[gid] = true
+	}
+	return string(bb), nil
+}
+
+func prepareUserFontBytes(xRefTable *XRefTable, s, fontName string, embed, rtl, fillFont bool) (string, error) {
+	if fillFont && embed {
+		return s, nil
+	}
+	if rtl {
+		s = types.Reverse(s)
+	}
+	if !embed {
+		return encodeUserFontRunes(s), nil
+	}
+	return prepareEmbeddedUserFontBytes(xRefTable, s, fontName)
 }
 
 // PrepBytes prepares bytes for s and fontName.
-func PrepBytes(xRefTable *XRefTable, s, fontName string, embed, rtl, fillFont bool) string {
-	if font.IsUserFont(fontName) && (!fillFont || !embed) {
-		if rtl {
-			s = types.Reverse(s)
-		}
-		bb := []byte{}
-		if !embed {
-			for _, r := range s {
-				b := make([]byte, 2)
-				binary.BigEndian.PutUint16(b, uint16(r))
-				bb = append(bb, b...)
-			}
-		} else {
-			usedGIDs, ok := xRefTable.UsedGIDs[fontName]
-			if !ok {
-				xRefTable.UsedGIDs[fontName] = map[uint16]bool{}
-				usedGIDs = xRefTable.UsedGIDs[fontName]
-			}
-
-			font.UserFontMetricsLock.RLock()
-			ttf := font.UserFontMetrics[fontName]
-			font.UserFontMetricsLock.RUnlock()
-
-			for _, r := range s {
-				gid, ok := ttf.Chars[uint32(r)]
-				if ok {
-					b := make([]byte, 2)
-					binary.BigEndian.PutUint16(b, gid)
-					bb = append(bb, b...)
-					usedGIDs[gid] = true
-				} // else "invalid char"
-			}
-		}
-		s = string(bb)
+func PrepBytes(xRefTable *XRefTable, s, fontName string, embed, rtl, fillFont bool) (string, error) {
+	if strings.TrimSpace(fontName) == "" {
+		return "", fmt.Errorf("prepare text bytes: %w", font.ErrMissingFontName)
 	}
-	s1, _ := types.Escape(s)
-	return *s1
+	userFont, err := font.IsUserFont(fontName)
+	if err != nil {
+		return "", fmt.Errorf("font %s: load metrics: %w", fontName, err)
+	}
+	if !userFont && !font.IsCoreFont(fontName) {
+		return "", fmt.Errorf("font %s: prepare text bytes: %w", fontName, font.ErrUnknownFont)
+	}
+	if userFont {
+		s, err = prepareUserFontBytes(xRefTable, s, fontName, embed, rtl, fillFont)
+		if err != nil {
+			return "", err
+		}
+	}
+	s1, err := types.Escape(s)
+	if err != nil {
+		return "", fmt.Errorf("font %s: escape text: %w", fontName, err)
+	}
+	return *s1, nil
 }
 
-func writeStringToBuf(xRefTable *XRefTable, w io.Writer, s string, x, y float64, td TextDescriptor) {
-	s = PrepBytes(xRefTable, s, td.FontName, td.Embed, td.RTL, false)
-	fmt.Fprintf(w, "BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr (%s) Tj ET ",
-		td.StrokeCol.R, td.StrokeCol.G, td.StrokeCol.B, td.FillCol.R, td.FillCol.G, td.FillCol.B, x, y, td.RMode, s)
+func writeStringToBuf(xRefTable *XRefTable, w io.Writer, s string, x, y float64, td TextDescriptor) error {
+	s, err := PrepBytes(xRefTable, s, td.FontName, td.Embed, td.RTL, false)
+	if err != nil {
+		return err
+	}
+	if _, err := fmt.Fprintf(w, "BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr (%s) Tj ET ",
+		td.StrokeCol.R, td.StrokeCol.G, td.StrokeCol.B, td.FillCol.R, td.FillCol.G, td.FillCol.B, x, y, td.RMode, s); err != nil {
+		return fmt.Errorf("write text string: %w", err)
+	}
+	return nil
 }
 
 func setFont(w io.Writer, fontID string, fontSize float32) {
@@ -227,11 +321,18 @@ func setFont(w io.Writer, fontID string, fontSize float32) {
 }
 
 // CalcBoundingBox calculates a bounding box.
-func CalcBoundingBox(s string, x, y float64, fontName string, fontSize int) *types.Rectangle {
-	w := font.TextWidth(s, fontName, fontSize)
-	h := font.LineHeight(fontName, fontSize)
-	y -= math.Ceil(font.Descent(fontName, fontSize))
-	return types.NewRectangle(x, y, x+w, y+h)
+func CalcBoundingBox(s string, x, y float64, fontName string, fontSize int) (*types.Rectangle, error) {
+	w, err := font.TextWidth(s, fontName, fontSize)
+	if err != nil {
+		return nil, fmt.Errorf("font %s: text width: %w", fontName, err)
+	}
+	fbb, err := font.BoundingBox(fontName)
+	if err != nil {
+		return nil, fmt.Errorf("font %s: bounding box: %w", fontName, err)
+	}
+	h := font.UserSpaceUnits(fbb.Height(), fontSize)
+	y -= math.Ceil(font.UserSpaceUnits(-fbb.LL.Y, fontSize))
+	return types.NewRectangle(x, y, x+w, y+h), nil
 }
 
 func horAdjustBoundingBoxForLines(r, box *types.Rectangle, dx, dy float64, x, y *float64) {
@@ -255,18 +356,27 @@ func horAdjustBoundingBoxForLines(r, box *types.Rectangle, dx, dy float64, x, y 
 	}
 }
 
-func prepJustifiedLine(xRefTable *XRefTable, lines *[]string, strbuf []string, strWidth, w float64, fontSize int, fontName string, embed, rtl bool) {
-	blank := PrepBytes(xRefTable, " ", fontName, embed, true, false)
+func prepJustifiedLine(xRefTable *XRefTable, lines *[]string, strbuf []string, strWidth, w float64, fontSize int, fontName string, embed, rtl bool) error {
+	blank, err := PrepBytes(xRefTable, " ", fontName, embed, true, false)
+	if err != nil {
+		return fmt.Errorf("prepare justified blank: %w", err)
+	}
 	var sb strings.Builder
 	sb.WriteString("[")
 	wc := len(strbuf)
-	dx := font.GlyphSpaceUnits(float64((w-strWidth))/float64(wc-1), fontSize)
+	var dx float64
+	if wc > 1 {
+		dx = font.GlyphSpaceUnits(float64((w-strWidth))/float64(wc-1), fontSize)
+	}
 	for i := 0; i < wc; i++ {
 		j := i
 		if rtl {
 			j = wc - 1 - i
 		}
-		s := PrepBytes(xRefTable, strbuf[j], fontName, embed, rtl, false)
+		s, err := PrepBytes(xRefTable, strbuf[j], fontName, embed, rtl, false)
+		if err != nil {
+			return fmt.Errorf("prepare justified word %d: %w", j+1, err)
+		}
 		sb.WriteString(fmt.Sprintf(" (%s)", s))
 		if i < wc-1 {
 			sb.WriteString(fmt.Sprintf(" %d (%s)", -int(dx), blank))
@@ -274,87 +384,102 @@ func prepJustifiedLine(xRefTable *XRefTable, lines *[]string, strbuf []string, s
 	}
 	sb.WriteString(" ] TJ")
 	*lines = append(*lines, sb.String())
+	return nil
 }
 
-func newPrepJustifiedString(
-	xRefTable *XRefTable,
-	fontName string,
-	fontSize int) func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, cjk, rtl bool) int {
+type justifiedTextPreparer struct {
+	xRefTable  *XRefTable
+	strbuf     []string
+	strWidth   float64
+	indent     bool
+	blankWidth float64
+}
 
-	// Not yet rendered content.
-	strbuf := []string{}
-
-	// Width of strbuf's content in user space implied by fontSize.
-	var strWidth float64
-
-	// Indent first line of paragraphs.
-	var indent bool = true
-
-	// Indentation string for first line of paragraphs.
-	identPrefix := "    "
-
-	blankWidth := font.TextWidth(" ", fontName, fontSize)
-
-	return func(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, embed, rtl bool) int {
-
-		if len(s) == 0 {
-			if len(strbuf) > 0 {
-				s1 := PrepBytes(xRefTable, strings.Join(strbuf, " "), fontName, embed, rtl, false)
-				if rtl {
-					dx := font.GlyphSpaceUnits(w-strWidth, *fontSize)
-					s = fmt.Sprintf("[ %d (%s) ] TJ ", -int(dx), s1)
-				} else {
-					s = fmt.Sprintf("(%s) Tj", s1)
-				}
-				*lines = append(*lines, s)
-				strbuf = []string{}
-				strWidth = 0
-			}
-			if lastline {
-				return 0
-			}
-			indent = true
-			if parIndent {
-				return 0
-			}
-			return 1
-		}
-
-		linefeeds := 0
-		ss := strings.Split(s, " ")
-		if parIndent && len(strbuf) == 0 && indent {
-			ss[0] = identPrefix + ss[0]
-		}
-
-		for _, s1 := range ss {
-			s1Width := font.TextWidth(s1, fontName, *fontSize)
-			bw := 0.
-			if len(strbuf) > 0 {
-				bw = blankWidth
-			}
-			if w-strWidth-(s1Width+bw) > 0 {
-				strWidth += s1Width + bw
-				strbuf = append(strbuf, s1)
-				continue
-			}
-			// Ensure s1 fits into w.
-			fs := font.Size(s1, fontName, w)
-			if fs < *fontSize {
-				*fontSize = fs
-			}
-			if len(strbuf) == 0 {
-				prepJustifiedLine(xRefTable, lines, []string{s1}, s1Width, w, *fontSize, fontName, embed, rtl)
-			} else {
-				// Note: Previous lines have whitespace based on bigger font size.
-				prepJustifiedLine(xRefTable, lines, strbuf, strWidth, w, *fontSize, fontName, embed, rtl)
-				strbuf = []string{s1}
-				strWidth = s1Width
-			}
-			linefeeds++
-			indent = false
-		}
-		return 0
+func newJustifiedTextPreparer(xRefTable *XRefTable, fontName string, fontSize int) (*justifiedTextPreparer, error) {
+	blankWidth, err := font.TextWidth(" ", fontName, fontSize)
+	if err != nil {
+		return nil, fmt.Errorf("font %s: justified blank width: %w", fontName, err)
 	}
+	return &justifiedTextPreparer{xRefTable: xRefTable, indent: true, blankWidth: blankWidth}, nil
+}
+
+func (p *justifiedTextPreparer) flush(lines *[]string, w float64, fontName string, fontSize *int, lastline, parIndent, embed, rtl bool) (int, error) {
+	if len(p.strbuf) > 0 {
+		s, err := PrepBytes(p.xRefTable, strings.Join(p.strbuf, " "), fontName, embed, rtl, false)
+		if err != nil {
+			return 0, fmt.Errorf("prepare final justified line: %w", err)
+		}
+		if rtl {
+			dx := font.GlyphSpaceUnits(w-p.strWidth, *fontSize)
+			s = fmt.Sprintf("[ %d (%s) ] TJ ", -int(dx), s)
+		} else {
+			s = fmt.Sprintf("(%s) Tj", s)
+		}
+		*lines = append(*lines, s)
+		p.strbuf = nil
+		p.strWidth = 0
+	}
+	if lastline {
+		return 0, nil
+	}
+	p.indent = true
+	if parIndent {
+		return 0, nil
+	}
+	return 1, nil
+}
+
+func (p *justifiedTextPreparer) add(lines *[]string, s string, w float64, fontName string, fontSize *int, parIndent, embed, rtl bool) (int, error) {
+	linefeeds := 0
+	ss := strings.Split(s, " ")
+	if parIndent && len(p.strbuf) == 0 && p.indent {
+		ss[0] = "    " + ss[0]
+	}
+	for _, word := range ss {
+		wordWidth, err := font.TextWidth(word, fontName, *fontSize)
+		if err != nil {
+			return 0, fmt.Errorf("font %s: justified word width: %w", fontName, err)
+		}
+		blankWidth := 0.
+		if len(p.strbuf) > 0 {
+			blankWidth = p.blankWidth
+		}
+		if w-p.strWidth-(wordWidth+blankWidth) > 0 {
+			p.strWidth += wordWidth + blankWidth
+			p.strbuf = append(p.strbuf, word)
+			continue
+		}
+		size, err := font.Size(word, fontName, w)
+		if err != nil {
+			return 0, fmt.Errorf("font %s: fit justified word: %w", fontName, err)
+		}
+		if size < *fontSize {
+			*fontSize = size
+		}
+		if len(p.strbuf) == 0 {
+			err = prepJustifiedLine(p.xRefTable, lines, []string{word}, wordWidth, w, *fontSize, fontName, embed, rtl)
+		} else {
+			err = prepJustifiedLine(p.xRefTable, lines, p.strbuf, p.strWidth, w, *fontSize, fontName, embed, rtl)
+			if err != nil {
+				return 0, err
+			}
+			p.strbuf = []string{word}
+			p.strWidth = wordWidth
+		}
+		if err != nil {
+			return 0, err
+		}
+		linefeeds++
+		p.indent = false
+	}
+	return linefeeds, nil
+}
+
+func (p *justifiedTextPreparer) prepare(lines *[]string, s string, w float64, fontName string, fontSize *int, lastline, parIndent, embed, rtl bool) (int, error) {
+	if len(s) == 0 {
+		return p.flush(lines, w, fontName, fontSize, lastline, parIndent, embed, rtl)
+	}
+	return p.add(lines, s, w, fontName, fontSize, parIndent, embed, rtl)
 }
 
 // Prerender justified text in order to calculate bounding box height.
@@ -365,7 +490,7 @@ func preRenderJustifiedText(
 	x, y, width float64,
 	td TextDescriptor,
 	mLeft, mRight, borderWidth float64,
-	fontSize *int) float64 {
+	fontSize *int) (float64, error) {
 
 	var ww float64
 	if !td.ScaleAbs {
@@ -374,45 +499,60 @@ func preRenderJustifiedText(
 		if width > 0 {
 			ww = width * td.Scale
 		} else {
-			box, _ := calcBoundingBoxForLines(*lines, x, y, td.FontName, *fontSize)
+			box, _, err := calcBoundingBoxForLines(*lines, x, y, td.FontName, *fontSize)
+			if err != nil {
+				return 0, err
+			}
 			ww = box.Width() * td.Scale
 		}
 	}
 	ww -= mLeft + mRight + 2*borderWidth
-	prepJustifiedString := newPrepJustifiedString(xRefTable, td.FontName, *fontSize)
+	preparer, err := newJustifiedTextPreparer(xRefTable, td.FontName, *fontSize)
+	if err != nil {
+		return 0, err
+	}
 	l := []string{}
 	for i, s := range *lines {
-		linefeeds := prepJustifiedString(&l, s, ww, td.FontName, fontSize, false, td.ParIndent, td.Embed, td.RTL)
+		linefeeds, err := preparer.prepare(&l, s, ww, td.FontName, fontSize, false, td.ParIndent, td.Embed, td.RTL)
+		if err != nil {
+			return 0, fmt.Errorf("justify line %d: %w", i+1, err)
+		}
 		for j := 0; j < linefeeds; j++ {
 			l = append(l, "")
 		}
 		isLastLine := i == len(*lines)-1
 		if isLastLine {
-			prepJustifiedString(&l, "", ww, td.FontName, fontSize, true, td.ParIndent, td.Embed, td.RTL)
+			if _, err := preparer.prepare(&l, "", ww, td.FontName, fontSize, true, td.ParIndent, td.Embed, td.RTL); err != nil {
+				return 0, fmt.Errorf("finalize justified text: %w", err)
+			}
 		}
 	}
 	*lines = l
-	return ww
+	return ww, nil
 }
 
 func scaleFontSize(r *types.Rectangle, lines []string, scaleAbs bool,
 	scale, width, x, y, mLeft, mRight, borderWidth float64,
-	fontName string, fontSize *int) {
+	fontName string, fontSize *int) error {
 	if scaleAbs {
 		*fontSize = int(float64(*fontSize) * scale)
 	} else {
 		www := width
 		if width == 0 {
-			box, _ := calcBoundingBoxForLines(lines, x, y, fontName, *fontSize)
+			box, _, err := calcBoundingBoxForLines(lines, x, y, fontName, *fontSize)
+			if err != nil {
+				return err
+			}
 			www = box.Width() + mLeft + mRight + 2*borderWidth
 		}
 		*fontSize = int(r.Width() * scale * float64(*fontSize) / www)
 	}
+	return nil
 }
 
 func horizontalWrapUp(box *types.Rectangle, maxLine string, hAlign types.HAlignment,
 	x *float64, width, ww, mLeft, mRight, borderWidth float64,
-	fontName string, fontSize *int) {
+	fontName string, fontSize *int) error {
 	switch hAlign {
 	case types.AlignLeft:
 		box.Translate(mLeft+borderWidth, 0)
@@ -433,7 +573,11 @@ func horizontalWrapUp(box *types.Rectangle, maxLine string, hAlign types.HAlignm
 	} else if width > 0 {
 		netWidth := width - 2*borderWidth - mLeft - mRight
 		if box.Width() > netWidth {
-			*fontSize = font.Size(maxLine, fontName, netWidth)
+			size, err := font.Size(maxLine, fontName, netWidth)
+			if err != nil {
+				return fmt.Errorf("font %s: fit aligned text: %w", fontName, err)
+			}
+			*fontSize = size
 		}
 		switch hAlign {
 		case types.AlignLeft:
@@ -450,6 +594,7 @@ func horizontalWrapUp(box *types.Rectangle, maxLine string, hAlign types.HAlignm
 		box.LL.X -= mLeft + borderWidth
 		box.UR.X += mRight + borderWidth
 	}
+	return nil
 }
 
 func createBoundingBoxForColumn(xRefTable *XRefTable, r *types.Rectangle, x, y *float64,
@@ -458,32 +603,47 @@ func createBoundingBoxForColumn(xRefTable *XRefTable, r *types.Rectangle, x, y *
 	dx, dy float64,
 	mTop, mBot, mLeft, mRight float64,
 	borderWidth float64,
-	fontSize *int, lines *[]string) *types.Rectangle {
+	fontSize *int, lines *[]string) (*types.Rectangle, error) {
 
 	var ww float64
 	if td.HAlign == types.AlignJustify {
-		ww = preRenderJustifiedText(xRefTable, lines, r, *x, *y, width, td, mLeft, mRight, borderWidth, fontSize)
+		var err error
+		ww, err = preRenderJustifiedText(xRefTable, lines, r, *x, *y, width, td, mLeft, mRight, borderWidth, fontSize)
+		if err != nil {
+			return nil, fmt.Errorf("prepare justified text: %w", err)
+		}
 	}
 
 	if td.HAlign != types.AlignJustify {
-		scaleFontSize(r, *lines, td.ScaleAbs, td.Scale, width, *x, *y, mLeft, mRight, borderWidth, td.FontName, fontSize)
+		if err := scaleFontSize(r, *lines, td.ScaleAbs, td.Scale, width, *x, *y, mLeft, mRight, borderWidth, td.FontName, fontSize); err != nil {
+			return nil, fmt.Errorf("scale text: %w", err)
+		}
 	}
 
 	// Apply vertical alignment.
 	var dy1 float64
+	var err error
 	switch td.VAlign {
 	case types.AlignTop:
-		dy1 = deltaAlignTop(td.FontName, *fontSize, mTop+borderWidth)
+		dy1, err = deltaAlignTop(td.FontName, *fontSize, mTop+borderWidth)
 	case types.AlignMiddle:
-		dy1 = deltaAlignMiddle(td.FontName, *fontSize, len(*lines), mTop, mBot)
+		dy1, err = deltaAlignMiddle(td.FontName, *fontSize, len(*lines), mTop, mBot)
 	case types.AlignBottom:
-		dy1 = deltaAlignBottom(td.FontName, *fontSize, len(*lines), mBot)
+		dy1, err = deltaAlignBottom(td.FontName, *fontSize, len(*lines), mBot)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("align text vertically: %w", err)
 	}
 	*y += math.Ceil(dy1)
 
-	box, maxLine := calcBoundingBoxForLines(*lines, *x, *y, td.FontName, *fontSize)
+	box, maxLine, err := calcBoundingBoxForLines(*lines, *x, *y, td.FontName, *fontSize)
+	if err != nil {
+		return nil, fmt.Errorf("measure column lines: %w", err)
+	}
 	// maxLine for hAlign != AlignJustify only!
-	horizontalWrapUp(box, maxLine, td.HAlign, x, width, ww, mLeft, mRight, borderWidth, td.FontName, fontSize)
+	if err := horizontalWrapUp(box, maxLine, td.HAlign, x, width, ww, mLeft, mRight, borderWidth, td.FontName, fontSize); err != nil {
+		return nil, fmt.Errorf("align text horizontally: %w", err)
+	}
 
 	box.LL.Y -= mBot + borderWidth
 	box.UR.Y += mTop + borderWidth
@@ -494,12 +654,15 @@ func createBoundingBoxForColumn(xRefTable *XRefTable, r *types.Rectangle, x, y *
 
 	horAdjustBoundingBoxForLines(r, box, dx, dy, x, y)
 
-	return box
+	return box, nil
 }
 
-func flushJustifiedStringToBuf(w io.Writer, s string, x, y float64, strokeCol, fillCol color.SimpleColor, rm draw.RenderMode) {
-	fmt.Fprintf(w, "BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr %s ET ",
-		strokeCol.R, strokeCol.G, strokeCol.B, fillCol.R, fillCol.G, fillCol.B, x, y, rm, s)
+func flushJustifiedStringToBuf(w io.Writer, s string, x, y float64, strokeCol, fillCol color.SimpleColor, rm draw.RenderMode) error {
+	if _, err := fmt.Fprintf(w, "BT 0 Tw %.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td %d Tr %s ET ",
+		strokeCol.R, strokeCol.G, strokeCol.B, fillCol.R, fillCol.G, fillCol.B, x, y, rm, s); err != nil {
+		return fmt.Errorf("write justified text: %w", err)
+	}
+	return nil
 }
 
 func scaleXForRegion(x float64, mediaBox, region *types.Rectangle) float64 {
@@ -553,11 +716,17 @@ func renderBackgroundAndBorder(w io.Writer, td TextDescriptor, borderWidth float
 	}
 }
 
-func renderText(xRefTable *XRefTable, w io.Writer, lines []string, td TextDescriptor, x, y float64, fontSize int) {
-	lh := font.LineHeight(td.FontName, fontSize)
-	for _, s := range lines {
+func renderText(xRefTable *XRefTable, w io.Writer, lines []string, td TextDescriptor, x, y float64, fontSize int) error {
+	_, lh, err := fontVerticalMetrics(td.FontName, fontSize)
+	if err != nil {
+		return fmt.Errorf("font %s: resolve vertical metrics: %w", td.FontName, err)
+	}
+	for i, s := range lines {
 		if td.HAlign != types.AlignJustify {
-			lineBB := CalcBoundingBox(s, x, y, td.FontName, fontSize)
+			lineBB, err := CalcBoundingBox(s, x, y, td.FontName, fontSize)
+			if err != nil {
+				return fmt.Errorf("line %d bounding box: %w", i+1, err)
+			}
 			// Apply horizontal alignment.
 			var dx float64
 			switch td.HAlign {
@@ -572,16 +741,21 @@ func renderText(xRefTable *XRefTable, w io.Writer, lines []string, td TextDescri
 				draw.SetStrokeColor(w, color.Black)
 				draw.DrawRectSimple(w, lineBB)
 			}
-			writeStringToBuf(xRefTable, w, s, x-dx, y, td)
+			if err := writeStringToBuf(xRefTable, w, s, x-dx, y, td); err != nil {
+				return fmt.Errorf("line %d bytes: %w", i+1, err)
+			}
 			y -= lh
 			continue
 		}
 
 		if len(s) > 0 {
-			flushJustifiedStringToBuf(w, s, x, y, td.StrokeCol, td.FillCol, td.RMode)
+			if err := flushJustifiedStringToBuf(w, s, x, y, td.StrokeCol, td.FillCol, td.RMode); err != nil {
+				return fmt.Errorf("line %d justified text: %w", i+1, err)
+			}
 		}
 		y -= lh
 	}
+	return nil
 }
 
 // This is a patched version of strings.FieldsFunc that also returns empty fields.
@@ -634,9 +808,21 @@ func SplitMultilineStr(s string) []string {
 	return append(lines, fieldsFunc(s, func(c rune) bool { return c == 0x0a })...)
 }
 
-func wrapLine(ss *[]string, line, space, word, fontName string, fontSize int, maxWidthPoints float64) {
+func textFits(candidate, fontName string, fontSize int, maxWidthPoints float64) (bool, error) {
+	width, err := font.TextWidth(candidate, fontName, fontSize)
+	if err != nil {
+		return false, fmt.Errorf("font %s: wrap candidate: %w", fontName, err)
+	}
+	return width < maxWidthPoints, nil
+}
+
+func wrapLine(ss *[]string, line, space, word, fontName string, fontSize int, maxWidthPoints float64) error {
 	candidate := line + space + word
-	if font.TextWidth(candidate, fontName, fontSize) < maxWidthPoints {
+	fits, err := textFits(candidate, fontName, fontSize, maxWidthPoints)
+	if err != nil {
+		return err
+	}
+	if fits {
 		*ss = append(*ss, candidate)
 	} else {
 		if len(line) > 0 {
@@ -644,9 +830,27 @@ func wrapLine(ss *[]string, line, space, word, fontName string, fontSize int, ma
 		}
 		*ss = append(*ss, word)
 	}
+	return nil
 }
 
-func wrap(lines []string, fontName string, fontSize int, maxWidthPoints float64) []string {
+func wrapWord(ss *[]string, line, space, word, nextSpace, fontName string, fontSize int, maxWidthPoints float64) (string, string, error) {
+	candidate := line + space + word
+	fits, err := textFits(candidate, fontName, fontSize, maxWidthPoints)
+	if err != nil {
+		return "", "", err
+	}
+	if fits {
+		return candidate, nextSpace, nil
+	}
+	if len(line) > 0 {
+		*ss = append(*ss, line)
+		return word, space, nil
+	}
+	*ss = append(*ss, word)
+	return line, "", nil
+}
+
+func wrap(lines []string, fontName string, fontSize int, maxWidthPoints float64) ([]string, error) {
 
 	var wrapState int
 
@@ -659,7 +863,7 @@ func wrap(lines []string, fontName string, fontSize int, maxWidthPoints float64)
 
 	var ss []string
 
-	for _, s := range lines {
+	for lineIndex, s := range lines {
 
 		var word, space, line string
 
@@ -688,21 +892,11 @@ func wrap(lines []string, fontName string, fontSize int, maxWidthPoints float64)
 
 			case inWord:
 				if unicode.IsSpace(c) {
-					candidate := line + space + word
-					if font.TextWidth(candidate, fontName, fontSize) < maxWidthPoints {
-						line = candidate
-						space = string(c)
-
-					} else {
-						if len(line) > 0 {
-							ss = append(ss, line)
-							line = word
-						} else {
-							ss = append(ss, word)
-							space = ""
-						}
+					var err error
+					line, space, err = wrapWord(&ss, line, space, word, string(c), fontName, fontSize, maxWidthPoints)
+					if err != nil {
+						return nil, fmt.Errorf("line %d: %w", lineIndex+1, err)
 					}
-
 					wrapState = inSpace
 
 				} else {
@@ -720,74 +914,79 @@ func wrap(lines []string, fontName string, fontSize int, maxWidthPoints float64)
 		}
 
 		if wrapState == inWord {
-			wrapLine(&ss, line, space, word, fontName, fontSize, maxWidthPoints)
+			if err := wrapLine(&ss, line, space, word, fontName, fontSize, maxWidthPoints); err != nil {
+				return nil, fmt.Errorf("line %d: %w", lineIndex+1, err)
+			}
 		}
 	}
 
-	return ss
+	return ss, nil
 }
 
-// WordWrap wraps text at unicode whitespace to fit within a specified width using the given font and font size.
-// Explicit newlines are honored, and whitespace at the beginning of a line is preserved (unless it
-// would cause a word to overrun the line).  Amounts and types of whitespace are preserved within lines.
-func WordWrap(s string, fontName string, fontSize int, maxWidthPoints float64) []string {
+// WordWrap wraps text at Unicode whitespace and reports font metric failures.
+func WordWrap(s string, fontName string, fontSize int, maxWidthPoints float64) ([]string, error) {
 	if len(s) == 0 || maxWidthPoints <= 0 {
-		return []string{s}
+		return []string{s}, nil
 	}
 
 	lines := SplitMultilineStr(s)
 
-	ss := wrap(lines, fontName, fontSize, maxWidthPoints)
+	ss, err := wrap(lines, fontName, fontSize, maxWidthPoints)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(ss) == 0 {
 		ss = append(ss, "")
 	}
 
-	return ss
+	return ss, nil
 }
 
-// WriteColumn writes a text column using s at position x/y using a certain font, fontsize and a desired horizontal and vertical alignment.
-// Enforce a desired column width by supplying a width > 0 (especially useful for justified text).
-// It returns the bounding box of this column.
-func WriteColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rectangle, td TextDescriptor, width float64) *types.Rectangle {
+func scaleTextColumnForRegion(
+	mediaBox, region *types.Rectangle,
+	dx, dy, width *float64,
+	fontSize *int,
+	mTop, mBot, mLeft, mRight, borderWidth *float64,
+) *types.Rectangle {
+	if region == nil {
+		return mediaBox
+	}
+	*dx = scaleXForRegion(*dx, mediaBox, region)
+	*dy = scaleYForRegion(*dy, mediaBox, region)
+	*width = scaleXForRegion(*width, mediaBox, region)
+	*fontSize = int(scaleYForRegion(float64(*fontSize), mediaBox, region))
+	*mTop = scaleYForRegion(*mTop, mediaBox, region)
+	*mBot = scaleYForRegion(*mBot, mediaBox, region)
+	*mLeft = scaleXForRegion(*mLeft, mediaBox, region)
+	*mRight = scaleXForRegion(*mRight, mediaBox, region)
+	*borderWidth = scaleXForRegion(*borderWidth, mediaBox, region)
+	return region
+}
+
+func positionTextColumn(r *types.Rectangle, x, y, dx, dy float64) (float64, float64) {
+	if x >= 0 {
+		x = r.LL.X + x
+	} else {
+		x = r.LL.X + r.Width()/2
+	}
+	if y >= 0 {
+		y = r.LL.Y + y
+	} else {
+		y = r.LL.Y + r.Height()/2
+	}
+	return x + dx, y + dy
+}
+
+func writeColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rectangle, td TextDescriptor, width float64) (*types.Rectangle, error) {
+	renderWriter := &textRenderWriter{Writer: w}
+	w = renderWriter
 	x, y, dx, dy := td.X, td.Y, td.Dx, td.Dy
 	mTop, mBot, mLeft, mRight := td.MTop, td.MBot, td.MLeft, td.MRight
 	s, fontSize, borderWidth := td.Text, td.FontSize, td.BorderWidth
 
-	r := mediaBox
-	if region != nil {
-		r = region
-		dx = scaleXForRegion(dx, mediaBox, r)
-		dy = scaleYForRegion(dy, mediaBox, r)
-		width = scaleXForRegion(width, mediaBox, r)
-		fontSize = int(scaleYForRegion(float64(fontSize), mediaBox, r))
-		mTop = scaleYForRegion(mTop, mediaBox, r)
-		mBot = scaleYForRegion(mBot, mediaBox, r)
-		mLeft = scaleXForRegion(mLeft, mediaBox, r)
-		mRight = scaleXForRegion(mRight, mediaBox, r)
-		borderWidth = scaleXForRegion(borderWidth, mediaBox, r)
-	}
-
-	if x >= 0 {
-		x = r.LL.X + x
-	}
-	if y >= 0 {
-		y = r.LL.Y + y
-	}
-
-	// Position text horizontally centered for x < 0.
-	if x < 0 {
-		x = r.LL.X + r.Width()/2
-	}
-
-	// Position text vertically centered for y < 0.
-	if y < 0 {
-		y = r.LL.Y + r.Height()/2
-	}
-
-	// Apply offset.
-	x += dx
-	y += dy
+	r := scaleTextColumnForRegion(mediaBox, region, &dx, &dy, &width, &fontSize, &mTop, &mBot, &mLeft, &mRight, &borderWidth)
+	x, y = positionTextColumn(r, x, y, dx, dy)
 
 	// Cache haircross coordinates.
 	x0, y0 := x, y
@@ -805,8 +1004,11 @@ func WriteColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rect
 	}
 
 	// Create bounding box and prerender content stream bytes for justified text.
-	colBB := createBoundingBoxForColumn(xRefTable,
+	colBB, err := createBoundingBoxForColumn(xRefTable,
 		r, &x, &y, width, td, dx, dy, mTop, mBot, mLeft, mRight, borderWidth, &fontSize, &lines)
+	if err != nil {
+		return nil, fmt.Errorf("font %s: create column bounding box: %w", td.FontName, err)
+	}
 
 	fmt.Fprint(w, "q ")
 
@@ -829,7 +1031,9 @@ func WriteColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rect
 	}
 
 	// Render text.
-	renderText(xRefTable, w, lines, td, x, y, fontSize)
+	if err := renderText(xRefTable, w, lines, td, x, y, fontSize); err != nil {
+		return nil, errors.Join(fmt.Errorf("font %s: render column text: %w", td.FontName, err), renderWriter.err)
+	}
 
 	fmt.Fprintf(w, "Q ")
 
@@ -841,12 +1045,28 @@ func WriteColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rect
 		draw.DrawCircle(w, x0, y0, 5, color.Black, &color.Red)
 	}
 
-	return colBB
+	if renderWriter.err != nil {
+		return nil, fmt.Errorf("font %s: write column content: %w", td.FontName, renderWriter.err)
+	}
+	return colBB, nil
 }
 
-// WriteMultiLine writes s at position x/y using a certain font, fontsize and a desired horizontal and vertical alignment.
-// It returns the bounding box of this text column.
-func WriteMultiLine(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rectangle, td TextDescriptor) *types.Rectangle {
+// WriteColumn writes a text column and reports rendering failures.
+func WriteColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rectangle, td TextDescriptor, width float64) (*types.Rectangle, error) {
+	if xRefTable == nil {
+		return nil, fmt.Errorf("render text column: %w", ErrMissingXRefTable)
+	}
+	if w == nil {
+		return nil, errors.New("render text column: missing writer")
+	}
+	if mediaBox == nil {
+		return nil, errors.New("render text column: missing media box")
+	}
+	return writeColumn(xRefTable, w, mediaBox, region, td, width)
+}
+
+// WriteMultiLine writes multiline text and reports rendering failures.
+func WriteMultiLine(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rectangle, td TextDescriptor) (*types.Rectangle, error) {
 	return WriteColumn(xRefTable, w, mediaBox, region, td, 0)
 }
 
@@ -875,8 +1095,8 @@ func AnchorPosAndAlign(a types.Anchor, r *types.Rectangle) (x, y float64, hAlign
 	return
 }
 
-// WriteMultiLineAnchored writes multiple lines with anchored position and returns its bounding box.
-func WriteMultiLineAnchored(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rectangle, td TextDescriptor, a types.Anchor) *types.Rectangle {
+// WriteMultiLineAnchored writes anchored multiline text and reports rendering failures.
+func WriteMultiLineAnchored(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rectangle, td TextDescriptor, a types.Anchor) (*types.Rectangle, error) {
 	r := mediaBox
 	if region != nil {
 		r = region
@@ -885,8 +1105,8 @@ func WriteMultiLineAnchored(xRefTable *XRefTable, w io.Writer, mediaBox, region 
 	return WriteMultiLine(xRefTable, w, mediaBox, region, td)
 }
 
-// WriteColumnAnchored writes a justified text column with anchored position and returns its bounding box.
-func WriteColumnAnchored(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rectangle, td TextDescriptor, a types.Anchor, width float64) *types.Rectangle {
+// WriteColumnAnchored writes an anchored justified column and reports rendering failures.
+func WriteColumnAnchored(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rectangle, td TextDescriptor, a types.Anchor, width float64) (*types.Rectangle, error) {
 	r := mediaBox
 	if region != nil {
 		r = region

@@ -17,7 +17,10 @@ limitations under the License.
 package api
 
 import (
+	"errors"
+	"fmt"
 	"io"
+	"math"
 	"os"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -26,16 +29,48 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// Zoom applies resizeConf for selected pages of rs and writes result to w.
+func validateZoomConfiguration(zoom *model.Zoom) error {
+	if zoom == nil {
+		return ErrMissingZoomConfiguration
+	}
+	if !finiteZoomValue(zoom.Factor) || !finiteZoomValue(zoom.HMargin) || !finiteZoomValue(zoom.VMargin) {
+		return fmt.Errorf("non-finite factor or margin: %w", ErrInvalidZoomConfiguration)
+	}
+
+	n := 0
+	if zoom.Factor != 0 {
+		n++
+	}
+	if zoom.HMargin != 0 {
+		n++
+	}
+	if zoom.VMargin != 0 {
+		n++
+	}
+	if n != 1 {
+		return fmt.Errorf("supply exactly one factor or margin: %w", ErrInvalidZoomConfiguration)
+	}
+	if zoom.Factor < 0 || zoom.Factor == 1 {
+		return fmt.Errorf("factor: %w", ErrInvalidZoomConfiguration)
+	}
+	return nil
+}
+
+func finiteZoomValue(v float64) bool {
+	return !math.IsNaN(v) && !math.IsInf(v, 0)
+}
+
+// Zoom applies zoom for selected pages of rs and writes the result to w.
 func Zoom(rs io.ReadSeeker, w io.Writer, selectedPages []string, zoom *model.Zoom, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
-
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
-
 	if w == nil {
 		return ErrMissingPDFWriter
+	}
+	if err := validateZoomConfiguration(zoom); err != nil {
+		return fmt.Errorf("zoom: validate configuration: %w", err)
 	}
 
 	if conf == nil {
@@ -45,32 +80,41 @@ func Zoom(rs io.ReadSeeker, w io.Writer, selectedPages []string, zoom *model.Zoo
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("zoom: %w", err)
 	}
 
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
-		return err
+		return fmt.Errorf("zoom: parse page selection: %w", err)
 	}
 
 	if err = pdfcpu.Zoom(ctx, pages, zoom); err != nil {
-		return err
+		return fmt.Errorf("zoom: apply pages: %w", err)
 	}
 
-	return Write(ctx, w, conf)
+	if err = Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("zoom: write output: %w", err)
+	}
+	return nil
 }
 
-// ZoomFile applies zoomConf for selected pages of inFile and writes result to outFile.
+// ZoomFile applies zoom for selected pages of inFile and writes the result to outFile.
 func ZoomFile(inFile, outFile string, selectedPages []string, zoom *model.Zoom, conf *model.Configuration) (err error) {
+	var f1, f2 *os.File
+	ok := false
+
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
+	if err := validateZoomConfiguration(zoom); err != nil {
+		return fmt.Errorf("zoom: validate configuration: %w", err)
+	}
 	if log.CLIEnabled() {
 		log.CLI.Printf("zooming %s\n", inFile)
 	}
 
-	var f1, f2 *os.File
-	ok := false
-
 	if f1, err = os.Open(inFile); err != nil {
-		return err
+		return fmt.Errorf("zoom: open input %s: %w", inFile, err)
 	}
 
 	tmpFile := ""
@@ -81,33 +125,22 @@ func ZoomFile(inFile, outFile string, selectedPages []string, zoom *model.Zoom, 
 		logWritingTo(inFile)
 	}
 
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
+	staged, err := openStagedOutput(f1, inFile, tmpFile, "zoom")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("zoom: create output: %w", err),
+			closeFile(f1, "zoom: close input"),
+		)
 	}
+	f2 = staged.output.file
 
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
+		err = staged.commit()
 	}()
-
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.ZOOM
 
 	if err = Zoom(f1, f2, selectedPages, zoom, conf); err != nil {
 		return err

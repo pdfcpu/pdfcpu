@@ -54,3 +54,87 @@ func TestValidateOCPropertiesMissingD(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateOptionalContentGroupIntentReportsArrayIndexContext(t *testing.T) {
+	err := validateOptionalContentGroupIntent(testXRef(t, model.ValidationStrict), types.Dict{
+		"Intent": types.Array{types.Integer(1)},
+	}, "optionalContentGroupDict", "Intent", REQUIRED, model.V15)
+	requireErrContains(t, err, "optionalContentGroupDict.Intent[0]")
+}
+
+func TestValidateOptionalContentGroupArrayReportsIndexContext(t *testing.T) {
+	err := validateOptionalContentGroupArray(testXRef(t, model.ValidationStrict), types.Dict{
+		"OCGs": types.Array{types.Integer(1)},
+	}, "optContentConfigDict", "OCGs", model.V15)
+	requireErrContains(t, err, "optContentConfigDict.OCGs[0]")
+}
+
+func TestValidateUsageApplicationDictArrayReportsIndexContext(t *testing.T) {
+	err := validateUsageApplicationDictArray(testXRef(t, model.ValidationStrict), types.Dict{
+		"AS": types.Array{types.Integer(1)},
+	}, "optContentConfigDict", "AS", REQUIRED, model.V15)
+	requireErrContains(t, err, "optContentConfigDict.AS[0]")
+}
+
+func TestValidateOCPropertiesReportsConfigsIndexContext(t *testing.T) {
+	err := validateOCProperties(testXRef(t, model.ValidationStrict), types.Dict{
+		"OCProperties": types.Dict{
+			"OCGs":    types.Array{},
+			"D":       types.Dict{},
+			"Configs": types.Array{types.Integer(1)},
+		},
+	}, OPTIONAL, model.V15)
+	requireErrContains(t, err, "optContentPropertiesDict.Configs[0]")
+}
+
+func TestValidateOptionalContentGroupArrayReportsObjectContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	xRefTable.Table[2] = model.NewXRefTableEntryGen0(types.Dict{
+		"Type": types.Name("OCG"),
+	})
+
+	err := validateOptionalContentGroupArray(xRefTable, types.Dict{
+		"OCGs": types.Array{*types.NewIndirectRef(2, 0)},
+	}, "optContentConfigDict", "OCGs", model.V15)
+	requireErrChainContains(t, err, "optContentConfigDict.OCGs[0] obj#2", "optionalContentGroupDict.Name")
+}
+
+func TestValidateUsageApplicationDictArrayReportsObjectContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	xRefTable.Table[2] = model.NewXRefTableEntryGen0(types.Dict{
+		"Event": types.Name("View"),
+	})
+
+	err := validateUsageApplicationDictArray(xRefTable, types.Dict{
+		"AS": types.Array{*types.NewIndirectRef(2, 0)},
+	}, "optContentConfigDict", "AS", REQUIRED, model.V15)
+	requireErrChainContains(t, err, "optContentConfigDict.AS[0] obj#2", "usageAppDict.Category")
+}
+
+func TestValidateOCPropertiesReportsConfigsObjectContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	xRefTable.Table[2] = model.NewXRefTableEntryGen0(types.Dict{
+		"BaseState": types.Name("Bogus"),
+	})
+
+	err := validateOCProperties(xRefTable, types.Dict{
+		"OCProperties": types.Dict{
+			"OCGs":    types.Array{},
+			"D":       types.Dict{},
+			"Configs": types.Array{*types.NewIndirectRef(2, 0)},
+		},
+	}, OPTIONAL, model.V15)
+	requireErrChainContains(t, err, "optContentPropertiesDict.Configs[0] obj#2", "optContentConfigDict.BaseState")
+}
+
+func TestValidateOptionalContentReportsEntryObjectContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	xRefTable.Table[2] = model.NewXRefTableEntryGen0(types.Dict{
+		"Type": types.Name("OCG"),
+	})
+
+	err := validateOptionalContent(xRefTable, types.Dict{
+		"OC": *types.NewIndirectRef(2, 0),
+	}, "annotDict", "OC", REQUIRED, model.V15)
+	requireErrChainContains(t, err, "annotDict.OC obj#2", "optionalContentGroupDict.Name")
+}

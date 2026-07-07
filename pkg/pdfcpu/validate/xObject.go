@@ -39,8 +39,11 @@ const (
 
 func validateReferenceDictPageEntry(xRefTable *model.XRefTable, o types.Object) error {
 	o, err := xRefTable.Dereference(o)
-	if err != nil || o == nil {
-		return err
+	if err != nil {
+		return fmt.Errorf("reference dict Page: dereference: %w", err)
+	}
+	if o == nil {
+		return nil
 	}
 
 	switch o.(type) {
@@ -49,7 +52,7 @@ func validateReferenceDictPageEntry(xRefTable *model.XRefTable, o types.Object) 
 		// no further processing
 
 	default:
-		return errors.New("corrupt type")
+		return fmt.Errorf("reference dict Page: expected integer or text string, got %T", o)
 
 	}
 
@@ -64,24 +67,27 @@ func validateReferenceDict(xRefTable *model.XRefTable, d types.Dict) error {
 	// F, file spec, required
 	_, err := validateFileSpecEntry(xRefTable, d, dictName, "F", REQUIRED, model.V10)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s.F: %w", dictName, err)
 	}
 
 	// Page, integer or text string, required
 	o, ok := d.Find("Page")
 	if !ok {
-		return errors.New("missing required entry \"Page\"")
+		return errors.New("refDict.Page: missing required entry")
 	}
 
 	err = validateReferenceDictPageEntry(xRefTable, o)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s.Page: %w", dictName, err)
 	}
 
 	// ID, string array, optional
 	_, err = validateStringArrayEntry(xRefTable, d, dictName, "ID", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 })
 
-	return err
+	if err != nil {
+		return fmt.Errorf("%s.ID: %w", dictName, err)
+	}
+	return nil
 }
 
 func validateOPIDictV13Part1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -331,14 +337,17 @@ func validateOPIVersionDict(xRefTable *model.XRefTable, d types.Dict) error {
 
 func validateMaskStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {
 	if sd.Type() != nil && *sd.Type() != "XObject" {
-		return errors.New("corrupt imageStreamDict type")
+		return fmt.Errorf("mask stream dict Type: expected XObject, got %q", *sd.Type())
 	}
 
 	if sd.Subtype() == nil || *sd.Subtype() != "Image" {
-		return errors.New("corrupt imageStreamDict subtype")
+		return errors.New("mask stream dict Subtype: expected Image")
 	}
 
-	return validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
+	if err := validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict); err != nil {
+		return fmt.Errorf("mask image stream dict: %w", err)
+	}
+	return nil
 }
 
 func validateMaskEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
@@ -346,7 +355,10 @@ func validateMaskEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entry
 
 	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
 	if err != nil || o == nil {
-		return err
+		if err != nil {
+			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
+		}
+		return nil
 	}
 
 	switch o := o.(type) {
@@ -354,15 +366,14 @@ func validateMaskEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entry
 	case types.StreamDict:
 		err = validateMaskStreamDict(xRefTable, &o)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
 	case types.Array:
 		// no further processing
 
 	default:
-
-		return fmt.Errorf("dict=%s corrupt entry \"%s\"", dictName, entryName)
+		return fmt.Errorf("%s.%s: expected image stream dict or color key array, got %T", dictName, entryName, o)
 
 	}
 
@@ -372,20 +383,20 @@ func validateMaskEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entry
 func validateAlternateImageStreamDicts(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
 	a, err := validateArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 	}
 	if a == nil {
 		if required {
-			return fmt.Errorf("dict=%s required entry \"%s\" missing", dictName, entryName)
+			return fmt.Errorf("%s.%s: missing required entry", dictName, entryName)
 		}
 		return nil
 	}
 
-	for _, o := range a {
+	for i, o := range a {
 
 		sd, err := validateStreamDict(xRefTable, o)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s.%s[%d]: %w", dictName, entryName, i, err)
 		}
 
 		if sd == nil {
@@ -394,7 +405,7 @@ func validateAlternateImageStreamDicts(xRefTable *model.XRefTable, d types.Dict,
 
 		err = validateImageStreamDict(xRefTable, sd, isAlternateImageStreamDict)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s.%s[%d]: %w", dictName, entryName, i, err)
 		}
 	}
 
@@ -725,7 +736,7 @@ func validateXObjectType(xRefTable *model.XRefTable, sd *types.StreamDict) error
 
 	n, err := validateNameEntry(xRefTable, sd.Dict, "xObjectStreamDict", "Type", OPTIONAL, model.V10, func(s string) bool { return types.MemberOf(s, ss) })
 	if err != nil {
-		return err
+		return fmt.Errorf("xObjectStreamDict.Type: %w", err)
 	}
 
 	// Repair "Xobject" to "XObject".
@@ -733,6 +744,41 @@ func validateXObjectType(xRefTable *model.XRefTable, sd *types.StreamDict) error
 		sd.Dict["Type"] = types.Name("XObject")
 	}
 
+	return nil
+}
+
+func validateXObjectStreamDictMissingSubtype(xRefTable *model.XRefTable, sd *types.StreamDict) error {
+	_, found := sd.Find("BBox")
+	if found {
+		if err := validateFormStreamDict(xRefTable, sd); err != nil {
+			return fmt.Errorf("xObject form stream dict: %w", err)
+		}
+		return nil
+	}
+
+	if err := validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict); err != nil {
+		return fmt.Errorf("xObject image stream dict: %w", err)
+	}
+	return nil
+}
+
+func validateXObjectStreamDictSubtype(xRefTable *model.XRefTable, sd *types.StreamDict, subtype types.Name) error {
+	var err error
+
+	switch subtype {
+	case "Form":
+		err = validateFormStreamDict(xRefTable, sd)
+	case "Image":
+		err = validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
+	case "PS":
+		err = errors.New("PostScript XObjects should not be used")
+	default:
+		return fmt.Errorf("xObjectStreamDict.Subtype: unknown subtype %q", subtype)
+	}
+
+	if err != nil {
+		return fmt.Errorf("xObject %s stream dict: %w", subtype, err)
+	}
 	return nil
 }
 
@@ -749,8 +795,11 @@ func validateXObjectStreamDict(xRefTable *model.XRefTable, o types.Object) error
 	if valid {
 		return nil
 	}
-	if err != nil || sd == nil {
-		return err
+	if err != nil {
+		return fmt.Errorf("xObject stream dict: dereference stream dict: %w", err)
+	}
+	if sd == nil {
+		return nil
 	}
 
 	dictName := "xObjectStreamDict"
@@ -765,45 +814,25 @@ func validateXObjectStreamDict(xRefTable *model.XRefTable, o types.Object) error
 	}
 	subtype, err := validateNameEntry(xRefTable, sd.Dict, dictName, "Subtype", required, model.V10, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s.Subtype: %w", dictName, err)
 	}
 
 	if subtype == nil || len(*subtype) == 0 {
-		// relaxed
-		_, found := sd.Find("BBox")
-		if found {
-			return validateFormStreamDict(xRefTable, sd)
-		}
-
-		// Relaxed for page Thumb
-		return validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
+		return validateXObjectStreamDictMissingSubtype(xRefTable, sd)
 	}
 
-	switch *subtype {
-
-	case "Form":
-		err = validateFormStreamDict(xRefTable, sd)
-
-	case "Image":
-		err = validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict)
-
-	case "PS":
-		err = fmt.Errorf("PostScript XObjects should not be used")
-
-	default:
-		return fmt.Errorf("unknown Subtype: %s", *subtype)
-
-	}
-
-	return err
+	return validateXObjectStreamDictSubtype(xRefTable, sd, *subtype)
 }
 
 func validateGroupAttributesDict(xRefTable *model.XRefTable, o types.Object) error {
 	// see 11.6.6 Transparency Group XObjects
 
 	d, err := xRefTable.DereferenceDict(o)
-	if err != nil || d == nil {
-		return err
+	if err != nil {
+		return fmt.Errorf("group attributes dict: dereference dict: %w", err)
+	}
+	if d == nil {
+		return nil
 	}
 
 	dictName := "groupAttributesDict"
@@ -811,48 +840,53 @@ func validateGroupAttributesDict(xRefTable *model.XRefTable, o types.Object) err
 	// Type, name, optional
 	_, err = validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, model.V10, func(s string) bool { return s == "Group" })
 	if err != nil {
-		return err
+		return fmt.Errorf("%s.Type: %w", dictName, err)
 	}
 
 	// S, name, required
 	_, err = validateNameEntry(xRefTable, d, dictName, "S", REQUIRED, model.V10, func(s string) bool { return s == "Transparency" })
 	if err != nil {
-		return err
+		return fmt.Errorf("%s.S: %w", dictName, err)
 	}
 
 	// CS, colorSpace, optional
 	err = validateColorSpaceEntry(xRefTable, d, dictName, "CS", OPTIONAL, ExcludePatternCS)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s.CS: %w", dictName, err)
 	}
 
 	// I, boolean, optional
 	_, err = validateBooleanEntry(xRefTable, d, dictName, "I", OPTIONAL, model.V10, nil)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("%s.I: %w", dictName, err)
+	}
+	return nil
 }
 
 func validateXObjectResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	// Version check
 	err := xRefTable.ValidateVersion("XObjectResourceDict", sinceVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("XObject resource dict: version: %w", err)
 	}
 
 	d, err := xRefTable.DereferenceDict(o)
-	if err != nil || d == nil {
-		return err
+	if err != nil {
+		return fmt.Errorf("XObject resource dict: dereference dict: %w", err)
+	}
+	if d == nil {
+		return nil
 	}
 
 	//fmt.Printf("XObjResDict:\n%s\n", d)
 
 	// Iterate over XObject resource dictionary
-	for _, o := range d {
-
+	for name, o := range d {
 		// Process XObject dict
 		err = validateXObjectStreamDict(xRefTable, o)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("XObject resource %s", name), o), err)
 		}
 	}
 

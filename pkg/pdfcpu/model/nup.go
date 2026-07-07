@@ -18,6 +18,7 @@ package model
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -66,7 +67,7 @@ type BorderStyling struct {
 	Width     float64
 }
 
-// NUp represents the command details for the command "NUp".
+// NUp represents the shared page imposition configuration for n-up, grid, and booklet commands.
 type NUp struct {
 	PageDim         *types.Dim         // Page dimensions in display unit.
 	PageSize        string             // Paper size eg. A4L, A4P, A4(=default=A4P), see paperSize.go
@@ -74,7 +75,7 @@ type NUp struct {
 	Orient          orientation        // One of rd(=default),dr,ld,dl - grid orientation
 	Enforce         bool               // enforce best-fit orientation of individual content on grid.
 	Grid            *types.Dim         // Intra page grid dimensions eg (2,2)
-	PageGrid        bool               // Create a m x n grid of pages for PDF inputfiles only (think "extra page n-Up").
+	PageGrid        bool               // Create an m x n grid of complete input pages.
 	ImgInputFile    bool               // Process image or PDF input files.
 	Margin          float64            // Cropbox for n-Up content.
 	Border          bool               // Draw bounding box.
@@ -101,8 +102,15 @@ func DefaultNUpConfig() *NUp {
 
 // String returns the string value of nup.
 func (nup NUp) String() string {
-	return fmt.Sprintf("N-Up conf: %s %s, orient=%s, grid=%s, pageGrid=%t, isImage=%t\n",
-		nup.PageSize, *nup.PageDim, nup.Orient, *nup.Grid, nup.PageGrid, nup.ImgInputFile)
+	return fmt.Sprintf("%s conf: %s %s, orient=%s, grid=%s, pageGrid=%t, isImage=%t\n",
+		nup.operation(), nup.PageSize, nup.PageDim, nup.Orient, nup.Grid, nup.PageGrid, nup.ImgInputFile)
+}
+
+func (nup NUp) operation() string {
+	if nup.PageGrid {
+		return "Grid"
+	}
+	return "N-Up"
 }
 
 // N returns the nUp value.
@@ -194,15 +202,18 @@ func createNUpFormForPDF(xRefTable *XRefTable, resDict *types.IndirectRef, conte
 	sd.InsertName("Filter", filter.Flate)
 
 	if err := sd.Encode(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("n-up PDF form: encode form stream: %w", err)
 	}
 
-	return xRefTable.IndRefForNewObject(sd)
+	ir, err := xRefTable.IndRefForNewObject(sd)
+	if err != nil {
+		return nil, fmt.Errorf("n-up PDF form: store form stream: %w", err)
+	}
+	return ir, nil
 }
 
 // NUpTilePDFBytes applies nup tiles to content bytes.
 func NUpTilePDFBytes(wr io.Writer, rSrc, rDest *types.Rectangle, formResID string, nup *NUp, rotate bool) {
-
 	// rScr is a rectangular region represented by form formResID in form space.
 
 	// rDest is an arbitrary rectangular region in dest space.
@@ -304,7 +315,7 @@ func ContentBytesForPageRotation(rot int, w, h float64) []byte {
 	return b.Bytes()
 }
 
-// NUpTilePDFBytesForPDF applies nup tiles from PDF.
+// NUpTilePDFBytesForPDF applies n-up tiles from PDF.
 func (ctx *Context) NUpTilePDFBytesForPDF(
 	pageNr int,
 	formsResDict types.Dict,
@@ -312,30 +323,41 @@ func (ctx *Context) NUpTilePDFBytesForPDF(
 	rDest *types.Rectangle,
 	nup *NUp,
 	rotate bool) error {
+	return ctx.TilePDFBytesForImposition("n-up", pageNr, formsResDict, buf, rDest, nup, rotate)
+}
 
+// TilePDFBytesForImposition applies page imposition tiles from PDF.
+func (ctx *Context) TilePDFBytesForImposition(
+	operation string,
+	pageNr int,
+	formsResDict types.Dict,
+	buf *bytes.Buffer,
+	rDest *types.Rectangle,
+	nup *NUp,
+	rotate bool) error {
 	consolidateRes := true
 	d, _, inhPAttrs, err := ctx.PageDict(pageNr, consolidateRes)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s source page %d: resolve page dictionary: %w", operation, pageNr, err)
 	}
 	if d == nil {
-		return fmt.Errorf("unknown page number: %d", pageNr)
+		return fmt.Errorf("%s source page %d: resolve page dictionary: %w", operation, pageNr, ErrPageNotFound)
 	}
 
 	// Retrieve content stream bytes.
 	bb, err := ctx.PageContent(d, pageNr)
-	if err == ErrNoContent {
+	if errors.Is(err, ErrNoContent) {
 		// TODO render if has annotations.
 		return nil
 	}
 	if err != nil {
-		return err
+		return fmt.Errorf("%s source page %d: load content: %w", operation, pageNr, err)
 	}
 
 	// Create an object for this resDict in xRefTable.
 	ir, err := ctx.IndRefForNewObject(inhPAttrs.Resources)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s source page %d: store resources: %w", operation, pageNr, err)
 	}
 
 	cropBox := inhPAttrs.MediaBox
@@ -355,7 +377,7 @@ func (ctx *Context) NUpTilePDFBytesForPDF(
 
 	formIndRef, err := createNUpFormForPDF(ctx.XRefTable, ir, bb, cropBox)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s source page %d: create form: %w", operation, pageNr, err)
 	}
 
 	formResID := fmt.Sprintf("Fm%d", pageNr)

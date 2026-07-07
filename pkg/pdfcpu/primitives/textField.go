@@ -379,38 +379,39 @@ func textFieldRunes(s string, rtl bool) []rune {
 	return rr
 }
 
-func (tf *TextField) renderCombLine(xRefTable *model.XRefTable, x, y float64, rr []rune, embed bool, buf io.Writer) {
+func (tf *TextField) renderCombLine(xRefTable *model.XRefTable, x, y float64, rr []rune, embed bool, buf io.Writer) error {
 	f := tf.Font
 	limit := min(len(rr), tf.MaxLen)
 	dx := tf.BoundingBox.Width() / float64(tf.MaxLen)
 	for j := range limit {
-		s := model.PrepBytes(xRefTable, string(rr[j]), f.Name, embed, false, f.FillFont)
+		s, err := model.PrepBytes(xRefTable, string(rr[j]), f.Name, embed, false, f.FillFont)
+		if err != nil {
+			return fmt.Errorf("comb character %d: %w", j+1, err)
+		}
 		fmt.Fprintf(buf, "%.2f %.2f Td (%s) Tj ", x, y, s)
 		y = 0
 		x = dx
 	}
+	return nil
 }
 
-func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y float64, lines []string, buf io.Writer) {
+func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y float64, lines []string, buf io.Writer) error {
 	f := tf.Font
 	cjk := pdffont.CJK(f.Script, f.Lang)
 	for i := 0; i < len(lines); i++ {
 		s := lines[i]
-		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
+		lineBB, err := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
+		if err != nil {
+			return fmt.Errorf("line %d: %w", i+1, err)
+		}
 		rr := textFieldRunes(s, f.RTL())
 		if !(tf.Comb && tf.MaxLen > 0 && tf.HorAlign == types.AlignLeft) {
-			s = model.PrepBytes(xRefTable, s, f.Name, !cjk, f.RTL(), f.FillFont)
+			s, err = model.PrepBytes(xRefTable, s, f.Name, !cjk, f.RTL(), f.FillFont)
+			if err != nil {
+				return fmt.Errorf("line %d: %w", i+1, err)
+			}
 		}
-		x := 2 * boWidth
-		if x == 0 {
-			x = 2
-		}
-		switch tf.HorAlign {
-		case types.AlignCenter:
-			x = w/2 - lineBB.Width()/2
-		case types.AlignRight:
-			x = w - lineBB.Width() - 2
-		}
+		x := alignedFieldTextX(tf.HorAlign, w, lineBB.Width(), boWidth)
 		fmt.Fprint(buf, "BT ")
 		if i == 0 {
 			fmt.Fprintf(buf, "/%s %d Tf %.2f %.2f %.2f RG %.2f %.2f %.2f rg ",
@@ -421,7 +422,9 @@ func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y f
 
 		if tf.Comb && tf.MaxLen > 0 && tf.HorAlign == types.AlignLeft {
 			x = 0.5
-			tf.renderCombLine(xRefTable, x, y, rr, !cjk, buf)
+			if err := tf.renderCombLine(xRefTable, x, y, rr, !cjk, buf); err != nil {
+				return fmt.Errorf("line %d: %w", i+1, err)
+			}
 			fmt.Fprint(buf, "ET ")
 		} else {
 			fmt.Fprintf(buf, "%.2f %.2f Td (%s) Tj ET ", x, y, s)
@@ -429,6 +432,22 @@ func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y f
 
 		y -= lh
 	}
+	return nil
+}
+
+func textFieldLines(s, fontName string, fontSize int, multiline bool, width float64) ([]string, error) {
+	if font.IsCoreFont(fontName) && utf8.ValidString(s) {
+		s = model.DecodeUTF8ToByte(s)
+	}
+	if multiline {
+		lines, err := model.WordWrap(s, fontName, fontSize, width)
+		if err != nil {
+			return nil, err
+		}
+		return lines, nil
+	}
+	s = strings.ReplaceAll(s, "\\n", "\n")
+	return []string{strings.ReplaceAll(s, "\n", " ")}, nil
 }
 
 func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
@@ -442,7 +461,11 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	f := tf.Font
 
 	if !tf.Multiline && float64(f.Size) > h {
-		f.Size = font.SizeForLineHeight(f.Name, h)
+		size, err := fontSizeForLineHeight(f.Name, h)
+		if err != nil {
+			return nil, fmt.Errorf("text field text: %w", err)
+		}
+		f.Size = size
 	}
 
 	s := tf.Value
@@ -450,22 +473,18 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		s = tf.Default
 	}
 
-	if font.IsCoreFont(f.Name) && utf8.ValidString(s) {
-		s = model.DecodeUTF8ToByte(s)
-	}
-
-	var lines []string
-	if tf.Multiline {
-		lines = model.WordWrap(s, f.Name, f.Size, w-2*boWidth)
-	} else {
-		ll := strings.ReplaceAll(s, "\\n", "\n")
-		lines = append(lines, strings.ReplaceAll(ll, "\n", " "))
+	lines, err := textFieldLines(s, f.Name, f.Size, tf.Multiline, w-2*boWidth)
+	if err != nil {
+		return nil, fmt.Errorf("text field text: %w", err)
 	}
 
 	fmt.Fprint(buf, "/Tx BMC ")
 
-	lh := font.LineHeight(f.Name, f.Size)
-	y := (tf.BoundingBox.Height()-lh)/2 + font.Descent(f.Name, f.Size)
+	lh, descent, err := fontLineMetrics(f.Name, f.Size)
+	if err != nil {
+		return nil, fmt.Errorf("text field text: %w", err)
+	}
+	y := (tf.BoundingBox.Height()-lh)/2 + descent
 	if tf.Multiline {
 		y = tf.BoundingBox.Height() - lh
 	}
@@ -474,7 +493,9 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		fmt.Fprintf(buf, "q 1 1 %.1f %.1f re W n ", w-2, h-2)
 	}
 
-	tf.renderLines(xRefTable, boWidth, lh, w, y, lines, buf)
+	if err := tf.renderLines(xRefTable, boWidth, lh, w, y, lines, buf); err != nil {
+		return nil, fmt.Errorf("text field text: %w", err)
+	}
 
 	if len(lines) > 0 {
 		fmt.Fprint(buf, "Q ")
@@ -775,7 +796,10 @@ func (tf *TextField) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) e
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb := model.WriteMultiLine(tf.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(tf.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return fmt.Errorf("text field label: %w", err)
+	}
 	l.height = bb.Height()
 	if bb.Width() > w {
 		w = bb.Width()
@@ -857,7 +881,9 @@ func (tf *TextField) doRender(p *model.Page, fonts model.FontMap) error {
 	}
 
 	if tf.Label != nil {
-		model.WriteColumn(tf.pdf.XRefTable, p.Buf, p.MediaBox, nil, *tf.Label.td, 0)
+		if _, err := model.WriteColumn(tf.pdf.XRefTable, p.Buf, p.MediaBox, nil, *tf.Label.td, 0); err != nil {
+			return fmt.Errorf("text field label: %w", err)
+		}
 	}
 
 	if tf.Debug || tf.pdf.Debug {
@@ -1035,7 +1061,11 @@ func fontAttrs(ctx *model.Context, fd types.Dict, fontID, text string, fonts map
 			if err != nil {
 				return "", "", "", "", nil, err
 			}
-			if !font.SupportedFont(name) || (len(prefix) == 0 && hasUTF(text)) {
+			supported, err := font.SupportedFont(name)
+			if err != nil {
+				return "", "", "", "", nil, fmt.Errorf("font %s: load metrics: %w", name, err)
+			}
+			if !supported || (len(prefix) == 0 && hasUTF(text)) {
 				// create utf8 font * save as indRef
 				fontID, name, lang, script, fontIndRef, err = ensureUTF8FormFont(ctx, fonts)
 				if err != nil {
@@ -1117,7 +1147,11 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine,
 	tf.Font = &f
 	tf.RTL = pdffont.RTL(lang)
 
-	if !font.SupportedFont(name) {
+	supported, err := font.SupportedFont(name)
+	if err != nil {
+		return fmt.Errorf("font %s: load metrics: %w", name, err)
+	}
+	if !supported {
 		return fmt.Errorf("font unavailable: %s", name)
 	}
 

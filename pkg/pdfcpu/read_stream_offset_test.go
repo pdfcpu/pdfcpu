@@ -31,25 +31,25 @@ func TestNextStreamOffset(t *testing.T) {
 		line      string
 		streamInd int
 		want      int
-		wantErr   bool
+		wantErr   error
 	}{
-		{"LF", "stream\nabc", 0, 7, false},
-		{"CRLF", "stream   \r\nabc", 0, 11, false},
-		{"CR", "stream\r", 0, 7, false},
-		{"Offset", "xxstream\nabc", 2, 9, false},
-		{"NegativeOffset", "stream\n", -1, 0, true},
-		{"OverflowOffset", "stream\n", maxInt, 0, true},
-		{"WrongMarker", "xxxxxx\n", 0, 0, true},
-		{"MissingMarker", "stream", 1, 0, true},
-		{"Truncated", "stream", 0, 0, true},
-		{"TrailingSpaces", "stream   ", 0, 0, true},
+		{"LF", "stream\nabc", 0, 7, nil},
+		{"CRLF", "stream   \r\nabc", 0, 11, nil},
+		{"CR", "stream\r", 0, 7, nil},
+		{"Offset", "xxstream\nabc", 2, 9, nil},
+		{"NegativeOffset", "stream\n", -1, 0, errCorruptStreamMarker},
+		{"OverflowOffset", "stream\n", maxInt, 0, errCorruptStreamMarker},
+		{"WrongMarker", "xxxxxx\n", 0, 0, errCorruptStreamMarker},
+		{"MissingMarker", "stream", 1, 0, errCorruptStreamMarker},
+		{"Truncated", "stream", 0, 0, errTruncatedStreamMarker},
+		{"TrailingSpaces", "stream   ", 0, 0, errTruncatedStreamMarker},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := nextStreamOffset(tt.line, tt.streamInd)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("got error %v, wantErr=%t", err, tt.wantErr)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("got error %v, want %v", err, tt.wantErr)
 			}
 			if got != tt.want {
 				t.Fatalf("got offset %d, want %d", got, tt.want)

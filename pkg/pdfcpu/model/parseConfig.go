@@ -136,7 +136,7 @@ func loadValidationMode(c configuration, conf *Configuration) {
 }
 
 func loadedConfig(c configuration, configPath string) *Configuration {
-	var conf Configuration
+	conf := Configuration{UnsupportedResourcePolicy: UnsupportedResourceSkip}
 	conf.Path = configPath
 
 	conf.CreationDate = c.CreationDate

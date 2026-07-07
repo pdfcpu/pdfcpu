@@ -28,7 +28,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-var errInvalidPageAnnotArray = errors.New("validatePageAnnotations: page annotation array without indirect references")
+var errInvalidPageAnnotArray = errors.New("page annotation array: expected indirect references")
 
 func validateBorderEffectDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
 	// see 12.5.4
@@ -229,7 +229,7 @@ func validateAnnotationDictText(xRefTable *model.XRefTable, d types.Dict, dictNa
 
 	if state == nil {
 		if stateModel != nil {
-			return fmt.Errorf("dict=%s missing state for statemodel=%s", dictName, *stateModel)
+			return fmt.Errorf("dict=%s missing State for StateModel=%s", dictName, *stateModel)
 		}
 		return nil
 	}
@@ -240,7 +240,7 @@ func validateAnnotationDictText(xRefTable *model.XRefTable, d types.Dict, dictNa
 		validStates = []string{"Marked", "Unmarked"}
 	}
 	if !types.MemberOf(*state, validStates) {
-		return fmt.Errorf("dict=%s invalid state=%s for state model=%s", dictName, *state, *stateModel)
+		return fmt.Errorf("dict=%s invalid State=%s for StateModel=%s", dictName, *state, *stateModel)
 	}
 
 	return nil
@@ -253,7 +253,7 @@ func validateActionOrDestination(xRefTable *model.XRefTable, d types.Dict, dictN
 		return "", err
 	}
 	if d1 != nil {
-		return "", validateActionDict(xRefTable, d1)
+		return "", validateActionDictObject(xRefTable, d1, d["A"], dictName+".A")
 	}
 
 	// A destination that shall be displayed when this item is activated.
@@ -887,7 +887,7 @@ func validateAnnotationDictWidget(xRefTable *model.XRefTable, d types.Dict, dict
 		return err
 	}
 	if d1 != nil {
-		if err = validateActionDict(xRefTable, d1); err != nil {
+		if err = validateActionDictObject(xRefTable, d1, d["A"], dictName+".A"); err != nil {
 			return err
 		}
 	}
@@ -931,7 +931,7 @@ func validateAnnotationDictScreen(xRefTable *model.XRefTable, d types.Dict, dict
 		return err
 	}
 	if d1 != nil {
-		if err = validateActionDict(xRefTable, d1); err != nil {
+		if err = validateActionDictObject(xRefTable, d1, d["A"], dictName+".A"); err != nil {
 			return err
 		}
 	}
@@ -1548,7 +1548,7 @@ func validateAnnotationDictGeneralPart2(xRefTable *model.XRefTable, d types.Dict
 			return err
 		}
 		if !validateBorderArray(xRefTable, a) {
-			return fmt.Errorf("invalid border array: %s", a)
+			return fmt.Errorf("annotation border array: invalid value %s", a)
 		}
 	}
 
@@ -1688,6 +1688,16 @@ func detectSignature(xRefTable *model.XRefTable, annotDict types.Dict, objNr, in
 	return cacheSig(xRefTable, annotDict, "formFieldDict", false, objNr, incr)
 }
 
+func pageAnnotationError(err error, hasIndRef bool, indRef types.IndirectRef, i int, phase string) error {
+	if err == nil {
+		return nil
+	}
+	if hasIndRef {
+		return fmt.Errorf("page annotation obj#%d: %s: %w", indRef.ObjectNumber.Value(), phase, err)
+	}
+	return fmt.Errorf("page annotation array[%d]: %s: %w", i, phase, err)
+}
+
 func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) (types.Array, error) {
 	// a ... array of indrefs to annotation dicts.
 
@@ -1704,7 +1714,7 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) (types.
 	for i, v := range a {
 
 		if hasTrapNet {
-			return nil, errors.New("invalid page annotation list, \"TrapNet\" has to be the last entry")
+			return nil, errors.New("page annotation array: TrapNet must be the last entry")
 		}
 
 		var (
@@ -1722,7 +1732,7 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) (types.
 			}
 			annotDict, incr, err = xRefTable.DereferenceDictWithIncr(indRef)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("page annotation obj#%d: dereference: %w", indRef.ObjectNumber.Value(), err)
 			}
 			if annotDict == nil {
 				// Skip nil dicts.
@@ -1746,13 +1756,13 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) (types.
 
 		if hasIndRef {
 			if err := detectSignature(xRefTable, annotDict, indRef.ObjectNumber.Value(), incr); err != nil {
-				return nil, err
+				return nil, pageAnnotationError(err, hasIndRef, indRef, i, "signature")
 			}
 		}
 
 		hasTrapNet, err = validateAnnotationDict(xRefTable, annotDict)
 		if err != nil {
-			return nil, err
+			return nil, pageAnnotationError(err, hasIndRef, indRef, i, "validate")
 		}
 
 		// Collect annotation.
@@ -1761,7 +1771,7 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array) (types.
 
 		ann, err := pdfcpu.Annotation(xRefTable, annotDict)
 		if err != nil {
-			return nil, err
+			return nil, pageAnnotationError(err, hasIndRef, indRef, i, "render")
 		}
 
 		addAnnotation(ann, pgAnnots, i, hasIndRef, indRef)
@@ -1800,11 +1810,18 @@ func validatePageAnnotations(xRefTable *model.XRefTable, d types.Dict) error {
 	return nil
 }
 
+func pageAnnotationWalkKidContext(o types.Object, i int) string {
+	if ir, ok := o.(types.IndirectRef); ok {
+		return fmt.Sprintf("page tree annotation walk: kid obj#%d", ir.ObjectNumber.Value())
+	}
+	return fmt.Sprintf("page tree annotation walk: kid[%d]", i)
+}
+
 func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage int) (int, error) {
 	// Iterate over page tree.
 	kidsArray := d.ArrayEntry("Kids")
 
-	for _, v := range kidsArray {
+	for i, v := range kidsArray {
 
 		if v == nil {
 			if log.ValidateEnabled() {
@@ -1815,14 +1832,17 @@ func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage 
 
 		d, err := xRefTable.DereferenceDict(v)
 		if err != nil {
-			return curPage, err
+			if ir, ok := v.(types.IndirectRef); ok {
+				return curPage, fmt.Errorf("page tree annotation walk: kid obj#%d: dereference: %w", ir.ObjectNumber.Value(), err)
+			}
+			return curPage, fmt.Errorf("page tree annotation walk: dereference kid: %w", err)
 		}
 		if d == nil {
-			return curPage, errors.New("pageNodeDict is null")
+			return curPage, fmt.Errorf("%s: page node is null", pageAnnotationWalkKidContext(v, i))
 		}
 		dictType := d.Type()
 		if dictType == nil {
-			return curPage, errors.New("missing pageNodeDict type")
+			return curPage, fmt.Errorf("%s: missing page node Type", pageAnnotationWalkKidContext(v, i))
 		}
 
 		switch *dictType {
@@ -1831,18 +1851,18 @@ func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage 
 			// Recurse over pagetree
 			curPage, err = validatePagesAnnotations(xRefTable, d, curPage)
 			if err != nil {
-				return curPage, err
+				return curPage, fmt.Errorf("%s: %w", pageAnnotationWalkKidContext(v, i), err)
 			}
 
 		case "Page":
 			curPage++
 			xRefTable.CurPage = curPage
 			if err = validatePageAnnotations(xRefTable, d); err != nil {
-				return curPage, err
+				return curPage, fmt.Errorf("page annotations: page %d: %w", curPage, err)
 			}
 
 		default:
-			return curPage, fmt.Errorf("expected dict type: %s", *dictType)
+			return curPage, fmt.Errorf("%s: unexpected page node Type %s", pageAnnotationWalkKidContext(v, i), *dictType)
 
 		}
 

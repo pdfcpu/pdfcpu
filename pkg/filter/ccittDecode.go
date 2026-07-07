@@ -53,7 +53,7 @@ func (f ccittDecode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) 
 	k := 0
 	k, ok = f.parms["K"]
 	if ok && k > 0 {
-		return nil, errors.New("ccittDecode: k > 0 currently unsupported")
+		return nil, errors.New("CCITT decode: k > 0 currently unsupported")
 	}
 
 	cols := 1728
@@ -64,7 +64,7 @@ func (f ccittDecode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) 
 
 	rows, ok := f.parms["Rows"]
 	if !ok {
-		return nil, errors.New("ccittDecode: missing DecodeParam \"Rows\"")
+		return nil, errors.New("CCITT decode: missing DecodeParam \"Rows\"")
 	}
 
 	blackIs1 := false

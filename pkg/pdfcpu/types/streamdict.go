@@ -336,6 +336,20 @@ func preserveEncodedImageFilter(name string) bool {
 	return name == filter.JPX || name == filter.JBIG2
 }
 
+func decodedContent(r io.Reader) ([]byte, error) {
+	if r == nil {
+		return nil, errors.New("copy decoded content: missing reader")
+	}
+	if bb, ok := r.(*bytes.Buffer); ok {
+		return bb.Bytes(), nil
+	}
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, r); err != nil {
+		return nil, fmt.Errorf("copy decoded content: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
 // Decode applies sd's filter pipeline to sd.Raw in order to produce sd.Content.
 func (sd *StreamDict) Decode() error {
 	_, err := sd.DecodeLengthWithLimit(-1, filter.DefaultMaxDecodeBytes)
@@ -357,7 +371,7 @@ func (sd *StreamDict) decodeLength(maxLen, maxDecodeBytes int64) ([]byte, error)
 
 		if preserveEncodedImageFilter(f.Name) {
 			if idx != len(sd.FilterPipeline)-1 {
-				return nil, filter.ErrUnsupportedFilter
+				return nil, fmt.Errorf("stream filter[%d] %q: decode: %w", idx, f.Name, filter.ErrUnsupportedFilter)
 			}
 			c = b
 			break
@@ -382,12 +396,12 @@ func (sd *StreamDict) decodeLength(maxLen, maxDecodeBytes int64) ([]byte, error)
 
 		parms := parmsForFilter(f.DecodeParms)
 		if err := fixParms(f, parms, sd); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("stream filter[%d] %q: prepare parameters: %w", idx, f.Name, err)
 		}
 
 		fi, err := filter.NewFilter(f.Name, parms, maxDecodeBytes)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("stream filter[%d] %q: construct: %w", idx, f.Name, err)
 		}
 
 		if maxLen >= 0 && idx == len(sd.FilterPipeline)-1 {
@@ -396,23 +410,16 @@ func (sd *StreamDict) decodeLength(maxLen, maxDecodeBytes int64) ([]byte, error)
 			c, err = fi.Decode(b)
 		}
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("stream filter[%d] %q: decode: %w", idx, f.Name, err)
 		}
 
 		//fmt.Printf("decodedStream after:%s\n%s\n", f.Name, hex.Dump(c.Bytes()))
 		b = c
 	}
 
-	var data []byte
-	if bb, ok := c.(*bytes.Buffer); ok {
-		data = bb.Bytes()
-	} else {
-		var buf bytes.Buffer
-		if _, err := io.Copy(&buf, c); err != nil {
-			return nil, err
-		}
-
-		data = buf.Bytes()
+	data, err := decodedContent(c)
+	if err != nil {
+		return nil, err
 	}
 
 	if maxLen < 0 {

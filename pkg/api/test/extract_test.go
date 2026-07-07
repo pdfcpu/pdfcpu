@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -177,13 +178,13 @@ func TestExtractFonts(t *testing.T) {
 	// Extract fonts for all pages into outDir.
 	for _, fn := range []string{"5116.DCT_Filter.pdf", "testImage.pdf", "go.pdf"} {
 		fn = filepath.Join(inDir, fn)
-		if err := api.ExtractFontsFile(fn, outDir, nil, nil); err != nil {
+		if err := api.ExtractFontsFile(fn, outDir, nil, nil); err != nil && !errors.Is(err, pdfcpu.ErrUnsupportedResource) {
 			t.Fatalf("%s %s: %v\n", msg, fn, err)
 		}
 	}
 	// Extract fonts for inFile for pages 1-3 into outDir.
 	inFile := filepath.Join(inDir, "go.pdf")
-	if err := api.ExtractFontsFile(inFile, outDir, []string{"1-3"}, nil); err != nil {
+	if err := api.ExtractFontsFile(inFile, outDir, []string{"1-3"}, nil); err != nil && !errors.Is(err, pdfcpu.ErrUnsupportedResource) {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }

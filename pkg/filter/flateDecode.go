@@ -18,12 +18,12 @@ package filter
 
 import (
 	"bytes"
+	stdflate "compress/flate"
 	"compress/zlib"
 	"errors"
 	"fmt"
 	"io"
 	"slices"
-	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/safemath"
@@ -35,28 +35,47 @@ import (
 // PDF allows a prediction step prior to compression applying TIFF or PNG prediction.
 // Predictor algorithm.
 const (
-	PredictorNo      = 1  // No prediction.
-	PredictorTIFF    = 2  // Use TIFF prediction for all rows.
-	PredictorNone    = 10 // Use PNGNone for all rows.
-	PredictorSub     = 11 // Use PNGSub for all rows.
-	PredictorUp      = 12 // Use PNGUp for all rows.
-	PredictorAverage = 13 // Use PNGAverage for all rows.
-	PredictorPaeth   = 14 // Use PNGPaeth for all rows.
-	PredictorOptimum = 15 // Use the optimum PNG prediction for each row.
+	// PredictorNo disables prediction.
+	PredictorNo = 1
+	// PredictorTIFF applies TIFF prediction to every row.
+	PredictorTIFF = 2
+	// PredictorNone applies the PNG none filter to every row.
+	PredictorNone = 10
+	// PredictorSub applies the PNG sub filter to every row.
+	PredictorSub = 11
+	// PredictorUp applies the PNG up filter to every row.
+	PredictorUp = 12
+	// PredictorAverage applies the PNG average filter to every row.
+	PredictorAverage = 13
+	// PredictorPaeth applies the PNG Paeth filter to every row.
+	PredictorPaeth = 14
+	// PredictorOptimum selects the optimum PNG filter for each row.
+	PredictorOptimum = 15
 )
 
 // For predictor > 2 PNG filters (see RFC 2083) get applied and the first byte of each pixelrow defines
 // the prediction algorithm used for all pixels of this row.
 const (
-	PNGNone    = 0x00
-	PNGSub     = 0x01
-	PNGUp      = 0x02
+	// PNGNone identifies the PNG none filter.
+	PNGNone = 0x00
+	// PNGSub identifies the PNG sub filter.
+	PNGSub = 0x01
+	// PNGUp identifies the PNG up filter.
+	PNGUp = 0x02
+	// PNGAverage identifies the PNG average filter.
 	PNGAverage = 0x03
-	PNGPaeth   = 0x04
+	// PNGPaeth identifies the PNG Paeth filter.
+	PNGPaeth = 0x04
 )
 
 type flate struct {
 	baseFilter
+}
+
+// IsCorruptFlateInput reports whether err contains a Flate corrupt-input error.
+func IsCorruptFlateInput(err error) bool {
+	var corruptInputErr stdflate.CorruptInputError
+	return errors.As(err, &corruptInputErr)
 }
 
 // Encode implements encoding for a Flate filter.
@@ -106,11 +125,8 @@ func (f flate) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) {
 
 func (f flate) passThru(rin io.Reader, maxLen int64) (*bytes.Buffer, error) {
 	b, err := f.copyDecoded(rin, maxLen)
-	if err != nil && strings.Contains(err.Error(), "invalid checksum") {
-		if log.CLIEnabled() {
-			log.CLI.Println("skipped: truncated zlib stream")
-		}
-		err = nil
+	if errors.Is(err, zlib.ErrChecksum) {
+		return b, fmt.Errorf("flate decode: %w", err)
 	}
 	if err == io.ErrUnexpectedEOF {
 		logUnexpectedEOFFlateDecode()
@@ -123,7 +139,7 @@ func logUnexpectedEOFFlateDecode() {
 	// Workaround for missing support for partial flush in compress/flate.
 	// See also https://github.com/golang/go/issues/31514
 	if log.ReadEnabled() {
-		log.Read.Println("flateDecode: ignoring unexpected EOF")
+		log.Read.Println("flate decode: ignoring unexpected EOF")
 	}
 }
 
@@ -145,7 +161,7 @@ func validatePredictor(predictor int) error {
 		return nil
 	}
 
-	return fmt.Errorf("flateDecode: undefined \"Predictor\" %d", predictor)
+	return fmt.Errorf("flate decode: undefined \"Predictor\" %d", predictor)
 }
 
 func predictorRowParams(predictor, colors, bpc, columns int) (rowSize, rowLen, bytesPerPixel int, err error) {
@@ -284,7 +300,7 @@ func processRow(pr, cr []byte, p, colors, bytesPerPixel int) ([]byte, error) {
 		filterPaeth(cdat, pdat, bytesPerPixel)
 
 	default:
-		return nil, fmt.Errorf("flateDecode: unexpected PNG predictor %d", f)
+		return nil, fmt.Errorf("flate decode: unexpected PNG predictor %d", f)
 	}
 
 	return cdat, nil
@@ -299,7 +315,7 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 	if !found {
 		colors = 1
 	} else if colors <= 0 {
-		return 0, 0, 0, fmt.Errorf("flateDecode: \"Colors\" must be > 0")
+		return 0, 0, 0, fmt.Errorf("flate decode: \"Colors\" must be > 0")
 	}
 
 	// BitsPerComponent, int
@@ -310,7 +326,7 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 	if !found {
 		bpc = 8
 	} else if !intMemberOf(bpc, []int{1, 2, 4, 8, 16}) {
-		return 0, 0, 0, fmt.Errorf("flateDecode: unexpected \"BitsPerComponent\": %d", bpc)
+		return 0, 0, 0, fmt.Errorf("flate decode: unexpected \"BitsPerComponent\": %d", bpc)
 	}
 
 	// Columns, int
@@ -319,7 +335,7 @@ func (f flate) parameters() (colors, bpc, columns int, err error) {
 	if !found {
 		columns = 1
 	} else if columns <= 0 {
-		return 0, 0, 0, fmt.Errorf("flateDecode: \"Columns\" must be > 0")
+		return 0, 0, 0, fmt.Errorf("flate decode: \"Columns\" must be > 0")
 	}
 
 	return colors, bpc, columns, nil
@@ -367,7 +383,7 @@ func (f flate) decodePostProcessRows(r io.Reader, maxLen int64, m, predictor, co
 		}
 
 		if n != m {
-			return nil, fmt.Errorf("flateDecode: read error, expected %d bytes, got: %d", m, n)
+			return nil, fmt.Errorf("flate decode: read error, expected %d bytes, got: %d", m, n)
 		}
 
 		if err := process(&b, pr, cr, predictor, colors, bytesPerPixel); err != nil {
@@ -421,7 +437,7 @@ func (f flate) decodePostProcess(r io.Reader, maxLen int64) (io.Reader, error) {
 
 	if maxLen < 0 && b.Len()%rowSize > 0 {
 		log.Info.Printf("failed postprocessing: %d %d\n", b.Len(), rowSize)
-		return nil, errors.New("flateDecode: postprocessing failed")
+		return nil, errors.New("flate decode: postprocessing failed")
 	}
 
 	return b, nil

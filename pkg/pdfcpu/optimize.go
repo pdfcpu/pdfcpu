@@ -80,7 +80,7 @@ func removeEmptyContentStreams(ctx *model.Context, pageDict types.Dict, obj type
 		contentStreamDict, ok := entry.Object.(types.StreamDict)
 		if ok {
 			if err := contentStreamDict.Decode(); err != nil {
-				return fmt.Errorf("invalid content stream obj#%d: %v", pageObjNumber, err)
+				return fmt.Errorf("content stream obj#%d: decode: %w", objNr, err)
 			}
 			if len(contentStreamDict.Content) == 0 {
 				pageDict.Delete("Contents")
@@ -118,7 +118,7 @@ func removeEmptyContentStreams(ctx *model.Context, pageDict types.Dict, obj type
 		}
 
 		if err := contentStreamDict.Decode(); err != nil {
-			return err
+			return fmt.Errorf("content stream obj#%d: decode: %w", objNr, err)
 		}
 		if len(contentStreamDict.Content) > 0 {
 			newContentArr = append(newContentArr, c)
@@ -137,7 +137,7 @@ func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber 
 	}
 
 	if err := removeEmptyContentStreams(ctx, pageDict, o, pageObjNumber); err != nil {
-		return err
+		return fmt.Errorf("remove empty content streams: %w", err)
 	}
 
 	o, found = pageDict.Find("Contents")
@@ -163,7 +163,7 @@ func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber 
 		if ok {
 			ir, err := optimizeContentStreamUsage(ctx, &contentStreamDict, objNr)
 			if err != nil {
-				return err
+				return fmt.Errorf("content stream obj#%d: optimize usage: %w", objNr, err)
 			}
 			if ir != nil {
 				pageDict["Contents"] = *ir
@@ -273,7 +273,7 @@ func handleDuplicateFontObject(ctx *model.Context, fontDict types.Dict, fName, r
 		// Check if the input fontDict matches the fontDict of this fontObject.
 		ok, err := model.EqualObjects(fontObject.FontDict, fontDict, ctx.XRefTable, nil)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("compare font obj#%d with obj#%d: %w", objNr, fontObjNr, err)
 		}
 
 		if !ok {
@@ -388,7 +388,7 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int,
 		fontDict, err := ctx.DereferenceFontDict(indRef)
 		if err != nil {
 			if ctx.XRefTable.ValidationMode == model.ValidationStrict {
-				return err
+				return fmt.Errorf("font resource %s obj#%d: dereference font dict: %w", qualifiedRName, objNr, err)
 			}
 
 			fontDict = nil
@@ -400,13 +400,13 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int,
 		// Get the unique font name.
 		prefix, fName, err := pdffont.Name(ctx.XRefTable, fontDict, objNr)
 		if err != nil {
-			return err
+			return fmt.Errorf("font resource %s obj#%d: parse font name: %w", qualifiedRName, objNr, err)
 		}
 
 		// Check if fontDict is a duplicate and if so return the object number of the original.
 		originalObjNr, err := handleDuplicateFontObject(ctx, fontDict, fName, qualifiedRName, objNr, pageNr)
 		if err != nil {
-			return err
+			return fmt.Errorf("font resource %s obj#%d: duplicate check: %w", qualifiedRName, objNr, err)
 		}
 
 		if originalObjNr != nil {
@@ -433,7 +433,7 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int,
 		if checkForEmbeddedFont(ctx) {
 			fontObj.Embedded, err = pdffont.Embedded(ctx.XRefTable, fontDict, objNr)
 			if err != nil {
-				return err
+				return fmt.Errorf("font resource %s obj#%d: detect embedded font: %w", qualifiedRName, objNr, err)
 			}
 		}
 
@@ -485,7 +485,7 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 		// Check if the input imageDict matches the imageDict of this imageObject.
 		ok, err := model.EqualObjects(*imageObject.ImageDict, *imageDict, ctx.XRefTable, nil)
 		if err != nil {
-			return nil, false, err
+			return nil, false, fmt.Errorf("compare image obj#%d with obj#%d: %w", objNr, imageObjNr, err)
 		}
 
 		if !ok {
@@ -516,7 +516,6 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 }
 
 func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rNamePrefix, rName string, rDict types.Dict, objNr, pageNr, pageObjNumber int, pageImages types.IntSet) error {
-
 	qualifiedRName := rName
 	if rNamePrefix != "" {
 		qualifiedRName = rNamePrefix + "." + rName
@@ -525,7 +524,7 @@ func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rNamePrefix
 	// Check if image is a duplicate and if so return the object number of the original.
 	originalObjNr, alreadyDupl, err := handleDuplicateImageObject(ctx, osd, qualifiedRName, objNr, pageNr)
 	if err != nil {
-		return err
+		return fmt.Errorf("image resource %s obj#%d: duplicate check: %w", qualifiedRName, objNr, err)
 	}
 
 	if originalObjNr != nil {
@@ -554,7 +553,6 @@ func optimizeXObjectImage(ctx *model.Context, osd *types.StreamDict, rNamePrefix
 }
 
 func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, objNr int) (*types.IndirectRef, error) {
-
 	f := ctx.Optimize.FormStreamCache
 	if len(f) == 0 {
 		f[objNr] = sd
@@ -580,7 +578,7 @@ func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, objNr int) (*
 		sd1 := f[objNr1]
 		ok, err := model.EqualObjects(*sd, *sd1, ctx.XRefTable, nil)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("compare form XObject obj#%d with obj#%d: %w", objNr, objNr1, err)
 		}
 		if ok {
 			ir := types.NewIndirectRef(objNr1, 0)
@@ -596,12 +594,12 @@ func optimizeXObjectForm(ctx *model.Context, sd *types.StreamDict, objNr int) (*
 func optimizeFormResources(ctx *model.Context, o types.Object, pageNr, pageObjNumber int, rName string, visitedRes []types.Object) error {
 	d, err := ctx.DereferenceDict(o)
 	if err != nil {
-		return err
+		return fmt.Errorf("form resource %s: dereference resources: %w", rName, err)
 	}
 	if d != nil {
 		// Optimize image and font resources.
 		if err = optimizeResources(ctx, d, pageNr, pageObjNumber, rName, visitedRes); err != nil {
-			return err
+			return fmt.Errorf("form resource %s: optimize resources: %w", rName, err)
 		}
 	}
 	return nil
@@ -612,10 +610,9 @@ func visited(o types.Object, visited []types.Object) bool {
 }
 
 func optimizeForm(ctx *model.Context, osd *types.StreamDict, rNamePrefix, rName string, rDict types.Dict, objNr, pageNr, pageObjNumber int, vis []types.Object) error {
-
 	ir, err := optimizeXObjectForm(ctx, osd, objNr)
 	if err != nil {
-		return err
+		return fmt.Errorf("form XObject %s obj#%d: optimize usage: %w", qualifiedRName(rNamePrefix, rName), objNr, err)
 	}
 
 	if ir != nil {
@@ -656,7 +653,7 @@ func optimizeExtGStateResources(ctx *model.Context, rDict types.Dict, pageNr, pa
 		dict, ok := s.(types.Dict)
 		if ok {
 			if err := optimizeSMaskResources(dict, vis, rNamePrefix, ctx, rDict, pageNr, pageImages, pageObjNumber); err != nil {
-				return err
+				return fmt.Errorf("SMask: %w", err)
 			}
 		}
 	}
@@ -688,7 +685,7 @@ func optimizeSMaskResources(dict types.Dict, vis []types.Object, rNamePrefix str
 
 	sd, err := ctx.DereferenceXObjectDict(*indRef)
 	if err != nil {
-		return err
+		return fmt.Errorf("SMask G obj#%d: dereference XObject: %w", objNr, err)
 	}
 	if sd == nil {
 		return nil
@@ -696,13 +693,13 @@ func optimizeSMaskResources(dict types.Dict, vis []types.Object, rNamePrefix str
 
 	if *sd.Subtype() == "Image" {
 		if err := optimizeXObjectImage(ctx, sd, rNamePrefix, "G", rDict, objNr, pageNr, pageObjNumber, pageImages); err != nil {
-			return err
+			return fmt.Errorf("SMask G image: %w", err)
 		}
 	}
 
 	if *sd.Subtype() == "Form" {
 		if err := optimizeForm(ctx, sd, rNamePrefix, "G", rDict, objNr, pageNr, pageObjNumber, vis); err != nil {
-			return err
+			return fmt.Errorf("SMask G form: %w", err)
 		}
 	}
 
@@ -729,10 +726,7 @@ func optimizeExtGStateResourcesDict(ctx *model.Context, rDict types.Dict, pageNr
 
 		objNr := int(indRef.ObjectNumber)
 
-		qualifiedRName := rName
-		if rNamePrefix != "" {
-			qualifiedRName = rNamePrefix + "." + rName
-		}
+		qualifiedRName := qualifiedRName(rNamePrefix, rName)
 
 		if log.OptimizeEnabled() {
 			log.Optimize.Printf("optimizeExtGStateResourcesDict: processing XObject: %s, obj#=%d\n", qualifiedRName, objNr)
@@ -740,14 +734,14 @@ func optimizeExtGStateResourcesDict(ctx *model.Context, rDict types.Dict, pageNr
 
 		rDict, err := ctx.DereferenceDict(indRef)
 		if err != nil {
-			continue
+			return fmt.Errorf("ExtGState resource %s obj#%d: dereference dict: %w", qualifiedRName, objNr, err)
 		}
 		if rDict == nil {
 			continue
 		}
 
 		if err := optimizeExtGStateResources(ctx, rDict, pageNr, pageObjNumber, qualifiedRName, vis); err != nil {
-			return err
+			return fmt.Errorf("ExtGState resource %s obj#%d: optimize resources: %w", qualifiedRName, objNr, err)
 		}
 
 	}
@@ -781,10 +775,7 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, 
 
 		objNr := int(indRef.ObjectNumber)
 
-		qualifiedRName := rName
-		if rNamePrefix != "" {
-			qualifiedRName = rNamePrefix + "." + rName
-		}
+		qualifiedRName := qualifiedRName(rNamePrefix, rName)
 
 		if log.OptimizeEnabled() {
 			log.Optimize.Printf("optimizeXObjectResourcesDict: processing XObject: %s, obj#=%d\n", qualifiedRName, objNr)
@@ -792,7 +783,7 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, 
 
 		sd, err := ctx.DereferenceXObjectDict(indRef)
 		if err != nil {
-			return err
+			return fmt.Errorf("XObject resource %s obj#%d: dereference XObject: %w", qualifiedRName, objNr, err)
 		}
 		if sd == nil {
 			continue
@@ -800,17 +791,17 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, 
 
 		if *sd.Subtype() == "Image" {
 			if err := optimizeXObjectImage(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, pageImages); err != nil {
-				return err
+				return fmt.Errorf("XObject resource %s obj#%d: image: %w", qualifiedRName, objNr, err)
 			}
 		}
 
 		if *sd.Subtype() == "Form" {
 			// Get rid of PieceInfo dict from form XObjects.
 			if err := ctx.DeleteDictEntry(sd.Dict, "PieceInfo"); err != nil {
-				return err
+				return fmt.Errorf("XObject resource %s obj#%d: delete PieceInfo: %w", qualifiedRName, objNr, err)
 			}
 			if err := optimizeForm(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, vis); err != nil {
-				return err
+				return fmt.Errorf("XObject resource %s obj#%d: form: %w", qualifiedRName, objNr, err)
 			}
 		}
 
@@ -826,40 +817,49 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, 
 func processFontResources(ctx *model.Context, obj types.Object, pageNr, pageObjNumber int, rNamePrefix string) error {
 	d, err := ctx.DereferenceDict(obj)
 	if err != nil {
-		return err
+		return fmt.Errorf("font resources: dereference dict: %w", err)
 	}
 
 	if d == nil {
 		return fmt.Errorf("font resource dict is null for page %d pageObj %d", pageNr, pageObjNumber)
 	}
 
-	return optimizeFontResourcesDict(ctx, d, pageNr, rNamePrefix)
+	if err := optimizeFontResourcesDict(ctx, d, pageNr, rNamePrefix); err != nil {
+		return fmt.Errorf("font resources: optimize dict: %w", err)
+	}
+	return nil
 }
 
 func processXObjectResources(ctx *model.Context, obj types.Object, pageNr, pageObjNumber int, rNamePrefix string, visitedRes []types.Object) error {
 	d, err := ctx.DereferenceDict(obj)
 	if err != nil {
-		return err
+		return fmt.Errorf("XObject resources: dereference dict: %w", err)
 	}
 
 	if d == nil {
 		return fmt.Errorf("xObject resource dict is null for page %d pageObj %d", pageNr, pageObjNumber)
 	}
 
-	return optimizeXObjectResourcesDict(ctx, d, pageNr, pageObjNumber, rNamePrefix, visitedRes)
+	if err := optimizeXObjectResourcesDict(ctx, d, pageNr, pageObjNumber, rNamePrefix, visitedRes); err != nil {
+		return fmt.Errorf("XObject resources: optimize dict: %w", err)
+	}
+	return nil
 }
 
 func processExtGStateResources(ctx *model.Context, obj types.Object, pageNr, pageObjNumber int, rNamePrefix string, visitedRes []types.Object) error {
 	d, err := ctx.DereferenceDict(obj)
 	if err != nil {
-		return err
+		return fmt.Errorf("ExtGState resources: dereference dict: %w", err)
 	}
 
 	if d == nil {
 		return fmt.Errorf("processExtGStateResources: extGState resource dict is null for page %d pageObj %d", pageNr, pageObjNumber)
 	}
 
-	return optimizeExtGStateResourcesDict(ctx, d, pageNr, pageObjNumber, rNamePrefix, visitedRes)
+	if err := optimizeExtGStateResourcesDict(ctx, d, pageNr, pageObjNumber, rNamePrefix, visitedRes); err != nil {
+		return fmt.Errorf("ExtGState resources: optimize dict: %w", err)
+	}
+	return nil
 }
 
 // Optimize given resource dictionary by removing redundant fonts and images.
@@ -879,7 +879,7 @@ func optimizeResources(ctx *model.Context, resourcesDict types.Dict, pageNr, pag
 	if found {
 		// Process Font resource dict, get rid of redundant fonts.
 		if err := processFontResources(ctx, obj, pageNr, pageObjNumber, rNamePrefix); err != nil {
-			return err
+			return fmt.Errorf("Font: %w", err)
 		}
 	}
 
@@ -887,7 +887,7 @@ func optimizeResources(ctx *model.Context, resourcesDict types.Dict, pageNr, pag
 	if found {
 		// Process XObject resource dict, get rid of redundant images.
 		if err := processXObjectResources(ctx, obj, pageNr, pageObjNumber, rNamePrefix, visitedRes); err != nil {
-			return err
+			return fmt.Errorf("XObject: %w", err)
 		}
 	}
 
@@ -895,7 +895,7 @@ func optimizeResources(ctx *model.Context, resourcesDict types.Dict, pageNr, pag
 	if found {
 		// An ExtGState resource dict may contain binary content in the following entries: "SMask", "HT".
 		if err := processExtGStateResources(ctx, obj, pageNr, pageObjNumber, rNamePrefix, visitedRes); err != nil {
-			return err
+			return fmt.Errorf("ExtGState: %w", err)
 		}
 	}
 
@@ -921,7 +921,7 @@ func parseResourcesDict(ctx *model.Context, pageDict types.Dict, pageNr, pageObj
 	// Get resources dict for this page.
 	d, err := resourcesDictForPageDict(ctx.XRefTable, pageDict, pageObjNumber)
 	if err != nil {
-		return err
+		return fmt.Errorf("page %d obj#%d: resources dict: %w", pageNr+1, pageObjNumber, err)
 	}
 
 	// dict may be nil for inherited resource dicts.
@@ -929,7 +929,7 @@ func parseResourcesDict(ctx *model.Context, pageDict types.Dict, pageNr, pageObj
 
 		// Optimize image and font resources.
 		if err = optimizeResources(ctx, d, pageNr, pageObjNumber, "", []types.Object{}); err != nil {
-			return err
+			return fmt.Errorf("page %d obj#%d: optimize resources: %w", pageNr+1, pageObjNumber, err)
 		}
 
 	}
@@ -939,6 +939,46 @@ func parseResourcesDict(ctx *model.Context, pageDict types.Dict, pageNr, pageObj
 	}
 
 	return nil
+}
+
+func parsePageTreeKid(ctx *model.Context, v types.Object, kidNr, pageNr int) (int, error) {
+	if v == nil {
+		return pageNr, nil
+	}
+
+	ir, ok := v.(types.IndirectRef)
+	if !ok {
+		return 0, fmt.Errorf("kid %d: expected indirect reference, got %T", kidNr, v)
+	}
+
+	d, err := ctx.DereferencePageNodeDict(ir)
+	if err != nil {
+		return 0, fmt.Errorf("kid %d obj#%d: dereference page node: %w", kidNr, ir.ObjectNumber.Value(), err)
+	}
+
+	if *d.Type() == "Pages" {
+		pageNr, err = parsePagesDict(ctx, d, pageNr)
+		if err != nil {
+			return 0, fmt.Errorf("kid %d pages obj#%d: %w", kidNr, ir.ObjectNumber.Value(), err)
+		}
+		return pageNr, nil
+	}
+
+	if ctx.OptimizeDuplicateContentStreams {
+		if err = optimizePageContent(ctx, d, int(ir.ObjectNumber)); err != nil {
+			return 0, fmt.Errorf("page %d obj#%d: optimize content: %w", pageNr+1, ir.ObjectNumber.Value(), err)
+		}
+	}
+
+	if err := ctx.DeleteDictEntry(d, "PieceInfo"); err != nil {
+		return 0, fmt.Errorf("page %d obj#%d: delete PieceInfo: %w", pageNr+1, ir.ObjectNumber.Value(), err)
+	}
+
+	if err = parseResourcesDict(ctx, d, pageNr, int(ir.ObjectNumber)); err != nil {
+		return 0, err
+	}
+
+	return pageNr + 1, nil
 }
 
 // Iterate over all pages and optimize content & resources.
@@ -960,57 +1000,17 @@ func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNr int) (int, 
 
 	kids, err := ctx.DereferenceArray(o)
 	if err != nil || kids == nil {
+		if err != nil {
+			return pageNr, fmt.Errorf("dereference Kids: %w", err)
+		}
 		return pageNr, fmt.Errorf("corrupt \"Kids\" entry: %s", pagesDict)
 	}
 
-	for _, v := range kids {
-
-		if v == nil {
-			continue
-		}
-
-		// Dereference next page node dict.
-		ir, _ := v.(types.IndirectRef)
-
-		d, err := ctx.DereferencePageNodeDict(ir)
+	for i, v := range kids {
+		pageNr, err = parsePageTreeKid(ctx, v, i+1, pageNr)
 		if err != nil {
-			return 0, fmt.Errorf("parsePagesDict: can't locate Pagedict or Pagesdict: %w", err)
-		}
-
-		dictType := d.Type()
-
-		// Note: Resource dicts may be inherited.
-
-		if *dictType == "Pages" {
-
-			// Recurse over pagetree and optimize resources.
-			pageNr, err = parsePagesDict(ctx, d, pageNr)
-			if err != nil {
-				return 0, err
-			}
-
-			continue
-		}
-
-		// Process page dict.
-
-		if ctx.OptimizeDuplicateContentStreams {
-			if err = optimizePageContent(ctx, d, int(ir.ObjectNumber)); err != nil {
-				return 0, err
-			}
-		}
-
-		// Get rid of PieceInfo dict from page dict.
-		if err := ctx.DeleteDictEntry(d, "PieceInfo"); err != nil {
 			return 0, err
 		}
-
-		// Parse and optimize resource dict for one page.
-		if err = parseResourcesDict(ctx, d, pageNr, int(ir.ObjectNumber)); err != nil {
-			return 0, err
-		}
-
-		pageNr++
 	}
 
 	return pageNr, nil
@@ -1021,18 +1021,26 @@ func traverse(xRefTable *model.XRefTable, value types.Object, duplObjs types.Int
 		duplObjs[int(indRef.ObjectNumber)] = true
 		o, err := xRefTable.Dereference(indRef)
 		if err != nil {
-			return err
+			return fmt.Errorf("obj#%d: dereference duplicate graph object: %w", indRef.ObjectNumber.Value(), err)
 		}
-		traverseObjectGraphAndMarkDuplicates(xRefTable, o, duplObjs)
+		if err := traverseObjectGraphAndMarkDuplicates(xRefTable, o, duplObjs); err != nil {
+			return fmt.Errorf("obj#%d: traverse duplicate graph object: %w", indRef.ObjectNumber.Value(), err)
+		}
 	}
 	if d, ok := value.(types.Dict); ok {
-		traverseObjectGraphAndMarkDuplicates(xRefTable, d, duplObjs)
+		if err := traverseObjectGraphAndMarkDuplicates(xRefTable, d, duplObjs); err != nil {
+			return err
+		}
 	}
 	if sd, ok := value.(types.StreamDict); ok {
-		traverseObjectGraphAndMarkDuplicates(xRefTable, sd, duplObjs)
+		if err := traverseObjectGraphAndMarkDuplicates(xRefTable, sd, duplObjs); err != nil {
+			return err
+		}
 	}
 	if a, ok := value.(types.Array); ok {
-		traverseObjectGraphAndMarkDuplicates(xRefTable, a, duplObjs)
+		if err := traverseObjectGraphAndMarkDuplicates(xRefTable, a, duplObjs); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -1052,7 +1060,7 @@ func traverseObjectGraphAndMarkDuplicates(xRefTable *model.XRefTable, obj types.
 		}
 		for _, value := range x {
 			if err := traverse(xRefTable, value, duplObjs); err != nil {
-				return err
+				return fmt.Errorf("dict entry: %w", err)
 			}
 		}
 
@@ -1062,7 +1070,7 @@ func traverseObjectGraphAndMarkDuplicates(xRefTable *model.XRefTable, obj types.
 		}
 		for _, value := range x.Dict {
 			if err := traverse(xRefTable, value, duplObjs); err != nil {
-				return err
+				return fmt.Errorf("stream dict entry: %w", err)
 			}
 		}
 
@@ -1070,9 +1078,9 @@ func traverseObjectGraphAndMarkDuplicates(xRefTable *model.XRefTable, obj types.
 		if log.OptimizeEnabled() {
 			log.Optimize.Println("traverseObjectGraphAndMarkDuplicates: arr")
 		}
-		for _, value := range x {
+		for i, value := range x {
 			if err := traverse(xRefTable, value, duplObjs); err != nil {
-				return err
+				return fmt.Errorf("array[%d]: %w", i, err)
 			}
 		}
 	}
@@ -1094,7 +1102,7 @@ func calcRedundantObjects(ctx *model.Context) error {
 		ctx.Optimize.DuplicateFontObjs[i] = true
 		// Identify and mark all involved potential duplicate objects for a redundant font.
 		if err := traverseObjectGraphAndMarkDuplicates(ctx.XRefTable, fontDict, ctx.Optimize.DuplicateFontObjs); err != nil {
-			return err
+			return fmt.Errorf("duplicate font obj#%d: traverse object graph: %w", i, err)
 		}
 	}
 
@@ -1102,7 +1110,7 @@ func calcRedundantObjects(ctx *model.Context) error {
 		ctx.Optimize.DuplicateImageObjs[i] = true
 		// Identify and mark all involved potential duplicate objects for a redundant image.
 		if err := traverseObjectGraphAndMarkDuplicates(ctx.XRefTable, *obj.ImageDict, ctx.Optimize.DuplicateImageObjs); err != nil {
-			return err
+			return fmt.Errorf("duplicate image obj#%d: traverse object graph: %w", i, err)
 		}
 	}
 
@@ -1145,13 +1153,13 @@ func optimizeFontAndImages(ctx *model.Context) error {
 	// Get a reference to the PDF indirect reference of the page tree root dict.
 	indRefPages, err := ctx.Pages()
 	if err != nil {
-		return err
+		return fmt.Errorf("page tree root: %w", err)
 	}
 
 	// Dereference and get a reference to the page tree root dict.
 	pageTreeRootDict, err := ctx.XRefTable.DereferenceDict(*indRefPages)
 	if err != nil {
-		return err
+		return fmt.Errorf("page tree root obj#%d: dereference dict: %w", indRefPages.ObjectNumber.Value(), err)
 	}
 
 	// Prepare optimization environment.
@@ -1161,11 +1169,11 @@ func optimizeFontAndImages(ctx *model.Context) error {
 	// Iterate over page dicts and optimize resources.
 	_, err = parsePagesDict(ctx, pageTreeRootDict, 0)
 	if err != nil {
-		return err
+		return fmt.Errorf("page tree: %w", err)
 	}
 
 	if err := fixCorruptFontResDicts(ctx); err != nil {
-		return err
+		return fmt.Errorf("fix corrupt font resources: %w", err)
 	}
 
 	ctx.Optimize.ContentStreamCache = map[int]*types.StreamDict{}
@@ -1173,7 +1181,7 @@ func optimizeFontAndImages(ctx *model.Context) error {
 
 	// Identify all duplicate objects.
 	if err = calcRedundantObjects(ctx); err != nil {
-		return err
+		return fmt.Errorf("calculate redundant objects: %w", err)
 	}
 
 	if log.OptimizeEnabled() {
@@ -1193,7 +1201,7 @@ func streamLengthFontFile(xRefTable *model.XRefTable, indirectRef *types.Indirec
 
 	sd, _, err := xRefTable.DereferenceStreamDict(*indirectRef)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("font file obj#%d: dereference stream dict: %w", objectNumber.Value(), err)
 	}
 
 	if sd == nil || (*sd).StreamLength == nil {
@@ -1231,14 +1239,14 @@ func calcEmbeddedFontsMemoryUsage(ctx *model.Context) error {
 		// Only embedded fonts have binary data.
 		ok, err := pdffont.Embedded(ctx.XRefTable, fontObject.FontDict, objNr)
 		if err != nil {
-			return err
+			return fmt.Errorf("font obj#%d: detect embedded font: %w", objNr, err)
 		}
 		if !ok {
 			continue
 		}
 
 		if err := processFontFilesForFontDict(ctx.XRefTable, fontObject.FontDict, objNr, fontFileIndRefs); err != nil {
-			return err
+			return fmt.Errorf("font obj#%d: collect font files: %w", objNr, err)
 		}
 	}
 
@@ -1246,7 +1254,7 @@ func calcEmbeddedFontsMemoryUsage(ctx *model.Context) error {
 	for ir := range fontFileIndRefs {
 		streamLength, err := streamLengthFontFile(ctx.XRefTable, &ir)
 		if err != nil {
-			return err
+			return fmt.Errorf("font file obj#%d: stream length: %w", ir.ObjectNumber.Value(), err)
 		}
 		ctx.Read.BinaryFontSize += *streamLength
 	}
@@ -1292,7 +1300,7 @@ func processFontFilesForFontDict(xRefTable *model.XRefTable, fontDict types.Dict
 
 	d, err := pdffont.FontDescriptor(xRefTable, fontDict, objectNumber)
 	if err != nil {
-		return err
+		return fmt.Errorf("font obj#%d: font descriptor: %w", objectNumber, err)
 	}
 
 	if d != nil {
@@ -1321,7 +1329,7 @@ func calcRedundantEmbeddedFontsMemoryUsage(ctx *model.Context) error {
 
 		// Duplicate Fonts have to be embedded, so no check here.
 		if err := processFontFilesForFontDict(ctx.XRefTable, fontDict, objectNumber, fontFileIndRefs); err != nil {
-			return err
+			return fmt.Errorf("duplicate font obj#%d: collect font files: %w", objectNumber, err)
 		}
 
 	}
@@ -1331,7 +1339,7 @@ func calcRedundantEmbeddedFontsMemoryUsage(ctx *model.Context) error {
 
 		streamLength, err := streamLengthFontFile(ctx.XRefTable, &ir)
 		if err != nil {
-			return err
+			return fmt.Errorf("duplicate font file obj#%d: stream length: %w", ir.ObjectNumber.Value(), err)
 		}
 
 		ctx.Read.BinaryFontDuplSize += *streamLength
@@ -1351,11 +1359,11 @@ func calcFontBinarySizes(ctx *model.Context) error {
 	}
 
 	if err := calcEmbeddedFontsMemoryUsage(ctx); err != nil {
-		return err
+		return fmt.Errorf("embedded fonts: %w", err)
 	}
 
 	if err := calcRedundantEmbeddedFontsMemoryUsage(ctx); err != nil {
-		return err
+		return fmt.Errorf("duplicate embedded fonts: %w", err)
 	}
 
 	if log.OptimizeEnabled() {
@@ -1394,7 +1402,7 @@ func calcBinarySizes(ctx *model.Context) error {
 
 	// Calculate font memory usage for stats.
 	if err := calcFontBinarySizes(ctx); err != nil {
-		return err
+		return fmt.Errorf("font binary sizes: %w", err)
 	}
 
 	// Calculate image memory usage for stats.
@@ -1413,7 +1421,7 @@ func fixDeepDict(ctx *model.Context, d types.Dict) error {
 	for k, v := range d {
 		ir, err := fixDeepObject(ctx, v)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", k, err)
 		}
 		if ir != nil {
 			d[k] = *ir
@@ -1427,7 +1435,7 @@ func fixDeepArray(ctx *model.Context, a types.Array) error {
 	for i, v := range a {
 		ir, err := fixDeepObject(ctx, v)
 		if err != nil {
-			return err
+			return fmt.Errorf("[%d]: %w", i, err)
 		}
 		if ir != nil {
 			a[i] = *ir
@@ -1443,7 +1451,7 @@ func fixDirectObject(ctx *model.Context, o types.Object) error {
 		for k, v := range o {
 			ir, err := fixDeepObject(ctx, v)
 			if err != nil {
-				return err
+				return fmt.Errorf("%s: %w", k, err)
 			}
 			if ir != nil {
 				o[k] = *ir
@@ -1453,7 +1461,7 @@ func fixDirectObject(ctx *model.Context, o types.Object) error {
 		for i, v := range o {
 			ir, err := fixDeepObject(ctx, v)
 			if err != nil {
-				return err
+				return fmt.Errorf("[%d]: %w", i, err)
 			}
 			if ir != nil {
 				o[i] = *ir
@@ -1485,7 +1493,7 @@ func fixIndirectObject(ctx *model.Context, ir *types.IndirectRef) error {
 		if ctx.Optimize.NullObjNr == nil {
 			nr, err := ctx.InsertObject(nil)
 			if err != nil {
-				return err
+				return fmt.Errorf("insert null object for free obj#%d: %w", objNr, err)
 			}
 			ctx.Optimize.NullObjNr = &nr
 		}
@@ -1510,7 +1518,10 @@ func fixIndirectObject(ctx *model.Context, ir *types.IndirectRef) error {
 
 	}
 
-	return err
+	if err != nil {
+		return fmt.Errorf("obj#%d: %w", objNr, err)
+	}
+	return nil
 }
 
 func fixDeepObject(ctx *model.Context, o types.Object) (*types.IndirectRef, error) {
@@ -1524,15 +1535,17 @@ func fixDeepObject(ctx *model.Context, o types.Object) (*types.IndirectRef, erro
 }
 
 func fixReferencesToFreeObjects(ctx *model.Context) error {
-	return fixDirectObject(ctx, ctx.RootDict)
+	if err := fixDirectObject(ctx, ctx.RootDict); err != nil {
+		return fmt.Errorf("root dict: %w", err)
+	}
+	return nil
 }
 
 // CacheFormFonts caches form fonts referenced by ctx.
 func CacheFormFonts(ctx *model.Context) error {
-
 	d, err := primitives.FormFontResDict(ctx.XRefTable)
 	if err != nil {
-		return err
+		return fmt.Errorf("form font resources: %w", err)
 	}
 
 	// Iterate over font resource dict.
@@ -1555,7 +1568,7 @@ func CacheFormFonts(ctx *model.Context) error {
 
 		fontDict, err := ctx.DereferenceFontDict(indRef)
 		if err != nil {
-			return err
+			return fmt.Errorf("form font obj#%d: dereference font dict: %w", objNr, err)
 		}
 		if fontDict == nil {
 			continue
@@ -1568,7 +1581,7 @@ func CacheFormFonts(ctx *model.Context) error {
 		// Get the unique font name.
 		prefix, fName, err := pdffont.Name(ctx.XRefTable, fontDict, objNr)
 		if err != nil {
-			return err
+			return fmt.Errorf("form font obj#%d: parse font name: %w", objNr, err)
 		}
 
 		if log.OptimizeEnabled() {
@@ -1593,7 +1606,7 @@ func optimizeResourceDicts(ctx *model.Context) error {
 	for i := 1; i <= ctx.PageCount; i++ {
 		d, _, inhPAttrs, err := ctx.PageDict(i, true)
 		if err != nil {
-			return err
+			return fmt.Errorf("page %d: resource dict: %w", i, err)
 		}
 		if d == nil {
 			continue
@@ -1610,7 +1623,7 @@ func resolveWidth(ctx *model.Context, sd *types.StreamDict) error {
 	if obj, ok := sd.Find("Width"); ok {
 		w, err := ctx.DereferenceNumber(obj)
 		if err != nil {
-			return err
+			return fmt.Errorf("dereference Width: %w", err)
 		}
 		sd.Dict["Width"] = types.Integer(w)
 	}
@@ -1623,7 +1636,7 @@ func ensureDirectWidthForXObjs(ctx *model.Context) error {
 			if v {
 				imageObj := ctx.Optimize.ImageObjects[objNr]
 				if err := resolveWidth(ctx, imageObj.ImageDict); err != nil {
-					return err
+					return fmt.Errorf("image obj#%d: resolve width: %w", objNr, err)
 				}
 			}
 		}
@@ -1640,7 +1653,7 @@ func OptimizeXRefTable(ctx *model.Context) error {
 	// Sometimes free objects are used although they are part of the free object list.
 	// Replace references to free xref table entries with a reference to a NULL object.
 	if err := fixReferencesToFreeObjects(ctx); err != nil {
-		return err
+		return fmt.Errorf("fix references to free objects: %w", err)
 	}
 
 	if (ctx.Cmd == model.VALIDATE ||
@@ -1651,28 +1664,28 @@ func OptimizeXRefTable(ctx *model.Context) error {
 		ctx.Conf.OptimizeResourceDicts {
 		// Extra step with potential for performance hit when processing large files.
 		if err := optimizeResourceDicts(ctx); err != nil {
-			return err
+			return fmt.Errorf("optimize resources: %w", err)
 		}
 	}
 
 	// Get rid of duplicate embedded fonts and images.
 	if err := optimizeFontAndImages(ctx); err != nil {
-		return err
+		return fmt.Errorf("optimize fonts and images: %w", err)
 	}
 
 	if err := ensureDirectWidthForXObjs(ctx); err != nil {
-		return err
+		return fmt.Errorf("resolve image widths: %w", err)
 	}
 
 	// Get rid of PieceInfo dict from root.
 	if err := ctx.DeleteDictEntry(ctx.RootDict, "PieceInfo"); err != nil {
-		return err
+		return fmt.Errorf("delete root PieceInfo: %w", err)
 	}
 
 	// Calculate memory usage of binary content for stats.
 	if log.StatsEnabled() {
 		if err := calcBinarySizes(ctx); err != nil {
-			return err
+			return fmt.Errorf("calculate binary sizes: %w", err)
 		}
 	}
 

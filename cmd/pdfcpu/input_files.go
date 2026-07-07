@@ -72,7 +72,6 @@ func expandWildcards(s string, inFiles *[]string, conf *model.Configuration) err
 		return err
 	}
 	for _, path := range paths {
-
 		if conf.CheckFileNameExt {
 			if !hasPDFExtension(path) {
 				if isDir, err := isDir(path); isDir && err == nil {
@@ -90,9 +89,8 @@ func expandWildcards(s string, inFiles *[]string, conf *model.Configuration) err
 	return nil
 }
 
-func collectInFiles(conf *model.Configuration, args []string) []string {
+func collectInFiles(conf *model.Configuration, args []string) ([]string, error) {
 	inFiles := []string{}
-
 	for _, arg := range args {
 		if arg == "-" {
 			inFiles = append(inFiles, arg)
@@ -103,7 +101,7 @@ func collectInFiles(conf *model.Configuration, args []string) []string {
 			// **/			skips files w/o extension "pdf"
 			// **/*.pdf
 			if err := expandWildcardsRec(arg, &inFiles, conf); err != nil {
-				fmt.Fprintf(os.Stderr, "%s", err)
+				return nil, fmt.Errorf("expand input %q: %w", arg, err)
 			}
 			continue
 		}
@@ -112,7 +110,7 @@ func collectInFiles(conf *model.Configuration, args []string) []string {
 			// *			skips files w/o extension "pdf"
 			// *.pdf
 			if err := expandWildcards(arg, &inFiles, conf); err != nil {
-				fmt.Fprintf(os.Stderr, "%s", err)
+				return nil, fmt.Errorf("expand input %q: %w", arg, err)
 			}
 			continue
 		}
@@ -121,7 +119,7 @@ func collectInFiles(conf *model.Configuration, args []string) []string {
 			if !hasPDFExtension(arg) {
 				if isDir, err := isDir(arg); isDir && err == nil {
 					if err := expandWildcards(arg+"/*", &inFiles, conf); err != nil {
-						fmt.Fprintf(os.Stderr, "%s", err)
+						return nil, fmt.Errorf("expand input %q: %w", arg, err)
 					}
 					continue
 				}
@@ -134,6 +132,5 @@ func collectInFiles(conf *model.Configuration, args []string) []string {
 
 		inFiles = append(inFiles, arg)
 	}
-
-	return inFiles
+	return inFiles, nil
 }

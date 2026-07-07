@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
@@ -38,14 +37,7 @@ func listPermissions(t *testing.T, fileName string) ([]string, error) {
 	defer f.Close()
 
 	conf := model.NewDefaultConfiguration()
-	conf.Cmd = model.LISTPERMISSIONS
-
-	ctx, err := api.ReadValidateAndOptimize(f, conf)
-	if err != nil {
-		return nil, err
-	}
-
-	return pdfcpu.Permissions(ctx), nil
+	return api.PermissionsList(f, conf)
 }
 
 func confForAlgorithm(aes bool, keyLength int, upw, opw string) *model.Configuration {

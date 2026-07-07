@@ -365,20 +365,21 @@ func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	if font.IsCoreFont(f.Name) && utf8.ValidString(v) {
 		v = model.DecodeUTF8ToByte(v)
 	}
-	lineBB := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
-	s := model.PrepBytes(xRefTable, v, f.Name, true, cb.RTL, f.FillFont)
-	x := 2 * boWidth
-	if x == 0 {
-		x = 2
+	lineBB, err := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
+	if err != nil {
+		return nil, fmt.Errorf("combo box text: %w", err)
 	}
-	switch cb.HorAlign {
-	case types.AlignCenter:
-		x = w/2 - lineBB.Width()/2
-	case types.AlignRight:
-		x = w - lineBB.Width() - 2
+	s, err := model.PrepBytes(xRefTable, v, f.Name, true, cb.RTL, f.FillFont)
+	if err != nil {
+		return nil, fmt.Errorf("combo box text: %w", err)
 	}
+	x := alignedFieldTextX(cb.HorAlign, w, lineBB.Width(), boWidth)
 
-	y := (cb.BoundingBox.Height()-font.LineHeight(f.Name, f.Size))/2 + font.Descent(f.Name, f.Size)
+	lineHeight, descent, err := fontLineMetrics(f.Name, f.Size)
+	if err != nil {
+		return nil, fmt.Errorf("combo box text: %w", err)
+	}
+	y := (cb.BoundingBox.Height()-lineHeight)/2 + descent
 
 	fmt.Fprintf(buf, "BT /%s %d Tf ", cb.fontID, f.Size)
 	fmt.Fprintf(buf, "%.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td (%s) Tj ET ",
@@ -596,7 +597,10 @@ func (cb *ComboBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) er
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return fmt.Errorf("combo box label: %w", err)
+	}
 	l.height = bb.Height() + 10
 
 	// Weird heuristic for vertical alignment with label
@@ -643,7 +647,10 @@ func (cb *ComboBox) prepForRender(p *model.Page, pageNr int, fonts model.FontMap
 		ScaleAbs: true,
 	}
 
-	bb := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return fmt.Errorf("combo box text: %w", err)
+	}
 
 	if cb.Width < 0 {
 		// Extend width to maxWidth.
@@ -676,7 +683,9 @@ func (cb *ComboBox) doRender(p *model.Page, fonts model.FontMap) error {
 	}
 
 	if cb.Label != nil {
-		model.WriteColumn(cb.pdf.XRefTable, p.Buf, p.MediaBox, nil, *cb.Label.td, 0)
+		if _, err := model.WriteColumn(cb.pdf.XRefTable, p.Buf, p.MediaBox, nil, *cb.Label.td, 0); err != nil {
+			return fmt.Errorf("combo box label: %w", err)
+		}
 	}
 
 	if cb.Debug || cb.pdf.Debug {

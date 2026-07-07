@@ -79,7 +79,7 @@ func TestAPIUserStringGuardsRejectEmptyStrings(t *testing.T) {
 		{
 			name: "extract attachments",
 			fn: func() error {
-				return ExtractAttachmentsFile("missing.pdf", "", []string{""}, nil)
+				return ExtractAttachmentsFile("missing.pdf", "out", []string{""}, nil)
 			},
 			want: "attachment filename must not be empty",
 		},

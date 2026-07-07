@@ -148,7 +148,7 @@ func (n *Node) insertIntoLeaf(k string, v types.Object, m NameMap) error {
 			continue
 		}
 		if e.k == k {
-			return errNameTreeDuplicateKey
+			return fmt.Errorf("name tree key %q: %w", k, errNameTreeDuplicateKey)
 		}
 		// Insert entry(k,v) at i
 		n.Names = append(n.Names, entry{})
@@ -168,11 +168,17 @@ func updateNameRef(d types.Dict, keys []string, nameOld, nameNew string) error {
 	for _, k := range keys {
 		s, err := d.StringOrHexLiteralEntry(k)
 		if err != nil {
-			return err
+			return fmt.Errorf("name reference entry %q: update key %q to %q: %w", k, nameOld, nameNew, err)
 		}
 		if s != nil {
 			if *s != nameOld {
-				return fmt.Errorf("invalid Name ref detected for: %s", nameOld)
+				return fmt.Errorf(
+					"name reference entry %q: update key %q to %q: unexpected value %q",
+					k,
+					nameOld,
+					nameNew,
+					*s,
+				)
 			}
 			d[k] = types.NewHexLiteral([]byte(nameNew))
 		}
@@ -197,12 +203,12 @@ func updateNameRefDicts(dd []types.Dict, nameRefDictKeys []string, nameOld, name
 func (n *Node) insertUniqueIntoLeaf(k string, v types.Object, m NameMap, nameRefDictKeys []string) (bool, error) {
 	var err error
 	kOrig := k
-	for first := true; first || err == errNameTreeDuplicateKey; first = false {
+	for first := true; first || errors.Is(err, errNameTreeDuplicateKey); first = false {
 		err = n.insertIntoLeaf(k, v, m)
 		if err == nil {
 			break
 		}
-		if err != errNameTreeDuplicateKey {
+		if !errors.Is(err, errNameTreeDuplicateKey) {
 			return false, err
 		}
 		if len(m) == 0 {
@@ -378,6 +384,16 @@ func (n *Node) AddTree(xRefTable *XRefTable, tree *Node, m NameMap, nameRefDictK
 	return nil
 }
 
+func deleteNameTreeValueGraph(xRefTable *XRefTable, k string, o types.Object) error {
+	if xRefTable == nil {
+		return nil
+	}
+	if err := xRefTable.DeleteObjectGraph(o); err != nil {
+		return fmt.Errorf("name tree key %q: delete value graph: %w", k, err)
+	}
+	return nil
+}
+
 func (n *Node) removeFromNames(xRefTable *XRefTable, k string) (ok bool, err error) {
 	for i, v := range n.Names {
 
@@ -387,14 +403,11 @@ func (n *Node) removeFromNames(xRefTable *XRefTable, k string) (ok bool, err err
 
 		if v.k == k {
 
-			if xRefTable != nil {
-				// Remove object graph of value.
-				if log.DebugEnabled() {
-					log.Debug.Println("removeFromNames: deleting object graph of v")
-				}
-				if err := xRefTable.DeleteObjectGraph(v.v); err != nil {
-					return false, err
-				}
+			if log.DebugEnabled() {
+				log.Debug.Println("removeFromNames: deleting object graph of v")
+			}
+			if err := deleteNameTreeValueGraph(xRefTable, k, v.v); err != nil {
+				return false, err
 			}
 
 			n.Names = append(n.Names[:i], n.Names[i+1:]...)
@@ -406,15 +419,12 @@ func (n *Node) removeFromNames(xRefTable *XRefTable, k string) (ok bool, err err
 	return false, nil
 }
 
-func (n *Node) removeSingleFromParent(xRefTable *XRefTable) error {
-	if xRefTable != nil {
-		// Remove object graph of value.
-		if log.DebugEnabled() {
-			log.Debug.Println("removeFromLeaf: deleting object graph of v")
-		}
-		if err := xRefTable.DeleteObjectGraph(n.Names[0].v); err != nil {
-			return err
-		}
+func (n *Node) removeSingleFromParent(xRefTable *XRefTable, k string) error {
+	if log.DebugEnabled() {
+		log.Debug.Println("removeFromLeaf: deleting object graph of v")
+	}
+	if err := deleteNameTreeValueGraph(xRefTable, k, n.Names[0].v); err != nil {
+		return err
 	}
 	n.Kmin, n.Kmax = "", ""
 	n.Names = nil
@@ -430,7 +440,7 @@ func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, e
 
 	// If sole entry gets deleted, remove this node from parent.
 	if len(n.Names) == 1 {
-		if err := n.removeSingleFromParent(xRefTable); err != nil {
+		if err := n.removeSingleFromParent(xRefTable, k); err != nil {
 			return false, false, err
 		}
 		return true, true, nil
@@ -438,14 +448,11 @@ func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, e
 
 	if k == n.Kmin {
 
-		if xRefTable != nil {
-			// Remove object graph of value.
-			if log.DebugEnabled() {
-				log.Debug.Println("removeFromLeaf: deleting object graph of v")
-			}
-			if err := xRefTable.DeleteObjectGraph(n.Names[0].v); err != nil {
-				return false, false, err
-			}
+		if log.DebugEnabled() {
+			log.Debug.Println("removeFromLeaf: deleting object graph of v")
+		}
+		if err := deleteNameTreeValueGraph(xRefTable, k, n.Names[0].v); err != nil {
+			return false, false, err
 		}
 
 		n.Names = n.Names[1:]
@@ -455,14 +462,11 @@ func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, e
 
 	if k == n.Kmax {
 
-		if xRefTable != nil {
-			// Remove object graph of value.
-			if log.DebugEnabled() {
-				log.Debug.Println("removeFromLeaf: deleting object graph of v")
-			}
-			if err := xRefTable.DeleteObjectGraph(n.Names[len(n.Names)-1].v); err != nil {
-				return false, false, err
-			}
+		if log.DebugEnabled() {
+			log.Debug.Println("removeFromLeaf: deleting object graph of v")
+		}
+		if err := deleteNameTreeValueGraph(xRefTable, k, n.Names[len(n.Names)-1].v); err != nil {
+			return false, false, err
 		}
 
 		n.Names = n.Names[:len(n.Names)-1]
@@ -477,10 +481,10 @@ func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, e
 	return false, ok, nil
 }
 
-func (n *Node) removeKid(xRefTable *XRefTable, kid *Node, i int) (bool, error) {
+func (n *Node) removeKid(xRefTable *XRefTable, k string, kid *Node, i int) (bool, error) {
 	if xRefTable != nil {
 		if err := xRefTable.DeleteObject(kid.D); err != nil {
-			return false, err
+			return false, fmt.Errorf("name tree key %q: delete child node: %w", k, err)
 		}
 	}
 
@@ -518,7 +522,7 @@ func (n *Node) removeKid(xRefTable *XRefTable, kid *Node, i int) (bool, error) {
 
 		if xRefTable != nil {
 			if err := xRefTable.DeleteObject(n.D); err != nil {
-				return false, err
+				return false, fmt.Errorf("name tree key %q: delete parent node: %w", k, err)
 			}
 		}
 
@@ -554,7 +558,7 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 
 			// This kid is now empty and needs to be removed.
 
-			noKids, err := n.removeKid(xRefTable, kid, i)
+			noKids, err := n.removeKid(xRefTable, k, kid, i)
 			if err != nil {
 				return false, err
 			}

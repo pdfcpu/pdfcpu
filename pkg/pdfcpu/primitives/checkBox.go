@@ -689,7 +689,10 @@ func (cb *CheckBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) er
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return fmt.Errorf("check box label: %w", err)
+	}
 	l.height = bb.Height()
 	if bb.Width() > w {
 		w = bb.Width()
@@ -742,7 +745,9 @@ func (cb *CheckBox) doRender(p *model.Page, fonts model.FontMap) error {
 	}
 
 	if cb.Label != nil {
-		model.WriteColumn(cb.pdf.XRefTable, p.Buf, p.MediaBox, nil, *cb.Label.td, 0)
+		if _, err := model.WriteColumn(cb.pdf.XRefTable, p.Buf, p.MediaBox, nil, *cb.Label.td, 0); err != nil {
+			return fmt.Errorf("check box label: %w", err)
+		}
 	}
 
 	if cb.Debug || cb.pdf.Debug {

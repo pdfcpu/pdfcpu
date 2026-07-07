@@ -55,9 +55,9 @@ Supported usecases:
          "pdfcpu from lock in.pdf" makes the form read-only.
          You may supply a mixed list of field ids and field names.
 
-   4) Make some or all read-only fields writeable:
-         "pdfcpu form unlock in.pdf dateOfBirth" makes the field "dateOfBirth" writeable.
-         "pdfcpu form unlock in.pdf" makes all fields of in.pdf writeable.
+   4) Make some or all read-only fields writable:
+         "pdfcpu form unlock in.pdf dateOfBirth" makes the field "dateOfBirth" writable.
+         "pdfcpu form unlock in.pdf" makes all fields of in.pdf writable.
          You may supply a mixed list of field ids and field names.
 
    5) Clear some or all fields:

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/format"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -430,23 +429,28 @@ func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 
 	f := df.Font
 	if float64(f.Size) > h {
-		f.Size = font.SizeForLineHeight(f.Name, h)
+		size, err := fontSizeForLineHeight(f.Name, h)
+		if err != nil {
+			return nil, fmt.Errorf("date field text: %w", err)
+		}
+		f.Size = size
 	}
 
-	lineBB := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
-	s := model.PrepBytes(xRefTable, v, f.Name, true, false, f.FillFont)
-	x := 2 * boWidth
-	if x == 0 {
-		x = 2
+	lineBB, err := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
+	if err != nil {
+		return nil, fmt.Errorf("date field text: %w", err)
 	}
-	switch df.HorAlign {
-	case types.AlignCenter:
-		x = w/2 - lineBB.Width()/2
-	case types.AlignRight:
-		x = w - lineBB.Width() - 2
+	s, err := model.PrepBytes(xRefTable, v, f.Name, true, false, f.FillFont)
+	if err != nil {
+		return nil, fmt.Errorf("date field text: %w", err)
 	}
+	x := alignedFieldTextX(df.HorAlign, w, lineBB.Width(), boWidth)
 
-	y := (df.BoundingBox.Height()-font.LineHeight(f.Name, f.Size))/2 + font.Descent(f.Name, f.Size)
+	lineHeight, descent, err := fontLineMetrics(f.Name, f.Size)
+	if err != nil {
+		return nil, fmt.Errorf("date field text: %w", err)
+	}
+	y := (df.BoundingBox.Height()-lineHeight)/2 + descent
 
 	fmt.Fprintf(buf, "BT /%s %d Tf ", df.fontID, f.Size)
 	fmt.Fprintf(buf, "%.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td (%s) Tj ET ",
@@ -751,7 +755,10 @@ func (df *DateField) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) e
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb := model.WriteMultiLine(df.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(df.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return fmt.Errorf("date field label: %w", err)
+	}
 	l.height = bb.Height()
 	if bb.Width() > w {
 		w = bb.Width()
@@ -815,7 +822,9 @@ func (df *DateField) doRender(p *model.Page, fonts model.FontMap) error {
 	}
 
 	if df.Label != nil {
-		model.WriteColumn(df.pdf.XRefTable, p.Buf, p.MediaBox, nil, *df.Label.td, 0)
+		if _, err := model.WriteColumn(df.pdf.XRefTable, p.Buf, p.MediaBox, nil, *df.Label.td, 0); err != nil {
+			return fmt.Errorf("date field label: %w", err)
+		}
 	}
 
 	if df.Debug || df.pdf.Debug {

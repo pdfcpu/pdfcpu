@@ -17,48 +17,50 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"errors"
 	"fmt"
-	"sort"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// PropertiesList returns a list of document properties as recorded in the document info dict.
-func PropertiesList(ctx *model.Context) ([]string, error) {
-	list := make([]string, 0, len(ctx.Properties))
-	keys := make([]string, len(ctx.Properties))
-	i := 0
-	for k := range ctx.Properties {
-		keys[i] = k
-		i++
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		v := ctx.Properties[k]
-		list = append(list, fmt.Sprintf("%s = %s", k, v))
-	}
-	return list, nil
-}
-
 // PropertiesAdd adds properties into the document info dict.
-// Returns true if at least one property was added.
 func PropertiesAdd(ctx *model.Context, properties map[string]string) error {
-	if err := ensureInfoDictAndFileID(ctx); err != nil {
+	if err := preparePropertiesInfo(ctx); err != nil {
 		return err
 	}
-
-	d, _ := ctx.DereferenceDict(*ctx.Info)
+	d, err := ctx.DereferenceDict(*ctx.Info)
+	if err != nil {
+		return fmt.Errorf("Info dictionary: dereference: %w", err)
+	}
+	if d == nil {
+		return errors.New("Info dictionary: missing object")
+	}
 
 	for k, v := range properties {
 		s, err := types.EscapedUTF16String(v)
 		if err != nil {
-			return err
+			return fmt.Errorf("Info dictionary property %q: encode value: %w", k, err)
 		}
 		d[k] = types.StringLiteral(*s)
 		ctx.Properties[k] = *s
 	}
 
+	return nil
+}
+
+func preparePropertiesInfo(ctx *model.Context) error {
+	if ctx.XRefTable.Version() < model.V20 {
+		if err := ensureInfoDict(ctx); err != nil {
+			return fmt.Errorf("Info dictionary: ensure: %w", err)
+		}
+	}
+	if ctx.Info == nil {
+		return errors.New("Info dictionary: missing")
+	}
+	if err := ensureFileID(ctx); err != nil {
+		return fmt.Errorf("file ID: ensure: %w", err)
+	}
 	return nil
 }
 
@@ -75,14 +77,17 @@ func PropertiesRemove(ctx *model.Context, properties []string) (bool, error) {
 	}
 
 	d, err := ctx.DereferenceDict(*ctx.Info)
-	if err != nil || d == nil {
-		return false, err
+	if err != nil {
+		return false, fmt.Errorf("Info dictionary: dereference: %w", err)
+	}
+	if d == nil {
+		return false, errors.New("Info dictionary: missing object")
 	}
 
 	var removed bool
 	for _, k := range properties {
 		_, ok := d[k]
-		if ok && !removed {
+		if ok {
 			delete(d, k)
 			delete(ctx.Properties, k)
 			removed = true
@@ -97,8 +102,11 @@ func removeAllProperties(ctx *model.Context) (bool, error) {
 
 	if ctx.Info != nil {
 		d, err := ctx.DereferenceDict(*ctx.Info)
-		if err != nil || d == nil {
-			return false, err
+		if err != nil {
+			return false, fmt.Errorf("Info dictionary: dereference: %w", err)
+		}
+		if d == nil {
+			return false, errors.New("Info dictionary: missing object")
 		}
 		for k := range ctx.Properties {
 			delete(d, types.EncodeName(k))
@@ -109,7 +117,7 @@ func removeAllProperties(ctx *model.Context) (bool, error) {
 
 	rootDict, err := ctx.Catalog()
 	if err != nil {
-		return removed, err
+		return removed, fmt.Errorf("catalog: access: %w", err)
 	}
 	if _, ok := rootDict["Metadata"]; ok {
 		delete(rootDict, "Metadata")

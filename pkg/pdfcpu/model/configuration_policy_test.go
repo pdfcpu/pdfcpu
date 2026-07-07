@@ -1,0 +1,66 @@
+//go:build !js
+
+/*
+Copyright 2026 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package model
+
+import "testing"
+
+// TestUnsupportedResourcePolicyDefaultsToSkip verifies the operational default independently of validation mode.
+func TestUnsupportedResourcePolicyDefaultsToSkip(t *testing.T) {
+	tests := []struct {
+		name string
+		conf *Configuration
+		mode int
+	}{
+		{"default", newDefaultConfiguration(), ValidationRelaxed},
+		{"strict YAML", loadedConfig(configuration{ValidationMode: "ValidationStrict"}, ""), ValidationStrict},
+		{"relaxed YAML", loadedConfig(configuration{ValidationMode: "ValidationRelaxed"}, ""), ValidationRelaxed},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.conf.ValidationMode != tt.mode {
+				t.Fatalf("validation mode: got %d, want %d", tt.conf.ValidationMode, tt.mode)
+			}
+			if tt.conf.UnsupportedResourcePolicy != UnsupportedResourceSkip {
+				t.Fatalf("unsupported resource policy: got %d, want %d", tt.conf.UnsupportedResourcePolicy, UnsupportedResourceSkip)
+			}
+		})
+	}
+}
+
+// TestLoadValidationModePreservesUnsupportedResourcePolicy verifies that validation parsing does not overwrite an operational policy.
+func TestLoadValidationModePreservesUnsupportedResourcePolicy(t *testing.T) {
+	tests := []struct {
+		name string
+		mode string
+	}{
+		{"strict", "ValidationStrict"},
+		{"relaxed", "ValidationRelaxed"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conf := Configuration{UnsupportedResourcePolicy: UnsupportedResourceFail}
+			loadValidationMode(configuration{ValidationMode: tt.mode}, &conf)
+			if conf.UnsupportedResourcePolicy != UnsupportedResourceFail {
+				t.Fatalf("unsupported resource policy: got %d, want %d", conf.UnsupportedResourcePolicy, UnsupportedResourceFail)
+			}
+		})
+	}
+}

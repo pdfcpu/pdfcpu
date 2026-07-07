@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 
@@ -76,14 +77,17 @@ func DefaultImportConfig() *Import {
 
 // String returns the string value of imp.
 func (imp Import) String() string {
-
 	sc := "relative"
 	if imp.ScaleAbs {
 		sc = "absolute"
 	}
 
+	pageDim := "<nil>"
+	if imp.PageDim != nil {
+		pageDim = imp.PageDim.String()
+	}
 	return fmt.Sprintf("Import conf: %s %s, pos=%s, dx=%f.2, dy=%f.2, scaling: %.1f %s\n",
-		imp.PageSize, *imp.PageDim, imp.Pos, imp.Dx, imp.Dy, imp.Scale, sc)
+		imp.PageSize, pageDim, imp.Pos, imp.Dx, imp.Dy, imp.Scale, sc)
 }
 
 func parsePageFormatImp(s string, imp *Import) (err error) {
@@ -95,25 +99,40 @@ func parsePageFormatImp(s string, imp *Import) (err error) {
 	return err
 }
 
+func invalidPageDimValue(v float64) bool {
+	return v <= 0 || math.IsNaN(v) || math.IsInf(v, 0)
+}
+
 // ParsePageDim parses page dim.
 func ParsePageDim(v string, u types.DisplayUnit) (*types.Dim, string, error) {
-
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
 		return nil, v, fmt.Errorf("illegal dimension string: need 2 positive values, %s", v)
 	}
 
 	w, err := strconv.ParseFloat(ss[0], 64)
-	if err != nil || w <= 0 {
-		return nil, v, fmt.Errorf("dimension x must be a positive numeric value: %s", ss[0])
+	if err != nil {
+		return nil, v, fmt.Errorf("dimension x %q: %w", ss[0], err)
+	}
+	if invalidPageDimValue(w) {
+		return nil, v, fmt.Errorf("dimension x must be a positive finite number: %s", ss[0])
 	}
 
 	h, err := strconv.ParseFloat(ss[1], 64)
-	if err != nil || h <= 0 {
-		return nil, v, fmt.Errorf("dimension y must be a positive numeric value: %s", ss[1])
+	if err != nil {
+		return nil, v, fmt.Errorf("dimension y %q: %w", ss[1], err)
+	}
+	if invalidPageDimValue(h) {
+		return nil, v, fmt.Errorf("dimension y must be a positive finite number: %s", ss[1])
 	}
 
 	d := types.Dim{Width: types.ToUserSpace(w, u), Height: types.ToUserSpace(h, u)}
+	if invalidPageDimValue(d.Width) {
+		return nil, v, fmt.Errorf("dimension x must resolve to a positive finite number: %s", ss[0])
+	}
+	if invalidPageDimValue(d.Height) {
+		return nil, v, fmt.Errorf("dimension y must resolve to a positive finite number: %s", ss[1])
+	}
 
 	return &d, "", nil
 }
@@ -137,7 +156,6 @@ func parsePositionAnchorImp(s string, imp *Import) error {
 }
 
 func parsePositionOffsetImp(s string, imp *Import) error {
-
 	d := strings.Split(s, " ")
 	if len(d) != 2 {
 		return fmt.Errorf("illegal position offset string: need 2 numeric values, %s", s)
@@ -205,7 +223,6 @@ func parseImportBackgroundColor(s string, imp *Import) error {
 
 // ParseImportDetails parses an Import command string into an internal structure.
 func ParseImportDetails(s string, u types.DisplayUnit) (*Import, error) {
-
 	if s == "" {
 		return nil, nil
 	}
@@ -215,18 +232,22 @@ func ParseImportDetails(s string, u types.DisplayUnit) (*Import, error) {
 
 	ss := strings.Split(s, ",")
 
-	for _, s := range ss {
-
-		ss1 := strings.Split(s, ":")
+	for i, s := range ss {
+		ss1 := strings.SplitN(s, ":", 2)
 		if len(ss1) != 2 {
-			return nil, errors.New("invalid import configuration string")
+			return nil, fmt.Errorf("import configuration clause %d: expected parameter:value", i+1)
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
 		paramValueStr := strings.TrimSpace(ss1[1])
 
 		if err := handleParameter(impParamMap, paramPrefix, paramValueStr, imp); err != nil {
-			return nil, err
+			return nil, fmt.Errorf(
+				"import configuration clause %d parameter %q: %w",
+				i+1,
+				paramPrefix,
+				err,
+			)
 		}
 	}
 
@@ -234,7 +255,6 @@ func ParseImportDetails(s string, u types.DisplayUnit) (*Import, error) {
 }
 
 func importImagePDFBytes(wr io.Writer, pageDim *types.Dim, imgWidth, imgHeight float64, imp *Import) {
-
 	vpw := float64(pageDim.Width)
 	vph := float64(pageDim.Height)
 	vp := types.RectForDim(vpw, vph)
@@ -307,18 +327,29 @@ func importImagePDFBytes(wr io.Writer, pageDim *types.Dim, imgWidth, imgHeight f
 
 // NewPagesForImage creates a new page dicts in xRefTable for given image reader r.
 func NewPagesForImage(xRefTable *model.XRefTable, r io.Reader, parentIndRef *types.IndirectRef, imp *Import) ([]*types.IndirectRef, error) {
-
-	// create image dict.
-	imgResources, err := model.CreateImageResources(xRefTable, r, imp.Gray, imp.Sepia)
-	if err != nil {
-		return nil, err
+	if xRefTable == nil {
+		return nil, fmt.Errorf("create image resources: %w", model.ErrMissingXRefTable)
+	}
+	if parentIndRef == nil {
+		return nil, errors.New("missing page tree parent")
+	}
+	if imp == nil {
+		return nil, errors.New("missing import configuration")
+	}
+	if imp.PageDim == nil {
+		return nil, errors.New("missing import page dimensions")
 	}
 
-	indRefs := []*types.IndirectRef{}
+	imgResources, err := model.CreateImageResources(xRefTable, r, imp.Gray, imp.Sepia)
+	if err != nil {
+		return nil, fmt.Errorf("create image resources: %w", err)
+	}
 
-	for _, imgRes := range imgResources {
-
-		// create resource dict for XObject.
+	indRefs := make([]*types.IndirectRef, 0, len(imgResources))
+	for i, imgRes := range imgResources {
+		if imgRes.Res.IndRef == nil {
+			return nil, fmt.Errorf("image resource %d: missing object reference", i+1)
+		}
 		d := types.Dict(
 			map[string]types.Object{
 				"ProcSet": types.NewNameArray("PDF", "Text", "ImageB", "ImageC", "ImageI"),
@@ -328,7 +359,7 @@ func NewPagesForImage(xRefTable *model.XRefTable, r io.Reader, parentIndRef *typ
 
 		resIndRef, err := xRefTable.IndRefForNewObject(d)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("image resource %d: create resource dictionary: %w", i+1, err)
 		}
 
 		dim := &types.Dim{Width: float64(imgRes.Width), Height: float64(imgRes.Height)}
@@ -342,16 +373,16 @@ func NewPagesForImage(xRefTable *model.XRefTable, r io.Reader, parentIndRef *typ
 		importImagePDFBytes(&buf, dim, float64(imgRes.Width), float64(imgRes.Height), imp)
 		sd, err := xRefTable.NewStreamDictForBuf(buf.Bytes())
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("image resource %d: create page content stream: %w", i+1, err)
 		}
 
 		if err = sd.Encode(); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("image resource %d: encode page content stream: %w", i+1, err)
 		}
 
 		contentsIndRef, err := xRefTable.IndRefForNewObject(*sd)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("image resource %d: create page content object: %w", i+1, err)
 		}
 
 		pageDict := types.Dict(
@@ -366,7 +397,7 @@ func NewPagesForImage(xRefTable *model.XRefTable, r io.Reader, parentIndRef *typ
 
 		indRef, err := xRefTable.IndRefForNewObject(pageDict)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("image resource %d: create page object: %w", i+1, err)
 		}
 
 		indRefs = append(indRefs, indRef)

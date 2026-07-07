@@ -18,7 +18,9 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"math"
 	"os"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -27,6 +29,71 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func validNUpDimension(v float64) bool {
+	return v > 0 && !math.IsInf(v, 0) && !math.IsNaN(v)
+}
+
+func validateNUpGrid(nup *model.NUp) error {
+	if nup.Grid == nil {
+		return errors.New("invalid configuration: missing page grid")
+	}
+	cellCount := nup.Grid.Width * nup.Grid.Height
+	maxInt := float64(int(^uint(0) >> 1))
+	if !validNUpDimension(nup.Grid.Width) || !validNUpDimension(nup.Grid.Height) || !validNUpDimension(cellCount) ||
+		cellCount > maxInt ||
+		math.Trunc(nup.Grid.Width) != nup.Grid.Width || math.Trunc(nup.Grid.Height) != nup.Grid.Height {
+		return errors.New("invalid configuration: invalid page grid")
+	}
+	return nil
+}
+
+func resolveNUpPageDimension(nup *model.NUp) error {
+	if nup.PageDim == nil {
+		dim := types.PaperSize[nup.PageSize]
+		if dim == nil {
+			return fmt.Errorf("invalid configuration: unknown page size %q", nup.PageSize)
+		}
+		pageDim := *dim
+		nup.PageDim = &pageDim
+	}
+	if !validNUpDimension(nup.PageDim.Width) || !validNUpDimension(nup.PageDim.Height) {
+		return errors.New("invalid configuration: invalid page dimensions")
+	}
+	return nil
+}
+
+func prepareNUpConfiguration(nup *model.NUp, imageInput bool) error {
+	if err := validateNUpGrid(nup); err != nil {
+		return err
+	}
+	if nup.PageDim == nil && !imageInput {
+		return nil
+	}
+	return resolveNUpPageDimension(nup)
+}
+
+func prepareNUpConfigurationForAPI(nup *model.NUp, imageInput bool) error {
+	if err := prepareNUpConfiguration(nup, imageInput); err != nil {
+		return fmt.Errorf("n-up: prepare configuration: %w", err)
+	}
+	return nil
+}
+
+// NUpValuesForBooklets returns the supported booklet page counts per sheet.
+func NUpValuesForBooklets() []int {
+	return pdfcpu.NUpValuesForBooklets()
+}
+
+// NUpValues returns the supported n-up page counts per sheet.
+func NUpValues() []int {
+	return append([]int(nil), pdfcpu.NUpValues...)
+}
+
+// DefaultBookletConfig returns the default configuration for a booklet.
+func DefaultBookletConfig() *model.NUp {
+	return pdfcpu.DefaultBookletConfig()
+}
 
 // PDFNUpConfig returns an NUp configuration for Nup-ing PDF files.
 func PDFNUpConfig(val int, desc string, conf *model.Configuration) (*model.NUp, error) {
@@ -38,14 +105,20 @@ func ImageNUpConfig(val int, desc string, conf *model.Configuration) (*model.NUp
 	return pdfcpu.ImageNUpConfig(val, desc, conf)
 }
 
-// PDFGridConfig returns a grid configuration for Grid-ing PDF files.
-func PDFGridConfig(rows, cols int, desc string, conf *model.Configuration) (*model.NUp, error) {
-	return pdfcpu.PDFGridConfig(rows, cols, desc, conf)
+// ParseNUpDetails parses an n-up command string into nup.
+func ParseNUpDetails(s string, nup *model.NUp) error {
+	if nup == nil {
+		return ErrMissingNUpConfiguration
+	}
+	return pdfcpu.ParseNUpDetails(s, nup)
 }
 
-// ImageGridConfig returns a grid configuration for Grid-ing image files.
-func ImageGridConfig(rows, cols int, desc string, conf *model.Configuration) (*model.NUp, error) {
-	return pdfcpu.ImageGridConfig(rows, cols, desc, conf)
+// ParseNUpValue applies an n-up page count to nup.
+func ParseNUpValue(n int, nup *model.NUp) error {
+	if nup == nil {
+		return ErrMissingNUpConfiguration
+	}
+	return pdfcpu.ParseNUpValue(n, nup)
 }
 
 // PDFBookletConfig returns an NUp configuration for Booklet-ing PDF files.
@@ -60,26 +133,39 @@ func ImageBookletConfig(val int, desc string, conf *model.Configuration) (*model
 
 // NUpFromImage creates a single page n-up PDF for one image
 // or a sequence of n-up pages for more than one image.
-func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (*model.Context, error) {
-	if nup.PageDim == nil {
-		// Set default paper size.
-		nup.PageDim = types.PaperSize[nup.PageSize]
-	}
+// On error, the returned context may be partially constructed and its PageCount remains at the pre-operation value.
+// Callers must discard a non-nil context returned together with an error.
+func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+	defer fault.Catch(&err)
 
-	ctx, err := pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)
-	if err != nil {
+	if nup == nil {
+		return nil, ErrMissingNUpConfiguration
+	}
+	if len(imageFileNames) == 0 {
+		return nil, ErrMissingImageInput
+	}
+	if err := prepareNUpConfigurationForAPI(nup, true); err != nil {
 		return nil, err
+	}
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.NUP
+
+	ctx, err = pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)
+	if err != nil {
+		return nil, fmt.Errorf("n-up: create image context: %w", err)
 	}
 
 	pagesIndRef, err := ctx.Pages()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("n-up: access image page tree: %w", err)
 	}
 
 	// This is the page tree root.
 	pagesDict, err := ctx.DereferenceDict(*pagesIndRef)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("n-up: dereference image page tree: %w", err)
 	}
 
 	if len(imageFileNames) == 1 {
@@ -88,7 +174,10 @@ func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model
 		err = pdfcpu.NUpFromMultipleImages(ctx, imageFileNames, nup, pagesDict, pagesIndRef)
 	}
 
-	return ctx, err
+	if err != nil {
+		return ctx, fmt.Errorf("n-up: impose images: %w", err)
+	}
+	return ctx, nil
 }
 
 // NUp rearranges PDF pages or images into page grids and writes the result to w.
@@ -101,7 +190,13 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 	}
 
 	if nup == nil {
-		return errors.New("missing n-up configuration")
+		return ErrMissingNUpConfiguration
+	}
+	if nup.ImgInputFile && len(imgFiles) == 0 {
+		return ErrMissingImageInput
+	}
+	if err := prepareNUpConfigurationForAPI(nup, nup.ImgInputFile); err != nil {
+		return err
 	}
 
 	if conf == nil {
@@ -128,60 +223,94 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 		}
 
 		if ctx, err = ReadAndValidate(rs, conf); err != nil {
-			return err
+			return fmt.Errorf("n-up: read and validate: %w", err)
 		}
 
 		pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 		if err != nil {
-			return err
+			return fmt.Errorf("n-up: parse page selection: %w", err)
 		}
 
 		// New pages get added to ctx while old pages get deleted.
 		// This way we avoid migrating objects between contexts.
 		if err = pdfcpu.NUpFromPDF(ctx, pages, nup); err != nil {
-			return err
+			return fmt.Errorf("n-up: impose pages: %w", err)
 		}
 
 	}
 
-	return Write(ctx, w, conf)
+	if err = Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("n-up: write output: %w", err)
+	}
+	return nil
+}
+
+func nUpImageOutputAliasesInput(inFile, outFile string) (bool, error) {
+	return outputAliasesInput(inFile, outFile)
+}
+
+func rejectNUpImageOutputAlias(inFiles []string, outFile string) error {
+	for i, inFile := range inFiles {
+		aliases, err := nUpImageOutputAliasesInput(inFile, outFile)
+		if err != nil {
+			return fmt.Errorf("n-up image %d %q: check output alias: %w", i+1, inFile, err)
+		}
+		if aliases {
+			return fmt.Errorf("n-up image %d %q: output aliases input: %w", i+1, inFile, ErrNUpImageOutputConflict)
+		}
+	}
+	return nil
 }
 
 // NUpFile rearranges PDF pages or images into page grids and writes the result to outFile.
 func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
+	if nup == nil {
+		return ErrMissingNUpConfiguration
+	}
+	if len(inFiles) == 0 {
+		if nup.ImgInputFile {
+			return ErrMissingImageInput
+		}
+		return ErrMissingPDFInput
+	}
+	if outFile == "" {
+		return ErrMissingPDFOutput
+	}
+	if err := prepareNUpConfigurationForAPI(nup, nup.ImgInputFile); err != nil {
+		return err
+	}
+	if nup.ImgInputFile {
+		if err := rejectNUpImageOutputAlias(inFiles, outFile); err != nil {
+			return err
+		}
+	}
+
 	var f1, f2 *os.File
 	ok := false
 
 	if !nup.ImgInputFile {
 		// Nup from a PDF page.
 		if f1, err = os.Open(inFiles[0]); err != nil {
-			return err
+			return fmt.Errorf("n-up: open input %s: %w", inFiles[0], err)
 		}
 	}
 
-	if f2, err = os.Create(outFile); err != nil {
-		if f1 != nil {
-			_ = f1.Close()
-		}
-		return err
+	staged, err := openStagedOutput(f1, inFiles[0], outFile, "n-up")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("n-up: create output: %w", err),
+			closeFile(f1, "n-up: close input"),
+		)
 	}
+	f2 = staged.output.file
 	logWritingTo(outFile)
 
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			if f1 != nil {
-				_ = f1.Close()
-			}
-			os.Remove(outFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if f1 != nil {
-			err = f1.Close()
-		}
+		err = staged.commit()
 	}()
 
 	if err = NUp(f1, f2, inFiles, selectedPages, nup, conf); err != nil {

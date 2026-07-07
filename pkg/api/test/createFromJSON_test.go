@@ -57,7 +57,7 @@ func TestCreateContentPrimitivesViaJson(t *testing.T) {
 
 	t.Helper()
 	inDir := filepath.Join(inDir, "json", "create")
-	outDir := filepath.Join(samplesDir, "create", "primitives")
+	outDir := t.TempDir()
 
 	for _, tt := range []struct {
 		msg        string

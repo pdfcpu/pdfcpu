@@ -60,9 +60,14 @@ func validateGoToRActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 func validateTargetDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
 	// table 202
 
+	parentDictName := dictName
+	rawEntry := d[entryName]
 	d1, err := validateDictEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d1 == nil {
-		return err
+		if err != nil {
+			return fmt.Errorf("%s: %w", dictEntryContext(parentDictName, entryName, rawEntry), err)
+		}
+		return nil
 	}
 
 	dictName = "targetDict"
@@ -70,29 +75,33 @@ func validateTargetDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName,
 	// R, required, name
 	_, err = validateNameEntry(xRefTable, d1, dictName, "R", REQUIRED, model.V10, func(s string) bool { return s == "P" || s == "C" })
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: R: %w", dictEntryContext(parentDictName, entryName, rawEntry), err)
 	}
 
 	// N, optional, byte string
 	_, err = validateStringEntry(xRefTable, d1, dictName, "N", OPTIONAL, model.V10, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: N: %w", dictEntryContext(parentDictName, entryName, rawEntry), err)
 	}
 
 	// P, optional, integer or byte string
 	err = validateIntOrStringEntry(xRefTable, d1, dictName, "P", OPTIONAL, model.V10)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: P: %w", dictEntryContext(parentDictName, entryName, rawEntry), err)
 	}
 
 	// A, optional, integer or text string
 	err = validateIntOrStringEntry(xRefTable, d1, dictName, "A", OPTIONAL, model.V10)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: A: %w", dictEntryContext(parentDictName, entryName, rawEntry), err)
 	}
 
 	// T, optional, target dict
-	return validateTargetDictEntry(xRefTable, d1, dictName, "T", OPTIONAL, model.V10)
+	if err := validateTargetDictEntry(xRefTable, d1, dictName, "T", OPTIONAL, model.V10); err != nil {
+		return fmt.Errorf("%s: %w", dictEntryContext(parentDictName, entryName, rawEntry), err)
+	}
+
+	return nil
 }
 
 func validateGoToEActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -205,7 +214,7 @@ func validateDestinationThreadEntry(xRefTable *model.XRefTable, d types.Dict, di
 		// or the title of the thread as specified in its thread info dict
 
 	default:
-		return fmt.Errorf("dict=%s entry=%s invalid type", dictName, entryName)
+		return fmt.Errorf("%s.%s: expected thread dict, string or integer, got %T", dictName, entryName, o)
 	}
 
 	return nil
@@ -226,7 +235,7 @@ func validateDestinationBeadEntry(xRefTable *model.XRefTable, d types.Dict, dict
 		// or an index of the thread within its thread
 
 	default:
-		return fmt.Errorf("dict=%s entry=%s invalid type", dictName, entryName)
+		return fmt.Errorf("%s.%s: expected bead dict or integer, got %T", dictName, entryName, o)
 	}
 
 	return nil
@@ -373,7 +382,7 @@ func validateMovieStartOrDurationEntry(xRefTable *model.XRefTable, d types.Dict,
 
 	case types.Array:
 		if len(o) != 2 {
-			return errors.New("array length <> 2")
+			return fmt.Errorf("%s.%s: expected array length 2, got %d", dictName, entryName, len(o))
 		}
 	}
 
@@ -464,8 +473,11 @@ func validateMovieActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 	}
 
 	d, err = xRefTable.DereferenceDict(*ir)
-	if err != nil || d == nil {
-		return errors.New("missing required entry \"T\" or \"Annotation\"")
+	if err != nil {
+		return fmt.Errorf("%s.Annotation: dereference movie annotation dict: %w", dictName, err)
+	}
+	if d == nil {
+		return errors.New("movie action: missing required entry \"T\" or \"Annotation\"")
 	}
 
 	_, err = validateNameEntry(xRefTable, d, "annotDict", "Subtype", REQUIRED, model.V10, func(s string) bool { return s == "Movie" })
@@ -492,11 +504,11 @@ func validateHideActionDictEntryT(xRefTable *model.XRefTable, o types.Object) er
 
 	case types.Array:
 		// mixed array of annotationDict indRefs and strings
-		for _, v := range o {
+		for i, v := range o {
 
 			o, err := xRefTable.Dereference(v)
 			if err != nil {
-				return err
+				return fmt.Errorf("Hide.T[%d]: dereference: %w", i, err)
 			}
 
 			if o == nil {
@@ -509,20 +521,22 @@ func validateHideActionDictEntryT(xRefTable *model.XRefTable, o types.Object) er
 				// Ensure UTF16 correctness.
 				_, err = types.StringLiteralToString(o)
 				if err != nil {
-					return err
+					return fmt.Errorf("Hide.T[%d]: string literal: %w", i, err)
 				}
 
 			case types.Dict:
 				// annotDict,  Check for required name Subtype
 				_, err = validateNameEntry(xRefTable, o, "annotDict", "Subtype", REQUIRED, model.V10, nil)
 				if err != nil {
-					return err
+					return fmt.Errorf("Hide.T[%d]: annotation dict: %w", i, err)
 				}
+			default:
+				return fmt.Errorf("Hide.T[%d]: expected string or annotation dict, got %T", i, o)
 			}
 		}
 
 	default:
-		return fmt.Errorf("validateHideActionDict: invalid entry \"T\"")
+		return fmt.Errorf("Hide.T: expected string, annotation dict or array, got %T", o)
 
 	}
 
@@ -535,12 +549,15 @@ func validateHideActionDict(xRefTable *model.XRefTable, d types.Dict, dictName s
 	// T, required, dict, text string or array
 	o, found := d.Find("T")
 	if !found || o == nil {
-		return errors.New("missing required entry \"T\"")
+		return errors.New("Hide action: missing required entry \"T\"")
 	}
 
 	o, err := xRefTable.Dereference(o)
-	if err != nil || o == nil {
-		return err
+	if err != nil {
+		return fmt.Errorf("Hide.T: dereference: %w", err)
+	}
+	if o == nil {
+		return errors.New("Hide.T: missing object")
 	}
 
 	err = validateHideActionDictEntryT(xRefTable, o)
@@ -595,13 +612,13 @@ func validateSubmitFormActionDict(xRefTable *model.XRefTable, d types.Dict, dict
 		return err
 	}
 
-	for _, v := range a {
+	for i, v := range a {
 		switch v.(type) {
 		case types.StringLiteral, types.IndirectRef:
 			// no further processing
 
 		default:
-			return errors.New("unknown Fields entry")
+			return fmt.Errorf("SubmitForm.Fields[%d]: expected string or indirect reference, got %T", i, v)
 		}
 	}
 
@@ -622,13 +639,13 @@ func validateResetFormActionDict(xRefTable *model.XRefTable, d types.Dict, dictN
 		return err
 	}
 
-	for _, v := range a {
+	for i, v := range a {
 		switch v.(type) {
 		case types.StringLiteral, types.IndirectRef:
 			// no further processing
 
 		default:
-			return errors.New("unknown Fields entry")
+			return fmt.Errorf("ResetForm.Fields[%d]: expected string or indirect reference, got %T", i, v)
 		}
 	}
 
@@ -680,7 +697,7 @@ func validateJavaScript(xRefTable *model.XRefTable, d types.Dict, dictName, entr
 		// no further processing
 
 	default:
-		err = fmt.Errorf("invalid type")
+		err = fmt.Errorf("%s.%s: expected string, hex literal or stream dict, got %T", dictName, entryName, o)
 
 	}
 
@@ -743,14 +760,15 @@ func validateRenditionActionDict(xRefTable *model.XRefTable, d types.Dict, dictN
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V14
 	}
+	rawR := d["R"]
 	d1, err := validateDictEntry(xRefTable, d, dictName, "R", required, sinceVersion, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", dictEntryContext(dictName, "R", rawR), err)
 	}
 	if d1 != nil {
 		err = validateRenditionDict(xRefTable, d1, sinceVersion)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", dictEntryContext(dictName, "R", rawR), err)
 		}
 	}
 
@@ -836,14 +854,60 @@ func validateActionDictCore(xRefTable *model.XRefTable, n *types.Name, d types.D
 
 			err := xRefTable.ValidateVersion(k, sinceVersion)
 			if err != nil {
-				return err
+				return fmt.Errorf("action %s: version: %w", k, err)
 			}
 
-			return v.validate(xRefTable, d, k)
+			if err := v.validate(xRefTable, d, k); err != nil {
+				return fmt.Errorf("action %s: %w", k, err)
+			}
+			return nil
 		}
 	}
 
-	return fmt.Errorf("unsupported action type: %s", *n)
+	return fmt.Errorf("action %s: unsupported action type %q", n.Value(), n.Value())
+}
+
+func validateActionDictObject(xRefTable *model.XRefTable, d types.Dict, o types.Object, context string) error {
+	if err := validateActionDict(xRefTable, d); err != nil {
+		return fmt.Errorf("%s: %w", objectContext(context, o), err)
+	}
+	return nil
+}
+
+func validateNextAction(xRefTable *model.XRefTable, o types.Object) error {
+	d, err := xRefTable.DereferenceDict(o)
+	if err == nil {
+		if d == nil {
+			return nil
+		}
+		if err := validateActionDictObject(xRefTable, d, o, "action Next"); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	a, err := xRefTable.DereferenceArray(o)
+	if err != nil {
+		return fmt.Errorf("action Next: expected action dict or array: %w", err)
+	}
+	if a == nil {
+		return nil
+	}
+
+	for i, v := range a {
+		d, err := xRefTable.DereferenceDict(v)
+		if err != nil {
+			return fmt.Errorf("action Next[%d]: dereference dict: %w", i, err)
+		}
+		if d == nil {
+			continue
+		}
+		if err := validateActionDictObject(xRefTable, d, v, fmt.Sprintf("action Next[%d]", i)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func validateActionDict(xRefTable *model.XRefTable, d types.Dict) error {
@@ -856,13 +920,13 @@ func validateActionDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 	_, err := validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, model.V10, func(s string) bool { return types.MemberOf(s, allowedTypes) })
 	if err != nil {
-		return err
+		return fmt.Errorf("action dictionary Type: %w", err)
 	}
 
 	// S, required, name, action Type
 	s, err := validateNameEntry(xRefTable, d, dictName, "S", REQUIRED, model.V10, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("action dictionary S: %w", err)
 	}
 
 	err = validateActionDictCore(xRefTable, s, d)
@@ -871,36 +935,7 @@ func validateActionDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	if o, ok := d.Find("Next"); ok {
-
-		// either optional action dict
-		d, err := xRefTable.DereferenceDict(o)
-		if err == nil {
-			return validateActionDict(xRefTable, d)
-		}
-
-		// or optional array of action dicts
-		a, err := xRefTable.DereferenceArray(o)
-		if err != nil {
-			return err
-		}
-
-		for _, v := range a {
-
-			d, err := xRefTable.DereferenceDict(v)
-			if err != nil {
-				return err
-			}
-
-			if d == nil {
-				continue
-			}
-
-			err = validateActionDict(xRefTable, d)
-			if err != nil {
-				return err
-			}
-		}
-
+		return validateNextAction(xRefTable, o)
 	}
 
 	return nil
@@ -947,19 +982,19 @@ func validateAdditionalActions(xRefTable *model.XRefTable, dict types.Dict, dict
 	for k, v := range d {
 
 		if !validateAdditionalAction(k, source) {
-			return fmt.Errorf("action %s not allowed for source %s", k, source)
+			return fmt.Errorf("additional action %s.%s: action %s not allowed for source %s", dictName, entryName, k, source)
 		}
 
 		d, err := xRefTable.DereferenceDict(v)
 		if err != nil {
-			return err
+			return fmt.Errorf("additional action %s.%s.%s: dereference dict: %w", dictName, entryName, k, err)
 		}
 
 		if d == nil {
 			continue
 		}
 
-		err = validateActionDict(xRefTable, d)
+		err = validateActionDictObject(xRefTable, d, v, fmt.Sprintf("additional action %s.%s.%s", dictName, entryName, k))
 		if err != nil {
 			return err
 		}

@@ -24,134 +24,140 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
+func validateCryptoCommand(cmd *Command) error {
+	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
+		return api.ErrMissingPDFInput
+	}
+	if cmd.OutFile == nil {
+		return api.ErrMissingPDFOutput
+	}
+	if cmd.Conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	return nil
+}
+
+func validatePasswordChangeCommand(cmd *Command) error {
+	if err := validateCryptoCommand(cmd); err != nil {
+		return err
+	}
+	if cmd.PWOld == nil {
+		return errors.New("missing old password")
+	}
+	if cmd.PWNew == nil {
+		return errors.New("missing new password")
+	}
+	return nil
+}
+
+func validatePermissionInputs(inFiles []string, conf *model.Configuration) error {
+	if len(inFiles) == 0 {
+		return api.ErrMissingPDFInput
+	}
+	for i, inFile := range inFiles {
+		if inFile == "" {
+			return fmt.Errorf("input %d: %w", i+1, api.ErrMissingPDFInput)
+		}
+	}
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	return nil
+}
+
 // Encrypt inFile and write result to outFile.
 func Encrypt(cmd *Command) ([]string, error) {
+	if err := validateCryptoCommand(cmd); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.EncryptFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
 	}
-
-	var rs io.ReadSeeker
-	var err error
-	if *cmd.InFile == "-" {
-		rs, err = readSeekerFromStdin()
-	} else {
-		rs, err = os.Open(*cmd.InFile)
-	}
-	if err != nil {
-		return nil, err
-	}
-	if f, ok := rs.(*os.File); ok {
-		defer f.Close()
-	}
-
-	w := io.Writer(os.Stdout)
-	if *cmd.OutFile == "-" {
-		log.SetCLILogger(nil)
-	} else {
-		f, err := os.Create(*cmd.OutFile)
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-		w = f
-	}
-
-	return nil, api.Encrypt(rs, w, cmd.Conf)
+	return nil, runContentStreamOperation(*cmd.InFile, *cmd.OutFile, "encrypt", func(rs io.ReadSeeker, w io.Writer) error {
+		return api.Encrypt(rs, w, cmd.Conf)
+	})
 }
 
 // Decrypt inFile and write result to outFile.
 func Decrypt(cmd *Command) ([]string, error) {
+	if err := validateCryptoCommand(cmd); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.DecryptFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
 	}
 
-	var rs io.ReadSeeker
-	var err error
-	if *cmd.InFile == "-" {
-		rs, err = readSeekerFromStdin()
-	} else {
-		rs, err = os.Open(*cmd.InFile)
-	}
-	if err != nil {
-		return nil, err
-	}
-	if f, ok := rs.(*os.File); ok {
-		defer f.Close()
-	}
-
-	w := io.Writer(os.Stdout)
-	if *cmd.OutFile == "-" {
-		log.SetCLILogger(nil)
-	} else {
-		f, err := os.Create(*cmd.OutFile)
-		if err != nil {
-			return nil, err
-		}
-		defer f.Close()
-		w = f
-	}
-
-	return nil, api.Decrypt(rs, w, cmd.Conf)
+	return nil, runContentStreamOperation(*cmd.InFile, *cmd.OutFile, "decrypt", func(rs io.ReadSeeker, w io.Writer) error {
+		return api.Decrypt(rs, w, cmd.Conf)
+	})
 }
 
 // ChangeUserPassword of inFile and write result to outFile.
 func ChangeUserPassword(cmd *Command) ([]string, error) {
+	if err := validatePasswordChangeCommand(cmd); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.ChangeUserPasswordFile(*cmd.InFile, *cmd.OutFile, *cmd.PWOld, *cmd.PWNew, cmd.Conf)
 	}
 
-	rs, w, cleanup, err := streamInOut(*cmd.InFile, *cmd.OutFile)
-	if err != nil {
-		return nil, err
-	}
-	if cleanup != nil {
-		defer cleanup()
-	}
-
-	return nil, api.ChangeUserPassword(rs, w, *cmd.PWOld, *cmd.PWNew, cmd.Conf)
+	return nil, runContentStreamOperation(
+		*cmd.InFile,
+		*cmd.OutFile,
+		"change user password",
+		func(rs io.ReadSeeker, w io.Writer) error {
+			return api.ChangeUserPassword(rs, w, *cmd.PWOld, *cmd.PWNew, cmd.Conf)
+		},
+	)
 }
 
 // ChangeOwnerPassword of inFile and write result to outFile.
 func ChangeOwnerPassword(cmd *Command) ([]string, error) {
+	if err := validatePasswordChangeCommand(cmd); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.ChangeOwnerPasswordFile(*cmd.InFile, *cmd.OutFile, *cmd.PWOld, *cmd.PWNew, cmd.Conf)
 	}
 
-	rs, w, cleanup, err := streamInOut(*cmd.InFile, *cmd.OutFile)
-	if err != nil {
-		return nil, err
-	}
-	if cleanup != nil {
-		defer cleanup()
-	}
-
-	return nil, api.ChangeOwnerPassword(rs, w, *cmd.PWOld, *cmd.PWNew, cmd.Conf)
+	return nil, runContentStreamOperation(
+		*cmd.InFile,
+		*cmd.OutFile,
+		"change owner password",
+		func(rs io.ReadSeeker, w io.Writer) error {
+			return api.ChangeOwnerPassword(rs, w, *cmd.PWOld, *cmd.PWNew, cmd.Conf)
+		},
+	)
 }
 
 func listPermissions(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
-	if rs == nil {
-		return nil, errors.New("pdfcpu: listPermissions: missing rs")
-	}
+	return api.PermissionsList(rs, conf)
+}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.LISTPERMISSIONS
+var closeListPermissionsInput = (*os.File).Close
 
-	ctx, err := api.ReadAndValidate(rs, conf)
+func readPermissionsFile(inFile string, conf *model.Configuration) ([]string, error) {
+	f, err := os.Open(inFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list permissions: open input: %w", err)
 	}
 
-	return pdfcpu.Permissions(ctx), nil
+	permissions, opErr := listPermissions(f, conf)
+	closeErr := closeListPermissionsInput(f)
+	if closeErr != nil {
+		closeErr = fmt.Errorf("list permissions: close input: %w", closeErr)
+	}
+	return permissions, errors.Join(opErr, closeErr)
 }
 
 // ListPermissionsFile returns a list of user access permissions for inFile.
 func ListPermissionsFile(inFiles []string, conf *model.Configuration) ([]string, error) {
+	if err := validatePermissionInputs(inFiles, conf); err != nil {
+		return nil, err
+	}
 	log.SetCLILogger(nil)
 
 	var ss []string
@@ -161,19 +167,13 @@ func ListPermissionsFile(inFiles []string, conf *model.Configuration) ([]string,
 		if i > 0 {
 			ss = append(ss, "")
 		}
-		f, err := os.Open(fn)
+		ssx, err := readPermissionsFile(fn, conf)
 		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			f.Close()
-		}()
-		ssx, err := listPermissions(f, conf)
-		if err != nil {
+			err = fmt.Errorf("%s: %w", fn, err)
 			if len(inFiles) == 1 {
 				return nil, err
 			}
-			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
+			errs = append(errs, err)
 			continue
 		}
 		ss = append(ss, fn+":")
@@ -185,6 +185,13 @@ func ListPermissionsFile(inFiles []string, conf *model.Configuration) ([]string,
 
 // ListPermissions of inFile.
 func ListPermissions(cmd *Command) ([]string, error) {
+	if cmd == nil {
+		return nil, api.ErrMissingPDFInput
+	}
+	if err := validatePermissionInputs(cmd.InFiles, cmd.Conf); err != nil {
+		return nil, err
+	}
+
 	stdin := false
 	for _, fn := range cmd.InFiles {
 		if fn == "-" {
@@ -204,31 +211,24 @@ func ListPermissions(cmd *Command) ([]string, error) {
 			ss = append(ss, "")
 		}
 
-		var rs io.ReadSeeker
+		var ssx []string
 		var err error
+		label := fn
 		if fn == "-" {
-			rs, err = readSeekerFromStdin()
+			label = "stdin"
+			ssx, err = withStdinReadSeeker("list permissions", func(rs io.ReadSeeker) ([]string, error) {
+				return listPermissions(rs, cmd.Conf)
+			})
 		} else {
-			rs, err = os.Open(fn)
+			ssx, err = readPermissionsFile(fn, cmd.Conf)
 		}
 		if err != nil {
-			return nil, err
-		}
-		if f, ok := rs.(*os.File); ok {
-			defer f.Close()
-		}
-
-		ssx, err := listPermissions(rs, cmd.Conf)
-		if err != nil {
+			err = fmt.Errorf("%s: %w", label, err)
 			if len(cmd.InFiles) == 1 {
 				return nil, err
 			}
-			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
+			errs = append(errs, err)
 			continue
-		}
-		label := fn
-		if label == "-" {
-			label = "stdin"
 		}
 		ss = append(ss, label+":")
 		ss = append(ss, ssx...)
@@ -239,17 +239,19 @@ func ListPermissions(cmd *Command) ([]string, error) {
 
 // SetPermissions of inFile.
 func SetPermissions(cmd *Command) ([]string, error) {
+	if err := validateCryptoCommand(cmd); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.SetPermissionsFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
 	}
 
-	rs, w, cleanup, err := streamInOut(*cmd.InFile, *cmd.OutFile)
-	if err != nil {
-		return nil, err
-	}
-	if cleanup != nil {
-		defer cleanup()
-	}
-
-	return nil, api.SetPermissions(rs, w, cmd.Conf)
+	return nil, runContentStreamOperation(
+		*cmd.InFile,
+		*cmd.OutFile,
+		"set permissions",
+		func(rs io.ReadSeeker, w io.Writer) error {
+			return api.SetPermissions(rs, w, cmd.Conf)
+		},
+	)
 }

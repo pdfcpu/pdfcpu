@@ -172,7 +172,9 @@ func addPageTreeForResourceDictInheritanceDemo(xRefTable *model.XRefTable, rootD
 		Y:        400,
 	}
 
-	model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td)
+	if _, err := model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
+		return fmt.Errorf("render Times-Roman demo text: %w", err)
+	}
 
 	fontName = "Courier"
 	td = model.TextDescriptor{
@@ -186,7 +188,9 @@ func addPageTreeForResourceDictInheritanceDemo(xRefTable *model.XRefTable, rootD
 		Y:        300,
 	}
 
-	model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td)
+	if _, err := model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
+		return fmt.Errorf("render Courier demo text: %w", err)
+	}
 
 	fontName = "Courier-Bold"
 	td = model.TextDescriptor{
@@ -200,7 +204,9 @@ func addPageTreeForResourceDictInheritanceDemo(xRefTable *model.XRefTable, rootD
 		Y:        350,
 	}
 
-	model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td)
+	if _, err := model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
+		return fmt.Errorf("render Courier-Bold demo text: %w", err)
+	}
 
 	pageIndRef, err := createDemoPage(xRefTable, *pagesIndRef, p)
 	if err != nil {

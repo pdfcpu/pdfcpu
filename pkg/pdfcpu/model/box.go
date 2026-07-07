@@ -145,7 +145,7 @@ func (pb *PageBoundaries) ResolveBox(s string) error {
 	return fmt.Errorf("invalid box prefix: %s", s)
 }
 
-// ParseBoxList parses a list of box
+// ParseBoxList parses a list of box types.
 func ParseBoxList(s string) (*PageBoundaries, error) {
 	// A comma separated, unsorted list of values:
 	//
@@ -934,7 +934,7 @@ func (ctx *Context) RemovePageBoundaries(selectedPages types.IntSet, pb *PageBou
 		}
 		d, _, inhPAttrs, err := ctx.PageDict(k, false)
 		if err != nil {
-			return err
+			return fmt.Errorf("page %d: page dictionary: %w", k, err)
 		}
 		if pb.Crop != nil {
 			if oldVal := d.Delete("CropBox"); oldVal == nil {
@@ -952,6 +952,22 @@ func (ctx *Context) RemovePageBoundaries(selectedPages types.IntSet, pb *PageBou
 		}
 	}
 	return nil
+}
+
+func (ctx *Context) pageBoundary(d types.Dict, boxName string) (*types.Rectangle, error) {
+	obj, found := d.Find(boxName)
+	if !found {
+		return nil, nil
+	}
+	a, err := ctx.DereferenceArray(obj)
+	if err != nil {
+		return nil, fmt.Errorf("%s: dereference array: %w", boxName, err)
+	}
+	r, err := rect(ctx.XRefTable, a)
+	if err != nil {
+		return nil, fmt.Errorf("%s: rectangle: %w", boxName, err)
+	}
+	return r, nil
 }
 
 func boxLowerLeftCorner(r *types.Rectangle, w, h float64, a types.Anchor) types.Point {
@@ -1195,45 +1211,24 @@ func (ctx *Context) AddPageBoundaries(selectedPages types.IntSet, pb *PageBounda
 		}
 		d, _, inhPAttrs, err := ctx.PageDict(k, false)
 		if err != nil {
-			return err
+			return fmt.Errorf("page %d: page dictionary: %w", k, err)
 		}
 		mediaBox := inhPAttrs.MediaBox
 		cropBox := inhPAttrs.CropBox
 
-		var trimBox *types.Rectangle
-		obj, found := d.Find("TrimBox")
-		if found {
-			a, err := ctx.DereferenceArray(obj)
-			if err != nil {
-				return err
-			}
-			if trimBox, err = rect(ctx.XRefTable, a); err != nil {
-				return err
-			}
+		trimBox, err := ctx.pageBoundary(d, "TrimBox")
+		if err != nil {
+			return fmt.Errorf("page %d: %w", k, err)
 		}
 
-		var bleedBox *types.Rectangle
-		obj, found = d.Find("BleedBox")
-		if found {
-			a, err := ctx.DereferenceArray(obj)
-			if err != nil {
-				return err
-			}
-			if bleedBox, err = rect(ctx.XRefTable, a); err != nil {
-				return err
-			}
+		bleedBox, err := ctx.pageBoundary(d, "BleedBox")
+		if err != nil {
+			return fmt.Errorf("page %d: %w", k, err)
 		}
 
-		var artBox *types.Rectangle
-		obj, found = d.Find("ArtBox")
-		if found {
-			a, err := ctx.DereferenceArray(obj)
-			if err != nil {
-				return err
-			}
-			if artBox, err = rect(ctx.XRefTable, a); err != nil {
-				return err
-			}
+		artBox, err := ctx.pageBoundary(d, "ArtBox")
+		if err != nil {
+			return fmt.Errorf("page %d: %w", k, err)
 		}
 
 		boxes := &boxes{mediaBox: mediaBox, cropBox: cropBox, trimBox: trimBox, bleedBox: bleedBox, artBox: artBox}
@@ -1251,7 +1246,7 @@ func (ctx *Context) Crop(selectedPages types.IntSet, b *Box) error {
 		}
 		d, _, inhPAttrs, err := ctx.PageDict(k, false)
 		if err != nil {
-			return err
+			return fmt.Errorf("page %d: page dictionary: %w", k, err)
 		}
 		ApplyBox("CropBox", b, d, inhPAttrs.MediaBox)
 	}

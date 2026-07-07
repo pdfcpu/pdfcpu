@@ -92,6 +92,7 @@ const (
 	PageLayoutTwoColumnRight
 	PageLayoutTwoPageLeft
 	PageLayoutTwoPageRight
+	PageLayoutOneColumn
 )
 
 // PageLayoutFor returns the page layout for s.
@@ -103,6 +104,8 @@ func PageLayoutFor(s string) *PageLayout {
 	switch strings.ToLower(s) {
 	case "singlepage":
 		pl = PageLayoutSinglePage
+	case "onecolumn":
+		pl = PageLayoutOneColumn
 	case "twocolumnleft":
 		pl = PageLayoutTwoColumnLeft
 	case "twocolumnright":
@@ -125,6 +128,8 @@ func (pl *PageLayout) String() string {
 	switch *pl {
 	case PageLayoutSinglePage:
 		return "SinglePage" // = default
+	case PageLayoutOneColumn:
+		return "OneColumn"
 	case PageLayoutTwoColumnLeft:
 		return "TwoColumnLeft"
 	case PageLayoutTwoColumnRight:
@@ -656,7 +661,6 @@ func (vp *ViewerPreferences) unmarshalPrinterPreferences(vpJSON ViewerPrefJSON) 
 
 // UnmarshalJSON unmarshals JSON data.
 func (vp *ViewerPreferences) UnmarshalJSON(data []byte) error {
-
 	vpJSON := ViewerPrefJSON{}
 
 	if err := json.Unmarshal(data, &vpJSON); err != nil {

@@ -54,8 +54,13 @@ func TestImportBookmarks(t *testing.T) {
 	msg := "TestImportBookmarks"
 	inDir := filepath.Join("..", "..", "samples", "bookmarks")
 	inFile := filepath.Join(inDir, "bookmarkTree.pdf")
-	inFileJSON := filepath.Join(inDir, "bookmarkTree.json")
+	inFileJSON := filepath.Join(outDir, "bookmarkTree.json")
 	outFile := filepath.Join(outDir, "bookmarkTreeImported.pdf")
+
+	exportCmd := cli.ExportBookmarksCommand(inFile, inFileJSON, nil)
+	if _, err := cli.Dispatch(exportCmd); err != nil {
+		t.Fatalf("%s export bookmarks: %v\n", msg, err)
+	}
 
 	replace := true
 	cmd := cli.ImportBookmarksCommand(inFile, inFileJSON, outFile, replace, nil)

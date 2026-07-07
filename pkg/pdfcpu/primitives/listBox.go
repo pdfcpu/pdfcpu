@@ -412,11 +412,10 @@ func (lb *ListBox) labelPos(labelHeight, w, g float64) (float64, float64) {
 	return x, y
 }
 
-func selectItem(w io.Writer, i int, width, height float64, fontName string, fontSize int, boWidth float64, col color.SimpleColor) {
-	lh := font.LineHeight(fontName, fontSize)
+func selectItem(w io.Writer, i int, width, height, lineHeight, boWidth float64, col color.SimpleColor) {
 	fmt.Fprintf(w, "%.2f %.2f %.2f rg 1 %.2f %.2f %.2f re f ",
 		col.R, col.G, col.B,
-		height-boWidth-float64(i+1)*lh, width-2, lh)
+		height-boWidth-float64(i+1)*lineHeight, width-2, lineHeight)
 }
 
 func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
@@ -441,18 +440,21 @@ func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	fmt.Fprintf(buf, "1 1 %.2f %.2f re W n ", w-2, h-2)
 
 	f, ind := lb.Font, lb.Ind
+	lh, descent, err := fontLineMetrics(f.Name, f.Size)
+	if err != nil {
+		return nil, fmt.Errorf("list box text: %w", err)
+	}
 	selCol := color.SimpleColor{R: 0.600006, G: 0.756866, B: 0.854904}
 	for i := 0; i < len(ind); i++ {
 		j := ind[i].(types.Integer).Value()
-		selectItem(buf, j, w, h, f.Name, f.Size, boWidth, selCol)
+		selectItem(buf, j, w, h, lh, boWidth, selCol)
 	}
 
 	x := 2 * boWidth
 	if x == 0 {
 		x = 2
 	}
-	h0 := h + font.Descent(f.Name, f.Size) - boWidth
-	lh := font.LineHeight(f.Name, f.Size)
+	h0 := h + descent - boWidth
 
 	opts := lb.Options
 	for i := 0; i < len(opts); i++ {
@@ -460,18 +462,15 @@ func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		if font.IsCoreFont(f.Name) && utf8.ValidString(s) {
 			s = model.DecodeUTF8ToByte(s)
 		}
-		lineBB := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
-		s = model.PrepBytes(xRefTable, s, f.Name, true, lb.RTL, f.FillFont)
-		x := 2 * boWidth
-		if x == 0 {
-			x = 2
+		lineBB, err := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
+		if err != nil {
+			return nil, fmt.Errorf("list box option %d: %w", i+1, err)
 		}
-		switch lb.HorAlign {
-		case types.AlignCenter:
-			x = w/2 - lineBB.Width()/2
-		case types.AlignRight:
-			x = w - lineBB.Width() - 2
+		s, err = model.PrepBytes(xRefTable, s, f.Name, true, lb.RTL, f.FillFont)
+		if err != nil {
+			return nil, fmt.Errorf("list box option %d: %w", i+1, err)
 		}
+		x := alignedFieldTextX(lb.HorAlign, w, lineBB.Width(), boWidth)
 		fmt.Fprint(buf, "BT ")
 		if i == 0 {
 			fmt.Fprintf(buf, "/%s %d Tf %.2f %.2f %.2f RG %.2f %.2f %.2f rg ",
@@ -767,7 +766,10 @@ func (lb *ListBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) err
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb := model.WriteMultiLine(lb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(lb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return fmt.Errorf("list box label: %w", err)
+	}
 	l.height = bb.Height()
 	if bb.Width() > w {
 		w = bb.Width()
@@ -826,7 +828,9 @@ func (lb *ListBox) doRender(p *model.Page, fonts model.FontMap) error {
 	}
 
 	if lb.Label != nil {
-		model.WriteColumn(lb.pdf.XRefTable, p.Buf, p.MediaBox, nil, *lb.Label.td, 0)
+		if _, err := model.WriteColumn(lb.pdf.XRefTable, p.Buf, p.MediaBox, nil, *lb.Label.td, 0); err != nil {
+			return fmt.Errorf("list box label: %w", err)
+		}
 	}
 
 	if lb.Debug || lb.pdf.Debug {

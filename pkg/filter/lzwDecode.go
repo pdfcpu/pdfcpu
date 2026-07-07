@@ -70,7 +70,7 @@ func (f lzwDecode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) {
 
 	p, found := f.parms["Predictor"]
 	if found && p > 1 {
-		return nil, fmt.Errorf("decodeLZW: unsupported predictor %d", p)
+		return nil, fmt.Errorf("LZW decode: unsupported predictor %d", p)
 	}
 
 	ec, ok := f.parms["EarlyChange"]

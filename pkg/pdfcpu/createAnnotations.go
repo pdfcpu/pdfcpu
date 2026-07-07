@@ -537,12 +537,7 @@ func createFileAttachmentAnnotation(xRefTable *model.XRefTable, pageIndRef types
 
 	fn := filepath.Base(fileName)
 
-	s, err := types.EscapedUTF16String(fn)
-	if err != nil {
-		return nil, err
-	}
-
-	fileSpecDict, err := xRefTable.NewFileSpecDict(fn, *s, "attached by pdfcpu", *ir)
+	fileSpecDict, err := xRefTable.NewFileSpecDict(fn, fn, "attached by pdfcpu", *ir)
 	if err != nil {
 		return nil, err
 	}
@@ -583,12 +578,7 @@ func createFileSpecDict(xRefTable *model.XRefTable, fileName string) (types.Dict
 	}
 	fn := filepath.Base(fileName)
 
-	s, err := types.EscapedUTF16String(fn)
-	if err != nil {
-		return nil, err
-	}
-
-	return xRefTable.NewFileSpecDict(fn, *s, "attached by pdfcpu", *ir)
+	return xRefTable.NewFileSpecDict(fn, fn, "attached by pdfcpu", *ir)
 }
 
 func createSoundObject(xRefTable *model.XRefTable) (*types.IndirectRef, error) {

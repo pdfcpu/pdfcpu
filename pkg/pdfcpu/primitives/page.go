@@ -260,7 +260,6 @@ func (page *PDFPage) validatePools() error {
 }
 
 func (page *PDFPage) validate() error {
-
 	if err := page.validatePageBoundaries(); err != nil {
 		return err
 	}
@@ -299,7 +298,10 @@ func (page *PDFPage) validate() error {
 
 	page.Content.page = page
 
-	return page.Content.validate()
+	if err := page.Content.validate(); err != nil {
+		return fmt.Errorf("content: %w", err)
+	}
+	return nil
 }
 
 func (page *PDFPage) namedFont(id string) *FormFont {

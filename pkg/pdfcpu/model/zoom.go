@@ -26,6 +26,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// Zoom represents page-content zoom configuration.
 type Zoom struct {
 	Factor  float64            // zoom factor x > 0, x > 1 zooms in, x < 1 zooms out
 	HMargin float64            // horizontal margin implying some (usually negative) scale factor
@@ -42,20 +43,31 @@ func (z *Zoom) EnsureFactorAndMargins(w, h float64) error {
 		z.VMargin = (h - (h * z.Factor)) / 2
 		return nil
 	}
-	if z.HMargin > 0 {
-		z.Factor = (w - 2*z.HMargin) / w
-		z.VMargin = (h - (h * z.Factor)) / 2
+	if z.HMargin != 0 {
+		factor := (w - 2*z.HMargin) / w
+		if factor <= 0 {
+			return fmt.Errorf("horizontal margin %.2f yields non-positive zoom factor for page width %.2f", z.HMargin, w)
+		}
+		z.Factor = factor
+		z.VMargin = (h - (h * factor)) / 2
+		return nil
 	}
-	z.Factor = (h - 2*z.VMargin) / h
-	z.HMargin = (w - (w * z.Factor)) / 2
-
+	factor := (h - 2*z.VMargin) / h
+	if factor <= 0 {
+		return fmt.Errorf("vertical margin %.2f yields non-positive zoom factor for page height %.2f", z.VMargin, h)
+	}
+	z.Factor = factor
+	z.HMargin = (w - (w * factor)) / 2
 	return nil
 }
 
 func parseHMargin(s string, zoom *Zoom) error {
 	m, err := strconv.ParseFloat(s, 64)
-	if err != nil || m == 0 {
-		return fmt.Errorf("\"hmargin\" must be a numeric value and must not be 0, got %s", s)
+	if err != nil {
+		return fmt.Errorf("\"hmargin\": parse numeric value %q: %w", s, err)
+	}
+	if m == 0 {
+		return fmt.Errorf("\"hmargin\" must not be 0, got %s", s)
 	}
 
 	if zoom.VMargin != 0 {
@@ -68,8 +80,11 @@ func parseHMargin(s string, zoom *Zoom) error {
 
 func parseVMargin(s string, zoom *Zoom) error {
 	m, err := strconv.ParseFloat(s, 64)
-	if err != nil || m == 0 {
-		return fmt.Errorf("\"vmargin\" must be a numeric value and must not be 0, got %s", s)
+	if err != nil {
+		return fmt.Errorf("\"vmargin\": parse numeric value %q: %w", s, err)
+	}
+	if m == 0 {
+		return fmt.Errorf("\"vmargin\" must not be 0, got %s", s)
 	}
 
 	if zoom.HMargin != 0 {
@@ -80,10 +95,10 @@ func parseVMargin(s string, zoom *Zoom) error {
 	return nil
 }
 
-func parseZoomFactor(s string, zoom *Zoom) (err error) {
+func parseZoomFactor(s string, zoom *Zoom) error {
 	zf, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return fmt.Errorf("zoom factor must be a float value: %s", s)
+		return fmt.Errorf("zoom factor: parse float value %q: %w", s, err)
 	}
 
 	if zf <= 0 || zf == 1 {
@@ -91,7 +106,7 @@ func parseZoomFactor(s string, zoom *Zoom) (err error) {
 	}
 
 	zoom.Factor = zf
-	return err
+	return nil
 }
 
 func parseBackgroundColorZoom(s string, zoom *Zoom) error {

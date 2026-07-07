@@ -82,6 +82,79 @@ func TestRenderImagePreservesJBIG2Stream(t *testing.T) {
 	}
 }
 
+func TestColorSpaceStringRejectsMalformedArray(t *testing.T) {
+	ctx := &model.Context{XRefTable: xRefTable}
+	tests := []struct {
+		name string
+		cs   types.Array
+		want string
+	}{
+		{
+			name: "empty array",
+			want: "empty array",
+		},
+		{
+			name: "first entry is not a name",
+			cs:   types.Array{types.Integer(1)},
+			want: "expected name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sd := &types.StreamDict{Dict: types.Dict{"ColorSpace": tt.cs}}
+			_, err := ColorSpaceString(ctx, sd)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("expected %q, got %q", tt.want, err.Error())
+			}
+		})
+	}
+}
+
+func TestColorSpaceComponentsRejectsMalformedArray(t *testing.T) {
+	tests := []struct {
+		name string
+		cs   types.Array
+		want string
+	}{
+		{
+			name: "empty array",
+			want: "empty array",
+		},
+		{
+			name: "first entry is not a name",
+			cs:   types.Array{types.Integer(1)},
+			want: "expected name",
+		},
+		{
+			name: "DeviceN missing colorants",
+			cs:   types.Array{types.Name(model.DeviceNCS)},
+			want: "missing array entry 1",
+		},
+		{
+			name: "DeviceN colorants not array",
+			cs:   types.Array{types.Name(model.DeviceNCS), types.Name("Cyan")},
+			want: "DeviceN colorants",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sd := &types.StreamDict{Dict: types.Dict{"ColorSpace": tt.cs}}
+			_, err := ColorSpaceComponents(xRefTable, sd)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("expected %q, got %q", tt.want, err.Error())
+			}
+		})
+	}
+}
+
 func TestCreateImageStreamDictPreservesIndexedPNG(t *testing.T) {
 	palette := color.Palette{
 		color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xFF},

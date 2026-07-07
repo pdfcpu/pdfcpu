@@ -48,11 +48,14 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil || d == nil {
-		return err
+		if err != nil {
+			return fmt.Errorf("%s: dereference: %w", objectContext("propertiesDict", o), err)
+		}
+		return nil
 	}
 
 	if err = validateMetadata(xRefTable, d, OPTIONAL, model.V14); err != nil {
-		return err
+		return fmt.Errorf("%s: %w", dictEntryContext("propertiesDict", "Metadata", d["Metadata"]), err)
 	}
 
 	for key, val := range d {
@@ -65,22 +68,22 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 		case "Contents":
 			logProp("known", key, val)
 			if err = validateStringOrStreamEntry(xRefTable, d, "propertiesDict", "Contents", OPTIONAL, model.V10); err != nil {
-				return err
+				return fmt.Errorf("%s: %w", dictEntryContext("propertiesDict", "Contents", val), err)
 			}
 
 		case "Resources":
 			logProp("known", key, val)
 			if _, err = validateResourceDict(xRefTable, val); err != nil {
-				return err
+				return fmt.Errorf("%s: %w", dictEntryContext("propertiesDict", "Resources", val), err)
 			}
 
 		case "OCG":
 			logProp("unsupported", key, val)
-			return fmt.Errorf("unsupported key \"%s\"", key)
+			return fmt.Errorf("%s: unsupported key", dictEntryContext("propertiesDict", key, val))
 
 		case "OCMD":
 			logProp("unsupported", key, val)
-			return fmt.Errorf("unsupported key \"%s\"", key)
+			return fmt.Errorf("%s: unsupported key", dictEntryContext("propertiesDict", key, val))
 
 		//case "MCID": -> default
 		//case "Alt": -> default
@@ -91,7 +94,7 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 		default:
 			logProp("unknown", key, val)
 			if _, err = xRefTable.Dereference(val); err != nil {
-				return err
+				return fmt.Errorf("%s: dereference: %w", dictEntryContext("propertiesDict", key, val), err)
 			}
 		}
 
@@ -102,18 +105,21 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 
 func validatePropertiesResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	if err := xRefTable.ValidateVersion("PropertiesResourceDict", sinceVersion); err != nil {
-		return err
+		return fmt.Errorf("propertiesResourceDict: %w", err)
 	}
 
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil || d == nil {
-		return err
+		if err != nil {
+			return fmt.Errorf("%s: dereference: %w", objectContext("propertiesResourceDict", o), err)
+		}
+		return nil
 	}
 
 	// Iterate over properties resource dict
-	for _, o := range d {
+	for name, o := range d {
 		if err = validatePropertiesDict(xRefTable, o); err != nil {
-			return err
+			return fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("propertiesResourceDict.%s", name), o), err)
 		}
 	}
 

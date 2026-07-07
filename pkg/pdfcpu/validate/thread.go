@@ -27,11 +27,11 @@ import (
 func validateEntryV(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version, pBeadIndRef *types.IndirectRef, objNumber int) error {
 	previousBeadIndRef, err := validateIndRefEntry(xRefTable, d, dictName, "V", required, sinceVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s.V: %w", dictName, err)
 	}
 
 	if *previousBeadIndRef != *pBeadIndRef {
-		return fmt.Errorf("obj#%d invalid entry V, corrupt previous Bead indirect reference", objNumber)
+		return fmt.Errorf("bead obj#%d: invalid V backpointer", objNumber)
 	}
 
 	return nil
@@ -45,37 +45,37 @@ func validateBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef, pBea
 
 	d, err := xRefTable.DereferenceDict(*beadIndRef)
 	if err != nil {
-		return err
+		return fmt.Errorf("bead obj#%d: dereference dict: %w", objNumber, err)
 	}
 	if d == nil {
-		return fmt.Errorf("obj#%d missing dict", objNumber)
+		return fmt.Errorf("bead obj#%d: missing dict", objNumber)
 	}
 
 	// Validate optional entry Type, must be "Bead".
 	_, err = validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Bead" })
 	if err != nil {
-		return err
+		return fmt.Errorf("bead obj#%d Type: %w", objNumber, err)
 	}
 
 	// Validate entry T, must refer to threadDict.
 	indRefT, err := validateIndRefEntry(xRefTable, d, dictName, "T", OPTIONAL, sinceVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("bead obj#%d T: %w", objNumber, err)
 	}
 	if indRefT != nil && *indRefT != *threadIndRef {
-		return fmt.Errorf("obj#%d invalid entry T (backpointer to ThreadDict)", objNumber)
+		return fmt.Errorf("bead obj#%d: invalid T backpointer to thread dict", objNumber)
 	}
 
 	// Validate required entry R, must be rectangle.
 	_, err = validateRectangleEntry(xRefTable, d, dictName, "R", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("bead obj#%d R: %w", objNumber, err)
 	}
 
 	// Validate required entry P, must be indRef to pageDict.
 	err = validateEntryP(xRefTable, d, dictName, REQUIRED, sinceVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("bead obj#%d P: %w", objNumber, err)
 	}
 
 	// Validate required entry V, must refer to previous bead.
@@ -87,14 +87,14 @@ func validateBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef, pBea
 	// Validate required entry N, must refer to last bead.
 	nBeadIndRef, err := validateIndRefEntry(xRefTable, d, dictName, "N", REQUIRED, sinceVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("bead obj#%d N: %w", objNumber, err)
 	}
 
 	// Recurse until next bead equals last bead.
 	if *nBeadIndRef != *lBeadIndRef {
 		err = validateBeadDict(xRefTable, nBeadIndRef, threadIndRef, beadIndRef, lBeadIndRef)
 		if err != nil {
-			return err
+			return fmt.Errorf("bead obj#%d next: %w", objNumber, err)
 		}
 	}
 
@@ -113,48 +113,49 @@ func validateBeadChainIntegrity(beadIndRef, pBeadIndRef, nBeadIndRef *types.Indi
 func validateFirstBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef *types.IndirectRef) error {
 	dictName := "firstBeadDict"
 	sinceVersion := model.V10
+	objNumber := beadIndRef.ObjectNumber.Value()
 
 	d, err := xRefTable.DereferenceDict(*beadIndRef)
 	if err != nil {
-		return err
+		return fmt.Errorf("first bead obj#%d: dereference dict: %w", objNumber, err)
 	}
 
 	if d == nil {
-		return errors.New("missing dict")
+		return fmt.Errorf("first bead obj#%d: missing dict", objNumber)
 	}
 
 	_, err = validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Bead" })
 	if err != nil {
-		return err
+		return fmt.Errorf("first bead obj#%d Type: %w", objNumber, err)
 	}
 
 	indRefT, err := validateIndRefEntry(xRefTable, d, dictName, "T", REQUIRED, sinceVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("first bead obj#%d T: %w", objNumber, err)
 	}
 
 	if *indRefT != *threadIndRef {
-		return errors.New("invalid entry T (backpointer to ThreadDict)")
+		return fmt.Errorf("first bead obj#%d: invalid T backpointer to thread dict", objNumber)
 	}
 
 	_, err = validateRectangleEntry(xRefTable, d, dictName, "R", REQUIRED, sinceVersion, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("first bead obj#%d R: %w", objNumber, err)
 	}
 
 	err = validateEntryP(xRefTable, d, dictName, REQUIRED, sinceVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("first bead obj#%d P: %w", objNumber, err)
 	}
 
 	pBeadIndRef, err := validateIndRefEntry(xRefTable, d, dictName, "V", REQUIRED, sinceVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("first bead obj#%d V: %w", objNumber, err)
 	}
 
 	nBeadIndRef, err := validateIndRefEntry(xRefTable, d, dictName, "N", REQUIRED, sinceVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("first bead obj#%d N: %w", objNumber, err)
 	}
 
 	if soleBeadDict(beadIndRef, pBeadIndRef, nBeadIndRef) {
@@ -162,10 +163,13 @@ func validateFirstBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef 
 	}
 
 	if !validateBeadChainIntegrity(beadIndRef, pBeadIndRef, nBeadIndRef) {
-		return errors.New("corrupt chain of beads")
+		return fmt.Errorf("first bead obj#%d: corrupt bead chain", objNumber)
 	}
 
-	return validateBeadDict(xRefTable, nBeadIndRef, threadIndRef, beadIndRef, pBeadIndRef)
+	if err = validateBeadDict(xRefTable, nBeadIndRef, threadIndRef, beadIndRef, pBeadIndRef); err != nil {
+		return fmt.Errorf("first bead obj#%d next: %w", objNumber, err)
+	}
+	return nil
 }
 
 func validateThreadDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
@@ -173,19 +177,22 @@ func validateThreadDict(xRefTable *model.XRefTable, o types.Object, sinceVersion
 
 	threadIndRef, ok := o.(types.IndirectRef)
 	if !ok {
-		return errors.New("not an indirect ref")
+		return fmt.Errorf("threadDict: expected indirect ref, got %T", o)
 	}
 
 	objNumber := threadIndRef.ObjectNumber.Value()
 
 	d, err := xRefTable.DereferenceDict(threadIndRef)
 	if err != nil {
-		return err
+		return fmt.Errorf("thread obj#%d: dereference dict: %w", objNumber, err)
+	}
+	if d == nil {
+		return fmt.Errorf("thread obj#%d: missing dict", objNumber)
 	}
 
 	_, err = validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Thread" })
 	if err != nil {
-		return err
+		return fmt.Errorf("thread obj#%d Type: %w", objNumber, err)
 	}
 
 	// Validate optional thread information dict entry.
@@ -193,17 +200,20 @@ func validateThreadDict(xRefTable *model.XRefTable, o types.Object, sinceVersion
 	if found && o != nil {
 		_, err = validateDocumentInfoDict(xRefTable, o)
 		if err != nil {
-			return err
+			return fmt.Errorf("thread obj#%d I: %w", objNumber, err)
 		}
 	}
 
 	fBeadIndRef := d.IndirectRefEntry("F")
 	if fBeadIndRef == nil {
-		return fmt.Errorf("obj#%d required indirect entry \"F\" missing", objNumber)
+		return fmt.Errorf("thread obj#%d F: missing required indirect entry", objNumber)
 	}
 
 	// Validate the list of beads starting with the first bead dict.
-	return validateFirstBeadDict(xRefTable, fBeadIndRef, &threadIndRef)
+	if err = validateFirstBeadDict(xRefTable, fBeadIndRef, &threadIndRef); err != nil {
+		return fmt.Errorf("thread obj#%d first bead: %w", objNumber, err)
+	}
+	return nil
 }
 
 func validateThreads(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
@@ -212,14 +222,14 @@ func validateThreads(xRefTable *model.XRefTable, rootDict types.Dict, required b
 	ir := rootDict.IndirectRefEntry("Threads")
 	if ir == nil {
 		if required {
-			return errors.New("required entry \"Threads\" missing")
+			return errors.New("rootDict.Threads: missing required entry")
 		}
 		return nil
 	}
 
 	a, err := xRefTable.DereferenceArray(*ir)
 	if err != nil {
-		return err
+		return fmt.Errorf("rootDict.Threads: dereference array: %w", err)
 	}
 	if a == nil {
 		return nil
@@ -227,10 +237,10 @@ func validateThreads(xRefTable *model.XRefTable, rootDict types.Dict, required b
 
 	err = xRefTable.ValidateVersion("threads", sinceVersion)
 	if err != nil {
-		return err
+		return fmt.Errorf("rootDict.Threads: %w", err)
 	}
 
-	for _, o := range a {
+	for i, o := range a {
 
 		if o == nil {
 			continue
@@ -238,7 +248,7 @@ func validateThreads(xRefTable *model.XRefTable, rootDict types.Dict, required b
 
 		err = validateThreadDict(xRefTable, o, sinceVersion)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("rootDict.Threads[%d]", i), o), err)
 		}
 
 	}

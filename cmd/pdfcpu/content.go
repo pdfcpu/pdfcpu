@@ -215,7 +215,7 @@ func handleSetPageLayoutCommand(conf *model.Configuration, args []string) error 
 		conf,
 		args,
 		validate.DocumentPageLayout,
-		"invalid page layout, use one of: SinglePage, TwoColumnLeft, TwoColumnRight, TwoPageLeft, TwoPageRight",
+		"invalid page layout, use one of: SinglePage, OneColumn, TwoColumnLeft, TwoColumnRight, TwoPageLeft, TwoPageRight",
 		cli.SetPageLayoutCommand,
 	)
 }
@@ -612,12 +612,16 @@ func handleExportBookmarksCommand(conf *model.Configuration, args []string) erro
 	outFileJSON := "out.json"
 	if len(args) == 2 {
 		outFileJSON = args[1]
-		if err := ensureJSONExtension(outFileJSON); err != nil {
-			return err
+		if outFileJSON != "-" {
+			if err := ensureJSONExtension(outFileJSON); err != nil {
+				return err
+			}
 		}
 	}
-	if err := ensureOutputFileAvailable(outFileJSON); err != nil {
-		return err
+	if outFileJSON != "-" {
+		if err := ensureOutputFileAvailable(outFileJSON); err != nil {
+			return err
+		}
 	}
 
 	return runCommand(cli.ExportBookmarksCommand(inFile, outFileJSON, conf))

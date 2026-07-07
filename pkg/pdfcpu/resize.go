@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -32,44 +33,50 @@ import (
 )
 
 // ParseResizeConfig parses a Resize command string into an internal structure.
-// "scale:.5, form:A4, dim:400 200 bgcol:#D00000"
+// Examples: "sc:.5", "form:A4, bgcol:#D00000", or "dim:400 200, border:on".
 func ParseResizeConfig(s string, u types.DisplayUnit) (*model.Resize, error) {
-
 	if s == "" {
 		return nil, errors.New("missing resize configuration string")
 	}
 
 	res := &model.Resize{Unit: u}
 
-	for s := range strings.SplitSeq(s, ",") {
-
-		ss1 := strings.Split(s, ":")
-		if len(ss1) != 2 {
-			return nil, errors.New("invalid resize configuration string")
+	for i, item := range strings.Split(s, ",") {
+		parts := strings.SplitN(item, ":", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf(`resize configuration clause %d: missing ":" separator`, i+1)
 		}
 
-		paramPrefix := strings.TrimSpace(ss1[0])
-		paramValueStr := strings.TrimSpace(ss1[1])
+		paramPrefix := strings.TrimSpace(parts[0])
+		if paramPrefix == "" {
+			return nil, fmt.Errorf("resize configuration clause %d: missing parameter name", i+1)
+		}
+		if strings.Contains(parts[1], ":") {
+			return nil, fmt.Errorf(`resize configuration clause %d: resize parameter %q: too many ":" separators`, i+1, paramPrefix)
+		}
+		paramValueStr := strings.TrimSpace(parts[1])
+		if paramValueStr == "" {
+			return nil, fmt.Errorf("resize configuration clause %d: missing parameter value", i+1)
+		}
 
 		if err := handleParameter(model.ResizeParamMap, paramPrefix, paramValueStr, res); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("resize configuration clause %d: resize parameter %q: %w", i+1, paramPrefix, err)
 		}
 	}
 
-	if res.Scale > 0 && res.PageSize != "" {
-		return nil, errors.New("resize - please supply either scale factor or dimensions or form size ")
+	if res.Scale > 0 && res.PageDim != nil {
+		return nil, errors.New("resize: scale factor conflicts with dimensions or form size")
 	}
 
 	if res.UserDim && res.PageSize != "" {
-		return nil, errors.New("resize - please supply either dimensions or form size ")
+		return nil, errors.New("resize: dimensions conflict with form size")
 	}
 
 	return res, nil
 }
 
 func prepTransform(rSrc, rDest *types.Rectangle, enforce bool) (float64, float64, float64, float64, float64) {
-
-	if !enforce && (rSrc.Portrait() && rDest.Landscape()) || (rSrc.Landscape() && rDest.Portrait()) {
+	if !enforce && ((rSrc.Portrait() && rDest.Landscape()) || (rSrc.Landscape() && rDest.Portrait())) {
 		w1 := rDest.Width()
 		rDest.UR.X = rDest.LL.X + rDest.Height()
 		rDest.UR.Y = rDest.LL.Y + w1
@@ -159,6 +166,14 @@ func transformedRect(r *types.Rectangle, m matrix.Matrix) *types.Rectangle {
 	return (types.QuadLiteral{P1: p1, P2: p2, P3: p3, P4: p4}).EnclosingRectangle(0)
 }
 
+func resizeObjectContext(label string, obj types.Object) string {
+	indRef, ok := obj.(types.IndirectRef)
+	if !ok {
+		return label
+	}
+	return fmt.Sprintf("%s obj#%d", label, indRef.ObjectNumber.Value())
+}
+
 func resizeAnnotationRect(ctx *model.Context, d types.Dict, m matrix.Matrix) error {
 	obj, found := d.Find("Rect")
 	if !found || obj == nil {
@@ -166,15 +181,15 @@ func resizeAnnotationRect(ctx *model.Context, d types.Dict, m matrix.Matrix) err
 	}
 	arr, err := ctx.DereferenceArray(obj)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: dereference array: %w", resizeObjectContext("annotation Rect", obj), err)
 	}
 	if len(arr) != 4 {
-		return errors.New("resize: invalid annotation rect")
+		return fmt.Errorf("%s: invalid length %d", resizeObjectContext("annotation Rect", obj), len(arr))
 	}
 
 	r, err := ctx.RectForArray(arr)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: resolve rectangle: %w", resizeObjectContext("annotation Rect", obj), err)
 	}
 
 	d.Update("Rect", transformedRect(r, m).Array())
@@ -188,21 +203,21 @@ func resizeAnnotationQuadPoints(ctx *model.Context, d types.Dict, m matrix.Matri
 	}
 	arr, err := ctx.DereferenceArray(obj)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: dereference array: %w", resizeObjectContext("annotation QuadPoints", obj), err)
 	}
 	if len(arr)%8 != 0 {
-		return errors.New("resize: invalid annotation quadpoints")
+		return fmt.Errorf("%s: invalid length %d", resizeObjectContext("annotation QuadPoints", obj), len(arr))
 	}
 
 	a := types.Array{}
 	for i := 0; i < len(arr); i += 2 {
 		x, err := ctx.DereferenceNumber(arr[i])
 		if err != nil {
-			return err
+			return fmt.Errorf("%s[%d]: dereference x coordinate: %w", resizeObjectContext("annotation QuadPoints", obj), i, err)
 		}
 		y, err := ctx.DereferenceNumber(arr[i+1])
 		if err != nil {
-			return err
+			return fmt.Errorf("%s[%d]: dereference y coordinate: %w", resizeObjectContext("annotation QuadPoints", obj), i+1, err)
 		}
 		p := m.Transform(types.Point{X: x, Y: y})
 		a = append(a, types.Float(p.X), types.Float(p.Y))
@@ -226,19 +241,19 @@ func resizePageAnnotations(ctx *model.Context, d types.Dict, m matrix.Matrix) er
 	}
 	arr, err := ctx.DereferenceArray(obj)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: dereference array: %w", resizeObjectContext("Annots", obj), err)
 	}
 
-	for _, o := range arr {
+	for i, o := range arr {
 		d, err := ctx.DereferenceDict(o)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: dereference dictionary: %w", resizeObjectContext(fmt.Sprintf("annotation %d", i+1), o), err)
 		}
 		if len(d) == 0 {
 			continue
 		}
 		if err := resizeAnnotation(ctx, d, m); err != nil {
-			return err
+			return fmt.Errorf("annotation %d: %w", i+1, err)
 		}
 	}
 
@@ -246,10 +261,9 @@ func resizePageAnnotations(ctx *model.Context, d types.Dict, m matrix.Matrix) er
 }
 
 func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
-
 	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("page dictionary: %w", err)
 	}
 
 	cropBox := inhPAttrs.MediaBox
@@ -274,11 +288,12 @@ func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
 	fmt.Fprintf(&trans, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
 	bb, err := ctx.PageContent(d, pageNr)
-	if err == model.ErrNoContent {
-		return nil
-	}
 	if err != nil {
-		return err
+		if errors.Is(err, model.ErrNoContent) {
+			bb = nil
+		} else {
+			return fmt.Errorf("read page content: %w", err)
+		}
 	}
 
 	if inhPAttrs.Rotate != 0 {
@@ -300,18 +315,21 @@ func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
 
 	handleBgColAndBorder(dx, dy, cropBox, &bb, res)
 
-	sd, _ := ctx.NewStreamDictForBuf(bb)
+	sd, err := ctx.NewStreamDictForBuf(bb)
+	if err != nil {
+		return fmt.Errorf("create content stream: %w", err)
+	}
 	if err := sd.Encode(); err != nil {
-		return err
+		return fmt.Errorf("encode content stream: %w", err)
 	}
 
 	if err := resizePageAnnotations(ctx, d, m); err != nil {
-		return err
+		return fmt.Errorf("resize annotations: %w", err)
 	}
 
 	ir, err := ctx.IndRefForNewObject(*sd)
 	if err != nil {
-		return err
+		return fmt.Errorf("insert content stream: %w", err)
 	}
 
 	d["Contents"] = *ir
@@ -323,24 +341,34 @@ func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
 	return nil
 }
 
+func resizePageNumbers(pageCount int, selectedPages types.IntSet) []int {
+	if len(selectedPages) == 0 {
+		pageNrs := make([]int, pageCount)
+		for i := range pageCount {
+			pageNrs[i] = i + 1
+		}
+		return pageNrs
+	}
+
+	pageNrs := make([]int, 0, len(selectedPages))
+	for pageNr, selected := range selectedPages {
+		if selected {
+			pageNrs = append(pageNrs, pageNr)
+		}
+	}
+	sort.Ints(pageNrs)
+	return pageNrs
+}
+
 // Resize resizes selectedPages using res.
 func Resize(ctx *model.Context, selectedPages types.IntSet, res *model.Resize) error {
 	if log.DebugEnabled() {
 		log.Debug.Printf("Resize:\n%s\n", res)
 	}
 
-	if len(selectedPages) == 0 {
-		selectedPages = types.IntSet{}
-		for i := 1; i <= ctx.PageCount; i++ {
-			selectedPages[i] = true
-		}
-	}
-
-	for k, v := range selectedPages {
-		if v {
-			if err := resizePage(ctx, k, res); err != nil {
-				return err
-			}
+	for _, pageNr := range resizePageNumbers(ctx.PageCount, selectedPages) {
+		if err := resizePage(ctx, pageNr, res); err != nil {
+			return fmt.Errorf("page %d: %w", pageNr, err)
 		}
 	}
 

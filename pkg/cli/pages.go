@@ -36,6 +36,21 @@ func NUpCommand(inFiles []string, outFile string, pageSelection []string, nUp *m
 		Conf:          conf}
 }
 
+// GridCommand creates a new command to arrange PDF pages or images in a grid.
+func GridCommand(inFiles []string, outFile string, pageSelection []string, nup *model.NUp, conf *model.Configuration) *Command {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+	conf.Cmd = model.GRID
+	return &Command{
+		Mode:          model.GRID,
+		InFiles:       inFiles,
+		OutFile:       &outFile,
+		PageSelection: pageSelection,
+		NUp:           nup,
+		Conf:          conf}
+}
+
 // BookletCommand creates a new command to render PDFs or image files in booklet fashion.
 func BookletCommand(inFiles []string, outFile string, pageSelection []string, nup *model.NUp, conf *model.Configuration) *Command {
 	if conf == nil {

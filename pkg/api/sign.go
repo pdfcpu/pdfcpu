@@ -217,27 +217,19 @@ func RemoveSignaturesFile(inFile, outFile string, conf *model.Configuration) (er
 	} else {
 		logWritingTo(inFile)
 	}
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
+	staged, err := openStagedOutput(f1, inFile, tmpFile, "remove signatures")
+	if err != nil {
 		_ = f1.Close()
 		return err
 	}
+	f2 = staged.output.file
 
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
+		err = staged.commit()
 	}()
 
 	if err = RemoveSignatures(f1, f2, conf); err != nil {

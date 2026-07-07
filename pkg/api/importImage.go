@@ -18,7 +18,10 @@ package api
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
 	"io"
+	"math"
 	"os"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -30,7 +33,190 @@ import (
 
 // Import parses an Import command string into an internal structure.
 func Import(s string, u types.DisplayUnit) (*pdfcpu.Import, error) {
-	return pdfcpu.ParseImportDetails(s, u)
+	imp, err := pdfcpu.ParseImportDetails(s, u)
+	if err != nil {
+		return nil, fmt.Errorf("import images: parse configuration: %w", err)
+	}
+	return imp, nil
+}
+
+// DefaultImportConfig returns the default image import configuration.
+func DefaultImportConfig() *pdfcpu.Import {
+	return pdfcpu.DefaultImportConfig()
+}
+
+func validateImportConfiguration(imp *pdfcpu.Import) error {
+	if imp.PageDim == nil {
+		return fmt.Errorf("missing page dimensions: %w", ErrInvalidImportConfiguration)
+	}
+	if invalidImportNumber(imp.PageDim.Width) || invalidImportNumber(imp.PageDim.Height) {
+		return fmt.Errorf("page dimensions: %w", ErrInvalidImportConfiguration)
+	}
+	if invalidImportScale(imp.Scale, imp.ScaleAbs) {
+		return fmt.Errorf("scale factor: %w", ErrInvalidImportConfiguration)
+	}
+	if imp.DPI < 0 {
+		return fmt.Errorf("DPI: %w", ErrInvalidImportConfiguration)
+	}
+	if math.IsNaN(imp.Dx) || math.IsInf(imp.Dx, 0) || math.IsNaN(imp.Dy) || math.IsInf(imp.Dy, 0) {
+		return fmt.Errorf("offset: %w", ErrInvalidImportConfiguration)
+	}
+	if imp.Pos < types.TopLeft || imp.Pos > types.Full {
+		return fmt.Errorf("position: %w", ErrInvalidImportConfiguration)
+	}
+	return nil
+}
+
+func invalidImportNumber(v float64) bool {
+	return v <= 0 || math.IsNaN(v) || math.IsInf(v, 0)
+}
+
+func invalidImportScale(scale float64, absolute bool) bool {
+	if invalidImportNumber(scale) {
+		return true
+	}
+	return !absolute && scale > 1
+}
+
+// PrepareImportConfiguration applies image import defaults and validates the result without performing I/O.
+func PrepareImportConfiguration(imp *pdfcpu.Import) (*pdfcpu.Import, error) {
+	if imp == nil {
+		imp = pdfcpu.DefaultImportConfig()
+	}
+	if err := validateImportConfiguration(imp); err != nil {
+		return nil, fmt.Errorf("import images: validate configuration: %w", err)
+	}
+	return imp, nil
+}
+
+func validateImportImageReaders(imgs []io.Reader) error {
+	if len(imgs) == 0 {
+		return ErrMissingImageInput
+	}
+	for i, r := range imgs {
+		if r == nil {
+			return fmt.Errorf("import images: image %d: %w", i+1, ErrMissingImageReader)
+		}
+	}
+	return nil
+}
+
+func validateImportImageFiles(imgFiles []string) error {
+	if len(imgFiles) == 0 {
+		return ErrMissingImageInput
+	}
+	for i, fileName := range imgFiles {
+		if fileName == "" {
+			return fmt.Errorf("import images: image %d: %w", i+1, ErrMissingImageInput)
+		}
+	}
+	return nil
+}
+
+func validateImportImagesOutput(imgFiles []string, outFile string, skipStdinMarker bool) error {
+	if err := validateImportImageFiles(imgFiles); err != nil {
+		return err
+	}
+	if outFile == "" {
+		return ErrMissingPDFOutput
+	}
+	for i, imageFile := range imgFiles {
+		if skipStdinMarker && imageFile == "-" {
+			continue
+		}
+		aliases, err := outputAliasesInput(imageFile, outFile)
+		if err != nil {
+			return fmt.Errorf("import images: image %d %q: check output alias: %w", i+1, imageFile, err)
+		}
+		if aliases {
+			return fmt.Errorf(
+				"import images: image %d %q: output aliases input: %w",
+				i+1,
+				imageFile,
+				ErrImportImagesOutputConflict,
+			)
+		}
+	}
+	return nil
+}
+
+// ValidateImportImagesOutput validates that outFile does not alias a file-based image input.
+// A "-" image input denotes stdin and is ignored.
+func ValidateImportImagesOutput(imgFiles []string, outFile string) error {
+	return validateImportImagesOutput(imgFiles, outFile, true)
+}
+
+func importImagesContext(rs io.ReadSeeker, imp *pdfcpu.Import, conf *model.Configuration) (*model.Context, error) {
+	if rs != nil {
+		ctx, err := ReadAndValidate(rs, conf)
+		if err != nil {
+			return nil, fmt.Errorf("import images: prepare PDF context: %w", err)
+		}
+		return ctx, nil
+	}
+	ctx, err := pdfcpu.CreateContextWithXRefTable(conf, imp.PageDim)
+	if err != nil {
+		return nil, fmt.Errorf("import images: create PDF context: %w", err)
+	}
+	return ctx, nil
+}
+
+func importImagesPageTree(ctx *model.Context) (*types.IndirectRef, types.Dict, error) {
+	pagesIndRef, err := ctx.Pages()
+	if err != nil {
+		return nil, nil, fmt.Errorf("import images: access page tree: %w", err)
+	}
+	if pagesIndRef == nil {
+		return nil, nil, errors.New("import images: access page tree: missing page tree reference")
+	}
+	pagesDict, err := ctx.DereferenceDict(*pagesIndRef)
+	if err != nil {
+		return nil, nil, fmt.Errorf("import images: dereference page tree: %w", err)
+	}
+	if pagesDict == nil {
+		return nil, nil, errors.New("import images: dereference page tree: missing page tree dictionary")
+	}
+	return pagesIndRef, pagesDict, nil
+}
+
+func appendImportedImagePages(
+	ctx *model.Context,
+	indRefs []*types.IndirectRef,
+	imageIndex int,
+	pagesDict types.Dict,
+) error {
+	for pageIndex, indRef := range indRefs {
+		if indRef == nil {
+			return fmt.Errorf("import images: image %d page %d: missing page reference", imageIndex, pageIndex+1)
+		}
+		if err := ctx.SetValid(*indRef); err != nil {
+			return fmt.Errorf("import images: image %d page %d: mark valid: %w", imageIndex, pageIndex+1, err)
+		}
+		if err := model.AppendPageTree(indRef, 1, pagesDict); err != nil {
+			return fmt.Errorf("import images: image %d page %d: append page tree: %w", imageIndex, pageIndex+1, err)
+		}
+		ctx.PageCount++
+	}
+	return nil
+}
+
+func appendImportedImages(
+	ctx *model.Context,
+	imgs []io.Reader,
+	pagesIndRef *types.IndirectRef,
+	pagesDict types.Dict,
+	imp *pdfcpu.Import,
+) error {
+	for imageIndex, r := range imgs {
+		indRefs, err := pdfcpu.NewPagesForImage(ctx.XRefTable, r, pagesIndRef, imp)
+		if err != nil {
+			return fmt.Errorf("import images: image %d: create pages: %w", imageIndex+1, err)
+		}
+		if err := appendImportedImagePages(ctx, indRefs, imageIndex+1, pagesDict); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ImportImages appends PDF pages containing images to rs and writes the result to w.
@@ -41,86 +227,61 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 	if w == nil {
 		return ErrMissingPDFWriter
 	}
+	if err := validateImportImageReaders(imgs); err != nil {
+		return err
+	}
+
+	imp, err = PrepareImportConfiguration(imp)
+	if err != nil {
+		return err
+	}
 
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.IMPORTIMAGES
 
-	if imp == nil {
-		imp = pdfcpu.DefaultImportConfig()
-	}
-
-	var ctx *model.Context
-
-	if rs != nil {
-		ctx, err = ReadAndValidate(rs, conf)
-	} else {
-		ctx, err = pdfcpu.CreateContextWithXRefTable(conf, imp.PageDim)
-	}
+	ctx, err := importImagesContext(rs, imp, conf)
 	if err != nil {
 		return err
 	}
-
-	pagesIndRef, err := ctx.Pages()
+	pagesIndRef, pagesDict, err := importImagesPageTree(ctx)
 	if err != nil {
 		return err
 	}
-
-	// Page tree root.
-	pagesDict, err := ctx.DereferenceDict(*pagesIndRef)
-	if err != nil {
+	if err := appendImportedImages(ctx, imgs, pagesIndRef, pagesDict, imp); err != nil {
 		return err
 	}
-
-	for _, r := range imgs {
-
-		indRefs, err := pdfcpu.NewPagesForImage(ctx.XRefTable, r, pagesIndRef, imp)
-		if err != nil {
-			return err
-		}
-
-		for _, indRef := range indRefs {
-			if err := ctx.SetValid(*indRef); err != nil {
-				return err
-			}
-			if err = model.AppendPageTree(indRef, 1, pagesDict); err != nil {
-				return err
-			}
-			ctx.PageCount++
-		}
+	if err := Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("import images: write output: %w", err)
 	}
-
-	return Write(ctx, w, conf)
+	return nil
 }
 
-func fileExists(filename string) bool {
-	var ret bool
-	f, err := os.Open(filename)
-	if err == nil {
-		ret = true
-	}
-	defer f.Close()
-	return ret
-
+type importImageFileCloser struct {
+	closer     io.Closer
+	imageIndex int
+	fileName   string
 }
 
-func prepImgFiles(imgFiles []string, f1 *os.File) ([]io.ReadCloser, []io.Reader, error) {
-	rc := make([]io.ReadCloser, len(imgFiles))
-	rr := make([]io.Reader, len(imgFiles))
-
+func prepImgFiles(imgFiles []string) ([]importImageFileCloser, []io.Reader, error) {
+	rc := make([]importImageFileCloser, 0, len(imgFiles))
+	rr := make([]io.Reader, 0, len(imgFiles))
 	for i, fn := range imgFiles {
 		f, err := os.Open(fn)
 		if err != nil {
-			if f1 != nil {
-				f1.Close()
-			}
-			return nil, nil, err
+			return nil, nil, errors.Join(
+				fmt.Errorf("import images: image %d %q: open: %w", i+1, fn, err),
+				closeImportImageInputs(rc),
+			)
 		}
-		rc[i] = f
-		rr[i] = bufio.NewReader(f)
+		rc = append(rc, importImageFileCloser{
+			closer:     f,
+			imageIndex: i + 1,
+			fileName:   fn,
+		})
+		rr = append(rr, bufio.NewReader(f))
 	}
-
 	return rc, rr, nil
 }
 
@@ -130,90 +291,85 @@ func logImportImages(s, outFile string) {
 	}
 }
 
-func importImagesInputFile(outFile string) (io.ReadSeeker, *os.File, string, error) {
-	rs := io.ReadSeeker(nil)
-	tmpFile := outFile
-
-	if fileExists(outFile) {
-		f, err := os.Open(outFile)
-		if err != nil {
-			return nil, nil, "", err
-		}
-		rs = f
+func importImagesInputFile(outFile string) (io.ReadSeeker, *os.File, error) {
+	f, err := os.Open(outFile)
+	if err == nil {
 		logImportImages("appending", outFile)
-		return rs, f, tmpFile, nil
+		return f, f, nil
 	}
-
+	if !errors.Is(err, os.ErrNotExist) {
+		return nil, nil, fmt.Errorf("import images: inspect output %s: %w", outFile, err)
+	}
 	logImportImages("writing", outFile)
-	return rs, nil, tmpFile, nil
+	return nil, nil, nil
 }
 
-func closeImportImageFiles(rc []io.ReadCloser) error {
-	for _, f := range rc {
-		if err := f.Close(); err != nil {
-			return err
+func closeImportImageInputs(rc []importImageFileCloser) error {
+	errs := make([]error, 0, len(rc))
+	for _, c := range rc {
+		if c.closer == nil {
+			continue
+		}
+		if err := c.closer.Close(); err != nil {
+			errs = append(
+				errs,
+				fmt.Errorf("import images: image %d %q: close: %w", c.imageIndex, c.fileName, err),
+			)
 		}
 	}
-	return nil
-}
-
-func finishImportImagesFile(ok bool, f1, f2 *os.File, rc []io.ReadCloser, tmpFile, outFile string) error {
-	if !ok {
-		_ = f2.Close()
-		if f1 != nil {
-			_ = f1.Close()
-			os.Remove(tmpFile)
-		}
-		for _, f := range rc {
-			_ = f.Close()
-		}
-		return nil
-	}
-
-	if err := f2.Close(); err != nil {
-		return err
-	}
-	if f1 != nil {
-		if err := f1.Close(); err != nil {
-			return err
-		}
-		if err := os.Rename(tmpFile, outFile); err != nil {
-			return err
-		}
-	}
-	return closeImportImageFiles(rc)
+	return errors.Join(errs...)
 }
 
 // ImportImagesFile appends PDF pages containing images to outFile which will be created if necessary.
 func ImportImagesFile(imgFiles []string, outFile string, imp *pdfcpu.Import, conf *model.Configuration) (err error) {
+	if err := validateImportImageFiles(imgFiles); err != nil {
+		return err
+	}
+	if outFile == "" {
+		return ErrMissingPDFOutput
+	}
+	imp, err = PrepareImportConfiguration(imp)
+	if err != nil {
+		return err
+	}
+	if err := validateImportImagesOutput(imgFiles, outFile, false); err != nil {
+		return err
+	}
+
 	ok := false
 
-	rs, f1, tmpFile, err := importImagesInputFile(outFile)
+	rs, f1, err := importImagesInputFile(outFile)
 	if err != nil {
 		return err
 	}
 
-	rc, rr, err := prepImgFiles(imgFiles, f1)
+	rc, rr, err := prepImgFiles(imgFiles)
 	if err != nil {
-		return err
+		return errors.Join(err, closeFile(f1, "import images: close input"))
 	}
 
 	inFile := ""
 	if f1 != nil {
 		inFile = outFile
 	}
-	f2, tmpFile, err := createOutputFile(inFile, tmpFile)
+	staged, err := openStagedOutput(f1, inFile, outFile, "import images")
 	if err != nil {
-		if f1 != nil {
-			f1.Close()
-		}
-		return err
+		return errors.Join(
+			fmt.Errorf("import images: create output: %w", err),
+			closeFile(f1, "import images: close input"),
+			closeImportImageInputs(rc),
+		)
 	}
+	f2 := staged.output.file
+	staged = staged.withCloser(func() error { return closeImportImageInputs(rc) })
+	staged.replaceContext = "import images: replace output"
 
 	defer func() {
-		if e := finishImportImagesFile(ok, f1, f2, rc, tmpFile, outFile); e != nil {
-			err = e
+		if !ok {
+			err = staged.cleanup(err)
+			return
 		}
+		err = staged.commit()
 	}()
 
 	if err = ImportImages(rs, f2, rr, imp, conf); err != nil {

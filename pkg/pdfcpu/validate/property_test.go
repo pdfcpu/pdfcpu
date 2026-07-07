@@ -51,3 +51,46 @@ func TestValidatePropertiesDictPaginationContents(t *testing.T) {
 		}
 	}
 }
+
+func TestValidatePropertiesDictReportsUnsupportedKeyContext(t *testing.T) {
+	err := validatePropertiesDict(testXRef(t, model.ValidationStrict), types.Dict{
+		"OCG": types.Dict{},
+	})
+	requireErrContains(t, err, "propertiesDict.OCG")
+}
+
+func TestValidatePropertiesDictReportsContentsContext(t *testing.T) {
+	err := validatePropertiesDict(testXRef(t, model.ValidationStrict), types.Dict{
+		"Contents": types.Integer(1),
+	})
+	requireErrContains(t, err, "propertiesDict.Contents")
+}
+
+func TestValidatePropertiesResourceDictReportsNameContext(t *testing.T) {
+	err := validatePropertiesResourceDict(testXRef(t, model.ValidationStrict), types.Dict{
+		"P1": types.Dict{"OCMD": types.Dict{}},
+	}, model.V10)
+	requireErrContains(t, err, "propertiesResourceDict.P1")
+}
+
+func TestValidatePropertiesDictReportsEntryObjectContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	xRefTable.Table[2] = model.NewXRefTableEntryGen0(types.Dict{})
+
+	err := validatePropertiesDict(xRefTable, types.Dict{
+		"OCG": *types.NewIndirectRef(2, 0),
+	})
+	requireErrContains(t, err, "propertiesDict.OCG obj#2")
+}
+
+func TestValidatePropertiesResourceDictReportsObjectContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	xRefTable.Table[2] = model.NewXRefTableEntryGen0(types.Dict{
+		"OCMD": types.Dict{},
+	})
+
+	err := validatePropertiesResourceDict(xRefTable, types.Dict{
+		"P1": *types.NewIndirectRef(2, 0),
+	}, model.V10)
+	requireErrChainContains(t, err, "propertiesResourceDict.P1 obj#2", "propertiesDict.OCMD")
+}

@@ -98,6 +98,7 @@ var (
 		model.REMOVEANNOTATIONS:       {0, 1},
 		model.ROTATE:                  {0, 1},
 		model.NUP:                     {0, 1},
+		model.GRID:                    {0, 1},
 		model.BOOKLET:                 {0, 1},
 		model.LISTBOOKMARKS:           {0, 0},
 		model.ADDBOOKMARKS:            {0, 1},
@@ -133,6 +134,19 @@ var (
 	// ErrUnsupportedEncryptionFeature reports a recognized encryption algorithm, version, or security handler that pdfcpu cannot process.
 	ErrUnsupportedEncryptionFeature = errors.New("unsupported encryption feature")
 )
+
+func classifyEncryptionDictionaryError(err error) error {
+	if errors.Is(err, errUnregisteredObject) ||
+		errors.Is(err, errNilDereferencedObject) ||
+		errors.Is(err, ErrReferenceDoesNotExist) ||
+		errors.Is(err, errCorruptDictObject) ||
+		errors.Is(err, model.ErrMissingEncryptDictObject) ||
+		errors.Is(err, model.ErrWrongTypeEncryptDictObject) ||
+		errors.Is(err, model.ErrDictionaryCorrupt) {
+		return errors.Join(ErrMalformedEncryption, err)
+	}
+	return err
+}
 
 // NewEncryptDict creates a new EncryptDict using the standard security handler.
 func newEncryptDict(pdf20, needAES bool, keyLength int, permissions int16) types.Dict {
@@ -780,16 +794,6 @@ func PermissionsList(p int) (list []string) {
 	return perms(p)
 }
 
-// Permissions returns a list of set permissions.
-func Permissions(ctx *model.Context) (list []string) {
-	p := 0
-	if ctx.E != nil {
-		p = ctx.E.P
-	}
-
-	return PermissionsList(p)
-}
-
 func validatePermissions(ctx *model.Context) (bool, error) {
 	// Algorithm 3.2a 5.
 
@@ -922,8 +926,14 @@ func getR(ctx *model.Context, d types.Dict) (int, error) {
 	}
 
 	r := d.IntEntry("R")
-	if r == nil || *r < 2 || *r > maxR {
-		return 0, ErrMalformedEncryption
+	if r == nil {
+		return 0, fmt.Errorf("%w: required entry \"R\" missing", ErrMalformedEncryption)
+	}
+	if *r < 2 || *r > maxR {
+		return 0, fmt.Errorf("%w: invalid encrypt \"R\" %d", ErrMalformedEncryption, *r)
+	}
+	if *r == 7 {
+		return 0, fmt.Errorf("%w: encrypt \"R\" 7", ErrUnsupportedEncryptionFeature)
 	}
 
 	return *r, nil
@@ -978,37 +988,33 @@ func validateAES256Parameters(d types.Dict, r int) (oe, ue, perms []byte, err er
 	return oe, ue, perms, nil
 }
 
-func validateOAndU(ctx *model.Context, d types.Dict, r int) (o, u []byte, err error) {
-	// O, 32 bytes long if the value of R is 4 or less and 48 bytes long if the value of R is 6.
-	o, err = d.StringEntryBytes("O")
+func validatePasswordEntry(d types.Dict, key string, minLen int) ([]byte, error) {
+	b, err := d.StringEntryBytes(key)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", ErrMalformedEncryption, err)
+		return nil, fmt.Errorf("%w: entry %q: %w", ErrMalformedEncryption, key, err)
+	}
+	if len(b) < minLen {
+		return nil, fmt.Errorf("%w: required entry %q shorter than %d bytes", ErrMalformedEncryption, key, minLen)
+	}
+	return b, nil
+}
+
+func validateOAndU(d types.Dict, r int, relaxed bool) (o, u []byte, err error) {
+	minLen := 0
+	if r >= 5 {
+		minLen = 48
+	} else if !relaxed {
+		minLen = 32
 	}
 
-	if ctx.XRefTable.ValidationMode == model.ValidationStrict {
-		if r == 6 && len(o) < 48 {
-			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"O\"", ErrMalformedEncryption)
-		}
-		if r <= 4 && len(o) < 32 {
-			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"O\"", ErrMalformedEncryption)
-		}
-	}
-
-	// U, 32 bytes long if the value of R is 4 or less and 48 bytes long if the value of R is 6.
-	u, err = d.StringEntryBytes("U")
+	o, err = validatePasswordEntry(d, "O", minLen)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w: %w", ErrMalformedEncryption, err)
+		return nil, nil, err
 	}
-
-	if ctx.XRefTable.ValidationMode == model.ValidationStrict {
-		if r == 6 && len(u) < 48 {
-			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"U\"", ErrMalformedEncryption)
-		}
-		if r <= 4 && len(u) < 32 {
-			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"U\"", ErrMalformedEncryption)
-		}
+	u, err = validatePasswordEntry(d, "U", minLen)
+	if err != nil {
+		return nil, nil, err
 	}
-
 	return o, u, nil
 }
 
@@ -1071,7 +1077,12 @@ func validateCFLength(len *int, cfm *string, pdf20, relaxed bool) error {
 }
 
 func validateCryptFilterRecipients(ctx *model.Context, d types.Dict, cfm *string) error {
-	if cfm == nil || (*cfm != "V2" && *cfm != "AESV2" && *cfm == "AESV3") {
+	if cfm == nil {
+		return nil
+	}
+	switch *cfm {
+	case "V2", "AESV2", "AESV3", "AESV4":
+	default:
 		return nil
 	}
 	obj, ok := d.Find("Recipients")
@@ -1081,7 +1092,7 @@ func validateCryptFilterRecipients(ctx *model.Context, d types.Dict, cfm *string
 
 	obj1, err := ctx.Dereference(obj)
 	if err != nil {
-		return err
+		return fmt.Errorf("crypt filter entry \"Recipients\": %w", err)
 	}
 
 	switch v := obj1.(type) {
@@ -1171,7 +1182,7 @@ func validateStmf(ctx *model.Context, d, cfDict types.Dict, v int, pubKeySecHand
 	if n != nil && *n != "Identity" {
 		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed)
 		if err != nil {
-			return err
+			return fmt.Errorf("encrypt dict entry \"StmF\": %w", err)
 		}
 		ctx.AES4Streams = aes
 	}
@@ -1183,7 +1194,7 @@ func validateStrf(ctx *model.Context, d, cfDict types.Dict, v int, pubKeySecHand
 	if n != nil && *n != "Identity" {
 		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed)
 		if err != nil {
-			return err
+			return fmt.Errorf("encrypt dict entry \"StrF\": %w", err)
 		}
 		ctx.AES4Strings = aes
 	}
@@ -1195,7 +1206,7 @@ func validateEFF(ctx *model.Context, d, cfDict types.Dict, v int, pubKeySecHandl
 	if n != nil && *n != "Identity" {
 		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed)
 		if err != nil {
-			return err
+			return fmt.Errorf("encrypt dict entry \"EFF\": %w", err)
 		}
 		ctx.AES4EmbeddedStreams = aes
 	}
@@ -1298,7 +1309,7 @@ func validatePubKeySecHandler(ctx *model.Context, d types.Dict, pubKeySecHandler
 		}
 		arr, err := ctx.DereferenceArray(obj)
 		if err != nil {
-			return err
+			return fmt.Errorf("encrypt dict entry \"Recipients\": %w", err)
 		}
 		if len(arr) == 0 {
 			return fmt.Errorf("%w: required entry \"Recipients\" empty", ErrMalformedEncryption)
@@ -1308,7 +1319,7 @@ func validatePubKeySecHandler(ctx *model.Context, d types.Dict, pubKeySecHandler
 	return nil
 }
 
-// SupportedEncryption returns a pointer to a struct encapsulating used encryption.
+// supportedEncryption returns a pointer to a struct encapsulating used encryption.
 func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 	// Filter
 	filter, err := validateEncryptFilter(d)
@@ -1349,7 +1360,8 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 	}
 
 	// O, U
-	o, u, err := validateOAndU(ctx, d, r)
+	relaxed := ctx.XRefTable.ValidationMode == model.ValidationRelaxed
+	o, u, err := validateOAndU(d, r, relaxed)
 	if err != nil {
 		return nil, err
 	}
@@ -1397,7 +1409,9 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 
 	nr := uint32(objNumber)
 	b1 := []byte{byte(nr), byte(nr >> 8), byte(nr >> 16)}
-	b := append(key, b1...)
+	b := make([]byte, 0, len(key)+5)
+	b = append(b, key...)
+	b = append(b, b1...)
 
 	gen := uint16(generation)
 	b2 := []byte{byte(gen), byte(gen >> 8)}
@@ -1780,7 +1794,7 @@ func encryptAESBytes(b, key []byte) ([]byte, error) {
 }
 
 func decryptAESBytes(b, key []byte) ([]byte, error) {
-	if len(b) < aes.BlockSize {
+	if len(b) < 2*aes.BlockSize {
 		return nil, errors.New("ciphertext too short")
 	}
 

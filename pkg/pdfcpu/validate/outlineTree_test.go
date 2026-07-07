@@ -17,24 +17,11 @@ limitations under the License.
 package validate
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
-
-func newOutlineTestXRef(t *testing.T, mode int) *model.XRefTable {
-	t.Helper()
-	ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())
-	if err != nil {
-		t.Fatal(err)
-	}
-	v := model.V17
-	ctx.XRefTable.HeaderVersion = &v
-	ctx.XRefTable.ValidationMode = mode
-	return ctx.XRefTable
-}
 
 func newOutlineTestRoot(t *testing.T, xRefTable *model.XRefTable, objNr *int) *types.IndirectRef {
 	t.Helper()
@@ -65,20 +52,35 @@ func newOutlineTestItem(t *testing.T, xRefTable *model.XRefTable, objNr *int, pa
 }
 
 func TestValidateOutlineTreeRejectsLeafCountStrict(t *testing.T) {
-	xRefTable := newOutlineTestXRef(t, model.ValidationStrict)
+	xRefTable := testXRef(t, model.ValidationStrict)
 	objNr := 1
 	rootRef := newOutlineTestRoot(t, xRefTable, &objNr)
 	count := 1
 	itemRef, _ := newOutlineTestItem(t, xRefTable, &objNr, rootRef, &count)
 	fixed := false
 
-	if _, _, err := validateOutlineTree(xRefTable, itemRef, itemRef, map[int]bool{}, &fixed); err == nil {
-		t.Fatal("strict validation accepted a leaf outline item with nonzero Count")
-	}
+	_, _, err := validateOutlineTree(xRefTable, itemRef, itemRef, map[int]bool{}, &fixed)
+	requireErrContains(t, err, "outline item obj#2: leaf Count must be 0")
+}
+
+func TestValidateOutlineTreeReportsNestedChildContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	objNr := 1
+	rootRef := newOutlineTestRoot(t, xRefTable, &objNr)
+	count := 1
+	parentRef, parentDict := newOutlineTestItem(t, xRefTable, &objNr, rootRef, &count)
+	childRef, childDict := newOutlineTestItem(t, xRefTable, &objNr, parentRef, nil)
+	parentDict["First"] = *childRef
+	parentDict["Last"] = *childRef
+	childDict["Count"] = types.Integer(1)
+	fixed := false
+
+	_, _, err := validateOutlineTree(xRefTable, parentRef, parentRef, map[int]bool{}, &fixed)
+	requireErrChainContains(t, err, "outline item obj#2", "validate children", "outline item obj#3", "leaf Count must be 0")
 }
 
 func TestValidateOutlineTreeRepairsLeafCountRelaxed(t *testing.T) {
-	xRefTable := newOutlineTestXRef(t, model.ValidationRelaxed)
+	xRefTable := testXRef(t, model.ValidationRelaxed)
 	objNr := 1
 	rootRef := newOutlineTestRoot(t, xRefTable, &objNr)
 	count := 1
@@ -97,7 +99,7 @@ func TestValidateOutlineTreeRepairsLeafCountRelaxed(t *testing.T) {
 }
 
 func TestValidateOutlineTreeRepairsNonLeafCountRelaxed(t *testing.T) {
-	xRefTable := newOutlineTestXRef(t, model.ValidationRelaxed)
+	xRefTable := testXRef(t, model.ValidationRelaxed)
 	objNr := 1
 	rootRef := newOutlineTestRoot(t, xRefTable, &objNr)
 	count := 99
@@ -122,7 +124,7 @@ func TestValidateOutlineTreeRepairsNonLeafCountRelaxed(t *testing.T) {
 }
 
 func TestValidateOutlineTreeAcceptsCollapsedCountStrict(t *testing.T) {
-	xRefTable := newOutlineTestXRef(t, model.ValidationStrict)
+	xRefTable := testXRef(t, model.ValidationStrict)
 	objNr := 1
 	rootRef := newOutlineTestRoot(t, xRefTable, &objNr)
 	count := -2
@@ -138,4 +140,33 @@ func TestValidateOutlineTreeAcceptsCollapsedCountStrict(t *testing.T) {
 	if _, _, err := validateOutlineTree(xRefTable, parentRef, parentRef, map[int]bool{}, &fixed); err != nil {
 		t.Fatalf("strict validation rejected collapsed Count: %v", err)
 	}
+}
+
+func TestValidateOutlinesReportsRootContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	objNr := 1
+	outlineDict := types.Dict{"Type": types.Name("Outlines")}
+	outlineRef, err := xRefTable.IndRefForObject(objNr, outlineDict)
+	if err != nil {
+		t.Fatal(err)
+	}
+	objNr++
+	itemRef, _ := newOutlineTestItem(t, xRefTable, &objNr, outlineRef, nil)
+	outlineDict["First"] = *itemRef
+
+	rootDict := types.Dict{"Outlines": *outlineRef}
+
+	err = validateOutlines(xRefTable, rootDict, OPTIONAL, model.V10)
+	requireErrContains(t, err, "outline root: missing Last")
+	requireErrNotContains(t, err, "outline root: outline root")
+}
+
+func TestValidateOutlinesReportsRootObjectContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	osd := types.NewObjectStreamDict()
+	lazy := types.NewLazyObjectStreamObject(osd, 1, -1, nil)
+	xRefTable.Table[2] = model.NewXRefTableEntryGen0(lazy)
+
+	err := validateOutlines(xRefTable, types.Dict{"Outlines": *types.NewIndirectRef(2, 0)}, OPTIONAL, model.V10)
+	requireErrChainContains(t, err, "outline root obj#2", "dereference", "unexpected EOF")
 }

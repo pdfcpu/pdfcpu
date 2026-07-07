@@ -18,6 +18,7 @@ package form
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -165,5 +166,219 @@ func TestFormFieldHelpersRejectCycle(t *testing.T) {
 	err = removeFormFieldsDepth(xRefTable, &indRefs, &fields, 0, model.NewFormFieldVisit())
 	if !errors.Is(err, model.ErrFormFieldCycle) {
 		t.Fatalf("got %v, want ErrFormFieldCycle", err)
+	}
+}
+
+func emptyFormContext(t *testing.T) *model.Context {
+	t.Helper()
+	ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ctx
+}
+
+func TestFormOperationsIdentifyAcroFormFieldsPhase(t *testing.T) {
+	ctx := emptyFormContext(t)
+	tests := []struct {
+		name string
+		fn   func() error
+	}{
+		{name: "list", fn: func() error { _, _, err := FormFields(ctx); return err }},
+		{name: "export", fn: func() error { _, _, err := ExportForm(ctx.XRefTable, "source.pdf"); return err }},
+		{name: "remove", fn: func() error { _, err := RemoveFormFields(ctx, nil); return err }},
+		{name: "reset", fn: func() error { _, err := ResetFormFields(ctx, nil); return err }},
+		{name: "lock", fn: func() error { _, err := LockFormFields(ctx, nil); return err }},
+		{name: "unlock", fn: func() error { _, err := UnlockFormFields(ctx, nil); return err }},
+		{name: "fill", fn: func() error {
+			fillDetails := func(string, string, FieldType, DataFormat) ([]string, bool, bool) {
+				return nil, false, false
+			}
+			_, _, err := FillForm(ctx, fillDetails, nil, JSON)
+			return err
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.fn()
+			if err == nil || !strings.Contains(err.Error(), "AcroForm Fields: no form available") {
+				t.Fatalf("expected AcroForm Fields context, got %v", err)
+			}
+		})
+	}
+}
+
+func TestListFormFieldsAddsCollectionPhase(t *testing.T) {
+	ctx := emptyFormContext(t)
+	_, err := ListFormFields(ctx)
+	if err == nil || !strings.Contains(err.Error(), "collect fields: AcroForm Fields") {
+		t.Fatalf("expected collection phase, got %v", err)
+	}
+	if got := strings.Count(err.Error(), "collect fields"); got != 1 {
+		t.Fatalf("expected collect fields once, got %d in %q", got, err.Error())
+	}
+}
+
+func TestIsFieldCallersDoNotRepeatWidgetIdentity(t *testing.T) {
+	ctx := emptyFormContext(t)
+	irRef, err := ctx.XRefTable.IndRefForObject(7, types.Integer(1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ir := *irRef
+	indRefs := []types.IndirectRef{ir}
+	wAnnots := model.Annot{IndRefs: &indRefs}
+	fillDetails := func(string, string, FieldType, DataFormat) ([]string, bool, bool) {
+		return nil, false, false
+	}
+
+	tests := []struct {
+		name string
+		fn   func() error
+	}{
+		{name: "collect", fn: func() error {
+			fields := []Field{}
+			return collectPageFields(ctx.XRefTable, wAnnots, nil, 1, &FieldMeta{}, &fields, 0)
+		}},
+		{name: "reset", fn: func() error {
+			ok := false
+			return resetPageFields(ctx, nil, wAnnots, nil, map[string]types.IndirectRef{}, &ok)
+		}},
+		{name: "lock", fn: func() error {
+			ok := false
+			return lockPageFields(ctx, nil, nil, wAnnots, map[string]types.IndirectRef{}, &ok)
+		}},
+		{name: "unlock", fn: func() error {
+			ok := false
+			return unlockPageFields(ctx.XRefTable, nil, nil, wAnnots, &ok)
+		}},
+		{name: "fill", fn: func() error {
+			ok := false
+			return fillWidgetAnnots(ctx, nil, map[types.IndirectRef]bool{}, wAnnots, JSON, map[string]types.IndirectRef{}, fillDetails, &ok)
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.fn()
+			if err == nil || !strings.Contains(err.Error(), "resolve field: widget obj#7: dereference") {
+				t.Fatalf("expected normalized widget context, got %v", err)
+			}
+			if got := strings.Count(err.Error(), "widget obj#7"); got != 1 {
+				t.Fatalf("expected widget identity once, got %d in %q", got, err.Error())
+			}
+		})
+	}
+}
+
+func TestCollectButtonFieldIdentityAppearsOnce(t *testing.T) {
+	tests := []struct {
+		name  string
+		entry string
+	}{
+		{name: "default value", entry: "DV"},
+		{name: "value", entry: "V"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := emptyFormContext(t)
+			d := types.Dict{
+				"FT":     types.Name("Btn"),
+				"T":      types.StringLiteral("customer.name"),
+				tt.entry: types.Integer(1),
+			}
+			ir, err := ctx.XRefTable.IndRefForObject(7, d)
+			if err != nil {
+				t.Fatal(err)
+			}
+			fields := types.Array{*ir}
+			indRefs := []types.IndirectRef{*ir}
+			wAnnots := model.Annot{IndRefs: &indRefs}
+			collected := []Field{}
+
+			err = collectPageFields(ctx.XRefTable, wAnnots, fields, 1, &FieldMeta{}, &collected, 0)
+			want := fmt.Sprintf(`field 7: entry %q`, tt.entry)
+			if err == nil || !strings.Contains(err.Error(), want) {
+				t.Fatalf("expected %q, got %v", want, err)
+			}
+			if got := strings.Count(err.Error(), "field 7"); got != 1 {
+				t.Fatalf("expected field identity once, got %d in %q", got, err.Error())
+			}
+		})
+	}
+}
+
+func TestLockAndUnlockPageFieldsUseOneBasedKidIndexes(t *testing.T) {
+	ctx := emptyFormContext(t)
+	d := types.Dict{
+		"FT":   types.Name("Tx"),
+		"T":    types.StringLiteral("field"),
+		"Kids": types.Array{types.Integer(1)},
+	}
+	ir, err := ctx.XRefTable.IndRefForObject(1, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fields := types.Array{*ir}
+	indRefs := []types.IndirectRef{*ir}
+	wAnnots := model.Annot{IndRefs: &indRefs}
+
+	tests := []struct {
+		name string
+		fn   func(*bool) error
+	}{
+		{name: "lock", fn: func(ok *bool) error {
+			return lockPageFields(ctx, nil, fields, wAnnots, map[string]types.IndirectRef{}, ok)
+		}},
+		{name: "unlock", fn: func(ok *bool) error {
+			return unlockPageFields(ctx.XRefTable, nil, fields, wAnnots, ok)
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ok := false
+			err := tt.fn(&ok)
+			if err == nil || !strings.Contains(err.Error(), "kid 1: dereference") {
+				t.Fatalf("expected one-based kid context, got %v", err)
+			}
+		})
+	}
+}
+
+func TestFormTreeWalkersRejectDirectObjectsWithoutPanic(t *testing.T) {
+	ctx := emptyFormContext(t)
+	fields := types.Array{types.Integer(1)}
+	tests := []struct {
+		name string
+		fn   func() error
+	}{
+		{name: "collect annotations", fn: func() error {
+			_, err := annotIndRefs(ctx.XRefTable, fields)
+			return err
+		}},
+		{name: "resolve field", fn: func() error {
+			_, err := annotIndRefForField(ctx.XRefTable, fields, "1")
+			return err
+		}},
+		{name: "remove field", fn: func() error {
+			indRefs := []types.IndirectRef{*types.NewIndirectRef(1, 0)}
+			return removeFormFields(ctx.XRefTable, &indRefs, &fields)
+		}},
+		{name: "resolve page annotations", fn: func() error {
+			_, err := fieldsForAnnots(ctx.XRefTable, fields, nil)
+			return err
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.fn()
+			if err == nil || !strings.Contains(err.Error(), "expected indirect reference") {
+				t.Fatalf("expected indirect reference error, got %v", err)
+			}
+		})
 	}
 }

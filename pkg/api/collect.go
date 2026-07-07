@@ -17,6 +17,8 @@
 package api
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -44,20 +46,23 @@ func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("collect: %w", err)
 	}
 
 	pages, err := PagesForPageCollection(ctx.PageCount, selectedPages)
 	if err != nil {
-		return err
+		return fmt.Errorf("collect: parse page selection: %w", err)
 	}
 
 	ctxDest, err := pdfcpu.ExtractPages(ctx, pages, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("collect: extract pages: %w", err)
 	}
 
-	return Write(ctxDest, w, conf)
+	if err = Write(ctxDest, w, conf); err != nil {
+		return fmt.Errorf("collect: write output: %w", err)
+	}
+	return nil
 }
 
 // CollectFile creates a custom PDF page sequence for inFile and writes the result to outFile.
@@ -65,8 +70,12 @@ func CollectFile(inFile, outFile string, selectedPages []string, conf *model.Con
 	var f1, f2 *os.File
 	ok := false
 
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
+
 	if f1, err = os.Open(inFile); err != nil {
-		return err
+		return fmt.Errorf("collect: open input %s: %w", inFile, err)
 	}
 
 	tmpFile := ""
@@ -76,27 +85,21 @@ func CollectFile(inFile, outFile string, selectedPages []string, conf *model.Con
 	} else {
 		logWritingTo(inFile)
 	}
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
+	staged, err := openStagedOutput(f1, inFile, tmpFile, "collect")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("collect: create output: %w", err),
+			closeFile(f1, "collect: close input"),
+		)
 	}
+	f2 = staged.output.file
 
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			_ = os.Remove(tmpFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
+		err = staged.commit()
 	}()
 
 	if err = Collect(f1, f2, selectedPages, conf); err != nil {

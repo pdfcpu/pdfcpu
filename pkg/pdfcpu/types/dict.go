@@ -109,6 +109,12 @@ func (d Dict) Find(key string) (Object, bool) {
 	return nil, false
 }
 
+// HasEntry returns true if key exists and maps to a non-nil object.
+func (d Dict) HasEntry(key string) bool {
+	v, found := d.Find(key)
+	return found && v != nil
+}
+
 // Delete deletes the Object for given key.
 func (d Dict) Delete(key string) (value Object) {
 	value, found := d.Find(key)

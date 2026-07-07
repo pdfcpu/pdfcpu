@@ -332,7 +332,9 @@ func (rbg *RadioButtonGroup) renderButtonLabels(p *model.Page, pageNr int, fonts
 		if rbg.hor {
 			td.VAlign = types.AlignMiddle
 		}
-		model.WriteColumn(rbg.pdf.XRefTable, p.Buf, p.MediaBox, nil, td, 0)
+		if _, err := model.WriteColumn(rbg.pdf.XRefTable, p.Buf, p.MediaBox, nil, td, 0); err != nil {
+			return fmt.Errorf("radio button label %d: %w", i+1, err)
+		}
 	}
 
 	return nil
@@ -952,7 +954,10 @@ func (rbg *RadioButtonGroup) prepLabel(p *model.Page, pageNr int, fonts model.Fo
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb := model.WriteMultiLine(rbg.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(rbg.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	if err != nil {
+		return fmt.Errorf("radio button group label: %w", err)
+	}
 	l.height = bb.Height()
 	if bb.Width() > w {
 		w = bb.Width()
@@ -976,7 +981,9 @@ func (rbg *RadioButtonGroup) prepForRender(p *model.Page, pageNr int, fonts mode
 		return err
 	}
 
-	rbg.Buttons.calcLabelWidths(rbg.hor)
+	if err := rbg.Buttons.calcLabelWidths(rbg.hor); err != nil {
+		return err
+	}
 
 	mTop, mRight, mBottom, mLeft, err := rbg.prepareMargin()
 	if err != nil {
@@ -994,7 +1001,9 @@ func (rbg *RadioButtonGroup) prepForRender(p *model.Page, pageNr int, fonts mode
 
 func (rbg *RadioButtonGroup) prepareDict(p *model.Page, pageNr int, fonts model.FontMap) (*types.IndirectRef, types.Array, error) {
 
-	rbg.renderButtonLabels(p, pageNr, fonts)
+	if err := rbg.renderButtonLabels(p, pageNr, fonts); err != nil {
+		return nil, nil, err
+	}
 
 	id, err := types.EscapedUTF16String(rbg.ID)
 	if err != nil {
@@ -1069,7 +1078,9 @@ func (rbg *RadioButtonGroup) doRender(p *model.Page, pageNr int, fonts model.Fon
 	}
 
 	if rbg.Label != nil {
-		model.WriteColumn(rbg.pdf.XRefTable, p.Buf, p.MediaBox, nil, *rbg.Label.td, 0)
+		if _, err := model.WriteColumn(rbg.pdf.XRefTable, p.Buf, p.MediaBox, nil, *rbg.Label.td, 0); err != nil {
+			return fmt.Errorf("radio button group label: %w", err)
+		}
 	}
 
 	if rbg.Debug || rbg.pdf.Debug {

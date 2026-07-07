@@ -18,6 +18,7 @@ package types
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 )
 
@@ -59,6 +60,13 @@ func TestByteForOctalString(t *testing.T) {
 				t.Errorf("got %x; want %x", got, test.expected)
 			}
 		})
+	}
+}
+
+func TestEscapedUTF16StringRejectsInvalidUTF8(t *testing.T) {
+	_, err := EscapedUTF16String(string([]byte{0xFF}))
+	if !errors.Is(err, ErrInvalidUTF8) {
+		t.Fatalf("expected %v, got %v", ErrInvalidUTF8, err)
 	}
 }
 

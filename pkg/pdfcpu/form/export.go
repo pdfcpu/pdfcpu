@@ -79,7 +79,7 @@ type DateField struct {
 	Locked  bool   `json:"locked"`
 }
 
-// RadioButtonGroup represents a form checkbox.
+// CheckBox represents a form checkbox.
 type CheckBox struct {
 	Pages   []int  `json:"pages"`
 	ID      string `json:"id"`
@@ -153,6 +153,9 @@ type FormGroup struct {
 
 func (f Form) textFieldValueAndLock(id, name string) (string, bool, bool) {
 	for _, tf := range f.TextFields {
+		if tf == nil {
+			continue
+		}
 		if tf.ID == id || tf.Name == name {
 			return tf.Value, tf.Locked, true
 		}
@@ -162,6 +165,9 @@ func (f Form) textFieldValueAndLock(id, name string) (string, bool, bool) {
 
 func (f Form) dateFieldValueAndLock(id, name string) (string, bool, bool) {
 	for _, df := range f.DateFields {
+		if df == nil {
+			continue
+		}
 		if df.ID == id || df.Name == name {
 			return df.Value, df.Locked, true
 		}
@@ -171,6 +177,9 @@ func (f Form) dateFieldValueAndLock(id, name string) (string, bool, bool) {
 
 func (f Form) checkBoxValueAndLock(id, name string) (bool, bool, bool) {
 	for _, cb := range f.CheckBoxes {
+		if cb == nil {
+			continue
+		}
 		if cb.ID == id || cb.Name == name {
 			return cb.Value, cb.Locked, true
 		}
@@ -180,6 +189,9 @@ func (f Form) checkBoxValueAndLock(id, name string) (bool, bool, bool) {
 
 func (f Form) radioButtonGroupValueAndLock(id, name string) (string, bool, bool) {
 	for _, rbg := range f.RadioButtonGroups {
+		if rbg == nil {
+			continue
+		}
 		if rbg.ID == id || rbg.Name == name {
 			return rbg.Value, rbg.Locked, true
 		}
@@ -189,6 +201,9 @@ func (f Form) radioButtonGroupValueAndLock(id, name string) (string, bool, bool)
 
 func (f Form) comboBoxValueAndLock(id, name string) (string, bool, bool) {
 	for _, cb := range f.ComboBoxes {
+		if cb == nil {
+			continue
+		}
 		if cb.ID == id || cb.Name == name {
 			return cb.Value, cb.Locked, true
 		}
@@ -198,6 +213,9 @@ func (f Form) comboBoxValueAndLock(id, name string) (string, bool, bool) {
 
 func (f Form) listBoxValuesAndLock(id, name string) ([]string, bool, bool) {
 	for _, lb := range f.ListBoxes {
+		if lb == nil {
+			continue
+		}
 		if lb.ID == id || lb.Name == name {
 			return lb.Values, lb.Locked, true
 		}
@@ -206,14 +224,13 @@ func (f Form) listBoxValuesAndLock(id, name string) ([]string, bool, bool) {
 }
 
 func locateAPN(xRefTable *model.XRefTable, d types.Dict) (types.Dict, error) {
-
 	obj, ok := d.Find("AP")
 	if !ok {
 		return nil, errors.New("corrupt form field: missing entry \"AP\"")
 	}
 	d1, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("entry AP: dereference: %w", err)
 	}
 	if len(d1) == 0 {
 		return nil, errors.New("corrupt form field: missing entry \"AP\"")
@@ -226,7 +243,7 @@ func locateAPN(xRefTable *model.XRefTable, d types.Dict) (types.Dict, error) {
 
 	obj, err = xRefTable.Dereference(obj)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("entry AP/N: dereference: %w", err)
 	}
 	if obj == nil {
 		return nil, errors.New("corrupt AP field: missing entry \"N\"")
@@ -248,7 +265,6 @@ func locateAPN(xRefTable *model.XRefTable, d types.Dict) (types.Dict, error) {
 }
 
 func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, bool, error) {
-
 	var opts []string
 	p := 0
 
@@ -261,10 +277,10 @@ func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 		return opts, true, nil
 	}
 
-	for _, o := range d.ArrayEntry("Kids") {
+	for i, o := range d.ArrayEntry("Kids") {
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
-			return nil, false, err
+			return nil, false, fmt.Errorf("entry Kids[%d]: dereference: %w", i, err)
 		}
 
 		indRef := d.IndirectRefEntry("P")
@@ -278,7 +294,7 @@ func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 
 		d1, err := locateAPN(xRefTable, d)
 		if err != nil {
-			return nil, false, err
+			return nil, false, fmt.Errorf("entry Kids[%d]: appearance: %w", i, err)
 		}
 
 		for k := range d1 {
@@ -286,12 +302,7 @@ func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 			if err != nil {
 				return nil, false, err
 			}
-			if k != "Off" {
-				for _, opt := range opts {
-					if opt == k {
-						continue
-					}
-				}
+			if k != "Off" && !types.MemberOf(k, opts) {
 				opts = append(opts, k)
 			}
 		}
@@ -308,20 +319,17 @@ func resolveOption(s string, opts []string, explicit bool) (string, error) {
 	if len(opts) > 0 && explicit {
 		j, err := strconv.Atoi(n)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("option index %q: %w", n, err)
 		}
-		for i, o := range opts {
-			if i == j {
-				n = o
-				break
-			}
+		if j < 0 || j >= len(opts) {
+			return "", fmt.Errorf("option index %d out of range [0,%d)", j, len(opts))
 		}
+		n = opts[j]
 	}
 	return n, nil
 }
 
 func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, locked bool) (*RadioButtonGroup, error) {
-
 	rbg := &RadioButtonGroup{Pages: []int{page}, ID: id, Name: name, AltName: altName, Locked: locked}
 
 	opts, explicit, err := extractRadioButtonGroupOptions(xRefTable, d)
@@ -352,16 +360,18 @@ func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict,
 	return rbg, nil
 }
 
-func extractCheckBox(page int, d types.Dict, id, name, altName string, locked bool) (*CheckBox, error) {
-
+func extractCheckBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, locked bool) (*CheckBox, error) {
 	cb := &CheckBox{Pages: []int{page}, ID: id, Name: name, AltName: altName, Locked: locked}
 
-	if o, ok := d.Find("DV"); ok {
-		cb.Default = o.(types.Name) != "Off"
+	if n, found, err := dictNameEntry(xRefTable, d, "DV"); err != nil {
+		return nil, fmt.Errorf("checkbox %s: %w", id, err)
+	} else if found {
+		cb.Default = n != "Off"
 	}
 
-	if o, ok := d.Find("V"); ok {
-		n := o.(types.Name)
+	if n, found, err := dictNameEntry(xRefTable, d, "V"); err != nil {
+		return nil, fmt.Errorf("checkbox %s: %w", id, err)
+	} else if found {
 		cb.Value = len(n) > 0 && n != "Off"
 	}
 
@@ -369,7 +379,6 @@ func extractCheckBox(page int, d types.Dict, id, name, altName string, locked bo
 }
 
 func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, locked bool) (*ComboBox, error) {
-
 	cb := &ComboBox{Pages: []int{page}, ID: id, Name: name, AltName: altName, Locked: locked}
 
 	if sl := d.StringLiteralEntry("DV"); sl != nil {
@@ -412,7 +421,11 @@ func dateFormatFromJSAction(d types.Dict) (*primitives.DateFormat, error) {
 				i := strings.Index(s, "AFDate_FormatEx(\"")
 				if i >= 0 {
 					from := i + len("AFDate_FormatEx(\"")
-					s = s[from : from+10]
+					to := strings.IndexByte(s[from:], '"')
+					if to < 0 {
+						return nil, errors.New("date format action: missing closing quote")
+					}
+					s = s[from : from+to]
 				}
 				if df, err := primitives.DateFormatForFmtExt(s); err == nil {
 					return df, nil
@@ -421,6 +434,28 @@ func dateFormatFromJSAction(d types.Dict) (*primitives.DateFormat, error) {
 		}
 	}
 	return nil, nil
+}
+
+func dateStringEntry(xRefTable *model.XRefTable, d types.Dict, key string) (string, bool, error) {
+	o, found := d.Find(key)
+	if !found {
+		return "", false, nil
+	}
+
+	o, err := xRefTable.Dereference(o)
+	if err != nil {
+		return "", false, fmt.Errorf("entry %s: dereference: %w", key, err)
+	}
+
+	s, err := types.StringOrHexLiteral(o)
+	if err != nil {
+		return "", false, fmt.Errorf("entry %s: decode string: %w", key, err)
+	}
+	if s == nil {
+		return "", true, nil
+	}
+
+	return *s, true, nil
 }
 
 func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.DateFormat, error) {
@@ -432,33 +467,21 @@ func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.Da
 		return df, nil
 	}
 
-	if o, found := d.Find("DV"); found {
-		o1, err := xRefTable.Dereference(o)
-		if err != nil {
-			return nil, err
-		}
-		sl, err := types.StringOrHexLiteral(o1)
-		if err != nil {
-			return nil, err
-		}
-		s := ""
-		if sl != nil {
-			s = *sl
-		}
+	s, found, err := dateStringEntry(xRefTable, d, "DV")
+	if err != nil {
+		return nil, err
+	}
+	if found {
 		if df, err := primitives.DateFormatForDate(s); err == nil {
 			return df, nil
 		}
 	}
 
-	if o, found := d.Find("V"); found {
-		sl, err := types.StringOrHexLiteral(o)
-		if err != nil {
-			return nil, err
-		}
-		s := ""
-		if sl != nil {
-			s = *sl
-		}
+	s, found, err = dateStringEntry(xRefTable, d, "V")
+	if err != nil {
+		return nil, err
+	}
+	if found {
 		if df, err := primitives.DateFormatForDate(s); err == nil {
 			return df, nil
 		}
@@ -468,7 +491,6 @@ func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.Da
 }
 
 func extractDateField(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, df *primitives.DateFormat, locked bool) (*DateField, error) {
-
 	dfield := &DateField{Pages: []int{page}, ID: id, Name: name, AltName: altName, Format: df.Ext, Locked: locked}
 
 	v, err := getV(xRefTable, d)
@@ -487,7 +509,6 @@ func extractDateField(xRefTable *model.XRefTable, page int, d types.Dict, id, na
 }
 
 func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, ff *int, locked bool) (*TextField, error) {
-
 	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
 
 	maxLen := 0
@@ -514,7 +535,6 @@ func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, na
 }
 
 func extractListBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, locked, multi bool) (*ListBox, error) {
-
 	lb := &ListBox{Pages: []int{page}, ID: id, Name: name, AltName: altName, Locked: locked, Multi: multi}
 
 	if !multi {
@@ -571,13 +591,14 @@ func header(xRefTable *model.XRefTable, source string) Header {
 }
 
 func fieldsForAnnots(xRefTable *model.XRefTable, annots, fields types.Array) (map[string]fieldInfo, error) {
-
 	m := map[string]fieldInfo{}
 	var prevId string
 
-	for _, v := range annots {
-
-		indRef := v.(types.IndirectRef)
+	for i, v := range annots {
+		indRef, err := indirectRef(v, "page Annots", i)
+		if err != nil {
+			return nil, err
+		}
 
 		ok, fi, err := isField(xRefTable, indRef, fields)
 		if err != nil {
@@ -608,7 +629,6 @@ func exportBtn(
 	id, name, altName string,
 	locked bool,
 	ok *bool) error {
-
 	if len(d.ArrayEntry("Kids")) > 1 {
 
 		for _, rb := range form.RadioButtonGroups {
@@ -635,7 +655,7 @@ func exportBtn(
 		}
 	}
 
-	cb, err := extractCheckBox(i, d, id, name, altName, locked)
+	cb, err := extractCheckBox(xRefTable, i, d, id, name, altName, locked)
 	if err != nil {
 		return err
 	}
@@ -653,7 +673,6 @@ func exportCh(
 	id, name, altName string,
 	locked bool,
 	ok *bool) error {
-
 	ff := d.IntEntry("Ff")
 
 	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
@@ -701,7 +720,6 @@ func exportTx(
 	ff *int,
 	locked bool,
 	ok *bool) error {
-
 	df, err := extractDateFormat(xRefTable, d)
 	if err != nil {
 		return err
@@ -765,7 +783,7 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 
 		d, err := xRefTable.DereferenceDict(*fi.indRef)
 		if err != nil {
-			return err
+			return fmt.Errorf("field %s obj#%d: dereference: %w", id, fi.indRef.ObjectNumber.Value(), err)
 		}
 		if len(d) == 0 {
 			continue
@@ -789,7 +807,7 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 		if o, found := d.Find("TU"); found {
 			s, err := types.StringOrHexLiteral(o)
 			if err != nil {
-				return err
+				return fmt.Errorf("field %s: entry TU: %w", id, err)
 			}
 			if s != nil {
 				altName = *s
@@ -797,7 +815,7 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 		}
 
 		if err := exportPageField(*ft, xRefTable, i, form, d, id, name, altName, locked, ok, ff); err != nil {
-			return err
+			return fmt.Errorf("field %s: %w", id, err)
 		}
 	}
 
@@ -806,10 +824,9 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 
 // ExportForm extracts form data originating from source from xRefTable.
 func ExportForm(xRefTable *model.XRefTable, source string) (*FormGroup, bool, error) {
-
 	fields, err := Fields(xRefTable)
 	if err != nil {
-		return nil, false, err
+		return nil, false, fmt.Errorf("AcroForm Fields: %w", err)
 	}
 
 	formGroup := FormGroup{}
@@ -823,7 +840,7 @@ func ExportForm(xRefTable *model.XRefTable, source string) (*FormGroup, bool, er
 
 		d, _, _, err := xRefTable.PageDict(i, false)
 		if err != nil {
-			return nil, false, err
+			return nil, false, fmt.Errorf("page %d: page dictionary: %w", i, err)
 		}
 
 		o, found := d.Find("Annots")
@@ -833,16 +850,16 @@ func ExportForm(xRefTable *model.XRefTable, source string) (*FormGroup, bool, er
 
 		arr, err := xRefTable.DereferenceArray(o)
 		if err != nil {
-			return nil, false, err
+			return nil, false, fmt.Errorf("page %d: Annots: %w", i, err)
 		}
 
 		m, err := fieldsForAnnots(xRefTable, arr, fields)
 		if err != nil {
-			return nil, false, err
+			return nil, false, fmt.Errorf("page %d: resolve fields: %w", i, err)
 		}
 
 		if err := exportPageFields(xRefTable, i, &form, m, &ok); err != nil {
-			return nil, false, err
+			return nil, false, fmt.Errorf("page %d: export fields: %w", i, err)
 		}
 	}
 
@@ -851,20 +868,40 @@ func ExportForm(xRefTable *model.XRefTable, source string) (*FormGroup, bool, er
 	return &formGroup, ok, nil
 }
 
-// ExportFormJSON extracts form data originating from source from xRefTable and writes a JSON representation to w.
-func ExportFormJSON(xRefTable *model.XRefTable, source string, w io.Writer) (bool, error) {
+type exportFormFunc func(*model.XRefTable, string) (*FormGroup, bool, error)
 
-	formGroup, ok, err := ExportForm(xRefTable, source)
-	if err != nil || !ok {
-		return false, err
+type marshalFormJSONFunc func(any, string, string) ([]byte, error)
+
+func exportFormJSON(xRefTable *model.XRefTable, source string, w io.Writer, export exportFormFunc, marshal marshalFormJSONFunc) (bool, error) {
+	if w == nil {
+		return false, ErrMissingJSONWriter
 	}
-
-	bb, err := json.MarshalIndent(formGroup, "", "\t")
+	formGroup, ok, err := export(xRefTable, source)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("collect data: %w", err)
+	}
+	if !ok {
+		return false, nil
 	}
 
-	_, err = w.Write(bb)
+	bb, err := marshal(formGroup, "", "\t")
+	if err != nil {
+		return false, fmt.Errorf("encode JSON: %w", err)
+	}
 
-	return ok, err
+	n, err := w.Write(bb)
+	if err != nil {
+		return false, fmt.Errorf("write JSON: %w", err)
+	}
+	if n != len(bb) {
+		return false, fmt.Errorf("write JSON: %w", io.ErrShortWrite)
+	}
+	return true, nil
+}
+
+// ExportFormJSON extracts form data originating from source from xRefTable and writes a JSON representation to w.
+// It returns true when form fields were exported and written. It returns false with a nil error when no exportable
+// form fields were found.
+func ExportFormJSON(xRefTable *model.XRefTable, source string, w io.Writer) (bool, error) {
+	return exportFormJSON(xRefTable, source, w, ExportForm, json.MarshalIndent)
 }

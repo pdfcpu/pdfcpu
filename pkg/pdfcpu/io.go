@@ -17,48 +17,187 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"crypto/rand"
+	"errors"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"reflect"
+
+	"github.com/pdfcpu/pdfcpu/internal/fileutil"
 )
 
-// Write rd to filepath and respect overwrite.
-func Write(rd io.Reader, filepath string, overwrite bool) (bool, error) {
-	if !overwrite {
-		if _, err := os.Stat(filepath); err == nil {
-			return false, nil
+type namedWriteCloser interface {
+	io.WriteCloser
+	Name() string
+}
+
+func removeStagedFile(path, tmpPath string, remove func(string) error) error {
+	if err := remove(tmpPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("remove temporary output for %s: %w", path, err)
+	}
+	return nil
+}
+
+func finishStagedFile(
+	path string,
+	w namedWriteCloser,
+	writeErr error,
+	closeInput func() error,
+	replace func(string, string) error,
+	remove func(string) error,
+) error {
+	tmpPath := w.Name()
+	closeErr := w.Close()
+	if closeErr != nil {
+		closeErr = fmt.Errorf("close output %s: %w", path, closeErr)
+	}
+	var inputErr error
+	if closeInput != nil {
+		inputErr = closeInput()
+	}
+	if err := errors.Join(writeErr, closeErr, inputErr); err != nil {
+		return errors.Join(err, removeStagedFile(path, tmpPath, remove))
+	}
+	if err := replace(tmpPath, path); err != nil {
+		return errors.Join(
+			fmt.Errorf("replace output %s: %w", path, err),
+			removeStagedFile(path, tmpPath, remove),
+		)
+	}
+	return nil
+}
+
+func writeReader(
+	path string,
+	r io.Reader,
+	createTemp func(string) (namedWriteCloser, error),
+	replace func(string, string) error,
+	remove func(string) error,
+) error {
+	w, err := createTemp(path)
+	if err != nil {
+		return fmt.Errorf("create temporary output %s: %w", path, err)
+	}
+	_, writeErr := io.Copy(w, r)
+	if writeErr != nil {
+		writeErr = fmt.Errorf("copy output %s: %w", path, writeErr)
+	}
+	return finishStagedFile(path, w, writeErr, nil, replace, remove)
+}
+
+func createStagedFile(path string) (*os.File, error) {
+	dir, prefix := filepath.Dir(path), "."+filepath.Base(path)+".tmp-"
+	f, err := openStagedFile(dir, prefix)
+	if err != nil {
+		return nil, err
+	}
+	if fi, err := os.Stat(path); err == nil {
+		if err := f.Chmod(fi.Mode().Perm()); err != nil {
+			name := f.Name()
+			return nil, errors.Join(err, f.Close(), os.Remove(name))
 		}
 	}
+	return f, nil
+}
 
-	to, err := os.Create(filepath)
+func createWriteReaderTemp(path string) (namedWriteCloser, error) {
+	return createStagedFile(path)
+}
+
+func openStagedFile(dir, prefix string) (*os.File, error) {
+	const attempts = 100
+	for range attempts {
+		var suffix [8]byte
+		if _, err := rand.Read(suffix[:]); err != nil {
+			return nil, err
+		}
+		name := filepath.Join(dir, fmt.Sprintf("%s%x", prefix, suffix))
+		f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+		if errors.Is(err, os.ErrExist) {
+			continue
+		}
+		return f, err
+	}
+	return nil, fmt.Errorf("exhausted temporary output name attempts")
+}
+
+func isNilReader(r io.Reader) bool {
+	if r == nil {
+		return true
+	}
+	v := reflect.ValueOf(r)
+	switch v.Kind() {
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return v.IsNil()
+	}
+	return false
+}
+
+func writeNewFile(rd io.Reader, filePath string) (bool, error) {
+	to, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0666)
+	if errors.Is(err, os.ErrExist) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	defer to.Close()
+	_, copyErr := io.Copy(to, rd)
+	closeErr := to.Close()
+	if err := errors.Join(copyErr, closeErr); err != nil {
+		return false, errors.Join(err, os.Remove(filePath))
+	}
+	return true, nil
+}
 
-	_, err = io.Copy(to, rd)
-	return true, err
+// WriteReader consumes r's content by writing it to a file at path.
+func WriteReader(path string, r io.Reader) error {
+	if isNilReader(r) {
+		return ErrMissingReader
+	}
+	return writeReader(path, r, createWriteReaderTemp, fileutil.ReplaceFile, os.Remove)
+}
+
+// Write rd to filepath and respect overwrite.
+func Write(rd io.Reader, filePath string, overwrite bool) (bool, error) {
+	if isNilReader(rd) {
+		return false, ErrMissingReader
+	}
+	if overwrite {
+		return true, WriteReader(filePath, rd)
+	}
+	return writeNewFile(rd, filePath)
 }
 
 // CopyFile copies srcFilename to destFilename.
 func CopyFile(srcFilename, destFilename string, overwrite bool) (bool, error) {
-	if !overwrite {
-		if _, err := os.Stat(destFilename); err == nil {
-			//log.Printf("skipping: %s already exists", filepath)
-			return false, nil
-		}
-	}
-
 	from, err := os.Open(srcFilename)
 	if err != nil {
 		return false, err
 	}
-	defer from.Close()
-	to, err := os.Create(destFilename)
-	if err != nil {
-		return false, err
+	if !overwrite {
+		defer from.Close()
+		return Write(from, destFilename, false)
 	}
-	defer to.Close()
-
-	_, err = io.Copy(to, from)
-	return true, err
+	sourceInfo, sourceErr := from.Stat()
+	destinationInfo, destinationErr := os.Stat(destFilename)
+	if sourceErr == nil && destinationErr == nil && os.SameFile(sourceInfo, destinationInfo) {
+		return true, from.Close()
+	}
+	to, err := createStagedFile(destFilename)
+	if err != nil {
+		return false, errors.Join(err, from.Close())
+	}
+	_, copyErr := io.Copy(to, from)
+	if copyErr != nil {
+		copyErr = fmt.Errorf("copy output %s: %w", destFilename, copyErr)
+	}
+	closeInput := func() error {
+		if err := from.Close(); err != nil {
+			return fmt.Errorf("close input %s: %w", srcFilename, err)
+		}
+		return nil
+	}
+	return true, finishStagedFile(destFilename, to, copyErr, closeInput, fileutil.ReplaceFile, os.Remove)
 }

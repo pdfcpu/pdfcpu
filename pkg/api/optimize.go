@@ -17,6 +17,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -26,6 +27,29 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
+
+func optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
+	ctx, err := ReadValidateAndOptimize(rs, conf)
+	if err != nil {
+		return err
+	}
+
+	if log.StatsEnabled() {
+		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
+
+	if err := WriteContext(ctx, w); err != nil {
+		return fmt.Errorf("write output: %w", err)
+	}
+
+	if ctx.StatsFileName != "" {
+		if err := pdfcpu.AppendStatsFile(ctx); err != nil {
+			return fmt.Errorf("write stats: %w", err)
+		}
+	}
+
+	return nil
+}
 
 // Optimize reads a PDF stream from rs and writes the optimized PDF stream to w.
 // noEncryption ensures w writes without encryption.
@@ -44,27 +68,9 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err err
 		conf = model.NewDefaultConfiguration()
 	}
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
-	if err != nil {
-		return err
+	if err := optimize(rs, w, conf); err != nil {
+		return fmt.Errorf("optimize: %w", err)
 	}
-
-	if log.StatsEnabled() {
-		log.Stats.Printf("XRefTable:\n%s\n", ctx)
-	}
-
-	if err = WriteContext(ctx, w); err != nil {
-		return err
-	}
-
-	// For Optimize only.
-	if ctx.StatsFileName != "" {
-		err = pdfcpu.AppendStatsFile(ctx)
-		if err != nil {
-			return fmt.Errorf("write stats: %w", err)
-		}
-	}
-
 	return nil
 }
 
@@ -76,8 +82,12 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 	var f1, f2 *os.File
 	ok := false
 
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
+
 	if f1, err = os.Open(inFile); err != nil {
-		return err
+		return fmt.Errorf("optimize: open input %s: %w", inFile, err)
 	}
 
 	tmpFile := ""
@@ -88,27 +98,21 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 		logWritingTo(inFile)
 	}
 
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
+	staged, err := openStagedOutput(f1, inFile, tmpFile, "optimize")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("optimize: create output: %w", err),
+			closeFile(f1, "optimize: close input"),
+		)
 	}
+	f2 = staged.output.file
 
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
+		err = staged.commit()
 	}()
 
 	if conf == nil {

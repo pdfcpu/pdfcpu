@@ -418,31 +418,52 @@ func (pdf *PDF) validateBordersMarginsPaddings() error {
 	return pdf.validatePaddings()
 }
 
+func (pdf *PDF) validatePages() ([]int, error) {
+	if len(pdf.Pages) == 0 {
+		return nil, errors.New("please supply \"pages\"")
+	}
+
+	pageNrs := []int{}
+	for pageNr, p := range pdf.Pages {
+		nr, err := strconv.Atoi(pageNr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid page number: %s", pageNr)
+		}
+		pageNrs = append(pageNrs, nr)
+		p.number = nr
+		p.pdf = pdf
+		if err := p.validate(); err != nil {
+			return nil, fmt.Errorf("page %d: validate: %w", nr, err)
+		}
+	}
+	sort.Ints(pageNrs)
+	return pageNrs, nil
+}
+
 // Validate validates pdf.
 func (pdf *PDF) Validate() error {
-
 	if err := pdf.validatePageBoundaries(); err != nil {
-		return err
+		return fmt.Errorf("page boundaries: %w", err)
 	}
 
 	if err := pdf.validateOrigin(); err != nil {
-		return err
+		return fmt.Errorf("origin: %w", err)
 	}
 
 	if err := pdf.validateColors(); err != nil {
-		return err
+		return fmt.Errorf("colors: %w", err)
 	}
 
 	if err := pdf.validateFonts(); err != nil {
-		return err
+		return fmt.Errorf("fonts: %w", err)
 	}
 
 	if err := pdf.validateHeader(); err != nil {
-		return err
+		return fmt.Errorf("header: %w", err)
 	}
 
 	if err := pdf.validateFooter(); err != nil {
-		return err
+		return fmt.Errorf("footer: %w", err)
 	}
 
 	if pdf.TimestampFormat == "" {
@@ -453,29 +474,13 @@ func (pdf *PDF) Validate() error {
 		pdf.DateFormat = pdf.Conf.DateFormat
 	}
 
-	if len(pdf.Pages) == 0 {
-		return errors.New("please supply \"pages\"")
-	}
-
 	// What follows is a quirky way of turning a map of pages into a sorted slice of pages
 	// including entries for pages that are missing in the map.
 
-	var pageNrs []int
-
-	for pageNr, p := range pdf.Pages {
-		nr, err := strconv.Atoi(pageNr)
-		if err != nil {
-			return fmt.Errorf("invalid page number: %s", pageNr)
-		}
-		pageNrs = append(pageNrs, nr)
-		p.number = nr
-		p.pdf = pdf
-		if err := p.validate(); err != nil {
-			return err
-		}
+	pageNrs, err := pdf.validatePages()
+	if err != nil {
+		return err
 	}
-
-	sort.Ints(pageNrs)
 
 	pp := []*PDFPage{}
 
@@ -487,10 +492,13 @@ func (pdf *PDF) Validate() error {
 	pdf.pages = pp
 
 	if err := pdf.validateBordersMarginsPaddings(); err != nil {
-		return err
+		return fmt.Errorf("borders/margins/paddings: %w", err)
 	}
 
-	return pdf.validatePools()
+	if err := pdf.validatePools(); err != nil {
+		return fmt.Errorf("pools: %w", err)
+	}
+	return nil
 }
 
 // DuplicateField returns true if field with ID is a duplicate field.
@@ -550,7 +558,6 @@ func (pdf *PDF) newPageFontID(indRef *types.IndirectRef, nextInd, pageNr int) st
 }
 
 func (pdf *PDF) idForFontName(fontName, fontLang string, pageFonts, globalFonts model.FontMap, pageNr int) (string, error) {
-
 	// Used for textdescriptor configuration.
 
 	var (
@@ -590,7 +597,7 @@ func (pdf *PDF) idForFontName(fontName, fontLang string, pageFonts, globalFonts 
 					indRef = types.NewIndirectRef(objNr, 0)
 					break
 				}
-				if err != pdffont.ErrCorruptFontDict {
+				if !errors.Is(err, pdffont.ErrCorruptFontDict) {
 					return "", err
 				}
 				break
@@ -602,7 +609,11 @@ func (pdf *PDF) idForFontName(fontName, fontLang string, pageFonts, globalFonts 
 				//fmt.Printf("searching for %s - obj:%d fontName:%s prefix:%s\n", fontName, objNr, fo.FontName, fo.Prefix)
 				if fontName == fo.FontName {
 					indRef = types.NewIndirectRef(objNr, 0)
-					if font.IsUserFont(fontName) {
+					userFont, err := font.IsUserFont(fontName)
+					if err != nil {
+						return "", fmt.Errorf("font %s: load metrics: %w", fontName, err)
+					}
+					if userFont {
 						if err := pdffont.IndRefsForUserfontUpdate(pdf.XRefTable, fo.FontDict, fontLang, &fr); err != nil {
 							return "", err
 						}
@@ -629,15 +640,18 @@ func fontIndRef(xRefTable *model.XRefTable, fontName, fontLang string) (*types.I
 	if strings.HasPrefix(fontName, "cjk:") {
 		fName = strings.TrimPrefix(fontName, "cjk:")
 	}
-	if font.IsUserFont(fName) {
+	userFont, err := font.IsUserFont(fName)
+	if err != nil {
+		return nil, fmt.Errorf("font %s: load metrics: %w", fName, err)
+	}
+	if userFont {
 		// Postpone font creation.
-		return xRefTable.IndRefForNewObject(nil)
+		return xRefTable.IndRefForNewObject(types.NewDict())
 	}
 	return pdffont.EnsureFontDict(xRefTable, fName, fontLang, "", false, nil)
 }
 
 func (pdf *PDF) ensureFont(fontID, fontName, fontLang string, fonts model.FontMap) (*types.IndirectRef, error) {
-
 	fr, ok := fonts[fontName]
 	if ok {
 		if fr.Res.IndRef != nil {
@@ -647,9 +661,13 @@ func (pdf *PDF) ensureFont(fontID, fontName, fontLang string, fonts model.FontMa
 			ir  *types.IndirectRef
 			err error
 		)
-		if font.IsUserFont(fontName) {
+		userFont, err := font.IsUserFont(fontName)
+		if err != nil {
+			return nil, fmt.Errorf("font %s: load metrics: %w", fontName, err)
+		}
+		if userFont {
 			// Postpone font creation.
-			ir, err = pdf.XRefTable.IndRefForNewObject(nil)
+			ir, err = pdf.XRefTable.IndRefForNewObject(types.NewDict())
 		} else {
 			ir, err = pdffont.EnsureFontDict(pdf.XRefTable, fontName, fr.Lang, "", false, nil)
 		}
@@ -1055,9 +1073,63 @@ func (pdf *PDF) newModelPageforPDFPage(page *PDFPage) model.Page {
 	return model.NewPage(mediaBox, cropBox)
 }
 
+func (pdf *PDF) renderPageHeader(p *model.Page, pageNr int, fonts model.FontMap, images model.ImageMap) (float64, float64, error) {
+	if pdf.Header == nil {
+		return 0, 0, nil
+	}
+	if err := pdf.Header.render(p, pageNr, fonts, images, true); err != nil {
+		return 0, 0, fmt.Errorf("header: %w", err)
+	}
+	return pdf.Header.Height, float64(pdf.Header.Dy), nil
+}
+
+func (pdf *PDF) renderPageFooter(p *model.Page, pageNr int, fonts model.FontMap, images model.ImageMap) (float64, float64, error) {
+	if pdf.Footer == nil {
+		return 0, 0, nil
+	}
+	if err := pdf.Footer.render(p, pageNr, fonts, images, false); err != nil {
+		return 0, 0, fmt.Errorf("footer: %w", err)
+	}
+	return pdf.Footer.Height, float64(pdf.Footer.Dy), nil
+}
+
+func (pdf *PDF) renderBlankPage(p *model.Page, pageNr int, fonts model.FontMap, images model.ImageMap) error {
+	if pdf.bgCol != nil {
+		draw.FillRectNoBorder(p.Buf, p.CropBox, *pdf.bgCol)
+	}
+	if _, _, err := pdf.renderPageHeader(p, pageNr, fonts, images); err != nil {
+		return err
+	}
+	if _, _, err := pdf.renderPageFooter(p, pageNr, fonts, images); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (pdf *PDF) renderContentPage(page *PDFPage, p *model.Page, pageNr int, fonts model.FontMap, images model.ImageMap) error {
+	pdf.renderPageBackground(page, p.Buf)
+
+	headerHeight, headerDy, err := pdf.renderPageHeader(p, pageNr, fonts, images)
+	if err != nil {
+		return err
+	}
+	footerHeight, footerDy, err := pdf.renderPageFooter(p, pageNr, fonts, images)
+	if err != nil {
+		return err
+	}
+
+	r := page.cropBox.CroppedCopy(0)
+	r.LL.Y += footerHeight + footerDy
+	r.UR.Y -= headerHeight + headerDy
+	page.Content.mediaBox = r
+	if err := page.Content.render(p, pageNr, fonts, images); err != nil {
+		return fmt.Errorf("content: %w", err)
+	}
+	return nil
+}
+
 // RenderPages renders page content into model.Pages
 func (pdf *PDF) RenderPages() ([]*model.Page, model.FontMap, error) {
-
 	pdf.calcInheritedAttrs()
 
 	pp := []*model.Page{}
@@ -1076,60 +1148,16 @@ func (pdf *PDF) RenderPages() ([]*model.Page, model.FontMap, error) {
 				continue
 			}
 
-			// Create blank page with optional background color.
-			if pdf.bgCol != nil {
-				draw.FillRectNoBorder(p.Buf, p.CropBox, *pdf.bgCol)
-			}
-
-			// Render page header.
-			if pdf.Header != nil {
-				if err := pdf.Header.render(&p, pageNr, fontMap, imageMap, true); err != nil {
-					return nil, nil, err
-				}
-			}
-
-			// Render page footer.
-			if pdf.Footer != nil {
-				if err := pdf.Footer.render(&p, pageNr, fontMap, imageMap, false); err != nil {
-					return nil, nil, err
-				}
+			if err := pdf.renderBlankPage(&p, pageNr, fontMap, imageMap); err != nil {
+				return nil, nil, fmt.Errorf("page %d: %w", pageNr, err)
 			}
 
 			pp = append(pp, &p)
-
 			continue
 		}
 
-		pdf.renderPageBackground(page, p.Buf)
-
-		var headerHeight, headerDy float64
-		var footerHeight, footerDy float64
-
-		// Render page header.
-		if pdf.Header != nil {
-			if err := pdf.Header.render(&p, pageNr, fontMap, imageMap, true); err != nil {
-				return nil, nil, err
-			}
-			headerHeight = pdf.Header.Height
-			headerDy = float64(pdf.Header.Dy)
-		}
-
-		// Render page footer.
-		if pdf.Footer != nil {
-			if err := pdf.Footer.render(&p, pageNr, fontMap, imageMap, false); err != nil {
-				return nil, nil, err
-			}
-			footerHeight = pdf.Footer.Height
-			footerDy = float64(pdf.Footer.Dy)
-		}
-
-		// Render page content.
-		r := page.cropBox.CroppedCopy(0)
-		r.LL.Y += footerHeight + footerDy
-		r.UR.Y -= headerHeight + headerDy
-		page.Content.mediaBox = r
-		if err := page.Content.render(&p, pageNr, fontMap, imageMap); err != nil {
-			return nil, nil, err
+		if err := pdf.renderContentPage(page, &p, pageNr, fontMap, imageMap); err != nil {
+			return nil, nil, fmt.Errorf("page %d: %w", pageNr, err)
 		}
 
 		pp = append(pp, &p)

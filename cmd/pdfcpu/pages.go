@@ -130,7 +130,7 @@ func zoomCmd() *cobra.Command {
 		Use:   "zoom description inFile [outFile]",
 		Short: "Zoom in/out of selected pages",
 		Long:  usageLongZoom,
-		Args:  cobra.MinimumNArgs(2),
+		Args:  cobra.RangeArgs(2, 3),
 		RunE:  wrapHandler(handleZoomCommand),
 	}
 	addSelectedPagesUnitPasswordFlags(cmd)
@@ -176,16 +176,19 @@ func boxesCmd() *cobra.Command {
 }
 
 func parseForGrid(args []string, nup *model.NUp, argInd *int) error {
-	cols, err := strconv.Atoi(args[*argInd])
-	if err != nil {
-		return err
+	if *argInd < 0 || len(args)-*argInd < 2 {
+		return errors.New("missing grid dimensions")
 	}
-	rows, err := strconv.Atoi(args[*argInd+1])
+	rows, err := strconv.Atoi(args[*argInd])
 	if err != nil {
-		return err
+		return fmt.Errorf("parse grid rows %q: %w", args[*argInd], err)
 	}
-	if err = pdfcpu.ParseNUpGridDefinition(cols, rows, nup); err != nil {
-		return err
+	cols, err := strconv.Atoi(args[*argInd+1])
+	if err != nil {
+		return fmt.Errorf("parse grid columns %q: %w", args[*argInd+1], err)
+	}
+	if err = api.ParseGridDefinition(rows, cols, nup); err != nil {
+		return fmt.Errorf("parse grid dimensions: %w", err)
 	}
 	*argInd += 2
 	return nil
@@ -207,7 +210,7 @@ func parseForNUp(args []string, nup *model.NUp, argInd *int, nUpValues []int) er
 	if !types.IntMemberOf(n, nUpValues) {
 		return nUpValueError(nUpValues)
 	}
-	if err = pdfcpu.ParseNUpValue(n, nup); err != nil {
+	if err = api.ParseNUpValue(n, nup); err != nil {
 		return err
 	}
 	*argInd++
@@ -245,6 +248,9 @@ func parseAfterNUpDetails(args []string, nup *model.NUp, argInd int, nUpValues [
 			return nil, err
 		}
 	}
+	if argInd >= len(args) {
+		return nil, errors.New("missing input file")
+	}
 
 	filenameIn := args[argInd]
 	if err := validateNUpInputFile(filenameIn, allowStdin); err != nil {
@@ -272,7 +278,7 @@ func nupOutFileAndArgIndex(args []string, nup *model.NUp) (string, int, error) {
 	outFile := args[0]
 	argInd := 1
 	if outFile != "-" && !hasPDFExtension(outFile) {
-		if err := pdfcpu.ParseNUpDetails(args[0], nup); err != nil {
+		if err := api.ParseNUpDetails(args[0], nup); err != nil {
 			return "", 0, err
 		}
 		outFile = args[1]
@@ -314,7 +320,7 @@ func handleNUpCommand(conf *model.Configuration, args []string) error {
 	nup := model.DefaultNUpConfig()
 	nup.InpUnit = conf.Unit
 
-	inFiles, outFile, err := nupFilesAndConfig(args, nup, pdfcpu.NUpValues)
+	inFiles, outFile, err := nupFilesAndConfig(args, nup, api.NUpValues())
 	if err != nil {
 		return err
 	}
@@ -323,12 +329,12 @@ func handleNUpCommand(conf *model.Configuration, args []string) error {
 
 func handleGridCommand(conf *model.Configuration, args []string) error {
 	if err := configureDisplayUnit(conf); err != nil {
-		return err
+		return fmt.Errorf("grid: configure display unit: %w", err)
 	}
 
 	pages, err := parseSelectedPages()
 	if err != nil {
-		return err
+		return fmt.Errorf("grid: parse page selection: %w", err)
 	}
 
 	nup := model.DefaultNUpConfig()
@@ -337,9 +343,9 @@ func handleGridCommand(conf *model.Configuration, args []string) error {
 
 	inFiles, outFile, err := nupFilesAndConfig(args, nup, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("grid: parse arguments: %w", err)
 	}
-	return runCommand(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
+	return runCommand(cli.GridCommand(inFiles, outFile, pages, nup, conf))
 }
 
 func handleBookletCommand(conf *model.Configuration, args []string) error {
@@ -352,10 +358,10 @@ func handleBookletCommand(conf *model.Configuration, args []string) error {
 		return err
 	}
 
-	nup := pdfcpu.DefaultBookletConfig()
+	nup := api.DefaultBookletConfig()
 	nup.InpUnit = conf.Unit
 
-	inFiles, outFile, err := nupFilesAndConfig(args, nup, pdfcpu.NUpValuesForBooklets)
+	inFiles, outFile, err := nupFilesAndConfig(args, nup, api.NUpValuesForBooklets())
 	if err != nil {
 		return err
 	}
@@ -363,47 +369,68 @@ func handleBookletCommand(conf *model.Configuration, args []string) error {
 }
 
 func handleResizeCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 {
+		return api.ErrMissingResizeConfiguration
+	}
+	if len(args) == 1 {
+		return api.ErrMissingPDFInput
+	}
 	if err := configureDisplayUnit(conf); err != nil {
-		return err
+		return fmt.Errorf("resize: configure display unit: %w", err)
 	}
 	rc, err := pdfcpu.ParseResizeConfig(args[0], conf.Unit)
 	if err != nil {
-		return err
+		return fmt.Errorf("resize: parse configuration: %w", err)
 	}
 
 	inFile, outFile, err := optionalOutputPDFArgs(conf, args[1:])
 	if err != nil {
-		return err
+		return fmt.Errorf("resize: parse arguments: %w", err)
 	}
 
 	selectedPages, err := parseSelectedPages()
 	if err != nil {
-		return err
+		return fmt.Errorf("resize: parse page selection: %w", err)
 	}
 
 	return runCommand(cli.ResizeCommand(inFile, outFile, selectedPages, rc, conf))
 }
 
 func handlePosterCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 {
+		return api.ErrMissingCutConfiguration
+	}
+	if len(args) == 1 {
+		return api.ErrMissingPDFInput
+	}
+	if len(args) == 2 {
+		return api.ErrMissingPDFOutput
+	}
 	if err := configureDisplayUnit(conf); err != nil {
-		return err
+		return fmt.Errorf("poster: configure display unit: %w", err)
 	}
 	// formsize(=papersize) or dimensions, optionally: scalefactor, border, margin, bgcolor
 	cut, err := pdfcpu.ParseCutConfigForPoster(args[0], conf.Unit)
 	if err != nil {
-		return err
+		return fmt.Errorf("poster: parse configuration: %w", err)
 	}
 
 	inFile := args[1]
 	if err := inputPDFArg(conf, inFile); err != nil {
-		return err
+		return fmt.Errorf("poster: check input: %w", err)
 	}
 
 	outDir := args[2]
 
 	selectedPages, err := parseSelectedPages()
 	if err != nil {
-		return err
+		return fmt.Errorf("poster: parse page selection: %w", err)
 	}
 
 	var outFile string
@@ -411,18 +438,27 @@ func handlePosterCommand(conf *model.Configuration, args []string) error {
 		outFile = args[3]
 	}
 	if err := ensureOutputDirOrFileAvailable(outDir, outFile); err != nil {
-		return err
+		return fmt.Errorf("poster: check output: %w", err)
 	}
 
 	return runCommand(cli.PosterCommand(inFile, outDir, outFile, selectedPages, cut, conf))
 }
 
 func ndownArgs(args []string, unit types.DisplayUnit) (int, *model.Cut, string, string, string, error) {
+	if len(args) == 0 {
+		return 0, nil, "", "", "", api.ErrMissingCutConfiguration
+	}
+	if len(args) == 1 {
+		return 0, nil, "", "", "", api.ErrMissingPDFInput
+	}
+	if len(args) == 2 {
+		return 0, nil, "", "", "", api.ErrMissingPDFOutput
+	}
 	n, err := strconv.Atoi(args[0])
 	if err == nil {
 		cut, err := pdfcpu.ParseCutConfigForN(n, "", unit)
 		if err != nil {
-			return 0, nil, "", "", "", err
+			return 0, nil, "", "", "", fmt.Errorf("parse configuration: %w", err)
 		}
 		var outFile string
 		if len(args) == 4 {
@@ -433,11 +469,11 @@ func ndownArgs(args []string, unit types.DisplayUnit) (int, *model.Cut, string, 
 
 	n, err = strconv.Atoi(args[1])
 	if err != nil {
-		return 0, nil, "", "", "", err
+		return 0, nil, "", "", "", fmt.Errorf("parse n-down value %q: %w", args[1], err)
 	}
 	cut, err := pdfcpu.ParseCutConfigForN(n, args[0], unit)
 	if err != nil {
-		return 0, nil, "", "", "", err
+		return 0, nil, "", "", "", fmt.Errorf("parse configuration: %w", err)
 	}
 	var outFile string
 	if len(args) == 5 {
@@ -447,50 +483,74 @@ func ndownArgs(args []string, unit types.DisplayUnit) (int, *model.Cut, string, 
 }
 
 func handleNDownCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 {
+		return api.ErrMissingCutConfiguration
+	}
+	if len(args) == 1 {
+		return api.ErrMissingPDFInput
+	}
+	if len(args) == 2 {
+		return api.ErrMissingPDFOutput
+	}
 	if err := configureDisplayUnit(conf); err != nil {
-		return err
+		return fmt.Errorf("ndown: configure display unit: %w", err)
 	}
 
 	selectedPages, err := parseSelectedPages()
 	if err != nil {
-		return err
+		return fmt.Errorf("ndown: parse page selection: %w", err)
 	}
 
 	n, cut, inFile, outDir, outFile, err := ndownArgs(args, conf.Unit)
 	if err != nil {
-		return err
+		return fmt.Errorf("ndown: parse arguments: %w", err)
 	}
 	if err := inputPDFArg(conf, inFile); err != nil {
-		return err
+		return fmt.Errorf("ndown: check input: %w", err)
 	}
 	if err := ensureOutputDirOrFileAvailable(outDir, outFile); err != nil {
-		return err
+		return fmt.Errorf("ndown: check output: %w", err)
 	}
 
 	return runCommand(cli.NDownCommand(inFile, outDir, outFile, selectedPages, n, cut, conf))
 }
 
 func handleCutCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 {
+		return api.ErrMissingCutConfiguration
+	}
+	if len(args) == 1 {
+		return api.ErrMissingPDFInput
+	}
+	if len(args) == 2 {
+		return api.ErrMissingPDFOutput
+	}
 	if err := configureDisplayUnit(conf); err != nil {
-		return err
+		return fmt.Errorf("cut: configure display unit: %w", err)
 	}
 	// required: at least one of horizontalCut, verticalCut
 	// optionally: border, margin, bgcolor
 	cut, err := pdfcpu.ParseCutConfig(args[0], conf.Unit)
 	if err != nil {
-		return err
+		return fmt.Errorf("cut: parse configuration: %w", err)
 	}
 
 	inFile := args[1]
 	if err := inputPDFArg(conf, inFile); err != nil {
-		return err
+		return fmt.Errorf("cut: check input: %w", err)
 	}
 
 	outDir := args[2]
 
 	selectedPages, err := parseSelectedPages()
 	if err != nil {
-		return err
+		return fmt.Errorf("cut: parse page selection: %w", err)
 	}
 
 	var outFile string
@@ -498,29 +558,38 @@ func handleCutCommand(conf *model.Configuration, args []string) error {
 		outFile = args[3]
 	}
 	if err := ensureOutputDirOrFileAvailable(outDir, outFile); err != nil {
-		return err
+		return fmt.Errorf("cut: check output: %w", err)
 	}
 
 	return runCommand(cli.CutCommand(inFile, outDir, outFile, selectedPages, cut, conf))
 }
 
 func handleZoomCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 {
+		return api.ErrMissingZoomConfiguration
+	}
+	if len(args) == 1 {
+		return api.ErrMissingPDFInput
+	}
 	if err := configureDisplayUnit(conf); err != nil {
-		return err
+		return fmt.Errorf("zoom: configure display unit: %w", err)
 	}
 	zc, err := pdfcpu.ParseZoomConfig(args[0], conf.Unit)
 	if err != nil {
-		return err
+		return fmt.Errorf("zoom: parse configuration: %w", err)
 	}
 
 	inFile, outFile, err := optionalOutputPDFArgs(conf, args[1:])
 	if err != nil {
-		return err
+		return fmt.Errorf("zoom: parse arguments: %w", err)
 	}
 
 	selectedPages, err := parseSelectedPages()
 	if err != nil {
-		return err
+		return fmt.Errorf("zoom: parse page selection: %w", err)
 	}
 
 	return runCommand(cli.ZoomCommand(inFile, outFile, selectedPages, zc, conf))
@@ -680,16 +749,9 @@ func handleRemovePagesCommand(conf *model.Configuration, args []string) error {
 	return runCommand(cli.RemovePagesCommand(inFile, outFile, pages, conf))
 }
 
-func abs(i int) int {
-	if i < 0 {
-		return -i
-	}
-	return i
-}
-
 func rotation(s string) (int, error) {
 	rotation, err := strconv.Atoi(s)
-	if err != nil || abs(rotation)%90 > 0 {
+	if err != nil || rotation%90 != 0 {
 		return 0, fmt.Errorf("rotation must be a multiple of 90: %s", s)
 	}
 	return rotation, nil
@@ -713,7 +775,7 @@ func handleCropCommand(conf *model.Configuration, args []string) error {
 	}
 	box, err := api.Box(args[0], conf.Unit)
 	if err != nil {
-		return fmt.Errorf("problem parsing box definition: %v", err)
+		return fmt.Errorf("crop: %w", err)
 	}
 	inFile, outFile, pages, err := selectedPagesPDFArgs(conf, args[1:])
 	if err != nil {
@@ -740,7 +802,7 @@ func handleListBoxesCommand(conf *model.Configuration, args []string) error {
 
 	pb, err := api.PageBoundariesFromBoxList(args[0])
 	if err != nil {
-		return fmt.Errorf("problem parsing box list: %v", err)
+		return fmt.Errorf("list boxes: %w", err)
 	}
 
 	inFile := args[1]
@@ -757,7 +819,7 @@ func handleAddBoxesCommand(conf *model.Configuration, args []string) error {
 	}
 	pb, err := api.PageBoundaries(args[0], conf.Unit)
 	if err != nil {
-		return fmt.Errorf("problem parsing page boundaries: %v", err)
+		return fmt.Errorf("add boxes: %w", err)
 	}
 
 	inFile, outFile, err := optionalOutputPDFArgs(conf, args[1:])
@@ -776,13 +838,10 @@ func handleAddBoxesCommand(conf *model.Configuration, args []string) error {
 func removeBoxBoundaries(s string) (*model.PageBoundaries, error) {
 	pb, err := api.PageBoundariesFromBoxList(s)
 	if err != nil {
-		return nil, fmt.Errorf("problem parsing box list: %v", err)
+		return nil, fmt.Errorf("remove boxes: %w", err)
 	}
 	if pb == nil {
-		return nil, errors.New("please supply a list of box types to be removed")
-	}
-	if pb.Media != nil {
-		return nil, errors.New("cannot remove media box")
+		pb = &model.PageBoundaries{}
 	}
 	return pb, nil
 }

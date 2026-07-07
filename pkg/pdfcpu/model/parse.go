@@ -29,10 +29,12 @@ import (
 )
 
 var (
+	// ErrDictionaryCorrupt reports malformed dictionary syntax.
+	ErrDictionaryCorrupt = errors.New("parse: corrupt dictionary")
+
 	errArrayCorrupt            = errors.New("parse: corrupt array")
 	errArrayNotTerminated      = errors.New("parse: unterminated array")
-	errDictionaryCorrupt       = errors.New("parse: corrupt dictionary")
-	errDictionaryNotTerminated = errors.New("parse: unterminated dictionary")
+	errDictionaryNotTerminated = fmt.Errorf("parse: unterminated dictionary: %w", ErrDictionaryCorrupt)
 	errDictionaryDuplicateKey  = errors.New("parse: duplicate key")
 	errHexLiteralCorrupt       = errors.New("parse: corrupt hex literal")
 	errHexLiteralNotTerminated = errors.New("parse: hex literal not terminated")
@@ -646,7 +648,7 @@ func parseDict(c context.Context, line *string, level, maxDepth int, relaxed boo
 	}
 
 	if len(l) < 4 || !strings.HasPrefix(l, "<<") {
-		return nil, errDictionaryCorrupt
+		return nil, ErrDictionaryCorrupt
 	}
 
 	// position behind '<<'

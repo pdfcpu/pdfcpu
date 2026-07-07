@@ -20,6 +20,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
 )
 
 func validateNoEmptyStrings(ss []string, name string) error {
@@ -46,8 +48,20 @@ func validateProperties(properties map[string]string) error {
 		if strings.TrimSpace(k) == "" {
 			return errors.New("property name must not be empty")
 		}
+		if !validate.DocumentProperty(k) {
+			return fmt.Errorf("property name %q not allowed", k)
+		}
 		if strings.TrimSpace(v) == "" {
 			return errors.New("property value must not be empty")
+		}
+	}
+	return nil
+}
+
+func validatePropertyNames(properties []string) error {
+	for _, property := range properties {
+		if !validate.DocumentProperty(property) {
+			return fmt.Errorf("property name %q not allowed", property)
 		}
 	}
 	return nil

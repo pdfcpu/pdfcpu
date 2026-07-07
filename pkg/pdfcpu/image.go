@@ -17,7 +17,6 @@ limitations under the License.
 package pdfcpu
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -245,13 +244,13 @@ func listImages(mm []map[int]model.Image, maxLen *ImageListMaxLengths) ([]string
 	return ss, j, size
 }
 
+// ImageListMaxLengths contains the column widths for a formatted image list.
 type ImageListMaxLengths struct {
 	PageNr, ObjNr, ID, Size, Filters int
 }
 
 // ListImages returns a formatted list of embedded images.
 func ListImages(ctx *model.Context, selectedPages types.IntSet) ([]string, error) {
-
 	mm, maxLen, err := Images(ctx, selectedPages)
 	if err != nil {
 		return nil, err
@@ -271,131 +270,170 @@ func ListImages(ctx *model.Context, selectedPages types.IntSet) ([]string, error
 func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
 	imgObj := ctx.Optimize.ImageObjects[objNr]
 	if imgObj == nil {
-		return fmt.Errorf("unknown image object for objNr=%d", objNr)
+		return fmt.Errorf("image obj#%d: missing optimization entry", objNr)
 	}
-
 	d := imgObj.ImageDict
-
+	if d == nil {
+		return fmt.Errorf("image obj#%d: missing image dictionary", objNr)
+	}
 	width := d.IntEntry("Width")
 	height := d.IntEntry("Height")
-
 	if width == nil || height == nil {
-		return errors.New("corrupt image dict")
+		return fmt.Errorf("image obj#%d: missing width or height", objNr)
 	}
-
 	if *width != w || *height != h {
-		return fmt.Errorf("invalid image dimensions, want(%d,%d), got(%d,%d)", w, h, *width, *height)
+		return fmt.Errorf("image obj#%d: replacement dimensions %dx%d, want %dx%d", objNr, w, h, *width, *height)
 	}
-
 	return nil
 }
 
 // UpdateImagesByObjNr replaces an XObject.
 func UpdateImagesByObjNr(ctx *model.Context, rd io.Reader, objNr int) error {
-
 	sd, w, h, err := model.CreateImageStreamDict(ctx.XRefTable, rd)
 	if err != nil {
-		return err
+		return fmt.Errorf("image obj#%d: create replacement: %w", objNr, err)
 	}
-
 	if err := validateImageDimensions(ctx, objNr, w, h); err != nil {
 		return err
 	}
-
 	genNr := 0
 	entry, ok := ctx.FindTableEntry(objNr, genNr)
-	if !ok {
-		return fmt.Errorf("invalid objNr=%d", objNr)
+	if !ok || entry == nil {
+		return fmt.Errorf("image obj#%d: missing xref entry", objNr)
 	}
-
 	entry.Object = *sd
-
 	return nil
 }
 
-func isInheritedXObjectResource(inhRes types.Dict, id string) bool {
-	if inhRes == nil {
-		return false
+func imageResourceRef(d types.Dict, id, context string) (*types.IndirectRef, error) {
+	o, found := d.Find(id)
+	if !found {
+		return nil, nil
 	}
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		return nil, fmt.Errorf("%s: expected indirect reference, got %T", context, o)
+	}
+	return &ir, nil
+}
 
-	d := inhRes.DictEntry("XObject")
+func inheritedImageResourceRef(ctx *model.Context, resources types.Dict, pageNr int, id string) (*types.IndirectRef, error) {
+	if resources == nil {
+		return nil, nil
+	}
+	o, found := resources.Find("XObject")
+	if !found {
+		return nil, nil
+	}
+	d, err := ctx.DereferenceDict(o)
+	if err != nil {
+		return nil, fmt.Errorf("page %d resource %s: dereference inherited XObject dictionary: %w", pageNr, id, err)
+	}
 	if d == nil {
-		return false
+		return nil, nil
 	}
+	return imageResourceRef(d, id, fmt.Sprintf("page %d resource %s", pageNr, id))
+}
 
-	for resId := range d {
-		if resId == id {
-			return true
+func unknownImageResource(pageNr int, id string) error {
+	return fmt.Errorf("page %d resource %s: unknown image resource", pageNr, id)
+}
+
+func requiredInheritedImageResourceRef(
+	ctx *model.Context,
+	resources types.Dict,
+	pageNr int,
+	id string,
+) (*types.IndirectRef, error) {
+	ref, err := inheritedImageResourceRef(ctx, resources, pageNr, id)
+	if err != nil {
+		return nil, err
+	}
+	if ref == nil {
+		return nil, unknownImageResource(pageNr, id)
+	}
+	return ref, nil
+}
+
+func pageImageResource(
+	ctx *model.Context,
+	pageDict types.Dict,
+	inheritedResources types.Dict,
+	pageNr int,
+	id string,
+) (types.Dict, *types.IndirectRef, error) {
+	o, found := pageDict.Find("Resources")
+	if !found {
+		inheritedRef, err := requiredInheritedImageResourceRef(ctx, inheritedResources, pageNr, id)
+		if err != nil {
+			return nil, nil, err
+		}
+		xObjects := types.NewDict()
+		pageDict["Resources"] = types.Dict{"XObject": xObjects}
+		return xObjects, inheritedRef, nil
+	}
+	resources, err := ctx.DereferenceDict(o)
+	if err != nil {
+		return nil, nil, fmt.Errorf("page %d resource %s: dereference resources dictionary: %w", pageNr, id, err)
+	}
+	if resources == nil {
+		return nil, nil, fmt.Errorf("page %d resource %s: missing resources dictionary", pageNr, id)
+	}
+	o, found = resources.Find("XObject")
+	if !found {
+		inheritedRef, err := requiredInheritedImageResourceRef(ctx, inheritedResources, pageNr, id)
+		if err != nil {
+			return nil, nil, err
+		}
+		xObjects := types.NewDict()
+		resources["XObject"] = xObjects
+		return xObjects, inheritedRef, nil
+	}
+	xObjects, err := ctx.DereferenceDict(o)
+	if err != nil {
+		return nil, nil, fmt.Errorf("page %d resource %s: dereference XObject dictionary: %w", pageNr, id, err)
+	}
+	if xObjects == nil {
+		if ir, ok := o.(types.IndirectRef); ok {
+			return nil, nil, fmt.Errorf(
+				"page %d resource %s: missing XObject dictionary for obj#%d",
+				pageNr,
+				id,
+				ir.ObjectNumber.Value(),
+			)
+		}
+		return nil, nil, fmt.Errorf("page %d resource %s: missing XObject dictionary", pageNr, id)
+	}
+	ref, err := imageResourceRef(xObjects, id, fmt.Sprintf("page %d resource %s", pageNr, id))
+	if err != nil {
+		return nil, nil, err
+	}
+	if ref == nil {
+		ref, err = requiredInheritedImageResourceRef(ctx, inheritedResources, pageNr, id)
+		if err != nil {
+			return nil, nil, err
 		}
 	}
-
-	return false
+	return xObjects, ref, nil
 }
 
 // UpdateImagesByPageNrAndId replaces the XObject referenced by pageNr and id.
 func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id string) error {
-
-	imgIndRef, w, h, err := model.CreateImageResource(ctx.XRefTable, rd)
-	if err != nil {
-		return err
-	}
-
 	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("page %d resource %s: resolve page dictionary: %w", pageNr, id, err)
 	}
-
-	obj, found := d.Find("Resources")
-	if !found {
-		if isInheritedXObjectResource(inhPAttrs.Resources, id) {
-			d1 := types.NewDict()
-			d1[id] = *imgIndRef
-			d2 := types.NewDict()
-			d2["XObject"] = d1
-			d["Resources"] = d2
-			return nil
-		}
-		return fmt.Errorf("page %d: unknown resource %s", pageNr, id)
-	}
-
-	resDict, err := ctx.DereferenceDict(obj)
+	xObjects, targetRef, err := pageImageResource(ctx, d, inhPAttrs.Resources, pageNr, id)
 	if err != nil {
 		return err
 	}
-
-	obj1, ok := resDict.Find("XObject")
-	if !ok {
-		if isInheritedXObjectResource(inhPAttrs.Resources, id) {
-			d := types.NewDict()
-			d[id] = *imgIndRef
-			resDict["XObject"] = d
-			return nil
-		}
-		return fmt.Errorf("page %d: unknown resource %s", pageNr, id)
-	}
-
-	imgResDict, err := ctx.DereferenceDict(obj1)
+	imgIndRef, w, h, err := model.CreateImageResource(ctx.XRefTable, rd)
 	if err != nil {
-		return err
+		return fmt.Errorf("page %d resource %s: create replacement: %w", pageNr, id, err)
 	}
-
-	for resId, indRef := range imgResDict {
-		if resId == id {
-
-			ir := indRef.(types.IndirectRef)
-			if err := validateImageDimensions(ctx, ir.ObjectNumber.Value(), w, h); err != nil {
-				return err
-			}
-
-			imgResDict[id] = *imgIndRef
-			return nil
-		}
+	if err := validateImageDimensions(ctx, targetRef.ObjectNumber.Value(), w, h); err != nil {
+		return fmt.Errorf("page %d resource %s: %w", pageNr, id, err)
 	}
-
-	if isInheritedXObjectResource(inhPAttrs.Resources, id) {
-		imgResDict[id] = *imgIndRef
-		return nil
-	}
-
-	return fmt.Errorf("page %d: unknown resource %s", pageNr, id)
+	xObjects[id] = *imgIndRef
+	return nil
 }

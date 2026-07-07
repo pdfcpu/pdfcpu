@@ -18,6 +18,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -25,6 +26,9 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
+
+// ErrNoKeywordRemoved signals that a remove operation did not match any keyword.
+var ErrNoKeywordRemoved = errors.New("no keyword removed")
 
 // Keywords returns the keywords of rs's info dict.
 func Keywords(rs io.ReadSeeker, conf *model.Configuration) (ss []string, err error) {
@@ -43,14 +47,18 @@ func Keywords(rs io.ReadSeeker, conf *model.Configuration) (ss []string, err err
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list keywords: %w", err)
 	}
 
-	return pdfcpu.KeywordsList(ctx)
+	ss, err = pdfcpu.KeywordsList(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list keywords: collect keywords: %w", err)
+	}
+	return ss, nil
 }
 
 // AddKeywords adds keywords to rs's infodict and writes the result to w.
-func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Configuration) (err error) {
+func AddKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
 	if rs == nil {
@@ -61,8 +69,8 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Conf
 		return ErrMissingPDFWriter
 	}
 
-	if err := validateNoEmptyStrings(files, "keyword"); err != nil {
-		return err
+	if err := validateNoEmptyStrings(keywords, "keyword"); err != nil {
+		return fmt.Errorf("add keywords: validate keywords: %w", err)
 	}
 
 	if conf == nil {
@@ -74,63 +82,73 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, files []string, conf *model.Conf
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("add keywords: %w", err)
 	}
 
-	if err = pdfcpu.KeywordsAdd(ctx, files); err != nil {
-		return err
+	if err = pdfcpu.KeywordsAdd(ctx, keywords); err != nil {
+		return fmt.Errorf("add keywords: update document keywords: %w", err)
 	}
 
-	return Write(ctx, w, conf)
+	if err = Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("add keywords: write output: %w", err)
+	}
+	return nil
 }
 
-// AddKeywordsFile adds keywords to inFile's infodict and writes the result to outFile.
-func AddKeywordsFile(inFile, outFile string, files []string, conf *model.Configuration) (err error) {
+type keywordMutation func(io.ReadSeeker, io.Writer, []string, *model.Configuration) error
+
+func mutateKeywordsFile(
+	inFile, outFile string,
+	keywords []string,
+	conf *model.Configuration,
+	op string,
+	mutate keywordMutation,
+) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
-	if err := validateNoEmptyStrings(files, "keyword"); err != nil {
-		return err
-	}
-
 	if f1, err = os.Open(inFile); err != nil {
-		return err
+		return fmt.Errorf("%s: open input %s: %w", op, inFile, err)
 	}
 
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
+	staged, err := openStagedOutput(f1, inFile, tmpFile, op)
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("%s: create output: %w", op, err),
+			closeFile(f1, op+": close input"),
+		)
 	}
+	f2 = staged.output.file
 
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
+		err = staged.commit()
 	}()
 
-	if err = AddKeywords(f1, f2, files, conf); err != nil {
+	if err = mutate(f1, f2, keywords, conf); err != nil {
 		return err
 	}
 
 	ok = true
-
 	return nil
+}
+
+// AddKeywordsFile adds keywords to inFile's infodict and writes the result to outFile.
+func AddKeywordsFile(inFile, outFile string, keywords []string, conf *model.Configuration) error {
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
+	if err := validateNoEmptyStrings(keywords, "keyword"); err != nil {
+		return fmt.Errorf("add keywords: validate keywords: %w", err)
+	}
+	return mutateKeywordsFile(inFile, outFile, keywords, conf, "add keywords", AddKeywords)
 }
 
 // RemoveKeywords deletes keywords from rs's infodict and writes the result to w.
@@ -146,7 +164,7 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 	}
 
 	if err := validateNoEmptyStrings(keywords, "keyword"); err != nil {
-		return err
+		return fmt.Errorf("remove keywords: validate keywords: %w", err)
 	}
 
 	if conf == nil {
@@ -158,65 +176,30 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("remove keywords: %w", err)
 	}
 
 	var ok bool
 	if ok, err = pdfcpu.KeywordsRemove(ctx, keywords); err != nil {
-		return err
+		return fmt.Errorf("remove keywords: update document keywords: %w", err)
 	}
 	if !ok {
-		return errors.New("no keyword removed")
+		return fmt.Errorf("remove keywords: %w", ErrNoKeywordRemoved)
 	}
 
-	return Write(ctx, w, conf)
+	if err = Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("remove keywords: write output: %w", err)
+	}
+	return nil
 }
 
 // RemoveKeywordsFile deletes keywords from inFile's infodict and writes the result to outFile.
-func RemoveKeywordsFile(inFile, outFile string, keywords []string, conf *model.Configuration) (err error) {
-	var f1, f2 *os.File
-	ok := false
-
+func RemoveKeywordsFile(inFile, outFile string, keywords []string, conf *model.Configuration) error {
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
 	if err := validateNoEmptyStrings(keywords, "keyword"); err != nil {
-		return err
+		return fmt.Errorf("remove keywords: validate keywords: %w", err)
 	}
-
-	if f1, err = os.Open(inFile); err != nil {
-		return err
-	}
-
-	tmpFile := ""
-	if outFile != "" && inFile != outFile {
-		tmpFile = outFile
-	}
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
-	}
-
-	defer func() {
-		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
-			return
-		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
-	}()
-
-	if err = RemoveKeywords(f1, f2, keywords, conf); err != nil {
-		return err
-	}
-
-	ok = true
-
-	return nil
+	return mutateKeywordsFile(inFile, outFile, keywords, conf, "remove keywords", RemoveKeywords)
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// Resize represents a page resize configuration.
 type Resize struct {
 	Scale         float64            // scale factor x > 0, x > 1 enlarges, x < 1 shrinks down
 	Unit          types.DisplayUnit  // display unit
@@ -37,13 +38,12 @@ type Resize struct {
 	BgColor       *color.SimpleColor // background color
 }
 
-// EnforceOrientation enforce orientation.
+// EnforceOrientation reports whether the configured page orientation must be preserved.
 func (r Resize) EnforceOrientation() bool {
 	return r.EnforceOrient || strings.HasSuffix(r.PageSize, "P") || strings.HasSuffix(r.PageSize, "L")
 }
 
 func parsePageDimRes(v string, u types.DisplayUnit) (*types.Dim, string, error) {
-
 	ss := strings.Split(v, " ")
 	if len(ss) != 2 {
 		return nil, v, fmt.Errorf("illegal dimension string: need 2 values one may be 0, %s", v)
@@ -84,7 +84,6 @@ func parseEnforceOrientation(s string, res *Resize) error {
 }
 
 func parsePageFormatRes(s string, res *Resize) error {
-
 	// Optional: appended last letter L indicates landscape mode.
 	// Optional: appended last letter P indicates portrait mode.
 	// eg. A4L means A4 in landscape mode whereas A4 defaults to A4P
@@ -105,6 +104,7 @@ func parsePageFormatRes(s string, res *Resize) error {
 	if !ok {
 		return fmt.Errorf("page format %s is unsupported", v)
 	}
+	res.EnforceOrient = landscape || portrait
 
 	if (d.Portrait() && landscape) || (d.Landscape() && portrait) {
 		d.Width, d.Height = d.Height, d.Width
@@ -118,7 +118,6 @@ func parsePageFormatRes(s string, res *Resize) error {
 }
 
 func parseScaleFactorSimple(s string) (float64, error) {
-
 	sc, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		return 0, fmt.Errorf("scale factor must be a float value: %s", s)

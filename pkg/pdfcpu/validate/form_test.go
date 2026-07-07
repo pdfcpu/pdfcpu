@@ -17,7 +17,6 @@
 package validate
 
 import (
-	"errors"
 	"strings"
 	"testing"
 
@@ -40,9 +39,8 @@ func TestValidateFormFieldDictRejectsCycle(t *testing.T) {
 	}
 
 	err = validateFormFieldDict(ctx.XRefTable, ir, nil, false)
-	if !errors.Is(err, model.ErrFormFieldCycle) {
-		t.Fatalf("got %v, want ErrFormFieldCycle", err)
-	}
+	requireErrIs(t, err, model.ErrFormFieldCycle)
+	requireErrChainContains(t, err, "form field obj#1 Kids[0] obj#1", "circular form field tree")
 }
 
 func TestValidateFormFieldDictAllowsPrivateFieldTypeRelaxed(t *testing.T) {
@@ -70,6 +68,63 @@ func TestValidateFormFieldDictAllowsPrivateFieldTypeRelaxed(t *testing.T) {
 			t.Fatalf("validate private field type mode=%s err=%v", tt.name, err)
 		}
 	}
+}
+
+func TestDetectRectArrayRejectsEmptyKids(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+
+	_, err := detectRectArray(xRefTable, types.Dict{
+		"Kids": types.Array{},
+	}, "formFieldDict")
+	requireErrContains(t, err, "form field Kids: empty array")
+}
+
+func TestValidateFormFieldsReportsArrayEntryContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+
+	err := validateFormFields(xRefTable, types.Array{types.Integer(1)}, false)
+	requireErrContains(t, err, "AcroForm Fields[0]: expected indirect reference")
+}
+
+func TestValidateFormFieldsSkipsMissingDictRelaxed(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationRelaxed)
+	ir := *types.NewIndirectRef(114, 0)
+	xRefTable.Table[114] = model.NewXRefTableEntryGen0(nil)
+
+	if err := validateFormFields(xRefTable, types.Array{ir}, false); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateFormFieldsRejectsMissingDictStrict(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	ir := *types.NewIndirectRef(114, 0)
+	xRefTable.Table[114] = model.NewXRefTableEntryGen0(nil)
+
+	err := validateFormFields(xRefTable, types.Array{ir}, false)
+	requireErrChainContains(t, err, "AcroForm Fields[0] obj#114", "form field obj#114: missing dict")
+}
+
+func TestValidateFormFieldKidsWrapsChildValidationError(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	xRefTable.Table[1] = model.NewXRefTableEntryGen0(types.Dict{
+		"Kids": types.Array{*types.NewIndirectRef(2, 0)},
+	})
+	xRefTable.Table[2] = model.NewXRefTableEntryGen0(nil)
+
+	err := validateFormFieldDict(xRefTable, *types.NewIndirectRef(1, 0), nil, false)
+	requireErrChainContains(t, err, "form field obj#1 Kids[0] obj#2", "form field obj#2: missing dict")
+}
+
+func TestValidateFormXFAReportsArrayEntryContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	v := model.V17
+	xRefTable.HeaderVersion = &v
+
+	err := validateFormXFA(xRefTable, types.Dict{
+		"XFA": types.Array{types.Integer(1)},
+	}, model.V15)
+	requireErrContains(t, err, "AcroForm XFA[0]: expected string")
 }
 
 func selfReferentialAcroForm(t *testing.T) (*model.XRefTable, types.Dict) {
@@ -100,9 +155,7 @@ func TestValidateFormRejectsSelfReferentialAcroFormStrict(t *testing.T) {
 	xRefTable.ValidationMode = model.ValidationStrict
 
 	err := validateForm(xRefTable, rootDict, OPTIONAL, model.V12)
-	if err == nil || !strings.Contains(err.Error(), "AcroForm references root catalog") {
-		t.Fatalf("got %v, want self-referential AcroForm error", err)
-	}
+	requireErrContains(t, err, "AcroForm references root catalog")
 }
 
 func TestValidateFormRepairsSelfReferentialAcroFormRelaxed(t *testing.T) {

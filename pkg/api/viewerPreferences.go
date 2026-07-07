@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -29,6 +30,8 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
+// ErrNoOp is retained for source compatibility.
+// Deprecated: viewer-preferences reset operations are idempotent and no longer return ErrNoOp.
 var ErrNoOp = errors.New("no operation")
 
 // ViewerPreferences returns rs's viewer preferences.
@@ -48,7 +51,7 @@ func ViewerPreferences(rs io.ReadSeeker, conf *model.Configuration) (vp *model.V
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("list viewer preferences: prepare PDF context: %w", err)
 	}
 
 	version := ctx.XRefTable.Version()
@@ -56,24 +59,65 @@ func ViewerPreferences(rs io.ReadSeeker, conf *model.Configuration) (vp *model.V
 	return ctx.ViewerPref, &version, nil
 }
 
+func viewerPreferencesForListing(vp *model.ViewerPreferences, version model.Version, all bool) (*model.ViewerPreferences, error) {
+	if !all {
+		return vp, nil
+	}
+
+	vp, err := model.ViewerPreferencesWithDefaults(vp, version)
+	if err != nil {
+		return nil, fmt.Errorf("list viewer preferences: apply defaults: %w", err)
+	}
+	return vp, nil
+}
+
+func marshalViewerPreferencesJSON(vp *model.ViewerPreferences) (string, error) {
+	s := struct {
+		Header     pdfcpu.Header            `json:"header"`
+		ViewerPref *model.ViewerPreferences `json:"viewerPreferences"`
+	}{
+		Header:     pdfcpu.Header{Version: "pdfcpu " + model.VersionStr, Creation: time.Now().Format("2006-01-02 15:04:05 MST")},
+		ViewerPref: vp,
+	}
+
+	bb, err := json.MarshalIndent(s, "", "\t")
+	if err != nil {
+		return "", fmt.Errorf("list viewer preferences: encode JSON: %w", err)
+	}
+	return string(bb), nil
+}
+
 // ViewerPreferencesFile returns inFile's viewer preferences.
-func ViewerPreferencesFile(inFile string, all bool, conf *model.Configuration) (*model.ViewerPreferences, error) {
+func ViewerPreferencesFile(inFile string, all bool, conf *model.Configuration) (vp *model.ViewerPreferences, err error) {
+	if inFile == "" {
+		return nil, ErrMissingPDFInput
+	}
+
 	f, err := os.Open(inFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list viewer preferences: open input %s: %w", inFile, err)
 	}
-	defer f.Close()
+	defer func() {
+		err = closeViewerPreferencesInput(err, f, "list viewer preferences: close input")
+	}()
 
 	vp, version, err := ViewerPreferences(f, conf)
 	if err != nil {
 		return nil, err
 	}
 
-	if !all {
-		return vp, nil
-	}
+	return viewerPreferencesForListing(vp, *version, all)
+}
 
-	return model.ViewerPreferencesWithDefaults(vp, *version)
+func closeViewerPreferencesInput(err error, f *os.File, context string) error {
+	closeErr := closeFile(f, context)
+	if err != nil && closeErr != nil {
+		return errors.Join(err, closeErr)
+	}
+	if err != nil {
+		return err
+	}
+	return closeErr
 }
 
 // ListViewerPreferences returns rs's viewer preferences.
@@ -93,75 +137,72 @@ func ListViewerPreferences(rs io.ReadSeeker, all bool, conf *model.Configuration
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
+		return nil, fmt.Errorf("list viewer preferences: prepare PDF context: %w", err)
+	}
+
+	vp, err := viewerPreferencesForListing(ctx.ViewerPref, ctx.XRefTable.Version(), all)
+	if err != nil {
 		return nil, err
 	}
-
-	if !all {
-		if ctx.ViewerPref != nil {
-			return ctx.ViewerPref.List(), nil
-		}
+	if vp == nil {
 		return []string{"No viewer preferences available."}, nil
 	}
+	return vp.List(), nil
+}
 
-	vp1, err := model.ViewerPreferencesWithDefaults(ctx.ViewerPref, ctx.XRefTable.Version())
+// ListViewerPreferencesJSON returns rs's viewer preferences in JSON.
+func ListViewerPreferencesJSON(rs io.ReadSeeker, all bool, conf *model.Configuration) ([]string, error) {
+	vp, version, err := ViewerPreferences(rs, conf)
 	if err != nil {
 		return nil, err
 	}
 
-	return vp1.List(), nil
+	vp, err = viewerPreferencesForListing(vp, *version, all)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := marshalViewerPreferencesJSON(vp)
+	if err != nil {
+		return nil, err
+	}
+	return []string{s}, nil
 }
 
 // ListViewerPreferencesFileJSON lists inFile's viewer preferences in JSON.
-func ListViewerPreferencesFileJSON(inFile string, all bool, conf *model.Configuration) ([]string, error) {
+func ListViewerPreferencesFileJSON(inFile string, all bool, conf *model.Configuration) (ss []string, err error) {
+	if inFile == "" {
+		return nil, ErrMissingPDFInput
+	}
+
 	f, err := os.Open(inFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list viewer preferences: open input %s: %w", inFile, err)
 	}
-	defer f.Close()
+	defer func() {
+		err = closeViewerPreferencesInput(err, f, "list viewer preferences: close input")
+	}()
 
-	vp, version, err := ViewerPreferences(f, conf)
-	if err != nil {
-		return nil, err
-	}
-
-	if !all {
-		if vp == nil {
-			return []string{"No viewer preferences available."}, nil
-		}
-	} else {
-		vp, err = model.ViewerPreferencesWithDefaults(vp, *version)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	s := struct {
-		Header     pdfcpu.Header            `json:"header"`
-		ViewerPref *model.ViewerPreferences `json:"viewerPreferences"`
-	}{
-		Header:     pdfcpu.Header{Version: "pdfcpu " + model.VersionStr, Creation: time.Now().Format("2006-01-02 15:04:05 MST")},
-		ViewerPref: vp,
-	}
-
-	bb, err := json.MarshalIndent(s, "", "\t")
-	if err != nil {
-		return nil, err
-	}
-
-	return []string{string(bb)}, nil
+	return ListViewerPreferencesJSON(f, all, conf)
 }
 
 // ListViewerPreferencesFile lists inFile's viewer preferences.
-func ListViewerPreferencesFile(inFile string, all, json bool, conf *model.Configuration) ([]string, error) {
+func ListViewerPreferencesFile(inFile string, all, json bool, conf *model.Configuration) (ss []string, err error) {
+	if inFile == "" {
+		return nil, ErrMissingPDFInput
+	}
+
 	if json {
 		return ListViewerPreferencesFileJSON(inFile, all, conf)
 	}
 
 	f, err := os.Open(inFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list viewer preferences: open input %s: %w", inFile, err)
 	}
-	defer f.Close()
+	defer func() {
+		err = closeViewerPreferencesInput(err, f, "list viewer preferences: close input")
+	}()
 
 	return ListViewerPreferences(f, all, conf)
 }
@@ -187,13 +228,13 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("set viewer preferences: prepare PDF context: %w", err)
 	}
 
 	version := ctx.XRefTable.Version()
 
 	if err := vp.Validate(version); err != nil {
-		return err
+		return fmt.Errorf("set viewer preferences: validate: %w", err)
 	}
 
 	if ctx.ViewerPref == nil {
@@ -204,7 +245,10 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 
 	ctx.XRefTable.BindViewerPreferences()
 
-	return Write(ctx, w, conf)
+	if err = Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("set viewer preferences: write output: %w", err)
+	}
+	return nil
 }
 
 // SetViewerPreferencesFromJSONBytes sets rs's viewer preferences corresponding to jsonBytes and writes the result to w.
@@ -217,14 +261,9 @@ func SetViewerPreferencesFromJSONBytes(rs io.ReadSeeker, w io.Writer, jsonBytes 
 		return ErrMissingPDFWriter
 	}
 
-	if !json.Valid(jsonBytes) {
-		return ErrInvalidJSON
-	}
-
 	vp := model.ViewerPreferences{}
-
 	if err := json.Unmarshal(jsonBytes, &vp); err != nil {
-		return err
+		return fmt.Errorf("set viewer preferences: decode JSON: %w", errors.Join(ErrInvalidJSON, err))
 	}
 
 	return SetViewerPreferences(rs, w, vp, conf)
@@ -241,12 +280,12 @@ func SetViewerPreferencesFromJSONReader(rs io.ReadSeeker, w io.Writer, rd io.Rea
 	}
 
 	if rd == nil {
-		return errors.New("missing JSON reader")
+		return fmt.Errorf("set viewer preferences: read JSON: %w", ErrMissingJSONReader)
 	}
 
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, rd); err != nil {
-		return err
+		return fmt.Errorf("set viewer preferences: read JSON: %w", err)
 	}
 
 	return SetViewerPreferencesFromJSONBytes(rs, w, buf.Bytes(), conf)
@@ -257,35 +296,33 @@ func SetViewerPreferencesFile(inFile, outFile string, vp model.ViewerPreferences
 	var f1, f2 *os.File
 	ok := false
 
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
+
 	if f1, err = os.Open(inFile); err != nil {
-		return err
+		return fmt.Errorf("set viewer preferences: open input %s: %w", inFile, err)
 	}
 
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
+	staged, err := openStagedOutput(f1, inFile, tmpFile, "set viewer preferences")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("set viewer preferences: create output: %w", err),
+			closeFile(f1, "set viewer preferences: close input"),
+		)
 	}
+	f2 = staged.output.file
 
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
+		err = staged.commit()
 	}()
 
 	if err = SetViewerPreferences(f1, f2, vp, conf); err != nil {
@@ -302,35 +339,33 @@ func SetViewerPreferencesFileFromJSONBytes(inFile, outFile string, jsonBytes []b
 	var f1, f2 *os.File
 	ok := false
 
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
+
 	if f1, err = os.Open(inFile); err != nil {
-		return err
+		return fmt.Errorf("set viewer preferences: open input %s: %w", inFile, err)
 	}
 
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
+	staged, err := openStagedOutput(f1, inFile, tmpFile, "set viewer preferences")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("set viewer preferences: create output: %w", err),
+			closeFile(f1, "set viewer preferences: close input"),
+		)
 	}
+	f2 = staged.output.file
 
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
+		err = staged.commit()
 	}()
 
 	if err = SetViewerPreferencesFromJSONBytes(f1, f2, jsonBytes, conf); err != nil {
@@ -344,19 +379,24 @@ func SetViewerPreferencesFileFromJSONBytes(inFile, outFile string, jsonBytes []b
 
 // SetViewerPreferencesFileFromJSONFile sets inFile's viewer preferences corresponding to inFileJSON and writes the result to outFile.
 func SetViewerPreferencesFileFromJSONFile(inFilePDF, outFilePDF, inFileJSON string, conf *model.Configuration) error {
+	if inFilePDF == "" {
+		return ErrMissingPDFInput
+	}
+
 	if inFileJSON == "" {
-		return errors.New("missing JSON input file")
+		return ErrMissingJSONInput
 	}
 
 	bb, err := os.ReadFile(inFileJSON)
 	if err != nil {
-		return err
+		return fmt.Errorf("set viewer preferences: read JSON %s: %w", inFileJSON, err)
 	}
 
 	return SetViewerPreferencesFileFromJSONBytes(inFilePDF, outFilePDF, bb, conf)
 }
 
 // ResetViewerPreferences resets rs's viewer preferences and writes the result to w.
+// If rs has no viewer preferences, it still writes the unchanged PDF and returns success.
 func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
@@ -377,55 +417,52 @@ func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configura
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("reset viewer preferences: prepare PDF context: %w", err)
 	}
 
-	if ctx.ViewerPref == nil {
-		return ErrNoOp
+	if ctx.ViewerPref != nil {
+		delete(ctx.RootDict, "ViewerPreferences")
 	}
 
-	delete(ctx.RootDict, "ViewerPreferences")
-
-	return Write(ctx, w, conf)
+	if err = Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("reset viewer preferences: write output: %w", err)
+	}
+	return nil
 }
 
 // ResetViewerPreferencesFile resets inFile's viewer preferences and writes the result to outFile.
+// If inFile has no viewer preferences, it still writes the unchanged PDF and returns success.
 func ResetViewerPreferencesFile(inFile, outFile string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
+
 	if f1, err = os.Open(inFile); err != nil {
-		return err
+		return fmt.Errorf("reset viewer preferences: open input %s: %w", inFile, err)
 	}
 
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
+	staged, err := openStagedOutput(f1, inFile, tmpFile, "reset viewer preferences")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("reset viewer preferences: create output: %w", err),
+			closeFile(f1, "reset viewer preferences: close input"),
+		)
 	}
+	f2 = staged.output.file
 
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
-			if err == ErrNoOp {
-				err = nil
-			}
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
+		err = staged.commit()
 	}()
 
 	if err = ResetViewerPreferences(f1, f2, conf); err != nil {

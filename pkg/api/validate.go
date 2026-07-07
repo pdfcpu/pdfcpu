@@ -29,6 +29,17 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
+func validationModeHint(mode int) string {
+	if mode != model.ValidationStrict {
+		return ""
+	}
+	return " (try --mode=relaxed)"
+}
+
+func validationError(ctx *model.Context, conf *model.Configuration, err error) error {
+	return fmt.Errorf("validation error (obj#:%d)%s: %w", ctx.CurObj, validationModeHint(conf.ValidationMode), err)
+}
+
 // Validate validates a PDF stream read from rs.
 func Validate(rs io.ReadSeeker, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
@@ -46,26 +57,22 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) (err error) {
 
 	ctx, err := ReadContext(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("read context: %w", err)
 	}
 
 	dur1 := time.Since(from1).Seconds()
 	from2 := time.Now()
 
 	if err = ValidateContext(ctx); err != nil {
-		s := ""
-		if conf.ValidationMode == model.ValidationStrict {
-			s = " (try --mode=relaxed)"
-		}
-		err = fmt.Errorf("%s: %w", fmt.Sprintf("validation error (obj#:%d)%s", ctx.CurObj, s), err)
+		err = validationError(ctx, conf, err)
 	}
 
-	if err == nil {
-		if conf.Optimize {
-			if log.CLIEnabled() {
-				log.CLI.Println("optimizing...")
-			}
-			err = pdfcpu.OptimizeXRefTable(ctx)
+	if err == nil && conf.Optimize {
+		if log.CLIEnabled() {
+			log.CLI.Println("optimizing...")
+		}
+		if err = pdfcpu.OptimizeXRefTable(ctx); err != nil {
+			err = fmt.Errorf("optimize context: %w", err)
 		}
 	}
 
@@ -87,7 +94,11 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) (err error) {
 }
 
 // ValidateFile validates inFile.
-func ValidateFile(inFile string, conf *model.Configuration) error {
+func ValidateFile(inFile string, conf *model.Configuration) (err error) {
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
+
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
@@ -98,13 +109,21 @@ func ValidateFile(inFile string, conf *model.Configuration) error {
 
 	f, err := os.Open(inFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("validate: open %s: %w", inFile, err)
 	}
 
-	defer f.Close()
+	defer func() {
+		closeErr := f.Close()
+		if err != nil {
+			return
+		}
+		if closeErr != nil {
+			err = fmt.Errorf("validate: close %s: %w", inFile, closeErr)
+		}
+	}()
 
 	if err = Validate(f, conf); err != nil {
-		return err
+		return fmt.Errorf("validate %s: %w", inFile, err)
 	}
 
 	if log.CLIEnabled() {
@@ -134,49 +153,4 @@ func ValidateFiles(inFiles []string, conf *model.Configuration) error {
 	}
 
 	return errors.Join(errs...)
-}
-
-// DumpObject writes an object from rs to stdout.
-func DumpObject(rs io.ReadSeeker, mode, objNr int, conf *model.Configuration) error {
-	if rs == nil {
-		return ErrMissingPDFReadSeeker
-	}
-
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.DUMP
-
-	ctx, err := ReadContext(rs, conf)
-	if err != nil {
-		return err
-	}
-
-	if err = ValidateContext(ctx); err != nil {
-		s := ""
-		if conf.ValidationMode == model.ValidationStrict {
-			s = " (try --mode=relaxed)"
-		}
-		return fmt.Errorf("%s: %w", fmt.Sprintf("validation error (obj#:%d)%s", ctx.CurObj, s), err)
-	}
-
-	ctx.DumpObject(objNr, mode)
-
-	return err
-}
-
-// DumpObjectFile writes an object from rs to stdout.
-func DumpObjectFile(inFile string, mode, objNr int, conf *model.Configuration) error {
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-
-	f, err := os.Open(inFile)
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	return DumpObject(f, mode, objNr, conf)
 }

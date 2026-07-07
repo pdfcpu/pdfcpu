@@ -25,7 +25,6 @@ import (
 	"image/color"
 	"image/png"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/hhrutter/tiff"
@@ -38,6 +37,7 @@ import (
 
 // Errors to be identified.
 var (
+	// ErrUnsupported16BPC reports an unsupported 16-bit image component depth.
 	ErrUnsupported16BPC = errors.New("unsupported 16 bits per component")
 )
 
@@ -549,7 +549,11 @@ func renderICCBased(xRefTable *model.XRefTable, im *PDFImage, cs types.Array) (i
 		return renderDeviceCMYKToTIFF(im)
 	}
 
-	return nil, "", nil
+	return unsupportedImageRender(im.objNr, fmt.Sprintf("ICCBased colorspace with %d components", n))
+}
+
+func unsupportedImageRender(objNr int, detail string) (io.Reader, string, error) {
+	return nil, "", fmt.Errorf("image obj#%d render %s: %w", objNr, detail, ErrUnsupportedResource)
 }
 
 func renderIndexedGrayToPNG(im *PDFImage, lookup []byte) (io.Reader, string, error) {
@@ -732,7 +736,7 @@ func renderIndexedNameCS(im *PDFImage, cs types.Name, maxInd int, lookup []byte)
 		log.Info.Printf("renderIndexedNameCS: objNr=%d, unsupported base colorspace %s\n", im.objNr, cs.String())
 	}
 
-	return nil, "", nil
+	return unsupportedImageRender(im.objNr, fmt.Sprintf("indexed base colorspace %s", cs))
 }
 
 func renderIndexedArrayCS(xRefTable *model.XRefTable, im *PDFImage, csa types.Array, maxInd int, lookup []byte) (io.Reader, string, error) {
@@ -805,7 +809,7 @@ func renderIndexedArrayCS(xRefTable *model.XRefTable, im *PDFImage, csa types.Ar
 		log.Info.Printf("renderIndexedArrayCS: objNr=%d, unsupported base colorspace %s\n", im.objNr, csa)
 	}
 
-	return nil, "", nil
+	return unsupportedImageRender(im.objNr, fmt.Sprintf("indexed base colorspace %s", csa))
 }
 
 func renderIndexed(xRefTable *model.XRefTable, im *PDFImage, cs types.Array) (io.Reader, string, error) {
@@ -847,7 +851,7 @@ func renderIndexed(xRefTable *model.XRefTable, im *PDFImage, cs types.Array) (io
 		return renderIndexedArrayCS(xRefTable, im, cs, maxInd.Value(), lookup)
 	}
 
-	return nil, "", nil
+	return unsupportedImageRender(im.objNr, fmt.Sprintf("indexed base colorspace type %T", baseCS))
 }
 
 func renderDeviceN(im *PDFImage, cs types.Array) (io.Reader, string, error) {
@@ -869,7 +873,7 @@ func renderDeviceN(im *PDFImage, cs types.Array) (io.Reader, string, error) {
 
 	alternateCS, ok := cs[2].(types.Name)
 	if !ok {
-		return nil, "", nil
+		return unsupportedImageRender(im.objNr, fmt.Sprintf("DeviceN alternate colorspace type %T", cs[2]))
 	}
 
 	switch alternateCS {
@@ -886,7 +890,7 @@ func renderDeviceN(im *PDFImage, cs types.Array) (io.Reader, string, error) {
 		return renderDeviceCMYKToTIFF(im)
 	}
 
-	return nil, "", nil
+	return unsupportedImageRender(im.objNr, fmt.Sprintf("DeviceN alternate colorspace %s", alternateCS))
 }
 
 func renderImage(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool, objNr int) (io.Reader, string, error) {
@@ -920,6 +924,7 @@ func renderImage(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool, o
 			if log.InfoEnabled() {
 				log.Info.Printf("renderImage: objNr=%d, unsupported name colorspace %s\n", objNr, cs.String())
 			}
+			return unsupportedImageRender(objNr, fmt.Sprintf("colorspace %s", cs))
 		}
 
 	case types.Array:
@@ -946,11 +951,12 @@ func renderImage(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool, o
 			if log.InfoEnabled() {
 				log.Info.Printf("renderImage: objNr=%d, unsupported array colorspace %s\n", objNr, csn)
 			}
+			return unsupportedImageRender(objNr, fmt.Sprintf("colorspace %s", cs))
 		}
 
 	}
 
-	return nil, "", nil
+	return unsupportedImageRender(objNr, fmt.Sprintf("colorspace type %T", o))
 }
 
 func decodeCMYK(c, m, y, k uint8, decode []colValRange) (uint8, uint8, uint8, uint8) {
@@ -1030,19 +1036,7 @@ func RenderImage(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool, r
 		return bytes.NewReader(sd.Content), "jbig2", nil
 	}
 
-	return nil, "", nil
-}
-
-// WriteReader consumes r's content by writing it to a file at path.
-func WriteReader(path string, r io.Reader) error {
-	w, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	if _, err = io.Copy(w, r); err != nil {
-		return err
-	}
-	return w.Close()
+	return unsupportedImageRender(objNr, fmt.Sprintf("filter %s", f))
 }
 
 // WriteImage writes a PDF image object to disk.
@@ -1051,8 +1045,8 @@ func WriteImage(xRefTable *model.XRefTable, fileName string, sd *types.StreamDic
 	if err != nil {
 		return "", err
 	}
-	if r == nil {
-		return "", fmt.Errorf("writeImage: unable to extract image from obj#%d", objNr)
+	if isNilReader(r) {
+		return "", fmt.Errorf("image obj#%d: %w", objNr, ErrMissingImageReader)
 	}
 	return fileName, WriteReader(fileName, r)
 }

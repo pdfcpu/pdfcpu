@@ -18,7 +18,6 @@ package model
 
 import (
 	"fmt"
-
 	"io"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
@@ -71,7 +70,7 @@ type BookletPage struct {
 	Rotate bool
 }
 
-func drawGuideLineLabel(w io.Writer, x, y float64, s string, mb *types.Rectangle, fm FontMap, rot int) {
+func drawGuideLineLabel(xRefTable *XRefTable, w io.Writer, x, y float64, s string, mb *types.Rectangle, fm FontMap, rot int) error {
 	fontName := "Helvetica"
 	td := TextDescriptor{
 		FontName:  fontName,
@@ -86,10 +85,13 @@ func drawGuideLineLabel(w io.Writer, x, y float64, s string, mb *types.Rectangle
 		Rotation:  float64(rot),
 		Text:      s,
 	}
-	WriteMultiLine(nil, w, mb, nil, td)
+	if _, err := WriteMultiLine(xRefTable, w, mb, nil, td); err != nil {
+		return fmt.Errorf("render guide label %q: %w", s, err)
+	}
+	return nil
 }
 
-func drawScissors(w io.Writer, isVerticalCut bool, horzCutYpos float64, mb *types.Rectangle, fm FontMap) {
+func drawScissors(xRefTable *XRefTable, w io.Writer, isVerticalCut bool, horzCutYpos float64, mb *types.Rectangle, fm FontMap) error {
 	x := 0.
 	y := horzCutYpos - 4
 	rot := 0.
@@ -113,7 +115,10 @@ func drawScissors(w io.Writer, isVerticalCut bool, horzCutYpos float64, mb *type
 		Rotation:  rot,
 		Text:      string([]byte{byte(34)}),
 	}
-	WriteMultiLine(nil, w, mb, nil, td)
+	if _, err := WriteMultiLine(xRefTable, w, mb, nil, td); err != nil {
+		return fmt.Errorf("render scissors: %w", err)
+	}
+	return nil
 }
 
 type cutOrFold int
@@ -180,30 +185,36 @@ func getCutFolds(nup *NUp) (horizontal cutOrFold, vertical cutOrFold) {
 	return horizontal, vertical
 }
 
-func drawGuideHorizontal(w io.Writer, y, width float64, cutOrFold cutOrFold, nup *NUp, mb *types.Rectangle, fm FontMap) {
+func drawGuideHorizontal(xRefTable *XRefTable, w io.Writer, y, width float64, cutOrFold cutOrFold, nup *NUp, mb *types.Rectangle, fm FontMap) error {
 	fmt.Fprint(w, "[3] 0 d ")
 	draw.SetLineWidth(w, 0)
 	draw.SetStrokeColor(w, color.Gray)
 	draw.DrawLineSimple(w, 0, y, width, y)
-	drawGuideLineLabel(w, width-46, y+2, cutOrFold.String(nup), mb, fm, 0)
-	if cutOrFold == cut {
-		drawScissors(w, false, y, mb, fm)
+	if err := drawGuideLineLabel(xRefTable, w, width-46, y+2, cutOrFold.String(nup), mb, fm, 0); err != nil {
+		return err
 	}
+	if cutOrFold == cut {
+		return drawScissors(xRefTable, w, false, y, mb, fm)
+	}
+	return nil
 }
 
-func drawGuideVertical(w io.Writer, x, height float64, cutOrFold cutOrFold, nup *NUp, mb *types.Rectangle, fm FontMap) {
+func drawGuideVertical(xRefTable *XRefTable, w io.Writer, x, height float64, cutOrFold cutOrFold, nup *NUp, mb *types.Rectangle, fm FontMap) error {
 	fmt.Fprint(w, "[3] 0 d ")
 	draw.SetLineWidth(w, 0)
 	draw.SetStrokeColor(w, color.Gray)
 	draw.DrawLineSimple(w, x, 0, x, height)
-	drawGuideLineLabel(w, x-23, height-32, cutOrFold.String(nup), mb, fm, 90)
-	if cutOrFold == cut {
-		drawScissors(w, true, height/2, mb, fm)
+	if err := drawGuideLineLabel(xRefTable, w, x-23, height-32, cutOrFold.String(nup), mb, fm, 90); err != nil {
+		return err
 	}
+	if cutOrFold == cut {
+		return drawScissors(xRefTable, w, true, height/2, mb, fm)
+	}
+	return nil
 }
 
-// DrawBookletGuides draws guides according to corresponding nup value.
-func DrawBookletGuides(nup *NUp, w io.Writer) FontMap {
+// DrawBookletGuides draws guides and reports rendering failures.
+func DrawBookletGuides(xRefTable *XRefTable, nup *NUp, w io.Writer) (FontMap, error) {
 	width := nup.PageDim.Width
 	height := nup.PageDim.Height
 	var fm FontMap = FontMap{}
@@ -213,27 +224,46 @@ func DrawBookletGuides(nup *NUp, w io.Writer) FontMap {
 	if horz != none {
 		switch nup.N() {
 		case 2, 4:
-			drawGuideHorizontal(w, height/2, width, horz, nup, mb, fm)
+			if err := drawGuideHorizontal(xRefTable, w, height/2, width, horz, nup, mb, fm); err != nil {
+				return nil, err
+			}
 		case 6:
 			// 6up: two cuts
-			drawGuideHorizontal(w, height*1/3, width, horz, nup, mb, fm)
-			drawGuideHorizontal(w, height*2/3, width, horz, nup, mb, fm)
+			if err := drawGuideHorizontal(xRefTable, w, height*1/3, width, horz, nup, mb, fm); err != nil {
+				return nil, err
+			}
+			if err := drawGuideHorizontal(xRefTable, w, height*2/3, width, horz, nup, mb, fm); err != nil {
+				return nil, err
+			}
 		case 8:
 			if nup.BookletBinding == LongEdge {
 				// 8up: middle cut and 1/4,3/4 folds
-				drawGuideHorizontal(w, height/2, width, cut, nup, mb, fm)
-				drawGuideHorizontal(w, height*1/4, width, fold, nup, mb, fm)
-				drawGuideHorizontal(w, height*3/4, width, fold, nup, mb, fm)
+				for _, guide := range []struct {
+					y    float64
+					kind cutOrFold
+				}{
+					{height / 2, cut},
+					{height * 1 / 4, fold},
+					{height * 3 / 4, fold},
+				} {
+					if err := drawGuideHorizontal(xRefTable, w, guide.y, width, guide.kind, nup, mb, fm); err != nil {
+						return nil, err
+					}
+				}
 			} else {
 				// short edge: cuts on rows
 				for i := 1; i < 4; i++ {
-					drawGuideHorizontal(w, height*float64(i)/4, width, cut, nup, mb, fm)
+					if err := drawGuideHorizontal(xRefTable, w, height*float64(i)/4, width, cut, nup, mb, fm); err != nil {
+						return nil, err
+					}
 				}
 			}
 		}
 	}
 	if vert != none {
-		drawGuideVertical(w, width/2, height, vert, nup, mb, fm)
+		if err := drawGuideVertical(xRefTable, w, width/2, height, vert, nup, mb, fm); err != nil {
+			return nil, err
+		}
 	}
-	return fm
+	return fm, nil
 }

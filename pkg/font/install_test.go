@@ -57,7 +57,7 @@ func TestInstallTrueTypeCollectionRejectsInvalidCounts(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fn := writeTTCFile(t, tt.count, tt.offsets...)
-			if err := InstallTrueTypeCollection(t.TempDir(), fn); err == nil {
+			if _, err := InstallTrueTypeCollection(t.TempDir(), fn); err == nil {
 				t.Fatal("expected corrupt TTC error")
 			}
 		})

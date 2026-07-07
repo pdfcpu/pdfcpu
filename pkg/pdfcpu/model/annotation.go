@@ -233,6 +233,8 @@ func LineEndingStyleName(les LineEndingStyle) string {
 }
 
 // AnnotationRenderer is the interface for PDF annotations.
+// Pointer-backed implementations must not pass a typed nil pointer through this interface;
+// generic typed-nil detection is intentionally not performed in production code.
 type AnnotationRenderer interface {
 	RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error)
 	Type() AnnotationType

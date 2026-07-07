@@ -18,16 +18,36 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"math"
 	"os"
 	"sort"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+// validatePageConfiguration accepts nil pageConf or PageDim.
+// A nil PageDim uses each selected page's effective MediaBox for its inserted blank page.
+func validatePageConfiguration(pageConf *pdfcpu.PageConfiguration) error {
+	if pageConf == nil || pageConf.PageDim == nil {
+		return nil
+	}
+	if invalidPageDimension(pageConf.PageDim.Width) {
+		return fmt.Errorf("width must be positive and finite: %w", ErrInvalidPageConfiguration)
+	}
+	if invalidPageDimension(pageConf.PageDim.Height) {
+		return fmt.Errorf("height must be positive and finite: %w", ErrInvalidPageConfiguration)
+	}
+	return nil
+}
+
+func invalidPageDimension(v float64) bool {
+	return v <= 0 || math.IsNaN(v) || math.IsInf(v, 0)
+}
 
 // InsertPages inserts a blank page before or after every page selected of rs and writes the result to w.
 func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before bool, pageConf *pdfcpu.PageConfiguration, conf *model.Configuration) (err error) {
@@ -40,6 +60,9 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 	if w == nil {
 		return ErrMissingPDFWriter
 	}
+	if err := validatePageConfiguration(pageConf); err != nil {
+		return fmt.Errorf("insert pages: validate page configuration: %w", err)
+	}
 
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
@@ -51,12 +74,12 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("insert pages: %w", err)
 	}
 
 	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
 	if err != nil {
-		return err
+		return fmt.Errorf("insert pages: parse page selection: %w", err)
 	}
 
 	var dim *types.Dim
@@ -65,19 +88,28 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 	}
 
 	if err = ctx.InsertBlankPages(pages, dim, before); err != nil {
-		return err
+		return fmt.Errorf("insert pages: insert blank pages: %w", err)
 	}
 
-	return Write(ctx, w, conf)
+	if err = Write(ctx, w, conf); err != nil {
+		return fmt.Errorf("insert pages: write output: %w", err)
+	}
+	return nil
 }
 
-// InsertPagesFile inserts a blank page before or after every inFile page selected and writes the result to w.
+// InsertPagesFile inserts a blank page before or after every selected inFile page and writes the result to outFile.
 func InsertPagesFile(inFile, outFile string, selectedPages []string, before bool, pageConf *pdfcpu.PageConfiguration, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
+	if err := validatePageConfiguration(pageConf); err != nil {
+		return fmt.Errorf("insert pages: validate page configuration: %w", err)
+	}
 	if f1, err = os.Open(inFile); err != nil {
-		return err
+		return fmt.Errorf("insert pages: open input %s: %w", inFile, err)
 	}
 
 	tmpFile := ""
@@ -87,27 +119,21 @@ func InsertPagesFile(inFile, outFile string, selectedPages []string, before bool
 	} else {
 		logWritingTo(inFile)
 	}
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
+	staged, err := openStagedOutput(f1, inFile, tmpFile, "insert pages")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("insert pages: create output: %w", err),
+			closeFile(f1, "insert pages: close input"),
+		)
 	}
+	f2 = staged.output.file
 
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
+		err = staged.commit()
 	}()
 
 	if err = InsertPages(f1, f2, selectedPages, before, pageConf, conf); err != nil {
@@ -138,19 +164,12 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("remove pages: %w", err)
 	}
 
 	pages, err := RemainingPagesForPageRemoval(ctx.PageCount, selectedPages, true)
 	if err != nil {
-		return err
-	}
-
-	if len(pages) == 0 {
-		if log.CLIEnabled() {
-			log.CLI.Println("aborted: missing page numbers!")
-		}
-		return nil
+		return fmt.Errorf("remove pages: parse page selection: %w", err)
 	}
 
 	var pageNrs []int
@@ -160,22 +179,31 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 		}
 	}
 	sort.Ints(pageNrs)
+	if len(pageNrs) == 0 {
+		return fmt.Errorf("remove pages: no pages remaining: %w", pdfcpu.ErrMissingPageNumbers)
+	}
 
 	ctxDest, err := pdfcpu.ExtractPages(ctx, pageNrs, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("remove pages: extract remaining pages: %w", err)
 	}
 
-	return Write(ctxDest, w, conf)
+	if err = Write(ctxDest, w, conf); err != nil {
+		return fmt.Errorf("remove pages: write output: %w", err)
+	}
+	return nil
 }
 
-// RemovePagesFile removes selected inFile pages and writes the result to outFile..
+// RemovePagesFile removes selected inFile pages and writes the result to outFile.
 func RemovePagesFile(inFile, outFile string, selectedPages []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
 	if f1, err = os.Open(inFile); err != nil {
-		return err
+		return fmt.Errorf("remove pages: open input %s: %w", inFile, err)
 	}
 
 	tmpFile := ""
@@ -185,27 +213,21 @@ func RemovePagesFile(inFile, outFile string, selectedPages []string, conf *model
 	} else {
 		logWritingTo(inFile)
 	}
-	if f2, tmpFile, err = createOutputFile(inFile, tmpFile); err != nil {
-		_ = f1.Close()
-		return err
+	staged, err := openStagedOutput(f1, inFile, tmpFile, "remove pages")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("remove pages: create output: %w", err),
+			closeFile(f1, "remove pages: close input"),
+		)
 	}
+	f2 = staged.output.file
 
 	defer func() {
 		if !ok {
-			_ = f2.Close()
-			_ = f1.Close()
-			os.Remove(tmpFile)
+			err = staged.cleanup(err)
 			return
 		}
-		if err = f2.Close(); err != nil {
-			return
-		}
-		if err = f1.Close(); err != nil {
-			return
-		}
-		if outFile == "" || inFile == outFile {
-			err = os.Rename(tmpFile, inFile)
-		}
+		err = staged.commit()
 	}()
 
 	if err = RemovePages(f1, f2, selectedPages, conf); err != nil {
@@ -227,24 +249,29 @@ func PageCount(rs io.ReadSeeker, conf *model.Configuration) (count int, err erro
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("page count: %w", err)
 	}
 
 	return ctx.PageCount, nil
 }
 
 // PageCountFile returns inFile's page count.
-func PageCountFile(inFile string) (int, error) {
+func PageCountFile(inFile string) (count int, err error) {
+	if inFile == "" {
+		return 0, ErrMissingPDFInput
+	}
 	f, err := os.Open(inFile)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("page count: open input %s: %w", inFile, err)
 	}
-	defer f.Close()
+	defer func() {
+		err = errors.Join(err, closeFile(f, "page count: close input"))
+	}()
 
 	return PageCount(f, model.NewDefaultConfiguration())
 }
 
-// PageDims returns a sorted slice of mediaBox dimensions for rs.
+// PageDims returns media box dimensions for rs in ascending page order.
 func PageDims(rs io.ReadSeeker, conf *model.Configuration) (pd []types.Dim, err error) {
 	defer fault.Catch(&err)
 
@@ -254,28 +281,33 @@ func PageDims(rs io.ReadSeeker, conf *model.Configuration) (pd []types.Dim, err 
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("page dimensions: %w", err)
 	}
 
 	pd, err = ctx.PageDims()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("page dimensions: collect page dimensions: %w", err)
 	}
 
 	if len(pd) != ctx.PageCount {
-		return nil, errors.New("corrupt page dimensions")
+		return nil, fmt.Errorf("page dimensions: corrupt result: got %d dimensions for %d pages", len(pd), ctx.PageCount)
 	}
 
 	return pd, nil
 }
 
-// PageDimsFile returns a sorted slice of mediaBox dimensions for inFile.
-func PageDimsFile(inFile string) ([]types.Dim, error) {
+// PageDimsFile returns media box dimensions for inFile in ascending page order.
+func PageDimsFile(inFile string) (pd []types.Dim, err error) {
+	if inFile == "" {
+		return nil, ErrMissingPDFInput
+	}
 	f, err := os.Open(inFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("page dimensions: open input %s: %w", inFile, err)
 	}
-	defer f.Close()
+	defer func() {
+		err = errors.Join(err, closeFile(f, "page dimensions: close input"))
+	}()
 
 	return PageDims(f, model.NewDefaultConfiguration())
 }

@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/fileutil"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -60,42 +61,58 @@ func writeObjects(ctx *model.Context) error {
 	return writeEncryptDict(ctx)
 }
 
+func validateWriteContext(ctx *model.Context) error {
+	if ctx == nil {
+		return ErrMissingPDFContext
+	}
+	if ctx.Write == nil {
+		return ErrMissingWriteContext
+	}
+	if ctx.XRefTable == nil {
+		return ErrMissingXRefTable
+	}
+	return nil
+}
+
+func createWriteFile(ctx *model.Context) (*os.File, string, error) {
+	fileName := filepath.Join(ctx.Write.DirName, ctx.Write.FileName)
+	if ctx.Write.FileName == "" {
+		return nil, "", errors.New("can't create output: missing file name")
+	}
+	if log.CLIEnabled() {
+		log.CLI.Printf("writing to %s\n", fileName)
+	}
+	file, err := createStagedFile(fileName)
+	if err != nil {
+		return nil, "", fmt.Errorf("can't create temporary output for %s: %w", fileName, err)
+	}
+	ctx.Write.Writer = bufio.NewWriter(file)
+	return file, fileName, nil
+}
+
+func finishWriteFile(file *os.File, fileName string, writeErr error) error {
+	return finishStagedFile(fileName, file, writeErr, nil, fileutil.ReplaceFile, os.Remove)
+}
+
 // WriteContext generates a PDF file for the cross reference table contained in Context.
 func WriteContext(ctx *model.Context) (err error) {
+	if err := validateWriteContext(ctx); err != nil {
+		return err
+	}
+
 	// Create a writer for dirname and filename if not already supplied.
 	if ctx.Write.Writer == nil {
-
-		fileName := filepath.Join(ctx.Write.DirName, ctx.Write.FileName)
-		if log.CLIEnabled() {
-			log.CLI.Printf("writing to %s\n", fileName)
-		}
-
-		file, err := os.Create(fileName)
+		file, fileName, err := createWriteFile(ctx)
 		if err != nil {
-			return fmt.Errorf("can't create %s: %w", fileName, err)
+			return err
 		}
-
-		ctx.Write.Writer = bufio.NewWriter(file)
-
 		defer func() {
-
-			// The underlying bufio.Writer has already been flushed.
-
-			// Processing error takes precedence.
-			if err != nil {
-				file.Close()
-				return
-			}
-
-			// Do not miss out on closing errors.
-			err = file.Close()
-
+			err = finishWriteFile(file, fileName, err)
 		}()
-
 	}
 
 	if err = prepareContextForWriting(ctx); err != nil {
-		return err
+		return fmt.Errorf("write PDF: prepare context: %w", err)
 	}
 
 	// if exists metadata, update from info dict
@@ -110,7 +127,7 @@ func WriteContext(ctx *model.Context) (err error) {
 	}
 
 	if err = writeHeader(ctx.Write, v); err != nil {
-		return err
+		return fmt.Errorf("write PDF: header: %w", err)
 	}
 
 	// Ensure there is no root version.
@@ -123,7 +140,7 @@ func WriteContext(ctx *model.Context) (err error) {
 	}
 
 	if err := writeObjects(ctx); err != nil {
-		return err
+		return fmt.Errorf("write PDF: objects: %w", err)
 	}
 
 	// Mark redundant objects as free.
@@ -131,16 +148,16 @@ func WriteContext(ctx *model.Context) (err error) {
 	deleteRedundantObjects(ctx)
 
 	if err = writeXRef(ctx); err != nil {
-		return err
+		return fmt.Errorf("write PDF: xref: %w", err)
 	}
 
 	// Write pdf trailer.
 	if err = writeTrailer(ctx.Write); err != nil {
-		return err
+		return fmt.Errorf("write PDF: trailer: %w", err)
 	}
 
 	if err = setFileSizeOfWrittenFile(ctx.Write); err != nil {
-		return err
+		return fmt.Errorf("write PDF: file size: %w", err)
 	}
 
 	if ctx.Read != nil {
@@ -154,6 +171,10 @@ func WriteContext(ctx *model.Context) (err error) {
 
 // WriteIncrement writes a PDF increment..
 func WriteIncrement(ctx *model.Context) error {
+	if err := validateWriteContext(ctx); err != nil {
+		return err
+	}
+
 	// Write all modified objects that are part of this increment.
 	for _, i := range ctx.Write.ObjNrs {
 		if err := writeFlatObject(ctx, i); err != nil {
@@ -179,7 +200,10 @@ func prepareContextForWriting(ctx *model.Context) error {
 		}
 	}
 
-	return handleEncryption(ctx)
+	if err := handleEncryption(ctx); err != nil {
+		return fmt.Errorf("encryption: %w", err)
+	}
+	return nil
 }
 
 func writeAdditionalStreams(ctx *model.Context) error {
@@ -340,7 +364,7 @@ func writeRootObject(ctx *model.Context) error {
 	// Ensure corresponding and accurate name tree object graphs.
 	if !ctx.ApplyReducedFeatureSet() {
 		if err := ctx.BindNameTrees(); err != nil {
-			return err
+			return fmt.Errorf("write root: bind name trees: %w", err)
 		}
 	}
 
@@ -906,19 +930,29 @@ func writeEncryptDict(ctx *model.Context) error {
 	objNumber := int(indRef.ObjectNumber)
 	genNumber := int(indRef.GenerationNumber)
 
-	d, err := ctx.DereferenceDict(indRef)
+	d, err := ctx.EncryptDict()
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"encryption dictionary obj#%d: dereference: %w",
+			objNumber,
+			classifyEncryptionDictionaryError(err),
+		)
+	}
+	if d == nil {
+		return fmt.Errorf("encryption dictionary obj#%d: %w", objNumber, ErrMalformedEncryption)
 	}
 
-	return writeObject(ctx, objNumber, genNumber, d.PDFString())
+	if err := writeObject(ctx, objNumber, genNumber, d.PDFString()); err != nil {
+		return fmt.Errorf("encryption dictionary obj#%d: write: %w", objNumber, err)
+	}
+	return nil
 }
 
 func setupEncryption(ctx *model.Context) error {
 	var err error
 
 	if ok := validateAlgorithm(ctx); !ok {
-		return errors.New("unsupported encryption algorithm (PDF 2.0 assumes AES/256)")
+		return fmt.Errorf("%w: algorithm configuration (PDF 2.0 requires AES-256)", ErrUnsupportedEncryptionFeature)
 	}
 
 	d := newEncryptDict(
@@ -929,23 +963,23 @@ func setupEncryption(ctx *model.Context) error {
 	)
 
 	if ctx.E, err = supportedEncryption(ctx, d); err != nil {
-		return err
+		return fmt.Errorf("build encryption dictionary: %w", err)
 	}
 
-	if ctx.ID == nil {
-		return errors.New("encrypt: missing ID")
+	if len(ctx.ID) == 0 {
+		return fmt.Errorf("encryption ID: %w", errMissingTrailerID)
 	}
 
 	if ctx.E.ID, err = ctx.IDFirstElement(); err != nil {
-		return err
+		return fmt.Errorf("encryption ID: %w", err)
 	}
 
 	if err = calcOAndU(ctx, d); err != nil {
-		return err
+		return fmt.Errorf("password entries: %w", err)
 	}
 
 	if err = writePermissions(ctx, d); err != nil {
-		return err
+		return fmt.Errorf("permissions entry: %w", err)
 	}
 
 	xRefTableEntry := model.NewXRefTableEntryGen0(d)
@@ -953,7 +987,7 @@ func setupEncryption(ctx *model.Context) error {
 	// Reuse free objects (including recycled objects from this run).
 	objNumber, err := ctx.InsertAndUseRecycled(*xRefTableEntry)
 	if err != nil {
-		return err
+		return fmt.Errorf("insert encryption dictionary: %w", err)
 	}
 
 	ctx.Encrypt = types.NewIndirectRef(objNumber, 0)
@@ -963,12 +997,19 @@ func setupEncryption(ctx *model.Context) error {
 
 func updateEncryption(ctx *model.Context) error {
 	if ctx.Encrypt == nil {
-		return errors.New("this file is not encrypted - nothing written")
+		return ErrNotEncrypted
 	}
 
 	d, err := ctx.EncryptDict()
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"encryption dictionary obj#%d: dereference: %w",
+			ctx.Encrypt.ObjectNumber.Value(),
+			classifyEncryptionDictionaryError(err),
+		)
+	}
+	if d == nil {
+		return fmt.Errorf("encryption dictionary obj#%d: %w", ctx.Encrypt.ObjectNumber.Value(), ErrMalformedEncryption)
 	}
 
 	if ctx.Cmd == model.SETPERMISSIONS {
@@ -993,23 +1034,26 @@ func updateEncryption(ctx *model.Context) error {
 	if ctx.E.R == 5 || ctx.E.R == 6 {
 
 		if err = calcOAndU(ctx, d); err != nil {
-			return err
+			return fmt.Errorf("password entries: %w", err)
 		}
 
 		// Calc Perms for rev 5, 6.
-		return writePermissions(ctx, d)
+		if err := writePermissions(ctx, d); err != nil {
+			return fmt.Errorf("permissions entry: %w", err)
+		}
+		return nil
 	}
 
 	//fmt.Printf("opw before: length:%d <%s>\n", len(ctx.E.O), ctx.E.O)
 	if ctx.E.O, err = o(ctx); err != nil {
-		return err
+		return fmt.Errorf("owner password entry: %w", err)
 	}
 	//fmt.Printf("opw after: length:%d <%s> %0X\n", len(ctx.E.O), ctx.E.O, ctx.E.O)
 	d.Update("O", types.HexLiteral(hex.EncodeToString(ctx.E.O)))
 
 	//fmt.Printf("upw before: length:%d <%s>\n", len(ctx.E.U), ctx.E.U)
 	if ctx.E.U, ctx.EncKey, err = u(ctx); err != nil {
-		return err
+		return fmt.Errorf("user password entry: %w", err)
 	}
 	//fmt.Printf("upw after: length:%d <%s> %0X\n", len(ctx.E.U), ctx.E.U, ctx.E.U)
 	//fmt.Printf("encKey = %0X\n", ctx.EncKey)
@@ -1042,7 +1086,7 @@ func handleEncryption(ctx *model.Context) error {
 
 	case model.ENCRYPT:
 		if err := setupEncryption(ctx); err != nil {
-			return err
+			return fmt.Errorf("setup encryption: %w", err)
 		}
 		encryptInfo(ctx)
 
@@ -1051,7 +1095,7 @@ func handleEncryption(ctx *model.Context) error {
 
 	case model.SETPERMISSIONS:
 		if err := updateEncryption(ctx); err != nil {
-			return err
+			return fmt.Errorf("update encryption: %w", err)
 		}
 
 	default:
@@ -1060,7 +1104,7 @@ func handleEncryption(ctx *model.Context) error {
 			ctx.EncKey = nil
 		} else if ctx.UserPWNew != nil || ctx.OwnerPWNew != nil {
 			if err := updateEncryption(ctx); err != nil {
-				return err
+				return fmt.Errorf("update encryption: %w", err)
 			}
 		}
 	}

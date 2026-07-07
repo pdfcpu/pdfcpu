@@ -42,18 +42,18 @@ func whitespaceOrEOLOrClosingBracket(c rune) bool {
 func skipDict(l *string) error {
 	s := *l
 	if !strings.HasPrefix(s, "<<") {
-		return errDictionaryCorrupt
+		return ErrDictionaryCorrupt
 	}
 	s = s[2:]
 	j := 0
 	for {
 		i := strings.IndexAny(s, "<>")
 		if i < 0 {
-			return errDictionaryCorrupt
+			return ErrDictionaryCorrupt
 		}
 		if s[i] == '<' {
 			if i == len(s)-1 {
-				return errDictionaryCorrupt
+				return ErrDictionaryCorrupt
 			}
 			if s[i+1] == '<' {
 				j++
@@ -65,7 +65,7 @@ func skipDict(l *string) error {
 		}
 		if s[i] == '>' {
 			if i == len(s)-1 {
-				return errDictionaryCorrupt
+				return ErrDictionaryCorrupt
 			}
 			if s[i+1] == '>' {
 				if j > 0 {

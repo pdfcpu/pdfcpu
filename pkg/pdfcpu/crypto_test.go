@@ -26,6 +26,37 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// TestClassifyEncryptionDictionaryErrorDistinguishesStructuralFailures verifies I/O errors remain operational.
+func TestClassifyEncryptionDictionaryErrorDistinguishesStructuralFailures(t *testing.T) {
+	ioErr := errors.New("read failed")
+	tests := []struct {
+		name      string
+		err       error
+		malformed bool
+	}{
+		{name: "missing reader object", err: errUnregisteredObject, malformed: true},
+		{name: "nil reader object", err: errNilDereferencedObject, malformed: true},
+		{name: "free reader object", err: ErrReferenceDoesNotExist, malformed: true},
+		{name: "wrong reader type", err: errCorruptDictObject, malformed: true},
+		{name: "missing model object", err: model.ErrMissingEncryptDictObject, malformed: true},
+		{name: "wrong model type", err: model.ErrWrongTypeEncryptDictObject, malformed: true},
+		{name: "corrupt dictionary syntax", err: model.ErrDictionaryCorrupt, malformed: true},
+		{name: "read failure", err: ioErr},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := classifyEncryptionDictionaryError(tt.err)
+			if !errors.Is(err, tt.err) {
+				t.Fatalf("lost lower cause %v: %v", tt.err, err)
+			}
+			if got := errors.Is(err, ErrMalformedEncryption); got != tt.malformed {
+				t.Fatalf("malformed classification=%t, want %t: %v", got, tt.malformed, err)
+			}
+		})
+	}
+}
+
 func TestEncryptionDictionaryErrorsClassified(t *testing.T) {
 	t.Parallel()
 
@@ -124,20 +155,202 @@ func TestAES256ParameterErrorsClassifiedMalformedEncryption(t *testing.T) {
 func TestValidateOAndUErrorsClassifiedMalformedEncryption(t *testing.T) {
 	t.Parallel()
 
-	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	setStrictPDF17XRefTable(ctx)
-
 	d := types.Dict{
 		"O": types.HexLiteral(strings.Repeat("00", 32)),
 		"U": types.HexLiteral(strings.Repeat("00", 31)),
 	}
 
-	_, _, err = validateOAndU(ctx, d, 4)
+	_, _, err := validateOAndU(d, 4, false)
 	if !errors.Is(err, ErrMalformedEncryption) {
 		t.Fatalf("got %v, want ErrMalformedEncryption", err)
+	}
+}
+
+func TestValidateOAndURejectsShortR4EntriesInStrictMode(t *testing.T) {
+	tests := []struct {
+		name string
+		oLen int
+		uLen int
+	}{
+		{name: "short O", oLen: 31, uLen: 32},
+		{name: "short U", oLen: 32, uLen: 31},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := types.Dict{
+				"O": types.HexLiteral(strings.Repeat("00", tt.oLen)),
+				"U": types.HexLiteral(strings.Repeat("00", tt.uLen)),
+			}
+
+			_, _, err := validateOAndU(d, 4, false)
+			if !errors.Is(err, ErrMalformedEncryption) {
+				t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
+			}
+		})
+	}
+}
+
+func TestValidateOAndURetainsR4RelaxedModeBehavior(t *testing.T) {
+	d := types.Dict{
+		"O": types.HexLiteral("00"),
+		"U": types.HexLiteral("00"),
+	}
+
+	o, u, err := validateOAndU(d, 4, true)
+	if err != nil {
+		t.Fatalf("expected relaxed mode to accept short R4 entries: %v", err)
+	}
+	if len(o) != 1 || len(u) != 1 {
+		t.Fatalf("got O/U lengths %d/%d, want 1/1", len(o), len(u))
+	}
+}
+
+func TestValidateOAndURejectsShortR5AndR6EntriesInAllModes(t *testing.T) {
+	tests := []struct {
+		name     string
+		revision int
+		relaxed  bool
+		oLen     int
+		uLen     int
+	}{
+		{name: "R5 strict short O", revision: 5, oLen: 47, uLen: 48},
+		{name: "R5 strict short U", revision: 5, oLen: 48, uLen: 47},
+		{name: "R5 relaxed short O", revision: 5, relaxed: true, oLen: 47, uLen: 48},
+		{name: "R5 relaxed short U", revision: 5, relaxed: true, oLen: 48, uLen: 47},
+		{name: "R6 strict short O", revision: 6, oLen: 47, uLen: 48},
+		{name: "R6 strict short U", revision: 6, oLen: 48, uLen: 47},
+		{name: "R6 relaxed short O", revision: 6, relaxed: true, oLen: 47, uLen: 48},
+		{name: "R6 relaxed short U", revision: 6, relaxed: true, oLen: 48, uLen: 47},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := types.Dict{
+				"O": types.HexLiteral(strings.Repeat("00", tt.oLen)),
+				"U": types.HexLiteral(strings.Repeat("00", tt.uLen)),
+			}
+
+			_, _, err := validateOAndU(d, tt.revision, tt.relaxed)
+			if !errors.Is(err, ErrMalformedEncryption) {
+				t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
+			}
+		})
+	}
+}
+
+func TestValidateOAndURejectsShortAES256EntriesInRelaxedMode(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := model.V17
+	ctx.XRefTable.HeaderVersion = &v
+	ctx.XRefTable.ValidationMode = model.ValidationRelaxed
+
+	d := newEncryptDict(false, true, 256, 0)
+	d["O"] = types.HexLiteral(strings.Repeat("00", 47))
+
+	_, err = supportedEncryption(ctx, d)
+	if !errors.Is(err, ErrMalformedEncryption) {
+		t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
+	}
+	if !strings.Contains(err.Error(), `entry "O"`) {
+		t.Fatalf("expected O entry context, got %q", err)
+	}
+}
+
+func TestSupportedEncryptionClassifiesRevision7Unsupported(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := model.V17
+	ctx.XRefTable.HeaderVersion = &v
+	ctx.XRefTable.ValidationMode = model.ValidationRelaxed
+
+	d := newEncryptDict(false, true, 256, 0)
+	d["R"] = types.Integer(7)
+
+	_, err = supportedEncryption(ctx, d)
+	if !errors.Is(err, ErrUnsupportedEncryptionFeature) {
+		t.Fatalf("got %v, want %v", err, ErrUnsupportedEncryptionFeature)
+	}
+	if !strings.Contains(err.Error(), `encrypt "R" 7`) {
+		t.Fatalf("expected revision context, got %q", err)
+	}
+}
+
+func TestValidateCryptFilterRecipientsIncludesEntryContext(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfm := "AESV3"
+	d := types.Dict{"Recipients": *types.NewIndirectRef(99, 0)}
+
+	err = validateCryptFilterRecipients(ctx, d, &cfm)
+	if err == nil || !strings.Contains(err.Error(), `crypt filter entry "Recipients"`) {
+		t.Fatalf("expected Recipients dereference context, got %v", err)
+	}
+}
+
+func TestValidateStmfIncludesEncryptEntryContext(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := model.V17
+	ctx.XRefTable.HeaderVersion = &v
+
+	d := types.Dict{"StmF": types.Name("StdCF")}
+	cfDict := types.Dict{
+		"StdCF": types.Dict{
+			"CFM":    types.Name("bad"),
+			"Length": types.Integer(128),
+		},
+	}
+
+	err = validateStmf(ctx, d, cfDict, 4, false, false)
+	if !errors.Is(err, ErrMalformedEncryption) {
+		t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
+	}
+	if !strings.Contains(err.Error(), `encrypt dict entry "StmF"`) {
+		t.Fatalf("expected StmF context, got %q", err)
+	}
+}
+
+func TestDecryptKeyDoesNotMutateInput(t *testing.T) {
+	backing := bytes.Repeat([]byte{0xA5}, 32)
+	key := backing[:5]
+	want := bytes.Clone(backing)
+
+	_ = decryptKey(7, 0, key, false)
+	if !bytes.Equal(backing, want) {
+		t.Fatalf("input key backing array mutated: got %x, want %x", backing, want)
+	}
+}
+
+func TestDecryptAESBytesRejectsIVOnlyCiphertext(t *testing.T) {
+	_, err := decryptAESBytes(make([]byte, 16), make([]byte, 16))
+	if err == nil || !strings.Contains(err.Error(), "ciphertext too short") {
+		t.Fatalf("expected short ciphertext error, got %v", err)
+	}
+}
+
+func TestAESBytesRoundTrip(t *testing.T) {
+	key := make([]byte, 16)
+	want := []byte("encrypted content")
+	encrypted, err := encryptAESBytes(bytes.Clone(want), key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := decryptAESBytes(encrypted, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Fatalf("got %q, want %q", got, want)
 	}
 }
 

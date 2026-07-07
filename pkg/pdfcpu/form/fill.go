@@ -43,22 +43,34 @@ func cacheResIDs(ctx *model.Context, pdf *primitives.PDF) error {
 	for i := 1; i <= ctx.PageCount; i++ {
 		_, _, inhPA, err := ctx.PageDict(i, true)
 		if err != nil {
-			return err
+			return fmt.Errorf("page %d: page dictionary: %w", i, err)
 		}
 		if inhPA != nil {
-			if inhPA.Resources["Font"] != nil {
-				pdf.FontResIDs[i] = inhPA.Resources["Font"].(types.Dict)
+			if err := cacheResourceDict(inhPA.Resources, "Font", i, pdf.FontResIDs); err != nil {
+				return err
 			}
-			if inhPA.Resources["XObject"] != nil {
-				pdf.XObjectResIDs[i] = inhPA.Resources["XObject"].(types.Dict)
+			if err := cacheResourceDict(inhPA.Resources, "XObject", i, pdf.XObjectResIDs); err != nil {
+				return err
 			}
 		}
 	}
 	return nil
 }
 
-func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error) {
+func cacheResourceDict(resources types.Dict, name string, pageNr int, cache map[int]types.Dict) error {
+	o := resources[name]
+	if o == nil {
+		return nil
+	}
+	d, ok := o.(types.Dict)
+	if !ok {
+		return fmt.Errorf("page %d: %s resources: expected dictionary, got %T", pageNr, name, o)
+	}
+	cache[pageNr] = d
+	return nil
+}
 
+func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error) {
 	pdf := &primitives.PDF{
 		FieldIDs:      types.StringSet{},
 		Fields:        types.Array{},
@@ -78,7 +90,7 @@ func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error
 	}
 
 	if err := cacheResIDs(ctx, pdf); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cache page resources: %w", err)
 	}
 
 	// What follows is a quirky way of turning a map of pages into a sorted slice of pages
@@ -89,7 +101,7 @@ func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error
 	for pageNr := range pages {
 		nr, err := strconv.Atoi(pageNr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid page number: %s", pageNr)
+			return nil, fmt.Errorf("page %q: parse page number: %w", pageNr, err)
 		}
 		pageNrs = append(pageNrs, nr)
 	}
@@ -112,7 +124,7 @@ func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error
 
 		_, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("page %d: page dictionary: %w", pageNr, err)
 		}
 
 		p := model.Page{
@@ -133,7 +145,7 @@ func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error
 
 		for _, ib := range page.ImageBoxes {
 			if err := ib.RenderForFill(pdf, &p, pageNr, imageMap); err != nil {
-				return nil, err
+				return nil, fmt.Errorf("page %d: render image box: %w", pageNr, err)
 			}
 		}
 
@@ -229,7 +241,6 @@ func parseImgBackgroundColor(s string, ib *primitives.ImageBox) error {
 }
 
 func parseImgBorder(s string, ib *primitives.ImageBox) error {
-
 	var err error
 
 	b := strings.Split(s, " ")
@@ -279,7 +290,6 @@ var imgParamMap = imageBoxParamMap{
 }
 
 func (m imageBoxParamMap) processImageBoxArg(paramPrefix, paramValueStr string, ib *primitives.ImageBox) error {
-
 	var param string
 
 	// Completion support
@@ -301,19 +311,18 @@ func (m imageBoxParamMap) processImageBoxArg(paramPrefix, paramValueStr string, 
 }
 
 func imageBox(s, src, url string) (*primitives.ImageBox, string, error) {
-
 	if !strings.HasPrefix(s, "@img") || len(s) < 6 {
-		return nil, "", fmt.Errorf("parsing cvs fieldNames: missing @img: <%s>", s)
+		return nil, "", fmt.Errorf("parsing CSV field names: missing @img: <%s>", s)
 	}
 
 	s = s[4:]
 	if s[0] != '(' || s[len(s)-1] != ')' {
-		return nil, "", fmt.Errorf("parsing cvs fieldNames: invalid @img: <%s>", s)
+		return nil, "", fmt.Errorf("parsing CSV field names: invalid @img: <%s>", s)
 	}
 
 	s = s[1 : len(s)-1]
 	if len(s) == 0 {
-		return nil, "", fmt.Errorf("parsing cvs fieldNames: empty @img: <%s>", s)
+		return nil, "", fmt.Errorf("parsing CSV field names: empty @img: <%s>", s)
 	}
 
 	ib := primitives.ImageBox{Src: src, Dx: 0, Dy: 0, Width: 0, Height: 0}
@@ -323,9 +332,9 @@ func imageBox(s, src, url string) (*primitives.ImageBox, string, error) {
 	ss := strings.Split(s, ",")
 
 	for _, s := range ss {
-		ss1 := strings.Split(s, ":")
+		ss1 := strings.SplitN(s, ":", 2)
 		if len(ss1) != 2 {
-			return nil, "", fmt.Errorf("parsing cvs fieldNames: invalid @img: <%s>", s)
+			return nil, "", fmt.Errorf("parsing CSV field names: invalid @img: <%s>", s)
 		}
 
 		paramPrefix := strings.TrimSpace(ss1[0])
@@ -373,8 +382,23 @@ func addImageBox(vv []string, fieldName string, im map[string]*Page) error {
 	return nil
 }
 
+func validateCSVRecord(fieldNames, formRecord []string) error {
+	if len(fieldNames) != len(formRecord) {
+		return fmt.Errorf("CSV record: got %d values, want %d", len(formRecord), len(fieldNames))
+	}
+	for i, fieldName := range fieldNames {
+		if fieldName == "" || fieldName == "*" {
+			return fmt.Errorf("CSV header column %d: missing field name", i+1)
+		}
+	}
+	return nil
+}
+
 // FieldMap returns structures needed to fill a form via CSV.
 func FieldMap(fieldNames, formRecord []string) (map[string]CSVFieldAttributes, map[string]*Page, string, error) {
+	if err := validateCSVRecord(fieldNames, formRecord); err != nil {
+		return nil, nil, "", err
+	}
 	fm := map[string]CSVFieldAttributes{}
 	im := map[string]*Page{}
 	outFile := ""
@@ -435,6 +459,9 @@ func FillDetails(form *Form, fieldMap map[string]CSVFieldAttributes) func(id, na
 	fm := fieldMap
 
 	return func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool) {
+		if format != CSV && f == nil {
+			return nil, false, false
+		}
 
 		if format == CSV {
 			fa, ok := fm[id]
@@ -450,7 +477,7 @@ func FillDetails(form *Form, fieldMap map[string]CSVFieldAttributes) func(id, na
 
 		switch fieldType {
 		case FTCheckBox:
-			v, lock, ok := form.checkBoxValueAndLock(id, name)
+			v, lock, ok := f.checkBoxValueAndLock(id, name)
 			c := "f"
 			if v {
 				c = "t"
@@ -482,23 +509,21 @@ func FillDetails(form *Form, fieldMap map[string]CSVFieldAttributes) func(id, na
 }
 
 func fillRadioButtons(ctx *model.Context, d types.Dict, vNew string, v types.Name) error {
-
-	for _, o := range d.ArrayEntry("Kids") {
-
+	for i, o := range d.ArrayEntry("Kids") {
 		d, err := ctx.DereferenceDict(o)
 		if err != nil {
-			return err
+			return fmt.Errorf("kid %d: dereference: %w", i+1, err)
 		}
 
 		d1, err := locateAPN(ctx.XRefTable, d)
 		if err != nil {
-			return err
+			return fmt.Errorf("kid %d: appearance: %w", i+1, err)
 		}
 
 		for k := range d1 {
 			k, err := types.DecodeName(k)
 			if err != nil {
-				return err
+				return fmt.Errorf("kid %d: decode appearance state: %w", i+1, err)
 			}
 			if k != "Off" {
 				d["AS"] = types.Name("Off")
@@ -522,7 +547,6 @@ func fillRadioButtonGroup(
 	format DataFormat,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ok *bool) error {
-
 	vv, lock, found := fillDetails(id, name, FTRadioButtonGroup, format)
 	if !found {
 		return nil
@@ -578,6 +602,17 @@ func fillRadioButtonGroup(
 	return nil
 }
 
+func checkBoxASNames(ctx *model.Context, d types.Dict, child bool) (types.Name, types.Name, error) {
+	offName, yesName, err := primitives.CalcCheckBoxASNames(ctx, d)
+	if err != nil {
+		if child {
+			return "", "", fmt.Errorf("kid 1: appearance: %w", err)
+		}
+		return "", "", fmt.Errorf("appearance: %w", err)
+	}
+	return offName, yesName, nil
+}
+
 func fillCheckBox(
 	ctx *model.Context,
 	d types.Dict,
@@ -586,7 +621,6 @@ func fillCheckBox(
 	format DataFormat,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ok *bool) error {
-
 	vv, lock, found := fillDetails(id, name, FTCheckBox, format)
 	if !found {
 		return nil
@@ -607,8 +641,9 @@ func fillCheckBox(
 	s := strings.ToLower(vv[0])
 	vNew := strings.HasPrefix(s, "t") // true
 	vOld := false
-	if o, found := d.Find("V"); found {
-		n := o.(types.Name)
+	if n, found, err := dictNameEntry(ctx.XRefTable, d, "V"); err != nil {
+		return fmt.Errorf("checkbox %s: %w", id, err)
+	} else if found {
 		vOld = len(n) > 0 && n != "Off"
 	}
 	if vNew == vOld {
@@ -628,12 +663,12 @@ func fillCheckBox(
 	if len(kids) == 1 {
 		d1, err = ctx.DereferenceDict(kids[0])
 		if err != nil {
-			return err
+			return fmt.Errorf("kid 1: dereference: %w", err)
 		}
 	}
 
 	if _, found := d1.Find("AS"); found {
-		offName, yesName, err := primitives.CalcCheckBoxASNames(ctx, d1)
+		offName, yesName, err := checkBoxASNames(ctx, d1, len(kids) == 1)
 		if err != nil {
 			return err
 		}
@@ -657,7 +692,6 @@ func fillBtn(
 	format DataFormat,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ok *bool) error {
-
 	ff := d.IntEntry("Ff")
 	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldPushbutton > 0 {
 		return nil
@@ -691,7 +725,6 @@ func fillComboBox(
 	fonts map[string]types.IndirectRef,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ok *bool) error {
-
 	vv, lock, found := fillDetails(id, name, FTComboBox, format)
 	if !found {
 		return nil
@@ -709,7 +742,7 @@ func fillComboBox(
 	} else if lock {
 		lockFormField(d)
 		if err := primitives.EnsureComboBoxAP(ctx, d, vNew, da, fonts); err != nil {
-			return err
+			return fmt.Errorf("appearance: %w", err)
 		}
 		*ok = true
 	}
@@ -809,7 +842,6 @@ func fillListBox(
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ff *int,
 	ok *bool) error {
-
 	vNew, lock, found := fillDetails(id, name, FTListBox, format)
 	if !found {
 		return nil
@@ -858,7 +890,7 @@ func fillListBox(
 	da := d.StringEntry("DA")
 
 	if err := primitives.EnsureListBoxAP(ctx, d, opts, ind, da, fonts); err != nil {
-		return err
+		return fmt.Errorf("appearance: %w", err)
 	}
 
 	*ok = true
@@ -876,7 +908,6 @@ func fillCh(
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ff *int,
 	ok *bool) error {
-
 	opts, err := parseOptions(ctx.XRefTable, d, OPTIONAL)
 	if err != nil {
 		return err
@@ -898,7 +929,6 @@ func fillDateField(
 	fonts map[string]types.IndirectRef,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ok *bool) error {
-
 	vv, lock, found := fillDetails(id, name, FTDate, format)
 	if !found {
 		return nil
@@ -933,15 +963,14 @@ func fillDateField(
 	kids := d.ArrayEntry("Kids")
 	if len(kids) > 0 {
 
-		for _, o := range kids {
-
+		for i, o := range kids {
 			d, err := ctx.DereferenceDict(o)
 			if err != nil {
-				return err
+				return fmt.Errorf("kid %d: dereference: %w", i+1, err)
 			}
 
 			if err := primitives.EnsureDateFieldAP(ctx, d, vNew, da, fonts); err != nil {
-				return err
+				return fmt.Errorf("kid %d: appearance: %w", i+1, err)
 			}
 
 			*ok = true
@@ -951,7 +980,7 @@ func fillDateField(
 	}
 
 	if err := primitives.EnsureDateFieldAP(ctx, d, vNew, da, fonts); err != nil {
-		return err
+		return fmt.Errorf("appearance: %w", err)
 	}
 
 	*ok = true
@@ -968,7 +997,6 @@ func fillTextField(
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ff *int,
 	ok *bool) error {
-
 	vv, lock, found := fillDetails(id, name, FTText, format)
 	if !found {
 		return nil
@@ -1013,15 +1041,14 @@ func fillTextField(
 	kids := d.ArrayEntry("Kids")
 	if len(kids) > 0 {
 
-		for _, o := range kids {
-
+		for i, o := range kids {
 			d, err := ctx.DereferenceDict(o)
 			if err != nil {
-				return err
+				return fmt.Errorf("kid %d: dereference: %w", i+1, err)
 			}
 
 			if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, maxLen, da, fonts); err != nil {
-				return err
+				return fmt.Errorf("kid %d: appearance: %w", i+1, err)
 			}
 
 			*ok = true
@@ -1031,7 +1058,7 @@ func fillTextField(
 	}
 
 	if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, maxLen, da, fonts); err != nil {
-		return err
+		return fmt.Errorf("appearance: %w", err)
 	}
 
 	*ok = true
@@ -1048,7 +1075,6 @@ func fillTx(
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ff *int,
 	ok *bool) error {
-
 	df, err := extractDateFormat(ctx.XRefTable, d)
 	if err != nil {
 		return err
@@ -1075,12 +1101,11 @@ func fillWidgetAnnots(
 	fonts map[string]types.IndirectRef,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ok *bool) error {
-
 	for _, indRef := range *(wAnnots.IndRefs) {
 
 		found, fi, err := isField(ctx.XRefTable, indRef, fields)
 		if err != nil {
-			return err
+			return fmt.Errorf("resolve field: %w", err)
 		}
 		if !found {
 			continue
@@ -1098,7 +1123,7 @@ func fillWidgetAnnots(
 
 		d, err := ctx.DereferenceDict(indRef)
 		if err != nil {
-			return err
+			return fmt.Errorf("field %s obj#%d: dereference: %w", id, indRef.ObjectNumber.Value(), err)
 		}
 		if len(d) == 0 {
 			continue
@@ -1130,7 +1155,7 @@ func fillWidgetAnnots(
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("field %s: %w", id, err)
 		}
 	}
 
@@ -1138,11 +1163,13 @@ func fillWidgetAnnots(
 }
 
 func setupFillFonts(xRefTable *model.XRefTable) error {
-	font.EnsureUserFontsLoaded()
+	if err := font.LoadUserFonts(); err != nil {
+		return fmt.Errorf("load form fonts: %w", err)
+	}
 
 	d, err := primitives.FormFontResDict(xRefTable)
 	if err != nil {
-		return err
+		return fmt.Errorf("AcroForm DR Font: %w", err)
 	}
 
 	m := xRefTable.FillFonts
@@ -1153,13 +1180,20 @@ func setupFillFonts(xRefTable *model.XRefTable) error {
 	}
 
 	for k, v := range d {
-		indRef := v.(types.IndirectRef)
+		indRef, ok := v.(types.IndirectRef)
+		if !ok {
+			return fmt.Errorf("form font resource %q: expected indirect reference, got %T", k, v)
+		}
 		fontName, _, _, err := primitives.FormFontDetails(xRefTable, indRef)
 		if err != nil {
-			return err
+			return fmt.Errorf("form font resource %q obj#%d: %w", k, indRef.ObjectNumber.Value(), err)
 		}
 
-		if font.IsCoreFont(fontName) || font.IsUserFont(fontName) {
+		supported, err := font.SupportedFont(fontName)
+		if err != nil {
+			return fmt.Errorf("form font resource %q: load metrics: %w", k, err)
+		}
+		if supported {
 			m[k] = indRef
 		}
 	}
@@ -1173,19 +1207,24 @@ func FillForm(
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	imgs map[string]*Page,
 	format DataFormat) (bool, []*model.Page, error) {
-
+	if fillDetails == nil {
+		return false, nil, errors.New("missing fill details")
+	}
+	if format != CSV && format != JSON {
+		return false, nil, fmt.Errorf("unsupported data format: %d", format)
+	}
 	xRefTable := ctx.XRefTable
 
 	fields, err := Fields(xRefTable)
 	if err != nil {
-		return false, nil, err
+		return false, nil, fmt.Errorf("AcroForm Fields: %w", err)
 	}
 
 	fonts := map[string]types.IndirectRef{}
 	indRefs := map[types.IndirectRef]bool{}
 
 	if err := setupFillFonts(xRefTable); err != nil {
-		return false, nil, err
+		return false, nil, fmt.Errorf("form fonts: setup: %w", err)
 	}
 
 	var ok bool
@@ -1201,19 +1240,19 @@ func FillForm(
 		}
 
 		if err := fillWidgetAnnots(ctx, fields, indRefs, wAnnots, format, fonts, fillDetails, &ok); err != nil {
-			return false, nil, err
+			return false, nil, fmt.Errorf("page %d: %w", i, err)
 		}
 	}
 
 	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
-		return false, nil, err
+		return false, nil, fmt.Errorf("form fonts: update: %w", err)
 	}
 
 	var pages []*model.Page
 
 	if len(imgs) > 0 {
 		if pages, err = addImages(ctx, imgs); err != nil {
-			return false, nil, err
+			return false, nil, fmt.Errorf("form images: %w", err)
 		}
 	}
 

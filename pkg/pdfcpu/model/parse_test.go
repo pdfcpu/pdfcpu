@@ -65,6 +65,23 @@ func TestProcessRefCountsRejectsRecursionDepth(t *testing.T) {
 	}
 }
 
+// TestDereferenceNumberPreservesDereferenceError verifies numeric dereferencing
+// preserves an underlying lazy object decode error.
+func TestDereferenceNumberPreservesDereferenceError(t *testing.T) {
+	xRefTable := newXRefTable(NewDefaultConfiguration())
+	osd := types.NewObjectStreamDict()
+	lazy := types.NewLazyObjectStreamObject(osd, 1, -1, nil)
+	xRefTable.Table[1] = NewXRefTableEntryGen0(lazy)
+
+	_, err := xRefTable.DereferenceNumber(*types.NewIndirectRef(1, 0))
+	if err == nil {
+		t.Fatal("expected dereference error")
+	}
+	if strings.Contains(err.Error(), "wrong type") {
+		t.Fatalf("got %v, want underlying decode error", err)
+	}
+}
+
 // TestPageTreeLookupRejectsRecursionDepth verifies page tree lookup respects recursion limits.
 func TestPageTreeLookupRejectsRecursionDepth(t *testing.T) {
 	xRefTable := newXRefTable(NewDefaultConfiguration())

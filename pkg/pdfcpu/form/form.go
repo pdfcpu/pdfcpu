@@ -45,6 +45,9 @@ const (
 )
 
 var (
+	// ErrMissingJSONWriter signals a missing JSON output writer.
+	ErrMissingJSONWriter = errors.New("missing JSON writer")
+
 	errNoFormFieldsAvailable = errors.New("no form fields available")
 	errFormFieldsNotRemoved  = errors.New("some form fields could not be removed")
 )
@@ -69,7 +72,7 @@ func (ft FieldType) String() string {
 	return s
 }
 
-// Field represents a form field for s particular page number.
+// Field represents a form field for a particular page number.
 type Field struct {
 	Pages   []int
 	Locked  bool
@@ -101,7 +104,6 @@ type FieldMeta struct {
 
 // Fields returns the form field array.
 func Fields(xRefTable *model.XRefTable) (types.Array, error) {
-
 	if xRefTable.Form == nil {
 		return nil, errors.New("no form available")
 	}
@@ -113,7 +115,7 @@ func Fields(xRefTable *model.XRefTable) (types.Array, error) {
 
 	fields, err := xRefTable.DereferenceArray(o)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("entry Fields: dereference: %w", err)
 	}
 
 	if len(fields) == 0 {
@@ -121,6 +123,30 @@ func Fields(xRefTable *model.XRefTable) (types.Array, error) {
 	}
 
 	return fields, nil
+}
+
+func indirectRef(o types.Object, context string, index int) (types.IndirectRef, error) {
+	indRef, ok := o.(types.IndirectRef)
+	if !ok {
+		return types.IndirectRef{}, fmt.Errorf("%s entry %d: expected indirect reference, got %T", context, index, o)
+	}
+	return indRef, nil
+}
+
+func dictNameEntry(xRefTable *model.XRefTable, d types.Dict, key string) (types.Name, bool, error) {
+	o, found := d.Find(key)
+	if !found {
+		return "", false, nil
+	}
+	o, err := xRefTable.Dereference(o)
+	if err != nil {
+		return "", false, fmt.Errorf("entry %q: dereference: %w", key, err)
+	}
+	n, ok := o.(types.Name)
+	if !ok {
+		return "", false, fmt.Errorf("entry %q: expected name, got %T", key, o)
+	}
+	return n, true, nil
 }
 
 func fullyQualifiedFieldNameDepth(xRefTable *model.XRefTable, indRef types.IndirectRef, fields types.Array, id, name *string, depth int, visit *model.FormFieldVisit) (bool, error) {
@@ -135,7 +161,7 @@ func fullyQualifiedFieldNameDepth(xRefTable *model.XRefTable, indRef types.Indir
 
 	d, err := xRefTable.DereferenceDict(indRef)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("field obj#%d: dereference: %w", objNr, err)
 	}
 	if len(d) == 0 {
 		return false, fmt.Errorf("corrupt field")
@@ -145,7 +171,7 @@ func fullyQualifiedFieldNameDepth(xRefTable *model.XRefTable, indRef types.Indir
 	thisName := ""
 	s, err := d.StringOrHexLiteralEntry("T")
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("field obj#%d: entry T: %w", objNr, err)
 	}
 	if s != nil {
 		thisName = *s
@@ -166,8 +192,11 @@ func fullyQualifiedFieldNameDepth(xRefTable *model.XRefTable, indRef types.Indir
 	// non-terminal field
 
 	ok, err := fullyQualifiedFieldNameDepth(xRefTable, *pIndRef, fields, id, name, depth+1, visit)
-	if !ok || err != nil {
-		return false, err
+	if err != nil {
+		return false, fmt.Errorf("field obj#%d: parent obj#%d: %w", objNr, pIndRef.ObjectNumber.Value(), err)
+	}
+	if !ok {
+		return false, nil
 	}
 
 	*id += "." + thisID
@@ -190,10 +219,9 @@ type fieldInfo struct {
 }
 
 func isField(xRefTable *model.XRefTable, indRef types.IndirectRef, fields types.Array) (bool, *fieldInfo, error) {
-
 	d, err := xRefTable.DereferenceDict(indRef)
 	if err != nil {
-		return false, nil, err
+		return false, nil, fmt.Errorf("widget obj#%d: dereference: %w", indRef.ObjectNumber.Value(), err)
 	}
 	if len(d) == 0 {
 		return false, nil, nil
@@ -208,7 +236,7 @@ func isField(xRefTable *model.XRefTable, indRef types.IndirectRef, fields types.
 	if pIndRef != nil {
 		dp, err := xRefTable.DereferenceDict(*pIndRef)
 		if err != nil {
-			return false, nil, err
+			return false, nil, fmt.Errorf("widget obj#%d: parent obj#%d: dereference: %w", indRef.ObjectNumber.Value(), pIndRef.ObjectNumber.Value(), err)
 		}
 		if len(dp) == 0 {
 			return false, nil, nil
@@ -242,7 +270,7 @@ func extractStringSlice(a types.Array) ([]string, error) {
 		if ok {
 			s, err := types.StringLiteralToString(sl)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("decode string: %w", err)
 			}
 			s = strings.TrimSpace(s)
 			if len(s) > 0 {
@@ -260,7 +288,7 @@ func extractStringSlice(a types.Array) ([]string, error) {
 		}
 		s, err := types.StringLiteralToString(sl)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("decode string: %w", err)
 		}
 		s = strings.TrimSpace(s)
 		if len(s) > 0 {
@@ -280,9 +308,13 @@ func parseOptions(xRefTable *model.XRefTable, d types.Dict, required bool) ([]st
 	}
 	a, err := xRefTable.DereferenceArray(o)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("entry Opt: dereference: %w", err)
 	}
-	return extractStringSlice(a)
+	ss, err := extractStringSlice(a)
+	if err != nil {
+		return nil, fmt.Errorf("entry Opt: %w", err)
+	}
+	return ss, nil
 }
 
 func parseStringLiteralArray(xRefTable *model.XRefTable, d types.Dict, key string) ([]string, error) {
@@ -290,29 +322,32 @@ func parseStringLiteralArray(xRefTable *model.XRefTable, d types.Dict, key strin
 	if o == nil {
 		return nil, nil
 	}
+	o, err := xRefTable.Dereference(o)
+	if err != nil {
+		return nil, fmt.Errorf("entry %s: dereference: %w", key, err)
+	}
 
 	switch o := o.(type) {
 
 	case types.StringLiteral:
 		s, err := types.StringLiteralToString(o)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("entry %s: decode string: %w", key, err)
 		}
 		return []string{s}, nil
 
 	case types.Array:
-		a, err := xRefTable.DereferenceArray(o)
+		ss, err := extractStringSlice(o)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("entry %s: %w", key, err)
 		}
-		return extractStringSlice(a)
+		return ss, nil
 	}
 
 	return nil, nil
 }
 
 func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, error) {
-
 	opts, err := parseOptions(xRefTable, d, OPTIONAL)
 	if err != nil {
 		return nil, err
@@ -321,22 +356,21 @@ func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 		return opts, nil
 	}
 
-	for _, o := range d.ArrayEntry("Kids") {
-
+	for i, o := range d.ArrayEntry("Kids") {
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("kid %d: dereference: %w", i+1, err)
 		}
 
 		d1, err := locateAPN(xRefTable, d)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("kid %d: appearance: %w", i+1, err)
 		}
 
 		for k := range d1 {
 			k, err := types.DecodeName(k)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("kid %d: decode appearance state: %w", i+1, err)
 			}
 			if k != "Off" {
 				found := false
@@ -358,7 +392,6 @@ func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 }
 
 func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
-
 	f.Typ = FTRadioButtonGroup
 
 	opts, err := collectRadioButtonGroupOptions(xRefTable, d)
@@ -374,7 +407,7 @@ func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field,
 	if s := d.NameEntry("V"); s != nil {
 		v, err := types.DecodeName(*s)
 		if err != nil {
-			return err
+			return fmt.Errorf("entry V: decode name: %w", err)
 		}
 		if v != "Off" {
 			if len(opts) > 0 {
@@ -400,19 +433,20 @@ func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field,
 }
 
 func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
-
 	ff := d.IntEntry("Ff")
 	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldPushbutton > 0 {
 		return nil
 	}
 
 	v := types.Name("Off")
-	if s, found := d.Find("DV"); found {
-		v = s.(types.Name)
+	if n, found, err := dictNameEntry(xRefTable, d, "DV"); err != nil {
+		return err
+	} else if found {
+		v = n
 	}
 	dv, err := types.DecodeName(v.String())
 	if err != nil {
-		return err
+		return fmt.Errorf("entry DV: decode name: %w", err)
 	}
 
 	if dv != "Off" {
@@ -428,8 +462,9 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 	}
 
 	f.Typ = FTCheckBox
-	if o, found := d.Find("V"); found {
-		n := o.(types.Name)
+	if n, found, err := dictNameEntry(xRefTable, d, "V"); err != nil {
+		return err
+	} else if found {
 		if len(n) > 0 && n != "Off" {
 			v := "Yes"
 			if len(v) > fm.valMax {
@@ -448,7 +483,7 @@ func collectComboBox(d types.Dict, f *Field, fm *FieldMeta) error {
 	if sl := d.StringLiteralEntry("V"); sl != nil {
 		v, err := types.StringLiteralToString(*sl)
 		if err != nil {
-			return err
+			return fmt.Errorf("entry V: decode string: %w", err)
 		}
 		if w := runewidth.StringWidth(v); w > fm.valMax {
 			fm.valMax = w
@@ -459,7 +494,7 @@ func collectComboBox(d types.Dict, f *Field, fm *FieldMeta) error {
 	if sl := d.StringLiteralEntry("DV"); sl != nil {
 		dv, err := types.StringLiteralToString(*sl)
 		if err != nil {
-			return err
+			return fmt.Errorf("entry DV: decode string: %w", err)
 		}
 		if w := runewidth.StringWidth(dv); w > fm.defMax {
 			fm.defMax = w
@@ -476,7 +511,7 @@ func collectListBox(xRefTable *model.XRefTable, multi bool, d types.Dict, f *Fie
 		if sl := d.StringLiteralEntry("V"); sl != nil {
 			v, err := types.StringLiteralToString(*sl)
 			if err != nil {
-				return err
+				return fmt.Errorf("entry V: decode string: %w", err)
 			}
 			if w := runewidth.StringWidth(v); w > fm.valMax {
 				fm.valMax = w
@@ -487,7 +522,7 @@ func collectListBox(xRefTable *model.XRefTable, multi bool, d types.Dict, f *Fie
 		if sl := d.StringLiteralEntry("DV"); sl != nil {
 			dv, err := types.StringLiteralToString(*sl)
 			if err != nil {
-				return err
+				return fmt.Errorf("entry DV: decode string: %w", err)
 			}
 			if w := runewidth.StringWidth(dv); w > fm.defMax {
 				fm.defMax = w
@@ -548,9 +583,13 @@ func collectCh(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta
 
 func inheritedV(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 	if o, found := d.Find("V"); found {
+		o, err := xRefTable.Dereference(o)
+		if err != nil {
+			return "", fmt.Errorf("entry V: dereference: %w", err)
+		}
 		s1, err := types.StringOrHexLiteral(o)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("entry V: decode string: %w", err)
 		}
 		if s1 != nil {
 			return *s1, nil
@@ -562,7 +601,7 @@ func inheritedV(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 	}
 	d, err := xRefTable.DereferenceDict(*indRef)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("entry Parent obj#%d: dereference: %w", indRef.ObjectNumber.Value(), err)
 	}
 	return inheritedV(xRefTable, d)
 }
@@ -579,11 +618,11 @@ func inheritedDV(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 	if o, found := d.Find("DV"); found {
 		o1, err := xRefTable.Dereference(o)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("entry DV: dereference: %w", err)
 		}
 		s1, err := types.StringOrHexLiteral(o1)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("entry DV: decode string: %w", err)
 		}
 		if s1 != nil {
 			return *s1, nil
@@ -595,7 +634,7 @@ func inheritedDV(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 	}
 	d, err := xRefTable.DereferenceDict(*indRef)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("entry Parent obj#%d: dereference: %w", indRef.ObjectNumber.Value(), err)
 	}
 	return inheritedDV(xRefTable, d)
 }
@@ -693,7 +732,6 @@ func collectPageField(
 	fm *FieldMeta,
 	fs *[]Field,
 	maxWidth int) error {
-
 	foundField := locateField(fs, fi, fm, pageNr)
 
 	f := Field{Pages: []int{pageNr}}
@@ -759,14 +797,13 @@ func collectPageFields(
 	fm *FieldMeta,
 	fs *[]Field,
 	maxWidth int) error {
-
 	indRefs := map[types.IndirectRef]bool{}
 
 	for _, ir := range *(wAnnots.IndRefs) {
 
 		ok, fi, err := isField(xRefTable, ir, fields)
 		if err != nil {
-			return err
+			return fmt.Errorf("resolve field: %w", err)
 		}
 		if !ok {
 			continue
@@ -782,14 +819,14 @@ func collectPageFields(
 
 		d, err := xRefTable.DereferenceDict(ir)
 		if err != nil {
-			return err
+			return fmt.Errorf("field %s obj#%d: dereference: %w", fi.id, ir.ObjectNumber.Value(), err)
 		}
 		if len(d) == 0 {
 			continue
 		}
 
 		if err := collectPageField(xRefTable, d, p, fi, fm, fs, maxWidth); err != nil {
-			return err
+			return fmt.Errorf("field %s: %w", fi.id, err)
 		}
 	}
 
@@ -812,7 +849,7 @@ func collectFields(xRefTable *model.XRefTable, fields types.Array, fm *FieldMeta
 		}
 
 		if err := collectPageFields(xRefTable, wAnnots, fields, p, fm, &fs, maxWidth); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("page %d: %w", p, err)
 		}
 	}
 
@@ -882,7 +919,6 @@ func calcListHeader(fm *FieldMeta) (string, []int) {
 }
 
 func multiPageFieldsMap(fs []Field) map[string][]Field {
-
 	m := map[string][]Field{}
 
 	for _, f := range fs {
@@ -903,7 +939,6 @@ func multiPageFieldsMap(fs []Field) map[string][]Field {
 }
 
 func renderMultiPageFields(m map[string][]Field, fm *FieldMeta) ([]string, error) {
-
 	var ss []string
 
 	s, horSep := calcListHeader(fm)
@@ -966,7 +1001,6 @@ func renderMultiPageFields(m map[string][]Field, fm *FieldMeta) ([]string, error
 }
 
 func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, error) {
-
 	ss := []string{}
 
 	m := multiPageFieldsMap(fs)
@@ -1041,19 +1075,18 @@ func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, erro
 // FormFields returns all form fields present in ctx.
 // maxWidth > 0 limits content for printing.
 func FormFields(ctx *model.Context) ([]Field, *FieldMeta, error) {
-
 	xRefTable := ctx.XRefTable
 
 	fields, err := Fields(xRefTable)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("AcroForm Fields: %w", err)
 	}
 
 	fm := &FieldMeta{pageMax: 2, idMax: 3, nameMax: 4, altNameMax: 7, defMax: 7, valMax: 5}
 
 	fs, err := collectFields(xRefTable, fields, fm, ctx.Conf.FormFieldListMaxColWidth)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("field tree: %w", err)
 	}
 
 	return fs, fm, nil
@@ -1061,15 +1094,18 @@ func FormFields(ctx *model.Context) ([]Field, *FieldMeta, error) {
 
 // ListFormFields returns a list of all form fields present in ctx.
 func ListFormFields(ctx *model.Context) ([]string, error) {
-
 	// TODO Align output for Bangla, Hindi, Marathi.
 
 	fs, fm, err := FormFields(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("collect fields: %w", err)
 	}
 
-	return renderFields(ctx, fs, fm)
+	fields, err := renderFields(ctx, fs, fm)
+	if err != nil {
+		return nil, fmt.Errorf("render fields: %w", err)
+	}
+	return fields, nil
 }
 
 func annotIndRefsDepth(xRefTable *model.XRefTable, fields types.Array, depth int, visit *model.FormFieldVisit) ([]types.IndirectRef, error) {
@@ -1078,8 +1114,11 @@ func annotIndRefsDepth(xRefTable *model.XRefTable, fields types.Array, depth int
 	}
 
 	var indRefs []types.IndirectRef
-	for _, v := range fields {
-		indRef := v.(types.IndirectRef)
+	for i, v := range fields {
+		indRef, err := indirectRef(v, "form field tree", i)
+		if err != nil {
+			return nil, err
+		}
 		objNr := indRef.ObjectNumber.Value()
 		if err := visit.Enter(objNr); err != nil {
 			return nil, err
@@ -1121,8 +1160,11 @@ func annotIndRefs(xRefTable *model.XRefTable, fields types.Array) ([]types.Indir
 }
 
 func annotIndRefSameLevel(xRefTable *model.XRefTable, fields types.Array, fieldIDOrName string) (*types.IndirectRef, error) {
-	for _, v := range fields {
-		indRef := v.(types.IndirectRef)
+	for i, v := range fields {
+		indRef, err := indirectRef(v, "form field tree", i)
+		if err != nil {
+			return nil, err
+		}
 		d, err := xRefTable.DereferenceDict(indRef)
 		if err != nil {
 			return nil, err
@@ -1158,8 +1200,11 @@ func annotIndRefForFieldDepth(xRefTable *model.XRefTable, fields types.Array, fi
 	// Must be below
 	ss := strings.Split(fieldIDOrName, ".")
 	partialName := ss[0]
-	for _, v := range fields {
-		indRef := v.(types.IndirectRef)
+	for i, v := range fields {
+		indRef, err := indirectRef(v, "form field tree", i)
+		if err != nil {
+			return nil, err
+		}
 		objNr := indRef.ObjectNumber.Value()
 		if err := visit.Enter(objNr); err != nil {
 			return nil, err
@@ -1243,8 +1288,11 @@ func removeFormFieldsDepth(xRefTable *model.XRefTable, indRefs *[]types.Indirect
 	}
 
 	f := types.Array{}
-	for _, v := range *fields {
-		indRef1 := v.(types.IndirectRef)
+	for i, v := range *fields {
+		indRef1, err := indirectRef(v, "form field tree", i)
+		if err != nil {
+			return err
+		}
 		objNr := indRef1.ObjectNumber.Value()
 		if err := visit.Enter(objNr); err != nil {
 			return err
@@ -1306,7 +1354,7 @@ func deletePageAnnots(xRefTable *model.XRefTable, m map[types.IndirectRef]bool, 
 
 		d, _, _, err := xRefTable.PageDict(i, false)
 		if err != nil {
-			return err
+			return fmt.Errorf("page %d: page dictionary: %w", i, err)
 		}
 
 		o, found := d.Find("Annots")
@@ -1316,7 +1364,7 @@ func deletePageAnnots(xRefTable *model.XRefTable, m map[types.IndirectRef]bool, 
 
 		arr, err := xRefTable.DereferenceArray(o)
 		if err != nil {
-			return err
+			return fmt.Errorf("page %d: Annots: %w", i, err)
 		}
 
 		// Delete page annotations for removed form fields.
@@ -1326,12 +1374,15 @@ func deletePageAnnots(xRefTable *model.XRefTable, m map[types.IndirectRef]bool, 
 				break
 			}
 			for j, v := range arr {
-				indRef2 := v.(types.IndirectRef)
+				indRef2, err := indirectRef(v, fmt.Sprintf("page %d Annots", i), j)
+				if err != nil {
+					return err
+				}
 				if indRef1 == indRef2 {
 					arr = append(arr[:j], arr[j+1:]...)
 					delete(m, indRef1)
 					if err := xRefTable.DeleteObject(indRef1); err != nil {
-						return err
+						return fmt.Errorf("page %d: delete field annotation obj#%d: %w", i, indRef1.ObjectNumber.Value(), err)
 					}
 					*ok = true
 					break
@@ -1351,17 +1402,16 @@ func deletePageAnnots(xRefTable *model.XRefTable, m map[types.IndirectRef]bool, 
 
 // RemoveFormFields deletes all form fields with given ID or name from the form represented by xRefTable.
 func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
-
 	xRefTable := ctx.XRefTable
 
 	fields, err := Fields(xRefTable)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("AcroForm Fields: %w", err)
 	}
 
 	indRefs, err := annotIndRefsForFields(xRefTable, fieldIDsOrNames, fields)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("resolve selected fields: %w", err)
 	}
 
 	indRefsClone := make([]types.IndirectRef, len(indRefs))
@@ -1369,7 +1419,7 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 
 	// Remove fields from AcroDict.
 	if err := removeFormFields(xRefTable, &indRefsClone, &fields); err != nil {
-		return false, err
+		return false, fmt.Errorf("field tree: remove fields: %w", err)
 	}
 
 	if len(indRefsClone) > 0 {
@@ -1388,7 +1438,7 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 	for _, indRef := range indRefs {
 		d, err := xRefTable.DereferenceDict(indRef)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("field obj#%d: dereference: %w", indRef.ObjectNumber.Value(), err)
 		}
 		o, ok := d.Find("Kids")
 		if !ok {
@@ -1397,15 +1447,19 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 		}
 		kids, err := xRefTable.DereferenceArray(o)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("field obj#%d: Kids: %w", indRef.ObjectNumber.Value(), err)
 		}
-		for _, indRef := range kids {
-			m[indRef.(types.IndirectRef)] = true
+		for i, o := range kids {
+			kidIndRef, err := indirectRef(o, fmt.Sprintf("field obj#%d Kids", indRef.ObjectNumber.Value()), i)
+			if err != nil {
+				return false, err
+			}
+			m[kidIndRef] = true
 		}
 	}
 
 	if err := deletePageAnnots(xRefTable, m, &ok); err != nil {
-		return false, err
+		return false, fmt.Errorf("page annotations: remove fields: %w", err)
 	}
 
 	if len(m) > 0 {
@@ -1423,15 +1477,16 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 }
 
 func resetBtn(xRefTable *model.XRefTable, d types.Dict) error {
-
 	ff := d.IntEntry("Ff")
 	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldPushbutton > 0 {
 		return nil
 	}
 
 	v := types.Name("Off")
-	if s, found := d.Find("DV"); found {
-		v = s.(types.Name)
+	if n, found, err := dictNameEntry(xRefTable, d, "DV"); err != nil {
+		return err
+	} else if found {
+		v = n
 	}
 
 	d["V"] = v
@@ -1442,27 +1497,26 @@ func resetBtn(xRefTable *model.XRefTable, d types.Dict) error {
 
 	vraw, err := types.DecodeName(v.String())
 	if err != nil {
-		return err
+		return fmt.Errorf("entry DV: decode name: %w", err)
 	}
 
 	// RadiobuttonGroup
 
-	for _, o := range d.ArrayEntry("Kids") {
-
+	for i, o := range d.ArrayEntry("Kids") {
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
-			return err
+			return fmt.Errorf("kid %d: dereference: %w", i+1, err)
 		}
 
 		d1, err := locateAPN(xRefTable, d)
 		if err != nil {
-			return err
+			return fmt.Errorf("kid %d: appearance: %w", i+1, err)
 		}
 
 		for k := range d1 {
 			k, err := types.DecodeName(k)
 			if err != nil {
-				return err
+				return fmt.Errorf("kid %d: decode appearance state: %w", i+1, err)
 			}
 			if k != "Off" {
 				d["AS"] = types.Name("Off")
@@ -1485,7 +1539,7 @@ func resetComboBoxOrRegularListBox(d types.Dict, opts []string, ff *int) (types.
 	} else {
 		dv, err := types.StringLiteralToString(*sl)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("entry DV: decode string: %w", err)
 		}
 		// Check if dv is a valid option.
 		for i, o := range opts {
@@ -1557,7 +1611,7 @@ func resetCh(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 
 	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldCombo == 0 {
 		if err := primitives.EnsureListBoxAP(ctx, d, opts, ind, da, fonts); err != nil {
-			return err
+			return fmt.Errorf("appearance: %w", err)
 		}
 	}
 
@@ -1572,13 +1626,13 @@ func resetTx(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 	if o, found := d.Find("DV"); found {
 		o1, err := ctx.Dereference(o)
 		if err != nil {
-			return err
+			return fmt.Errorf("entry DV: dereference: %w", err)
 		}
 		d["V"] = o1
 		sl, _ := o1.(types.StringLiteral)
 		s, err = types.StringLiteralToString(sl)
 		if err != nil {
-			return err
+			return fmt.Errorf("entry DV: decode string: %w", err)
 		}
 	} else {
 		if _, found := d["V"]; !found {
@@ -1602,11 +1656,10 @@ func resetTx(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 	kids := d.ArrayEntry("Kids")
 	if len(kids) > 0 {
 
-		for _, o := range kids {
-
+		for i, o := range kids {
 			d, err := ctx.DereferenceDict(o)
 			if err != nil {
-				return err
+				return fmt.Errorf("kid %d: dereference: %w", i+1, err)
 			}
 
 			if isDate {
@@ -1616,7 +1669,7 @@ func resetTx(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 			}
 
 			if err != nil {
-				return err
+				return fmt.Errorf("kid %d: appearance: %w", i+1, err)
 			}
 		}
 
@@ -1628,8 +1681,10 @@ func resetTx(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 	} else {
 		err = primitives.EnsureTextFieldAP(ctx, d, s, multiLine, comb, 0, da, fonts)
 	}
-
-	return err
+	if err != nil {
+		return fmt.Errorf("appearance: %w", err)
+	}
+	return nil
 }
 
 func matchField(fi *fieldInfo, fieldIDsOrNames []string) bool {
@@ -1645,14 +1700,13 @@ func resetPageFields(
 	fields types.Array,
 	fonts map[string]types.IndirectRef,
 	ok *bool) error {
-
 	indRefs := map[types.IndirectRef]bool{}
 
 	for _, ir := range *(wAnnots.IndRefs) {
 
 		found, fi, err := isField(ctx.XRefTable, ir, fields)
 		if err != nil {
-			return err
+			return fmt.Errorf("resolve field: %w", err)
 		}
 		if !found {
 			continue
@@ -1671,7 +1725,7 @@ func resetPageFields(
 
 		d, err := ctx.DereferenceDict(ir)
 		if err != nil {
-			return err
+			return fmt.Errorf("field %s obj#%d: dereference: %w", fi.id, ir.ObjectNumber.Value(), err)
 		}
 		if len(d) == 0 {
 			continue
@@ -1697,7 +1751,7 @@ func resetPageFields(
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("field %s: %w", fi.id, err)
 		}
 
 		*ok = true
@@ -1708,12 +1762,11 @@ func resetPageFields(
 
 // ResetFormFields clears or resets all form fields contained in fieldIDsOrNames to its default.
 func ResetFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
-
 	xRefTable := ctx.XRefTable
 
 	fields, err := Fields(xRefTable)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("AcroForm Fields: %w", err)
 	}
 
 	var ok bool
@@ -1732,12 +1785,12 @@ func ResetFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error)
 		}
 
 		if err := resetPageFields(ctx, fieldIDsOrNames, wAnnots, fields, fonts, &ok); err != nil {
-			return false, err
+			return false, fmt.Errorf("page %d: reset fields: %w", i, err)
 		}
 	}
 
 	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
-		return false, err
+		return false, fmt.Errorf("form fonts: update: %w", err)
 	}
 
 	// pdfcpu provides all appearance streams for form fields.
@@ -1779,7 +1832,7 @@ func ensureAP(ctx *model.Context, d types.Dict, fi *fieldInfo, fonts map[string]
 			if sl := d.StringLiteralEntry("V"); sl != nil {
 				s, err := types.StringLiteralToString(*sl)
 				if err != nil {
-					return err
+					return fmt.Errorf("entry V: decode string: %w", err)
 				}
 				v = s
 			}
@@ -1801,14 +1854,13 @@ func lockPageFields(
 	wAnnots model.Annot,
 	fonts map[string]types.IndirectRef,
 	ok *bool) error {
-
 	indRefs := map[types.IndirectRef]bool{}
 
 	for _, ir := range *(wAnnots.IndRefs) {
 
 		found, fi, err := isField(ctx.XRefTable, ir, fields)
 		if err != nil {
-			return err
+			return fmt.Errorf("resolve field: %w", err)
 		}
 		if !found {
 			continue
@@ -1828,7 +1880,7 @@ func lockPageFields(
 
 		d, err := ctx.DereferenceDict(ir)
 		if err != nil {
-			return err
+			return fmt.Errorf("field %s obj#%d: dereference: %w", fi.id, ir.ObjectNumber.Value(), err)
 		}
 		if len(d) == 0 {
 			continue
@@ -1837,16 +1889,16 @@ func lockPageFields(
 		lockFormField(d)
 		*ok = true
 
-		for _, o := range d.ArrayEntry("Kids") {
+		for i, o := range d.ArrayEntry("Kids") {
 			d, err := ctx.DereferenceDict(o)
 			if err != nil {
-				return err
+				return fmt.Errorf("field %s: kid %d: dereference: %w", fi.id, i+1, err)
 			}
 			lockFormField(d)
 		}
 
 		if err := ensureAP(ctx, d, fi, fonts); err != nil {
-			return err
+			return fmt.Errorf("field %s: appearance: %w", fi.id, err)
 		}
 	}
 
@@ -1855,14 +1907,13 @@ func lockPageFields(
 
 // LockFormFields turns all form fields contained in fieldIDsOrNames into read-only.
 func LockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
-
 	// Note: Not honoured by Apple Preview for Checkboxes, RadiobuttonGroups and ComboBoxes.
 
 	xRefTable := ctx.XRefTable
 
 	fields, err := Fields(xRefTable)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("AcroForm Fields: %w", err)
 	}
 
 	var ok bool
@@ -1881,12 +1932,12 @@ func LockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) 
 		}
 
 		if err := lockPageFields(ctx, fieldIDsOrNames, fields, wAnnots, fonts, &ok); err != nil {
-			return false, err
+			return false, fmt.Errorf("page %d: lock fields: %w", i, err)
 		}
 	}
 
 	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
-		return false, err
+		return false, fmt.Errorf("form fonts: update: %w", err)
 	}
 
 	// pdfcpu provides all appearance streams for form fields.
@@ -1929,14 +1980,13 @@ func unlockPageFields(
 	fields types.Array,
 	wAnnots model.Annot,
 	ok *bool) error {
-
 	indRefs := map[types.IndirectRef]bool{}
 
 	for _, ir := range *(wAnnots.IndRefs) {
 
 		found, fi, err := isField(xRefTable, ir, fields)
 		if err != nil {
-			return err
+			return fmt.Errorf("resolve field: %w", err)
 		}
 		if !found {
 			continue
@@ -1956,7 +2006,7 @@ func unlockPageFields(
 
 		d, err := xRefTable.DereferenceDict(ir)
 		if err != nil {
-			return err
+			return fmt.Errorf("field %s obj#%d: dereference: %w", fi.id, ir.ObjectNumber.Value(), err)
 		}
 		if len(d) == 0 {
 			continue
@@ -1966,16 +2016,16 @@ func unlockPageFields(
 
 		*ok = true
 
-		for _, o := range d.ArrayEntry("Kids") {
+		for i, o := range d.ArrayEntry("Kids") {
 			d, err := xRefTable.DereferenceDict(o)
 			if err != nil {
-				return err
+				return fmt.Errorf("field %s: kid %d: dereference: %w", fi.id, i+1, err)
 			}
 			unlockFormField(d)
 		}
 
 		if err := deleteAP(d, fi); err != nil {
-			return err
+			return fmt.Errorf("field %s: appearance: %w", fi.id, err)
 		}
 
 	}
@@ -1983,14 +2033,13 @@ func unlockPageFields(
 	return nil
 }
 
-// UnlockFormFields turns all form fields contained in fieldIDsOrNames writeable.
+// UnlockFormFields turns all form fields contained in fieldIDsOrNames writable.
 func UnlockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
-
 	xRefTable := ctx.XRefTable
 
 	fields, err := Fields(xRefTable)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("AcroForm Fields: %w", err)
 	}
 
 	var ok bool
@@ -2008,7 +2057,7 @@ func UnlockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 		}
 
 		if err := unlockPageFields(xRefTable, fieldIDsOrNames, fields, wAnnots, &ok); err != nil {
-			return false, err
+			return false, fmt.Errorf("page %d: unlock fields: %w", i, err)
 		}
 	}
 

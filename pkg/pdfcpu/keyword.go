@@ -17,6 +17,9 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -36,66 +39,124 @@ func KeywordsList(ctx *model.Context) ([]string, error) {
 	return ss, nil
 }
 
-func removeKeywordsFromMetadata(ctx *model.Context) error {
+func keywordMetadataStream(ctx *model.Context) (types.Dict, *types.StreamDict, error) {
 	rootDict, err := ctx.Catalog()
 	if err != nil {
-		return err
+		return nil, nil, fmt.Errorf("catalog Metadata stream: access catalog: %w", err)
 	}
 
-	indRef, _ := rootDict["Metadata"].(types.IndirectRef)
-	entry, _ := ctx.FindTableEntryForIndRef(&indRef)
-	sd, _ := entry.Object.(types.StreamDict)
+	o, found := rootDict["Metadata"]
+	if !found {
+		return nil, nil, errors.New("catalog Metadata stream: missing")
+	}
+	sd, _, err := ctx.DereferenceStreamDict(o)
+	if err != nil {
+		return nil, nil, fmt.Errorf("catalog Metadata stream: dereference: %w", err)
+	}
+	if sd == nil {
+		return nil, nil, errors.New("catalog Metadata stream: missing object")
+	}
+	return rootDict, sd, nil
+}
+
+func storeKeywordMetadataStream(ctx *model.Context, rootDict types.Dict, sd types.StreamDict) error {
+	indRef, ok := rootDict["Metadata"].(types.IndirectRef)
+	if !ok {
+		rootDict["Metadata"] = sd
+		return nil
+	}
+
+	entry, found := ctx.FindTableEntryForIndRef(&indRef)
+	if !found || entry == nil {
+		return fmt.Errorf("catalog Metadata stream obj#%d: missing xref entry", indRef.ObjectNumber.Value())
+	}
+	entry.Object = sd
+	return nil
+}
+
+func removeKeywordsFromMetadata(ctx *model.Context) (bool, error) {
+	rootDict, sd, err := keywordMetadataStream(ctx)
+	if err != nil {
+		return false, err
+	}
 
 	if err = sd.Decode(); err != nil {
-		return err
+		return false, fmt.Errorf("catalog Metadata stream: decode: %w", err)
 	}
 
+	before := sd.Content
 	if err = model.RemoveKeywords(&sd.Content); err != nil {
-		return err
+		return false, fmt.Errorf("catalog Metadata stream: remove keywords: %w", err)
+	}
+	if bytes.Equal(before, sd.Content) {
+		return false, nil
 	}
 
 	//fmt.Println(hex.Dump(sd.Content))
 
 	if err := sd.Encode(); err != nil {
-		return err
+		return false, fmt.Errorf("catalog Metadata stream: encode: %w", err)
 	}
 
-	entry.Object = sd
-
-	return nil
+	if err := storeKeywordMetadataStream(ctx, rootDict, *sd); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func finalizeKeywords(ctx *model.Context) error {
+	if ctx.Info == nil {
+		return errors.New("Info dictionary: missing")
+	}
 	d, err := ctx.DereferenceDict(*ctx.Info)
-	if err != nil || d == nil {
-		return err
+	if err != nil {
+		return fmt.Errorf("Info dictionary: dereference: %w", err)
+	}
+	if d == nil {
+		return errors.New("Info dictionary: missing object")
 	}
 
 	ss, err := KeywordsList(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("Info dictionary Keywords: collect keywords: %w", err)
 	}
 
 	s0 := strings.Join(ss, "; ")
 
 	s, err := types.EscapedUTF16String(s0)
 	if err != nil {
-		return err
+		return fmt.Errorf("Info dictionary Keywords: encode text: %w", err)
 	}
 
 	d["Keywords"] = types.StringLiteral(*s)
 
 	if ctx.CatalogXMPMeta != nil {
-		removeKeywordsFromMetadata(ctx)
+		if _, err := removeKeywordsFromMetadata(ctx); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
+func prepareKeywordsInfo(ctx *model.Context) error {
+	if ctx.XRefTable.Version() < model.V20 {
+		if err := ensureInfoDict(ctx); err != nil {
+			return fmt.Errorf("Info dictionary: ensure: %w", err)
+		}
+	}
+	if ctx.Info == nil {
+		return errors.New("Info dictionary: missing")
+	}
+	if err := ensureFileID(ctx); err != nil {
+		return fmt.Errorf("file ID: ensure: %w", err)
+	}
+	return nil
+}
+
 // KeywordsAdd adds keywords to the document info dict.
-// Returns true if at least one keyword was added.
 func KeywordsAdd(ctx *model.Context, keywords []string) error {
-	if err := ensureInfoDictAndFileID(ctx); err != nil {
+	if err := prepareKeywordsInfo(ctx); err != nil {
 		return err
 	}
 
@@ -114,24 +175,41 @@ func KeywordsRemove(ctx *model.Context, keywords []string) (bool, error) {
 	}
 
 	d, err := ctx.DereferenceDict(*ctx.Info)
-	if err != nil || d == nil {
-		return false, err
+	if err != nil {
+		return false, fmt.Errorf("Info dictionary: dereference: %w", err)
+	}
+	if d == nil {
+		return false, errors.New("Info dictionary: missing object")
 	}
 
 	if len(keywords) == 0 {
 		// Remove all keywords.
+		_, removed := d["Keywords"]
 		delete(d, "Keywords")
 
 		if ctx.CatalogXMPMeta != nil {
-			removeKeywordsFromMetadata(ctx)
+			metadataRemoved, err := removeKeywordsFromMetadata(ctx)
+			if err != nil {
+				return false, err
+			}
+			removed = removed || metadataRemoved
 		}
 
-		return true, nil
+		for keyword, active := range ctx.KeywordList {
+			removed = removed || active
+			ctx.KeywordList[keyword] = false
+		}
+
+		return removed, nil
 	}
 
+	remove := types.StringSet{}
+	for _, keyword := range keywords {
+		remove[strings.TrimSpace(keyword)] = true
+	}
 	var removed bool
 	for keyword := range ctx.KeywordList {
-		if types.MemberOf(keyword, keywords) {
+		if remove[keyword] {
 			ctx.KeywordList[keyword] = false
 			removed = true
 		}

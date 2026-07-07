@@ -435,8 +435,8 @@ func (tb *TextBox) render(p *model.Page, pageNr int, fonts model.FontMap) error 
 	}
 
 	if tb.anchored {
-		model.WriteMultiLineAnchored(tb.pdf.XRefTable, p.Buf, r, nil, *td, tb.anchor)
-		return nil
+		_, err := model.WriteMultiLineAnchored(tb.pdf.XRefTable, p.Buf, r, nil, *td, tb.anchor)
+		return err
 	}
 
 	td.X, td.Y = types.NormalizeCoord(tb.x, tb.y, tb.content.Box(), pdf.origin, false)
@@ -463,7 +463,6 @@ func (tb *TextBox) render(p *model.Page, pageNr int, fonts model.FontMap) error 
 		r.LL.Y += td.BorderWidth
 	}
 
-	model.WriteColumn(tb.pdf.XRefTable, p.Buf, r, nil, *td, float64(tb.Width))
-
-	return nil
+	_, err = model.WriteColumn(tb.pdf.XRefTable, p.Buf, r, nil, *td, float64(tb.Width))
+	return err
 }

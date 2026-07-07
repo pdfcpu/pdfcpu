@@ -290,6 +290,7 @@ Pipeline examples:
      value ... one of:
 
      SinglePage     ... Display one page at a time (default)
+     OneColumn      ... Display the pages in one continuous column
      TwoColumnLeft  ... Display the pages in two columns, with odd- numbered pages on the left
      TwoColumnRight ... Display the pages in two columns, with odd- numbered pages on the right
      TwoPageLeft    ... Display the pages two at a time, with odd-numbered pages on the left

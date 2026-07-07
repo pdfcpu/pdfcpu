@@ -23,7 +23,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -293,27 +292,12 @@ func InspectCertificates(cmd *Command) ([]string, error) {
 // ValidateSignatures validates contained digital signature integrity.
 func ValidateSignatures(cmd *Command) ([]string, error) {
 	if *cmd.InFile == "-" {
-		rs, err := readSeekerFromStdin()
+		in, err := readSeekerFromStdin("validate signatures")
 		if err != nil {
 			return nil, err
 		}
-
-		f, err := os.CreateTemp("", "pdfcpu-signatures-stdin-*.pdf")
-		if err != nil {
-			return nil, err
-		}
-		name := f.Name()
-		defer os.Remove(name)
-
-		if _, err := io.Copy(f, rs); err != nil {
-			_ = f.Close()
-			return nil, err
-		}
-		if err := f.Close(); err != nil {
-			return nil, err
-		}
-
-		return api.ValidateSignaturesFile(name, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
+		result, opErr := api.ValidateSignaturesFile(in.path, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
+		return result, in.finalize("validate signatures", opErr)
 	}
 
 	return api.ValidateSignaturesFile(*cmd.InFile, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
@@ -325,13 +309,9 @@ func RemoveSignatures(cmd *Command) ([]string, error) {
 		return nil, api.RemoveSignaturesFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
 	}
 
-	rs, w, cleanup, err := streamInOut(*cmd.InFile, *cmd.OutFile)
+	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "remove signatures")
 	if err != nil {
 		return nil, err
 	}
-	if cleanup != nil {
-		defer cleanup()
-	}
-
-	return nil, api.RemoveSignatures(rs, w, cmd.Conf)
+	return nil, finalize(api.RemoveSignatures(rs, w, cmd.Conf))
 }

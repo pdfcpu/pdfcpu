@@ -19,14 +19,14 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
 	"github.com/spf13/cobra"
 )
@@ -42,6 +42,7 @@ func fontsCmd() *cobra.Command {
 		&cobra.Command{
 			Use:   "list",
 			Short: "List supported fonts",
+			Args:  cobra.NoArgs,
 			RunE:  wrapHandler(handleListFontsCommand),
 		},
 		&cobra.Command{
@@ -51,9 +52,8 @@ func fontsCmd() *cobra.Command {
 			RunE:  wrapHandler(handleInstallFontsCommand),
 		},
 		&cobra.Command{
-			Use:   "cheatsheet fontFiles...",
+			Use:   "cheatsheet [fontNames...]",
 			Short: "Create font cheat sheets",
-			Args:  cobra.MinimumNArgs(1),
 			RunE:  wrapHandler(handleCreateCheatSheetFontsCommand),
 		},
 	)
@@ -159,11 +159,11 @@ func defaultImageImportCommand(conf *model.Configuration, args []string) error {
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.ImportImagesCommand(imageFileNames, args[0], pdfcpu.DefaultImportConfig(), conf))
+	return runCommand(cli.ImportImagesCommand(imageFileNames, args[0], api.DefaultImportConfig(), conf))
 }
 
 func describedImageImportCommand(conf *model.Configuration, args []string) error {
-	imp, err := pdfcpu.ParseImportDetails(args[0], conf.Unit)
+	imp, err := api.Import(args[0], conf.Unit)
 	if err != nil {
 		return err
 	}
@@ -200,35 +200,15 @@ func handleListFontsCommand(conf *model.Configuration, args []string) error {
 	return runCommand(cli.ListFontsCommand(conf))
 }
 
-func fontFileNames(args []string) []string {
-	fileNames := []string{}
-	for _, arg := range args {
-		if !types.MemberOf(filepath.Ext(arg), []string{".ttf", ".ttc"}) {
-			continue
-		}
-		fileNames = append(fileNames, arg)
-	}
-	return fileNames
-}
-
 func handleInstallFontsCommand(conf *model.Configuration, args []string) error {
-	fileNames := fontFileNames(args)
-	if len(fileNames) == 0 {
-		return errors.New("please supply a *.ttf or *.tcc fontname")
-	}
-
-	return runCommand(cli.InstallFontsCommand(fileNames, conf))
+	return runCommand(cli.InstallFontsCommand(args, conf))
 }
 
 func handleCreateCheatSheetFontsCommand(conf *model.Configuration, args []string) error {
 	if err := validateNoEmptyArgs(args, "font name"); err != nil {
 		return err
 	}
-	fileNames := []string{}
-	if len(args) > 0 {
-		fileNames = append(fileNames, args...)
-	}
-	return runCommand(cli.CreateCheatSheetsFontsCommand(fileNames, conf))
+	return runCommand(cli.CreateCheatSheetsFontsCommand(args, conf))
 }
 
 func handleListImagesCommand(conf *model.Configuration, args []string) error {
@@ -400,18 +380,37 @@ func validateAttachmentArg(arg string) error {
 	return nil
 }
 
-func attachmentFiles(args []string, expandGlobs bool) ([]string, error) {
+var errNoAttachmentGlobMatches = errors.New("no matches")
+
+func hasAttachmentGlobMeta(s string) bool {
+	meta := "*?["
+	if os.PathSeparator != '\\' {
+		meta += `\`
+	}
+	return strings.ContainsAny(s, meta)
+}
+
+func attachmentFiles(args []string, expandGlobs bool, op string) ([]string, error) {
 	fileNames := []string{}
 	for _, arg := range args {
 		if err := validateAttachmentArg(arg); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s: validate attachment filename: %w", op, err)
 		}
-		if expandGlobs && strings.Contains(arg, "*") {
-			matches, err := filepath.Glob(arg)
+		parts := strings.SplitN(arg, ",", 2)
+		if expandGlobs && hasAttachmentGlobMeta(parts[0]) {
+			matches, err := filepath.Glob(parts[0])
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("%s: expand attachment glob %q: %w", op, parts[0], err)
 			}
-			fileNames = append(fileNames, matches...)
+			if len(matches) == 0 {
+				return nil, fmt.Errorf("%s: expand attachment glob %q: %w", op, parts[0], errNoAttachmentGlobMatches)
+			}
+			for _, match := range matches {
+				if len(parts) == 2 {
+					match += "," + parts[1]
+				}
+				fileNames = append(fileNames, match)
+			}
 			continue
 		}
 		fileNames = append(fileNames, arg)
@@ -420,19 +419,34 @@ func attachmentFiles(args []string, expandGlobs bool) ([]string, error) {
 }
 
 func handleListAttachmentsCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 {
+		return api.ErrMissingPDFInput
+	}
 	inFile := args[0]
 	if err := inputPDFArg(conf, inFile); err != nil {
-		return err
+		return fmt.Errorf("list attachments: validate input: %w", err)
 	}
 	return runCommand(cli.ListAttachmentsCommand(inFile, conf))
 }
 
 func handleAddAttachmentsCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 {
+		return api.ErrMissingPDFInput
+	}
+	if len(args) < 2 {
+		return fmt.Errorf("add attachments: %w", api.ErrNoAttachmentAdded)
+	}
 	inFile := args[0]
 	if err := inputPDFArg(conf, inFile); err != nil {
-		return err
+		return fmt.Errorf("add attachments: validate input: %w", err)
 	}
-	fileNames, err := attachmentFiles(args[1:], true)
+	fileNames, err := attachmentFiles(args[1:], true, "add attachments")
 	if err != nil {
 		return err
 	}
@@ -440,11 +454,20 @@ func handleAddAttachmentsCommand(conf *model.Configuration, args []string) error
 }
 
 func handleAddAttachmentsPortfolioCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 {
+		return api.ErrMissingPDFInput
+	}
+	if len(args) < 2 {
+		return fmt.Errorf("add portfolio attachments: %w", api.ErrNoAttachmentAdded)
+	}
 	inFile := args[0]
 	if err := inputPDFArg(conf, inFile); err != nil {
-		return err
+		return fmt.Errorf("add portfolio attachments: validate input: %w", err)
 	}
-	fileNames, err := attachmentFiles(args[1:], true)
+	fileNames, err := attachmentFiles(args[1:], true, "add portfolio attachments")
 	if err != nil {
 		return err
 	}
@@ -452,27 +475,42 @@ func handleAddAttachmentsPortfolioCommand(conf *model.Configuration, args []stri
 }
 
 func handleRemoveAttachmentsCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 {
+		return api.ErrMissingPDFInput
+	}
 	inFile := args[0]
 	if err := inputPDFArg(conf, inFile); err != nil {
-		return err
+		return fmt.Errorf("remove attachments: validate input: %w", err)
 	}
 	if err := validateNoEmptyArgs(args[1:], "attachment filename"); err != nil {
-		return err
+		return fmt.Errorf("remove attachments: validate attachment filenames: %w", err)
 	}
 	return runCommand(cli.RemoveAttachmentsCommand(inFile, stdoutForStdin(inFile), args[1:], conf))
 }
 
 func handleExtractAttachmentsCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 {
+		return api.ErrMissingPDFInput
+	}
+	if len(args) < 2 {
+		return api.ErrMissingPDFOutput
+	}
 	inFile := args[0]
 	if err := inputPDFArg(conf, inFile); err != nil {
-		return err
+		return fmt.Errorf("extract attachments: validate input: %w", err)
 	}
 	outDir := args[1]
 	if err := validateNoEmptyArgs(args[2:], "attachment filename"); err != nil {
-		return err
+		return fmt.Errorf("extract attachments: validate attachment filenames: %w", err)
 	}
 	if err := ensureOutputDirEmpty(outDir); err != nil {
-		return err
+		return fmt.Errorf("extract attachments: prepare output directory: %w", err)
 	}
 	return runCommand(cli.ExtractAttachmentsCommand(inFile, outDir, args[2:], conf))
 }

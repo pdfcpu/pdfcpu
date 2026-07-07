@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -35,7 +34,7 @@ func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impC
 
 	// The default import conf uses the special pos:full argument
 	// which overrides all other import conf parms.
-	imp := pdfcpu.DefaultImportConfig()
+	imp := api.DefaultImportConfig()
 	if impConf != "" {
 		if imp, err = api.Import(impConf, types.POINTS); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
@@ -51,7 +50,6 @@ func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impC
 
 // TestImportImages verifies import images.
 func TestImportImages(t *testing.T) {
-
 	outDir := filepath.Join(samplesDir, "import")
 
 	testFile1 := filepath.Join(outDir, "CenteredGraySepia.pdf")
@@ -102,7 +100,6 @@ func TestImportImages(t *testing.T) {
 
 // TestMemBasedWriterPanic verifies mem based writer panic.
 func TestMemBasedWriterPanic(t *testing.T) {
-
 	imgFiles := []string{filepath.Join(resDir, "logoSmall.png")}
 
 	rr := make([]io.Reader, len(imgFiles))
@@ -119,5 +116,4 @@ func TestMemBasedWriterPanic(t *testing.T) {
 	if err := api.ImportImages(nil, outBuf, rr, nil, nil); err != nil {
 		t.Fatal(err)
 	}
-
 }

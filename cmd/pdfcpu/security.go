@@ -18,13 +18,15 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/spf13/cobra"
 )
 
@@ -78,7 +80,6 @@ func decryptCmd() *cobra.Command {
 func encryptCmd() *cobra.Command {
 	opts := &encryptOptions{
 		mode: "aes",
-		key:  "256",
 		perm: "none",
 	}
 
@@ -130,21 +131,36 @@ func permissionsCmd() *cobra.Command {
 }
 
 func handleListPermissionsCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 {
+		return api.ErrMissingPDFInput
+	}
+
 	inFiles := []string{}
-	for _, arg := range args {
-		if strings.Contains(arg, "*") {
+	for i, arg := range args {
+		if arg == "" {
+			return fmt.Errorf("list permissions: input %d: %w", i+1, api.ErrMissingPDFInput)
+		}
+		if strings.ContainsAny(arg, "*?[") {
 			matches, err := filepath.Glob(arg)
 			if err != nil {
-				return err
+				return fmt.Errorf("list permissions: expand input pattern %q: %w", arg, err)
 			}
-			// TODO check extension
+			if len(matches) == 0 {
+				return fmt.Errorf("list permissions: input pattern %q matched no files", arg)
+			}
+			for _, match := range matches {
+				if err := inputPDFArg(conf, match); err != nil {
+					return fmt.Errorf("list permissions: parse arguments: %w", err)
+				}
+			}
 			inFiles = append(inFiles, matches...)
 			continue
 		}
-		if conf.CheckFileNameExt && arg != "-" {
-			if err := ensurePDFExtension(arg); err != nil {
-				return err
-			}
+		if err := inputPDFArg(conf, arg); err != nil {
+			return fmt.Errorf("list permissions: parse arguments: %w", err)
 		}
 		inFiles = append(inFiles, arg)
 	}
@@ -169,7 +185,7 @@ func isBinary(s string) bool {
 }
 
 func isHex(s string) bool {
-	if s[0] != 'x' {
+	if len(s) < 2 || s[0] != 'x' {
 		return false
 	}
 	s = s[1:]
@@ -206,57 +222,71 @@ func validatePerm(perm string) error {
 }
 
 func handleSetPermissionsCommand(conf *model.Configuration, args []string) error {
-	if perm != "" {
-		perm = permCompletion(perm)
+	if err := validateSecurityCommandArgs("set permissions", conf, args, 1, 2); err != nil {
+		return err
 	}
 
-	if err := validatePerm(perm); err != nil {
-		return err
+	normalizedPerm := perm
+	if normalizedPerm != "" {
+		normalizedPerm = permCompletion(normalizedPerm)
+	}
+
+	if err := validatePerm(normalizedPerm); err != nil {
+		return fmt.Errorf("set permissions: validate permissions: %w", err)
 	}
 
 	inFile, outFile, err := optionalOutputPDFArgs(conf, args)
 	if err != nil {
-		return err
+		return fmt.Errorf("set permissions: parse arguments: %w", err)
 	}
 
-	configPerm(perm, conf)
+	configPerm(normalizedPerm, conf)
 
 	return runCommand(cli.SetPermissionsCommand(inFile, outFile, conf))
 }
 
 func handleDecryptCommand(conf *model.Configuration, args []string) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if err := validateCryptoCommandArgs("decrypt", args); err != nil {
+		return err
+	}
 	inFile, outFile, err := inputOutputPDFArgs(conf, args)
 	if err != nil {
-		return err
+		return fmt.Errorf("decrypt: parse arguments: %w", err)
 	}
 	return runCommand(cli.DecryptCommand(inFile, outFile, conf))
 }
 
 func validateEncryptModeFlag(opts *encryptOptions) error {
-	if !types.MemberOf(opts.mode, []string{"rc4", "aes", ""}) {
+	if opts == nil {
+		return errors.New("missing encrypt options")
+	}
+	switch opts.mode {
+	case "":
+		opts.mode = "aes"
+	case "rc4", "aes":
+	default:
 		return errors.New("valid modes: rc4,aes default:aes")
 	}
 
-	if opts.mode == "" {
-		opts.mode = "aes"
-	}
-
-	if opts.key == "256" && opts.mode == "rc4" {
+	if opts.mode == "rc4" && opts.key == "" {
 		opts.key = "128"
 	}
-
-	if opts.mode == "rc4" {
-		if opts.key != "40" && opts.key != "128" && opts.key != "" {
-			return errors.New("supported RC4 key lengths: 40,128 default:128")
-		}
+	if opts.mode == "aes" && opts.key == "" {
+		opts.key = "256"
 	}
+	return validateEncryptKeyFlag(opts.mode, opts.key)
+}
 
-	if opts.mode == "aes" {
-		if opts.key != "40" && opts.key != "128" && opts.key != "256" && opts.key != "" {
-			return errors.New("supported AES key lengths: 40,128,256 default:256")
-		}
+func validateEncryptKeyFlag(mode, key string) error {
+	if mode == "rc4" && key != "40" && key != "128" {
+		return errors.New("supported RC4 key lengths: 40,128 default:128")
 	}
-
+	if mode == "aes" && key != "40" && key != "128" && key != "256" {
+		return errors.New("supported AES key lengths: 40,128,256 default:256")
+	}
 	return nil
 }
 
@@ -271,19 +301,25 @@ func validateEncryptFlags(opts *encryptOptions) error {
 }
 
 func handleEncryptCommand(conf *model.Configuration, args []string, opts *encryptOptions) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if err := validateCryptoCommandArgs("encrypt", args); err != nil {
+		return err
+	}
+	if opts == nil {
+		return errors.New("encrypt: missing options")
+	}
 	if opts.perm != "" {
 		opts.perm = permCompletion(opts.perm)
 	}
 
 	if conf.OwnerPW == "" {
-		return errors.New("missing non-empty owner password")
+		return fmt.Errorf("encrypt: owner password must not be empty (use --opw): %w", pdfcpu.ErrOwnerPasswordRequired)
 	}
 
 	if err := validateEncryptFlags(opts); err != nil {
-		return err
-	}
-	if perm != "" {
-		perm = permCompletion(perm)
+		return fmt.Errorf("encrypt: validate flags: %w", err)
 	}
 
 	conf.EncryptUsingAES = opts.mode != "rc4"
@@ -301,14 +337,26 @@ func handleEncryptCommand(conf *model.Configuration, args []string, opts *encryp
 
 	inFile, outFile, err := inputOutputPDFArgs(conf, args)
 	if err != nil {
-		return err
+		return fmt.Errorf("encrypt: parse arguments: %w", err)
 	}
 
 	return runCommand(cli.EncryptCommand(inFile, outFile, conf))
 }
 
+func validateCryptoCommandArgs(op string, args []string) error {
+	if len(args) == 0 || args[0] == "" {
+		return api.ErrMissingPDFInput
+	}
+	if len(args) > 2 {
+		return fmt.Errorf("%s: expected 1 or 2 arguments", op)
+	}
+	return nil
+}
+
 func handleChangeUserPasswordCommand(conf *model.Configuration, args []string) error {
-	inFile, outFile, err := passwordChangePDFArgs(conf, args)
+	const op = "change user password"
+
+	inFile, outFile, err := passwordChangePDFArgs(op, conf, args)
 	if err != nil {
 		return err
 	}
@@ -320,7 +368,9 @@ func handleChangeUserPasswordCommand(conf *model.Configuration, args []string) e
 }
 
 func handleChangeOwnerPasswordCommand(conf *model.Configuration, args []string) error {
-	inFile, outFile, err := passwordChangePDFArgs(conf, args)
+	const op = "change owner password"
+
+	inFile, outFile, err := passwordChangePDFArgs(op, conf, args)
 	if err != nil {
 		return err
 	}
@@ -328,17 +378,39 @@ func handleChangeOwnerPasswordCommand(conf *model.Configuration, args []string) 
 	pwOld := args[1]
 	pwNew := args[2]
 	if pwNew == "" {
-		return errors.New("owner password must not be empty")
+		return fmt.Errorf("%s: new owner password must not be empty: %w", op, pdfcpu.ErrOwnerPasswordRequired)
 	}
 
 	return runCommand(cli.ChangeOwnerPWCommand(inFile, outFile, &pwOld, &pwNew, conf))
 }
 
-func passwordChangePDFArgs(conf *model.Configuration, args []string) (string, string, error) {
+func validateSecurityCommandArgs(
+	op string,
+	conf *model.Configuration,
+	args []string,
+	minArgs, maxArgs int,
+) error {
+	if conf == nil {
+		return api.ErrMissingConfiguration
+	}
+	if len(args) == 0 || args[0] == "" {
+		return api.ErrMissingPDFInput
+	}
+	if len(args) < minArgs || len(args) > maxArgs {
+		return fmt.Errorf("%s: expected %d or %d arguments", op, minArgs, maxArgs)
+	}
+	return nil
+}
+
+func passwordChangePDFArgs(op string, conf *model.Configuration, args []string) (string, string, error) {
+	if err := validateSecurityCommandArgs(op, conf, args, 3, 4); err != nil {
+		return "", "", err
+	}
+
 	inFile := args[0]
 	if conf.CheckFileNameExt && inFile != "-" {
 		if err := ensurePDFExtension(inFile); err != nil {
-			return "", "", err
+			return "", "", fmt.Errorf("%s: parse arguments: %w", op, err)
 		}
 	}
 
@@ -350,11 +422,11 @@ func passwordChangePDFArgs(conf *model.Configuration, args []string) (string, st
 		outFile = args[3]
 		if outFile != "-" {
 			if err := ensurePDFExtension(outFile); err != nil {
-				return "", "", err
+				return "", "", fmt.Errorf("%s: parse arguments: %w", op, err)
 			}
 		}
 		if err := ensureOutputFileAvailable(outFile); err != nil {
-			return "", "", err
+			return "", "", fmt.Errorf("%s: parse arguments: %w", op, err)
 		}
 	}
 

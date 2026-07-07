@@ -18,6 +18,7 @@ package validate
 
 import (
 	"encoding/xml"
+	"fmt"
 	"strings"
 	"time"
 
@@ -31,9 +32,10 @@ func validateMetadataStream(xRefTable *model.XRefTable, d types.Dict, required b
 		sinceVersion = model.V10
 	}
 
+	rawEntry := d["Metadata"]
 	sd, err := validateStreamDictEntry(xRefTable, d, "dict", "Metadata", required, sinceVersion, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", dictEntryContext("dict", "Metadata", rawEntry), err)
 	}
 	if sd == nil {
 		delete(d, "Metadata")
@@ -43,11 +45,11 @@ func validateMetadataStream(xRefTable *model.XRefTable, d types.Dict, required b
 	dictName := "metaDataDict"
 
 	if _, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Metadata" }); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %s.Type: %w", objectContext(dictEntryContext("dict", "Metadata", rawEntry), rawEntry), dictName, err)
 	}
 
 	if _, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Subtype", OPTIONAL, sinceVersion, func(s string) bool { return s == "XML" }); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %s.Subtype: %w", objectContext(dictEntryContext("dict", "Metadata", rawEntry), rawEntry), dictName, err)
 	}
 
 	return sd, nil
@@ -67,7 +69,10 @@ func validateMetadata(xRefTable *model.XRefTable, d types.Dict, required bool, s
 func catalogMetaData(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) (*model.XMPMeta, error) {
 	sd, err := validateMetadataStream(xRefTable, rootDict, required, sinceVersion)
 	if err != nil || sd == nil {
-		return nil, err
+		if err != nil {
+			return nil, fmt.Errorf("catalog metadata stream: %w", err)
+		}
+		return nil, nil
 	}
 
 	// if xRefTable.Version() < model.V20 {
@@ -80,14 +85,14 @@ func catalogMetaData(xRefTable *model.XRefTable, rootDict types.Dict, required b
 		return nil, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode catalog metadata: %w", err)
 	}
 
 	x := model.XMPMeta{}
 
 	if err = xml.Unmarshal(sd.Content, &x); err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return nil, err
+			return nil, fmt.Errorf("parse catalog metadata: %w", err)
 		}
 		model.ShowSkipped("metadata parse error")
 		return nil, nil
@@ -105,7 +110,6 @@ func populateKeywordList(xRefTable *model.XRefTable, d model.Description) {
 }
 
 func validateRootMetadata(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-
 	if xRefTable.CatalogXMPMeta == nil {
 		return nil
 	}

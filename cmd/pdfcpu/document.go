@@ -27,10 +27,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/spf13/cobra"
 )
 
@@ -230,7 +230,13 @@ func validateCmd() *cobra.Command {
 }
 
 func handleValidateCommand(conf *model.Configuration, args []string, opts *validateOptions) error {
-	inFiles := collectInFiles(conf, args)
+	inFiles, err := collectInFiles(conf, args)
+	if err != nil {
+		return fmt.Errorf("validate: %w", err)
+	}
+	if len(inFiles) == 0 {
+		return fmt.Errorf("validate: %w", api.ErrMissingPDFInput)
+	}
 
 	switch opts.mode {
 	case "strict", "s":
@@ -533,20 +539,22 @@ func splitPageNumbers(args []string) ([]int, error) {
 	if len(args) == 2 {
 		return nil, errors.New("split: missing page numbers")
 	}
-	ii := types.IntSet{}
+	pageNrs := make([]int, 0, len(args)-2)
+	seen := map[int]bool{}
 	for i := 2; i < len(args); i++ {
 		p, err := strconv.Atoi(args[i])
 		if err != nil || p < 2 {
 			return nil, errors.New("split: pageNr is a numeric value >= 2")
 		}
-		ii[p] = true
+		if seen[p] {
+			return nil, errors.New("split: page numbers must be unique")
+		}
+		if len(pageNrs) > 0 && p <= pageNrs[len(pageNrs)-1] {
+			return nil, errors.New("split: page numbers must be sorted ascending")
+		}
+		seen[p] = true
+		pageNrs = append(pageNrs, p)
 	}
-
-	pageNrs := make([]int, 0, len(ii))
-	for k := range ii {
-		pageNrs = append(pageNrs, k)
-	}
-	sort.Ints(pageNrs)
 	return pageNrs, nil
 }
 
@@ -582,6 +590,9 @@ func splitInputOutput(conf *model.Configuration, args []string) (string, string,
 }
 
 func splitSpan(args []string) (int, error) {
+	if len(args) > 3 {
+		return 0, errors.New("split: span mode accepts at most one span")
+	}
 	if len(args) != 3 {
 		return 1, nil
 	}
@@ -592,8 +603,21 @@ func splitSpan(args []string) (int, error) {
 	return span, nil
 }
 
+func validateSplitModeArgs(mode string, args []string) error {
+	if mode == "bookmark" && len(args) > 2 {
+		return errors.New("split: bookmark mode does not accept span or page numbers")
+	}
+	if mode == "span" && len(args) > 3 {
+		return errors.New("split: span mode accepts at most one span")
+	}
+	return nil
+}
+
 func handleSplitCommand(conf *model.Configuration, args []string, opts *splitOptions) error {
 	if err := splitMode(opts); err != nil {
+		return err
+	}
+	if err := validateSplitModeArgs(opts.mode, args); err != nil {
 		return err
 	}
 	inFile, outDir, err := splitInputOutput(conf, args)

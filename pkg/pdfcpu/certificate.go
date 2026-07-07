@@ -190,29 +190,21 @@ func saveCertsAsPEM(certs []*x509.Certificate, filename string, overwrite bool) 
 		return false, errNoCertificatesToSave
 	}
 
-	if !overwrite {
-		if _, err := os.Stat(filename); err == nil {
-			return false, nil
-		}
-	}
-
-	file, err := os.Create(filename)
-	if err != nil {
-		return false, fmt.Errorf("failed to create file: %w", err)
-	}
-	defer file.Close()
-
+	var buf bytes.Buffer
 	for _, cert := range certs {
 		block := &pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: cert.Raw,
 		}
-		if err := pem.Encode(file, block); err != nil {
+		if err := pem.Encode(&buf, block); err != nil {
 			return false, err
 		}
 	}
-
-	return true, nil
+	ok, err := Write(&buf, filename, overwrite)
+	if err != nil {
+		return false, fmt.Errorf("failed to write file: %w", err)
+	}
+	return ok, nil
 }
 
 func saveCertsAsP7C(certs []*x509.Certificate, filename string, overwrite bool) (bool, error) {

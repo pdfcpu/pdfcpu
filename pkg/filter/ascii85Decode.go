@@ -52,7 +52,6 @@ func (f ascii85Decode) Decode(r io.Reader) (io.Reader, error) {
 
 // DecodeLength implements decoding for an ASCII85Decode filter with a maximum output length.
 func (f ascii85Decode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) {
-
 	bb, err := getReaderBytes(r)
 	if err != nil {
 		return nil, err
@@ -65,7 +64,7 @@ func (f ascii85Decode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error
 	bb = bytes.TrimRight(bb, "\r\n")
 
 	if !bytes.HasSuffix(bb, []byte(eodASCII85)) {
-		return nil, errors.New("ascii85Decode: missing eod marker")
+		return nil, errors.New("ASCII85 decode: missing eod marker")
 	}
 
 	// Strip eod sequence: "~>"

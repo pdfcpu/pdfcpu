@@ -53,3 +53,72 @@ func TestDestinationArrayFirstElementStreamDict(t *testing.T) {
 		t.Fatal("strict validation accepted a stream as destination page")
 	}
 }
+
+func TestValidateDestinationArrayReportsLengthContext(t *testing.T) {
+	err := validateDestinationArray(testXRef(t, model.ValidationStrict), types.Array{types.Integer(1)})
+	if err == nil {
+		t.Fatal("expected invalid destination array length error")
+	}
+	if got := err.Error(); got != "destination array: invalid length 1" {
+		t.Fatalf("got %q, want destination array length context", got)
+	}
+}
+
+func TestValidateDestinationArrayReportsModeContext(t *testing.T) {
+	err := validateDestinationArray(testXRef(t, model.ValidationStrict), types.Array{
+		types.Dict{"Type": types.Name("Page")},
+		types.Name("Bogus"),
+	})
+	if err == nil {
+		t.Fatal("expected invalid destination mode error")
+	}
+	if got := err.Error(); got != `destination array mode: invalid mode "Bogus"` {
+		t.Fatalf("got %q, want destination mode context", got)
+	}
+}
+
+func TestValidateDestinationArrayReportsSecondElementContext(t *testing.T) {
+	err := validateDestinationArray(testXRef(t, model.ValidationStrict), types.Array{
+		types.Dict{"Type": types.Name("Page")},
+		types.Integer(1),
+	})
+	requireErrContains(t, err, "destination array[1]: expected name")
+}
+
+func TestValidateActionDestinationEntryReportsEntryContext(t *testing.T) {
+	err := validateActionDestinationEntry(
+		testXRef(t, model.ValidationStrict),
+		types.Dict{"D": types.Integer(1)},
+		"GoTo",
+		"D",
+		REQUIRED,
+		model.V10,
+	)
+	requireErrContains(t, err, "GoTo.D: destination: unsupported object type")
+}
+
+func TestValidateActionDestinationEntryReportsObjectContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	xRefTable.Table[2] = model.NewXRefTableEntryGen0(types.Integer(1))
+
+	err := validateActionDestinationEntry(
+		xRefTable,
+		types.Dict{"D": *types.NewIndirectRef(2, 0)},
+		"GoTo",
+		"D",
+		REQUIRED,
+		model.V10,
+	)
+	requireErrChainContains(t, err, "GoTo.D obj#2", "destination: unsupported object type")
+}
+
+func TestValidateDestinationDictReportsObjectContext(t *testing.T) {
+	xRefTable := testXRef(t, model.ValidationStrict)
+	xRefTable.Table[2] = model.NewXRefTableEntryGen0(types.Array{
+		types.Dict{"Type": types.Name("Page")},
+		types.Integer(1),
+	})
+
+	err := validateDestinationDict(xRefTable, types.Dict{"D": *types.NewIndirectRef(2, 0)})
+	requireErrChainContains(t, err, "destination dictionary.D obj#2", "destination array[1]")
+}

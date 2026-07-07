@@ -283,76 +283,80 @@ func logSelPages(selectedPages types.IntSet) {
 	}
 }
 
-func calcSelPages(pageCount int, pageSelection []string, selectedPages types.IntSet) error {
-	for _, v := range pageSelection {
-
-		//log.Stats.Printf("pageExp: <%s>\n", v)
-
-		if v == "even" {
-			selectEvenPages(selectedPages, pageCount)
-			continue
+func handleNormalizedPageSelectionToken(pageCount, i int, token, v string, negated bool, selectedPages types.IntSet) error {
+	// -#
+	if v[0] == '-' {
+		v = v[1:]
+		if err := handlePrefix(v, negated, pageCount, selectedPages); err != nil {
+			return pageSelectionTokenError(i, token, err)
 		}
-
-		if v == "odd" {
-			selectOddPages(selectedPages, pageCount)
-			continue
-		}
-
-		var negated bool
-		if negation(v[0]) {
-			negated = true
-			//logInfoAPI.Printf("is a negated exp\n")
-			v = v[1:]
-		}
-
-		// -#
-		if v[0] == '-' {
-
-			v = v[1:]
-
-			if err := handlePrefix(v, negated, pageCount, selectedPages); err != nil {
-				return err
-			}
-
-			continue
-		}
-
-		// #-
-		if v[0] != 'l' && strings.HasSuffix(v, "-") {
-
-			if err := handleSuffix(v[:len(v)-1], negated, pageCount, selectedPages); err != nil {
-				return err
-			}
-
-			continue
-		}
-
-		// l l-# l-#-
-		if v[0] == 'l' {
-			if err := handleSpecificPageOrLastXPages(v, negated, pageCount, selectedPages); err != nil {
-				return err
-			}
-			continue
-		}
-
-		pr := strings.Split(v, "-")
-		if len(pr) >= 2 {
-			// v contains '-' somewhere in the middle
-			// #-# #-l #-l-#
-			if err := parsePageRange(pr, pageCount, negated, selectedPages); err != nil {
-				return err
-			}
-
-			continue
-		}
-
-		// #
-		if err := handleSpecificPageOrLastXPages(pr[0], negated, pageCount, selectedPages); err != nil {
-			return err
-		}
-
+		return nil
 	}
 
+	// #-
+	if v[0] != 'l' && strings.HasSuffix(v, "-") {
+		if err := handleSuffix(v[:len(v)-1], negated, pageCount, selectedPages); err != nil {
+			return pageSelectionTokenError(i, token, err)
+		}
+		return nil
+	}
+
+	// l l-# l-#-
+	if v[0] == 'l' {
+		if err := handleSpecificPageOrLastXPages(v, negated, pageCount, selectedPages); err != nil {
+			return pageSelectionTokenError(i, token, err)
+		}
+		return nil
+	}
+
+	pr := strings.Split(v, "-")
+	if len(pr) >= 2 {
+		// v contains '-' somewhere in the middle
+		// #-# #-l #-l-#
+		if err := parsePageRange(pr, pageCount, negated, selectedPages); err != nil {
+			return pageSelectionTokenError(i, token, err)
+		}
+		return nil
+	}
+
+	// #
+	if err := handleSpecificPageOrLastXPages(pr[0], negated, pageCount, selectedPages); err != nil {
+		return pageSelectionTokenError(i, token, err)
+	}
+	return nil
+}
+
+func handlePageSelectionToken(pageCount, i int, token string, selectedPages types.IntSet) error {
+	if token == "" {
+		return pageSelectionEmptyTokenError(i, token)
+	}
+	if token == "even" {
+		selectEvenPages(selectedPages, pageCount)
+		return nil
+	}
+	if token == "odd" {
+		selectOddPages(selectedPages, pageCount)
+		return nil
+	}
+
+	v := token
+	var negated bool
+	if negation(v[0]) {
+		negated = true
+		v = v[1:]
+		if v == "" {
+			return pageSelectionEmptyTokenError(i, token)
+		}
+	}
+	return handleNormalizedPageSelectionToken(pageCount, i, token, v, negated, selectedPages)
+}
+
+func calcSelPages(pageCount int, pageSelection []string, selectedPages types.IntSet) error {
+	for i, token := range pageSelection {
+		if err := handlePageSelectionToken(pageCount, i, token, selectedPages); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -601,71 +605,97 @@ func parsePageRangeForCollection(pr []string, pageCount int, negated bool, cp *[
 	return nil
 }
 
+func pageSelectionTokenError(i int, token string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("page selection token %d %q: %w", i+1, token, err)
+}
+
+func pageSelectionEmptyTokenError(i int, token string) error {
+	if token == "" {
+		return fmt.Errorf("page selection token %d: empty", i+1)
+	}
+	return fmt.Errorf("page selection token %d %q: empty", i+1, token)
+}
+
+func handlePageCollectionToken(pageCount, i int, token string, collectedPages *[]int) error {
+	if token == "" {
+		return pageSelectionEmptyTokenError(i, token)
+	}
+
+	if token == "even" {
+		collectEvenPages(collectedPages, pageCount)
+		return nil
+	}
+
+	if token == "odd" {
+		collectOddPages(collectedPages, pageCount)
+		return nil
+	}
+
+	v := token
+	var negated bool
+	if negation(v[0]) {
+		negated = true
+		//logInfoAPI.Printf("is a negated exp\n")
+		v = v[1:]
+		if v == "" {
+			return pageSelectionEmptyTokenError(i, token)
+		}
+	}
+
+	return handleNormalizedPageCollectionToken(pageCount, i, token, v, negated, collectedPages)
+}
+
+func handleNormalizedPageCollectionToken(pageCount, i int, token, v string, negated bool, collectedPages *[]int) error {
+	// -#
+	if v[0] == '-' {
+		v = v[1:]
+		if err := handlePrefixForCollection(v, negated, pageCount, collectedPages); err != nil {
+			return pageSelectionTokenError(i, token, err)
+		}
+		return nil
+	}
+
+	// #-
+	if v[0] != 'l' && strings.HasSuffix(v, "-") {
+		if err := handleSuffixForCollection(v[:len(v)-1], negated, pageCount, collectedPages); err != nil {
+			return pageSelectionTokenError(i, token, err)
+		}
+		return nil
+	}
+
+	// l l-# l-#-
+	if v[0] == 'l' {
+		if err := handleSpecificPageOrLastXPagesForCollection(v, negated, pageCount, collectedPages); err != nil {
+			return pageSelectionTokenError(i, token, err)
+		}
+		return nil
+	}
+
+	pr := strings.Split(v, "-")
+	if len(pr) >= 2 {
+		// v contains '-' somewhere in the middle
+		// #-# #-l #-l-#
+		if err := parsePageRangeForCollection(pr, pageCount, negated, collectedPages); err != nil {
+			return pageSelectionTokenError(i, token, err)
+		}
+		return nil
+	}
+
+	// #
+	if err := handleSpecificPageOrLastXPagesForCollection(pr[0], negated, pageCount, collectedPages); err != nil {
+		return pageSelectionTokenError(i, token, err)
+	}
+	return nil
+}
+
 func calcPagesForPageCollection(pageCount int, pageSelection []string) ([]int, error) {
 	collectedPages := []int{}
 
-	for _, v := range pageSelection {
-
-		if v == "even" {
-			collectEvenPages(&collectedPages, pageCount)
-			continue
-		}
-
-		if v == "odd" {
-			collectOddPages(&collectedPages, pageCount)
-			continue
-		}
-
-		var negated bool
-		if negation(v[0]) {
-			negated = true
-			//logInfoAPI.Printf("is a negated exp\n")
-			v = v[1:]
-		}
-
-		// -#
-		if v[0] == '-' {
-
-			v = v[1:]
-
-			if err := handlePrefixForCollection(v, negated, pageCount, &collectedPages); err != nil {
-				return nil, err
-			}
-
-			continue
-		}
-
-		// #-
-		if v[0] != 'l' && strings.HasSuffix(v, "-") {
-
-			if err := handleSuffixForCollection(v[:len(v)-1], negated, pageCount, &collectedPages); err != nil {
-				return nil, err
-			}
-
-			continue
-		}
-
-		// l l-# l-#-
-		if v[0] == 'l' {
-			if err := handleSpecificPageOrLastXPagesForCollection(v, negated, pageCount, &collectedPages); err != nil {
-				return nil, err
-			}
-			continue
-		}
-
-		pr := strings.Split(v, "-")
-		if len(pr) >= 2 {
-			// v contains '-' somewhere in the middle
-			// #-# #-l #-l-#
-			if err := parsePageRangeForCollection(pr, pageCount, negated, &collectedPages); err != nil {
-				return nil, err
-			}
-
-			continue
-		}
-
-		// #
-		if err := handleSpecificPageOrLastXPagesForCollection(pr[0], negated, pageCount, &collectedPages); err != nil {
+	for i, v := range pageSelection {
+		if err := handlePageCollectionToken(pageCount, i, v, &collectedPages); err != nil {
 			return nil, err
 		}
 	}

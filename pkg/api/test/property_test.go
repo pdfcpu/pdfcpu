@@ -1,5 +1,5 @@
 /*
-Copyright 2020 The pdf Authors.
+Copyright 2020 The pdfcpu Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,16 +17,26 @@ limitations under the License.
 package test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func renderProperties(properties map[string]string) []string {
+	ss := make([]string, 0, len(properties))
+	for k, v := range properties {
+		ss = append(ss, fmt.Sprintf("%s = %s", k, v))
+	}
+	sort.Strings(ss)
+	return ss
+}
 
 func listPropertiesFile(t *testing.T, fileName string, conf *model.Configuration) ([]string, error) {
 	t.Helper()
@@ -39,19 +49,11 @@ func listPropertiesFile(t *testing.T, fileName string, conf *model.Configuration
 	}
 	defer f.Close()
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.LISTPROPERTIES
-
-	ctx, err := api.ReadValidateAndOptimize(f, conf)
+	properties, err := api.Properties(f, conf)
 	if err != nil {
-		t.Fatalf("%s ReadValidateAndOptimize: %v\n", msg, err)
+		t.Fatalf("%s properties: %v\n", msg, err)
 	}
-
-	return pdfcpu.PropertiesList(ctx)
+	return renderProperties(properties), nil
 }
 
 func listProperties(t *testing.T, msg, fileName string, want []string) []string {

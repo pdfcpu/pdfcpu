@@ -17,6 +17,9 @@ limitations under the License.
 package cli
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
@@ -184,12 +187,15 @@ func AddKeywordsCommand(inFile, outFile string, keywords []string, conf *model.C
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
+	if outFile == "" {
+		outFile = inFile
+	}
 	conf.Cmd = model.ADDKEYWORDS
 	return &Command{
 		Mode:       model.ADDKEYWORDS,
 		InFile:     &inFile,
 		OutFile:    &outFile,
-		StringVals: keywords,
+		StringVals: slices.Clone(keywords),
 		Conf:       conf}
 }
 
@@ -198,12 +204,15 @@ func RemoveKeywordsCommand(inFile, outFile string, keywords []string, conf *mode
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
+	if outFile == "" {
+		outFile = inFile
+	}
 	conf.Cmd = model.REMOVEKEYWORDS
 	return &Command{
 		Mode:       model.REMOVEKEYWORDS,
 		InFile:     &inFile,
 		OutFile:    &outFile,
-		StringVals: keywords,
+		StringVals: slices.Clone(keywords),
 		Conf:       conf}
 }
 
@@ -229,7 +238,7 @@ func AddPropertiesCommand(inFile, outFile string, properties map[string]string, 
 		Mode:      model.ADDPROPERTIES,
 		InFile:    &inFile,
 		OutFile:   &outFile,
-		StringMap: properties,
+		StringMap: maps.Clone(properties),
 		Conf:      conf}
 }
 
@@ -243,6 +252,6 @@ func RemovePropertiesCommand(inFile, outFile string, propKeys []string, conf *mo
 		Mode:       model.REMOVEPROPERTIES,
 		InFile:     &inFile,
 		OutFile:    &outFile,
-		StringVals: propKeys,
+		StringVals: slices.Clone(propKeys),
 		Conf:       conf}
 }
