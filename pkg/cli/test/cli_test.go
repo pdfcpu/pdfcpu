@@ -151,6 +151,36 @@ func TestValidate(t *testing.T) {
 	}
 }
 
+// TestValidateBatchWithStdinReturnsErrors verifies multi input validation failure reporting.
+func TestValidateBatchWithStdinReturnsErrors(t *testing.T) {
+	stdin := os.Stdin
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdin = r
+	defer func() {
+		os.Stdin = stdin
+		r.Close()
+	}()
+
+	if _, err = w.WriteString("not a pdf"); err != nil {
+		t.Fatal(err)
+	}
+	w.Close()
+
+	missingFile := filepath.Join(outDir, "missing.pdf")
+	_, err = cli.Dispatch(cli.ValidateCommand([]string{"-", missingFile}, conf))
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	for _, want := range []string{"-", missingFile} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("expected %q in error, got %q", want, err.Error())
+		}
+	}
+}
+
 // TestInfoCommand verifies info command.
 func TestInfoCommand(t *testing.T) {
 	msg := "TestInfoCommand"

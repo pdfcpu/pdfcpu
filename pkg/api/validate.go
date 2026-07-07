@@ -17,6 +17,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -119,6 +120,7 @@ func ValidateFiles(inFiles []string, conf *model.Configuration) error {
 		conf = model.NewDefaultConfiguration()
 	}
 
+	var errs []error
 	for i, fn := range inFiles {
 		if i > 0 && log.CLIEnabled() {
 			log.CLI.Println()
@@ -127,11 +129,11 @@ func ValidateFiles(inFiles []string, conf *model.Configuration) error {
 			if len(inFiles) == 1 {
 				return err
 			}
-			fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // DumpObject writes an object from rs to stdout.

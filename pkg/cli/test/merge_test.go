@@ -18,6 +18,7 @@ package test
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
@@ -63,6 +64,19 @@ func TestMergeCreateZippedCommand(t *testing.T) {
 
 	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
+	}
+}
+
+// TestMergeCreateWithStdinIncludesSourceContext verifies raw merge input errors.
+func TestMergeCreateWithStdinIncludesSourceContext(t *testing.T) {
+	outFile := filepath.Join(outDir, "missing-stdin-merge.pdf")
+	missingFile := filepath.Join(outDir, "missing.pdf")
+
+	cmd := cli.MergeCreateCommand([]string{missingFile, "-"}, outFile, false, conf)
+	if _, err := cli.Dispatch(cmd); err == nil {
+		t.Fatal("expected error")
+	} else if want := "merge source 0: read source"; !strings.Contains(err.Error(), want) {
+		t.Fatalf("expected %q in error, got %q", want, err.Error())
 	}
 }
 

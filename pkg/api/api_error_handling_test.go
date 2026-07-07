@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
@@ -197,5 +198,42 @@ func TestMergeErrorsIncludeSourceContext(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "merge source 0: read and validate") {
 		t.Fatalf("expected raw source context, got %q", err.Error())
+	}
+}
+
+func TestValidateFilesReturnsJoinedErrors(t *testing.T) {
+	stderr := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = w
+	defer func() {
+		os.Stderr = stderr
+		r.Close()
+	}()
+
+	inFiles := []string{"missing1.pdf", "missing2.pdf"}
+	err = ValidateFiles(inFiles, nil)
+	w.Close()
+
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected not exist error, got %v", err)
+	}
+	for _, fn := range inFiles {
+		if !strings.Contains(err.Error(), fn) {
+			t.Fatalf("expected %q in error, got %q", fn, err.Error())
+		}
+	}
+
+	var buf bytes.Buffer
+	if _, err = io.Copy(&buf, r); err != nil {
+		t.Fatal(err)
+	}
+	if buf.Len() > 0 {
+		t.Fatalf("expected no stderr output, got %q", buf.String())
 	}
 }

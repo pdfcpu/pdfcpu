@@ -17,6 +17,7 @@ limitations under the License.
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -51,6 +52,7 @@ func Validate(cmd *Command) ([]string, error) {
 		return nil, api.ValidateFiles(cmd.InFiles, conf)
 	}
 
+	var errs []error
 	for i, fn := range cmd.InFiles {
 		if i > 0 {
 			log.CLI.Println()
@@ -75,11 +77,11 @@ func Validate(cmd *Command) ([]string, error) {
 			if len(cmd.InFiles) == 1 {
 				return nil, err
 			}
-			fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 		}
 	}
 
-	return nil, nil
+	return nil, errors.Join(errs...)
 }
 
 // Optimize inFile and write result to outFile.
@@ -127,12 +129,18 @@ func mergeStdinCount(inFiles []string) int {
 	return count
 }
 
-func mergeReader(fn string) (io.ReadSeeker, *os.File, error) {
+func mergeReader(fn string, source int) (io.ReadSeeker, *os.File, error) {
 	if fn == "-" {
 		rs, err := readSeekerFromStdin()
+		if err != nil {
+			return nil, nil, fmt.Errorf("merge source %d: read source: %w", source, err)
+		}
 		return rs, nil, err
 	}
 	f, err := os.Open(fn)
+	if err != nil {
+		return nil, nil, fmt.Errorf("merge source %d: read source: %w", source, err)
+	}
 	return f, f, err
 }
 
@@ -145,8 +153,8 @@ func closeMergeFiles(files []*os.File) {
 func mergeReaders(inFiles []string) ([]io.ReadSeeker, []*os.File, error) {
 	readers := make([]io.ReadSeeker, 0, len(inFiles))
 	files := make([]*os.File, 0, len(inFiles))
-	for _, fn := range inFiles {
-		rs, f, err := mergeReader(fn)
+	for i, fn := range inFiles {
+		rs, f, err := mergeReader(fn, i)
 		if err != nil {
 			closeMergeFiles(files)
 			return nil, nil, err
