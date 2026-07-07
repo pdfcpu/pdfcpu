@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -178,5 +179,23 @@ func TestAPIArgumentErrors(t *testing.T) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
 		})
+	}
+}
+
+func TestMergeErrorsIncludeSourceContext(t *testing.T) {
+	err := appendTo(nil, "1", nil, false)
+	if !errors.Is(err, ErrMissingPDFReadSeeker) {
+		t.Fatalf("expected %v, got %v", ErrMissingPDFReadSeeker, err)
+	}
+	if !strings.Contains(err.Error(), "merge source 1: read source") {
+		t.Fatalf("expected source context, got %q", err.Error())
+	}
+
+	err = MergeRaw([]io.ReadSeeker{bytes.NewReader(nil)}, io.Discard, false, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "merge source 0: read and validate") {
+		t.Fatalf("expected raw source context, got %q", err.Error())
 	}
 }

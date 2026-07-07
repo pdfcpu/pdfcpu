@@ -22,7 +22,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -30,23 +29,35 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
+func mergeSourceLabel(source string) string {
+	if source == "" {
+		return "source"
+	}
+	return fmt.Sprintf("source %s", source)
+}
+
 // appendTo appends rs to ctxDest's page tree.
 func appendTo(rs io.ReadSeeker, fName string, ctxDest *model.Context, dividerPage bool) error {
+	source := mergeSourceLabel(fName)
 	if rs == nil {
-		return ErrMissingPDFReadSeeker
+		return fmt.Errorf("merge %s: read source: %w", source, ErrMissingPDFReadSeeker)
 	}
 
 	ctxSource, err := ReadAndValidate(rs, ctxDest.Configuration)
 	if err != nil {
-		return err
+		return fmt.Errorf("merge %s: read and validate: %w", source, err)
 	}
 
 	if ctxDest.XRefTable.Version() < model.V20 && ctxSource.XRefTable.Version() == model.V20 {
-		return pdfcpu.ErrUnsupportedVersion
+		return fmt.Errorf("merge %s: validate version: %w", source, pdfcpu.ErrUnsupportedVersion)
 	}
 
 	// Merge source context into dest context.
-	return pdfcpu.MergeXRefTables(fName, ctxSource, ctxDest, false, dividerPage)
+	if err := pdfcpu.MergeXRefTables(fName, ctxSource, ctxDest, false, dividerPage); err != nil {
+		return fmt.Errorf("merge %s: append pages: %w", source, err)
+	}
+
+	return nil
 }
 
 func appendFile(fName string, ctxDest *model.Context, dividerPage bool) error {
@@ -83,24 +94,28 @@ func MergeRaw(rsc []io.ReadSeeker, w io.Writer, dividerPage bool, conf *model.Co
 
 	ctxDest, err := ReadAndValidate(rsc[0], conf)
 	if err != nil {
-		return err
+		return fmt.Errorf("merge source 0: read and validate: %w", err)
 	}
 
 	ctxDest.EnsureVersionForWriting()
 
 	for i, f := range rsc[1:] {
-		if err = appendTo(f, strconv.Itoa(i), ctxDest, dividerPage); err != nil {
+		if err = appendTo(f, fmt.Sprintf("%d", i+1), ctxDest, dividerPage); err != nil {
 			return err
 		}
 	}
 
 	if conf.OptimizeBeforeWriting {
 		if err = OptimizeContext(ctxDest); err != nil {
-			return err
+			return fmt.Errorf("merge: optimize context: %w", err)
 		}
 	}
 
-	return WriteContext(ctxDest, w)
+	if err = WriteContext(ctxDest, w); err != nil {
+		return fmt.Errorf("merge: write output: %w", err)
+	}
+
+	return nil
 }
 
 func prepDestContext(destFile string, rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
@@ -110,12 +125,12 @@ func prepDestContext(destFile string, rs io.ReadSeeker, conf *model.Configuratio
 
 	ctxDest, err := ReadAndValidate(rs, conf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("merge destination %s: read and validate: %w", filepath.Base(destFile), err)
 	}
 
 	if conf.CreateBookmarks && conf.MergeBookmarkMode != model.MergeBookmarkModePreserve {
 		if err := pdfcpu.EnsureOutlines(ctxDest, filepath.Base(destFile), conf.Cmd == model.MERGEAPPEND); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("merge destination %s: ensure outlines: %w", filepath.Base(destFile), err)
 		}
 	}
 
@@ -188,11 +203,15 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 
 	if conf.OptimizeBeforeWriting {
 		if err := OptimizeContext(ctxDest); err != nil {
-			return err
+			return fmt.Errorf("merge: optimize context: %w", err)
 		}
 	}
 
-	return WriteContext(ctxDest, w)
+	if err := WriteContext(ctxDest, w); err != nil {
+		return fmt.Errorf("merge: write output: %w", err)
+	}
+
+	return nil
 }
 
 // MergeCreateFile merges inFiles and writes the result to outFile.
