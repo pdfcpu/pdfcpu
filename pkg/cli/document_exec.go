@@ -455,12 +455,12 @@ func jsonInfoOutput(infos []*pdfcpu.PDFInfo) ([]string, error) {
 
 // ListInfoFiles returns formatted information about inFiles.
 func ListInfoFiles(inFiles []string, selectedPages []string, fonts, json bool, conf *model.Configuration) ([]string, error) {
-
 	if json {
 		return listInfoFilesJSON(inFiles, selectedPages, fonts, conf)
 	}
 
 	var ss []string
+	var errs []error
 
 	for i, fn := range inFiles {
 		if i > 0 {
@@ -471,12 +471,13 @@ func ListInfoFiles(inFiles []string, selectedPages []string, fonts, json bool, c
 			if len(inFiles) == 1 {
 				return nil, err
 			}
-			fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
+			continue
 		}
 		ss = append(ss, ssx...)
 	}
 
-	return ss, nil
+	return ss, errors.Join(errs...)
 }
 
 // ListInfo gathers information about inFile and returns the result as []string.
@@ -487,6 +488,7 @@ func ListInfo(cmd *Command) ([]string, error) {
 
 	var ss []string
 	var infos []*pdfcpu.PDFInfo
+	var errs []error
 	for i, fn := range cmd.InFiles {
 		if i > 0 && !cmd.BoolVal2 {
 			ss = append(ss, "")
@@ -503,7 +505,7 @@ func ListInfo(cmd *Command) ([]string, error) {
 			if len(cmd.InFiles) == 1 {
 				return nil, err
 			}
-			fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 			continue
 		}
 		if f, ok := rs.(*os.File); ok {
@@ -516,7 +518,7 @@ func ListInfo(cmd *Command) ([]string, error) {
 				if len(cmd.InFiles) == 1 {
 					return nil, err
 				}
-				fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
+				errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 				continue
 			}
 			infos = append(infos, info)
@@ -528,12 +530,16 @@ func ListInfo(cmd *Command) ([]string, error) {
 			if len(cmd.InFiles) == 1 {
 				return nil, err
 			}
-			fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 			continue
 		}
 		ss = append(ss, ssx...)
 	}
 
+	err := errors.Join(errs...)
+	if err != nil {
+		return ss, err
+	}
 	if cmd.BoolVal2 {
 		return jsonInfoOutput(infos)
 	}

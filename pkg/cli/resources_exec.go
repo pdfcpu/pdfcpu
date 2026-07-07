@@ -208,12 +208,13 @@ func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Config
 	log.SetCLILogger(nil)
 
 	ss := []string{}
+	var errs []error
 
 	for _, fn := range inFiles {
 		f, err := os.Open(fn)
 		if err != nil {
 			if len(inFiles) > 1 {
-				ss = append(ss, fmt.Sprintf("\ncan't open %s: %v", fn, err))
+				errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 				continue
 			}
 			return nil, err
@@ -222,7 +223,7 @@ func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Config
 		output, err := listImages(f, selectedPages, conf)
 		if err != nil {
 			if len(inFiles) > 1 {
-				ss = append(ss, fmt.Sprintf("\n%s: %v", fn, err))
+				errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 				continue
 			}
 			return nil, err
@@ -231,7 +232,7 @@ func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Config
 		ss = append(ss, output...)
 	}
 
-	return ss, nil
+	return ss, errors.Join(errs...)
 }
 
 // ListImages returns inFiles embedded images.
@@ -249,6 +250,7 @@ func ListImages(cmd *Command) ([]string, error) {
 
 	log.SetCLILogger(nil)
 	var ss []string
+	var errs []error
 	for _, fn := range cmd.InFiles {
 		var rs io.ReadSeeker
 		var err error
@@ -261,7 +263,7 @@ func ListImages(cmd *Command) ([]string, error) {
 			if len(cmd.InFiles) == 1 {
 				return nil, err
 			}
-			ss = append(ss, fmt.Sprintf("\ncan't open %s: %v", fn, err))
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 			continue
 		}
 		if f, ok := rs.(*os.File); ok {
@@ -273,7 +275,7 @@ func ListImages(cmd *Command) ([]string, error) {
 			if len(cmd.InFiles) == 1 {
 				return nil, err
 			}
-			ss = append(ss, fmt.Sprintf("\n%s: %v", fn, err))
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 			continue
 		}
 		label := fn
@@ -284,7 +286,7 @@ func ListImages(cmd *Command) ([]string, error) {
 		ss = append(ss, output...)
 	}
 
-	return ss, nil
+	return ss, errors.Join(errs...)
 }
 
 func updateImageParams(cmd *Command) (objNr, pageNr int, id string) {

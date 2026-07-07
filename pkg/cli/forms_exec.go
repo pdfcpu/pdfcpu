@@ -18,6 +18,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -100,13 +101,14 @@ func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, 
 	log.SetCLILogger(nil)
 
 	ss := []string{}
+	var errs []error
 
 	for _, fn := range inFiles {
 
 		f, err := os.Open(fn)
 		if err != nil {
 			if len(inFiles) > 1 {
-				ss = append(ss, fmt.Sprintf("\ncan't open %s: %v", fn, err))
+				errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 				continue
 			}
 			return nil, err
@@ -116,7 +118,7 @@ func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, 
 		output, err := listFormFields(f, conf)
 		if err != nil {
 			if len(inFiles) > 1 {
-				ss = append(ss, fmt.Sprintf("\n%s:\n%v", fn, err))
+				errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 				continue
 			}
 			return nil, err
@@ -126,7 +128,7 @@ func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, 
 		ss = append(ss, output...)
 	}
 
-	return ss, nil
+	return ss, errors.Join(errs...)
 }
 
 // ListFormFields returns inFile's form field ids.
@@ -149,6 +151,7 @@ func ListFormFields(cmd *Command) ([]string, error) {
 
 	log.SetCLILogger(nil)
 	var ss []string
+	var errs []error
 	for _, fn := range cmd.InFiles {
 		var rs io.ReadSeeker
 		var err error
@@ -161,7 +164,7 @@ func ListFormFields(cmd *Command) ([]string, error) {
 			if len(cmd.InFiles) == 1 {
 				return nil, err
 			}
-			ss = append(ss, fmt.Sprintf("\ncan't open %s: %v", fn, err))
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 			continue
 		}
 		if f, ok := rs.(*os.File); ok {
@@ -173,7 +176,7 @@ func ListFormFields(cmd *Command) ([]string, error) {
 			if len(cmd.InFiles) == 1 {
 				return nil, err
 			}
-			ss = append(ss, fmt.Sprintf("\n%s:\n%v", fn, err))
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
 			continue
 		}
 
@@ -185,7 +188,7 @@ func ListFormFields(cmd *Command) ([]string, error) {
 		ss = append(ss, output...)
 	}
 
-	return ss, nil
+	return ss, errors.Join(errs...)
 }
 
 func formInOut(cmd *Command) (io.ReadSeeker, io.Writer, func(), error) {

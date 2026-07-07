@@ -16,6 +16,7 @@ limitations under the License.
 package test
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -178,6 +179,48 @@ func TestValidateBatchWithStdinReturnsErrors(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("expected %q in error, got %q", want, err.Error())
 		}
+	}
+}
+
+// TestMultiInputListCommandsReturnErrors verifies batch list failures are not hidden.
+func TestMultiInputListCommandsReturnErrors(t *testing.T) {
+	validFile := filepath.Join(inDir, "Acroforms2.pdf")
+	missingFile := filepath.Join(outDir, "missing.pdf")
+	tests := []struct {
+		name string
+		cmd  *cli.Command
+	}{
+		{
+			name: "info",
+			cmd:  cli.InfoCommand([]string{validFile, missingFile}, nil, false, false, conf),
+		},
+		{
+			name: "permissions",
+			cmd:  cli.ListPermissionsCommand([]string{validFile, missingFile}, conf),
+		},
+		{
+			name: "form fields",
+			cmd:  cli.ListFormFieldsCommand([]string{validFile, missingFile}, conf),
+		},
+		{
+			name: "images",
+			cmd:  cli.ListImagesCommand([]string{validFile, missingFile}, nil, conf),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := cli.Dispatch(tt.cmd)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("expected not exist error, got %v", err)
+			}
+			if !strings.Contains(err.Error(), missingFile) {
+				t.Fatalf("expected %q in error, got %q", missingFile, err.Error())
+			}
+		})
 	}
 }
 

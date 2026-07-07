@@ -294,14 +294,10 @@ func runCommand(cmd *cli.Command) error {
 		return errors.New("pdfcpu: missing command")
 	}
 	out, err := cli.Dispatch(cmd)
-	if err != nil {
-		return err
-	}
-
 	if out != nil && !quiet {
 		for _, s := range out {
 			fmt.Fprintln(os.Stdout, s)
 		}
 	}
-	return nil
+	return err
 }

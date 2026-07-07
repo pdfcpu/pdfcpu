@@ -155,6 +155,7 @@ func ListPermissionsFile(inFiles []string, conf *model.Configuration) ([]string,
 	log.SetCLILogger(nil)
 
 	var ss []string
+	var errs []error
 
 	for i, fn := range inFiles {
 		if i > 0 {
@@ -172,13 +173,14 @@ func ListPermissionsFile(inFiles []string, conf *model.Configuration) ([]string,
 			if len(inFiles) == 1 {
 				return nil, err
 			}
-			fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
+			continue
 		}
 		ss = append(ss, fn+":")
 		ss = append(ss, ssx...)
 	}
 
-	return ss, nil
+	return ss, errors.Join(errs...)
 }
 
 // ListPermissions of inFile.
@@ -196,6 +198,7 @@ func ListPermissions(cmd *Command) ([]string, error) {
 
 	log.SetCLILogger(nil)
 	var ss []string
+	var errs []error
 	for i, fn := range cmd.InFiles {
 		if i > 0 {
 			ss = append(ss, "")
@@ -220,7 +223,8 @@ func ListPermissions(cmd *Command) ([]string, error) {
 			if len(cmd.InFiles) == 1 {
 				return nil, err
 			}
-			fmt.Fprintf(os.Stderr, "%s: %v\n", fn, err)
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
+			continue
 		}
 		label := fn
 		if label == "-" {
@@ -230,7 +234,7 @@ func ListPermissions(cmd *Command) ([]string, error) {
 		ss = append(ss, ssx...)
 	}
 
-	return ss, nil
+	return ss, errors.Join(errs...)
 }
 
 // SetPermissions of inFile.
