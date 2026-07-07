@@ -77,6 +77,20 @@ func TestAPIArgumentErrors(t *testing.T) {
 			wantErr: ErrMissingPDFInput,
 		},
 		{
+			name: "merge zip missing first reader",
+			fn: func() error {
+				return MergeCreateZip(nil, bytes.NewReader(nil), io.Discard, nil)
+			},
+			wantErr: ErrMissingPDFReadSeeker,
+		},
+		{
+			name: "merge zip missing second reader",
+			fn: func() error {
+				return MergeCreateZip(bytes.NewReader(nil), nil, io.Discard, nil)
+			},
+			wantErr: ErrMissingPDFReadSeeker,
+		},
+		{
 			name: "booklet missing configuration",
 			fn: func() error {
 				return Booklet(bytes.NewReader(nil), io.Discard, nil, nil, nil, nil)

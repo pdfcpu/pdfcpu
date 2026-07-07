@@ -17,7 +17,6 @@
 package api
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -297,11 +296,11 @@ func MergeCreateZip(rs1, rs2 io.ReadSeeker, w io.Writer, conf *model.Configurati
 	defer fault.Catch(&err)
 
 	if rs1 == nil {
-		return errors.New("missing first PDF read seeker")
+		return fmt.Errorf("merge zip source 1: %w", ErrMissingPDFReadSeeker)
 	}
 
 	if rs2 == nil {
-		return errors.New("missing second PDF read seeker")
+		return fmt.Errorf("merge zip source 2: %w", ErrMissingPDFReadSeeker)
 	}
 
 	if w == nil {

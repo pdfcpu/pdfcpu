@@ -55,7 +55,7 @@ var (
 	// ErrReferenceDoesNotExist reports a reference to a missing indirect object.
 	ErrReferenceDoesNotExist = errors.New("referenced object does not exist")
 
-	// ErrWrongPassword reports failed PDF password authentication.
+	// ErrWrongPassword reports supplied PDF credentials that fail password authentication.
 	ErrWrongPassword = errors.New("please provide the correct password")
 
 	// ErrNotEncrypted reports an operation requiring encryption on an unencrypted PDF.
@@ -64,7 +64,7 @@ var (
 	// ErrEncrypted reports an operation that cannot process encrypted PDFs.
 	ErrEncrypted = errors.New("this file is encrypted")
 
-	// ErrOwnerPasswordRequired reports an encryption operation missing the owner password.
+	// ErrOwnerPasswordRequired reports missing owner credentials for an encryption operation.
 	ErrOwnerPasswordRequired = errors.New("please provide owner password and optional user password")
 
 	// ErrPermissionDenied reports a PDF operation blocked by encryption permission bits.
@@ -3323,7 +3323,7 @@ func setupEncryptionKey(ctx *model.Context, d types.Dict) (err error) {
 	// If the owner password does not match we generally move on if the user password is correct
 	// unless we need to insist on a correct owner password due to the specific command in progress.
 	if !ok && needsOwnerAndUserPassword(ctx.Cmd) {
-		return errors.New("please provide the owner password with --opw")
+		return fmt.Errorf("%w with --opw", ErrOwnerPasswordRequired)
 	}
 
 	// Generally the owner password, which is also regarded as the master password or set permissions password

@@ -127,11 +127,11 @@ var (
 		model.ZOOM:                    {0, 1},
 	}
 
-	// ErrUnknownEncryption reports encryption parameters that cannot be identified.
-	ErrUnknownEncryption = errors.New("unknown encryption")
+	// ErrMalformedEncryption reports a missing, malformed, or inconsistent encryption dictionary.
+	ErrMalformedEncryption = errors.New("malformed encryption")
 
-	// ErrUnsupportedEncryption reports recognized encryption that pdfcpu cannot process.
-	ErrUnsupportedEncryption = errors.New("unsupported encryption")
+	// ErrUnsupportedEncryptionFeature reports a recognized encryption algorithm, version, or security handler that pdfcpu cannot process.
+	ErrUnsupportedEncryptionFeature = errors.New("unsupported encryption feature")
 )
 
 // NewEncryptDict creates a new EncryptDict using the standard security handler.
@@ -923,7 +923,7 @@ func getR(ctx *model.Context, d types.Dict) (int, error) {
 
 	r := d.IntEntry("R")
 	if r == nil || *r < 2 || *r > maxR {
-		return 0, ErrUnknownEncryption
+		return 0, ErrMalformedEncryption
 	}
 
 	return *r, nil
@@ -951,28 +951,28 @@ func validateAES256Parameters(d types.Dict, r int) (oe, ue, perms []byte, err er
 	// OE
 	oe, err = d.StringEntryBytes("OE")
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("%w: %w", ErrMalformedEncryption, err)
 	}
 	if len(oe) != 32 {
-		return nil, nil, nil, errors.New("encryption dictionary: 'OE' entry missing or not 32 bytes")
+		return nil, nil, nil, fmt.Errorf("%w: required entry \"OE\" missing or not 32 bytes", ErrMalformedEncryption)
 	}
 
 	// UE
 	ue, err = d.StringEntryBytes("UE")
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("%w: %w", ErrMalformedEncryption, err)
 	}
 	if len(ue) != 32 {
-		return nil, nil, nil, errors.New("encryption dictionary: 'UE' entry missing or not 32 bytes")
+		return nil, nil, nil, fmt.Errorf("%w: required entry \"UE\" missing or not 32 bytes", ErrMalformedEncryption)
 	}
 
 	// Perms
 	perms, err = d.StringEntryBytes("Perms")
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, fmt.Errorf("%w: %w", ErrMalformedEncryption, err)
 	}
 	if len(perms) != 16 {
-		return nil, nil, nil, errors.New("encryption dictionary: 'Perms' entry missing or not 16 bytes")
+		return nil, nil, nil, fmt.Errorf("%w: required entry \"Perms\" missing or not 16 bytes", ErrMalformedEncryption)
 	}
 
 	return oe, ue, perms, nil
@@ -982,30 +982,30 @@ func validateOAndU(ctx *model.Context, d types.Dict, r int) (o, u []byte, err er
 	// O, 32 bytes long if the value of R is 4 or less and 48 bytes long if the value of R is 6.
 	o, err = d.StringEntryBytes("O")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("%w: %w", ErrMalformedEncryption, err)
 	}
 
 	if ctx.XRefTable.ValidationMode == model.ValidationStrict {
 		if r == 6 && len(o) < 48 {
-			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"O\"", ErrUnsupportedEncryption)
+			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"O\"", ErrMalformedEncryption)
 		}
 		if r <= 4 && len(o) < 32 {
-			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"O\"", ErrUnsupportedEncryption)
+			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"O\"", ErrMalformedEncryption)
 		}
 	}
 
 	// U, 32 bytes long if the value of R is 4 or less and 48 bytes long if the value of R is 6.
 	u, err = d.StringEntryBytes("U")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("%w: %w", ErrMalformedEncryption, err)
 	}
 
 	if ctx.XRefTable.ValidationMode == model.ValidationStrict {
 		if r == 6 && len(u) < 48 {
-			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"O\"", ErrUnsupportedEncryption)
+			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"U\"", ErrMalformedEncryption)
 		}
 		if r <= 4 && len(u) < 32 {
-			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"O\"", ErrUnsupportedEncryption)
+			return nil, nil, fmt.Errorf("%w: missing or invalid required entry \"U\"", ErrMalformedEncryption)
 		}
 	}
 
@@ -1019,11 +1019,11 @@ func checkCFLengthV2(len int, pdf20, relaxed bool) error {
 	}
 	if bitLen < 40 || bitLen > 128 || bitLen%8 != 0 {
 		if pdf20 || !relaxed {
-			return fmt.Errorf("invalid CF length: %d", len)
+			return fmt.Errorf("%w: invalid CF length: %d", ErrMalformedEncryption, len)
 		}
 		bitLen *= 8
 		if bitLen < 40 || bitLen > 128 || bitLen%8 != 0 {
-			return fmt.Errorf("invalid CF length: %d", len)
+			return fmt.Errorf("%w: invalid CF length: %d", ErrMalformedEncryption, len)
 		}
 	}
 	return nil
@@ -1037,11 +1037,11 @@ func checkCFLengthAESV2(len int, pdf20, relaxed bool) error {
 	}
 	if bitLen != aesV2KeyLen {
 		if pdf20 || !relaxed {
-			return fmt.Errorf("invalid CF length, got %d want %d", len, aesV2KeyLen)
+			return fmt.Errorf("%w: invalid CF length, got %d want %d", ErrMalformedEncryption, len, aesV2KeyLen)
 		}
 		bitLen *= 8
 		if bitLen != aesV2KeyLen {
-			return fmt.Errorf("invalid CF length, got %d want %d", len, aesV2KeyLen)
+			return fmt.Errorf("%w: invalid CF length, got %d want %d", ErrMalformedEncryption, len, aesV2KeyLen)
 		}
 	}
 	return nil
@@ -1051,7 +1051,7 @@ func validateCFLength(len *int, cfm *string, pdf20, relaxed bool) error {
 	// See table 25 Length
 	// v = 4
 
-	if len == nil {
+	if len == nil || cfm == nil {
 		return nil
 	}
 
@@ -1076,7 +1076,7 @@ func validateCryptFilterRecipients(ctx *model.Context, d types.Dict, cfm *string
 	}
 	obj, ok := d.Find("Recipients")
 	if !ok {
-		return errors.New("crypt filter: missing entry \"Recipients\"")
+		return fmt.Errorf("%w: crypt filter missing entry \"Recipients\"", ErrMalformedEncryption)
 	}
 
 	obj1, err := ctx.Dereference(obj)
@@ -1087,14 +1087,14 @@ func validateCryptFilterRecipients(ctx *model.Context, d types.Dict, cfm *string
 	switch v := obj1.(type) {
 	case types.Array:
 		if len(v) == 0 {
-			return errors.New("crypt filter: entry \"Recipients\" is empty")
+			return fmt.Errorf("%w: crypt filter entry \"Recipients\" is empty", ErrMalformedEncryption)
 		}
 	case types.StringLiteral:
 		if len(v.Value()) == 0 {
-			return errors.New("crypt filter: entry \"Recipients\" is empty")
+			return fmt.Errorf("%w: crypt filter entry \"Recipients\" is empty", ErrMalformedEncryption)
 		}
 	default:
-		return errors.New("crypt filter: entry \"Recipients\" must be array or string literal")
+		return fmt.Errorf("%w: crypt filter entry \"Recipients\" must be array or string literal", ErrMalformedEncryption)
 	}
 
 	return nil
@@ -1112,7 +1112,7 @@ func checkCryptFilterCFM(cfm string, v int) error {
 	}
 	if len(ss) > 0 {
 		if !types.MemberOf(cfm, ss) {
-			return fmt.Errorf("crypt filter invalid entry \"CFM\": %s", cfm)
+			return fmt.Errorf("%w: crypt filter invalid entry \"CFM\": %s", ErrMalformedEncryption, cfm)
 		}
 	}
 	return nil
@@ -1134,7 +1134,7 @@ func validateCryptFilter(ctx *model.Context, d types.Dict, v int, pubKeySecHandl
 	length := d.IntEntry("Length")
 	pdf20 := ctx.PDF20()
 	if length == nil && !pdf20 {
-		return false, errors.New("crypt filter missing entry \"Length\"")
+		return false, fmt.Errorf("%w: crypt filter missing entry \"Length\"", ErrMalformedEncryption)
 	}
 	if v == 4 {
 		if err := validateCFLength(length, cfm, pdf20, relaxed); err != nil {
@@ -1144,7 +1144,7 @@ func validateCryptFilter(ctx *model.Context, d types.Dict, v int, pubKeySecHandl
 
 	ae := d.NameEntry("AuthEvent")
 	if ae != nil && *ae != "DocOpen" {
-		return false, errors.New("crypt filter invalid entry \"AuthEvent\"")
+		return false, fmt.Errorf("%w: crypt filter invalid entry \"AuthEvent\"", ErrMalformedEncryption)
 	}
 
 	if pubKeySecHandler {
@@ -1161,7 +1161,7 @@ func validateCryptFilter(ctx *model.Context, d types.Dict, v int, pubKeySecHandl
 func locateCFEntry(ctx *model.Context, d types.Dict, v int, key string, pubKeySecHandler, relaxed bool) (bool, error) {
 	d1 := d.DictEntry(key)
 	if d1 == nil {
-		return false, fmt.Errorf("entry \"%s\" missing in \"CF\"", key)
+		return false, fmt.Errorf("%w: entry \"%s\" missing in \"CF\"", ErrMalformedEncryption, key)
 	}
 	return validateCryptFilter(ctx, d1, v, pubKeySecHandler, relaxed)
 }
@@ -1209,7 +1209,7 @@ func validateCryptFilters(ctx *model.Context, d types.Dict, v int, pubKeySecHand
 	// CF
 	cfDict := d.DictEntry("CF")
 	if cfDict == nil {
-		return fmt.Errorf("encrypt dict, required entry \"CF\" missing")
+		return fmt.Errorf("%w: encrypt dict, required entry \"CF\" missing", ErrMalformedEncryption)
 	}
 
 	relaxed := ctx.XRefTable.ValidationMode == model.ValidationRelaxed
@@ -1228,11 +1228,11 @@ func validateCryptFilters(ctx *model.Context, d types.Dict, v int, pubKeySecHand
 func validateEncryptFilter(d types.Dict) (string, error) {
 	filter := d.NameEntry("Filter")
 	if filter == nil {
-		return "", errors.New("encryption, missing \"Filter\"")
+		return "", fmt.Errorf("%w: required entry \"Filter\" missing", ErrMalformedEncryption)
 	}
 	// TODO support "Adobe.PubSec"
 	if !types.MemberOf(*filter, []string{"Standard"}) {
-		return "", fmt.Errorf("%w: filter %s", ErrUnsupportedEncryption, *filter)
+		return "", fmt.Errorf("%w: filter %s", ErrUnsupportedEncryptionFeature, *filter)
 	}
 	return *filter, nil
 }
@@ -1241,7 +1241,7 @@ func validateEncryptSubFilter(d types.Dict, pubKeySecHandler bool) (string, erro
 	subFilter := d.NameEntry("SubFilter")
 	if subFilter != nil && pubKeySecHandler {
 		if !types.MemberOf(*subFilter, []string{"adbe.pkcs7.s3", "adbe.pkcs7.s4", "adbe.pkcs7.s5"}) {
-			return "", fmt.Errorf("%w: subFilter %s", ErrUnsupportedEncryption, *subFilter)
+			return "", fmt.Errorf("%w: subFilter %s", ErrUnsupportedEncryptionFeature, *subFilter)
 		}
 		return *subFilter, nil
 	}
@@ -1251,13 +1251,17 @@ func validateEncryptSubFilter(d types.Dict, pubKeySecHandler bool) (string, erro
 func validateEncryptV(d types.Dict) (int, error) {
 	v := d.IntEntry("V")
 	if v == nil {
-		return -1, fmt.Errorf("validateV: missing encrypt \"V\"")
+		return -1, fmt.Errorf("%w: required entry \"V\" missing", ErrMalformedEncryption)
 	}
-	if *v < 1 || *v > 5 {
-		return -1, fmt.Errorf("validateV: encrypt \"V\" must be one of 1,2,3,4,5")
+
+	switch *v {
+	case 1, 2, 3, 4, 5:
+		return *v, nil
+	case 6:
+		return -1, fmt.Errorf("%w: encrypt \"V\" 6 (AESV4)", ErrUnsupportedEncryptionFeature)
+	default:
+		return -1, fmt.Errorf("%w: invalid encrypt \"V\" %d", ErrMalformedEncryption, *v)
 	}
-	// TODO Support ISO/TS 32003 V=6/AESV4 AES-256-GCM.
-	return *v, nil
 }
 
 func validateEncryptLength(d types.Dict, v int) (int, error) {
@@ -1270,13 +1274,15 @@ func validateEncryptLength(d types.Dict, v int) (int, error) {
 			return 40, nil
 		}
 		if *i < 40 || *i > 128 || *i%8 != 0 {
-			return 0, fmt.Errorf("invalid encrypt \"Length\" %d", *i)
+			return 0, fmt.Errorf("%w: invalid encrypt \"Length\" %d", ErrMalformedEncryption, *i)
 		}
 		return *i, nil
-	case 5, 6:
+	case 5:
 		return 256, nil
+	case 6:
+		return 0, fmt.Errorf("%w: encrypt \"V\" 6 (AESV4)", ErrUnsupportedEncryptionFeature)
 	default:
-		return 0, fmt.Errorf("%w: handler version %d", ErrUnsupportedEncryption, v)
+		return 0, fmt.Errorf("%w: invalid encrypt \"V\" %d", ErrMalformedEncryption, v)
 	}
 }
 
@@ -1288,14 +1294,14 @@ func validatePubKeySecHandler(ctx *model.Context, d types.Dict, pubKeySecHandler
 	if subFilter == "adbe.pkcs7.s3" || subFilter == "adbe.pkcs7.s4" {
 		obj, ok := d.Find("Recipients")
 		if !ok {
-			return fmt.Errorf("%w: required entry \"Recipients\" missing", ErrUnsupportedEncryption)
+			return fmt.Errorf("%w: required entry \"Recipients\" missing", ErrMalformedEncryption)
 		}
 		arr, err := ctx.DereferenceArray(obj)
 		if err != nil {
 			return err
 		}
 		if len(arr) == 0 {
-			return fmt.Errorf("%w: required entry \"Recipients\" empty", ErrUnsupportedEncryption)
+			return fmt.Errorf("%w: required entry \"Recipients\" empty", ErrMalformedEncryption)
 		}
 	}
 
@@ -1357,7 +1363,7 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 	// P
 	p := d.IntEntry("P")
 	if p == nil {
-		return nil, fmt.Errorf("%w: required entry \"P\" missing", ErrUnsupportedEncryption)
+		return nil, fmt.Errorf("%w: required entry \"P\" missing", ErrMalformedEncryption)
 	}
 
 	// EncryptMetadata
