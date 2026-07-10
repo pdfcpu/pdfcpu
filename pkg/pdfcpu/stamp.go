@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The pdfcpu Authors.
+Copyright 2025 The pdfcpu Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -202,6 +202,13 @@ func parseFontSize(s string, wm *model.Watermark) error {
 	return nil
 }
 
+// parseMaxWidth parses the maximum column width for text wrapping.
+// The value is interpreted in the current input display unit (InpUnit).
+// When maxWidth > 0, text watermarks will automatically wrap text at word boundaries
+// (including CJK character breaks) to fit within the specified width.
+// A value of 0 (default) disables automatic text wrapping.
+// Note: The effective font size is determined by points and scale parameters;
+// maxWidth only controls where line breaks occur, not the font size itself.
 func parseMaxWidth(s string, wm *model.Watermark) error {
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {

@@ -18,11 +18,9 @@ package model
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"math"
-	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -902,15 +900,26 @@ func wrap(lines []string, fontName string, fontSize, maxWidthPoints float64) ([]
 						return nil, fmt.Errorf("line %d: %w", lineIndex+1, err)
 					}
 					wrapState = inSpace
+				} else if len(word) > 0 && canBreakAfterChar(lastRune(word)) && canBreakBeforeChar(c) {
+					fullCandidate := line + space + word + string(c)
 
-				} else if canBreakAfterChar(c) {
-					candidate := word + string(c)
-					if font.TextWidth(candidate, fontName, fontSize) <= maxWidthPoints {
-						word = candidate
+					if font.TextWidth(fullCandidate, fontName, fontSize) <= maxWidthPoints {
+						word += string(c)
+
+					} else if font.TextWidth(word+string(c), fontName, fontSize) <= maxWidthPoints {
+						word += string(c)
+
 					} else {
-						if len(word) > 0 {
+						if len(line) > 0 {
+							ss = append(ss, line)
+						}
+						if font.TextWidth(word, fontName, fontSize) > maxWidthPoints {
+							wrapLine(&ss, "", "", word, fontName, fontSize, maxWidthPoints)
+						} else {
 							ss = append(ss, word)
 						}
+						line = ""
+						space = ""
 						word = string(c)
 					}
 				} else {
@@ -937,6 +946,13 @@ func wrap(lines []string, fontName string, fontSize, maxWidthPoints float64) ([]
 	return ss, nil
 }
 
+// lastRune get last rune of a string
+func lastRune(s string) rune {
+	r := rune(0)
+	for _, c := range s {
+		r = c
+	}
+	return r
 // WordWrap wraps text at Unicode whitespace and reports font metric failures.
 func WordWrap(s string, fontName string, fontSize int, maxWidthPoints float64) ([]string, error) {
 	return WordWrapFloat(s, fontName, float64(fontSize), maxWidthPoints)
@@ -953,6 +969,7 @@ func isCJKChar(r rune) bool {
 		(r >= 0x20000 && r <= 0x2A6DF)
 }
 
+// canBreakAfterChar reports whether a line break is allowed immediately after r.
 func canBreakAfterChar(r rune) bool {
 	if r >= 0x4E00 && r <= 0x9FFF {
 		return true
@@ -976,9 +993,69 @@ func canBreakAfterChar(r rune) bool {
 		return true
 	}
 	if r >= 0x3000 && r <= 0x303F {
-		return true
+		return !isOpeningPunct(r)
 	}
 	if r >= 0xFF00 && r <= 0xFFEF {
+		return !isOpeningPunct(r)
+	}
+	return false
+}
+
+// canBreakBeforeChar reports whether a line break is allowed immediately before r.
+func canBreakBeforeChar(r rune) bool {
+	if r >= 0x4E00 && r <= 0x9FFF {
+		return true
+	}
+	if r >= 0x3400 && r <= 0x4DBF {
+		return true
+	}
+	if r >= 0x20000 && r <= 0x2A6DF {
+		return true
+	}
+	if r >= 0x3040 && r <= 0x309F {
+		return true
+	}
+	if r >= 0x30A0 && r <= 0x30FF {
+		return true
+	}
+	if r >= 0xAC00 && r <= 0xD7AF {
+		return true
+	}
+	if r >= 0x1100 && r <= 0x11FF {
+		return true
+	}
+	if r >= 0x3000 && r <= 0x303F {
+		return !isClosingPunct(r)
+	}
+	if r >= 0xFF00 && r <= 0xFFEF {
+		return !isClosingPunct(r)
+	}
+	return false
+}
+
+// isOpeningPunct reports whether r is an opening punctuation mark.
+func isOpeningPunct(r rune) bool {
+	switch r {
+	case 0x3008, 0x300A, 0x300C, 0x300E, 0x3010, 0x3014, 0x3016, 0x3018, 0x301A, 0x301D:
+		return true
+	case 0xFF02, 0xFF07, 0xFF08, 0xFF3B, 0xFF40, 0xFF5B:
+		return true
+	case 0x2018, 0x201A, 0x201C, 0x201E, 0x2039, 0x00AB:
+		return true
+	}
+	return false
+}
+
+// isClosingPunct reports whether r is a closing punctuation mark.
+func isClosingPunct(r rune) bool {
+	switch r {
+	case 0x3001, 0x3002, 0x3009, 0x300B, 0x300D, 0x300F, 0x3011, 0x3015, 0x3017, 0x3019, 0x301B, 0x301E, 0x301F:
+		return true
+	case 0xFF01, 0xFF02, 0xFF07, 0xFF09, 0xFF0C, 0xFF0E, 0xFF1A, 0xFF1B, 0xFF1F, 0xFF3D, 0xFF5D:
+		return true
+	case 0x2013, 0x2014, 0x2019, 0x201D, 0x2026, 0x203A, 0x00BB:
+		return true
+	case 0x0022, 0x0027:
 		return true
 	}
 	return false
