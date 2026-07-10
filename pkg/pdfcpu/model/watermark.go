@@ -90,6 +90,7 @@ type Watermark struct {
 	Scale                     float64             // relative scale factor: 0 <= x <= 1, absolute scale factor: 0 <= x
 	ScaleEff                  float64             // effective scale factor
 	ScaleAbs                  bool                // true for absolute scaling.
+	MaxWidth                  float64             // max column width for text wrapping, 0 means no wrap.
 	Update                    bool                // true for updating instead of adding a page watermark.
 	Ocg, ExtGState, Font, Img *types.IndirectRef  // resources
 	Width, Height             int                 // image or page dimensions

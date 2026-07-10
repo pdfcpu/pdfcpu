@@ -903,6 +903,16 @@ func wrap(lines []string, fontName string, fontSize, maxWidthPoints float64) ([]
 					}
 					wrapState = inSpace
 
+				} else if canBreakAfterChar(c) {
+					candidate := word + string(c)
+					if font.TextWidth(candidate, fontName, fontSize) <= maxWidthPoints {
+						word = candidate
+					} else {
+						if len(word) > 0 {
+							ss = append(ss, word)
+						}
+						word = string(c)
+					}
 				} else {
 					word += string(c)
 				}
@@ -935,6 +945,49 @@ func WordWrap(s string, fontName string, fontSize int, maxWidthPoints float64) (
 // WordWrapFloat wraps text at Unicode whitespace using a fractional font size.
 // It reports font metric failures.
 func WordWrapFloat(s string, fontName string, fontSize, maxWidthPoints float64) ([]string, error) {
+func isCJKChar(r rune) bool {
+	return (r >= 0x4E00 && r <= 0x9FFF) ||
+		(r >= 0x3400 && r <= 0x4DBF) ||
+		(r >= 0x3000 && r <= 0x303F) ||
+		(r >= 0xFF00 && r <= 0xFFEF) ||
+		(r >= 0x20000 && r <= 0x2A6DF)
+}
+
+func canBreakAfterChar(r rune) bool {
+	if r >= 0x4E00 && r <= 0x9FFF {
+		return true
+	}
+	if r >= 0x3400 && r <= 0x4DBF {
+		return true
+	}
+	if r >= 0x20000 && r <= 0x2A6DF {
+		return true
+	}
+	if r >= 0x3040 && r <= 0x309F {
+		return true
+	}
+	if r >= 0x30A0 && r <= 0x30FF {
+		return true
+	}
+	if r >= 0xAC00 && r <= 0xD7AF {
+		return true
+	}
+	if r >= 0x1100 && r <= 0x11FF {
+		return true
+	}
+	if r >= 0x3000 && r <= 0x303F {
+		return true
+	}
+	if r >= 0xFF00 && r <= 0xFFEF {
+		return true
+	}
+	return false
+}
+
+// WordWrap wraps text at unicode whitespace to fit within a specified width using the given font and font size.
+// Explicit newlines are honored, and whitespace at the beginning of a line is preserved (unless it
+// would cause a word to overrun the line).  Amounts and types of whitespace are preserved within lines.
+func WordWrap(s string, fontName string, fontSize int, maxWidthPoints float64) []string {
 	if len(s) == 0 || maxWidthPoints <= 0 {
 		return []string{s}, nil
 	}
@@ -1006,6 +1059,10 @@ func writeColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rect
 	}
 
 	lines := SplitMultilineStr(s)
+
+	if width > 0 {
+		lines,_ = wrap(lines, td.FontName, fontSize, width)
+	}
 
 	if !td.ScaleAbs {
 		if td.Scale > 1 {

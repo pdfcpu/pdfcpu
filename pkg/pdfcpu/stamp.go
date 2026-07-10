@@ -202,6 +202,18 @@ func parseFontSize(s string, wm *model.Watermark) error {
 	return nil
 }
 
+func parseMaxWidth(s string, wm *model.Watermark) error {
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return err
+	}
+	if f <= 0 {
+		return errors.Errorf("pdfcpu: maxwidth must be a positive number: %s", s)
+	}
+	wm.MaxWidth = types.ToUserSpace(f, wm.InpUnit)
+	return nil
+}
+
 func parseScaleFactor(s string) (float64, bool, error) {
 	ss := strings.Split(s, " ")
 	if len(ss) > 2 {
@@ -1356,7 +1368,12 @@ func calcFormBoundingBox(xRefTable *model.XRefTable, w io.Writer, timestampForma
 		td, unique = setupTextDescriptor(*wm, timestampFormat, pageNr, pageCount)
 		// Render td into b and return the bounding box.
 		var err error
-		wm.Bb, err = model.WriteMultiLine(xRefTable, w, types.RectForDim(wm.Vp.Width(), wm.Vp.Height()), nil, td)
+		if wm.MaxWidth > 0 {
+			wm.Bb, err = model.WriteColumn(xRefTable, w, types.RectForDim(wm.Vp.Width(), wm.Vp.Height()), nil, td, wm.MaxWidth)
+		} else {
+			wm.Bb, err = model.WriteMultiLine(xRefTable, w, types.RectForDim(wm.Vp.Width(), wm.Vp.Height()), nil, td)
+		}
+		//wm.Bb, err = model.WriteMultiLine(xRefTable, w, types.RectForDim(wm.Vp.Width(), wm.Vp.Height()), nil, td)
 		if err != nil {
 			return false, fmt.Errorf("render text watermark: %w", err)
 		}
