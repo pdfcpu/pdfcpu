@@ -79,6 +79,7 @@ var wmParamMap = parameterMap[model.Watermark]{
 	"fontname":        parseFontName,
 	"scriptname":      parseScriptName,
 	"margins":         parseMargins,
+	"maxWidth":        parseMaxWidth,
 	"mode":            parseRenderMode,
 	"offset":          parsePositionOffsetWM,
 	"opacity":         parseOpacity,
@@ -1373,13 +1374,13 @@ func calcFormBoundingBox(xRefTable *model.XRefTable, w io.Writer, timestampForma
 	} else {
 		var td model.TextDescriptor
 		td, unique = setupTextDescriptor(*wm, timestampFormat, pageNr, pageCount)
-		// Render td into b and return the bounding box.
 		var err error
+		// Pre-wrap text when MaxWidth is set.
 		if wm.MaxWidth > 0 {
-			wm.Bb, err = model.WriteColumn(xRefTable, w, types.RectForDim(wm.Vp.Width(), wm.Vp.Height()), nil, td, wm.MaxWidth)
-		} else {
-			wm.Bb, err = model.WriteMultiLine(xRefTable, w, types.RectForDim(wm.Vp.Width(), wm.Vp.Height()), nil, td)
+			td.Text = strings.Join(model.WordWrap(td.Text, td.FontName, td.FontSize, wm.MaxWidth), "\n")
 		}
+		// Render td into b and return the bounding box.
+		wm.Bb = model.WriteMultiLine(xRefTable, w, types.RectForDim(wm.Vp.Width(), wm.Vp.Height()), nil, td)
 		//wm.Bb, err = model.WriteMultiLine(xRefTable, w, types.RectForDim(wm.Vp.Width(), wm.Vp.Height()), nil, td)
 		if err != nil {
 			return false, fmt.Errorf("render text watermark: %w", err)
