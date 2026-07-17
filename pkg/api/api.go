@@ -171,6 +171,10 @@ func WriteContextFile(ctx *model.Context, outFile string) error {
 func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
 	defer fault.Catch(&err)
 
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	}
+
 	if ctx, err = ReadContext(rs, conf); err != nil {
 		return nil, err
 	}
