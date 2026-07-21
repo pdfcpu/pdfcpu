@@ -1573,6 +1573,47 @@ func ensureNoStartXRef(line string, i int) bool {
 	return i == 0 || i > 0 && line[i-1] != 't'
 }
 
+func registerXRefEntry(ctx *model.Context, line string, offset int64, incr int) bool {
+	objNr, generation, err := model.ParseObjectAttributes(&line)
+	if err != nil || *objNr == 0 {
+		return false
+	}
+
+	ctx.Table[*objNr] = &model.XRefTableEntry{
+		Generation: generation,
+		Offset:     &offset,
+		Incr:       incr,
+	}
+	return true
+}
+
+func registerXRefObjects(ctx *model.Context, incr int) error {
+	var offset int64
+	rd, err := newPositionedReader(ctx.Read.RS, &offset)
+	if err != nil {
+		return err
+	}
+
+	s := bufio.NewScanner(rd)
+	s.Buffer(make([]byte, 0, defaultBufSize), maxObjectBufferLen)
+	s.Split(scan.LinesSingleEOL)
+
+	withinObj := false
+	for s.Scan() {
+		rawLine := s.Text()
+		line := types.TrimLeadingComment(rawLine)
+		checkEndObj(&withinObj, &line)
+		if objCandidate(withinObj, line) && registerXRefEntry(ctx, line, offset, incr) {
+			withinObj = !strings.Contains(line, "endobj")
+		}
+		offset += int64(len(rawLine) + 1)
+	}
+	if err := s.Err(); err != nil {
+		return fmt.Errorf("repair xref table: register objects: %w", err)
+	}
+	return nil
+}
+
 type xrefRepairState struct {
 	scanner       *bufio.Scanner
 	offset        int64
@@ -1629,6 +1670,9 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 		Free:       true,
 		Offset:     &z,
 		Generation: &g}
+	if err := registerXRefObjects(ctx, incr); err != nil {
+		return err
+	}
 
 	rs := ctx.Read.RS
 	var offset int64
@@ -3132,7 +3176,7 @@ func dereferenceAndLoad(c context.Context, ctx *model.Context, objNr int, entry 
 		if err != nil {
 			model.ShowSkipped(fmt.Sprintf("obj #%d reason: %v", objNr, err))
 		}
-		if errors.Is(err, model.ErrCorruptObjectOffset) {
+		if errors.Is(err, model.ErrCorruptObjectOffset) || errors.Is(err, errUnregisteredObject) {
 			return err
 		}
 	}
@@ -3302,7 +3346,9 @@ func dereferenceObjects(c context.Context, ctx *model.Context) error {
 	}
 
 	if err := f(c, ctx); err != nil {
-		if !errors.Is(err, model.ErrCorruptObjectOffset) {
+		repairOffset := errors.Is(err, model.ErrCorruptObjectOffset)
+		repairMissing := ctx.XRefTable.ValidationMode == model.ValidationRelaxed && errors.Is(err, errUnregisteredObject)
+		if !repairOffset && !repairMissing {
 			return err
 		}
 		if err := bypassXrefSection(c, ctx, 0, err, 1); err != nil {

@@ -304,6 +304,25 @@ func TestDereferencedObjectClassifiesUnregisteredObject(t *testing.T) {
 	}
 }
 
+func TestRegisterXRefObjectsTracksEOLOffsets(t *testing.T) {
+	for _, eol := range []string{"\n", "\r\n"} {
+		t.Run(fmt.Sprintf("EOL=%q", eol), func(t *testing.T) {
+			pdf := []byte("%PDF-1.7" + eol + "%\x80\x81\x82\x83" + eol + "7 0 obj" + eol + "<<>>" + eol + "endobj" + eol)
+			ctx, err := model.NewContext(bytes.NewReader(pdf), nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := registerXRefObjects(ctx, 1); err != nil {
+				t.Fatal(err)
+			}
+			entry, ok := ctx.Find(7)
+			if !ok || *entry.Offset != int64(bytes.Index(pdf, []byte("7 0 obj"))) {
+				t.Fatalf("unexpected xref entry: %+v", entry)
+			}
+		})
+	}
+}
+
 func TestDereferencedTypedObjectClassification(t *testing.T) {
 	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
 	if err != nil {
