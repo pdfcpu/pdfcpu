@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -1569,6 +1570,50 @@ func ensureNoStartXRef(line string, i int) bool {
 	return i == 0 || i > 0 && line[i-1] != 't'
 }
 
+type xrefRepairState struct {
+	scanner       *bufio.Scanner
+	offset        int64
+	withinObj     bool
+	withinXref    bool
+	withinTrailer bool
+	bb            []byte
+	offsetPrev    *int64
+}
+
+func processXRefRepairLine(c context.Context, ctx *model.Context, state *xrefRepairState, line string, length, eolCount int, offExtra int64, incr int) (bool, error) {
+	if !state.withinXref {
+		return false, nil
+	}
+
+	state.offset += int64(length + eolCount)
+	if !state.withinTrailer {
+		if strings.Contains(line, "trailer") {
+			state.bb = append([]byte{}, line...)
+			state.withinTrailer = true
+		}
+		return true, nil
+	}
+	if length == 0 {
+		return true, nil
+	}
+
+	state.bb = append(state.bb, '\n')
+	state.bb = append(state.bb, line...)
+	if !strings.HasPrefix(line, "startxref") {
+		return true, nil
+	}
+
+	offsetPrev, err := processTrailer(c, ctx, state.scanner, string(state.bb), nil, offExtra, incr, true)
+	if err != nil {
+		return false, err
+	}
+	state.offsetPrev = offsetPrev
+	state.withinXref = false
+	state.withinTrailer = false
+	model.ShowRepaired("xreftable")
+	return true, nil
+}
+
 // bypassXrefSection is a fix for digesting corrupt xref sections.
 // It populates the xRefTable by reading in all indirect objects line by line
 // and works on the assumption of a single xref section - meaning no incremental updates.
@@ -1595,17 +1640,11 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 	s.Split(scan.LinesSingleEOL)
 	eolCount := 1
 
-	var (
-		withinObj     bool
-		withinXref    bool
-		withinTrailer bool
-		prevLine      string
-		bb            []byte
-		offsetPrev    *int64
-	)
+	state := xrefRepairState{scanner: s}
+	var prevLine string
 
 	for {
-		line, err := scanLineRaw(s)
+		line, err := scanLineRaw(state.scanner)
 		if err != nil {
 			if errors.Is(err, errMissingScannerLine) {
 				break
@@ -1618,44 +1657,25 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 			line = prevLine + line
 			prevLine = ""
 		}
-		if withinXref {
-			offset += int64(length + eolCount)
-			if withinTrailer {
-				if length == 0 {
-					continue
-				}
-				bb = append(bb, '\n')
-				bb = append(bb, line...)
-				if !strings.HasPrefix(line, "startxref") {
-					continue
-				}
-				offsetPrev, err = processTrailer(c, ctx, s, string(bb), nil, offExtra, incr, true)
-				if err != nil {
-					return err
-				}
-				model.ShowRepaired("xreftable")
-				withinXref = false
-				withinTrailer = false
-				continue
-			}
-			i := strings.Index(line, "trailer")
-			if i >= 0 {
-				bb = append([]byte{}, line...)
-				withinTrailer = true
-			}
+		handled, err := processXRefRepairLine(c, ctx, &state, line, length, eolCount, offExtra, incr)
+		if err != nil {
+			return err
+		}
+		if handled {
 			continue
 		}
 		i := strings.Index(line, "xref")
 		if ensureNoStartXRef(line, i) {
-			offset += int64(length + eolCount)
-			withinXref = true
+			state.offset += int64(length + eolCount)
+			state.withinXref = true
 			continue
 		}
-		checkEndObj(&withinObj, &line)
-		if objCandidate(withinObj, line) {
+		checkEndObj(&state.withinObj, &line)
+		if objCandidate(state.withinObj, line) {
 			if !strings.HasSuffix(line, "obj") {
-				withinObj = true
-				if s, err = processObject(c, ctx, line, &offset, incr, offsetPrev); err != nil {
+				state.withinObj = true
+				state.scanner, err = processObject(c, ctx, line, &state.offset, incr, state.offsetPrev)
+				if err != nil {
 					return err
 				}
 				continue
@@ -1664,7 +1684,7 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 			continue
 		}
 
-		offset += int64(length + eolCount)
+		state.offset += int64(length + eolCount)
 		continue
 	}
 	return nil
@@ -1750,6 +1770,28 @@ func tryXRefSection(c context.Context, ctx *model.Context, rs io.ReadSeeker, off
 	return &zero, nil
 }
 
+func parseXRefStreamOrRepair(c context.Context, ctx *model.Context, rs io.ReadSeeker, offset *int64, offExtra int64, incr int) (*int64, bool, error) {
+	if log.ReadEnabled() {
+		log.Read.Println("buildXRefTableStartingAt: found xref stream")
+	}
+	ctx.Read.UsingXRefStreams = true
+	rd, err := newPositionedReader(rs, offset)
+	if err != nil {
+		return nil, false, err
+	}
+
+	next, err := parseXRefStream(c, ctx, rd, offset, offExtra, incr)
+	if err == nil {
+		return next, false, nil
+	}
+	if ctx.Configuration.ValidationMode == model.ValidationStrict && errors.Is(err, model.ErrXRefStreamIndexSizeMismatch) {
+		return nil, false, err
+	}
+
+	// Try fix for corrupt single xref section.
+	return nil, true, bypassXrefSection(c, ctx, offExtra, err, incr)
+}
+
 // Build XRefTable by reading XRef streams or XRef sections.
 func buildXRefTableStartingAt(c context.Context, ctx *model.Context, offset *int64) error {
 	if log.ReadEnabled() {
@@ -1799,24 +1841,14 @@ func buildXRefTableStartingAt(c context.Context, ctx *model.Context, offset *int
 			continue
 		}
 
-		if log.ReadEnabled() {
-			log.Read.Println("buildXRefTableStartingAt: found xref stream")
-		}
-		ctx.Read.UsingXRefStreams = true
-		rd, err := newPositionedReader(rs, offset)
+		repaired := false
+		offset, repaired, err = parseXRefStreamOrRepair(c, ctx, rs, offset, offExtra, incr)
 		if err != nil {
 			return err
 		}
-
-		if offset, err = parseXRefStream(c, ctx, rd, offset, offExtra, incr); err != nil {
-			if ctx.Configuration.ValidationMode == model.ValidationStrict &&
-				errors.Is(err, model.ErrXRefStreamIndexSizeMismatch) {
-				return err
-			}
-			// Try fix for corrupt single xref section.
-			return bypassXrefSection(c, ctx, offExtra, err, incr)
+		if repaired {
+			return nil
 		}
-
 	}
 
 	postProcess(ctx, xrefSectionCount)
@@ -2705,13 +2737,52 @@ func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.S
 	return nil
 }
 
+func metadataStream(sd *types.StreamDict) bool {
+	if sd == nil {
+		return false
+	}
+
+	t := sd.Dict.Type()
+	return t != nil && *t == "Metadata"
+}
+
+func unencryptedMetadata(ctx *model.Context, sd *types.StreamDict) bool {
+	return ctx != nil && ctx.XRefTable != nil && ctx.E != nil && !ctx.E.Emd && metadataStream(sd)
+}
+
+func repairablePlaintextMetadata(ctx *model.Context, sd *types.StreamDict, err error) bool {
+	if ctx == nil || ctx.XRefTable == nil || ctx.E == nil || ctx.XRefTable.ValidationMode != model.ValidationRelaxed {
+		return false
+	}
+	if !ctx.E.Emd || !ctx.AES4Streams || !metadataStream(sd) {
+		return false
+	}
+	return errors.Is(err, errAESCiphertextTooShort) || errors.Is(err, errAESCiphertextUnaligned)
+}
+
+func validPlaintextMetadata(ctx *model.Context, sd *types.StreamDict) bool {
+	probe := *sd
+	probe.Raw = bytes.Clone(sd.Raw)
+	probe.Content = nil
+	if err := probe.DecodeWithLimit(decodeLimit(ctx)); err != nil {
+		return false
+	}
+
+	var x model.XMPMeta
+	return xml.Unmarshal(probe.Content, &x) == nil
+}
+
 func decryptStreamContent(ctx *model.Context, sd *types.StreamDict, objNr, genNr int) error {
-	if ctx == nil || ctx.EncKey == nil {
+	if ctx == nil || ctx.EncKey == nil || unencryptedMetadata(ctx, sd) {
 		return nil
 	}
 
 	raw, err := decryptStream(sd.Raw, objNr, genNr, ctx.EncKey, ctx.AES4Streams, ctx.E.R)
 	if err != nil {
+		if repairablePlaintextMetadata(ctx, sd, err) && validPlaintextMetadata(ctx, sd) {
+			model.ShowRepaired(fmt.Sprintf("plaintext metadata obj#%d", objNr))
+			return nil
+		}
 		return err
 	}
 	sd.Raw = raw

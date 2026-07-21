@@ -19,6 +19,7 @@ package pdfcpu
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -351,6 +352,45 @@ func TestAESBytesRoundTrip(t *testing.T) {
 	}
 	if !bytes.Equal(got, want) {
 		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+// TestValidatePermissionsChecksEncryptMetadata verifies the encrypted permission flag matches the encryption dictionary.
+func TestValidatePermissionsChecksEncryptMetadata(t *testing.T) {
+	for _, encryptMetadata := range []bool{false, true} {
+		t.Run(fmt.Sprintf("encryptMetadata=%t", encryptMetadata), func(t *testing.T) {
+			ctx := &model.Context{
+				XRefTable: &model.XRefTable{
+					E: &model.Enc{
+						P:     -4,
+						R:     6,
+						Emd:   encryptMetadata,
+						Perms: make([]byte, 16),
+					},
+					EncKey: make([]byte, 32),
+				},
+			}
+			if err := writePermissions(ctx, types.Dict{}); err != nil {
+				t.Fatal(err)
+			}
+
+			ok, err := validatePermissions(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !ok {
+				t.Fatal("matching EncryptMetadata flag rejected")
+			}
+
+			ctx.E.Emd = !ctx.E.Emd
+			ok, err = validatePermissions(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ok {
+				t.Fatal("mismatched EncryptMetadata flag accepted")
+			}
+		})
 	}
 }
 
