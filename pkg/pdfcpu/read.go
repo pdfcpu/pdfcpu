@@ -1165,7 +1165,10 @@ func parseTrailerDict(c context.Context, ctx *model.Context, trailerDict types.D
 	// May appear in XRefSections only.
 	if ctx.Reader15 {
 		if err := parseHybridXRefStream(c, ctx, offsetXRefStream, offExtra, incr); err != nil {
-			return nil, err
+			if err := bypassXrefSection(c, ctx, offExtra, err, incr); err != nil {
+				return nil, err
+			}
+			return nil, nil
 		}
 	}
 
