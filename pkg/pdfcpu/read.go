@@ -1320,17 +1320,19 @@ func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, f
 		fields = strings.Fields(line)
 	}
 
-	// Process all sub sections of this xRef section.
-	if line, err = parseXRefTableSubSection(ctx.XRefTable, s, fields, offExtra, incr); err != nil {
-		return nil, err
+	line = strings.TrimLeft(line, " ")
+	if !strings.HasPrefix(line, "trailer") {
+		// Process all sub sections of this xRef section.
+		if line, err = parseXRefTableSubSection(ctx.XRefTable, s, fields, offExtra, incr); err != nil {
+			return nil, err
+		}
+		*ssCount++
+		line = strings.TrimLeft(line, " ")
 	}
-	*ssCount++
 
 	if log.ReadEnabled() {
 		log.Read.Println("parseXRefSection: All subsections read!")
 	}
-
-	line = strings.TrimLeft(line, " ")
 
 	if !strings.HasPrefix(line, "trailer") {
 		return nil, fmt.Errorf("xrefsection: missing trailer dict, line = <%s>", line)
