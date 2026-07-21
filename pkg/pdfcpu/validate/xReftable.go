@@ -573,7 +573,11 @@ func validateOutputIntentDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// S: required, name
-	_, err = validateNameEntry(xRefTable, d, dictName, "S", REQUIRED, model.V10, nil)
+	required := REQUIRED
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		required = OPTIONAL
+	}
+	_, err = validateNameEntry(xRefTable, d, dictName, "S", required, model.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -585,7 +589,7 @@ func validateOutputIntentDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// OutputConditionIdentifier, required, text string
-	required := REQUIRED
+	required = REQUIRED
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = OPTIONAL
 	}
