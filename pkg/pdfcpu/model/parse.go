@@ -32,6 +32,9 @@ var (
 	// ErrDictionaryCorrupt reports malformed dictionary syntax.
 	ErrDictionaryCorrupt = errors.New("parse: corrupt dictionary")
 
+	// ErrXRefStreamIndexSizeMismatch reports an xref stream Index exceeding its declared Size.
+	ErrXRefStreamIndexSizeMismatch = errors.New("parse: xref stream Index exceeds Size")
+
 	errArrayCorrupt            = errors.New("parse: corrupt array")
 	errArrayNotTerminated      = errors.New("parse: unterminated array")
 	errDictionaryNotTerminated = fmt.Errorf("parse: unterminated dictionary: %w", ErrDictionaryCorrupt)
@@ -1025,7 +1028,7 @@ func ParseObjectContext(c context.Context, line *string, level int, maxDepth ...
 	return value, nil
 }
 
-func createXRefStreamDict(sd *types.StreamDict, objs []int) (*types.XRefStreamDict, error) {
+func createXRefStreamDict(sd *types.StreamDict, objs []int, size int) (*types.XRefStreamDict, error) {
 	// Read parameter W in order to decode the xref table.
 	// array of integers representing the size of the fields in a single cross-reference entry.
 
@@ -1065,7 +1068,7 @@ func createXRefStreamDict(sd *types.StreamDict, objs []int) (*types.XRefStreamDi
 
 	return &types.XRefStreamDict{
 		StreamDict:     *sd,
-		Size:           *sd.Size(),
+		Size:           size,
 		Objects:        objs,
 		W:              wIntArr,
 		PreviousOffset: sd.Prev(),
@@ -1093,11 +1096,11 @@ func xRefStreamSize(sd *types.StreamDict, limits ResourceLimits) (int, error) {
 	return size, nil
 }
 
-func xRefStreamObjectsFromIndex(indArr types.Array, size int, limits ResourceLimits) ([]int, error) {
+func xRefStreamObjectsFromIndex(indArr types.Array, size int, limits ResourceLimits, relaxed bool) ([]int, int, error) {
 	objs := make([]int, 0, size)
 
 	if len(indArr)%2 != 0 {
-		return nil, errXrefStreamCorruptIndex
+		return nil, 0, errXrefStreamCorruptIndex
 	}
 
 	total := 0
@@ -1105,21 +1108,28 @@ func xRefStreamObjectsFromIndex(indArr types.Array, size int, limits ResourceLim
 	for i := 0; i < len(indArr)/2; i++ {
 		startObj, ok := indArr[i*2].(types.Integer)
 		if !ok {
-			return nil, errXrefStreamCorruptIndex
+			return nil, 0, errXrefStreamCorruptIndex
 		}
 
 		count, ok := indArr[i*2+1].(types.Integer)
 		if !ok {
-			return nil, errXrefStreamCorruptIndex
+			return nil, 0, errXrefStreamCorruptIndex
 		}
 
 		start := startObj.Value()
 		n := count.Value()
-		if start < 0 || n < 0 || n > size-total {
-			return nil, errXrefStreamCorruptIndex
+		if start < 0 || n < 0 || start > limits.MaxObjectCount-n {
+			return nil, 0, errXrefStreamCorruptIndex
 		}
-		if total+n > limits.MaxXRefEntries {
-			return nil, fmt.Errorf("xref entry count %d exceeds limit %d", total+n, limits.MaxXRefEntries)
+		end := start + n
+		if end > size {
+			if !relaxed {
+				return nil, 0, ErrXRefStreamIndexSizeMismatch
+			}
+			size = end
+		}
+		if n > limits.MaxXRefEntries-total {
+			return nil, 0, fmt.Errorf("xref entry count exceeds limit %d", limits.MaxXRefEntries)
 		}
 
 		for j := 0; j < n; j++ {
@@ -1129,12 +1139,12 @@ func xRefStreamObjectsFromIndex(indArr types.Array, size int, limits ResourceLim
 		total += n
 	}
 
-	return objs, nil
+	return objs, size, nil
 }
 
-func xRefStreamObjectsFromSize(size int, limits ResourceLimits) ([]int, error) {
+func xRefStreamObjectsFromSize(size int, limits ResourceLimits) ([]int, int, error) {
 	if size > limits.MaxXRefEntries {
-		return nil, fmt.Errorf("xref entry count %d exceeds limit %d", size, limits.MaxXRefEntries)
+		return nil, 0, fmt.Errorf("xref entry count %d exceeds limit %d", size, limits.MaxXRefEntries)
 	}
 
 	objs := make([]int, 0, size)
@@ -1142,17 +1152,17 @@ func xRefStreamObjectsFromSize(size int, limits ResourceLimits) ([]int, error) {
 		objs = append(objs, i)
 	}
 
-	return objs, nil
+	return objs, size, nil
 }
 
-func xRefStreamObjects(sd *types.StreamDict, size int, limits ResourceLimits) ([]int, error) {
+func xRefStreamObjects(sd *types.StreamDict, size int, limits ResourceLimits, relaxed bool) ([]int, int, error) {
 	// Read optional parameter Index.
 	indArr := sd.Index()
 	if indArr != nil {
 		if log.ParseEnabled() {
 			log.Parse.Println("ParseXRefStreamDict: using index dict")
 		}
-		return xRefStreamObjectsFromIndex(indArr, size, limits)
+		return xRefStreamObjectsFromIndex(indArr, size, limits, relaxed)
 	}
 
 	if log.ParseEnabled() {
@@ -1163,6 +1173,15 @@ func xRefStreamObjects(sd *types.StreamDict, size int, limits ResourceLimits) ([
 
 // ParseXRefStreamDictWithLimits creates a XRefStreamDict out of a StreamDict using resource limits.
 func ParseXRefStreamDictWithLimits(sd *types.StreamDict, limits ResourceLimits) (*types.XRefStreamDict, error) {
+	return parseXRefStreamDictWithLimits(sd, limits, false)
+}
+
+// ParseXRefStreamDictRelaxedWithLimits creates an XRefStreamDict and repairs a bounded Index/Size mismatch.
+func ParseXRefStreamDictRelaxedWithLimits(sd *types.StreamDict, limits ResourceLimits) (*types.XRefStreamDict, error) {
+	return parseXRefStreamDictWithLimits(sd, limits, true)
+}
+
+func parseXRefStreamDictWithLimits(sd *types.StreamDict, limits ResourceLimits, relaxed bool) (*types.XRefStreamDict, error) {
 	if log.ParseEnabled() {
 		log.Parse.Println("ParseXRefStreamDict: begin")
 	}
@@ -1172,12 +1191,12 @@ func ParseXRefStreamDictWithLimits(sd *types.StreamDict, limits ResourceLimits) 
 		return nil, err
 	}
 
-	objs, err := xRefStreamObjects(sd, size, limits)
+	objs, size, err := xRefStreamObjects(sd, size, limits, relaxed)
 	if err != nil {
 		return nil, err
 	}
 
-	xsd, err := createXRefStreamDict(sd, objs)
+	xsd, err := createXRefStreamDict(sd, objs, size)
 	if err != nil {
 		return nil, err
 	}

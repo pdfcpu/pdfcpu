@@ -801,6 +801,9 @@ func xRefStreamDict(c context.Context, ctx *model.Context, o types.Object, objNr
 		return nil, fmt.Errorf("xRefStreamDict: cannot decode stream for obj#:%d: %w", objNr, err)
 	}
 
+	if ctx.Configuration.ValidationMode == model.ValidationRelaxed {
+		return model.ParseXRefStreamDictRelaxedWithLimits(&sd, ctx.Configuration.Limits)
+	}
 	return model.ParseXRefStreamDictWithLimits(&sd, ctx.Configuration.Limits)
 }
 
@@ -1539,6 +1542,7 @@ func processObject(c context.Context, ctx *model.Context, line string, offset *i
 		return nil, err
 	}
 	s := bufio.NewScanner(rd)
+	s.Buffer(make([]byte, 0, defaultBufSize), maxObjectBufferLen)
 	s.Split(scan.LinesSingleEOL)
 	return s, nil
 }
@@ -1587,6 +1591,7 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 	}
 
 	s := bufio.NewScanner(rd)
+	s.Buffer(make([]byte, 0, defaultBufSize), maxObjectBufferLen)
 	s.Split(scan.LinesSingleEOL)
 	eolCount := 1
 
@@ -1602,7 +1607,10 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 	for {
 		line, err := scanLineRaw(s)
 		if err != nil {
-			break
+			if errors.Is(err, errMissingScannerLine) {
+				break
+			}
+			return fmt.Errorf("repair xref table: scan input: %w", err)
 		}
 		length := len(line)
 		line = types.TrimLeadingComment(line)
@@ -1801,6 +1809,10 @@ func buildXRefTableStartingAt(c context.Context, ctx *model.Context, offset *int
 		}
 
 		if offset, err = parseXRefStream(c, ctx, rd, offset, offExtra, incr); err != nil {
+			if ctx.Configuration.ValidationMode == model.ValidationStrict &&
+				errors.Is(err, model.ErrXRefStreamIndexSizeMismatch) {
+				return err
+			}
 			// Try fix for corrupt single xref section.
 			return bypassXrefSection(c, ctx, offExtra, err, incr)
 		}

@@ -209,6 +209,36 @@ func TestParseXRefStreamDictRejectsSizeLimit(t *testing.T) {
 	}
 }
 
+// TestParseXRefStreamDictRepairsIndexSizeMismatch verifies relaxed parsing repairs
+// an undersized Size entry without weakening strict parsing or resource limits.
+func TestParseXRefStreamDictRepairsIndexSizeMismatch(t *testing.T) {
+	sd := types.StreamDict{
+		Dict: types.Dict{
+			"Size":  types.Integer(6),
+			"Index": types.Array{types.Integer(0), types.Integer(7)},
+			"W":     types.Array{types.Integer(1), types.Integer(1), types.Integer(1)},
+		},
+	}
+
+	limits := DefaultResourceLimits()
+	if _, err := ParseXRefStreamDictWithLimits(&sd, limits); !errors.Is(err, ErrXRefStreamIndexSizeMismatch) {
+		t.Fatalf("got %v, want ErrXRefStreamIndexSizeMismatch", err)
+	}
+
+	xsd, err := ParseXRefStreamDictRelaxedWithLimits(&sd, limits)
+	if err != nil {
+		t.Fatalf("parse relaxed xref stream dictionary: %v", err)
+	}
+	if xsd.Size != 7 || len(xsd.Objects) != 7 {
+		t.Fatalf("got size %d and %d objects, want 7 and 7", xsd.Size, len(xsd.Objects))
+	}
+
+	limits.MaxObjectCount = 6
+	if _, err := ParseXRefStreamDictRelaxedWithLimits(&sd, limits); err == nil {
+		t.Fatal("expected repaired Size to respect MaxObjectCount")
+	}
+}
+
 // TestObjectStreamDictRejectsLimits verifies object stream parsing enforces resource limits.
 func TestObjectStreamDictRejectsLimits(t *testing.T) {
 	sd := types.StreamDict{
