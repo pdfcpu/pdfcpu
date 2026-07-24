@@ -24,12 +24,143 @@ import (
 	"io"
 	"time"
 
-	"github.com/hhrutter/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// ValidatePKCS7Signatures validates contained signatures using subFilter adbe.pkcs7.sha1, adbe.pkcs7.detached and ETSI.CAdES.detached.
+type timestampApplication struct {
+	signer               *model.Signer
+	result               *model.SignatureValidationResult
+	setResultSigningTime bool
+	problemPrefix        string
+}
+
+const embeddedTimestampNotAuthenticated = "embedded timestamp token observed but not fully authenticated"
+
+func applyTimestampEvidence(evidence timestampEvidence, application timestampApplication) {
+	if application.signer == nil {
+		return
+	}
+	if evidence.Err != nil {
+		application.signer.HasTimestamp = evidence.Present
+		application.signer.AddProblem(fmt.Sprintf("%s: %v", application.problemPrefix, evidence.Err))
+		if application.result != nil {
+			setResultReason(application.result, model.SignatureReasonTimestampTokenInvalid)
+		}
+		return
+	}
+	if !evidence.Present || evidence.SigningTime.IsZero() {
+		return
+	}
+	application.signer.HasTimestamp = true
+	application.signer.Timestamp = evidence.SigningTime
+	if evidence.Kind == timestampKindSignature {
+		application.signer.AddProblem(fmt.Sprintf("%s: %s", application.problemPrefix, embeddedTimestampNotAuthenticated))
+		return
+	}
+	if !isLocallyValidatedDocumentTimestampEvidence(evidence) {
+		return
+	}
+	if application.setResultSigningTime && application.result != nil {
+		application.result.Details.SigningTime = evidence.SigningTime
+	}
+}
+
+func embeddedSignatureTimestampEvidence(p7Signer pkcs7.SignerInfo) timestampEvidence {
+	// Collect locally available RFC 3161 timestamp evidence.
+	evidence := timestampEvidence{
+		Kind:            timestampKindSignature,
+		AssessmentScope: model.AssessmentScopeLocal,
+		SourceSigner:    p7Signer,
+	}
+	bb, err := locateTimestampToken(p7Signer)
+	if err != nil {
+		evidence.Present = true
+		evidence.Err = fmt.Errorf("timestamp token: locate: %w", err)
+		return evidence
+	}
+	if len(bb) == 0 {
+		return evidence
+	}
+	evidence.Present = true
+	evidence.RawToken = append([]byte(nil), bb...)
+	evidence.CMS, err = pkcs7.Parse(bb)
+	if err != nil {
+		evidence.Err = fmt.Errorf("timestamp token: parse: %w", err)
+		return evidence
+	}
+	if len(evidence.CMS.Signers) != 1 {
+		evidence.Err = fmt.Errorf("timestamp token: expected one signer, got %d", len(evidence.CMS.Signers))
+		return evidence
+	}
+	evidence.Err = populateEmbeddedTimestampInfo(&evidence)
+	return evidence
+}
+
+func populateEmbeddedTimestampInfo(evidence *timestampEvidence) error {
+	if evidence.CMS == nil || !evidence.CMS.ContentType.Equal(oidTSTInfo) {
+		return errors.New("timestamp token: missing timestamp info")
+	}
+	tstInfo, err := parseTSTInfo(evidence.CMS.Content)
+	evidence.TokenInfoErr = err
+	if err != nil {
+		return fmt.Errorf("timestamp token: parse timestamp info: %w", err)
+	}
+	evidence.TokenInfo = structuredTimestampTokenInfo(tstInfo)
+	evidence.SigningTime = tstInfo.GenTime
+	return nil
+}
+
+func documentTimestampEvidence(signingTime time.Time) timestampEvidence {
+	return timestampEvidence{
+		Kind:            timestampKindDocument,
+		SigningTime:     signingTime,
+		Present:         true,
+		AssessmentScope: model.AssessmentScopeLocal,
+	}
+}
+
+func preparedDocumentTimestampEvidence(
+	tstInfo *TSTInfo,
+	rawToken []byte,
+	cms *pkcs7.PKCS7,
+	sourceSigner pkcs7.SignerInfo,
+	signedData []byte,
+) timestampEvidence {
+	evidence := documentTimestampEvidence(tstInfo.GenTime)
+	evidence.RawToken = append([]byte(nil), rawToken...)
+	evidence.CMS = cms
+	evidence.SourceSigner = sourceSigner
+	evidence.TokenInfo = structuredTimestampTokenInfo(tstInfo)
+	evidence.SignedData = signedData
+	evidence.DigestVerified = true
+	evidence.SignatureVerified = true
+	return evidence
+}
+
+func structuredTimestampTokenInfo(tstInfo *TSTInfo) *timestampTokenInfo {
+	if tstInfo == nil {
+		return nil
+	}
+	return &timestampTokenInfo{
+		Version:                 tstInfo.Version,
+		Policy:                  tstInfo.Policy,
+		MessageImprintAlgorithm: tstInfo.MessageImprint.HashAlgorithm.Algorithm,
+		MessageImprint:          append([]byte(nil), tstInfo.MessageImprint.HashedMessage...),
+		SerialNumber:            tstInfo.SerialNumber,
+		GeneratedAt:             tstInfo.GenTime,
+		Accuracy:                tstInfo.Accuracy,
+		Ordering:                tstInfo.Ordering,
+		Nonce:                   tstInfo.Nonce,
+		TSA:                     tstInfo.TSA,
+		Extensions:              tstInfo.Extensions,
+	}
+}
+
+// ValidatePKCS7Signatures reports observed signature, certificate, timestamp
+// and revocation evidence together with a local assessment for supported
+// PKCS#7 SubFilters.
 func ValidatePKCS7Signatures(
 	ra io.ReaderAt,
 	sigDict types.Dict,
@@ -39,8 +170,32 @@ func ValidatePKCS7Signatures(
 	perms int,
 	rootCerts *x509.CertPool,
 	result *model.SignatureValidationResult,
-	ctx *model.Context) error {
+	ctx *model.Context,
+) error {
+	return validatePKCS7Signatures(
+		ra,
+		sigDict,
+		certified,
+		authoritative,
+		validateAll,
+		perms,
+		rootCerts,
+		result,
+		ctx,
+	)
+}
 
+func validatePKCS7Signatures(
+	ra io.ReaderAt,
+	sigDict types.Dict,
+	certified bool,
+	authoritative bool,
+	validateAll bool,
+	perms int,
+	rootCerts *x509.CertPool,
+	result *model.SignatureValidationResult,
+	ctx *model.Context,
+) error {
 	if ctx.Configuration.Offline {
 		result.AddProblem("pdfcpu is offline, unable to perform certificate revocation checking")
 	}
@@ -52,8 +207,11 @@ func ValidatePKCS7Signatures(
 
 	data, err := signedData(ra, sigDict)
 	if err != nil {
-		result.Reason = model.SignatureReasonInternal
-		result.AddProblem(fmt.Sprintf("unmarshal asn1 content: %v", err))
+		if !errors.Is(err, errMalformedByteRange) {
+			return fmt.Errorf("read signed data: %w", err)
+		}
+		result.Reason = model.SignatureReasonMalformed
+		result.AddProblem(fmt.Sprintf("read signed data: %v", err))
 		return nil
 	}
 
@@ -62,47 +220,81 @@ func ValidatePKCS7Signatures(
 		p7.Content = data
 	}
 
+	var localAssessment localSignatureAssessment
 	for i, p7Signer := range p7.Signers {
-		verifyP7Signer(p7Signer, p7.Certificates, rootCerts, p7.Content, data, detached, certified, authoritative, perms, i, result, ctx)
+		signerAssessment := localSignatureAssessment{SignersProcessed: 1}
+		if err := verifyP7SignerWithContentType(
+			p7Signer,
+			p7.Certificates,
+			rootCerts,
+			p7.Content,
+			data,
+			detached,
+			certified,
+			authoritative,
+			perms,
+			i,
+			result,
+			ctx,
+			p7.ContentType,
+			&signerAssessment,
+		); err != nil {
+			return fmt.Errorf("signer %d: %w", i+1, err)
+		}
+		localAssessment.merge(signerAssessment)
 		if (certified || authoritative) && !validateAll {
 			break
 		}
 	}
 
-	finalizePKCS7Result(result)
+	finalizePKCS7Result(result, localAssessment)
 
 	return nil
 }
 
-func finalizePKCS7Result(result *model.SignatureValidationResult) {
-	if result.Status == model.SignatureStatusUnknown && result.Reason == model.SignatureReasonUnknown {
-		result.Status = model.SignatureStatusValid
-		result.Reason = model.SignatureReasonDocNotModified
-	} else {
-		// Show PAdES basic evidence level for valid signatures only.
-		if len(result.Details.Signers) > 0 {
-			result.Details.Signers[0].PAdES = ""
-		}
+func finalizePKCS7Result(
+	result *model.SignatureValidationResult,
+	assessment localSignatureAssessment,
+) {
+	if assessment.SignersProcessed > 0 &&
+		finalizeLocalSignatureResult(result, assessment) {
+		return
+	}
+
+	// Show PAdES basic evidence levels for valid signatures only.
+	for _, signer := range result.Details.Signers {
+		signer.PAdES = ""
 	}
 }
 
 func p7(sigDict types.Dict) (*pkcs7.PKCS7, error) {
-	hl := sigDict.HexLiteralEntry("Contents")
-	if hl == nil {
-		return nil, errors.New("invalid signature dict - missing \"Contents\"")
-	}
-
-	signature, err := hl.Bytes()
+	signature, err := signatureContents(sigDict)
 	if err != nil {
-		return nil, fmt.Errorf("invalid content data: %v", err)
+		return nil, err
 	}
 
 	p7, err := pkcs7.Parse(signature)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse PKCS#7: %v", err)
+		if errors.Is(err, pkcs7.ErrCertificateParse) {
+			return nil, fmt.Errorf("PKCS#7 embedded certificates: parse certificate: %w", err)
+		}
+		return nil, fmt.Errorf("parse PKCS#7: %w", err)
 	}
 
 	return p7, nil
+}
+
+func signatureContents(sigDict types.Dict) ([]byte, error) {
+	hl := sigDict.HexLiteralEntry("Contents")
+	if hl == nil {
+		return nil, errors.New("signature dict entry Contents: missing")
+	}
+
+	signature, err := hl.Bytes()
+	if err != nil {
+		return nil, fmt.Errorf("signature dict entry Contents: decode: %w", err)
+	}
+	return signature, nil
 }
 
 func verifyP7Signer(
@@ -116,8 +308,44 @@ func verifyP7Signer(
 	authoritative bool,
 	perms, i int,
 	result *model.SignatureValidationResult,
-	ctx *model.Context) {
+	ctx *model.Context,
+) error {
+	return verifyP7SignerWithContentType(
+		p7Signer,
+		p7Certs,
+		rootCerts,
+		p7Content,
+		data,
+		detached,
+		certified,
+		authoritative,
+		perms,
+		i,
+		result,
+		ctx,
+		pkcs7.OIDData,
+		nil,
+	)
+}
 
+func verifyP7SignerWithContentType(
+	p7Signer pkcs7.SignerInfo,
+	p7Certs []*x509.Certificate,
+	rootCerts *x509.CertPool,
+	p7Content []byte,
+	data []byte,
+	detached bool,
+	certified bool,
+	authoritative bool,
+	perms, i int,
+	result *model.SignatureValidationResult,
+	ctx *model.Context,
+	contentType asn1.ObjectIdentifier,
+	localAssessment *localSignatureAssessment,
+) error {
+	if localAssessment == nil {
+		localAssessment = &localSignatureAssessment{}
+	}
 	conf := ctx.Configuration
 
 	signer := &model.Signer{}
@@ -128,51 +356,54 @@ func verifyP7Signer(
 	signer.Permissions = perms
 
 	checkPerms(signer, result)
+	digestReason, digestErr := verifyP7Digest(p7Signer, p7Content, data, detached)
 
-	if ok := checkP7Digest(p7Signer, p7Content, data, detached, signer, result); !ok {
-		return
+	signerCert, err := pkcs7.GetCertFromCertsByIssuerAndSerial(p7Certs, p7Signer.IssuerAndSerialNumber)
+	if err != nil {
+		markCertificateInvalidEvidence(result)
+		signer.AddProblem(fmt.Sprintf("pkcs7: signer %d identifier: %v", i+1, err))
+		return nil
 	}
-
-	if result.Status == model.SignatureStatusUnknown {
-		if result.DocModified == model.Unknown {
-			result.DocModified = model.False
-		}
-	}
-
-	signerCert := pkcs7.GetCertFromCertsByIssuerAndSerial(p7Certs, p7Signer.IssuerAndSerialNumber)
 	if signerCert == nil {
-		result.Reason = model.SignatureReasonInternal
+		markCertificateInvalidEvidence(result)
 		signer.AddProblem(fmt.Sprintf("pkcs7: missing certificate for signer %d", i+1))
-		return
+		return nil
 	}
+	localAssessment.CertificateIdentified = true
 
-	if err := verifyP7Signature(p7Signer, signerCert, p7Content, detached); err != nil {
-		if result.Status == model.SignatureStatusUnknown {
-			result.Status = model.SignatureStatusInvalid
-			result.Reason = model.SignatureReasonSignatureForged
-		}
-		signer.AddProblem(fmt.Sprintf("pkcs7: signature verification failure: %v\n", err))
-		return
+	if err := verifyP7Signature(p7Signer, signerCert, p7Content, contentType); err != nil {
+		reportP7SignatureError(err, signer, result)
+		return nil
 	}
+	localAssessment.SignatureAuthenticated = true
 
-	// Signature is authenticated and the signer is who they claim to be.
-
-	if detached {
-		signer.PAdES = "B-B"
+	// The signature verifies with the public key in the identified certificate.
+	if !applyP7DigestEvidence(digestReason, digestErr, signer, result) {
+		return nil
 	}
+	localAssessment.DigestVerified = true
+	markDocumentUnmodified(result)
+
+	applyP7ProfileAssessment(
+		result.Details.SubFilter,
+		detached,
+		contentType,
+		p7Signer,
+		signerCert,
+		signer,
+		result,
+		localAssessment,
+	)
 
 	// Process optional DSS and DTS for embedded revocation and timestamp evidence.
-	// This may report PAdES evidence levels B-T, B-LT or B-LTA respectively.
 
-	// Calculate the signingTime we use for validation.
-	// Use either a present timestamp token or document timestamp.
-	// Fallback to claimed signingTime and in absence to time.Now().
+	// Record the claimed signing time for compatible presentation only.
+	// Locally validated document timestamp evidence does not select an
+	// archival validation time.
 
 	// TODO Handle oidArchiveTimestamp
 
-	var signingTime *time.Time
-
-	signingTime = handleClaimedSigningTime(p7Signer, signer, result)
+	handleClaimedSigningTime(p7Signer, signer, result)
 
 	if !ctx.DTS.IsZero() {
 		if result.Details.SigningTime.After(ctx.DTS) {
@@ -182,57 +413,164 @@ func verifyP7Signer(
 		}
 	}
 
-	if ts := checkTimestampToken(detached, p7Signer, rootCerts, ctx, signer, result); ts != nil {
-		signingTime = ts
-	}
+	checkTimestampToken(
+		p7Signer,
+		ctx,
+		signer,
+		result,
+	)
 
 	// Look for embedded revocation info.
 	crls, ocsps := handleArchivedRevocationInfo(p7Signer, signer)
 
 	certs := p7Certs
 
-	handleDSS(&certs, &crls, &ocsps, ctx, signer, detached)
+	handleDSS(&certs, &crls, &ocsps, ctx, signer, result, detached)
 
-	// Does signerCert chain up to a trusted Root CA?
-	chains := buildP7CertChains(i == 0, signerCert, certs, rootCerts, signer, signingTime, result)
+	// Collect certificate-path evidence using the configured local certificate sources.
+	chains := buildP7CertChains(i == 0, signerCert, certs, rootCerts, signer, result)
+	pathResolved := len(chains) > 0
 	if len(chains) == 0 {
 		chains = [][]*x509.Certificate{certChain(signerCert, certs)}
 	}
 
-	validateCertChains(chains, rootCerts, signer, signingTime, crls, ocsps, result, ctx.Configuration)
+	assessment, err := assessCertificateEvidence(
+		chains,
+		pathResolved,
+		rootCerts,
+		crls,
+		ocsps,
+		result.Reason,
+		ctx.Configuration,
+	)
+	if err != nil {
+		return fmt.Errorf("pkcs7: assess certificate evidence: %w", err)
+	}
+	applyCertificateAssessment(assessment, signer, result)
+	localAssessment.applyCertificateAssessment(assessment)
+	return nil
+}
+
+func applyP7ProfileAssessment(
+	subFilter string,
+	detached bool,
+	contentType asn1.ObjectIdentifier,
+	p7Signer pkcs7.SignerInfo,
+	signerCert *x509.Certificate,
+	signer *model.Signer,
+	result *model.SignatureValidationResult,
+	assessment *localSignatureAssessment,
+) {
+	switch subFilter {
+	case "adbe.pkcs7.detached", "adbe.pkcs7.sha1":
+		if err := validateAdobePKCS7Profile(subFilter, detached, contentType); err != nil {
+			markMalformedEvidence(result)
+			signer.AddProblem(fmt.Sprintf("SubFilter %s: validate profile: %v", subFilter, err))
+			return
+		}
+		assessment.ProfileValidated = true
+	case "ETSI.CAdES.detached":
+		if err := validateCAdESBaselineBProfile(detached, contentType, p7Signer, signerCert); err != nil {
+			reportCAdESBaselineBProfileError(err, signer, result)
+			return
+		}
+		assessment.ProfileValidated = true
+		signer.PAdES = "B-B"
+	}
+}
+
+func validateAdobePKCS7Profile(
+	subFilter string,
+	detached bool,
+	contentType asn1.ObjectIdentifier,
+) error {
+	if !contentType.Equal(oidData) {
+		return fmt.Errorf("%w: content type %s", errMalformedAdobePKCS7Profile, contentType)
+	}
+	if subFilter == "adbe.pkcs7.detached" && !detached {
+		return fmt.Errorf("%w: signed content is encapsulated", errMalformedAdobePKCS7Profile)
+	}
+	if subFilter == "adbe.pkcs7.sha1" && detached {
+		return fmt.Errorf("%w: signed content is detached", errMalformedAdobePKCS7Profile)
+	}
+	return nil
+}
+
+func validateCAdESBaselineBProfile(
+	detached bool,
+	contentType asn1.ObjectIdentifier,
+	p7Signer pkcs7.SignerInfo,
+	signerCert *x509.Certificate,
+) error {
+	if !detached {
+		return fmt.Errorf("%w: signed content is encapsulated", errMalformedCAdESBaselineBProfile)
+	}
+	if !contentType.Equal(oidData) {
+		return fmt.Errorf(
+			"%w: content type %s",
+			errUnsupportedCAdESBaselineBProfile,
+			contentType,
+		)
+	}
+	if err := validateESSCertificateBinding(p7Signer, signerCert); err != nil {
+		return classifyCAdESBaselineBProfileError(err)
+	}
+	return nil
+}
+
+func classifyCAdESBaselineBProfileError(err error) error {
+	switch {
+	case errors.Is(err, errESSCertificateMismatch):
+		return fmt.Errorf("%w: signing-certificate binding: %w", errCAdESCertificateBindingMismatch, err)
+	case errors.Is(err, pkcs7.ErrUnsupportedAlgorithm),
+		errors.Is(err, errUnsupportedESSCertificateProfile):
+		return fmt.Errorf("%w: signing-certificate binding: %w", errUnsupportedCAdESBaselineBProfile, err)
+	default:
+		return fmt.Errorf("%w: signing-certificate binding: %w", errMalformedCAdESBaselineBProfile, err)
+	}
+}
+
+func reportCAdESBaselineBProfileError(
+	err error,
+	signer *model.Signer,
+	result *model.SignatureValidationResult,
+) {
+	switch {
+	case errors.Is(err, errCAdESCertificateBindingMismatch):
+		markInvalidEvidence(result, model.SignatureReasonCertInvalid, model.Unknown)
+	case errors.Is(err, errUnsupportedCAdESBaselineBProfile):
+		markUnsupportedEvidence(result)
+	default:
+		markMalformedEvidence(result)
+	}
+	signer.AddProblem(fmt.Sprintf("SubFilter ETSI.CAdES.detached: validate baseline B profile: %v", err))
 }
 
 func checkPerms(signer *model.Signer, result *model.SignatureValidationResult) {
 	if signer.Certified && signer.Permissions != model.CertifiedSigPermNoChangesAllowed {
 		// TODO Check for violation of perm 2 and 3
 		signer.AddProblem(CertifiedSigPermsNotSupported)
-		result.Reason = model.SignatureReasonInternal
+		markUnsupportedEvidence(result)
 	}
 }
 
-func checkP7Digest(
-	p7Signer pkcs7.SignerInfo,
-	p7Content,
-	data []byte, detached bool,
+func applyP7DigestEvidence(
+	reason model.SignatureReason,
+	err error,
 	signer *model.Signer,
-	result *model.SignatureValidationResult) bool {
-
-	reason, err := verifyP7Digest(p7Signer, p7Content, data, detached)
+	result *model.SignatureValidationResult,
+) bool {
 	if err == nil {
 		return true
 	}
 
-	if result.Status == model.SignatureStatusUnknown {
-		if reason == model.SignatureReasonDocModified {
-			// Document has been modified since time of signing.
-			result.Status = model.SignatureStatusInvalid
-			result.Reason = model.SignatureReasonDocModified
-			result.DocModified = model.True
-		}
-		if reason == model.SignatureReasonInternal {
-			//result.Status = model.SignatureStatusInvalid
-			result.Reason = model.SignatureReasonInternal
-		}
+	switch reason {
+	case model.SignatureReasonDocModified:
+		markInvalidEvidence(result, model.SignatureReasonDocModified, model.True)
+	case model.SignatureReasonUnsupported:
+		markUnsupportedEvidence(result)
+	default:
+		markMalformedEvidence(result)
 	}
 
 	signer.AddProblem(fmt.Sprintf("%v", err))
@@ -247,21 +585,24 @@ func verifyP7Digest(p7Signer pkcs7.SignerInfo, p7Content []byte, data []byte, de
 	if detached {
 
 		if len(p7Signer.AuthenticatedAttributes) == 0 {
-			return model.SignatureReasonInternal, errors.New("pkcs7: missing authenticated attributes")
+			return model.SignatureReasonMalformed, errors.New("pkcs7: missing authenticated attributes")
 		}
 
 		if err := pkcs7.VerifyMessageDigestDetached(p7Signer, p7Content); err != nil {
 			var mdErr *pkcs7.MessageDigestMismatchError
 			if errors.As(err, &mdErr) {
-				return model.SignatureReasonDocModified, fmt.Errorf("pkcs7: message digest verification failure: %v", err)
+				return model.SignatureReasonDocModified, fmt.Errorf("pkcs7: verify message digest: mismatch: %w", err)
 			}
-			return model.SignatureReasonInternal, fmt.Errorf("pkcs7: message digest verification: %v", err)
+			if isUnsupportedP7SignatureError(err) {
+				return model.SignatureReasonUnsupported, fmt.Errorf("pkcs7: verify message digest: %w", err)
+			}
+			return model.SignatureReasonMalformed, fmt.Errorf("pkcs7: verify message digest: %w", err)
 		}
 
 	} else {
 
 		if err := pkcs7.VerifyMessageDigestEmbedded(p7Content, data); err != nil {
-			return model.SignatureReasonDocModified, fmt.Errorf("pkcs7: message digest verification failure: %v", err)
+			return model.SignatureReasonDocModified, fmt.Errorf("pkcs7: verify message digest: mismatch: %w", err)
 		}
 
 	}
@@ -270,160 +611,292 @@ func verifyP7Digest(p7Signer pkcs7.SignerInfo, p7Content []byte, data []byte, de
 }
 
 func checkTimestampToken(
-	detached bool,
 	p7Signer pkcs7.SignerInfo,
-	rootCerts *x509.CertPool,
+	_ *model.Context,
+	signer *model.Signer,
+	result *model.SignatureValidationResult,
+) {
+	evidence := embeddedSignatureTimestampEvidence(p7Signer)
+	applyTimestampEvidence(evidence, timestampApplication{
+		signer:        signer,
+		result:        result,
+		problemPrefix: "pkcs7",
+	})
+}
+
+func handleDSS(
+	certs *[]*x509.Certificate,
+	crls *[][]byte,
+	ocsps *[][]byte,
 	ctx *model.Context,
 	signer *model.Signer,
-	result *model.SignatureValidationResult) (signingTime *time.Time) {
-
-	token := handleTimestampToken(p7Signer, rootCerts, signer, result)
-
-	if token != nil {
-		signingTime = token
-		signer.HasTimestamp = true
-		signer.Timestamp = *token
-		if detached {
-			signer.PAdES = "B-T"
-		}
-	} else if !ctx.DTS.IsZero() {
-		signingTime = &ctx.DTS
-		signer.HasTimestamp = true
-		signer.Timestamp = ctx.DTS
-		if detached {
-			signer.PAdES = "B-T"
-		}
+	result *model.SignatureValidationResult,
+	_ bool,
+) {
+	if len(ctx.DSS) == 0 {
+		return
 	}
-
-	return signingTime
-}
-
-func handleDSS(certs *[]*x509.Certificate, crls *[][]byte, ocsps *[][]byte, ctx *model.Context, signer *model.Signer, detached bool) {
-	if len(ctx.DSS) > 0 {
-		if dssCerts, dssCRLs, dssOCSPs, ok := processDSS(ctx, signer); ok {
-			*certs = mergeCerts(*certs, dssCerts)
-			if len(dssCRLs) > 0 {
-				*crls = dssCRLs
-			}
-			if len(dssOCSPs) > 0 {
-				*ocsps = dssOCSPs
-			}
-			if detached && signer.PAdES == "B-T" {
-				signer.PAdES = "B-LT"
-			}
-			signer.LTVEnabled = true
-		}
-	}
-
-	if signer.PAdES == "B-LT" && !ctx.DTS.IsZero() {
-		signer.PAdES = "B-LTA"
+	evidence := processDSS(ctx, signer)
+	*certs = mergeCerts(*certs, evidence.Certificates)
+	*crls = append(*crls, evidence.CRLs...)
+	*ocsps = append(*ocsps, evidence.OCSPResponses...)
+	if !evidence.Supported {
+		markUnsupportedEvidence(result)
 	}
 }
 
-func verifyP7Signature(p7Signer pkcs7.SignerInfo, cert *x509.Certificate, p7Content []byte, detached bool) error {
+func verifyP7Signature(
+	p7Signer pkcs7.SignerInfo,
+	cert *x509.Certificate,
+	p7Content []byte,
+	contentType ...asn1.ObjectIdentifier,
+) error {
 	// Verify signature against expected hash using the public key.
-	// Ensures integrity and authenticity of the signature itself.
-	// Confirms the signer is who they claim to be.
+	// The signature verifies with the public key in the identified certificate.
 
-	var content []byte
-	if !detached {
-		content = p7Content
+	expectedContentType := pkcs7.OIDData
+	if len(contentType) > 0 {
+		expectedContentType = contentType[0]
 	}
-	return pkcs7.CheckSignature(cert, p7Signer, content)
+	return pkcs7.CheckSignatureWithContentType(cert, p7Signer, p7Content, expectedContentType)
 }
 
-func handleClaimedSigningTime(signerInfo pkcs7.SignerInfo, signer *model.Signer, result *model.SignatureValidationResult) *time.Time {
-	var (
-		err         error
-		signingTime time.Time
+func reportP7SignatureError(
+	err error,
+	signer *model.Signer,
+	result *model.SignatureValidationResult,
+) {
+	reportSignatureVerificationError(
+		"pkcs7: verify signature",
+		err,
+		model.SignatureReasonDocModified,
+		signer,
+		result,
 	)
+}
 
-	for _, attr := range signerInfo.AuthenticatedAttributes {
-		if attr.Type.Equal(oidSigningTime) {
-			_, err = asn1.Unmarshal(attr.Value.Bytes, &signingTime)
-			break
-		}
+func reportSignatureVerificationError(
+	phase string,
+	err error,
+	contentMismatchReason model.SignatureReason,
+	signer *model.Signer,
+	result *model.SignatureValidationResult,
+) {
+	if isMalformedP7SignatureError(err) {
+		markMalformedEvidence(result)
+		signer.AddProblem(fmt.Sprintf("%s malformed: %v", phase, err))
+		return
 	}
+	if isUnsupportedP7SignatureError(err) {
+		markUnsupportedEvidence(result)
+		signer.AddProblem(fmt.Sprintf("%s unsupported: %v", phase, err))
+		return
+	}
+	var digestMismatchErr *pkcs7.MessageDigestMismatchError
+	if errors.As(err, &digestMismatchErr) {
+		docModified := model.Unknown
+		if contentMismatchReason == model.SignatureReasonDocModified {
+			docModified = model.True
+		}
+		markInvalidEvidence(result, contentMismatchReason, docModified)
+		signer.AddProblem(fmt.Sprintf("%s content mismatch: %v", phase, err))
+		return
+	}
+	if errors.Is(err, pkcs7.ErrSignatureMismatch) {
+		markInvalidEvidence(result, model.SignatureReasonSignatureForged, model.Unknown)
+		signer.AddProblem(fmt.Sprintf("%s failure: %v", phase, err))
+		return
+	}
+	markMalformedEvidence(result)
+	signer.AddProblem(fmt.Sprintf("%s malformed: %v", phase, err))
+}
 
+func isUnsupportedP7SignatureError(err error) bool {
+	if errors.Is(err, pkcs7.ErrUnsupportedAlgorithm) ||
+		errors.Is(err, pkcs7.ErrAlgorithmMismatch) ||
+		errors.Is(err, x509.ErrUnsupportedAlgorithm) {
+		return true
+	}
+	var insecureAlgorithmErr x509.InsecureAlgorithmError
+	if errors.As(err, &insecureAlgorithmErr) {
+		return true
+	}
+	return false
+}
+
+func isMalformedP7SignatureError(err error) bool {
+	if errors.Is(err, pkcs7.ErrInvalidPSSParameters) ||
+		errors.Is(err, pkcs7.ErrMalformedAttribute) {
+		return true
+	}
+	var syntaxErr asn1.SyntaxError
+	if errors.As(err, &syntaxErr) {
+		return true
+	}
+	var structuralErr asn1.StructuralError
+	if errors.As(err, &structuralErr) {
+		return true
+	}
+	return false
+}
+
+func handleClaimedSigningTime(signerInfo pkcs7.SignerInfo, signer *model.Signer, result *model.SignatureValidationResult) {
+	signingTime, err := parseClaimedSigningTime(signerInfo)
 	if err != nil {
-		signer.AddProblem(fmt.Sprintf("invalid signing time: %v", err))
-		if result.Status == model.SignatureStatusUnknown {
-			result.Reason = model.SignatureReasonSigningTimeInvalid
+		signer.AddProblem(fmt.Sprintf("%v", err))
+		setResultReason(result, model.SignatureReasonSigningTimeInvalid)
+		return
+	}
+	if signingTime != nil && result.Details.SigningTime.IsZero() {
+		result.Details.SigningTime = *signingTime
+	}
+}
+
+func parseClaimedSigningTime(signerInfo pkcs7.SignerInfo) (*time.Time, error) {
+	var (
+		signingTime *time.Time
+		firstIndex  int
+	)
+	for i, attr := range signerInfo.AuthenticatedAttributes {
+		if !attr.Type.Equal(oidSigningTime) {
+			continue
 		}
-		return nil
+		if signingTime != nil {
+			return nil, fmt.Errorf(
+				"pkcs7: signing time attributes %d and %d: duplicate",
+				firstIndex,
+				i+1,
+			)
+		}
+		var t time.Time
+		rest, err := asn1.Unmarshal(attr.Value.Bytes, &t)
+		if err != nil {
+			return nil, fmt.Errorf("pkcs7: signing time attribute %d: unmarshal: %w", i+1, err)
+		}
+		if len(rest) > 0 {
+			err := asn1.SyntaxError{Msg: "trailing data"}
+			return nil, fmt.Errorf("pkcs7: signing time attribute %d: %w", i+1, err)
+		}
+		signingTime = &t
+		firstIndex = i + 1
 	}
-
-	if !signingTime.IsZero() {
-		result.Details.SigningTime = signingTime
-		return &signingTime
-	}
-
-	return nil
+	return signingTime, nil
 }
 
-func timestampToken(p7Signer pkcs7.SignerInfo, _ *x509.CertPool) (time.Time, error) {
-	// Extract timestamp token evidence for signing time.
-	// Full RFC3161 trust validation belongs to the trust validation layer.
-	if bb := locateTimestampToken(p7Signer); len(bb) > 0 {
-		return extractTimestampTokenTime(bb)
-	}
-	return time.Time{}, nil
-}
-
-func locateTimestampToken(signerInfo pkcs7.SignerInfo) []byte {
-	for _, attr := range signerInfo.UnauthenticatedAttributes {
+func locateTimestampToken(signerInfo pkcs7.SignerInfo) ([]byte, error) {
+	var (
+		token      []byte
+		firstIndex int
+	)
+	for i, attr := range signerInfo.UnauthenticatedAttributes {
 		if attr.Type.Equal(oidTimestampToken) {
-			return attr.Value.Bytes
+			if firstIndex != 0 {
+				return nil, fmt.Errorf(
+					"timestamp token attributes %d and %d: duplicate",
+					firstIndex,
+					i+1,
+				)
+			}
+			token = attr.Value.Bytes
+			firstIndex = i + 1
 		}
 	}
-	return nil
+	return token, nil
 }
 
 func extractTimestampTokenTime(data []byte) (time.Time, error) {
 	var defTime time.Time
 	p7, err := pkcs7.Parse(data)
 	if err != nil {
-		return defTime, fmt.Errorf("failed to parse timestamp token: %v", err)
+		return defTime, fmt.Errorf("timestamp token: parse: %w", err)
 	}
 
 	if len(p7.Signers) != 1 {
-		return defTime, fmt.Errorf("malformed timestamp token")
+		return defTime, fmt.Errorf("timestamp token: expected one signer, got %d", len(p7.Signers))
 	}
 	signer := p7.Signers[0]
+	return timestampTokenSigningTime(signer)
+}
 
-	for _, attr := range signer.AuthenticatedAttributes {
-		if attr.Type.Equal(oidSigningTime) {
-			var rawValue asn1.RawValue
-			if _, err := asn1.Unmarshal(attr.Value.Bytes, &rawValue); err != nil {
-				return defTime, fmt.Errorf("failed to unmarshal signing time: %v", err)
-			}
-			if rawValue.Tag == asn1.TagUTCTime {
-				return time.Parse("060102150405Z", string(rawValue.Bytes))
-			}
-			if rawValue.Tag == asn1.TagGeneralizedTime {
-				return time.Parse("20060102150405Z", string(rawValue.Bytes))
-			}
-			return defTime, fmt.Errorf("unexpected tag for signing time: %d", rawValue.Tag)
+func timestampTokenSigningTime(signer pkcs7.SignerInfo) (time.Time, error) {
+	var defTime time.Time
+	var (
+		signingTime *time.Time
+		firstIndex  int
+	)
+	for i, attr := range signer.AuthenticatedAttributes {
+		if !attr.Type.Equal(oidSigningTime) {
+			continue
 		}
+		if signingTime != nil {
+			return defTime, fmt.Errorf(
+				"timestamp token: signing time attributes %d and %d: duplicate",
+				firstIndex,
+				i+1,
+			)
+		}
+		t, err := parseTimestampTokenSigningTime(attr.Value.Bytes)
+		if err != nil {
+			return defTime, fmt.Errorf("timestamp token: signing time attribute %d: %w", i+1, err)
+		}
+		signingTime = &t
+		firstIndex = i + 1
 	}
 
-	return defTime, errors.New("unable to resolve timestamp info")
+	if signingTime != nil {
+		return *signingTime, nil
+	}
+	return defTime, errors.New("timestamp token: signing time unavailable")
+}
+
+func parseTimestampTokenSigningTime(bb []byte) (time.Time, error) {
+	var rawValue asn1.RawValue
+	rest, err := asn1.Unmarshal(bb, &rawValue)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("timestamp token signing time: unmarshal: %w", err)
+	}
+	if len(rest) > 0 {
+		err := asn1.SyntaxError{Msg: "trailing data"}
+		return time.Time{}, fmt.Errorf("timestamp token signing time: %w", err)
+	}
+	t, err := parseTimestampSigningTime(rawValue)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("timestamp token signing time: %w", err)
+	}
+	return t, nil
+}
+
+func parseTimestampSigningTime(rawValue asn1.RawValue) (time.Time, error) {
+	var (
+		layout string
+		phase  string
+	)
+	switch rawValue.Tag {
+	case asn1.TagUTCTime:
+		layout = "060102150405Z"
+		phase = "parse UTC signing time"
+	case asn1.TagGeneralizedTime:
+		layout = "20060102150405Z"
+		phase = "parse generalized signing time"
+	default:
+		return time.Time{}, fmt.Errorf("unexpected tag for signing time: %d", rawValue.Tag)
+	}
+	t, err := time.Parse(layout, string(rawValue.Bytes))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("%s: %w", phase, err)
+	}
+	return t, nil
 }
 
 func handleArchivedRevocationInfo(p7Signer pkcs7.SignerInfo, signer *model.Signer) (crls [][]byte, ocsps [][]byte) {
-	if !signer.HasTimestamp {
-		return nil, nil
-	}
 	ria, err := revocationInfoArchival(p7Signer)
 	if err != nil {
-		signer.LTVEnabled = true
-		signer.AddProblem(fmt.Sprintf("revocationInfoArchival extraction failed: %v", err))
+		signer.AddProblem(fmt.Sprintf("%v", err))
+		return nil, nil
 	}
 	if ria == nil {
 		return nil, nil
 	}
-
-	signer.LTVEnabled = true
 
 	for _, raw := range ria.CRLs {
 		crls = append(crls, raw.FullBytes)
@@ -442,16 +915,9 @@ func buildP7CertChains(
 	certs []*x509.Certificate,
 	rootCerts *x509.CertPool,
 	signer *model.Signer,
-	signingTime *time.Time,
 	result *model.SignatureValidationResult) [][]*x509.Certificate {
-
-	currentTime := time.Now()
-	if signingTime != nil {
-		currentTime = *signingTime
-	}
-
 	intermediates := collectIntermediates(cert, certs)
-	chains, err := pkcs7.VerifyCertChain(cert, intermediates, rootCerts, currentTime)
+	chains, err := pkcs7.VerifyCertChain(cert, intermediates, rootCerts, time.Now())
 	if err != nil {
 		handleCertVerifyErr(err, cert, signer, result)
 		return nil
@@ -462,29 +928,46 @@ func buildP7CertChains(
 	return chains
 }
 
-func handleTimestampToken(p7Signer pkcs7.SignerInfo, rootCerts *x509.CertPool, signer *model.Signer, result *model.SignatureValidationResult) *time.Time {
-	ts, err := timestampToken(p7Signer, rootCerts)
-	if err != nil {
-		signer.HasTimestamp = true
-		signer.AddProblem(fmt.Sprintf("invalid TimestampToken: %v", err))
-		if result.Status == model.SignatureStatusUnknown {
-			result.Reason = model.SignatureReasonTimestampTokenInvalid
-		}
-	} else if !ts.IsZero() {
-		signer.HasTimestamp = true
-		signer.Timestamp = ts
-		return &ts
-	}
-	return nil
+func handleTimestampToken(
+	p7Signer pkcs7.SignerInfo,
+	signer *model.Signer,
+	result *model.SignatureValidationResult,
+) {
+	evidence := embeddedSignatureTimestampEvidence(p7Signer)
+	applyTimestampEvidence(evidence, timestampApplication{
+		signer:        signer,
+		result:        result,
+		problemPrefix: "pkcs7",
+	})
 }
 
 func revocationInfoArchival(p7Signer pkcs7.SignerInfo) (*RevocationInfoArchival, error) {
-	for _, attr := range p7Signer.AuthenticatedAttributes {
-		if attr.Type.Equal(oidRevocationInfoArchival) {
-			var ria RevocationInfoArchival
-			_, err := asn1.Unmarshal(attr.Value.Bytes, &ria)
-			return &ria, err
+	var (
+		ria        *RevocationInfoArchival
+		firstIndex int
+	)
+	for i, attr := range p7Signer.AuthenticatedAttributes {
+		if !attr.Type.Equal(oidRevocationInfoArchival) {
+			continue
 		}
+		if ria != nil {
+			return nil, fmt.Errorf(
+				"pkcs7: revocation info archival attributes %d and %d: duplicate",
+				firstIndex,
+				i+1,
+			)
+		}
+		var value RevocationInfoArchival
+		rest, err := asn1.Unmarshal(attr.Value.Bytes, &value)
+		if err != nil {
+			return nil, fmt.Errorf("pkcs7: revocation info archival attribute %d: unmarshal: %w", i+1, err)
+		}
+		if len(rest) > 0 {
+			err := asn1.SyntaxError{Msg: "trailing data"}
+			return nil, fmt.Errorf("pkcs7: revocation info archival attribute %d: %w", i+1, err)
+		}
+		ria = &value
+		firstIndex = i + 1
 	}
-	return nil, nil
+	return ria, nil
 }

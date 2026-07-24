@@ -36,29 +36,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-var (
-	// ErrNoFormData signals missing form data for a form fill operation.
-	ErrNoFormData = errors.New("missing form data")
-
-	// ErrMissingFormInput signals a missing required form input reader or file.
-	ErrMissingFormInput = errors.New("missing form input")
-
-	// ErrNoFormFieldsAffected signals that a form operation did not change any fields.
-	ErrNoFormFieldsAffected = errors.New("no form fields affected")
-
-	// ErrUnsupportedFormDataFormat signals an unsupported form data format.
-	ErrUnsupportedFormDataFormat = errors.New("unsupported data format")
-
-	// ErrInvalidCSV signals malformed or incomplete CSV form data.
-	ErrInvalidCSV = errors.New("invalid csv input file")
-
-	// ErrInvalidJSON signals invalid JSON form data.
-	ErrInvalidJSON = errors.New("invalid JSON encoding")
-
-	// ErrInvalidFormData signals structurally invalid decoded form data.
-	ErrInvalidFormData = errors.New("invalid form data")
-)
-
 // FormFields returns all form fields of rs.
 func FormFields(rs io.ReadSeeker, conf *model.Configuration) (fields []form.Field, err error) {
 	defer fault.Catch(&err)

@@ -352,8 +352,13 @@ func validateShading(xRefTable *model.XRefTable, obj types.Object) error {
 func validateShadingResourceDict(xRefTable *model.XRefTable, obj types.Object, sinceVersion model.Version) error {
 	// see 8.7.4.3 Shading Dictionaries
 
+	version := sinceVersion
+	if xRefTable.ValidationMode == model.ValidationRelaxed && xRefTable.Version() < sinceVersion {
+		version = model.V12
+	}
+
 	// Version check
-	err := xRefTable.ValidateVersion("shadingResourceDict", sinceVersion)
+	err := xRefTable.ValidateVersion("shadingResourceDict", version)
 	if err != nil {
 		return fmt.Errorf("shadingResourceDict: %w", err)
 	}
@@ -373,6 +378,10 @@ func validateShadingResourceDict(xRefTable *model.XRefTable, obj types.Object, s
 		if err != nil {
 			return fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("shadingResourceDict.%s", name), obj), err)
 		}
+	}
+
+	if version < sinceVersion {
+		showDigestedVersionViolation(xRefTable, "shadingResourceDict")
 	}
 
 	return nil

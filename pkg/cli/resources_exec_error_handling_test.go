@@ -55,7 +55,7 @@ func TestImportImagesRejectsMalformedCommands(t *testing.T) {
 		cmd  *Command
 		want error
 	}{
-		{name: "nil command", want: api.ErrMissingImageInput},
+		{name: "nil command", want: ErrMissingCommand},
 		{name: "missing images", cmd: &Command{OutFile: &outFile}, want: api.ErrMissingImageInput},
 		{
 			name: "empty image",
@@ -494,8 +494,12 @@ func TestListImagesRejectsMalformedCommands(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := ListImages(tt.cmd); !errors.Is(err, api.ErrMissingPDFInput) {
-				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
+			want := error(api.ErrMissingPDFInput)
+			if tt.cmd == nil {
+				want = ErrMissingCommand
+			}
+			if _, err := ListImages(tt.cmd); !errors.Is(err, want) {
+				t.Fatalf("expected %v, got %v", want, err)
 			}
 		})
 	}
@@ -600,7 +604,7 @@ func TestUpdateImagesRejectsMalformedCommands(t *testing.T) {
 		cmd  *Command
 		want error
 	}{
-		{name: "nil command", want: api.ErrMissingPDFInput},
+		{name: "nil command", want: ErrMissingCommand},
 		{name: "missing inputs", cmd: &Command{}, want: api.ErrMissingPDFInput},
 		{name: "empty PDF input", cmd: &Command{InFiles: []string{""}}, want: api.ErrMissingPDFInput},
 		{name: "missing image input", cmd: &Command{InFiles: []string{"input.pdf"}}, want: api.ErrMissingImageInput},

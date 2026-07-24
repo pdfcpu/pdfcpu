@@ -51,3 +51,14 @@ func TestDispatchRecoversUnexpectedPanicWithStackMetadata(t *testing.T) {
 		t.Fatalf("stack trace does not include test frame:\n%s", p.Stack)
 	}
 }
+
+// TestDispatchRejectsAddSignature verifies the unimplemented command mode cannot report false success.
+func TestDispatchRejectsAddSignature(t *testing.T) {
+	_, err := Dispatch(&Command{Mode: model.ADDSIGNATURE})
+	if !errors.Is(err, ErrUnsupportedCommandMode) {
+		t.Fatalf("expected unsupported command mode, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "mode") {
+		t.Fatalf("expected command mode context, got %v", err)
+	}
+}

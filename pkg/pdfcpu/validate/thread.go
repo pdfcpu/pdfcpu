@@ -24,6 +24,32 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+func validateBeadPageEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) (bool, error) {
+	required := REQUIRED
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		required = OPTIONAL
+	}
+
+	ir, err := validateIndRefEntry(xRefTable, d, dictName, "P", required, sinceVersion)
+	if err != nil || ir == nil {
+		return ir == nil, err
+	}
+
+	pageDict, err := xRefTable.DereferenceDict(*ir)
+	if err != nil {
+		return false, err
+	}
+	if pageDict == nil {
+		return false, errors.New("missing page dict")
+	}
+
+	_, err = validateNameEntry(xRefTable, pageDict, "pageDict", "Type", REQUIRED, model.V10, func(s string) bool {
+		return s == "Page"
+	})
+
+	return false, err
+}
+
 func validateEntryV(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version, pBeadIndRef *types.IndirectRef, objNumber int) error {
 	previousBeadIndRef, err := validateIndRefEntry(xRefTable, d, dictName, "V", required, sinceVersion)
 	if err != nil {
@@ -73,7 +99,7 @@ func validateBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef, pBea
 	}
 
 	// Validate required entry P, must be indRef to pageDict.
-	err = validateEntryP(xRefTable, d, dictName, REQUIRED, sinceVersion)
+	missingP, err := validateBeadPageEntry(xRefTable, d, dictName, sinceVersion)
 	if err != nil {
 		return fmt.Errorf("bead obj#%d P: %w", objNumber, err)
 	}
@@ -96,6 +122,10 @@ func validateBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef, pBea
 		if err != nil {
 			return fmt.Errorf("bead obj#%d next: %w", objNumber, err)
 		}
+	}
+
+	if missingP {
+		model.ShowDigestedSpecViolation("dict=" + dictName + " required entry=P missing")
 	}
 
 	return nil
@@ -143,7 +173,7 @@ func validateFirstBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef 
 		return fmt.Errorf("first bead obj#%d R: %w", objNumber, err)
 	}
 
-	err = validateEntryP(xRefTable, d, dictName, REQUIRED, sinceVersion)
+	missingP, err := validateBeadPageEntry(xRefTable, d, dictName, sinceVersion)
 	if err != nil {
 		return fmt.Errorf("first bead obj#%d P: %w", objNumber, err)
 	}
@@ -158,22 +188,23 @@ func validateFirstBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef 
 		return fmt.Errorf("first bead obj#%d N: %w", objNumber, err)
 	}
 
-	if soleBeadDict(beadIndRef, pBeadIndRef, nBeadIndRef) {
-		return nil
+	if !soleBeadDict(beadIndRef, pBeadIndRef, nBeadIndRef) {
+		if !validateBeadChainIntegrity(beadIndRef, pBeadIndRef, nBeadIndRef) {
+			return fmt.Errorf("first bead obj#%d: corrupt bead chain", objNumber)
+		}
+		if err = validateBeadDict(xRefTable, nBeadIndRef, threadIndRef, beadIndRef, pBeadIndRef); err != nil {
+			return fmt.Errorf("first bead obj#%d next: %w", objNumber, err)
+		}
 	}
-
-	if !validateBeadChainIntegrity(beadIndRef, pBeadIndRef, nBeadIndRef) {
-		return fmt.Errorf("first bead obj#%d: corrupt bead chain", objNumber)
-	}
-
-	if err = validateBeadDict(xRefTable, nBeadIndRef, threadIndRef, beadIndRef, pBeadIndRef); err != nil {
-		return fmt.Errorf("first bead obj#%d next: %w", objNumber, err)
+	if missingP {
+		model.ShowDigestedSpecViolation("dict=" + dictName + " required entry=P missing")
 	}
 	return nil
 }
 
 func validateThreadDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	dictName := "threadDict"
+	var specViolations []error
 
 	threadIndRef, ok := o.(types.IndirectRef)
 	if !ok {
@@ -198,21 +229,31 @@ func validateThreadDict(xRefTable *model.XRefTable, o types.Object, sinceVersion
 	// Validate optional thread information dict entry.
 	o, found := d.Find("I")
 	if found && o != nil {
-		_, err = validateDocumentInfoDict(xRefTable, o)
+		_, specViolations, err = validateDocumentInfoDict(xRefTable, o)
 		if err != nil {
 			return fmt.Errorf("thread obj#%d I: %w", objNumber, err)
 		}
 	}
 
-	fBeadIndRef := d.IndirectRefEntry("F")
+	fBeadIndRef, err := validateIndRefEntry(xRefTable, d, dictName, "F", OPTIONAL, sinceVersion)
+	if err != nil {
+		return fmt.Errorf("thread obj#%d F: %w", objNumber, err)
+	}
 	if fBeadIndRef == nil {
-		return fmt.Errorf("thread obj#%d F: missing required indirect entry", objNumber)
+		msg := fmt.Sprintf("thread obj#%d F: missing required indirect entry", objNumber)
+		if xRefTable.ValidationMode != model.ValidationRelaxed {
+			return errors.New(msg)
+		}
+		showDigestedSpecViolations(xRefTable, specViolations)
+		model.ShowDigestedSpecViolation(msg)
+		return nil
 	}
 
 	// Validate the list of beads starting with the first bead dict.
 	if err = validateFirstBeadDict(xRefTable, fBeadIndRef, &threadIndRef); err != nil {
 		return fmt.Errorf("thread obj#%d first bead: %w", objNumber, err)
 	}
+	showDigestedSpecViolations(xRefTable, specViolations)
 	return nil
 }
 

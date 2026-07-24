@@ -778,9 +778,16 @@ func validateExtGStateDictPart1(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// OPM, integer, optional, since V1.3
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "OPM", OPTIONAL, model.V13, nil)
+	sinceVersion = model.V13
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		sinceVersion = model.V12
+	}
+	opm, err := validateIntegerEntry(xRefTable, d, dictName, "OPM", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
+	}
+	if opm != nil && xRefTable.ValidationMode == model.ValidationRelaxed && xRefTable.Version() < model.V13 {
+		showDigestedVersionViolation(xRefTable, "dict="+dictName+" entry=OPM")
 	}
 
 	// Font, array, optional, since V1.3

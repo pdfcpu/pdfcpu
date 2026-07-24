@@ -37,18 +37,25 @@ import (
 const (
 	// PredictorNo disables prediction.
 	PredictorNo = 1
+
 	// PredictorTIFF applies TIFF prediction to every row.
 	PredictorTIFF = 2
+
 	// PredictorNone applies the PNG none filter to every row.
 	PredictorNone = 10
+
 	// PredictorSub applies the PNG sub filter to every row.
 	PredictorSub = 11
+
 	// PredictorUp applies the PNG up filter to every row.
 	PredictorUp = 12
+
 	// PredictorAverage applies the PNG average filter to every row.
 	PredictorAverage = 13
+
 	// PredictorPaeth applies the PNG Paeth filter to every row.
 	PredictorPaeth = 14
+
 	// PredictorOptimum selects the optimum PNG filter for each row.
 	PredictorOptimum = 15
 )
@@ -58,12 +65,16 @@ const (
 const (
 	// PNGNone identifies the PNG none filter.
 	PNGNone = 0x00
+
 	// PNGSub identifies the PNG sub filter.
 	PNGSub = 0x01
+
 	// PNGUp identifies the PNG up filter.
 	PNGUp = 0x02
+
 	// PNGAverage identifies the PNG average filter.
 	PNGAverage = 0x03
+
 	// PNGPaeth identifies the PNG Paeth filter.
 	PNGPaeth = 0x04
 )

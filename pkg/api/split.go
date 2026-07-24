@@ -18,7 +18,6 @@ package api
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -31,17 +30,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/sanitize"
-)
-
-var (
-	// ErrInvalidSplitPageNumberSequence signals an invalid split page number sequence.
-	ErrInvalidSplitPageNumberSequence = errors.New("invalid split page number sequence")
-
-	// ErrInvalidSplitSpan signals an invalid split span.
-	ErrInvalidSplitSpan = errors.New("invalid split span")
-
-	// ErrMissingSplitPageNumbers signals missing split page numbers.
-	ErrMissingSplitPageNumbers = errors.New("missing split page numbers")
 )
 
 // PageSpan represents a contiguous page range and its generated PDF stream.

@@ -18,7 +18,61 @@ limitations under the License.
 
 package model
 
-import "testing"
+import (
+	"testing"
+
+	"go.yaml.in/yaml/v3"
+)
+
+// TestBuiltInRevocationTimeoutsMatchEmbeddedConfig verifies that disabling config directory usage preserves safe
+// revocation timeouts.
+func TestBuiltInRevocationTimeoutsMatchEmbeddedConfig(t *testing.T) {
+	var configured configuration
+	if err := yaml.Unmarshal(configFileBytes, &configured); err != nil {
+		t.Fatalf("parse embedded configuration: %v", err)
+	}
+
+	conf := newDefaultConfiguration()
+	tests := []struct {
+		name string
+		got  int
+		want int
+	}{
+		{"CRL", conf.TimeoutCRL, configured.TimeoutCRL},
+		{"OCSP", conf.TimeoutOCSP, configured.TimeoutOCSP},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.want <= 0 {
+				t.Fatalf("embedded timeout must be positive: %d", tt.want)
+			}
+			if tt.got != tt.want {
+				t.Fatalf("built-in timeout: got %d, want %d", tt.got, tt.want)
+			}
+		})
+	}
+}
+
+// TestAllowedRevocationHostsConfiguration verifies private PKI exceptions survive YAML loading without aliasing input.
+func TestAllowedRevocationHostsConfiguration(t *testing.T) {
+	var configured configuration
+	if err := yaml.Unmarshal([]byte("allowedRevocationHosts: [ocsp.example.corp, crl.example.corp]"), &configured); err != nil {
+		t.Fatal(err)
+	}
+
+	conf := loadedConfig(configured, "")
+	if len(conf.AllowedRevocationHosts) != 2 ||
+		conf.AllowedRevocationHosts[0] != "ocsp.example.corp" ||
+		conf.AllowedRevocationHosts[1] != "crl.example.corp" {
+		t.Fatalf("allowed revocation hosts: %v", conf.AllowedRevocationHosts)
+	}
+
+	configured.AllowedRevocationHosts[0] = "changed.example.corp"
+	if conf.AllowedRevocationHosts[0] != "ocsp.example.corp" {
+		t.Fatalf("loaded configuration aliases parser input: %v", conf.AllowedRevocationHosts)
+	}
+}
 
 // TestUnsupportedResourcePolicyDefaultsToSkip verifies the operational default independently of validation mode.
 func TestUnsupportedResourcePolicyDefaultsToSkip(t *testing.T) {

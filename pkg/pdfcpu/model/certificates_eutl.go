@@ -25,6 +25,8 @@ import (
 	"path/filepath"
 )
 
+const bundledDefaultCertificates = true
+
 //go:embed resources/certs/*.p7c
 var certFilesEU embed.FS
 

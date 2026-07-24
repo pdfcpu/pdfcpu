@@ -154,7 +154,11 @@ func validateOPIDictV13Part2(xRefTable *model.XRefTable, d types.Dict, dictName 
 	}
 
 	// ColorType, optional, name
-	_, err = validateNameEntry(xRefTable, d, dictName, "ColorType", OPTIONAL, model.V10, func(s string) bool { return s == "Process" || s == "Spot" || s == "Separation" })
+	validateColorType := func(s string) bool {
+		return types.MemberOf(s, []string{"Process", "Spot", "Separation"}) ||
+			(s == "Intrinsic" && xRefTable.ValidationMode == model.ValidationRelaxed)
+	}
+	colorType, err := validateNameEntry(xRefTable, d, dictName, "ColorType", OPTIONAL, model.V10, validateColorType)
 	if err != nil {
 		return err
 	}
@@ -196,9 +200,15 @@ func validateOPIDictV13Part2(xRefTable *model.XRefTable, d types.Dict, dictName 
 	}
 
 	// Tags, optional, array
-	_, err = validateArrayEntry(xRefTable, d, dictName, "Tags", OPTIONAL, model.V10, nil)
+	if _, err = validateArrayEntry(xRefTable, d, dictName, "Tags", OPTIONAL, model.V10, nil); err != nil {
+		return err
+	}
 
-	return err
+	if colorType != nil && colorType.Value() == "Intrinsic" && xRefTable.ValidationMode == model.ValidationRelaxed {
+		model.ShowDigestedSpecViolation("dict=" + dictName + " entry=ColorType invalid dict entry: Intrinsic")
+	}
+
+	return nil
 }
 
 func validateOPIDictV13(xRefTable *model.XRefTable, d types.Dict) error {

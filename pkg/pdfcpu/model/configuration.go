@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -300,6 +301,9 @@ type Configuration struct {
 	// Http timeout in seconds for OCSP revocation checking.
 	TimeoutOCSP int
 
+	// AllowedRevocationHosts contains private hosts explicitly trusted for CRL and OCSP requests.
+	AllowedRevocationHosts []string
+
 	// Preferred certificate revocation checking mechanism: CRL, OSCP
 	PreferredCertRevocationChecker int
 
@@ -458,7 +462,11 @@ func initCertificates() error {
 	if !onlyHidden(files) {
 		return nil
 	}
+	if !bundledDefaultCertificates {
+		return nil
+	}
 
+	MarkCertificateStoreChanged()
 	return installDefaultCertificates()
 }
 
@@ -531,6 +539,8 @@ func newDefaultConfiguration() *Configuration {
 		NeedAppearances:                 false,
 		Offline:                         false,
 		Timeout:                         5,
+		TimeoutCRL:                      10,
+		TimeoutOCSP:                     10,
 		PreferredCertRevocationChecker:  CRL,
 		FormFieldListMaxColWidth:        0,
 		Limits:                          DefaultResourceLimits(),
@@ -550,6 +560,7 @@ func ResetConfig() error {
 func NewDefaultConfiguration() *Configuration {
 	if loadedDefaultConfig != nil {
 		c := *loadedDefaultConfig
+		c.AllowedRevocationHosts = slices.Clone(loadedDefaultConfig.AllowedRevocationHosts)
 		return &c
 	}
 	if ConfigPath != "disable" {
@@ -559,6 +570,7 @@ func NewDefaultConfiguration() *Configuration {
 		}
 		if err = EnsureDefaultConfigAt(path, false); err == nil {
 			c := *loadedDefaultConfig
+			c.AllowedRevocationHosts = slices.Clone(loadedDefaultConfig.AllowedRevocationHosts)
 			return &c
 		}
 		fault.Fail("config problem: %w", err)

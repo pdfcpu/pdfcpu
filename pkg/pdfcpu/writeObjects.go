@@ -657,7 +657,7 @@ func writeDeepDict(ctx *model.Context, d types.Dict, objNr, genNr int) error {
 	if d.IsPage() {
 		valid, err := ctx.IsObjValid(objNr, genNr)
 		if err != nil {
-			return err
+			return fmt.Errorf("write page dict obj#%d gen#%d: check valid: %w", objNr, genNr, err)
 		}
 		if !valid {
 			return nil

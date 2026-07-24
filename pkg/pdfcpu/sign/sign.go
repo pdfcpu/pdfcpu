@@ -32,26 +32,143 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hhrutter/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 const (
 	// CertifiedSigPermsNotSupported reports unsupported certified signature permission validation.
 	CertifiedSigPermsNotSupported = "Certified signature detected. Permission validation not supported."
-	certImportHint                = "import missing trusted certificates with \"pdfcpu certificates import <file>\""
+
+	certImportHint = "import missing certificates into pdfcpu's local certificate store with \"pdfcpu certificates import <file>\""
 )
+
+func parseCertificate(bb []byte) (*x509.Certificate, error) {
+	cert, err := x509.ParseCertificate(bb)
+	if err != nil {
+		return nil, &certificateParseError{cause: err}
+	}
+	return cert, nil
+}
+
+func setResultReason(result *model.SignatureValidationResult, reason model.SignatureReason) {
+	if result.Reason == model.SignatureReasonUnknown {
+		result.Reason = reason
+	}
+}
+
+func markDocumentUnmodified(result *model.SignatureValidationResult) {
+	if result.DocModified == model.Unknown {
+		result.DocModified = model.False
+	}
+}
+
+func markInvalidEvidence(
+	result *model.SignatureValidationResult,
+	reason model.SignatureReason,
+	docModified int,
+) {
+	if result.Status != model.SignatureStatusInvalid {
+		result.Status = model.SignatureStatusInvalid
+		result.Reason = reason
+	}
+	if docModified == model.True || result.DocModified == model.Unknown {
+		result.DocModified = docModified
+	}
+}
+
+func markUnsupportedEvidence(result *model.SignatureValidationResult) {
+	setResultReason(result, model.SignatureReasonUnsupported)
+}
+
+func markMalformedEvidence(result *model.SignatureValidationResult) {
+	setResultReason(result, model.SignatureReasonMalformed)
+}
+
+func markCertificateInvalidEvidence(result *model.SignatureValidationResult) {
+	setResultReason(result, model.SignatureReasonCertInvalid)
+}
+
+func finalizeLocalSignatureResult(
+	result *model.SignatureValidationResult,
+	assessment localSignatureAssessment,
+) bool {
+	if !assessment.complete() ||
+		result.Status != model.SignatureStatusUnknown ||
+		result.Reason != model.SignatureReasonUnknown {
+		return false
+	}
+	result.Status = model.SignatureStatusValid
+	result.Reason = model.SignatureReasonDocNotModified
+	markDocumentUnmodified(result)
+	return true
+}
+
+func assessCertificateEvidence(
+	chains [][]*x509.Certificate,
+	pathResolved bool,
+	rootCerts *x509.CertPool,
+	crls, ocsps [][]byte,
+	reason model.SignatureReason,
+	conf *model.Configuration,
+) (certificateAssessment, error) {
+	signer := &model.Signer{}
+	result := &model.SignatureValidationResult{Reason: reason}
+	if err := validateCertChains(
+		chains,
+		pathResolved,
+		rootCerts,
+		signer,
+		crls,
+		ocsps,
+		result,
+		conf,
+	); err != nil {
+		return certificateAssessment{}, err
+	}
+	return certificateAssessment{
+		Certificate:           signer.Certificate,
+		CertificatePathStatus: signer.CertificatePathStatus,
+		Problems:              append([]string(nil), signer.Problems...),
+		Reason:                result.Reason,
+	}, nil
+}
+
+func applyCertificateAssessment(
+	assessment certificateAssessment,
+	signer *model.Signer,
+	result *model.SignatureValidationResult,
+) {
+	if assessment.Certificate != nil {
+		signer.Certificate = assessment.Certificate
+	}
+	signer.CertificatePathStatus = assessment.CertificatePathStatus
+	for _, problem := range assessment.Problems {
+		signer.AddProblem(problem)
+	}
+	if assessment.Reason != 0 {
+		setResultReason(result, assessment.Reason)
+	}
+}
 
 func validateCertChains(
 	chains [][]*x509.Certificate, // All chain paths for cert leading to a root CA.
+	pathResolved bool,
 	rootCerts *x509.CertPool,
 	signer *model.Signer,
-	signingTime *time.Time,
 	crls [][]byte,
 	ocsps [][]byte,
 	result *model.SignatureValidationResult,
-	conf *model.Configuration) {
+	conf *model.Configuration,
+) error {
+	if len(chains) == 0 || len(chains[0]) == 0 {
+		signer.AddProblem("certificate chain: missing")
+		if result.Reason == model.SignatureReasonUnknown {
+			result.Reason = model.SignatureReasonCertInvalid
+		}
+		return nil
+	}
 
 	var cd *model.CertificateDetails
 
@@ -59,67 +176,126 @@ func validateCertChains(
 	chain := chains[0]
 
 	for i, cert := range chain {
-
-		certDetails := model.CertificateDetails{}
-
-		if signer.Certificate == nil {
-			signer.Certificate = &certDetails
-		} else {
-			cd.IssuerCertificate = &certDetails
-		}
-		cd = &certDetails
-
-		if ok := setupCertDetails(cert, &certDetails, signer, signingTime, result, i); !ok {
-			continue
-		}
-
-		selfSigned, err := isSelfSigned(cert)
-		if selfSigned {
-			certDetails.SelfSigned = true
-		}
+		certDetails, err := validateCertificateInChain(
+			cert,
+			certificateIssuer(chain, i),
+			i,
+			pathResolved,
+			rootCerts,
+			signer,
+			crls,
+			ocsps,
+			result,
+			conf,
+		)
 		if err != nil {
-			signer.AddProblem(fmt.Sprintf("selfSigned cert verification for against public key failed: %s: %v\n", certInfo(cert), err))
-			if result.Reason == model.SignatureReasonUnknown {
-				result.Reason = model.SignatureReasonSelfSignedCertErr
-			}
-			certDetails.Trust.Status = model.False
-			certDetails.Trust.Reason = "certificate not trusted"
-			continue
+			return err
 		}
-
-		if selfSigned || certDetails.CA {
-			certDetails.Trust.Status = model.True
-			certDetails.Trust.Reason = "CA"
-			if selfSigned {
-				certDetails.Trust.Reason = "self signed"
-			}
-			continue
-		}
-
-		if certDetails.Expired && signingTime == nil && len(crls) == 0 && len(ocsps) == 0 {
-			certDetails.Trust.Status = model.False
-			certDetails.Trust.Reason = "certificate expired"
-			continue
-		}
-
-		setTrustStatus(&certDetails, result)
-
-		var issuer *x509.Certificate
-		if len(chain) > 1 {
-			issuer = chain[1]
-		}
-		checkRevocation(cert, issuer, rootCerts, signer, &certDetails, signingTime, crls, ocsps, result, conf)
+		cd = appendCertificateDetails(signer, cd, certDetails)
 	}
+	if signer.Certificate != nil {
+		signer.CertificatePathStatus = signer.Certificate.PathEvidence.Status
+	}
+	return nil
+}
+
+func validateCertificateInChain(
+	cert, issuer *x509.Certificate,
+	certIndex int,
+	pathResolved bool,
+	rootCerts *x509.CertPool,
+	signer *model.Signer,
+	crls, ocsps [][]byte,
+	result *model.SignatureValidationResult,
+	conf *model.Configuration,
+) (*model.CertificateDetails, error) {
+	certDetails := &model.CertificateDetails{}
+	setLocalCertificatePathStatus(certDetails, pathResolved)
+	if cert == nil {
+		reportMissingCertificate(certDetails, signer, result, certIndex)
+		return certDetails, nil
+	}
+	ok, err := setupCertDetails(cert, certDetails, signer, result, certIndex)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return certDetails, nil
+	}
+	selfSigned, err := isSelfSigned(cert)
+	certDetails.SelfSigned = selfSigned
+	if err != nil {
+		reportSelfSignedCertificateError(cert, certDetails, signer, result, certIndex, err)
+		return certDetails, nil
+	}
+	if selfSigned || certDetails.CA {
+		return certDetails, nil
+	}
+	if certDetails.Expired && len(crls) == 0 && len(ocsps) == 0 {
+		return certDetails, nil
+	}
+	checkRevocation(cert, issuer, rootCerts, signer, certDetails, crls, ocsps, result, conf)
+	return certDetails, nil
+}
+
+func reportMissingCertificate(
+	certDetails *model.CertificateDetails,
+	signer *model.Signer,
+	result *model.SignatureValidationResult,
+	certIndex int,
+) {
+	certDetails.Leaf = certIndex == 0
+	signer.AddProblem(fmt.Sprintf("certificate chain, certificate index %d: missing certificate", certIndex+1))
+	if result.Reason == model.SignatureReasonUnknown {
+		result.Reason = model.SignatureReasonCertInvalid
+	}
+}
+
+func reportSelfSignedCertificateError(
+	cert *x509.Certificate,
+	certDetails *model.CertificateDetails,
+	signer *model.Signer,
+	result *model.SignatureValidationResult,
+	certIndex int,
+	err error,
+) {
+	signer.AddProblem(fmt.Sprintf(
+		"certificate chain, certificate index %d: verify self-signed certificate %s: %v",
+		certIndex+1,
+		certInfo(cert),
+		err,
+	))
+	if result.Reason == model.SignatureReasonUnknown {
+		result.Reason = model.SignatureReasonSelfSignedCertErr
+	}
+}
+
+func appendCertificateDetails(
+	signer *model.Signer,
+	previous, current *model.CertificateDetails,
+) *model.CertificateDetails {
+	if previous == nil {
+		signer.Certificate = current
+		return current
+	}
+	previous.IssuerCertificate = current
+	return current
+}
+
+func certificateIssuer(chain []*x509.Certificate, certIndex int) *x509.Certificate {
+	if certIndex < 0 || certIndex+1 >= len(chain) {
+		return nil
+	}
+	return chain[certIndex+1]
 }
 
 func setupCertDetails(
 	cert *x509.Certificate,
 	certDetails *model.CertificateDetails,
 	signer *model.Signer,
-	signingTime *time.Time,
 	result *model.SignatureValidationResult,
-	i int) bool {
-
+	i int,
+) (bool, error) {
 	certDetails.Leaf = i == 0
 	certDetails.Subject = cert.Subject.CommonName
 	certDetails.Issuer = cert.Issuer.CommonName
@@ -129,71 +305,193 @@ func setupCertDetails(
 	certDetails.ValidThru = cert.NotAfter
 
 	ts := time.Now()
-	if signingTime != nil {
-		ts = *signingTime
-	}
 	certDetails.Expired = ts.Before(cert.NotBefore) || ts.After(cert.NotAfter)
 
 	certDetails.Usage = certUsage(cert)
-	certDetails.Qualified = qualifiedCertificate(cert)
+	certDetails.Qualified = hasRecognizedQualifiedCertificatePolicy(cert)
 	certDetails.CA = cert.IsCA
 
 	certDetails.SignAlg = cert.PublicKeyAlgorithm.String()
 
-	keySize, ok := getKeySize(cert, signer, certDetails, result)
+	keySize, ok, err := getKeySize(cert, signer, certDetails, result, i)
+	if err != nil {
+		return false, err
+	}
 	if !ok {
-		return false
+		return false, nil
 	}
 	certDetails.KeySize = keySize
 
-	return true
+	return true, nil
 }
 
-func getKeySize(cert *x509.Certificate, signer *model.Signer, certDetails *model.CertificateDetails, result *model.SignatureValidationResult) (int, bool) {
-	keySize, err := publicKeySize(cert)
+func getKeySize(
+	cert *x509.Certificate,
+	signer *model.Signer,
+	certDetails *model.CertificateDetails,
+	result *model.SignatureValidationResult,
+	certIndex int,
+) (int, bool, error) {
+	return getKeySizeWith(cert, signer, certDetails, result, certIndex, publicKeySize)
+}
+
+func getKeySizeWith(
+	cert *x509.Certificate,
+	signer *model.Signer,
+	certDetails *model.CertificateDetails,
+	result *model.SignatureValidationResult,
+	certIndex int,
+	inspect func(*x509.Certificate) (int, error),
+) (int, bool, error) {
+	keySize, err := inspect(cert)
 	if err == nil {
-		return keySize, true
+		return keySize, true, nil
 	}
-	signer.AddProblem(fmt.Sprintf("%v", err))
-	if result.Reason == model.SignatureReasonUnknown {
-		result.Reason = model.SignatureReasonCertNotTrusted
+	context := fmt.Sprintf(
+		"certificate chain, certificate index %d: inspect public key for %s: %v",
+		certIndex+1,
+		certInfo(cert),
+		err,
+	)
+	switch {
+	case errors.Is(err, errUnsupportedPublicKey):
+		signer.AddProblem(context)
+		markUnsupportedEvidence(result)
+	case errors.Is(err, errMalformedPublicKey):
+		signer.AddProblem(context)
+		markCertificateInvalidEvidence(result)
+	default:
+		return 0, false, fmt.Errorf(
+			"certificate chain, certificate index %d: inspect public key for %s: %w",
+			certIndex+1,
+			certInfo(cert),
+			err,
+		)
 	}
-	certDetails.Trust.Status = model.False
-	certDetails.Trust.Reason = "certificate not trusted"
-	return 0, false
+	return 0, false, nil
 }
 
-func setTrustStatus(certDetails *model.CertificateDetails, result *model.SignatureValidationResult) {
-	if result.Reason == model.SignatureReasonCertNotTrusted {
-		certDetails.Trust.Status = model.False
-		certDetails.Trust.Reason = "certificate not trusted"
-	} else {
-		certDetails.Trust.Status = model.True
-		certDetails.Trust.Reason = "cert chain resolved by local trust store"
+func setLocalCertificatePathStatus(certDetails *model.CertificateDetails, pathResolved bool) {
+	if !pathResolved {
+		setCertificatePathConclusion(
+			certDetails,
+			model.Unknown,
+			"certificate path was not resolved using the configured local certificate store",
+			model.CertificatePathMethodLocalTrustStore,
+		)
+		return
+	}
+	setCertificatePathConclusion(
+		certDetails,
+		model.True,
+		"certificate path resolved using the configured local certificate store",
+		model.CertificatePathMethodLocalTrustStore,
+	)
+}
+
+func setCertificatePathConclusion(
+	certDetails *model.CertificateDetails,
+	status int,
+	reason string,
+	method model.CertificatePathMethod,
+) {
+	certDetails.Trust.Status = status
+	certDetails.Trust.Reason = reason
+	certDetails.PathEvidence = model.CertificatePathEvidence{
+		AssessmentScope: model.AssessmentScopeLocal,
+		Method:          method,
+		Status:          status,
+		Reason:          reason,
 	}
 }
 
 func signedData(ra io.ReaderAt, sigDict types.Dict) ([]byte, error) {
+	if ra == nil {
+		return nil, fatalByteRangeRead(errors.New("signature dict entry ByteRange: missing reader"))
+	}
 	arr := sigDict.ArrayEntry("ByteRange")
 	if len(arr) != 4 {
-		return nil, errors.New("invalid signature dict - missing \"ByteRange\"")
+		return nil, malformedByteRange(errors.New("signature dict entry ByteRange: missing or invalid length"))
+	}
+	values, err := byteRangeValues(arr)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := validateByteRange(values); err != nil {
+		return nil, err
+	}
+	if err := validateContentsGap(ra, sigDict, values); err != nil {
+		return nil, err
 	}
 	return bytesForByteRange(ra, arr)
+}
+
+func validateContentsGap(ra io.ReaderAt, sigDict types.Dict, values [4]int64) error {
+	contents := sigDict.HexLiteralEntry("Contents")
+	if contents == nil {
+		return malformedByteRange(errors.New("signature dict entry ByteRange: excluded gap has no signature dict entry Contents"))
+	}
+
+	end1, err := byteRangeEnd(values[0], values[1])
+	if err != nil {
+		return err
+	}
+	gapSize := values[2] - end1
+	if gapSize < 2 || gapSize > int64(len(contents.Value()))+2+(1<<20) {
+		return malformedByteRange(errors.New("signature dict entry ByteRange: excluded gap does not match signature dict entry Contents"))
+	}
+
+	var gap bytes.Buffer
+	if err := copyByteRange(&gap, ra, end1, gapSize); err != nil {
+		return err
+	}
+	if !contentsGapMatches(gap.Bytes(), contents.Value()) {
+		return malformedByteRange(errors.New("signature dict entry ByteRange: excluded gap does not match signature dict entry Contents"))
+	}
+	return nil
+}
+
+func contentsGapMatches(gap []byte, contents string) bool {
+	if len(gap) < 2 || gap[0] != '<' || gap[len(gap)-1] != '>' {
+		return false
+	}
+	i := 0
+	for _, b := range gap[1 : len(gap)-1] {
+		if strings.ContainsRune(" \t\n\f\r", rune(b)) {
+			continue
+		}
+		if i >= len(contents) || toUpperHex(b) != toUpperHex(contents[i]) {
+			return false
+		}
+		i++
+	}
+	return i == len(contents)
+}
+
+func toUpperHex(b byte) byte {
+	if b >= 'a' && b <= 'f' {
+		return b - ('a' - 'A')
+	}
+	return b
 }
 
 func byteRangeValues(arr types.Array) ([4]int64, error) {
 	var values [4]int64
 	if len(arr) != len(values) {
-		return values, errors.New("invalid signature ByteRange")
+		return values, malformedByteRange(errors.New("signature dict entry ByteRange: invalid length"))
 	}
 	for i, o := range arr {
 		v, ok := o.(types.Integer)
 		if !ok {
-			return values, fmt.Errorf("invalid signature ByteRange entry %d", i)
+			return values, malformedByteRange(
+				fmt.Errorf("signature dict entry ByteRange, array index %d: expected integer", i+1),
+			)
 		}
 		values[i] = int64(v.Value())
 		if values[i] < 0 {
-			return values, fmt.Errorf("negative signature ByteRange entry %d", i)
+			return values, malformedByteRange(
+				fmt.Errorf("signature dict entry ByteRange, array index %d: negative value", i+1),
+			)
 		}
 	}
 	return values, nil
@@ -201,25 +499,28 @@ func byteRangeValues(arr types.Array) ([4]int64, error) {
 
 func byteRangeEnd(off, size int64) (int64, error) {
 	if off > math.MaxInt64-size {
-		return 0, errors.New("signature ByteRange overflow")
+		return 0, malformedByteRange(errors.New("signature dict entry ByteRange: offset and length overflow"))
 	}
 	return off + size, nil
 }
 
 func validateByteRange(values [4]int64) (int64, error) {
+	if values[0] != 0 {
+		return 0, malformedByteRange(errors.New("signature dict entry ByteRange: first range must begin at offset 0"))
+	}
 	end1, err := byteRangeEnd(values[0], values[1])
 	if err != nil {
 		return 0, err
 	}
 	if end1 > values[2] {
-		return 0, errors.New("overlapping signature ByteRange")
+		return 0, malformedByteRange(errors.New("signature dict entry ByteRange: overlapping ranges"))
 	}
 	if _, err := byteRangeEnd(values[2], values[3]); err != nil {
 		return 0, err
 	}
 	total, err := byteRangeEnd(values[1], values[3])
 	if err != nil || total > int64(math.MaxInt) {
-		return 0, errors.New("signature ByteRange size overflow")
+		return 0, malformedByteRange(errors.New("signature dict entry ByteRange: total size overflow"))
 	}
 	return total, nil
 }
@@ -227,17 +528,23 @@ func validateByteRange(values [4]int64) (int64, error) {
 func copyByteRange(w io.Writer, ra io.ReaderAt, off, size int64) error {
 	n, err := io.CopyN(w, io.NewSectionReader(ra, off, size), size)
 	if err != nil {
-		return fmt.Errorf("invalid signature ByteRange: %w", err)
+		readErr := fmt.Errorf("signature dict entry ByteRange, offset %d, length %d: read: %w", off, size, err)
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			return malformedByteRange(readErr)
+		}
+		return fatalByteRangeRead(readErr)
 	}
 	if n != size {
-		return errors.New("short signature ByteRange")
+		return malformedByteRange(
+			fmt.Errorf("signature dict entry ByteRange, offset %d, length %d: short read", off, size),
+		)
 	}
 	return nil
 }
 
 func bytesForByteRange(ra io.ReaderAt, arr types.Array) ([]byte, error) {
 	if ra == nil {
-		return nil, errors.New("missing signature reader")
+		return nil, fatalByteRangeRead(errors.New("signature dict entry ByteRange: missing reader"))
 	}
 	values, err := byteRangeValues(arr)
 	if err != nil {
@@ -316,7 +623,7 @@ func certUsage(cert *x509.Certificate) string {
 	return strings.Join(ss, ",")
 }
 
-func qualifiedCertificate(cert *x509.Certificate) bool {
+func hasRecognizedQualifiedCertificatePolicy(cert *x509.Certificate) bool {
 	for _, policy := range cert.PolicyIdentifiers {
 		switch {
 		case policy.Equal(oidQCESign):
@@ -333,16 +640,24 @@ func qualifiedCertificate(cert *x509.Certificate) bool {
 }
 
 func certChain(cert *x509.Certificate, certs []*x509.Certificate) []*x509.Certificate {
+	if cert == nil {
+		return nil
+	}
 	certMap := make(map[string]*x509.Certificate)
 	for _, cert := range certs {
+		if cert == nil {
+			continue
+		}
 		certMap[string(cert.RawSubject)] = cert
 	}
 
 	current := cert
 
 	var sorted []*x509.Certificate
+	visited := map[*x509.Certificate]bool{}
 
-	for current != nil && len(sorted) < len(certs) {
+	for current != nil && !visited[current] {
+		visited[current] = true
 		sorted = append(sorted, current)
 		current = certMap[string(current.RawIssuer)]
 	}
@@ -353,16 +668,44 @@ func certChain(cert *x509.Certificate, certs []*x509.Certificate) []*x509.Certif
 func publicKeySize(cert *x509.Certificate) (int, error) {
 	switch pubKey := cert.PublicKey.(type) {
 	case *rsa.PublicKey:
-		return pubKey.Size() * 8, nil
+		return rsaPublicKeySize(pubKey)
 	case *ecdsa.PublicKey:
-		return pubKey.Curve.Params().BitSize, nil
+		return ecdsaPublicKeySize(pubKey)
 	case ed25519.PublicKey:
-		return 256, nil
+		return ed25519PublicKeySize(pubKey)
 	case *dsa.PublicKey:
-		return pubKey.Y.BitLen(), nil
+		return dsaPublicKeySize(pubKey)
 	default:
-		return 0, fmt.Errorf("unknown public key type %T", pubKey)
+		return 0, fmt.Errorf("%w: type %T", errUnsupportedPublicKey, pubKey)
 	}
+}
+
+func rsaPublicKeySize(pubKey *rsa.PublicKey) (int, error) {
+	if pubKey == nil || pubKey.N == nil || pubKey.N.Sign() <= 0 || pubKey.E <= 0 {
+		return 0, fmt.Errorf("%w: invalid RSA public key", errMalformedPublicKey)
+	}
+	return pubKey.Size() * 8, nil
+}
+
+func ecdsaPublicKeySize(pubKey *ecdsa.PublicKey) (int, error) {
+	if pubKey == nil || pubKey.Curve == nil || pubKey.Curve.Params() == nil {
+		return 0, fmt.Errorf("%w: invalid ECDSA public key", errMalformedPublicKey)
+	}
+	return pubKey.Curve.Params().BitSize, nil
+}
+
+func ed25519PublicKeySize(pubKey ed25519.PublicKey) (int, error) {
+	if len(pubKey) != ed25519.PublicKeySize {
+		return 0, fmt.Errorf("%w: invalid Ed25519 public key", errMalformedPublicKey)
+	}
+	return ed25519.PublicKeySize * 8, nil
+}
+
+func dsaPublicKeySize(pubKey *dsa.PublicKey) (int, error) {
+	if pubKey == nil || pubKey.Y == nil || pubKey.Y.Sign() <= 0 {
+		return 0, fmt.Errorf("%w: invalid DSA public key", errMalformedPublicKey)
+	}
+	return pubKey.Y.BitLen(), nil
 }
 
 func handleCertVerifyErr(err error, cert *x509.Certificate, signer *model.Signer, result *model.SignatureValidationResult) {
@@ -371,7 +714,11 @@ func handleCertVerifyErr(err error, cert *x509.Certificate, signer *model.Signer
 		if result.Reason == model.SignatureReasonUnknown {
 			result.Reason = model.SignatureReasonCertNotTrusted
 		}
-		signer.AddProblem(fmt.Sprintf("certificate chain is not trusted for %s: %v", certInfo(cert), err))
+		signer.AddProblem(fmt.Sprintf(
+			"certificate path was not resolved using the configured local certificate store for %s: %v",
+			certInfo(cert),
+			err,
+		))
 		signer.AddProblem(certImportHint)
 		return
 	}
@@ -402,32 +749,37 @@ func certInfo(cert *x509.Certificate) string {
 	return fmt.Sprintf("serial=%q", cert.SerialNumber.Text(16))
 }
 
-func processDSS(ctx *model.Context, signer *model.Signer) ([]*x509.Certificate, [][]byte, [][]byte, bool) {
+func processDSS(ctx *model.Context, signer *model.Signer) dssEvidence {
 	ok := true
 	dssCerts, err := extractCertsFromDSS(ctx)
 	if err != nil {
-		signer.AddProblem(fmt.Sprintf("DSS: extract certs: %v", err))
+		signer.AddProblem(fmt.Sprintf("%v", err))
 		ok = false
 	}
 
 	dssCRLs, err := extractCRLsFromDSS(ctx)
 	if err != nil {
-		signer.AddProblem(fmt.Sprintf("DSS: extract crls %v", err))
+		signer.AddProblem(fmt.Sprintf("%v", err))
 		ok = false
 	}
 
 	dssOCSPs, err := extractOCSPsFromDSS(ctx)
 	if err != nil {
-		signer.AddProblem(fmt.Sprintf("DSS: extract ocsps %v", err))
+		signer.AddProblem(fmt.Sprintf("%v", err))
 		ok = false
 	}
 
-	if _, ok := ctx.DSS.Find("VRI"); ok {
-		signer.AddProblem("DSS: VRI currently unsupported")
+	if _, found := ctx.DSS.Find("VRI"); found {
+		signer.AddProblem("DSS dict entry VRI: unsupported")
 		ok = false
 	}
 
-	return dssCerts, dssCRLs, dssOCSPs, ok
+	return dssEvidence{
+		Certificates:  dssCerts,
+		CRLs:          dssCRLs,
+		OCSPResponses: dssOCSPs,
+		Supported:     ok,
+	}
 }
 
 func extractCertsFromDSS(ctx *model.Context) ([]*x509.Certificate, error) {
@@ -438,25 +790,25 @@ func extractCertsFromDSS(ctx *model.Context) ([]*x509.Certificate, error) {
 
 	arr, err := ctx.DereferenceArray(entry)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("DSS dict entry Certs: dereference array: %w", err)
 	}
 
 	var certs []*x509.Certificate
 
-	for _, obj := range arr {
+	for i, obj := range arr {
 		sd, _, err := ctx.DereferenceStreamDict(obj)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("DSS dict entry Certs, array index %d: dereference stream dictionary: %w", i+1, err)
 		}
 		if sd == nil {
-			return nil, errors.New("invalid DSS cert streamdict")
+			return nil, fmt.Errorf("DSS dict entry Certs, array index %d: missing stream dictionary", i+1)
 		}
 		if err := sd.Decode(); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("DSS dict entry Certs, array index %d: decode stream: %w", i+1, err)
 		}
-		cert, err := x509.ParseCertificate(sd.Content)
+		cert, err := parseCertificate(sd.Content)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("DSS dict entry Certs, array index %d: parse certificate: %w", i+1, err)
 		}
 		certs = append(certs, cert)
 	}
@@ -469,6 +821,9 @@ func mergeCerts(certLists ...[]*x509.Certificate) []*x509.Certificate {
 	var result []*x509.Certificate
 	for _, list := range certLists {
 		for _, cert := range list {
+			if cert == nil {
+				continue
+			}
 			fingerprint := string(cert.Raw)
 			if !visited[fingerprint] {
 				visited[fingerprint] = true
@@ -480,28 +835,28 @@ func mergeCerts(certLists ...[]*x509.Certificate) []*x509.Certificate {
 }
 
 func extractCRLsFromDSS(ctx *model.Context) ([][]byte, error) {
-	entry, found := ctx.DSS.Find("CLRs")
+	entry, found := ctx.DSS.Find("CRLs")
 	if !found {
 		return nil, nil
 	}
 
 	arr, err := ctx.DereferenceArray(entry)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("DSS dict entry CRLs: dereference array: %w", err)
 	}
 
 	var crls [][]byte
 
-	for _, obj := range arr {
+	for i, obj := range arr {
 		sd, _, err := ctx.DereferenceStreamDict(obj)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("DSS dict entry CRLs, array index %d: dereference stream dictionary: %w", i+1, err)
 		}
 		if sd == nil {
-			return nil, errors.New("invalid DSS CRL streamdict")
+			return nil, fmt.Errorf("DSS dict entry CRLs, array index %d: missing stream dictionary", i+1)
 		}
 		if err := sd.Decode(); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("DSS dict entry CRLs, array index %d: decode stream: %w", i+1, err)
 		}
 		crls = append(crls, sd.Content)
 	}
@@ -517,21 +872,21 @@ func extractOCSPsFromDSS(ctx *model.Context) ([][]byte, error) {
 
 	arr, err := ctx.DereferenceArray(entry)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("DSS dict entry OCSPs: dereference array: %w", err)
 	}
 
 	var ocsps [][]byte
 
-	for _, obj := range arr {
+	for i, obj := range arr {
 		sd, _, err := ctx.DereferenceStreamDict(obj)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("DSS dict entry OCSPs, array index %d: dereference stream dictionary: %w", i+1, err)
 		}
 		if sd == nil {
-			return nil, errors.New("invalid DSS OCSP streamdict")
+			return nil, fmt.Errorf("DSS dict entry OCSPs, array index %d: missing stream dictionary", i+1)
 		}
 		if err := sd.Decode(); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("DSS dict entry OCSPs, array index %d: decode stream: %w", i+1, err)
 		}
 		ocsps = append(ocsps, sd.Content)
 	}
@@ -542,30 +897,33 @@ func extractOCSPsFromDSS(ctx *model.Context) ([][]byte, error) {
 func validateP7(sigDict types.Dict, result *model.SignatureValidationResult) *pkcs7.PKCS7 {
 	p7, err := p7(sigDict)
 	if err != nil {
-		if isCertParseErr(err) {
+		if errors.Is(err, errCertificateParse) || errors.Is(err, pkcs7.ErrCertificateParse) {
 			handleCertParseErr(err, result)
 			return nil
 		}
-		result.Reason = model.SignatureReasonInternal
+		switch {
+		case errors.Is(err, pkcs7.ErrUnsupportedContentType),
+			errors.Is(err, pkcs7.ErrUnsupportedAlgorithm),
+			errors.Is(err, pkcs7.ErrAlgorithmMismatch):
+			markUnsupportedEvidence(result)
+		default:
+			markMalformedEvidence(result)
+		}
 		result.AddProblem(fmt.Sprintf("pkcs7: %v", err))
 		return nil
 	}
 
 	if len(p7.Signers) == 0 {
-		result.Reason = model.SignatureReasonInternal
+		markMalformedEvidence(result)
 		result.AddProblem("pkcs7: message without signers")
 		return nil
 	}
 
 	if len(p7.Signers) != 1 && result.Details.IsETSI_CAdES_detached() {
-		result.Reason = model.SignatureReasonInternal
+		markMalformedEvidence(result)
 		result.AddProblem("pkcs7: \"ETSI.CAdES.detached\" requires a single signer")
 		return nil
 	}
 
 	return p7
-}
-
-func isCertParseErr(err error) bool {
-	return strings.Contains(err.Error(), "x509:")
 }

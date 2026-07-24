@@ -33,6 +33,9 @@ var ErrPageTreeDuplicate = errors.New("duplicate page tree node")
 // ErrFormFieldCycle signals a form field tree cycle.
 var ErrFormFieldCycle = errors.New("circular form field tree")
 
+// ErrStructureTreeCycle signals a structure tree cycle.
+var ErrStructureTreeCycle = errors.New("circular structure tree")
+
 // MaxRecursionDepth returns the configured recursion depth limit.
 func (xRefTable *XRefTable) MaxRecursionDepth() int {
 	if xRefTable == nil || xRefTable.Conf == nil || xRefTable.Conf.Limits.MaxRecursionDepth <= 0 {
@@ -132,6 +135,38 @@ func (v *FormFieldVisit) Check(objNr int) error {
 
 // Leave leaves the current form field node.
 func (v *FormFieldVisit) Leave(objNr int) {
+	if v == nil || objNr == 0 {
+		return
+	}
+	delete(v.ancestors, objNr)
+}
+
+// StructureTreeVisit tracks structure tree ancestor traversal state.
+type StructureTreeVisit struct {
+	ancestors map[int]bool
+}
+
+// NewStructureTreeVisit returns a structure tree traversal state.
+func NewStructureTreeVisit() *StructureTreeVisit {
+	return &StructureTreeVisit{
+		ancestors: map[int]bool{},
+	}
+}
+
+// Enter rejects structure tree ancestor cycles.
+func (v *StructureTreeVisit) Enter(objNr int) error {
+	if v == nil || objNr == 0 {
+		return nil
+	}
+	if v.ancestors[objNr] {
+		return ErrStructureTreeCycle
+	}
+	v.ancestors[objNr] = true
+	return nil
+}
+
+// Leave leaves the current structure tree node.
+func (v *StructureTreeVisit) Leave(objNr int) {
 	if v == nil || objNr == 0 {
 		return
 	}

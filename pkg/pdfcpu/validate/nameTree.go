@@ -24,6 +24,8 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+var errMissingNameTreeKidsOrNames = errors.New("missing Kids or Names")
+
 func validateDestsNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	// Version check
 	err := xRefTable.ValidateVersion("DestsNameTreeValue", sinceVersion)
@@ -587,7 +589,7 @@ func validateNameTreeDictNamesEntry(xRefTable *model.XRefTable, d types.Dict, na
 	// Names: array of the form [key1 value1 key2 value2 ... key n value n]
 	o, found := d.Find("Names")
 	if !found {
-		return "", "", fmt.Errorf("name tree %s: missing Kids or Names", name)
+		return "", "", fmt.Errorf("name tree %s: %w", name, errMissingNameTreeKidsOrNames)
 	}
 
 	a, err := xRefTable.DereferenceArray(o)
@@ -706,7 +708,14 @@ func nameTreeKidContext(name string, o types.Object, i int) string {
 	return fmt.Sprintf("name tree %s Kids[%d]", name, i)
 }
 
-func validateNameTreeKids(xRefTable *model.XRefTable, name string, a types.Array, node *model.Node, depth int) (string, string, error) {
+func validateNameTreeKids(
+	xRefTable *model.XRefTable,
+	name string,
+	a types.Array,
+	node *model.Node,
+	depth int,
+	specViolations *[]error,
+) (string, string, error) {
 	var kmin, kmax string
 
 	for i, o := range a {
@@ -719,10 +728,21 @@ func validateNameTreeKids(xRefTable *model.XRefTable, name string, a types.Array
 			return "", "", fmt.Errorf("%s: missing dict", nameTreeKidContext(name, o, i))
 		}
 
-		kminKid, kmaxKid, kidNode, err := validateNameTreeDepth(xRefTable, name, d, false, depth+1)
+		kminKid, kmaxKid, kidNode, err := validateNameTreeDepthWithViolations(
+			xRefTable,
+			name,
+			d,
+			false,
+			depth+1,
+			specViolations,
+		)
 		if err != nil {
+			err = fmt.Errorf("%s: %w", nameTreeKidContext(name, o, i), err)
 			if xRefTable.ValidationMode == model.ValidationStrict {
-				return "", "", fmt.Errorf("%s: %w", nameTreeKidContext(name, o, i), err)
+				return "", "", err
+			}
+			if errors.Is(err, errMissingNameTreeKidsOrNames) {
+				*specViolations = append(*specViolations, err)
 			}
 			continue
 		}
@@ -738,6 +758,29 @@ func validateNameTreeKids(xRefTable *model.XRefTable, name string, a types.Array
 }
 
 func validateNameTreeDepth(xRefTable *model.XRefTable, name string, d types.Dict, root bool, depth int) (string, string, *model.Node, error) {
+	var specViolations []error
+	kmin, kmax, node, err := validateNameTreeDepthWithViolations(
+		xRefTable,
+		name,
+		d,
+		root,
+		depth,
+		&specViolations,
+	)
+	if err == nil {
+		showDigestedSpecViolations(xRefTable, specViolations)
+	}
+	return kmin, kmax, node, err
+}
+
+func validateNameTreeDepthWithViolations(
+	xRefTable *model.XRefTable,
+	name string,
+	d types.Dict,
+	root bool,
+	depth int,
+	specViolations *[]error,
+) (string, string, *model.Node, error) {
 	if err := xRefTable.CheckRecursionDepth("name tree", depth); err != nil {
 		return "", "", nil, err
 	}
@@ -775,7 +818,7 @@ func validateNameTreeDepth(xRefTable *model.XRefTable, name string, d types.Dict
 			return "", "", nil, nil
 		}
 
-		kmin, kmax, err = validateNameTreeKids(xRefTable, name, a, node, depth)
+		kmin, kmax, err = validateNameTreeKids(xRefTable, name, a, node, depth, specViolations)
 		if err != nil {
 			return "", "", nil, err
 		}
@@ -784,6 +827,12 @@ func validateNameTreeDepth(xRefTable *model.XRefTable, name string, d types.Dict
 		// Leaf node
 		kmin, kmax, err = validateNameTreeDictNamesEntry(xRefTable, d, name, node)
 		if err != nil {
+			if root &&
+				xRefTable.ValidationMode == model.ValidationRelaxed &&
+				errors.Is(err, errMissingNameTreeKidsOrNames) {
+				*specViolations = append(*specViolations, err)
+				return "", "", node, nil
+			}
 			return "", "", nil, err
 		}
 	}

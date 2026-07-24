@@ -27,9 +27,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// ErrNoPropertyRemoved signals that a remove operation did not match any property.
-var ErrNoPropertyRemoved = errors.New("no property removed")
-
 // Properties returns rs's properties as recorded in infoDict.
 func Properties(rs io.ReadSeeker, conf *model.Configuration) (m map[string]string, err error) {
 	defer fault.Catch(&err)

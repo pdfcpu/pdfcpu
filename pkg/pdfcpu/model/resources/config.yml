@@ -75,6 +75,10 @@ timeoutCRL: 10
 # http timeout in seconds for OCSP revocation checking.
 timeoutOCSP: 10
 
+# private hosts explicitly trusted for CRL and OCSP requests.
+# example: [ocsp.example.corp, crl.example.corp]
+allowedRevocationHosts: []
+
 # preferred certificate revocation checking mechanism:
 # crl
 # ocsp

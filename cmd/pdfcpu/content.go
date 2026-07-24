@@ -312,7 +312,7 @@ func annotationsCmd() *cobra.Command {
 	listCmd := &cobra.Command{
 		Use:   "list inFile",
 		Short: "List annotations",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  cobra.ExactArgs(1),
 		RunE: wrapHandler(func(conf *model.Configuration, args []string) error {
 			return handleListAnnotationsCommand(conf, args, listOpts)
 		}),

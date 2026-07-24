@@ -230,8 +230,11 @@ func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName stri
 	}
 
 	if outFieldType == nil || (*outFieldType).Value() == "Tx" {
-		//if (*outFieldType).Value() == "Tx" {
-		da, err := validateStringEntry(xRefTable, d, dictName, "DA", requiresDA, model.V10, validate)
+		required := requiresDA
+		if terminalNode && outFieldType == nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+			required = OPTIONAL
+		}
+		da, err := validateStringEntry(xRefTable, d, dictName, "DA", required, model.V10, validate)
 		if err != nil {
 			if !terminalNode && requiresDA {
 				err = nil
@@ -364,7 +367,11 @@ func validateFormFieldDictEntries(xRefTable *model.XRefTable, objNr, incr int, d
 	dictName := "formFieldDict"
 
 	// FT: name, Btn,Tx,Ch,Sig
-	fieldType, err := validateNameEntry(xRefTable, d, dictName, "FT", terminalNode && inFieldType == nil, model.V10, validateFormFieldType(xRefTable))
+	required := terminalNode && inFieldType == nil
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		required = OPTIONAL
+	}
+	fieldType, err := validateNameEntry(xRefTable, d, dictName, "FT", required, model.V10, validateFormFieldType(xRefTable))
 	if err != nil {
 		return nil, false, err
 	}
@@ -436,20 +443,39 @@ func validateFormFieldParts(xRefTable *model.XRefTable, objNr, incr int, d types
 	}
 
 	// Validate field dict entries.
-	if _, _, err := validateFormFieldDictEntries(xRefTable, objNr, incr, d, true, false, inFieldType, requiresDA); err != nil {
+	fieldType, _, err := validateFormFieldDictEntries(xRefTable, objNr, incr, d, true, false, inFieldType, requiresDA)
+	if err != nil {
 		return err
 	}
 
 	// Validate widget annotation - Validation of AA redundant because of merged acrofield with widget annotation.
-	_, err := validateAnnotationDict(xRefTable, d)
-	return err
+	if _, err = validateAnnotationDict(xRefTable, d); err != nil {
+		return err
+	}
+
+	if fieldType == nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+		model.ShowDigestedSpecViolation("dict=formFieldDict required entry=FT missing")
+	}
+
+	return nil
 }
 
 func isWidget(d types.Dict) bool {
 	return d.Subtype() != nil && *d.Subtype() == "Widget"
 }
 
-func validateFormFieldKids(xRefTable *model.XRefTable, objNr, incr int, d types.Dict, o types.Object, inFieldType *types.Name, requiresDA bool, depth int, visit *model.FormFieldVisit) error {
+func validateFormFieldKids(
+	xRefTable *model.XRefTable,
+	objNr,
+	incr int,
+	d types.Dict,
+	o types.Object,
+	inFieldType *types.Name,
+	requiresDA bool,
+	depth int,
+	visit *model.FormFieldVisit,
+	specViolations *[]error,
+) error {
 	var err error
 
 	// dict represents a non terminal field.
@@ -490,14 +516,23 @@ func validateFormFieldKids(xRefTable *model.XRefTable, objNr, incr int, d types.
 		valid, err := xRefTable.IsValid(ir)
 		if err != nil {
 			if xRefTable.ValidationMode == model.ValidationStrict {
-				return fmt.Errorf("form field kid obj#%d: check valid: %w", ir.ObjectNumber.Value(), err)
+				return fmt.Errorf("form field obj#%d Kids[%d] obj#%d: check valid: %w", objNr, i, ir.ObjectNumber.Value(), err)
 			}
-			model.ShowSkipped(fmt.Sprintf("missing form field kid obj #%s", ir.ObjectNumber.String()))
+			err = fmt.Errorf("form field obj#%d Kids[%d] obj#%d: check valid: %w", objNr, i, ir.ObjectNumber.Value(), err)
+			*specViolations = append(*specViolations, err)
 			valid = true
 		}
 
 		if !valid {
-			if err = validateFormFieldDictDepth(xRefTable, ir, xInFieldType, requiresDA, depth+1, visit); err != nil {
+			if err = validateFormFieldDictDepth(
+				xRefTable,
+				ir,
+				xInFieldType,
+				requiresDA,
+				depth+1,
+				visit,
+				specViolations,
+			); err != nil {
 				return fmt.Errorf("form field obj#%d Kids[%d] obj#%d: %w", objNr, i, ir.ObjectNumber.Value(), err)
 			}
 		}
@@ -507,10 +542,31 @@ func validateFormFieldKids(xRefTable *model.XRefTable, objNr, incr int, d types.
 }
 
 func validateFormFieldDict(xRefTable *model.XRefTable, ir types.IndirectRef, inFieldType *types.Name, requiresDA bool) error {
-	return validateFormFieldDictDepth(xRefTable, ir, inFieldType, requiresDA, 0, model.NewFormFieldVisit())
+	var specViolations []error
+	err := validateFormFieldDictDepth(
+		xRefTable,
+		ir,
+		inFieldType,
+		requiresDA,
+		0,
+		model.NewFormFieldVisit(),
+		&specViolations,
+	)
+	if err == nil {
+		showDigestedSpecViolations(xRefTable, specViolations)
+	}
+	return err
 }
 
-func validateFormFieldDictDepth(xRefTable *model.XRefTable, ir types.IndirectRef, inFieldType *types.Name, requiresDA bool, depth int, visit *model.FormFieldVisit) error {
+func validateFormFieldDictDepth(
+	xRefTable *model.XRefTable,
+	ir types.IndirectRef,
+	inFieldType *types.Name,
+	requiresDA bool,
+	depth int,
+	visit *model.FormFieldVisit,
+	specViolations *[]error,
+) error {
 	if err := xRefTable.CheckRecursionDepth("form field tree", depth); err != nil {
 		return err
 	}
@@ -526,7 +582,7 @@ func validateFormFieldDictDepth(xRefTable *model.XRefTable, ir types.IndirectRef
 	}
 	if d == nil {
 		if xRefTable.ValidationMode == model.ValidationRelaxed {
-			model.ShowSkipped(fmt.Sprintf("missing form field obj #%d", objNr))
+			*specViolations = append(*specViolations, fmt.Errorf("form field obj#%d: missing dict", objNr))
 			return nil
 		}
 		return fmt.Errorf("form field obj#%d: missing dict", objNr)
@@ -543,13 +599,26 @@ func validateFormFieldDictDepth(xRefTable *model.XRefTable, ir types.IndirectRef
 	}
 
 	if o, ok := d.Find("Kids"); ok {
-		return validateFormFieldKids(xRefTable, objNr, incr, d, o, inFieldType, requiresDA, depth, visit)
+		return validateFormFieldKids(
+			xRefTable,
+			objNr,
+			incr,
+			d,
+			o,
+			inFieldType,
+			requiresDA,
+			depth,
+			visit,
+			specViolations,
+		)
 	}
 
 	return validateFormFieldParts(xRefTable, objNr, incr, d, inFieldType, requiresDA)
 }
 
 func validateFormFields(xRefTable *model.XRefTable, arr types.Array, requiresDA bool) error {
+	var specViolations []error
+
 	for i, value := range arr {
 
 		ir, ok := value.(types.IndirectRef)
@@ -560,20 +629,30 @@ func validateFormFields(xRefTable *model.XRefTable, arr types.Array, requiresDA 
 		valid, err := xRefTable.IsValid(ir)
 		if err != nil {
 			if xRefTable.ValidationMode == model.ValidationStrict {
-				return fmt.Errorf("form field obj#%d: check valid: %w", ir.ObjectNumber.Value(), err)
+				return fmt.Errorf("AcroForm Fields[%d] obj#%d: check valid: %w", i, ir.ObjectNumber.Value(), err)
 			}
-			model.ShowSkipped(fmt.Sprintf("missing form field obj #%s", ir.ObjectNumber.String()))
+			err = fmt.Errorf("AcroForm Fields[%d] obj#%d: check valid: %w", i, ir.ObjectNumber.Value(), err)
+			specViolations = append(specViolations, err)
 			valid = true
 		}
 
 		if !valid {
-			if err = validateFormFieldDict(xRefTable, ir, nil, requiresDA); err != nil {
+			if err = validateFormFieldDictDepth(
+				xRefTable,
+				ir,
+				nil,
+				requiresDA,
+				0,
+				model.NewFormFieldVisit(),
+				&specViolations,
+			); err != nil {
 				return fmt.Errorf("AcroForm Fields[%d] obj#%d: %w", i, ir.ObjectNumber.Value(), err)
 			}
 		}
 
 	}
 
+	showDigestedSpecViolations(xRefTable, specViolations)
 	return nil
 }
 

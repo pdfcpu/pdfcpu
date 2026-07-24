@@ -36,7 +36,7 @@ func TestZoomRejectsMissingCommandFields(t *testing.T) {
 		cmd  *Command
 		want error
 	}{
-		{name: "nil command", want: api.ErrMissingPDFInput},
+		{name: "nil command", want: ErrMissingCommand},
 		{name: "nil input", cmd: &Command{}, want: api.ErrMissingPDFInput},
 		{name: "empty input", cmd: &Command{InFile: &empty}, want: api.ErrMissingPDFInput},
 		{name: "nil output", cmd: &Command{InFile: &inFile}, want: api.ErrMissingPDFOutput},

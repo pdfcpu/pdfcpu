@@ -30,6 +30,35 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
+func validateFormPDFCommand(cmd *Command, operation string) error {
+	return validateCommandRequirements(cmd, commandRequirements{
+		operation: operation,
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequired,
+	})
+}
+
+func validateMultiFillFormCommand(cmd *Command) error {
+	requirements := commandRequirements{
+		operation: "multi-fill form",
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequired,
+	}
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
+		return err
+	}
+	if err := validateCommandString(cmd.InFileJSON, commandStringRequiredNonEmpty, api.ErrMissingFormInput); err != nil {
+		return commandValidationError(requirements.operation, err)
+	}
+	if *cmd.OutFile == "-" {
+		return nil
+	}
+	return commandValidationError(
+		requirements.operation,
+		validateCommandString(cmd.OutDir, commandStringRequiredNonEmpty, api.ErrMissingPDFOutput),
+	)
+}
+
 func listFormFields(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
 	return api.ListFormFields(rs, conf)
 }
@@ -99,6 +128,9 @@ func formFieldSource(fn string) string {
 
 // ListFormFieldsFile returns a list of form field ids in inFile.
 func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, error) {
+	if err := validateCommandInputFiles(inFiles, 1, 0, nil); err != nil {
+		return nil, commandValidationError("list form fields", err)
+	}
 	log.SetCLILogger(nil)
 
 	ss := []string{}
@@ -123,6 +155,13 @@ func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, 
 
 // ListFormFields returns inFile's form field ids.
 func ListFormFields(cmd *Command) ([]string, error) {
+	requirements := commandRequirements{
+		operation:     "list form fields",
+		minInputFiles: 1,
+	}
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
+		return nil, err
+	}
 	if cmd.BoolVal1 {
 		log.SetCLILogger(nil)
 		return listFormFieldsJSON(cmd.InFiles, cmd.Conf)
@@ -213,6 +252,9 @@ func formPDFWithData(cmd *Command, operation string, fileFn func() error, reader
 
 // RemoveFormFields removes some form fields from inFile.
 func RemoveFormFields(cmd *Command) ([]string, error) {
+	if err := validateFormPDFCommand(cmd, "remove form fields"); err != nil {
+		return nil, err
+	}
 	return formPDFFileCommand(
 		*cmd.InFile,
 		*cmd.OutFile,
@@ -228,6 +270,9 @@ func RemoveFormFields(cmd *Command) ([]string, error) {
 
 // LockFormFields makes some or all form fields of inFile read-only.
 func LockFormFields(cmd *Command) ([]string, error) {
+	if err := validateFormPDFCommand(cmd, "lock form fields"); err != nil {
+		return nil, err
+	}
 	return formPDFFileCommand(
 		*cmd.InFile,
 		*cmd.OutFile,
@@ -243,6 +288,9 @@ func LockFormFields(cmd *Command) ([]string, error) {
 
 // UnlockFormFields makes some or all form fields of inFile writable.
 func UnlockFormFields(cmd *Command) ([]string, error) {
+	if err := validateFormPDFCommand(cmd, "unlock form fields"); err != nil {
+		return nil, err
+	}
 	return formPDFFileCommand(
 		*cmd.InFile,
 		*cmd.OutFile,
@@ -258,6 +306,9 @@ func UnlockFormFields(cmd *Command) ([]string, error) {
 
 // ResetFormFields sets some or all form fields of inFile to the corresponding default value.
 func ResetFormFields(cmd *Command) ([]string, error) {
+	if err := validateFormPDFCommand(cmd, "reset form fields"); err != nil {
+		return nil, err
+	}
 	return formPDFFileCommand(
 		*cmd.InFile,
 		*cmd.OutFile,
@@ -273,6 +324,14 @@ func ResetFormFields(cmd *Command) ([]string, error) {
 
 // ExportFormFields returns a representation of inFile's form as outFileJSON.
 func ExportFormFields(cmd *Command) ([]string, error) {
+	requirements := commandRequirements{
+		operation:   "export form",
+		inFile:      commandStringRequiredNonEmpty,
+		outFileJSON: commandStringRequiredNonEmpty,
+	}
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile == "-" {
 		rs, w, finalize, err := streamInOutForOperation("-", *cmd.OutFileJSON, "export form")
 		if err != nil {
@@ -287,6 +346,15 @@ func ExportFormFields(cmd *Command) ([]string, error) {
 
 // FillFormFields fills out inFile's form using data represented by inFileJSON.
 func FillFormFields(cmd *Command) ([]string, error) {
+	requirements := commandRequirements{
+		operation:  "fill form",
+		inFile:     commandStringRequiredNonEmpty,
+		outFile:    commandStringRequired,
+		inFileJSON: commandStringRequiredNonEmpty,
+	}
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
+		return nil, err
+	}
 	return formPDFWithData(
 		cmd,
 		"fill form",
@@ -351,6 +419,9 @@ func multiFillFormFieldsToStdout(cmd *Command, inFile string) ([]string, error) 
 
 // MultiFillFormFields fills out multiple instances of inFile's form using JSON or CSV data.
 func MultiFillFormFields(cmd *Command) ([]string, error) {
+	if err := validateMultiFillFormCommand(cmd); err != nil {
+		return nil, err
+	}
 	inFile, finalize, err := multiFillFormInputFile(cmd)
 	if err != nil {
 		return nil, err

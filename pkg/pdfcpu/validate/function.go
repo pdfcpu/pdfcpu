@@ -98,46 +98,49 @@ func validateStitchingFunctionDict(xRefTable *model.XRefTable, d types.Dict) err
 	return nil
 }
 
-func validateSampledFunctionStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {
+func validateSampledFunctionStreamDictVersion(
+	xRefTable *model.XRefTable,
+	sd *types.StreamDict,
+	version model.Version,
+) error {
 	dictName := "sampledFunctionStreamDict"
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, model.V12)
+	err := xRefTable.ValidateVersion(dictName, version)
 	if err != nil {
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Domain", REQUIRED, model.V12, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Domain", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Domain: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Range", REQUIRED, model.V12, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Range", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Range: %w", dictName, err)
 	}
 
-	_, err = validateIntegerArrayEntry(xRefTable, sd.Dict, dictName, "Size", REQUIRED, model.V12, nil)
+	_, err = validateIntegerArrayEntry(xRefTable, sd.Dict, dictName, "Size", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Size: %w", dictName, err)
 	}
 
 	validate := func(i int) bool { return types.IntMemberOf(i, []int{1, 2, 4, 8, 12, 16, 24, 32}) }
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "BitsPerSample", REQUIRED, model.V12, validate)
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "BitsPerSample", REQUIRED, version, validate)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerSample: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "Order", OPTIONAL, model.V12, func(i int) bool { return i == 1 || i == 3 })
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "Order", OPTIONAL, version, func(i int) bool { return i == 1 || i == 3 })
 	if err != nil {
 		return fmt.Errorf("%s.Order: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Encode", OPTIONAL, model.V12, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Encode", OPTIONAL, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Encode: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Decode", OPTIONAL, model.V12, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Decode", OPTIONAL, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Decode: %w", dictName, err)
 	}
@@ -145,24 +148,57 @@ func validateSampledFunctionStreamDict(xRefTable *model.XRefTable, sd *types.Str
 	return nil
 }
 
-func validatePostScriptCalculatorFunctionStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {
+func validateSampledFunctionStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {
+	version := model.V12
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		version = model.V11
+	}
+	err := validateSampledFunctionStreamDictVersion(xRefTable, sd, version)
+	if err != nil {
+		return err
+	}
+	if xRefTable.Version() < model.V12 {
+		showDigestedVersionViolation(xRefTable, "sampledFunctionStreamDict")
+	}
+	return nil
+}
+
+func validatePostScriptCalculatorFunctionStreamDictVersion(
+	xRefTable *model.XRefTable,
+	sd *types.StreamDict,
+	version model.Version,
+) error {
 	dictName := "postScriptCalculatorFunctionStreamDict"
-	// Version check
-	err := xRefTable.ValidateVersion(dictName, model.V13)
+	err := xRefTable.ValidateVersion(dictName, version)
 	if err != nil {
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Domain", REQUIRED, model.V13, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Domain", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Domain: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Range", REQUIRED, model.V13, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Range", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Range: %w", dictName, err)
 	}
 
+	return nil
+}
+
+func validatePostScriptCalculatorFunctionStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {
+	version := model.V13
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		version = model.V12
+	}
+	err := validatePostScriptCalculatorFunctionStreamDictVersion(xRefTable, sd, version)
+	if err != nil {
+		return err
+	}
+	if xRefTable.Version() < model.V13 {
+		showDigestedVersionViolation(xRefTable, "postScriptCalculatorFunctionStreamDict")
+	}
 	return nil
 }
 

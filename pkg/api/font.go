@@ -38,17 +38,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-var (
-	// ErrUnknownFont aliases the lower-layer unknown-font sentinel.
-	ErrUnknownFont = font.ErrUnknownFont
-
-	// ErrUserFontNotFound is retained as a compatibility alias for ErrUnknownFont.
-	ErrUserFontNotFound = font.ErrUnknownFont
-
-	// ErrDuplicatePostScriptName aliases the lower-layer duplicate-name sentinel.
-	ErrDuplicatePostScriptName = font.ErrDuplicatePostScriptName
-)
-
 type fontAPIOperations struct {
 	userFontDir               string
 	reloadUserFonts           func() error

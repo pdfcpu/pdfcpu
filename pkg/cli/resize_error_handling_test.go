@@ -34,8 +34,8 @@ func cliResizeConfiguration() *model.Resize {
 
 // TestResizeRejectsMissingCommandFields verifies CLI resize boundary guards.
 func TestResizeRejectsMissingCommandFields(t *testing.T) {
-	if _, err := Resize(nil); !errors.Is(err, api.ErrMissingPDFInput) {
-		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
+	if _, err := Resize(nil); !errors.Is(err, ErrMissingCommand) {
+		t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 	}
 	if _, err := Resize(&Command{}); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)

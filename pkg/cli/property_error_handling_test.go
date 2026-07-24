@@ -62,7 +62,7 @@ func TestPropertyCommandArgumentErrors(t *testing.T) {
 		{name: "list command", run: func() error {
 			_, err := ListProperties(nil)
 			return err
-		}, want: api.ErrMissingPDFInput},
+		}, want: ErrMissingCommand},
 		{name: "list input", run: func() error {
 			_, err := ListProperties(&Command{})
 			return err

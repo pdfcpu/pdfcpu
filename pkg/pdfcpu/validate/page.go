@@ -535,15 +535,22 @@ func validateNumberFormatDict(xRefTable *model.XRefTable, d types.Dict, sinceVer
 	}
 
 	// F, name, optional
-	_, err = validateNameEntry(xRefTable, d, dictName, "F", OPTIONAL, sinceVersion, nil)
+	format, err := validateNameEntry(xRefTable, d, dictName, "F", OPTIONAL, sinceVersion, func(s string) bool {
+		return types.MemberOf(s, []string{"D", "F", "R", "T"})
+	})
 	if err != nil {
 		return err
 	}
 
 	// D, integer, optional
-	_, err = validateIntegerEntry(xRefTable, d, dictName, "D", OPTIONAL, sinceVersion, nil)
+	precision, err := validateIntegerEntry(xRefTable, d, dictName, "D", OPTIONAL, sinceVersion, func(i int) bool {
+		return i > 0
+	})
 	if err != nil {
 		return err
+	}
+	if precision != nil && (format == nil || format.Value() == "D") && precision.Value()%10 != 0 {
+		return fmt.Errorf("%s.D: decimal precision must be a multiple of 10", dictName)
 	}
 
 	// FD, bool, optional
@@ -577,68 +584,49 @@ func validateNumberFormatDict(xRefTable *model.XRefTable, d types.Dict, sinceVer
 	}
 
 	// O, name, optional
-	_, err = validateNameEntry(xRefTable, d, dictName, "O", OPTIONAL, sinceVersion, nil)
+	_, err = validateNameEntry(xRefTable, d, dictName, "O", OPTIONAL, sinceVersion, func(s string) bool {
+		return types.MemberOf(s, []string{"S", "P"})
+	})
 
 	return err
 }
 
 func validateNumberFormatArrayEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
-	a, err := validateArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, nil)
+	a, err := validateArrayEntry(xRefTable, d, dictName, entryName, required, sinceVersion, func(a types.Array) bool {
+		return len(a) > 0
+	})
 	if err != nil || a == nil {
 		return err
 	}
 
-	for _, v := range a {
-
+	for i, v := range a {
 		d, err := xRefTable.DereferenceDict(v)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s.%s[%d]: %w", dictName, entryName, i, err)
 		}
-
 		if d == nil {
-			continue
+			return fmt.Errorf("%s.%s[%d]: missing number format dict", dictName, entryName, i)
 		}
-
 		err = validateNumberFormatDict(xRefTable, d, sinceVersion)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s.%s[%d]: %w", dictName, entryName, i, err)
 		}
-
 	}
 
 	return nil
 }
 
-func validateMeasureDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
-	dictName := "measureDict"
-
-	_, err := validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Measure" })
-	if err != nil {
-		return err
-	}
-
-	// PDF 1.6 defines only a single type of coordinate system, a rectilinear coordinate system,
-	// that shall be specified by the value RL for the Subtype entry.
-	coordSys, err := validateNameEntry(xRefTable, d, dictName, "Subtype", OPTIONAL, sinceVersion, nil)
-	if err != nil || coordSys == nil {
-		return err
-	}
-
-	if *coordSys != "RL" {
-		if xRefTable.Version() > sinceVersion {
-			// unknown coord system
-			return nil
-		}
-		return fmt.Errorf("measure dict: entry Subtype invalid value: %s", coordSys.Value())
-	}
+func validateRectilinearMeasureDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+	dictName := "rectilinearMeasureDict"
 
 	// R, text string, required, scale ratio
-	_, err = validateStringEntry(xRefTable, d, dictName, "R", REQUIRED, sinceVersion, nil)
+	_, err := validateStringEntry(xRefTable, d, dictName, "R", REQUIRED, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
 
-	// X, number format array, required, for measurement of change along the x axis and, if Y is not present, along the y axis as well.
+	// X, number format array, required, for measurement of change along the x axis and, if Y is not present,
+	// along the y axis as well.
 	err = validateNumberFormatArrayEntry(xRefTable, d, dictName, "X", REQUIRED, sinceVersion)
 	if err != nil {
 		return err
@@ -674,18 +662,224 @@ func validateMeasureDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion 
 		return err
 	}
 
-	// O, number array, optional, array of two numbers that shall specify the origin of the measurement coordinate system in default user space coordinates.
+	// O, number array, optional, array of two numbers that shall specify the origin of the measurement coordinate system
+	// in default user space coordinates.
 	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "O", OPTIONAL, sinceVersion, func(a types.Array) bool { return len(a) == 2 })
 	if err != nil {
 		return err
 	}
 
-	// CYX, number, optional, a factor that shall be used to convert the largest units along the y axis to the largest units along the x axis.
+	// CYX, number, optional, a factor that shall be used to convert the largest units along the y axis to the largest units
+	// along the x axis.
 	_, err = validateNumberEntry(xRefTable, d, dictName, "CYX", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func validateMeasureCoordinateSystemDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+	dictName := "measureCoordinateSystemDict"
+
+	validateType := func(s string) bool { return types.MemberOf(s, []string{"GEOGCS", "PROJCS"}) }
+	csType, err := validateNameEntry(xRefTable, d, dictName, "Type", REQUIRED, sinceVersion, validateType)
+	if err != nil {
+		return err
+	}
+
+	epsg, err := validateIntegerEntry(xRefTable, d, dictName, "EPSG", OPTIONAL, sinceVersion, func(i int) bool {
+		return i > 0
+	})
+	if err != nil {
+		return err
+	}
+
+	isASCII := func(s string) bool {
+		for i := 0; i < len(s); i++ {
+			if s[i] > 0x7f {
+				return false
+			}
+		}
+		return true
+	}
+	wkt, err := validateStringEntry(xRefTable, d, dictName, "WKT", OPTIONAL, sinceVersion, isASCII)
+	if err != nil {
+		return err
+	}
+	if wkt != nil && len(*wkt) == 0 {
+		return errors.New("measure coordinate system dict: WKT must not be empty")
+	}
+
+	if epsg == nil && wkt == nil {
+		return errors.New("measure coordinate system dict: one of EPSG or WKT required")
+	}
+	if xRefTable.Version() == model.V20 && csType.Value() == "GEOGCS" && epsg != nil && wkt != nil {
+		return errors.New("measure coordinate system dict: EPSG and WKT are mutually exclusive")
+	}
+
+	return nil
+}
+
+func validateMeasureCoordinateSystemEntry(xRefTable *model.XRefTable, d types.Dict, entryName string, required bool, sinceVersion model.Version) error {
+	d1, err := validateDictEntry(xRefTable, d, "geospatialMeasureDict", entryName, required, sinceVersion, nil)
+	if err != nil {
+		return fmt.Errorf("geospatialMeasureDict.%s: %w", entryName, err)
+	}
+	if d1 == nil {
+		return nil
+	}
+
+	if err = validateMeasureCoordinateSystemDict(xRefTable, d1, sinceVersion); err != nil {
+		return fmt.Errorf("geospatialMeasureDict.%s: %w", entryName, err)
+	}
+
+	return nil
+}
+
+func validateMeasureUnitSquareArray(xRefTable *model.XRefTable, a types.Array, dictName, entryName string) error {
+	for i, o := range a {
+		f, err := xRefTable.DereferenceNumber(o)
+		if err != nil {
+			return fmt.Errorf("dict=%s entry=%s index=%d: %w", dictName, entryName, i, err)
+		}
+		if f < 0 || f > 1 {
+			return fmt.Errorf("dict=%s entry=%s invalid value at index %d: %g", dictName, entryName, i, f)
+		}
+	}
+
+	return nil
+}
+
+func validateMeasureDisplayUnits(xRefTable *model.XRefTable, a types.Array) error {
+	validUnits := [][]string{
+		{"M", "KM", "FT", "USFT", "MI", "NM"},
+		{"SQM", "HA", "SQKM", "SQFT", "A", "SQMI"},
+		{"DEG", "GRD"},
+	}
+
+	for i, o := range a {
+		o, err := xRefTable.Dereference(o)
+		if err != nil {
+			return fmt.Errorf("geospatialMeasureDict.PDU index=%d: %w", i, err)
+		}
+		name, ok := o.(types.Name)
+		if !ok {
+			return fmt.Errorf("geospatialMeasureDict.PDU invalid type at index %d: %T", i, o)
+		}
+		if !types.MemberOf(name.Value(), validUnits[i]) {
+			return fmt.Errorf("geospatialMeasureDict.PDU invalid value at index %d: %s", i, o)
+		}
+	}
+
+	return nil
+}
+
+func validateGeospatialMeasureDictPart1(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+	dictName := "geospatialMeasureDict"
+
+	bounds, err := validateNumberArrayEntry(xRefTable, d, dictName, "Bounds", OPTIONAL, sinceVersion, func(a types.Array) bool {
+		return len(a) >= 6 && len(a)%2 == 0
+	})
+	if err != nil {
+		return err
+	}
+	if bounds != nil {
+		if err = validateMeasureUnitSquareArray(xRefTable, bounds, dictName, "Bounds"); err != nil {
+			return err
+		}
+	}
+
+	if err = validateMeasureCoordinateSystemEntry(xRefTable, d, "GCS", REQUIRED, sinceVersion); err != nil {
+		return err
+	}
+	if err = validateMeasureCoordinateSystemEntry(xRefTable, d, "DCS", OPTIONAL, sinceVersion); err != nil {
+		return err
+	}
+
+	pdu, err := validateNameArrayEntry(xRefTable, d, dictName, "PDU", OPTIONAL, sinceVersion, func(a types.Array) bool {
+		return len(a) == 3
+	})
+	if err != nil {
+		return err
+	}
+	if pdu != nil {
+		if err = validateMeasureDisplayUnits(xRefTable, pdu); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateGeospatialMeasureDictPart2(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+	dictName := "geospatialMeasureDict"
+	validatePairs := func(a types.Array) bool { return len(a) >= 4 && len(a)%2 == 0 }
+
+	gpts, err := validateNumberArrayEntry(xRefTable, d, dictName, "GPTS", REQUIRED, sinceVersion, validatePairs)
+	if err != nil {
+		return err
+	}
+	lpts, err := validateNumberArrayEntry(xRefTable, d, dictName, "LPTS", OPTIONAL, sinceVersion, validatePairs)
+	if err != nil {
+		return err
+	}
+	if lpts != nil {
+		if len(lpts) != len(gpts) {
+			return fmt.Errorf("%s: LPTS and GPTS array lengths differ", dictName)
+		}
+		if err = validateMeasureUnitSquareArray(xRefTable, lpts, dictName, "LPTS"); err != nil {
+			return err
+		}
+	}
+
+	pcsmVersion := model.V20
+	if xRefTable.ValidationMode == model.ValidationRelaxed && xRefTable.Version() == model.V17 {
+		pcsmVersion = model.V17
+	}
+	pcsm, err := validateNumberArrayEntry(xRefTable, d, dictName, "PCSM", OPTIONAL, pcsmVersion, func(a types.Array) bool {
+		return len(a) == 12
+	})
+	if err != nil {
+		return err
+	}
+	if pcsm != nil && pcsmVersion < model.V20 {
+		showDigestedVersionViolation(xRefTable, "dict="+dictName+" entry=PCSM")
+	}
+
+	return nil
+}
+
+func validateGeospatialMeasureDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+	if err := validateGeospatialMeasureDictPart1(xRefTable, d, sinceVersion); err != nil {
+		return err
+	}
+
+	return validateGeospatialMeasureDictPart2(xRefTable, d, sinceVersion)
+}
+
+func validateMeasureDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+	dictName := "measureDict"
+
+	_, err := validateNameEntry(xRefTable, d, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool {
+		return s == "Measure"
+	})
+	if err != nil {
+		return err
+	}
+
+	subtype, err := validateNameEntry(xRefTable, d, dictName, "Subtype", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+	if subtype == nil || subtype.Value() == "RL" {
+		return validateRectilinearMeasureDict(xRefTable, d, sinceVersion)
+	}
+	if subtype.Value() == "GEO" {
+		return validateGeospatialMeasureDict(xRefTable, d, sinceVersion)
+	}
+
+	// Other coordinate-system subtypes are permitted but have unknown schemas.
 	return nil
 }
 
@@ -935,6 +1129,28 @@ func validateParent(pageNodeDict types.Dict, childObjNr, parentObjNr int) error 
 	return nil
 }
 
+func validatePageTreeParentLink(
+	xRefTable *model.XRefTable,
+	pageNodeDict types.Dict,
+	childObjNr,
+	parentObjNr int,
+) (specViolation, err error) {
+	err = validateParent(pageNodeDict, childObjNr, parentObjNr)
+	if err == nil {
+		return nil, nil
+	}
+	if xRefTable.ValidationMode == model.ValidationStrict || pageNodeDict.IndirectRefEntry("Parent") == nil {
+		return nil, err
+	}
+	return err, nil
+}
+
+func showDigestedPageTreeParentViolation(xRefTable *model.XRefTable, err error) {
+	if err != nil {
+		model.ShowDigestedSpecViolationError(xRefTable, err)
+	}
+}
+
 func detectPageNodeDict(xRefTable *model.XRefTable, indRef types.IndirectRef, objNr, parentObjNr int, mediaBoxArr types.Array, pageNr int) (types.Dict, error) {
 	pageNodeDict, err := xRefTable.DereferenceDict(indRef)
 	if err != nil {
@@ -996,7 +1212,8 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr 
 
 		a = append(a, ir)
 
-		if err := validateParent(pageNodeDict, objNr, parentObjNr); err != nil {
+		parentViolation, err := validatePageTreeParentLink(xRefTable, pageNodeDict, objNr, parentObjNr)
+		if err != nil {
 			return nil, err
 		}
 
@@ -1030,6 +1247,7 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr 
 			return nil, fmt.Errorf("page tree: node obj#%d: unexpected dict type: %s", objNr, dictType)
 		}
 
+		showDigestedPageTreeParentViolation(xRefTable, parentViolation)
 	}
 
 	return a, nil

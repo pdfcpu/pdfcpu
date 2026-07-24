@@ -108,6 +108,7 @@ func TestViewerPreferencesCommandsRejectMissingInput(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func() error
+		want error
 	}{
 		{
 			name: "list nil command",
@@ -115,6 +116,7 @@ func TestViewerPreferencesCommandsRejectMissingInput(t *testing.T) {
 				_, err := ListViewerPreferences(nil)
 				return err
 			},
+			want: ErrMissingCommand,
 		},
 		{
 			name: "set missing input",
@@ -122,6 +124,7 @@ func TestViewerPreferencesCommandsRejectMissingInput(t *testing.T) {
 				_, err := SetViewerPreferences(&Command{})
 				return err
 			},
+			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "reset nil command",
@@ -129,13 +132,14 @@ func TestViewerPreferencesCommandsRejectMissingInput(t *testing.T) {
 				_, err := ResetViewerPreferences(nil)
 				return err
 			},
+			want: ErrMissingCommand,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.run(); !errors.Is(err, api.ErrMissingPDFInput) {
-				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
+			if err := tt.run(); !errors.Is(err, tt.want) {
+				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
 		})
 	}
@@ -145,6 +149,7 @@ func TestPageLayoutCommandsRejectMissingInput(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func() error
+		want error
 	}{
 		{
 			name: "list nil command",
@@ -152,6 +157,7 @@ func TestPageLayoutCommandsRejectMissingInput(t *testing.T) {
 				_, err := ListPageLayout(nil)
 				return err
 			},
+			want: ErrMissingCommand,
 		},
 		{
 			name: "set missing input",
@@ -159,6 +165,7 @@ func TestPageLayoutCommandsRejectMissingInput(t *testing.T) {
 				_, err := SetPageLayout(&Command{StringVal: "SinglePage"})
 				return err
 			},
+			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "reset nil command",
@@ -166,13 +173,14 @@ func TestPageLayoutCommandsRejectMissingInput(t *testing.T) {
 				_, err := ResetPageLayout(nil)
 				return err
 			},
+			want: ErrMissingCommand,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.run(); !errors.Is(err, api.ErrMissingPDFInput) {
-				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
+			if err := tt.run(); !errors.Is(err, tt.want) {
+				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
 		})
 	}
@@ -213,6 +221,7 @@ func TestPageModeCommandsRejectMissingInput(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func() error
+		want error
 	}{
 		{
 			name: "list nil command",
@@ -220,6 +229,7 @@ func TestPageModeCommandsRejectMissingInput(t *testing.T) {
 				_, err := ListPageMode(nil)
 				return err
 			},
+			want: ErrMissingCommand,
 		},
 		{
 			name: "set missing input",
@@ -227,6 +237,7 @@ func TestPageModeCommandsRejectMissingInput(t *testing.T) {
 				_, err := SetPageMode(&Command{StringVal: "UseNone"})
 				return err
 			},
+			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "reset nil command",
@@ -234,13 +245,14 @@ func TestPageModeCommandsRejectMissingInput(t *testing.T) {
 				_, err := ResetPageMode(nil)
 				return err
 			},
+			want: ErrMissingCommand,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.run(); !errors.Is(err, api.ErrMissingPDFInput) {
-				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
+			if err := tt.run(); !errors.Is(err, tt.want) {
+				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
 		})
 	}
@@ -556,7 +568,7 @@ func TestBookmarkCommandsRejectMissingRequiredFields(t *testing.T) {
 				_, err := ListBookmarks(nil)
 				return err
 			},
-			wantErr: api.ErrMissingPDFInput,
+			wantErr: ErrMissingCommand,
 		},
 		{
 			name: "export nil command",
@@ -564,7 +576,7 @@ func TestBookmarkCommandsRejectMissingRequiredFields(t *testing.T) {
 				_, err := ExportBookmarks(nil)
 				return err
 			},
-			wantErr: api.ErrMissingPDFInput,
+			wantErr: ErrMissingCommand,
 		},
 		{
 			name: "export missing output",
@@ -580,7 +592,7 @@ func TestBookmarkCommandsRejectMissingRequiredFields(t *testing.T) {
 				_, err := ImportBookmarks(nil)
 				return err
 			},
-			wantErr: api.ErrMissingPDFInput,
+			wantErr: ErrMissingCommand,
 		},
 		{
 			name: "import missing JSON input",
@@ -596,7 +608,7 @@ func TestBookmarkCommandsRejectMissingRequiredFields(t *testing.T) {
 				_, err := RemoveBookmarks(nil)
 				return err
 			},
-			wantErr: api.ErrMissingPDFInput,
+			wantErr: ErrMissingCommand,
 		},
 	}
 

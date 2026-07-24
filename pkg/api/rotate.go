@@ -27,9 +27,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// ErrInvalidRotation signals a rotation that is not a multiple of 90 degrees.
-var ErrInvalidRotation = errors.New("invalid rotation")
-
 func validateRotation(rotation int) error {
 	if rotation%90 != 0 {
 		return fmt.Errorf("rotation must be a multiple of 90: %w", ErrInvalidRotation)

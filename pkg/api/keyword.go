@@ -27,9 +27,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// ErrNoKeywordRemoved signals that a remove operation did not match any keyword.
-var ErrNoKeywordRemoved = errors.New("no keyword removed")
-
 // Keywords returns the keywords of rs's info dict.
 func Keywords(rs io.ReadSeeker, conf *model.Configuration) (ss []string, err error) {
 	defer fault.Catch(&err)

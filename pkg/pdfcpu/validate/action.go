@@ -574,25 +574,25 @@ func validateHideActionDict(xRefTable *model.XRefTable, d types.Dict, dictName s
 func validateNamedActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// see 12.6.4.11
 
-	validate := func(s string) bool {
-
-		if types.MemberOf(s, []string{"NextPage", "PrevPage", "FirstPage", "LastPage"}) {
-			return true
-		}
-
-		// Some known non standard named actions
-		if types.MemberOf(s, []string{
-			"AcroSrch:Query", "Find", "FindAgain", "FindAgainDoc", "FindPrevious", "FindPreviousDoc", "FullScreen", "GoBack", "GoBackDoc",
-			"GoForward", "GoToPage", "Print", "Quit", "SaveAs", "FitPage", "FitWidth", "Close", "CropPages", "ZoomViewIn"}) {
-			return true
-		}
-
-		return false
+	standard := func(s string) bool {
+		return types.MemberOf(s, []string{"NextPage", "PrevPage", "FirstPage", "LastPage"})
 	}
 
-	_, err := validateNameEntry(xRefTable, d, dictName, "N", REQUIRED, model.V10, validate)
+	nonStandard := func(s string) bool {
+		// Some known non standard named actions
+		return types.MemberOf(s, []string{
+			"AcroSrch:Query", "Find", "FindAgain", "FindAgainDoc", "FindPrevious", "FindPreviousDoc", "FullScreen", "GoBack", "GoBackDoc",
+			"GoForward", "GoToPage", "Print", "Quit", "SaveAs", "FitPage", "FitWidth", "Close", "CropPages", "ZoomViewIn", "ZoomViewOut"})
+	}
 
-	return err
+	n, err := validateNameEntry(xRefTable, d, dictName, "N", REQUIRED, model.V10, func(s string) bool { return standard(s) || nonStandard(s) })
+	if err != nil {
+		return err
+	}
+	if n != nil && xRefTable.ValidationMode == model.ValidationRelaxed && nonStandard(n.Value()) {
+		model.ShowDigestedSpecViolation(fmt.Sprintf("dict=%s entry=N invalid dict entry: %s", dictName, n.Value()))
+	}
+	return nil
 }
 
 func validateSubmitFormActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -924,18 +924,31 @@ func validateActionDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// S, required, name, action Type
-	s, err := validateNameEntry(xRefTable, d, dictName, "S", REQUIRED, model.V10, nil)
+	required := REQUIRED
+	relaxed := xRefTable.ValidationMode == model.ValidationRelaxed
+	if relaxed {
+		required = OPTIONAL
+	}
+	s, err := validateNameEntry(xRefTable, d, dictName, "S", required, model.V10, nil)
 	if err != nil {
 		return fmt.Errorf("action dictionary S: %w", err)
 	}
 
-	err = validateActionDictCore(xRefTable, s, d)
-	if err != nil {
-		return err
+	if s != nil {
+		err = validateActionDictCore(xRefTable, s, d)
+		if err != nil {
+			return err
+		}
 	}
 
 	if o, ok := d.Find("Next"); ok {
-		return validateNextAction(xRefTable, o)
+		if err := validateNextAction(xRefTable, o); err != nil {
+			return err
+		}
+	}
+
+	if s == nil && relaxed {
+		model.ShowDigestedSpecViolation("dict=" + dictName + " required entry=S missing")
 	}
 
 	return nil

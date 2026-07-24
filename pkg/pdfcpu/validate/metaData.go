@@ -48,8 +48,15 @@ func validateMetadataStream(xRefTable *model.XRefTable, d types.Dict, required b
 		return nil, fmt.Errorf("%s: %s.Type: %w", objectContext(dictEntryContext("dict", "Metadata", rawEntry), rawEntry), dictName, err)
 	}
 
-	if _, err = validateNameEntry(xRefTable, sd.Dict, dictName, "Subtype", OPTIONAL, sinceVersion, func(s string) bool { return s == "XML" }); err != nil {
+	relaxed := xRefTable.ValidationMode == model.ValidationRelaxed
+	subtype, err := validateNameEntry(xRefTable, sd.Dict, dictName, "Subtype", OPTIONAL, sinceVersion, func(s string) bool {
+		return s == "XML" || relaxed && s == "XMP"
+	})
+	if err != nil {
 		return nil, fmt.Errorf("%s: %s.Subtype: %w", objectContext(dictEntryContext("dict", "Metadata", rawEntry), rawEntry), dictName, err)
+	}
+	if subtype != nil && relaxed && subtype.Value() == "XMP" {
+		model.ShowDigestedSpecViolation("dict=" + dictName + " entry=Subtype invalid dict entry: XMP")
 	}
 
 	return sd, nil

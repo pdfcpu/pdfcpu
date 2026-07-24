@@ -27,6 +27,32 @@ import (
 
 var errUnsupportedPDFObject = errors.New("unsupported PDF object")
 
+type invalidStructElementKError struct {
+	err error
+}
+
+func (e *invalidStructElementKError) Error() string {
+	return e.err.Error()
+}
+
+func handleInvalidStructElementK(
+	xRefTable *model.XRefTable,
+	err error,
+	specViolations *[]error,
+) error {
+	if xRefTable.ValidationMode == model.ValidationStrict {
+		return err
+	}
+	*specViolations = append(*specViolations, err)
+	return nil
+}
+
+func showDigestedSpecViolations(xRefTable *model.XRefTable, specViolations []error) {
+	for _, err := range specViolations {
+		model.ShowDigestedSpecViolationError(xRefTable, err)
+	}
+}
+
 func validateMarkedContentReferenceDict(xRefTable *model.XRefTable, d types.Dict) error {
 	var err error
 
@@ -109,7 +135,27 @@ func validateObjectReferenceDict(xRefTable *model.XRefTable, d types.Dict) error
 	return nil
 }
 
-func validateStructElementKArrayElement(xRefTable *model.XRefTable, o types.Object, useIDs bool, depth int) error {
+func enterStructureTreeObject(visit *model.StructureTreeVisit, o types.Object) (int, error) {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		return 0, nil
+	}
+
+	objNr := ir.ObjectNumber.Value()
+	if err := visit.Enter(objNr); err != nil {
+		return objNr, err
+	}
+
+	return objNr, nil
+}
+
+func validateStructElementKArrayElement(
+	xRefTable *model.XRefTable,
+	o types.Object,
+	useIDs bool,
+	depth int,
+	visit *model.StructureTreeVisit,
+) error {
 	switch o := o.(type) {
 
 	case types.Integer:
@@ -120,7 +166,7 @@ func validateStructElementKArrayElement(xRefTable *model.XRefTable, o types.Obje
 		dictType := o.Type()
 
 		if dictType == nil || *dictType == "StructElem" {
-			return validateStructElementDictDepth(xRefTable, o, useIDs, depth+1)
+			return validateStructElementDictDepth(xRefTable, o, useIDs, depth+1, visit)
 		}
 
 		if *dictType == "MCR" {
@@ -131,50 +177,104 @@ func validateStructElementKArrayElement(xRefTable *model.XRefTable, o types.Obje
 			return validateObjectReferenceDict(xRefTable, o)
 		}
 
-		return fmt.Errorf("structure element K: unexpected dict Type %s, expected StructElem, OBJR or MCR", *dictType)
+		err := fmt.Errorf("unexpected dict Type %s, expected StructElem, OBJR or MCR", *dictType)
+		return &invalidStructElementKError{err}
 
 	}
 
-	return fmt.Errorf("structure element K: %w: %T", errUnsupportedPDFObject, o)
+	return fmt.Errorf("%w: %T", errUnsupportedPDFObject, o)
 }
 
-func validateStructElementDictEntryKArray(xRefTable *model.XRefTable, a types.Array, useIDs bool, depth int) error {
-	for i, o := range a {
-
-		// Avoid recursion.
-		ir, ok := o.(types.IndirectRef)
-		if ok {
-			valid, err := xRefTable.IsValid(ir)
-			if err != nil {
-				return fmt.Errorf("structure element K[%d] obj#%d: check valid: %w", i, ir.ObjectNumber.Value(), err)
-			}
-			if valid {
-				continue
-			}
-			if err := xRefTable.SetValid(ir); err != nil {
-				return fmt.Errorf("structure element K[%d] obj#%d: mark valid: %w", i, ir.ObjectNumber.Value(), err)
-			}
+func validateStructElementDictEntryKArrayElement(
+	xRefTable *model.XRefTable,
+	rawObject types.Object,
+	index int,
+	useIDs bool,
+	depth int,
+	visit *model.StructureTreeVisit,
+	specViolations *[]error,
+) error {
+	context := objectContext(fmt.Sprintf("structure element K[%d]", index), rawObject)
+	objNr, err := enterStructureTreeObject(visit, rawObject)
+	if err != nil {
+		err = fmt.Errorf("%s: %w", context, err)
+		if xRefTable.ValidationMode == model.ValidationRelaxed && errors.Is(err, model.ErrStructureTreeCycle) {
+			*specViolations = append(*specViolations, err)
+			return nil
 		}
+		return err
+	}
+	defer visit.Leave(objNr)
 
-		o, err := xRefTable.Dereference(o)
-		if err != nil {
-			return fmt.Errorf("%s: dereference: %w", objectContext(fmt.Sprintf("structure element K[%d]", i), a[i]), err)
+	o, err := xRefTable.Dereference(rawObject)
+	if err != nil {
+		return fmt.Errorf("%s: dereference: %w", context, err)
+	}
+	if o == nil {
+		return nil
+	}
+
+	if err := validateStructElementKArrayElement(xRefTable, o, useIDs, depth, visit); err != nil {
+		err = fmt.Errorf("%s: %w", context, err)
+		var invalidK *invalidStructElementKError
+		if errors.As(err, &invalidK) {
+			return handleInvalidStructElementK(xRefTable, err, specViolations)
 		}
-
-		if o == nil {
-			continue
-		}
-
-		if err := validateStructElementKArrayElement(xRefTable, o, useIDs, depth); err != nil {
-			return fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("structure element K[%d]", i), a[i]), err)
-		}
-
+		return err
 	}
 
 	return nil
 }
 
-func validateStructElementDictEntryK(xRefTable *model.XRefTable, o types.Object, useIDs bool, depth int) error {
+func validateStructElementDictEntryKArrayDepth(
+	xRefTable *model.XRefTable,
+	a types.Array,
+	useIDs bool,
+	depth int,
+	visit *model.StructureTreeVisit,
+	specViolations *[]error,
+) error {
+	for i, o := range a {
+		if err := validateStructElementDictEntryKArrayElement(
+			xRefTable,
+			o,
+			i,
+			useIDs,
+			depth,
+			visit,
+			specViolations,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateStructElementDictEntryKArray(xRefTable *model.XRefTable, a types.Array, useIDs bool, depth int) error {
+	var specViolations []error
+	err := validateStructElementDictEntryKArrayDepth(
+		xRefTable,
+		a,
+		useIDs,
+		depth,
+		model.NewStructureTreeVisit(),
+		&specViolations,
+	)
+	if err == nil {
+		showDigestedSpecViolations(xRefTable, specViolations)
+	}
+	return err
+}
+
+func validateStructElementDictEntryKDepth(
+	xRefTable *model.XRefTable,
+	rawObject types.Object,
+	useIDs bool,
+	depth int,
+	visit *model.StructureTreeVisit,
+	specViolations *[]error,
+) error {
 	// K: optional, the children of this structure element
 	//
 	// struct element dict
@@ -183,10 +283,16 @@ func validateStructElementDictEntryK(xRefTable *model.XRefTable, o types.Object,
 	// marked content id int
 	// array of all above
 
-	rawObject := o
-	o, err := xRefTable.Dereference(o)
+	context := objectContext("structure element K", rawObject)
+	objNr, err := enterStructureTreeObject(visit, rawObject)
 	if err != nil {
-		return fmt.Errorf("%s: dereference: %w", objectContext("structure element K", rawObject), err)
+		return fmt.Errorf("%s: %w", context, err)
+	}
+	defer visit.Leave(objNr)
+
+	o, err := xRefTable.Dereference(rawObject)
+	if err != nil {
+		return fmt.Errorf("%s: dereference: %w", context, err)
 	}
 	if o == nil {
 		return nil
@@ -200,9 +306,9 @@ func validateStructElementDictEntryK(xRefTable *model.XRefTable, o types.Object,
 		dictType := o.Type()
 
 		if dictType == nil || *dictType == "StructElem" {
-			err = validateStructElementDictDepth(xRefTable, o, useIDs, depth+1)
+			err = validateStructElementDictDepth(xRefTable, o, useIDs, depth+1, visit)
 			if err != nil {
-				return fmt.Errorf("%s: %w", objectContext("structure element K", rawObject), err)
+				return fmt.Errorf("%s: %w", context, err)
 			}
 			break
 		}
@@ -210,7 +316,7 @@ func validateStructElementDictEntryK(xRefTable *model.XRefTable, o types.Object,
 		if *dictType == "MCR" {
 			err = validateMarkedContentReferenceDict(xRefTable, o)
 			if err != nil {
-				return fmt.Errorf("%s: %w", objectContext("structure element K", rawObject), err)
+				return fmt.Errorf("%s: %w", context, err)
 			}
 			break
 		}
@@ -218,26 +324,44 @@ func validateStructElementDictEntryK(xRefTable *model.XRefTable, o types.Object,
 		if *dictType == "OBJR" {
 			err = validateObjectReferenceDict(xRefTable, o)
 			if err != nil {
-				return fmt.Errorf("%s: %w", objectContext("structure element K", rawObject), err)
+				return fmt.Errorf("%s: %w", context, err)
 			}
 			break
 		}
 
-		return fmt.Errorf("%s: unexpected dict Type %s, expected StructElem, OBJR or MCR", objectContext("structure element K", rawObject), *dictType)
+		err := fmt.Errorf("%s: unexpected dict Type %s, expected StructElem, OBJR or MCR", context, *dictType)
+		return handleInvalidStructElementK(xRefTable, err, specViolations)
 
 	case types.Array:
 
-		err = validateStructElementDictEntryKArray(xRefTable, o, useIDs, depth)
+		err = validateStructElementDictEntryKArrayDepth(xRefTable, o, useIDs, depth, visit, specViolations)
 		if err != nil {
 			return err
 		}
 
 	default:
-		return fmt.Errorf("%s: %w: %T", objectContext("structure element K", rawObject), errUnsupportedPDFObject, o)
+		err := fmt.Errorf("%s: %w: %T", context, errUnsupportedPDFObject, o)
+		return err
 
 	}
 
 	return nil
+}
+
+func validateStructElementDictEntryK(xRefTable *model.XRefTable, o types.Object, useIDs bool, depth int) error {
+	var specViolations []error
+	err := validateStructElementDictEntryKDepth(
+		xRefTable,
+		o,
+		useIDs,
+		depth,
+		model.NewStructureTreeVisit(),
+		&specViolations,
+	)
+	if err == nil {
+		showDigestedSpecViolations(xRefTable, specViolations)
+	}
+	return err
 }
 
 func processStructElementDictPgEntry(xRefTable *model.XRefTable, ir types.IndirectRef) error {
@@ -422,7 +546,15 @@ func validateStructElementDictEntryS(xRefTable *model.XRefTable, d types.Dict, d
 	return nil
 }
 
-func validateStructElementDictPart1(xRefTable *model.XRefTable, d types.Dict, dictName string, useIDs bool, depth int) error {
+func validateStructElementDictPart1(
+	xRefTable *model.XRefTable,
+	d types.Dict,
+	dictName string,
+	useIDs bool,
+	depth int,
+	visit *model.StructureTreeVisit,
+	specViolations *[]error,
+) error {
 	// S: structure type, required, name, see 14.7.3 and Annex E.
 	if err := validateStructElementDictEntryS(xRefTable, d, dictName); err != nil {
 		return err
@@ -448,7 +580,14 @@ func validateStructElementDictPart1(xRefTable *model.XRefTable, d types.Dict, di
 
 	// K: optional, the children of this structure element.
 	if o, found := d.Find("K"); found {
-		if err := validateStructElementDictEntryK(xRefTable, o, useIDs, depth); err != nil {
+		if err := validateStructElementDictEntryKDepth(
+			xRefTable,
+			o,
+			useIDs,
+			depth,
+			visit,
+			specViolations,
+		); err != nil {
 			return err
 		}
 	}
@@ -463,25 +602,44 @@ func validateStructElementDictPart1(xRefTable *model.XRefTable, d types.Dict, di
 	return nil
 }
 
-func validateStructElementDictPart2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateStructElementLang(xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) (bool, error) {
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		if o, ok := d.Find("Lang"); ok {
+			o, err := xRefTable.Dereference(o)
+			if err != nil {
+				return false, err
+			}
+			if _, ok := o.(types.Name); ok {
+				err = xRefTable.ValidateVersion("dict="+dictName+" entry=Lang", sinceVersion)
+				return err == nil, err
+			}
+		}
+	}
+
+	_, err := validateStringEntry(xRefTable, d, dictName, "Lang", OPTIONAL, sinceVersion, nil)
+
+	return false, err
+}
+
+func validateStructElementDictPart2(xRefTable *model.XRefTable, d types.Dict, dictName string) (bool, error) {
 	// C: optional, name or array
 	if o, ok := d.Find("C"); ok {
 		err := validateStructElementDictEntryC(xRefTable, o)
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
 
 	// R: optional, integer >= 0
 	_, err := validateIntegerEntry(xRefTable, d, dictName, "R", OPTIONAL, model.V10, func(i int) bool { return i >= 0 })
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// T: optional, text string
 	_, err = validateStringEntry(xRefTable, d, dictName, "T", OPTIONAL, model.V10, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// Lang: optional, text string, since 1.4
@@ -489,15 +647,15 @@ func validateStructElementDictPart2(xRefTable *model.XRefTable, d types.Dict, di
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V13
 	}
-	_, err = validateStringEntry(xRefTable, d, dictName, "Lang", OPTIONAL, sinceVersion, nil)
+	langName, err := validateStructElementLang(xRefTable, d, dictName, sinceVersion)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// Alt: optional, text string
 	_, err = validateStringEntry(xRefTable, d, dictName, "Alt", OPTIONAL, model.V10, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// E: optional, text string, since 1.5
@@ -507,7 +665,7 @@ func validateStructElementDictPart2(xRefTable *model.XRefTable, d types.Dict, di
 	}
 	_, err = validateStringEntry(xRefTable, d, dictName, "E", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// ActualText: optional, text string, since 1.4
@@ -517,14 +675,20 @@ func validateStructElementDictPart2(xRefTable *model.XRefTable, d types.Dict, di
 	}
 	_, err = validateStringEntry(xRefTable, d, dictName, "ActualText", OPTIONAL, sinceVersion, nil)
 
-	return err
+	return langName, err
 }
 
 func validateStructElementDict(xRefTable *model.XRefTable, d types.Dict, useIDs bool) error {
-	return validateStructElementDictDepth(xRefTable, d, useIDs, 0)
+	return validateStructElementDictDepth(xRefTable, d, useIDs, 0, model.NewStructureTreeVisit())
 }
 
-func validateStructElementDictDepth(xRefTable *model.XRefTable, d types.Dict, useIDs bool, depth int) error {
+func validateStructElementDictDepth(
+	xRefTable *model.XRefTable,
+	d types.Dict,
+	useIDs bool,
+	depth int,
+	visit *model.StructureTreeVisit,
+) error {
 	if err := xRefTable.CheckRecursionDepth("structure tree", depth); err != nil {
 		return err
 	}
@@ -533,12 +697,23 @@ func validateStructElementDictDepth(xRefTable *model.XRefTable, d types.Dict, us
 
 	dictName := "StructElementDict"
 
-	err := validateStructElementDictPart1(xRefTable, d, dictName, useIDs, depth)
+	var specViolations []error
+	err := validateStructElementDictPart1(xRefTable, d, dictName, useIDs, depth, visit, &specViolations)
 	if err != nil {
 		return err
 	}
 
-	return validateStructElementDictPart2(xRefTable, d, dictName)
+	langName, err := validateStructElementDictPart2(xRefTable, d, dictName)
+	if err != nil {
+		return err
+	}
+
+	if langName {
+		model.ShowDigestedSpecViolation("dict=" + dictName + " entry=Lang invalid type types.Name")
+	}
+	showDigestedSpecViolations(xRefTable, specViolations)
+
+	return nil
 }
 
 func handleInvalidStructTreeObject(xRefTable *model.XRefTable, err error) error {
@@ -549,57 +724,85 @@ func handleInvalidStructTreeObject(xRefTable *model.XRefTable, err error) error 
 	return nil
 }
 
-func validateStructTreeRootDictEntryKArray(xRefTable *model.XRefTable, a types.Array, useIDs bool) error {
+func validateStructTreeRootDictEntryKArrayElement(
+	xRefTable *model.XRefTable,
+	rawObject types.Object,
+	index int,
+	useIDs bool,
+	visit *model.StructureTreeVisit,
+) error {
+	context := objectContext(fmt.Sprintf("structure tree root K[%d]", index), rawObject)
+	objNr, err := enterStructureTreeObject(visit, rawObject)
+	if err != nil {
+		return fmt.Errorf("%s: %w", context, err)
+	}
+	defer visit.Leave(objNr)
+
+	o, err := xRefTable.Dereference(rawObject)
+	if err != nil {
+		return fmt.Errorf("%s: dereference: %w", context, err)
+	}
+	if o == nil {
+		return nil
+	}
+
+	d, ok := o.(types.Dict)
+	if !ok {
+		err := fmt.Errorf("%s: %w: %T", context, errUnsupportedPDFObject, o)
+		return handleInvalidStructTreeObject(xRefTable, err)
+	}
+
+	dictType := d.Type()
+	if dictType == nil || *dictType == "StructElem" {
+		if err := validateStructElementDictDepth(xRefTable, d, useIDs, 1, visit); err != nil {
+			return fmt.Errorf("%s: %w", context, err)
+		}
+		return nil
+	}
+
+	err = fmt.Errorf("%s: unexpected dict Type %s, expected StructElem", context, *dictType)
+
+	return handleInvalidStructTreeObject(xRefTable, err)
+}
+
+func validateStructTreeRootDictEntryKArrayDepth(
+	xRefTable *model.XRefTable,
+	a types.Array,
+	useIDs bool,
+	visit *model.StructureTreeVisit,
+) error {
 	for i, o := range a {
-
-		o, err := xRefTable.Dereference(o)
-		if err != nil {
-			return fmt.Errorf("%s: dereference: %w", objectContext(fmt.Sprintf("structure tree root K[%d]", i), a[i]), err)
-		}
-
-		if o == nil {
-			continue
-		}
-
-		switch o := o.(type) {
-
-		case types.Dict:
-
-			dictType := o.Type()
-
-			if dictType == nil || *dictType == "StructElem" {
-				err = validateStructElementDictDepth(xRefTable, o, useIDs, 1)
-				if err != nil {
-					return fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("structure tree root K[%d]", i), a[i]), err)
-				}
-				break
-			}
-
-			err := fmt.Errorf("%s: unexpected dict Type %s, expected StructElem", objectContext(fmt.Sprintf("structure tree root K[%d]", i), a[i]), *dictType)
-			if err = handleInvalidStructTreeObject(xRefTable, err); err != nil {
-				return err
-			}
-
-		default:
-			err := fmt.Errorf("%s: %w: %T", objectContext(fmt.Sprintf("structure tree root K[%d]", i), a[i]), errUnsupportedPDFObject, o)
-			if err = handleInvalidStructTreeObject(xRefTable, err); err != nil {
-				return err
-			}
-
+		if err := validateStructTreeRootDictEntryKArrayElement(xRefTable, o, i, useIDs, visit); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func validateStructTreeRootDictEntryK(xRefTable *model.XRefTable, o types.Object, useIDs bool) error {
+func validateStructTreeRootDictEntryKArray(xRefTable *model.XRefTable, a types.Array, useIDs bool) error {
+	return validateStructTreeRootDictEntryKArrayDepth(xRefTable, a, useIDs, model.NewStructureTreeVisit())
+}
+
+func validateStructTreeRootDictEntryKDepth(
+	xRefTable *model.XRefTable,
+	rawObject types.Object,
+	useIDs bool,
+	visit *model.StructureTreeVisit,
+) error {
 	// The immediate child or children of the structure tree root in the structure hierarchy.
 	// The value may be either a dictionary representing a single structure element or an array of such dictionaries.
 
-	rawObject := o
-	o, err := xRefTable.Dereference(o)
+	context := objectContext("structure tree root K", rawObject)
+	objNr, err := enterStructureTreeObject(visit, rawObject)
 	if err != nil {
-		return fmt.Errorf("%s: dereference: %w", objectContext("structure tree root K", rawObject), err)
+		return fmt.Errorf("%s: %w", context, err)
+	}
+	defer visit.Leave(objNr)
+
+	o, err := xRefTable.Dereference(rawObject)
+	if err != nil {
+		return fmt.Errorf("%s: dereference: %w", context, err)
 	}
 	if o == nil {
 		return nil
@@ -612,30 +815,34 @@ func validateStructTreeRootDictEntryK(xRefTable *model.XRefTable, o types.Object
 		dictType := o.Type()
 
 		if dictType == nil || *dictType == "StructElem" {
-			err = validateStructElementDictDepth(xRefTable, o, useIDs, 1)
+			err = validateStructElementDictDepth(xRefTable, o, useIDs, 1, visit)
 			if err != nil {
-				return fmt.Errorf("%s: %w", objectContext("structure tree root K", rawObject), err)
+				return fmt.Errorf("%s: %w", context, err)
 			}
 			break
 		}
 
-		err := fmt.Errorf("%s: unexpected dict Type %s, expected StructElem", objectContext("structure tree root K", rawObject), *dictType)
+		err := fmt.Errorf("%s: unexpected dict Type %s, expected StructElem", context, *dictType)
 		return handleInvalidStructTreeObject(xRefTable, err)
 
 	case types.Array:
 
-		err = validateStructTreeRootDictEntryKArray(xRefTable, o, useIDs)
+		err = validateStructTreeRootDictEntryKArrayDepth(xRefTable, o, useIDs, visit)
 		if err != nil {
 			return err
 		}
 
 	default:
-		err := fmt.Errorf("%s: %w: %T", objectContext("structure tree root K", rawObject), errUnsupportedPDFObject, o)
+		err := fmt.Errorf("%s: %w: %T", context, errUnsupportedPDFObject, o)
 		return handleInvalidStructTreeObject(xRefTable, err)
 
 	}
 
 	return nil
+}
+
+func validateStructTreeRootDictEntryK(xRefTable *model.XRefTable, o types.Object, useIDs bool) error {
+	return validateStructTreeRootDictEntryKDepth(xRefTable, o, useIDs, model.NewStructureTreeVisit())
 }
 
 func processStructTreeClassMapDict(xRefTable *model.XRefTable, d types.Dict) error {

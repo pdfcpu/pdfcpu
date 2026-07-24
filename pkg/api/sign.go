@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +26,18 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
+
+// ReadSeekerAt supports PDF parsing and positional signature verification.
+type ReadSeekerAt interface {
+	io.ReadSeeker
+	io.ReaderAt
+}
+
+type signatureValidationOperation func(
+	io.ReaderAt,
+	*model.Context,
+	bool,
+) ([]*model.SignatureValidationResult, error)
 
 func signatureStats(signValidResults []*model.SignatureValidationResult) model.SignatureStats {
 	sigStats := model.SignatureStats{Total: len(signValidResults)}
@@ -100,12 +113,7 @@ func digest(signValidResults []*model.SignatureValidationResult, full bool) []st
 		ss = append(ss, "")
 		ss = append(ss, fmt.Sprintf("1 %s", svr.Signature.String(svr.Status)))
 		ss = append(ss, fmt.Sprintf("   Status: %s", svr.Status))
-		s := svr.Reason.String()
-		if svr.Reason == model.SignatureReasonInternal {
-			if len(svr.Problems) > 0 {
-				s = svr.Problems[0]
-			}
-		}
+		s := compactSignatureReason(svr)
 		ss = append(ss, fmt.Sprintf("   Reason: %s", s))
 		ss = append(ss, fmt.Sprintf("   Signed: %s", svr.SigningTime()))
 		return ss
@@ -122,12 +130,7 @@ func digest(signValidResults []*model.SignatureValidationResult, full bool) []st
 		ss = append(ss, fmt.Sprintf("\n%d:", i+1))
 		ss = append(ss, fmt.Sprintf("     Type: %s", svr.Signature.String(svr.Status)))
 		ss = append(ss, fmt.Sprintf("   Status: %s", svr.Status.String()))
-		s := svr.Reason.String()
-		if svr.Reason == model.SignatureReasonInternal {
-			if len(svr.Problems) > 0 {
-				s = svr.Problems[0]
-			}
-		}
+		s := compactSignatureReason(svr)
 		ss = append(ss, fmt.Sprintf("   Reason: %s", s))
 		ss = append(ss, fmt.Sprintf("   Signed: %s", svr.SigningTime()))
 	}
@@ -135,40 +138,113 @@ func digest(signValidResults []*model.SignatureValidationResult, full bool) []st
 	return ss
 }
 
-// ValidateSignatures validates signature integrity of inFile and reports available trust evidence.
-func ValidateSignatures(inFile string, all bool, conf *model.Configuration) (svr []*model.SignatureValidationResult, err error) {
+func compactSignatureReason(svr *model.SignatureValidationResult) string {
+	s := svr.Reason.String()
+	switch svr.Reason {
+	case model.SignatureReasonInternal,
+		model.SignatureReasonMalformed,
+		model.SignatureReasonUnsupported:
+		if len(svr.Problems) > 0 {
+			s = svr.Problems[0]
+		}
+	}
+	return s
+}
+
+// ValidateSignatures reports observed signature, certificate, timestamp and
+// revocation evidence together with a local assessment.
+func ValidateSignatures(inFile string, all bool, conf *model.Configuration) (results []*model.SignatureValidationResult, err error) {
 	defer fault.Catch(&err)
+	return validateSignaturesFile(inFile, all, conf, pdfcpu.ValidateSignatures)
+}
+
+func validateSignaturesFile(
+	inFile string,
+	all bool,
+	conf *model.Configuration,
+	operation signatureValidationOperation,
+) (results []*model.SignatureValidationResult, err error) {
+	if inFile == "" {
+		return nil, ErrMissingPDFInput
+	}
+
+	f, err := os.Open(inFile)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"validate signatures: open input %s: %w",
+			inFile,
+			err,
+		)
+	}
+	defer func() {
+		err = errors.Join(
+			err,
+			closeFile(f, "validate signatures: close input"),
+		)
+	}()
+
+	return validateSignaturesRaw(f, all, conf, operation)
+}
+
+// ValidateSignaturesRaw reports observed signature, certificate, timestamp and
+// revocation evidence together with a local assessment.
+func ValidateSignaturesRaw(
+	rs ReadSeekerAt,
+	all bool,
+	conf *model.Configuration,
+) (results []*model.SignatureValidationResult, err error) {
+	defer fault.Catch(&err)
+
+	return validateSignaturesRaw(rs, all, conf, pdfcpu.ValidateSignatures)
+}
+
+func validateSignaturesRaw(
+	rs ReadSeekerAt,
+	all bool,
+	conf *model.Configuration,
+	operation signatureValidationOperation,
+) (results []*model.SignatureValidationResult, err error) {
+	if rs == nil {
+		return nil, ErrMissingPDFReadSeeker
+	}
 
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
 	conf.Cmd = model.VALIDATESIGNATURES
 
+	ctx, err := ReadValidateAndOptimize(rs, conf)
+	if err != nil {
+		return nil, fmt.Errorf("validate signatures: %w", err)
+	}
+
+	if len(ctx.Signatures) == 0 &&
+		!ctx.SignatureExist &&
+		!ctx.AppendOnly {
+		return nil, fmt.Errorf("validate signatures: %w", ErrNoSignatures)
+	}
+
 	if err := pdfcpu.LoadCertificates(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf(
+			"validate signatures: load trust pool: %w",
+			err,
+		)
 	}
 
-	f, err := os.Open(inFile)
+	results, err = operation(rs, ctx, all)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(
+			"validate signatures: verify signatures: %w",
+			err,
+		)
 	}
-	defer f.Close()
-
-	ctx, err := ReadValidateAndOptimize(f, conf)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(ctx.Signatures) == 0 && !ctx.SignatureExist && !ctx.AppendOnly {
-		return nil, ErrNoSignatures
-	}
-
-	return pdfcpu.ValidateSignatures(f, ctx, all)
+	return results, nil
 }
 
-// ValidateSignaturesFile validates signature integrity of inFile.
+// ValidateSignaturesFile presents observed signature, certificate, timestamp
+// and revocation evidence together with a local assessment.
 // all: processes all signatures meaning not only the authoritative/certified signature..
-// full: detailed output including cert chain, available trust evidence and problems encountered.
+// full: detailed output including certificate paths, observed evidence and problems encountered.
 func ValidateSignaturesFile(inFile string, all, full bool, conf *model.Configuration) ([]string, error) {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
@@ -198,7 +274,10 @@ func RemoveSignatures(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) 
 	}
 	conf.Cmd = model.REMOVESIGNATURES
 
-	return Optimize(rs, w, conf)
+	if err := optimize(rs, w, conf); err != nil {
+		return fmt.Errorf("remove signatures: %w", err)
+	}
+	return nil
 }
 
 // RemoveSignaturesFile removes all digital signatures from inFile and writes to outFile if provided else overwrites inFile.
@@ -206,8 +285,12 @@ func RemoveSignaturesFile(inFile, outFile string, conf *model.Configuration) (er
 	var f1, f2 *os.File
 	ok := false
 
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
+
 	if f1, err = os.Open(inFile); err != nil {
-		return err
+		return fmt.Errorf("remove signatures: open input %s: %w", inFile, err)
 	}
 
 	tmpFile := ""
@@ -219,8 +302,10 @@ func RemoveSignaturesFile(inFile, outFile string, conf *model.Configuration) (er
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "remove signatures")
 	if err != nil {
-		_ = f1.Close()
-		return err
+		return errors.Join(
+			fmt.Errorf("remove signatures: create output: %w", err),
+			closeFile(f1, "remove signatures: close input"),
+		)
 	}
 	f2 = staged.output.file
 

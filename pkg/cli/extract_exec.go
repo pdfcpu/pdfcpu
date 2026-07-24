@@ -28,6 +28,14 @@ import (
 
 const extractPagesOperation = "extract pages"
 
+func validateExtractionCommand(cmd *Command, operation string) error {
+	return validateCommandRequirements(cmd, commandRequirements{
+		operation: operation,
+		inFile:    commandStringRequiredNonEmpty,
+		outDir:    commandStringRequiredNonEmpty,
+	})
+}
+
 func reportUnsupportedResourceSkips(err error) error {
 	var unsupportedErr *api.UnsupportedResourceError
 	if !errors.As(err, &unsupportedErr) {
@@ -92,9 +100,13 @@ func extractPageToStdout(cmd *Command) error {
 
 // ExtractImages dumps embedded image resources from inFile into outDir for selected pages.
 func ExtractImages(cmd *Command) ([]string, error) {
+	if err := validateExtractionCommand(cmd, "extract images"); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile == "-" {
 		return withStdinReadSeeker("extract images", func(rs io.ReadSeeker) ([]string, error) {
-			return nil, reportUnsupportedResourceSkips(api.ExtractImages(rs, cmd.PageSelection, api.WriteImageToDisk(*cmd.OutDir, "stdin"), cmd.Conf))
+			err := api.ExtractImages(rs, cmd.PageSelection, api.WriteImageToDisk(*cmd.OutDir, "stdin"), cmd.Conf)
+			return nil, reportUnsupportedResourceSkips(err)
 		})
 	}
 	return nil, reportUnsupportedResourceSkips(api.ExtractImagesFile(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Conf))
@@ -102,9 +114,13 @@ func ExtractImages(cmd *Command) ([]string, error) {
 
 // ExtractFonts dumps embedded fontfiles from inFile into outDir for selected pages.
 func ExtractFonts(cmd *Command) ([]string, error) {
+	if err := validateExtractionCommand(cmd, "extract fonts"); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile == "-" {
 		return withStdinReadSeeker("extract fonts", func(rs io.ReadSeeker) ([]string, error) {
-			return nil, reportUnsupportedResourceSkips(api.ExtractFonts(rs, cmd.PageSelection, api.WriteFontToDisk(*cmd.OutDir, "stdin"), cmd.Conf))
+			err := api.ExtractFonts(rs, cmd.PageSelection, api.WriteFontToDisk(*cmd.OutDir, "stdin"), cmd.Conf)
+			return nil, reportUnsupportedResourceSkips(err)
 		})
 	}
 	return nil, reportUnsupportedResourceSkips(api.ExtractFontsFile(*cmd.InFile, *cmd.OutDir, cmd.PageSelection, cmd.Conf))
@@ -112,6 +128,9 @@ func ExtractFonts(cmd *Command) ([]string, error) {
 
 // ExtractPages generates single page PDF files from inFile in outDir for selected pages.
 func ExtractPages(cmd *Command) ([]string, error) {
+	if err := validateExtractionCommand(cmd, extractPagesOperation); err != nil {
+		return nil, err
+	}
 	if *cmd.OutDir == "-" {
 		return nil, extractPageToStdout(cmd)
 	}
@@ -127,6 +146,9 @@ func ExtractPages(cmd *Command) ([]string, error) {
 
 // ExtractContent dumps "PDF source" files from inFile into outDir for selected pages.
 func ExtractContent(cmd *Command) ([]string, error) {
+	if err := validateExtractionCommand(cmd, "extract content"); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile == "-" {
 		return withStdinReadSeeker("extract content", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.ExtractContent(rs, cmd.PageSelection, api.WriteContentToDisk(*cmd.OutDir, "stdin"), cmd.Conf)
@@ -137,9 +159,13 @@ func ExtractContent(cmd *Command) ([]string, error) {
 
 // ExtractMetadata dumps all metadata dict entries for inFile into outDir.
 func ExtractMetadata(cmd *Command) ([]string, error) {
+	if err := validateExtractionCommand(cmd, "extract metadata"); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile == "-" {
 		return withStdinReadSeeker("extract metadata", func(rs io.ReadSeeker) ([]string, error) {
-			return nil, reportUnsupportedResourceSkips(api.ExtractMetadata(rs, api.WriteMetadataToDisk(*cmd.OutDir, "stdin"), cmd.Conf))
+			err := api.ExtractMetadata(rs, api.WriteMetadataToDisk(*cmd.OutDir, "stdin"), cmd.Conf)
+			return nil, reportUnsupportedResourceSkips(err)
 		})
 	}
 

@@ -385,7 +385,7 @@ func TestUpdatePageWatermarkResourcesPreservesDereferenceErrors(t *testing.T) {
 	if !strings.Contains(err.Error(), "ExtGState: dereference dictionary") {
 		t.Fatalf("expected ExtGState context in %q", err.Error())
 	}
-	if !strings.Contains(err.Error(), "wrong type") {
+	if !errors.Is(err, model.ErrExpectedDict) {
 		t.Fatalf("expected dereference detail in %q", err.Error())
 	}
 }

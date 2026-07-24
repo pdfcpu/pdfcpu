@@ -65,7 +65,7 @@ func TestAttachmentCommandBoundaryGuards(t *testing.T) {
 		{name: "list nil command", run: func() error {
 			_, err := ListAttachments(nil)
 			return err
-		}, want: api.ErrMissingPDFInput},
+		}, want: ErrMissingCommand},
 		{name: "list missing input", run: func() error {
 			_, err := ListAttachments(&Command{})
 			return err
@@ -73,7 +73,7 @@ func TestAttachmentCommandBoundaryGuards(t *testing.T) {
 		{name: "add nil command", run: func() error {
 			_, err := AddAttachments(nil)
 			return err
-		}, want: api.ErrMissingPDFInput},
+		}, want: ErrMissingCommand},
 		{name: "add missing output", run: func() error {
 			_, err := AddAttachments(&Command{InFile: &inFile})
 			return err
@@ -81,7 +81,7 @@ func TestAttachmentCommandBoundaryGuards(t *testing.T) {
 		{name: "remove nil command", run: func() error {
 			_, err := RemoveAttachments(nil)
 			return err
-		}, want: api.ErrMissingPDFInput},
+		}, want: ErrMissingCommand},
 		{name: "remove missing output", run: func() error {
 			_, err := RemoveAttachments(&Command{InFile: &inFile})
 			return err
@@ -89,7 +89,7 @@ func TestAttachmentCommandBoundaryGuards(t *testing.T) {
 		{name: "extract nil command", run: func() error {
 			_, err := ExtractAttachments(nil)
 			return err
-		}, want: api.ErrMissingPDFInput},
+		}, want: ErrMissingCommand},
 		{name: "extract missing directory", run: func() error {
 			_, err := ExtractAttachments(&Command{InFile: &inFile, OutFile: &outFile})
 			return err

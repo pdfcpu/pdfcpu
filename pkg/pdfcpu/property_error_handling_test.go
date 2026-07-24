@@ -89,8 +89,7 @@ func TestPreparePropertiesInfoReportsDistinctPhases(t *testing.T) {
 		if err == nil || !strings.Contains(err.Error(), "Info dictionary: ensure") {
 			t.Fatalf("expected Info dictionary ensure context, got %v", err)
 		}
-		cause := errors.Unwrap(err)
-		if cause == nil || !strings.Contains(cause.Error(), "wrong type") {
+		if !errors.Is(err, model.ErrExpectedDict) {
 			t.Fatalf("expected preserved Info dictionary cause, got %v", err)
 		}
 	})

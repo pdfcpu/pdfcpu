@@ -23,13 +23,27 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 )
 
 // TrustedCertDir is the location for installed trusted certificates.
 var TrustedCertDir string
 
-// UserCertPool contains all certificates loaded from CertDir.
+// UserCertPool contains the last successfully loaded trusted certificates.
+// Deprecated: Certificate trust pools are managed by package pdfcpu.
 var UserCertPool *x509.CertPool
+
+var certificateStoreRevision atomic.Uint64
+
+// CertificateStoreRevision returns the current trusted-certificate store revision.
+func CertificateStoreRevision() uint64 {
+	return certificateStoreRevision.Load()
+}
+
+// MarkCertificateStoreChanged advances the trusted-certificate store revision.
+func MarkCertificateStoreChanged() {
+	certificateStoreRevision.Add(1)
+}
 
 // IsPEM Do we need locking?
 
@@ -119,6 +133,7 @@ func ResetCertificates() error {
 	if err := resetCertificatesDir(); err != nil {
 		return err
 	}
+	MarkCertificateStoreChanged()
 	return installDefaultCertificates()
 }
 

@@ -177,6 +177,29 @@ func handleTimeoutOCSP(v string, c *Configuration) error {
 	return nil
 }
 
+func handleAllowedRevocationHosts(v string, c *Configuration) error {
+	v = strings.TrimSpace(v)
+	if len(v) < 2 || v[0] != '[' || v[len(v)-1] != ']' {
+		return fmt.Errorf("allowedRevocationHosts must be an inline list, got: %s", v)
+	}
+	v = strings.TrimSpace(v[1 : len(v)-1])
+	if v == "" {
+		c.AllowedRevocationHosts = nil
+		return nil
+	}
+
+	hosts := strings.Split(v, ",")
+	c.AllowedRevocationHosts = make([]string, 0, len(hosts))
+	for _, host := range hosts {
+		host = strings.Trim(strings.TrimSpace(host), `"'`)
+		if host == "" {
+			return fmt.Errorf("allowedRevocationHosts contains an empty host")
+		}
+		c.AllowedRevocationHosts = append(c.AllowedRevocationHosts, host)
+	}
+	return nil
+}
+
 func parseReadableInt64(s string) (int64, error) {
 	ss := strings.Fields(strings.ToUpper(strings.TrimSpace(s)))
 	if len(ss) == 0 || len(ss) > 2 {
@@ -355,6 +378,9 @@ func parseKeysPart2(k, v string, c *Configuration) (bool, error) {
 
 	case "timeoutOCSP":
 		return true, handleTimeoutOCSP(v, c)
+
+	case "allowedRevocationHosts":
+		return true, handleAllowedRevocationHosts(v, c)
 
 	case "formFieldListMaxColWidth":
 		return true, handleFormFieldListMaxColWidth(v, c)

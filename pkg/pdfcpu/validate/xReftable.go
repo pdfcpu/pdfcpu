@@ -394,22 +394,29 @@ func validatePageLayout(xRefTable *model.XRefTable, rootDict types.Dict, require
 	return nil
 }
 
-func pageModeValidator(v model.Version) func(s string) bool {
-	// "None", "none", "UserNone" are out of spec.
-	modes := []string{"UseNone", "UseOutlines", "UseThumbs", "FullScreen", "None", "none", "UserNone"}
+func nonStandardPageMode(s string) bool {
+	return types.MemberOf(s, []string{"None", "none", "UserNone", `"None"`})
+}
+
+func pageModeValidator(v model.Version, relaxed bool) func(s string) bool {
+	modes := []string{"UseNone", "UseOutlines", "UseThumbs", "FullScreen"}
 	if v >= model.V14 {
 		modes = append(modes, "UseOC")
 	}
 	if v >= model.V16 {
 		modes = append(modes, "UseAttachments")
 	}
-	return func(s string) bool { return types.MemberOf(s, modes) }
+	return func(s string) bool {
+		return types.MemberOf(s, modes) || (relaxed && nonStandardPageMode(s))
+	}
 }
 
 func validatePageMode(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-	n, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageMode", required, sinceVersion, pageModeValidator(xRefTable.Version()))
+	relaxed := xRefTable.ValidationMode == model.ValidationRelaxed
+	validate := pageModeValidator(xRefTable.Version(), relaxed)
+	n, err := validateNameEntry(xRefTable, rootDict, "rootDict", "PageMode", required, sinceVersion, validate)
 	if err != nil {
-		if xRefTable.ValidationMode == model.ValidationStrict || n == nil {
+		if !relaxed || n == nil {
 			return err
 		}
 		// Relax validation of "UseAttachments" before PDF v1.6.
@@ -419,7 +426,13 @@ func validatePageMode(xRefTable *model.XRefTable, rootDict types.Dict, required 
 	}
 
 	if n != nil {
-		xRefTable.PageMode = model.PageModeFor(n.String())
+		pageMode := n.String()
+		if nonStandardPageMode(pageMode) {
+			xRefTable.PageMode = model.PageModeFor("UseNone")
+			model.ShowDigestedSpecViolation("dict=rootDict entry=PageMode invalid dict entry: " + pageMode)
+			return nil
+		}
+		xRefTable.PageMode = model.PageModeFor(pageMode)
 	}
 
 	return nil
@@ -599,7 +612,12 @@ func validateOutputIntentDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// S: required, name
-	_, err = validateNameEntry(xRefTable, d, dictName, "S", REQUIRED, model.V10, nil)
+	required := REQUIRED
+	relaxed := xRefTable.ValidationMode == model.ValidationRelaxed
+	if relaxed {
+		required = OPTIONAL
+	}
+	s, err := validateNameEntry(xRefTable, d, dictName, "S", required, model.V10, nil)
 	if err != nil {
 		return err
 	}
@@ -611,8 +629,8 @@ func validateOutputIntentDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// OutputConditionIdentifier, required, text string
-	required := REQUIRED
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
+	required = REQUIRED
+	if relaxed {
 		required = OPTIONAL
 	}
 	_, err = validateStringEntry(xRefTable, d, dictName, "OutputConditionIdentifier", required, model.V10, nil)
@@ -633,9 +651,15 @@ func validateOutputIntentDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	// DestOutputProfile, optional, streamDict
-	_, err = validateStreamDictEntry(xRefTable, d, dictName, "DestOutputProfile", OPTIONAL, model.V10, nil)
+	if _, err = validateStreamDictEntry(xRefTable, d, dictName, "DestOutputProfile", OPTIONAL, model.V10, nil); err != nil {
+		return err
+	}
 
-	return err
+	if s == nil && relaxed {
+		model.ShowDigestedSpecViolation("dict=" + dictName + " required entry=S missing")
+	}
+
+	return nil
 }
 
 func validateOutputIntents(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
@@ -748,6 +772,7 @@ func validatePermissions(xRefTable *model.XRefTable, rootDict types.Dict, requir
 	if len(d) == 0 {
 		return nil
 	}
+	permsIncrement := indirectObjectIncrement(xRefTable, rawEntry, 0)
 
 	i := 0
 
@@ -762,6 +787,7 @@ func validatePermissions(xRefTable *model.XRefTable, rootDict types.Dict, requir
 		}
 	}
 
+	rawUR3 := d["UR3"]
 	d1, err := validateDictEntry(xRefTable, d, "permDict", "UR3", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return fmt.Errorf("%s: permDict.UR3: %w", context, err)
@@ -771,6 +797,7 @@ func validatePermissions(xRefTable *model.XRefTable, rootDict types.Dict, requir
 	}
 
 	xRefTable.URSignature = d1
+	xRefTable.URSignatureIncrement = indirectObjectIncrement(xRefTable, rawUR3, permsIncrement)
 	i++
 
 	if i == 0 {
@@ -778,6 +805,22 @@ func validatePermissions(xRefTable *model.XRefTable, rootDict types.Dict, requir
 	}
 
 	return nil
+}
+
+func indirectObjectIncrement(
+	xRefTable *model.XRefTable,
+	obj types.Object,
+	fallback int,
+) int {
+	indRef, ok := obj.(types.IndirectRef)
+	if !ok {
+		return fallback
+	}
+	entry, found := xRefTable.FindTableEntryForIndRef(&indRef)
+	if !found {
+		return fallback
+	}
+	return entry.Incr
 }
 
 // TODO implement

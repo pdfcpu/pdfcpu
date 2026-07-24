@@ -29,6 +29,9 @@ var (
 	// ErrMissingCommand signals a missing CLI command.
 	ErrMissingCommand = errors.New("missing command")
 
+	// ErrInvalidCommandArguments signals an incomplete or structurally invalid CLI command.
+	ErrInvalidCommandArguments = errors.New("invalid command arguments")
+
 	// ErrUnsupportedCommandMode signals a command mode unsupported by a dispatcher.
 	ErrUnsupportedCommandMode = errors.New("unsupported command mode")
 )
@@ -137,7 +140,6 @@ var dispatchTable = map[model.CommandMode]dispatchFunc{
 	model.IMPORTCERTIFICATES:  dispatchCertificates,
 	model.VALIDATESIGNATURES:  dispatchSignatures,
 	model.REMOVESIGNATURES:    dispatchSignatures,
-	model.ADDSIGNATURE:        dispatchSignatures,
 }
 
 // Dispatch executes a pdfcpu command.

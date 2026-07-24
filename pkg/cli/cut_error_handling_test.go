@@ -44,7 +44,7 @@ func TestCutCLIExecutorsRejectMissingFields(t *testing.T) {
 		cmd  *Command
 		want error
 	}{
-		{name: "nil command", want: api.ErrMissingPDFInput},
+		{name: "nil command", want: ErrMissingCommand},
 		{name: "missing input", cmd: &Command{}, want: api.ErrMissingPDFInput},
 		{name: "empty input", cmd: &Command{InFile: &empty}, want: api.ErrMissingPDFInput},
 		{name: "missing output file", cmd: &Command{InFile: &inFile}, want: api.ErrMissingPDFOutput},

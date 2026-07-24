@@ -19,6 +19,8 @@ limitations under the License.
 
 package model
 
+const bundledDefaultCertificates = false
+
 func installDefaultCertificates() error {
 	return nil
 }

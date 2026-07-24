@@ -73,6 +73,10 @@ func missingRequiredEntryError(xRefTable *model.XRefTable, dictName, entryName, 
 	return errors.New(msg)
 }
 
+func showDigestedVersionViolation(xRefTable *model.XRefTable, element string) {
+	model.ShowDigestedSpecViolation(fmt.Sprintf("%s: unsupported in version %s", element, xRefTable.VersionString()))
+}
+
 func logMissingRequiredEntry(dictName, entryName string, d types.Dict) {
 	if log.ValidateEnabled() {
 		log.Validate.Printf("dict=%s required entry=%s missing: %s\n", dictName, entryName, d)
@@ -274,8 +278,12 @@ func validateDateEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entry
 		return nil, err
 	}
 
-	s, err := xRefTable.DereferenceStringOrHexLiteral(o, sinceVersion, nil)
+	s, err := xRefTable.DereferenceStringOrHexLiteral(o, model.V10, nil)
 	if err != nil {
+		return nil, err
+	}
+
+	if err = xRefTable.ValidateVersion("dict="+dictName+" entry="+entryName, sinceVersion); err != nil {
 		return nil, err
 	}
 
@@ -874,7 +882,7 @@ func validateNumberEntry(xRefTable *model.XRefTable, d types.Dict, dictName, ent
 	}
 
 	if validate != nil && !validate(f) {
-		return nil, fmt.Errorf("dict=%s entry=%s invalid dict entry", dictName, entryName)
+		return nil, fmt.Errorf("dict=%s entry=%s invalid dict entry: %g", dictName, entryName, f)
 	}
 
 	if log.ValidateEnabled() {
@@ -1158,10 +1166,11 @@ func validateStringArrayEntry(xRefTable *model.XRefTable, d types.Dict, dictName
 	}
 
 	for i, o := range a {
+		context := objectContext(fmt.Sprintf("dict=%s entry=%s[%d]", dictName, entryName, i), o)
 
 		o, err := xRefTable.Dereference(o)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s: dereference: %w", context, err)
 		}
 
 		if o == nil {
@@ -1177,7 +1186,11 @@ func validateStringArrayEntry(xRefTable *model.XRefTable, d types.Dict, dictName
 			// no further processing
 
 		default:
-			return nil, fmt.Errorf("string array: invalid type at index %d", i)
+			return nil, fmt.Errorf(
+				"%s: invalid type %T, expected types.StringLiteral or types.HexLiteral",
+				context,
+				o,
+			)
 		}
 
 	}

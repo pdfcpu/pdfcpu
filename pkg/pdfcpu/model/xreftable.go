@@ -163,11 +163,12 @@ type XRefTable struct {
 	// Thumbnail images
 	PageThumbs map[int]types.IndirectRef
 
-	Signatures        map[int]map[int]Signature // form signatures and signatures located via page annotations only keyed by increment #.
-	URSignature       types.Dict                // usage rights signature
-	CertifiedSigObjNr int                       //
-	DSS               types.Dict                // document security store
-	DTS               time.Time                 // trusted document timestamp
+	Signatures           map[int]map[int]Signature // form signatures and signatures located via page annotations only keyed by increment #.
+	URSignature          types.Dict                // usage rights signature
+	URSignatureIncrement int                       // increment containing the usage rights signature
+	CertifiedSigObjNr    int                       //
+	DSS                  types.Dict                // document security store
+	DTS                  time.Time                 // locally validated document timestamp
 
 	// Offspec section
 	AdditionalStreams *types.Array // array of IndirectRef - trailer :e.g., Oasis "Open Doc"
@@ -945,21 +946,39 @@ func (xRefTable *XRefTable) UndeleteObject(objectNumber int) error {
 	return nil
 }
 
+func validateObjNrAndGenNr(objNr, genNr int) error {
+	if objNr < 0 {
+		return fmt.Errorf("invalid negative object number %d", objNr)
+	}
+	if genNr < 0 {
+		return fmt.Errorf("invalid negative generation number %d for obj#%d", genNr, objNr)
+	}
+	return nil
+}
+
 // IsObjValid returns true if the object with objNr and genNr is valid.
 func (xRefTable *XRefTable) IsObjValid(objNr, genNr int) (bool, error) {
+	if err := validateObjNrAndGenNr(objNr, genNr); err != nil {
+		return false, err
+	}
 	entry, found := xRefTable.FindTableEntry(objNr, genNr)
 	if !found {
-		return false, fmt.Errorf("isObjValid: no entry for obj#%d", objNr)
+		return false, fmt.Errorf("missing xref entry for obj#%d gen#%d", objNr, genNr)
 	}
 	if entry.Free {
-		return false, fmt.Errorf("isObjValid: unexpected free entry for obj#%d", objNr)
+		return false, fmt.Errorf("unexpected free xref entry for obj#%d gen#%d", objNr, genNr)
 	}
 	return entry.Valid, nil
 }
 
 // IsValid returns true if the object referenced by ir is valid.
 func (xRefTable *XRefTable) IsValid(ir types.IndirectRef) (bool, error) {
-	return xRefTable.IsObjValid(ir.ObjectNumber.Value(), ir.GenerationNumber.Value())
+	objNr := ir.ObjectNumber.Value()
+	genNr := ir.GenerationNumber.Value()
+	if err := validateObjNrAndGenNr(objNr, genNr); err != nil {
+		return false, fmt.Errorf("invalid indirect reference %d %d R: %w", objNr, genNr, err)
+	}
+	return xRefTable.IsObjValid(objNr, genNr)
 }
 
 // IsObjBeingValidated returns true if the object with objNr and genNr is being validated.

@@ -25,6 +25,9 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// ErrExpectedDict signals that a PDF object is not a dictionary.
+var ErrExpectedDict = errors.New("expected types.Dict")
+
 func processDictRefCounts(xRefTable *XRefTable, d types.Dict, depth int) error {
 	if err := xRefTable.CheckRecursionDepth("reference count traversal", depth); err != nil {
 		return err
@@ -365,6 +368,7 @@ func (xRefTable *XRefTable) DereferenceArray(o types.Object) (types.Array, error
 
 // DereferenceDict resolves and validates a dictionary object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceDict(o types.Object) (types.Dict, error) {
+	rawObject := o
 	o, err := xRefTable.Dereference(o)
 	if err != nil || o == nil {
 		return nil, err
@@ -372,16 +376,30 @@ func (xRefTable *XRefTable) DereferenceDict(o types.Object) (types.Dict, error) 
 
 	d, ok := o.(types.Dict)
 	if !ok {
-		return nil, fmt.Errorf("wrong type %T <%v>", o, o)
+		return nil, dereferenceDictTypeError(rawObject, o)
 	}
 
 	return d, nil
+}
+
+func dereferenceDictTypeError(rawObject, resolvedObject types.Object) error {
+	if ir, ok := rawObject.(types.IndirectRef); ok {
+		return fmt.Errorf(
+			"obj#%d gen#%d: %w, got %T",
+			ir.ObjectNumber.Value(),
+			ir.GenerationNumber.Value(),
+			ErrExpectedDict,
+			resolvedObject,
+		)
+	}
+	return fmt.Errorf("%w, got %T", ErrExpectedDict, resolvedObject)
 }
 
 // DereferenceDictWithIncr resolves and validates a dictionary object, which may be an indirect reference.
 // It also returns the number of the written PDF Increment this object is part of.
 // The higher the increment number the older the object.
 func (xRefTable *XRefTable) DereferenceDictWithIncr(o types.Object) (types.Dict, int, error) {
+	rawObject := o
 	o, incr, err := xRefTable.DereferenceWithIncr(o)
 	if err != nil || o == nil {
 		return nil, 0, err
@@ -389,7 +407,7 @@ func (xRefTable *XRefTable) DereferenceDictWithIncr(o types.Object) (types.Dict,
 
 	d, ok := o.(types.Dict)
 	if !ok {
-		return nil, 0, fmt.Errorf("wrong type %T <%v>", o, o)
+		return nil, 0, dereferenceDictTypeError(rawObject, o)
 	}
 
 	return d, incr, nil

@@ -27,9 +27,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// ErrInvalidPageMode signals an unsupported page mode.
-var ErrInvalidPageMode = errors.New("invalid page mode")
-
 func validPageMode(pm model.PageMode) bool {
 	return pm >= model.PageModeUseNone && pm <= model.PageModeUseAttachments
 }

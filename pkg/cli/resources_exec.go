@@ -23,7 +23,6 @@ import (
 	"io"
 	"math"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 
@@ -78,18 +77,15 @@ func ImportImages(cmd *Command) (result []string, err error) {
 }
 
 func validateImportImagesCommand(cmd *Command) error {
-	if cmd == nil || len(cmd.InFiles) == 0 {
-		return api.ErrMissingImageInput
+	const operation = "import images"
+	if err := validateCommandRequirements(cmd, commandRequirements{operation: operation}); err != nil {
+		return err
 	}
-	for _, inFile := range cmd.InFiles {
-		if inFile == "" {
-			return api.ErrMissingImageInput
-		}
+	if err := validateCommandInputFiles(cmd.InFiles, 1, 0, api.ErrMissingImageInput); err != nil {
+		return commandValidationError(operation, err)
 	}
-	if cmd.OutFile == nil || *cmd.OutFile == "" {
-		return api.ErrMissingPDFOutput
-	}
-	return nil
+	err := validateCommandString(cmd.OutFile, commandStringRequiredNonEmpty, api.ErrMissingPDFOutput)
+	return commandValidationError(operation, err)
 }
 
 func hasStdinImage(inFiles []string) (bool, error) {
@@ -253,7 +249,7 @@ func CreateCheatSheetsFonts(cmd *Command) ([]string, error) {
 
 func validateFontsCommand(cmd *Command, expectedMode model.CommandMode) error {
 	if cmd == nil {
-		return errors.New("fonts command: missing command")
+		return commandValidationError("fonts command", ErrMissingCommand)
 	}
 	switch expectedMode {
 	case model.LISTFONTS, model.INSTALLFONTS, model.CHEATSHEETSFONTS:
@@ -313,8 +309,8 @@ func listImagesFile(inFile string, selectedPages []string, conf *model.Configura
 }
 
 func validateListImagesInputs(inFiles []string) error {
-	if len(inFiles) == 0 || slices.Contains(inFiles, "") {
-		return api.ErrMissingPDFInput
+	if err := validateCommandInputFiles(inFiles, 1, 0, nil); err != nil {
+		return commandValidationError("list images", err)
 	}
 	stdinCount := 0
 	for _, inFile := range inFiles {
@@ -363,8 +359,8 @@ func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Config
 }
 
 func validateListImagesCommand(cmd *Command) error {
-	if cmd == nil {
-		return api.ErrMissingPDFInput
+	if err := validateCommandRequirements(cmd, commandRequirements{operation: "list images"}); err != nil {
+		return err
 	}
 	return validateListImagesInputs(cmd.InFiles)
 }
@@ -385,19 +381,26 @@ func updateImageParams(cmd *Command) (objNr, pageNr int, id string) {
 }
 
 func validateUpdateImagesCommand(cmd *Command) error {
-	if cmd == nil || len(cmd.InFiles) == 0 || cmd.InFiles[0] == "" {
-		return api.ErrMissingPDFInput
+	if err := validateCommandRequirements(cmd, commandRequirements{operation: "update images"}); err != nil {
+		return err
+	}
+	if len(cmd.InFiles) == 0 || cmd.InFiles[0] == "" {
+		return commandValidationError("update images", api.ErrMissingPDFInput)
 	}
 	if len(cmd.InFiles) < 2 || cmd.InFiles[1] == "" {
-		return api.ErrMissingImageInput
+		return commandValidationError("update images", api.ErrMissingImageInput)
 	}
 	if len(cmd.InFiles) != 2 {
-		return fmt.Errorf("update images: expected exactly two inputs, got %d", len(cmd.InFiles))
+		return fmt.Errorf(
+			"update images: expected exactly two inputs, got %d: %w",
+			len(cmd.InFiles),
+			ErrInvalidCommandArguments,
+		)
 	}
-	if cmd.OutFile == nil {
-		return api.ErrMissingPDFOutput
-	}
-	return nil
+	return commandValidationError(
+		"update images",
+		validateCommandString(cmd.OutFile, commandStringRequired, api.ErrMissingPDFOutput),
+	)
 }
 
 func updateImagesInOut(cmd *Command, objNr, pageNr int, id string) ([]string, error) {
@@ -494,30 +497,26 @@ func ListAttachmentsCompactFile(inFile string, conf *model.Configuration) (ss []
 }
 
 func validateListAttachmentsCommand(cmd *Command) error {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return api.ErrMissingPDFInput
-	}
-	return nil
+	return validateCommandRequirements(cmd, commandRequirements{
+		operation: "list attachments",
+		inFile:    commandStringRequiredNonEmpty,
+	})
 }
 
-func validateMutateAttachmentsCommand(cmd *Command) error {
-	if err := validateListAttachmentsCommand(cmd); err != nil {
-		return err
-	}
-	if cmd.OutFile == nil {
-		return api.ErrMissingPDFOutput
-	}
-	return nil
+func validateMutateAttachmentsCommand(cmd *Command, operation string) error {
+	return validateCommandRequirements(cmd, commandRequirements{
+		operation: operation,
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequired,
+	})
 }
 
 func validateExtractAttachmentsCommand(cmd *Command) error {
-	if err := validateListAttachmentsCommand(cmd); err != nil {
-		return err
-	}
-	if cmd.OutDir == nil || *cmd.OutDir == "" {
-		return api.ErrMissingPDFOutput
-	}
-	return nil
+	return validateCommandRequirements(cmd, commandRequirements{
+		operation: "extract attachments",
+		inFile:    commandStringRequiredNonEmpty,
+		outDir:    commandStringRequiredNonEmpty,
+	})
 }
 
 // ListAttachments returns a list of embedded file attachments for inFile.
@@ -536,7 +535,7 @@ func ListAttachments(cmd *Command) ([]string, error) {
 
 // AddAttachments embeds inFiles into a PDF context read from inFile and writes the result to outFile.
 func AddAttachments(cmd *Command) ([]string, error) {
-	if err := validateMutateAttachmentsCommand(cmd); err != nil {
+	if err := validateMutateAttachmentsCommand(cmd, "add attachments"); err != nil {
 		return nil, err
 	}
 	op := "add attachments"
@@ -557,7 +556,7 @@ func AddAttachments(cmd *Command) ([]string, error) {
 
 // RemoveAttachments deletes inFiles from a PDF context read from inFile and writes the result to outFile.
 func RemoveAttachments(cmd *Command) ([]string, error) {
-	if err := validateMutateAttachmentsCommand(cmd); err != nil {
+	if err := validateMutateAttachmentsCommand(cmd, "remove attachments"); err != nil {
 		return nil, err
 	}
 	if *cmd.InFile == "-" || *cmd.OutFile == "-" {
@@ -608,16 +607,17 @@ func ListKeywordsFile(inFile string, conf *model.Configuration) ([]string, error
 
 // ListKeywords returns a list of keywords for inFile.
 func ListKeywords(cmd *Command) ([]string, error) {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return nil, api.ErrMissingPDFInput
+	inFile, err := validatedCommandInFile(cmd, "list keywords")
+	if err != nil {
+		return nil, err
 	}
-	if *cmd.InFile == "-" {
+	if inFile == "-" {
 		return withStdinReadSeeker("list keywords", func(rs io.ReadSeeker) ([]string, error) {
 			return api.Keywords(rs, cmd.Conf)
 		})
 	}
 
-	return ListKeywordsFile(*cmd.InFile, cmd.Conf)
+	return ListKeywordsFile(inFile, cmd.Conf)
 }
 
 func runKeywordStreamOperation(inFile, outFile, op string, fn func(io.ReadSeeker, io.Writer) error) error {
@@ -639,11 +639,13 @@ func validateKeywordValues(keywords []string, op string) error {
 
 // AddKeywords adds keywords to inFile's document info dict and writes the result to outFile.
 func AddKeywords(cmd *Command) ([]string, error) {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return nil, api.ErrMissingPDFInput
+	requirements := commandRequirements{
+		operation: "add keywords",
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequiredNonEmpty,
 	}
-	if cmd.OutFile == nil || *cmd.OutFile == "" {
-		return nil, api.ErrMissingPDFOutput
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
+		return nil, err
 	}
 	if err := validateKeywordValues(cmd.StringVals, "add keywords"); err != nil {
 		return nil, err
@@ -660,11 +662,13 @@ func AddKeywords(cmd *Command) ([]string, error) {
 
 // RemoveKeywords deletes keywords from inFile's document info dict and writes the result to outFile.
 func RemoveKeywords(cmd *Command) ([]string, error) {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return nil, api.ErrMissingPDFInput
+	requirements := commandRequirements{
+		operation: "remove keywords",
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequiredNonEmpty,
 	}
-	if cmd.OutFile == nil || *cmd.OutFile == "" {
-		return nil, api.ErrMissingPDFOutput
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
+		return nil, err
 	}
 	if err := validateKeywordValues(cmd.StringVals, "remove keywords"); err != nil {
 		return nil, err
@@ -718,16 +722,17 @@ func ListPropertiesFile(inFile string, conf *model.Configuration) ([]string, err
 
 // ListProperties returns inFile's properties.
 func ListProperties(cmd *Command) ([]string, error) {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return nil, api.ErrMissingPDFInput
+	inFile, err := validatedCommandInFile(cmd, "list properties")
+	if err != nil {
+		return nil, err
 	}
-	if *cmd.InFile == "-" {
+	if inFile == "-" {
 		return withStdinReadSeeker("list properties", func(rs io.ReadSeeker) ([]string, error) {
 			return listProperties(rs, cmd.Conf)
 		})
 	}
 
-	return ListPropertiesFile(*cmd.InFile, cmd.Conf)
+	return ListPropertiesFile(inFile, cmd.Conf)
 }
 
 func validatePropertyMap(properties map[string]string) error {
@@ -765,13 +770,25 @@ func runPropertyStreamOperation(inFile, outFile, op string, fn func(io.ReadSeeke
 	return finalize(fn(rs, w))
 }
 
+func validatePropertyCommand(cmd *Command, operation string) error {
+	requirements := commandRequirements{
+		operation: operation,
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequired,
+	}
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
+		return err
+	}
+	if *cmd.InFile == "-" && *cmd.OutFile == "" {
+		return commandValidationError(operation, api.ErrMissingPDFOutput)
+	}
+	return nil
+}
+
 // AddProperties adds properties to inFile's document info dict and writes the result to outFile.
 func AddProperties(cmd *Command) ([]string, error) {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return nil, api.ErrMissingPDFInput
-	}
-	if cmd.OutFile == nil || *cmd.InFile == "-" && *cmd.OutFile == "" {
-		return nil, api.ErrMissingPDFOutput
+	if err := validatePropertyCommand(cmd, "add properties"); err != nil {
+		return nil, err
 	}
 	if err := validatePropertyMap(cmd.StringMap); err != nil {
 		return nil, fmt.Errorf("add properties: validate properties: %w", err)
@@ -788,11 +805,8 @@ func AddProperties(cmd *Command) ([]string, error) {
 
 // RemoveProperties deletes properties from inFile's document info dict and writes the result to outFile.
 func RemoveProperties(cmd *Command) ([]string, error) {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return nil, api.ErrMissingPDFInput
-	}
-	if cmd.OutFile == nil || *cmd.InFile == "-" && *cmd.OutFile == "" {
-		return nil, api.ErrMissingPDFOutput
+	if err := validatePropertyCommand(cmd, "remove properties"); err != nil {
+		return nil, err
 	}
 	if err := validatePropertyNames(cmd.StringVals); err != nil {
 		return nil, fmt.Errorf("remove properties: validate properties: %w", err)

@@ -50,9 +50,89 @@ const (
 
 const SignTSFormat = "2006-01-02 15:04:05 -0700"
 
+// RevocationDetails contains observed CRL and OCSP evidence together with a
+// local revocation assessment. Its Status and Reason fields are compatibility
+// representations, not legal, regulatory, enterprise-policy or policy-based
+// trust decisions.
 type RevocationDetails struct {
 	Status int
 	Reason string
+	CRL    *CRLEvidence
+	CRLs   []*CRLEvidence
+	OCSP   *OCSPEvidence
+	OCSPs  []*OCSPEvidence
+}
+
+// RevocationEvidenceSource identifies where revocation evidence originated.
+type RevocationEvidenceSource uint8
+
+const (
+	// RevocationEvidenceSourceUnspecified identifies unavailable provenance.
+	RevocationEvidenceSourceUnspecified RevocationEvidenceSource = iota
+
+	// RevocationEvidenceSourceArchived identifies evidence embedded in the signed document.
+	RevocationEvidenceSourceArchived
+
+	// RevocationEvidenceSourceOnline identifies evidence obtained from a configured endpoint.
+	RevocationEvidenceSourceOnline
+)
+
+// CRLRevocationEntry records an observed CRL entry without implying authenticity.
+type CRLRevocationEntry struct {
+	SerialNumber   string
+	RevocationTime time.Time
+	ReasonCode     int
+}
+
+// CRLEvidence records observed CRL material and separate issuer, signature and
+// applicability checks. Archived evidence may remain in an unknown state.
+type CRLEvidence struct {
+	AssessmentScope AssessmentScope
+	Source          RevocationEvidenceSource
+	Index           int
+	Location        string
+	Error           string
+	IssuerMatched   int
+	SignatureValid  int
+	Applicable      int
+	Entries         []CRLRevocationEntry
+}
+
+// OCSPResponder identifies the certificate authenticating an OCSP response.
+type OCSPResponder uint8
+
+const (
+	// OCSPResponderUnspecified identifies unavailable responder evidence.
+	OCSPResponderUnspecified OCSPResponder = iota
+
+	// OCSPResponderIssuer identifies a response authenticated directly by the issuer.
+	OCSPResponderIssuer
+
+	// OCSPResponderDelegated identifies an authorized delegated responder.
+	OCSPResponderDelegated
+)
+
+// OCSPEvidence records observed OCSP provenance and separate response-signature,
+// responder-certificate, authentication and applicability checks. Archived
+// evidence may remain in an unknown state.
+type OCSPEvidence struct {
+	AssessmentScope                      AssessmentScope
+	Source                               RevocationEvidenceSource
+	Index                                int
+	Location                             string
+	Error                                string
+	ProducedAt                           time.Time
+	ThisUpdate                           time.Time
+	NextUpdate                           time.Time
+	RevokedAt                            time.Time
+	Applicable                           int
+	Responder                            OCSPResponder
+	Authenticated                        int
+	ResponseSignatureValid               int
+	ResponderCertificateIssuedByIssuer   int
+	ResponderCertificateOCSPSigningValid int
+	CertificateStatus                    int
+	ResponderRevocation                  int
 }
 
 // String returns the string value of rd.
@@ -65,6 +145,9 @@ func (rd RevocationDetails) String() string {
 	return strings.Join(ss, "\n")
 }
 
+// TrustDetails is the legacy compatibility representation of the
+// local certificate-path assessment. It is not a legal, regulatory,
+// enterprise-policy or policy-based trust decision.
 type TrustDetails struct {
 	Status                                int
 	Reason                                string
@@ -74,6 +157,84 @@ type TrustDetails struct {
 	AllowExecuteDynamicContent            bool
 	AllowExecuteJavaScript                bool
 	AllowExecutePrivilegedSystemOperation bool
+}
+
+// AssessmentScope identifies the scope used to assess observed signature,
+// certificate, timestamp and revocation evidence.
+type AssessmentScope uint8
+
+const (
+	// AssessmentScopeLocal represents an assessment using the configured local
+	// certificate and revocation sources. It does not imply a policy-based trust
+	// decision.
+	AssessmentScopeLocal AssessmentScope = iota
+)
+
+// ValidationTimeSource identifies where a certificate-validation time originated.
+type ValidationTimeSource uint8
+
+const (
+	// ValidationTimeSourceUnspecified identifies wall-clock or unavailable provenance.
+	ValidationTimeSourceUnspecified ValidationTimeSource = iota
+
+	// ValidationTimeSourceClaimedSigningTime is retained for compatibility.
+	// Claimed CMS signing time is display-only and does not select the local
+	// certificate-assessment time.
+	ValidationTimeSourceClaimedSigningTime
+
+	// ValidationTimeSourceSignatureTimestamp identifies an embedded signature timestamp.
+	ValidationTimeSourceSignatureTimestamp
+
+	// ValidationTimeSourceDocumentTimestamp identifies an ETSI.RFC3161 document timestamp.
+	ValidationTimeSourceDocumentTimestamp
+)
+
+// ValidationTimeEvidence records an observed candidate validation time and its
+// provenance. Its presence does not mean the local assessment used that time
+// or that a policy-based trust decision accepted it.
+type ValidationTimeEvidence struct {
+	Time            time.Time
+	Source          ValidationTimeSource
+	AssessmentScope AssessmentScope
+}
+
+// CertificatePathMethod identifies how a certificate-path conclusion was reached.
+type CertificatePathMethod uint8
+
+const (
+	// CertificatePathMethodUnspecified identifies an unavailable path-assessment method.
+	CertificatePathMethodUnspecified CertificatePathMethod = iota
+
+	// CertificatePathMethodLocalTrustStore identifies local X.509 trust-store resolution.
+	CertificatePathMethodLocalTrustStore
+
+	// CertificatePathMethodSelfSignature identifies legacy self-signature
+	// inspection evidence. Self-signature alone does not resolve a path.
+	CertificatePathMethodSelfSignature
+
+	// CertificatePathMethodCertificateAuthority identifies legacy CA evidence.
+	// IsCA alone does not resolve a path.
+	CertificatePathMethodCertificateAuthority
+
+	// CertificatePathMethodValidity identifies a certificate-validity conclusion.
+	CertificatePathMethodValidity
+
+	// CertificatePathMethodMissingCertificate identifies an incomplete certificate path.
+	CertificatePathMethodMissingCertificate
+
+	// CertificatePathMethodPublicKey identifies a public-key inspection failure.
+	CertificatePathMethodPublicKey
+)
+
+// CertificatePathEvidence records local certificate-path assessment evidence.
+// Status is True only when local X.509 path verification succeeds. Certificate
+// authority and self-signature observations are recorded independently on
+// CertificateDetails.
+type CertificatePathEvidence struct {
+	AssessmentScope AssessmentScope
+	Method          CertificatePathMethod
+	Status          int
+	Reason          string
 }
 
 // String returns the string value of td.
@@ -94,15 +255,19 @@ func (td TrustDetails) String() string {
 	return strings.Join(ss, "\n")
 }
 
+// CertificateDetails contains observed certificate, path, validation-time and
+// revocation evidence together with a local assessment. It is not a legal,
+// regulatory, enterprise-policy or policy-based trust decision.
 type CertificateDetails struct {
-	Leaf              bool
-	SelfSigned        bool
-	Subject           string
-	Issuer            string
-	SerialNumber      string
-	ValidFrom         time.Time
-	ValidThru         time.Time
-	Expired           bool
+	Leaf         bool
+	SelfSigned   bool
+	Subject      string
+	Issuer       string
+	SerialNumber string
+	ValidFrom    time.Time
+	ValidThru    time.Time
+	Expired      bool
+	// Qualified records recognized certificate-policy evidence, not a legal or regulatory conclusion.
 	Qualified         bool
 	CA                bool
 	Usage             string
@@ -111,11 +276,17 @@ type CertificateDetails struct {
 	KeySize           int
 	Revocation        RevocationDetails
 	Trust             TrustDetails
+	PathEvidence      CertificatePathEvidence
+	ValidationTime    ValidationTimeEvidence
 	IssuerCertificate *CertificateDetails
 }
 
 // String returns the string value of cd.
 func (cd CertificateDetails) String() string {
+	return cd.string(false)
+}
+
+func (cd CertificateDetails) string(localPath bool) string {
 	ss := []string{}
 	ss = append(ss, fmt.Sprintf("                             Subject:    %s", cd.Subject))
 	ss = append(ss, fmt.Sprintf("                             Issuer:     %s", cd.Issuer))
@@ -130,7 +301,11 @@ func (cd CertificateDetails) String() string {
 	ss = append(ss, fmt.Sprintf("                             SignAlg:    %s", cd.SignAlg))
 	ss = append(ss, fmt.Sprintf("                             Key Size:   %d bits", cd.KeySize))
 	ss = append(ss, fmt.Sprintf("                             SelfSigned: %t", cd.SelfSigned))
-	ss = append(ss, fmt.Sprintf("                             Trust:%s", cd.Trust))
+	label := "Trust"
+	if localPath {
+		label = "Local Path"
+	}
+	ss = append(ss, fmt.Sprintf("                             %s:%s", label, cd.Trust))
 	if cd.Leaf && !cd.SelfSigned {
 		ss = append(ss, fmt.Sprintf("                             Revocation:%s", cd.Revocation))
 	}
@@ -144,7 +319,7 @@ func (cd CertificateDetails) String() string {
 			s += "CA"
 		}
 		ss = append(ss, s+":")
-		ss = append(ss, cd.IssuerCertificate.String())
+		ss = append(ss, cd.IssuerCertificate.string(localPath))
 	}
 	return strings.Join(ss, "\n")
 }
@@ -182,7 +357,7 @@ func (sig Signature) String(status SignatureStatus) string {
 	}
 
 	if sig.Type == SigTypeDTS {
-		s1 := "trusted, "
+		s1 := "locally validated, "
 		if status != SignatureStatusValid {
 			s1 = "not " + s1
 		}
@@ -233,7 +408,7 @@ type SignatureStats struct {
 }
 
 // Counter returns counters for detected signatures.
-func (sigStats SignatureStats) Counter(svr *SignatureValidationResult) (*int, *int, *int, *int) {
+func (sigStats *SignatureStats) Counter(svr *SignatureValidationResult) (*int, *int, *int, *int) {
 	switch svr.Type {
 	case SigTypeForm:
 		return &sigStats.FormSigned, &sigStats.FormSignedVisible, &sigStats.FormUnsigned, &sigStats.FormUnsignedVisible
@@ -247,12 +422,18 @@ func (sigStats SignatureStats) Counter(svr *SignatureValidationResult) (*int, *i
 	return nil, nil, nil, nil
 }
 
-// SignatureStatus represents all possible signature statuses.
+// SignatureStatus represents the compatibility status produced by the
+// local assessment of observed evidence. It is not a legal, regulatory,
+// enterprise-policy or policy-based trust decision.
 type SignatureStatus int
 
 const (
 	SignatureStatusUnknown SignatureStatus = 1 << iota
+
+	// SignatureStatusValid indicates that the supported cryptographic and local
+	// validation checks completed successfully.
 	SignatureStatusValid
+
 	SignatureStatusInvalid
 )
 
@@ -268,6 +449,7 @@ func (st SignatureStatus) String() string {
 	return SignatureStatusStrings[st]
 }
 
+// SignatureReason identifies the reported reason associated with a signature status.
 type SignatureReason int
 
 const (
@@ -283,6 +465,16 @@ const (
 	SignatureReasonCertRevoked
 	SignatureReasonInternal
 	SignatureReasonSelfSignedCertErr
+
+	// SignatureReasonCertRevocationUnknown indicates that the available
+	// revocation sources did not establish a certificate status.
+	SignatureReasonCertRevocationUnknown
+
+	// SignatureReasonMalformed indicates malformed signature data.
+	SignatureReasonMalformed
+
+	// SignatureReasonUnsupported indicates an unsupported signature profile or algorithm.
+	SignatureReasonUnsupported
 )
 
 // SignatureReasonStrings manages string representations for signature reasons.
@@ -293,11 +485,14 @@ var SignatureReasonStrings = map[SignatureReason]string{
 	SignatureReasonSignatureForged:       "signer's signature is not authentic",
 	SignatureReasonTimestampTokenInvalid: "timestamp token is invalid",
 	SignatureReasonCertInvalid:           "signer's certificate is invalid",
-	SignatureReasonCertNotTrusted:        "signer's certificate chain is not in the configured local trusted certificate store",
+	SignatureReasonCertNotTrusted:        "signer's certificate path was not resolved using the configured local certificate store",
 	SignatureReasonCertExpired:           "signer's certificate or one of its parent certificates has expired",
-	SignatureReasonCertRevoked:           "signer's certificate or one of its parent certificates has been revoked",
+	SignatureReasonCertRevoked:           "signer's certificate has been revoked",
 	SignatureReasonInternal:              "internal error",
-	SignatureReasonSelfSignedCertErr:     "signer's self signed certificate is not trusted",
+	SignatureReasonSelfSignedCertErr:     "signer's self-signed certificate was not accepted by the configured local certificate assessment",
+	SignatureReasonCertRevocationUnknown: "signer's certificate revocation status is unknown",
+	SignatureReasonMalformed:             "signature data is malformed",
+	SignatureReasonUnsupported:           "signature profile or algorithm is unsupported",
 }
 
 // String returns the string value of sr.
@@ -305,13 +500,15 @@ func (sr SignatureReason) String() string {
 	return SignatureReasonStrings[sr]
 }
 
+// Signer contains certificate, timestamp, permission and problem details for a
+// signature signer.
 type Signer struct {
 	Certificate           *CertificateDetails
-	CertificatePathStatus int
-	HasTimestamp          bool
-	Timestamp             time.Time // signature timestamp attribute (which contains a timestamp token)
-	LTVEnabled            bool      // timestamp and revocation evidence detected
-	PAdES                 string    // reported baseline evidence level: B-B, B-T, B-LT, B-LTA
+	CertificatePathStatus int       // overall local path status; CA entries do not override it
+	HasTimestamp          bool      // timestamp token presence; does not imply authentication
+	Timestamp             time.Time // observed TSTInfo genTime or document timestamp
+	LTVEnabled            bool      // legacy LTV conclusion; presence alone does not set it
+	PAdES                 string    // supported baseline conclusion: B-B; higher levels require sufficient assessment
 	Certified             bool      // indicated by DocMDP entry
 	Authoritative         bool      // true if certified or first (youngest) signature
 	Permissions           int       // see table 257
@@ -365,7 +562,7 @@ func (signer Signer) String(dts bool) string {
 			s += "(CA)"
 		}
 		ss = append(ss, s+":")
-		ss = append(ss, signer.Certificate.String())
+		ss = append(ss, signer.Certificate.string(dts))
 	}
 
 	for i, s := range signer.Problems {
@@ -379,6 +576,7 @@ func (signer Signer) String(dts bool) string {
 	return strings.Join(ss, "\n")
 }
 
+// SignatureDetails contains PDF signature dictionary metadata and signer details.
 type SignatureDetails struct {
 	SubFilter      string    // Signature Dict SubFilter
 	SignerIdentity string    // extracted from signature
@@ -443,6 +641,9 @@ func (sd SignatureDetails) String() string {
 	return strings.Join(ss, "\n")
 }
 
+// SignatureValidationResult contains observed signature, certificate,
+// timestamp and revocation evidence together with a local assessment. It is not
+// a legal, regulatory, enterprise-policy or policy-based trust decision.
 type SignatureValidationResult struct {
 	Signature
 	Status      SignatureStatus

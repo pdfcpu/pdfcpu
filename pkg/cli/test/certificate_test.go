@@ -18,8 +18,10 @@ package test
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
@@ -83,6 +85,57 @@ func TestListCertificatesJSON(t *testing.T) {
 	}
 	if list.TotalInstalledCerts == 0 || len(list.Files) != 1 {
 		t.Fatalf("%s: missing certificates: %v\n", msg, list)
+	}
+}
+
+// TestListCertificatesErrorContext verifies CLI listing surfaces API errors unchanged.
+func TestListCertificatesErrorContext(t *testing.T) {
+	dir := t.TempDir()
+	fileName := filepath.Join(dir, "not-a-directory")
+	if err := os.WriteFile(fileName, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	restoreTrustedCertDir(t, filepath.Join(fileName, "certs"))
+
+	cmd := cli.ListCertificatesCommand(false, conf)
+	_, err := cli.Dispatch(cmd)
+	if err == nil {
+		t.Fatal("expected directory creation error")
+	}
+	if !strings.Contains(err.Error(), "list certificates: create trusted certificate directory") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// TestCertificateCommandErrorContext verifies CLI import and inspect preserve API causes and context.
+func TestCertificateCommandErrorContext(t *testing.T) {
+	missingFile := filepath.Join(t.TempDir(), "missing.pem")
+	tests := []struct {
+		name string
+		cmd  *cli.Command
+		want string
+	}{
+		{
+			name: "import",
+			cmd:  cli.ImportCertificatesCommand([]string{missingFile}, conf),
+			want: "import certificates: input 1",
+		},
+		{
+			name: "inspect",
+			cmd:  cli.InspectCertificatesCommand([]string{missingFile}, conf),
+			want: "inspect certificates: input 1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := cli.Dispatch(tt.cmd)
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("expected %q, got %q", tt.want, err)
+			}
+		})
 	}
 }
 

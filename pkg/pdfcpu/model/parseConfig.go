@@ -57,6 +57,7 @@ type configuration struct {
 	Timeout                         int         `yaml:"timeout"`
 	TimeoutCRL                      int         `yaml:"timeoutCRL"`
 	TimeoutOCSP                     int         `yaml:"timeoutOCSP"`
+	AllowedRevocationHosts          []string    `yaml:"allowedRevocationHosts"`
 	PreferredCertRevocationChecker  string      `yaml:"preferredCertRevocationChecker"`
 	FormFieldListMaxColWidth        int         `yaml:"formFieldListMaxColWidth"`
 	MaxStreamBytes                  *int64Value `yaml:"maxStreamBytes"`
@@ -187,6 +188,7 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	conf.Timeout = c.Timeout
 	conf.TimeoutCRL = c.TimeoutCRL
 	conf.TimeoutOCSP = c.TimeoutOCSP
+	conf.AllowedRevocationHosts = append([]string(nil), c.AllowedRevocationHosts...)
 	conf.FormFieldListMaxColWidth = c.FormFieldListMaxColWidth
 	conf.Limits = DefaultResourceLimits()
 

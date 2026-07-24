@@ -810,6 +810,20 @@ func permissionInt32(p int) (int32, error) {
 	return int32(p), nil
 }
 
+func normalizePermission(p int, relaxed bool) (int, error, error) {
+	p32, err := permissionInt32(p)
+	if err == nil {
+		return int(p32), nil, nil
+	}
+
+	const maxUnsignedPermission = int64(1<<32 - 1)
+	if !relaxed || p < 0 || int64(p) > maxUnsignedPermission {
+		return 0, nil, err
+	}
+
+	return int(int32(uint32(p))), err, nil
+}
+
 func validatePermissions(ctx *model.Context) (bool, error) {
 	// Algorithm 3.2a 5.
 
@@ -1020,92 +1034,121 @@ func validateAES256Parameters(d types.Dict, r int) (oe, ue, perms []byte, err er
 	return oe, ue, perms, nil
 }
 
-func validatePasswordEntry(d types.Dict, key string, minLen int) ([]byte, error) {
+func validatePasswordEntry(
+	d types.Dict,
+	key string,
+	minLen int,
+	digestShort bool,
+	specViolations *[]error,
+) ([]byte, error) {
 	b, err := d.StringEntryBytes(key)
 	if err != nil {
 		return nil, fmt.Errorf("%w: entry %q: %w", ErrMalformedEncryption, key, err)
 	}
 	if len(b) < minLen {
-		return nil, fmt.Errorf("%w: required entry %q shorter than %d bytes", ErrMalformedEncryption, key, minLen)
+		err := fmt.Errorf("%w: required entry %q shorter than %d bytes", ErrMalformedEncryption, key, minLen)
+		if !digestShort {
+			return nil, err
+		}
+		appendSpecViolation(specViolations, err)
 	}
 	return b, nil
 }
 
-func validateOAndU(d types.Dict, r int, relaxed bool) (o, u []byte, err error) {
-	minLen := 0
+func validateOAndU(
+	d types.Dict,
+	r int,
+	relaxed bool,
+	specViolations *[]error,
+) (o, u []byte, err error) {
+	minLen := 32
+	digestShort := relaxed
 	if r >= 5 {
 		minLen = 48
-	} else if !relaxed {
-		minLen = 32
+		digestShort = false
 	}
 
-	o, err = validatePasswordEntry(d, "O", minLen)
+	o, err = validatePasswordEntry(d, "O", minLen, digestShort, specViolations)
 	if err != nil {
 		return nil, nil, err
 	}
-	u, err = validatePasswordEntry(d, "U", minLen)
+	u, err = validatePasswordEntry(d, "U", minLen, digestShort, specViolations)
 	if err != nil {
 		return nil, nil, err
 	}
 	return o, u, nil
 }
 
-func checkCFLengthV2(len int, pdf20, relaxed bool) error {
-	bitLen := len
+func checkCFLengthV2(length int, pdf20, relaxed bool) (specViolation, err error) {
+	bitLen := length
 	if pdf20 {
 		bitLen *= 8
 	}
+	if bitLen >= 40 && bitLen <= 128 && bitLen%8 == 0 {
+		return nil, nil
+	}
+
+	err = fmt.Errorf("%w: invalid CF length: %d", ErrMalformedEncryption, length)
+	if pdf20 || !relaxed {
+		return nil, err
+	}
+
+	bitLen = length * 8
 	if bitLen < 40 || bitLen > 128 || bitLen%8 != 0 {
-		if pdf20 || !relaxed {
-			return fmt.Errorf("%w: invalid CF length: %d", ErrMalformedEncryption, len)
-		}
-		bitLen *= 8
-		if bitLen < 40 || bitLen > 128 || bitLen%8 != 0 {
-			return fmt.Errorf("%w: invalid CF length: %d", ErrMalformedEncryption, len)
-		}
+		return nil, err
 	}
-	return nil
+
+	return err, nil
 }
 
-func checkCFLengthAESV2(len int, pdf20, relaxed bool) error {
-	aesV2KeyLen := 128
-	bitLen := len
+func checkCFLengthAESV2(length int, pdf20, relaxed bool) (specViolation, err error) {
+	const aesV2KeyLength = 128
+
+	bitLen := length
 	if pdf20 {
 		bitLen *= 8
 	}
-	if bitLen != aesV2KeyLen {
-		if pdf20 || !relaxed {
-			return fmt.Errorf("%w: invalid CF length, got %d want %d", ErrMalformedEncryption, len, aesV2KeyLen)
-		}
-		bitLen *= 8
-		if bitLen != aesV2KeyLen {
-			return fmt.Errorf("%w: invalid CF length, got %d want %d", ErrMalformedEncryption, len, aesV2KeyLen)
-		}
+	if bitLen == aesV2KeyLength {
+		return nil, nil
 	}
-	return nil
+
+	err = fmt.Errorf("%w: invalid CF length, got %d want %d", ErrMalformedEncryption, length, aesV2KeyLength)
+	if pdf20 || !relaxed || length*8 != aesV2KeyLength {
+		return nil, err
+	}
+
+	return err, nil
 }
 
-func validateCFLength(len *int, cfm *string, pdf20, relaxed bool) error {
+func validateCFLength(length *int, cfm *string, pdf20, relaxed bool) (specViolation, err error) {
 	// See table 25 Length
 	// v = 4
 
-	if len == nil || cfm == nil {
-		return nil
+	if length == nil || cfm == nil {
+		return nil, nil
 	}
 
-	if *cfm == "V2" {
-		if err := checkCFLengthV2(*len, pdf20, relaxed); err != nil {
-			return err
+	switch *cfm {
+	case "V2":
+		return checkCFLengthV2(*length, pdf20, relaxed)
+
+	case "AESV2":
+		return checkCFLengthAESV2(*length, pdf20, relaxed)
+	}
+
+	return nil, nil
+}
+
+func appendSpecViolation(specViolations *[]error, err error) {
+	if err == nil {
+		return
+	}
+	for _, specViolation := range *specViolations {
+		if specViolation.Error() == err.Error() {
+			return
 		}
 	}
-
-	if *cfm == "AESV2" {
-		if err := checkCFLengthAESV2(*len, pdf20, relaxed); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	*specViolations = append(*specViolations, err)
 }
 
 func validateCryptFilterRecipients(ctx *model.Context, d types.Dict, cfm *string) error {
@@ -1161,7 +1204,14 @@ func checkCryptFilterCFM(cfm string, v int) error {
 	return nil
 }
 
-func validateCryptFilter(ctx *model.Context, d types.Dict, v int, pubKeySecHandler, relaxed bool) (bool, error) {
+func validateCryptFilter(
+	ctx *model.Context,
+	d types.Dict,
+	v int,
+	pubKeySecHandler,
+	relaxed bool,
+	specViolations *[]error,
+) (bool, error) {
 	// v = 4,5,6
 	// 4 AESV2, V2
 	// 5 AESV3
@@ -1180,9 +1230,11 @@ func validateCryptFilter(ctx *model.Context, d types.Dict, v int, pubKeySecHandl
 		return false, fmt.Errorf("%w: crypt filter missing entry \"Length\"", ErrMalformedEncryption)
 	}
 	if v == 4 {
-		if err := validateCFLength(length, cfm, pdf20, relaxed); err != nil {
+		specViolation, err := validateCFLength(length, cfm, pdf20, relaxed)
+		if err != nil {
 			return false, err
 		}
+		appendSpecViolation(specViolations, specViolation)
 	}
 
 	ae := d.NameEntry("AuthEvent")
@@ -1201,18 +1253,34 @@ func validateCryptFilter(ctx *model.Context, d types.Dict, v int, pubKeySecHandl
 	return aes, nil
 }
 
-func locateCFEntry(ctx *model.Context, d types.Dict, v int, key string, pubKeySecHandler, relaxed bool) (bool, error) {
+func locateCFEntry(
+	ctx *model.Context,
+	d types.Dict,
+	v int,
+	key string,
+	pubKeySecHandler,
+	relaxed bool,
+	specViolations *[]error,
+) (bool, error) {
 	d1 := d.DictEntry(key)
 	if d1 == nil {
 		return false, fmt.Errorf("%w: entry \"%s\" missing in \"CF\"", ErrMalformedEncryption, key)
 	}
-	return validateCryptFilter(ctx, d1, v, pubKeySecHandler, relaxed)
+	return validateCryptFilter(ctx, d1, v, pubKeySecHandler, relaxed, specViolations)
 }
 
-func validateStmf(ctx *model.Context, d, cfDict types.Dict, v int, pubKeySecHandler, relaxed bool) error {
+func validateStmf(
+	ctx *model.Context,
+	d,
+	cfDict types.Dict,
+	v int,
+	pubKeySecHandler,
+	relaxed bool,
+	specViolations *[]error,
+) error {
 	n := d.NameEntry("StmF")
 	if n != nil && *n != "Identity" {
-		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed)
+		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed, specViolations)
 		if err != nil {
 			return fmt.Errorf("encrypt dict entry \"StmF\": %w", err)
 		}
@@ -1221,10 +1289,18 @@ func validateStmf(ctx *model.Context, d, cfDict types.Dict, v int, pubKeySecHand
 	return nil
 }
 
-func validateStrf(ctx *model.Context, d, cfDict types.Dict, v int, pubKeySecHandler, relaxed bool) error {
+func validateStrf(
+	ctx *model.Context,
+	d,
+	cfDict types.Dict,
+	v int,
+	pubKeySecHandler,
+	relaxed bool,
+	specViolations *[]error,
+) error {
 	n := d.NameEntry("StrF")
 	if n != nil && *n != "Identity" {
-		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed)
+		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed, specViolations)
 		if err != nil {
 			return fmt.Errorf("encrypt dict entry \"StrF\": %w", err)
 		}
@@ -1233,10 +1309,18 @@ func validateStrf(ctx *model.Context, d, cfDict types.Dict, v int, pubKeySecHand
 	return nil
 }
 
-func validateEFF(ctx *model.Context, d, cfDict types.Dict, v int, pubKeySecHandler, relaxed bool) error {
+func validateEFF(
+	ctx *model.Context,
+	d,
+	cfDict types.Dict,
+	v int,
+	pubKeySecHandler,
+	relaxed bool,
+	specViolations *[]error,
+) error {
 	n := d.NameEntry("EFF")
 	if n != nil && *n != "Identity" {
-		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed)
+		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed, specViolations)
 		if err != nil {
 			return fmt.Errorf("encrypt dict entry \"EFF\": %w", err)
 		}
@@ -1245,7 +1329,13 @@ func validateEFF(ctx *model.Context, d, cfDict types.Dict, v int, pubKeySecHandl
 	return nil
 }
 
-func validateCryptFilters(ctx *model.Context, d types.Dict, v int, pubKeySecHandler bool) error {
+func validateCryptFilters(
+	ctx *model.Context,
+	d types.Dict,
+	v int,
+	pubKeySecHandler bool,
+	specViolations *[]error,
+) error {
 	// validate CF, StmF, StrF, EFF
 	// v = 4,5,6
 
@@ -1257,15 +1347,15 @@ func validateCryptFilters(ctx *model.Context, d types.Dict, v int, pubKeySecHand
 
 	relaxed := ctx.XRefTable.ValidationMode == model.ValidationRelaxed
 
-	if err := validateStmf(ctx, d, cfDict, v, pubKeySecHandler, relaxed); err != nil {
+	if err := validateStmf(ctx, d, cfDict, v, pubKeySecHandler, relaxed, specViolations); err != nil {
 		return err
 	}
 
-	if err := validateStrf(ctx, d, cfDict, v, pubKeySecHandler, relaxed); err != nil {
+	if err := validateStrf(ctx, d, cfDict, v, pubKeySecHandler, relaxed, specViolations); err != nil {
 		return err
 	}
 
-	return validateEFF(ctx, d, cfDict, v, pubKeySecHandler, relaxed)
+	return validateEFF(ctx, d, cfDict, v, pubKeySecHandler, relaxed, specViolations)
 }
 
 func validateEncryptFilter(d types.Dict) (string, error) {
@@ -1351,8 +1441,38 @@ func validatePubKeySecHandler(ctx *model.Context, d types.Dict, pubKeySecHandler
 	return nil
 }
 
+func validateEncryptPermissions(
+	ctx *model.Context,
+	d types.Dict,
+	pubKeySecHandler bool,
+	subFilter string,
+) (int, bool, error, error) {
+	p := d.IntEntry("P")
+	if p == nil {
+		return 0, false, nil, fmt.Errorf("%w: required entry \"P\" missing", ErrMalformedEncryption)
+	}
+
+	relaxed := ctx.XRefTable.ValidationMode == model.ValidationRelaxed
+	normalizedP, specViolation, err := normalizePermission(*p, relaxed)
+	if err != nil {
+		return 0, false, nil, err
+	}
+
+	encMeta := true
+	if emd := d.BooleanEntry("EncryptMetadata"); emd != nil {
+		encMeta = *emd
+	}
+
+	if err := validatePubKeySecHandler(ctx, d, pubKeySecHandler, subFilter); err != nil {
+		return 0, false, nil, err
+	}
+	return normalizedP, encMeta, specViolation, nil
+}
+
 // supportedEncryption returns a pointer to a struct encapsulating used encryption.
 func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
+	var specViolations []error
+
 	// Filter
 	filter, err := validateEncryptFilter(d)
 	if err != nil {
@@ -1380,7 +1500,7 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 
 	// CF, StmF, StrF, EFF
 	if v == 4 || v == 5 || v == 6 {
-		if err := validateCryptFilters(ctx, d, v, pubKeySecHandler); err != nil {
+		if err := validateCryptFilters(ctx, d, v, pubKeySecHandler, &specViolations); err != nil {
 			return nil, err
 		}
 	}
@@ -1393,7 +1513,7 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 
 	// O, U
 	relaxed := ctx.XRefTable.ValidationMode == model.ValidationRelaxed
-	o, u, err := validateOAndU(d, r, relaxed)
+	o, u, err := validateOAndU(d, r, relaxed, &specViolations)
 	if err != nil {
 		return nil, err
 	}
@@ -1404,39 +1524,31 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 		return nil, err
 	}
 
-	// P
-	p := d.IntEntry("P")
-	if p == nil {
-		return nil, fmt.Errorf("%w: required entry \"P\" missing", ErrMalformedEncryption)
-	}
-	if _, err := permissionInt32(*p); err != nil {
+	p, encMeta, specViolation, err := validateEncryptPermissions(ctx, d, pubKeySecHandler, subFilter)
+	if err != nil {
 		return nil, err
 	}
 
-	// EncryptMetadata
-	encMeta := true
-	emd := d.BooleanEntry("EncryptMetadata")
-	if emd != nil {
-		encMeta = *emd
+	enc := &model.Enc{
+		O:     o,
+		OE:    oe,
+		U:     u,
+		UE:    ue,
+		L:     l,
+		P:     p,
+		Perms: perms,
+		R:     r,
+		V:     v,
+		Emd:   encMeta}
+
+	if specViolation != nil {
+		appendSpecViolation(&specViolations, specViolation)
+	}
+	for _, specViolation := range specViolations {
+		model.ShowDigestedSpecViolationError(ctx.XRefTable, specViolation)
 	}
 
-	// PubKeySecHandler
-	if err := validatePubKeySecHandler(ctx, d, pubKeySecHandler, subFilter); err != nil {
-		return nil, err
-	}
-
-	return &model.Enc{
-			O:     o,
-			OE:    oe,
-			U:     u,
-			UE:    ue,
-			L:     l,
-			P:     *p,
-			Perms: perms,
-			R:     r,
-			V:     v,
-			Emd:   encMeta},
-		nil
+	return enc, nil
 }
 
 func decryptKey(objNumber, generation int, key []byte, aes bool) ([]byte, error) {

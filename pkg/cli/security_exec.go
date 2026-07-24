@@ -27,50 +27,47 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func validateCryptoCommand(cmd *Command) error {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return api.ErrMissingPDFInput
+func validateCryptoCommand(cmd *Command, operation string) error {
+	requirements := commandRequirements{
+		operation: operation,
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequired,
 	}
-	if cmd.OutFile == nil {
-		return api.ErrMissingPDFOutput
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
+		return err
 	}
 	if cmd.Conf == nil {
-		return api.ErrMissingConfiguration
+		return commandValidationError(operation, api.ErrMissingConfiguration)
 	}
 	return nil
 }
 
-func validatePasswordChangeCommand(cmd *Command) error {
-	if err := validateCryptoCommand(cmd); err != nil {
+func validatePasswordChangeCommand(cmd *Command, operation string) error {
+	if err := validateCryptoCommand(cmd, operation); err != nil {
 		return err
 	}
 	if cmd.PWOld == nil {
-		return errors.New("missing old password")
+		return commandValidationError(operation, errors.New("missing old password"))
 	}
 	if cmd.PWNew == nil {
-		return errors.New("missing new password")
+		return commandValidationError(operation, errors.New("missing new password"))
 	}
 	return nil
 }
 
 func validatePermissionInputs(inFiles []string, conf *model.Configuration) error {
-	if len(inFiles) == 0 {
-		return api.ErrMissingPDFInput
-	}
-	for i, inFile := range inFiles {
-		if inFile == "" {
-			return fmt.Errorf("input %d: %w", i+1, api.ErrMissingPDFInput)
-		}
+	if err := validateCommandInputFiles(inFiles, 1, 0, nil); err != nil {
+		return commandValidationError("list permissions", err)
 	}
 	if conf == nil {
-		return api.ErrMissingConfiguration
+		return commandValidationError("list permissions", api.ErrMissingConfiguration)
 	}
 	return nil
 }
 
 // Encrypt inFile and write result to outFile.
 func Encrypt(cmd *Command) ([]string, error) {
-	if err := validateCryptoCommand(cmd); err != nil {
+	if err := validateCryptoCommand(cmd, "encrypt"); err != nil {
 		return nil, err
 	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
@@ -83,7 +80,7 @@ func Encrypt(cmd *Command) ([]string, error) {
 
 // Decrypt inFile and write result to outFile.
 func Decrypt(cmd *Command) ([]string, error) {
-	if err := validateCryptoCommand(cmd); err != nil {
+	if err := validateCryptoCommand(cmd, "decrypt"); err != nil {
 		return nil, err
 	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
@@ -97,7 +94,7 @@ func Decrypt(cmd *Command) ([]string, error) {
 
 // ChangeUserPassword of inFile and write result to outFile.
 func ChangeUserPassword(cmd *Command) ([]string, error) {
-	if err := validatePasswordChangeCommand(cmd); err != nil {
+	if err := validatePasswordChangeCommand(cmd, "change user password"); err != nil {
 		return nil, err
 	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
@@ -116,7 +113,7 @@ func ChangeUserPassword(cmd *Command) ([]string, error) {
 
 // ChangeOwnerPassword of inFile and write result to outFile.
 func ChangeOwnerPassword(cmd *Command) ([]string, error) {
-	if err := validatePasswordChangeCommand(cmd); err != nil {
+	if err := validatePasswordChangeCommand(cmd, "change owner password"); err != nil {
 		return nil, err
 	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
@@ -185,8 +182,8 @@ func ListPermissionsFile(inFiles []string, conf *model.Configuration) ([]string,
 
 // ListPermissions of inFile.
 func ListPermissions(cmd *Command) ([]string, error) {
-	if cmd == nil {
-		return nil, api.ErrMissingPDFInput
+	if err := validateCommandRequirements(cmd, commandRequirements{operation: "list permissions"}); err != nil {
+		return nil, err
 	}
 	if err := validatePermissionInputs(cmd.InFiles, cmd.Conf); err != nil {
 		return nil, err
@@ -239,7 +236,7 @@ func ListPermissions(cmd *Command) ([]string, error) {
 
 // SetPermissions of inFile.
 func SetPermissions(cmd *Command) ([]string, error) {
-	if err := validateCryptoCommand(cmd); err != nil {
+	if err := validateCryptoCommand(cmd, "set permissions"); err != nil {
 		return nil, err
 	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {

@@ -37,6 +37,12 @@ import (
 
 // Validate inFile against ISO-32000-1:2008.
 func Validate(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation:     "validate",
+		minInputFiles: 1,
+	}); err != nil {
+		return nil, err
+	}
 	conf := cmd.Conf
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
@@ -79,6 +85,13 @@ func Validate(cmd *Command) ([]string, error) {
 
 // Optimize inFile and write result to outFile.
 func Optimize(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation: "optimize",
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequired,
+	}); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.OptimizeFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
 	}
@@ -173,6 +186,13 @@ func mergeCreateRaw(cmd *Command) ([]string, error) {
 
 // MergeCreate merges inFiles in the order specified and writes the result to outFile.
 func MergeCreate(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation:     "merge",
+		outFile:       commandStringRequiredNonEmpty,
+		minInputFiles: 1,
+	}); err != nil {
+		return nil, err
+	}
 	stdinCount := mergeStdinCount(cmd.InFiles)
 	if stdinCount > 1 {
 		return nil, fmt.Errorf("pdfcpu: merge: only one stdin input supported")
@@ -189,6 +209,14 @@ func MergeCreate(cmd *Command) ([]string, error) {
 
 // MergeCreateZip zips two inFiles in the order specified and writes the result to outFile.
 func MergeCreateZip(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation:     "merge zip",
+		outFile:       commandStringRequiredNonEmpty,
+		minInputFiles: 2,
+		maxInputFiles: 2,
+	}); err != nil {
+		return nil, err
+	}
 	if *cmd.OutFile != "-" {
 		return nil, api.MergeCreateZipFile(cmd.InFiles[0], cmd.InFiles[1], *cmd.OutFile, cmd.Conf)
 	}
@@ -210,6 +238,13 @@ func MergeCreateZip(cmd *Command) ([]string, error) {
 
 // MergeAppend merges inFiles in the order specified and writes the result to outFile.
 func MergeAppend(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation:     "merge append",
+		outFile:       commandStringRequiredNonEmpty,
+		minInputFiles: 1,
+	}); err != nil {
+		return nil, err
+	}
 	if *cmd.OutFile == "-" {
 		return nil, fmt.Errorf("pdfcpu: merge append: stdout not supported")
 	}
@@ -218,6 +253,13 @@ func MergeAppend(cmd *Command) ([]string, error) {
 
 // Split inFile into single page PDFs and write result files to outDir.
 func Split(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation: "split",
+		inFile:    commandStringRequiredNonEmpty,
+		outDir:    commandStringRequiredNonEmpty,
+	}); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile == "-" {
 		return withStdinReadSeeker("split", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.Split(rs, *cmd.OutDir, "stdin.pdf", cmd.IntVal, cmd.Conf)
@@ -228,6 +270,15 @@ func Split(cmd *Command) ([]string, error) {
 
 // SplitByPageNr splits inFile along pages and writes result files to outDir.
 func SplitByPageNr(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation:        "split by page number",
+		inFile:           commandStringRequiredNonEmpty,
+		outDir:           commandStringRequiredNonEmpty,
+		minIntValues:     1,
+		missingIntValues: api.ErrMissingSplitPageNumbers,
+	}); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile == "-" {
 		return withStdinReadSeeker("split by page number", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.SplitByPageNr(rs, *cmd.OutDir, "stdin.pdf", cmd.IntVals, cmd.Conf)
@@ -238,6 +289,13 @@ func SplitByPageNr(cmd *Command) ([]string, error) {
 
 // Trim inFile and write result to outFile.
 func Trim(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation: "trim",
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequired,
+	}); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.TrimFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
@@ -251,6 +309,13 @@ func Trim(cmd *Command) ([]string, error) {
 
 // Collect creates a custom page sequence for selected pages of inFile and writes result to outFile.
 func Collect(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation: "collect",
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequired,
+	}); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.CollectFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
@@ -283,6 +348,9 @@ func listInfo(rs io.ReadSeeker, inFile string, selectedPages []string, fonts boo
 
 // ListInfoFile returns formatted information about inFile.
 func ListInfoFile(inFile string, selectedPages []string, fonts bool, conf *model.Configuration) ([]string, error) {
+	if inFile == "" {
+		return nil, commandValidationError("list info", api.ErrMissingPDFInput)
+	}
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, fmt.Errorf("list info: open %s: %w", inFile, err)
@@ -426,6 +494,9 @@ func jsonInfoOutput(infos []*pdfcpu.PDFInfo) ([]string, error) {
 
 // ListInfoFiles returns formatted information about inFiles.
 func ListInfoFiles(inFiles []string, selectedPages []string, fonts, json bool, conf *model.Configuration) ([]string, error) {
+	if err := validateCommandInputFiles(inFiles, 1, 0, nil); err != nil {
+		return nil, commandValidationError("list info", err)
+	}
 	if json {
 		return listInfoFilesJSON(inFiles, selectedPages, fonts, conf)
 	}
@@ -483,6 +554,12 @@ func listInfoReadSeeker(rs io.ReadSeeker, fn string, selectedPages []string, fon
 
 // ListInfo gathers information about inFile and returns the result as []string.
 func ListInfo(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation:     "list info",
+		minInputFiles: 1,
+	}); err != nil {
+		return nil, err
+	}
 	if !slices.Contains(cmd.InFiles, "-") {
 		return ListInfoFiles(cmd.InFiles, cmd.PageSelection, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
 	}
@@ -531,6 +608,14 @@ func ListInfo(cmd *Command) ([]string, error) {
 
 // Dump known object to stdout.
 func Dump(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation:        "dump",
+		inFile:           commandStringRequiredNonEmpty,
+		minIntValues:     2,
+		missingIntValues: ErrInvalidCommandArguments,
+	}); err != nil {
+		return nil, err
+	}
 	mode := cmd.IntVals[0]
 	objNr := cmd.IntVals[1]
 
@@ -573,6 +658,17 @@ func dumpValidationError(ctx *model.Context, conf *model.Configuration, err erro
 // Create renders page content corresponding to declarations found in inFileJSON and writes the result to outFile.
 // If inFile is present, page content will be appended,
 func Create(cmd *Command) ([]string, error) {
+	if err := validateCommandRequirements(cmd, commandRequirements{
+		operation:  "create",
+		inFile:     commandStringRequired,
+		outFile:    commandStringRequired,
+		inFileJSON: commandStringRequiredNonEmpty,
+	}); err != nil {
+		return nil, err
+	}
+	if *cmd.InFile == "" && *cmd.OutFile == "" {
+		return nil, commandValidationError("create", api.ErrMissingPDFInput)
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.CreateFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutFile, cmd.Conf)
 	}

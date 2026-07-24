@@ -66,11 +66,10 @@ This command validates signed byte ranges, CMS/PKCS#7 signature data and signer 
 It also reports certificate chains, timestamps, revocation responses,
 DSS data and PAdES baseline indicators where available.
 
-Certificate chain and revocation checks use pdfcpu's configured local trusted
-certificate store and available CRL/OCSP evidence on a best-effort basis.
+Certificate-path and revocation checks use pdfcpu's configured local certificate
+store and available CRL/OCSP evidence on a best-effort basis.
 
 This command does not perform legal-validity, eIDAS, enterprise policy or full long-term validation (LTV).
-Policy-grade trust validation belongs to a dedicated trust validation layer.
 
            all ... validate all signatures (certified, approval, usage rights, digital timestamps)
           full ... detailed output including certificate chains, revocation status and any problems encountered

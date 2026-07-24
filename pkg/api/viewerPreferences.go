@@ -30,10 +30,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// ErrNoOp is retained for source compatibility.
-// Deprecated: viewer-preferences reset operations are idempotent and no longer return ErrNoOp.
-var ErrNoOp = errors.New("no operation")
-
 // ViewerPreferences returns rs's viewer preferences.
 func ViewerPreferences(rs io.ReadSeeker, conf *model.Configuration) (vp *model.ViewerPreferences, v *model.Version, err error) {
 	defer fault.Catch(&err)

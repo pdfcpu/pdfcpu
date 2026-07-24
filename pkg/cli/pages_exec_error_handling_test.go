@@ -32,8 +32,8 @@ import (
 
 // TestRotateRejectsMissingCommandFields verifies rotate command boundary guards.
 func TestRotateRejectsMissingCommandFields(t *testing.T) {
-	if _, err := Rotate(nil); !errors.Is(err, api.ErrMissingPDFInput) {
-		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
+	if _, err := Rotate(nil); !errors.Is(err, ErrMissingCommand) {
+		t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 	}
 	if _, err := Rotate(&Command{}); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
@@ -56,8 +56,8 @@ func TestInsertRemovePagesRejectMissingCommandFields(t *testing.T) {
 
 	for _, tt := range operations {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := tt.fn(nil); !errors.Is(err, api.ErrMissingPDFInput) {
-				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
+			if _, err := tt.fn(nil); !errors.Is(err, ErrMissingCommand) {
+				t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 			}
 			if _, err := tt.fn(&Command{}); !errors.Is(err, api.ErrMissingPDFInput) {
 				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
@@ -285,8 +285,8 @@ func TestNUpImageStdoutDoesNotOpenPDFInput(t *testing.T) {
 
 func TestNUpRejectsMissingCommandFields(t *testing.T) {
 	_, err := NUp(nil)
-	if !errors.Is(err, api.ErrMissingPDFInput) {
-		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
+	if !errors.Is(err, ErrMissingCommand) {
+		t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 	}
 
 	cmd := &Command{}
@@ -304,8 +304,8 @@ func TestNUpRejectsMissingCommandFields(t *testing.T) {
 
 func TestGridRejectsMissingCommandFields(t *testing.T) {
 	_, err := Grid(nil)
-	if !errors.Is(err, api.ErrMissingPDFInput) {
-		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
+	if !errors.Is(err, ErrMissingCommand) {
+		t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 	}
 
 	cmd := &Command{}
@@ -344,8 +344,8 @@ func TestBoxCommandsRejectMissingFields(t *testing.T) {
 		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.run(nil); !errors.Is(err, api.ErrMissingPDFInput) {
-				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
+			if err := tt.run(nil); !errors.Is(err, ErrMissingCommand) {
+				t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 			}
 			if err := tt.run(&Command{}); !errors.Is(err, api.ErrMissingPDFInput) {
 				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
@@ -875,8 +875,8 @@ func TestBookletStreamRejectsMissingConfiguration(t *testing.T) {
 
 func TestBookletRejectsMissingCommandFields(t *testing.T) {
 	_, err := Booklet(nil)
-	if !errors.Is(err, api.ErrMissingPDFInput) {
-		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
+	if !errors.Is(err, ErrMissingCommand) {
+		t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 	}
 
 	cmd := &Command{}

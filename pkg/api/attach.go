@@ -32,17 +32,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/sanitize"
 )
 
-var (
-	// ErrNoAttachmentAdded signals that no attachment was added.
-	ErrNoAttachmentAdded = errors.New("no attachment added")
-
-	// ErrNoAttachmentRemoved signals that no attachment was removed.
-	ErrNoAttachmentRemoved = errors.New("no attachment removed")
-
-	// ErrAttachmentOutputCollision signals attachments resolving to the same output path.
-	ErrAttachmentOutputCollision = errors.New("attachment output collision")
-)
-
 func addAttachmentsOperation(coll bool) string {
 	if coll {
 		return "add portfolio attachments"

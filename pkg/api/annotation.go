@@ -28,9 +28,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// ErrMissingAnnotation signals a missing required annotation.
-var ErrMissingAnnotation = pdfcpu.ErrMissingAnnotation
-
 func validateAnnotationRenderer(ar model.AnnotationRenderer) error {
 	if ar == nil {
 		return ErrMissingAnnotation

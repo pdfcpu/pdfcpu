@@ -36,8 +36,26 @@ func runContentStreamOperation(inFile, outFile, op string, fn func(io.ReadSeeker
 	return finalize(fn(rs, w))
 }
 
+func validateWatermarkCommand(cmd *Command, operation string, requireWatermark bool) error {
+	requirements := commandRequirements{
+		operation: operation,
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequired,
+	}
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
+		return err
+	}
+	if requireWatermark && cmd.Watermark == nil {
+		return commandValidationError(operation, api.ErrMissingWatermarkConfiguration)
+	}
+	return nil
+}
+
 // AddWatermarks adds watermarks or stamps to selected pages of inFile and writes the result to outFile.
 func AddWatermarks(cmd *Command) ([]string, error) {
+	if err := validateWatermarkCommand(cmd, "add watermarks", true); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.AddWatermarksFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Watermark, cmd.Conf)
 	}
@@ -49,8 +67,11 @@ func AddWatermarks(cmd *Command) ([]string, error) {
 	return nil, finalize(api.AddWatermarks(rs, w, cmd.PageSelection, cmd.Watermark, cmd.Conf))
 }
 
-// RemoveWatermarks remove watermarks or stamps from selected pages of inFile and writes the result to outFile.
+// RemoveWatermarks removes watermarks or stamps from selected pages of inFile and writes the result to outFile.
 func RemoveWatermarks(cmd *Command) ([]string, error) {
+	if err := validateWatermarkCommand(cmd, "remove watermarks", false); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.RemoveWatermarksFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
@@ -97,29 +118,47 @@ func listAnnotationsFile(inFile string, selectedPages []string, json bool, conf 
 
 // ListAnnotationsFile returns a list of page annotations of inFile.
 func ListAnnotationsFile(inFile string, selectedPages []string, conf *model.Configuration) (int, []string, error) {
+	if inFile == "" {
+		return 0, nil, commandValidationError("list annotations", api.ErrMissingPDFInput)
+	}
 	return listAnnotationsFile(inFile, selectedPages, false, conf)
 }
 
 // ListAnnotationsJSONFile returns a JSON list of page annotations of inFile.
 func ListAnnotationsJSONFile(inFile string, selectedPages []string, conf *model.Configuration) (int, []string, error) {
+	if inFile == "" {
+		return 0, nil, commandValidationError("list annotations", api.ErrMissingPDFInput)
+	}
 	return listAnnotationsFile(inFile, selectedPages, true, conf)
 }
 
 // ListAnnotations returns inFile's page annotations.
 func ListAnnotations(cmd *Command) ([]string, error) {
-	if *cmd.InFile == "-" {
+	inFile, err := validatedCommandInFile(cmd, "list annotations")
+	if err != nil {
+		return nil, err
+	}
+	if inFile == "-" {
 		return withStdinReadSeeker("list annotations", func(rs io.ReadSeeker) ([]string, error) {
 			_, ss, err := listAnnotations(rs, cmd.PageSelection, cmd.BoolVal1, cmd.Conf)
 			return ss, err
 		})
 	}
 
-	_, ss, err := listAnnotationsFile(*cmd.InFile, cmd.PageSelection, cmd.BoolVal1, cmd.Conf)
+	_, ss, err := listAnnotationsFile(inFile, cmd.PageSelection, cmd.BoolVal1, cmd.Conf)
 	return ss, err
 }
 
 // RemoveAnnotations deletes annotations from inFile's page tree and writes the result to outFile.
 func RemoveAnnotations(cmd *Command) ([]string, error) {
+	requirements := commandRequirements{
+		operation: "remove annotations",
+		inFile:    commandStringRequiredNonEmpty,
+		outFile:   commandStringRequired,
+	}
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		incr := false // No incremental writing on cli.
 		return nil, api.RemoveAnnotationsFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.StringVals, cmd.IntVals, cmd.Conf, incr)
@@ -132,34 +171,6 @@ func RemoveAnnotations(cmd *Command) ([]string, error) {
 	return nil, finalize(api.RemoveAnnotations(rs, w, cmd.PageSelection, cmd.StringVals, cmd.IntVals, cmd.Conf))
 }
 
-func bookmarkCommandInFile(cmd *Command) (string, error) {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return "", api.ErrMissingPDFInput
-	}
-	return *cmd.InFile, nil
-}
-
-func bookmarkCommandJSONInput(cmd *Command) (string, error) {
-	if cmd.InFileJSON == nil || *cmd.InFileJSON == "" {
-		return "", api.ErrMissingJSONInput
-	}
-	return *cmd.InFileJSON, nil
-}
-
-func bookmarkCommandJSONOutput(cmd *Command) (string, error) {
-	if cmd.OutFileJSON == nil || *cmd.OutFileJSON == "" {
-		return "", api.ErrMissingJSONOutput
-	}
-	return *cmd.OutFileJSON, nil
-}
-
-func bookmarkCommandOutFile(cmd *Command) string {
-	if cmd.OutFile == nil {
-		return ""
-	}
-	return *cmd.OutFile
-}
-
 // ListBookmarksFile returns inFile's bookmarks.
 // Deprecated: use api.ListBookmarksFile.
 func ListBookmarksFile(inFile string, conf *model.Configuration) ([]string, error) {
@@ -168,7 +179,7 @@ func ListBookmarksFile(inFile string, conf *model.Configuration) ([]string, erro
 
 // ListBookmarks returns inFile's bookmarks.
 func ListBookmarks(cmd *Command) ([]string, error) {
-	inFile, err := bookmarkCommandInFile(cmd)
+	inFile, err := validatedCommandInFile(cmd, "list bookmarks")
 	if err != nil {
 		return nil, err
 	}
@@ -183,14 +194,16 @@ func ListBookmarks(cmd *Command) ([]string, error) {
 
 // ExportBookmarks exports inFile's bookmarks to outFileJSON.
 func ExportBookmarks(cmd *Command) ([]string, error) {
-	inFile, err := bookmarkCommandInFile(cmd)
-	if err != nil {
+	requirements := commandRequirements{
+		operation:   "export bookmarks",
+		inFile:      commandStringRequiredNonEmpty,
+		outFileJSON: commandStringRequiredNonEmpty,
+	}
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
 		return nil, err
 	}
-	outFileJSON, err := bookmarkCommandJSONOutput(cmd)
-	if err != nil {
-		return nil, err
-	}
+	inFile := *cmd.InFile
+	outFileJSON := *cmd.OutFileJSON
 	if inFile != "-" && outFileJSON != "-" {
 		return nil, api.ExportBookmarksFile(inFile, outFileJSON, cmd.Conf)
 	}
@@ -208,17 +221,19 @@ func ExportBookmarks(cmd *Command) ([]string, error) {
 	return nil, finalize(api.ExportBookmarksJSON(rs, w, source, cmd.Conf))
 }
 
-// ImportBookmarks creates/replaces bookmarks of inFile corresponding to declarations found in inJSONFile and writes the result to outFile.
+// ImportBookmarks creates or replaces inFile's bookmarks using inFileJSON and writes the result to outFile.
 func ImportBookmarks(cmd *Command) ([]string, error) {
-	inFile, err := bookmarkCommandInFile(cmd)
-	if err != nil {
+	requirements := commandRequirements{
+		operation:  "import bookmarks",
+		inFile:     commandStringRequiredNonEmpty,
+		inFileJSON: commandStringRequiredNonEmpty,
+	}
+	if err := validateCommandRequirements(cmd, requirements); err != nil {
 		return nil, err
 	}
-	inFileJSON, err := bookmarkCommandJSONInput(cmd)
-	if err != nil {
-		return nil, err
-	}
-	outFile := bookmarkCommandOutFile(cmd)
+	inFile := *cmd.InFile
+	inFileJSON := *cmd.InFileJSON
+	outFile := optionalCommandString(cmd.OutFile)
 	if inFile != "-" && outFile != "-" {
 		return nil, api.ImportBookmarksFile(inFile, inFileJSON, outFile, cmd.BoolVal1, cmd.Conf)
 	}
@@ -241,11 +256,11 @@ func ImportBookmarks(cmd *Command) ([]string, error) {
 
 // RemoveBookmarks removes bookmarks from inFile.
 func RemoveBookmarks(cmd *Command) ([]string, error) {
-	inFile, err := bookmarkCommandInFile(cmd)
+	inFile, err := validatedCommandInFile(cmd, "remove bookmarks")
 	if err != nil {
 		return nil, err
 	}
-	outFile := bookmarkCommandOutFile(cmd)
+	outFile := optionalCommandString(cmd.OutFile)
 	if inFile != "-" && outFile != "-" {
 		return nil, api.RemoveBookmarksFile(inFile, outFile, cmd.Conf)
 	}
@@ -257,23 +272,9 @@ func RemoveBookmarks(cmd *Command) ([]string, error) {
 	return nil, finalize(api.RemoveBookmarks(rs, w, cmd.Conf))
 }
 
-func pageLayoutCommandInFile(cmd *Command) (string, error) {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return "", api.ErrMissingPDFInput
-	}
-	return *cmd.InFile, nil
-}
-
-func pageLayoutCommandOutFile(cmd *Command) string {
-	if cmd == nil || cmd.OutFile == nil {
-		return ""
-	}
-	return *cmd.OutFile
-}
-
 // ListPageLayout returns inFile's page layout.
 func ListPageLayout(cmd *Command) ([]string, error) {
-	inFile, err := pageLayoutCommandInFile(cmd)
+	inFile, err := validatedCommandInFile(cmd, "list page layout")
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +290,7 @@ func ListPageLayout(cmd *Command) ([]string, error) {
 
 // SetPageLayout sets inFile's page layout.
 func SetPageLayout(cmd *Command) ([]string, error) {
-	inFile, err := pageLayoutCommandInFile(cmd)
+	inFile, err := validatedCommandInFile(cmd, "set page layout")
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +300,7 @@ func SetPageLayout(cmd *Command) ([]string, error) {
 		return nil, fmt.Errorf("set page layout %q: %w", cmd.StringVal, api.ErrInvalidPageLayout)
 	}
 
-	outFile := pageLayoutCommandOutFile(cmd)
+	outFile := optionalCommandString(cmd.OutFile)
 	if inFile != "-" && outFile != "-" {
 		return nil, api.SetPageLayoutFile(inFile, outFile, *pageLayout, cmd.Conf)
 	}
@@ -312,12 +313,12 @@ func SetPageLayout(cmd *Command) ([]string, error) {
 
 // ResetPageLayout resets inFile's page layout.
 func ResetPageLayout(cmd *Command) ([]string, error) {
-	inFile, err := pageLayoutCommandInFile(cmd)
+	inFile, err := validatedCommandInFile(cmd, "reset page layout")
 	if err != nil {
 		return nil, err
 	}
 
-	outFile := pageLayoutCommandOutFile(cmd)
+	outFile := optionalCommandString(cmd.OutFile)
 	if inFile != "-" && outFile != "-" {
 		return nil, api.ResetPageLayoutFile(inFile, outFile, cmd.Conf)
 	}
@@ -328,23 +329,9 @@ func ResetPageLayout(cmd *Command) ([]string, error) {
 	return nil, err
 }
 
-func pageModeCommandInFile(cmd *Command) (string, error) {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return "", api.ErrMissingPDFInput
-	}
-	return *cmd.InFile, nil
-}
-
-func pageModeCommandOutFile(cmd *Command) string {
-	if cmd == nil || cmd.OutFile == nil {
-		return ""
-	}
-	return *cmd.OutFile
-}
-
 // ListPageMode returns inFile's page mode.
 func ListPageMode(cmd *Command) ([]string, error) {
-	inFile, err := pageModeCommandInFile(cmd)
+	inFile, err := validatedCommandInFile(cmd, "list page mode")
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +347,7 @@ func ListPageMode(cmd *Command) ([]string, error) {
 
 // SetPageMode sets inFile's page mode.
 func SetPageMode(cmd *Command) ([]string, error) {
-	inFile, err := pageModeCommandInFile(cmd)
+	inFile, err := validatedCommandInFile(cmd, "set page mode")
 	if err != nil {
 		return nil, err
 	}
@@ -370,7 +357,7 @@ func SetPageMode(cmd *Command) ([]string, error) {
 		return nil, fmt.Errorf("set page mode %q: %w", cmd.StringVal, api.ErrInvalidPageMode)
 	}
 
-	outFile := pageModeCommandOutFile(cmd)
+	outFile := optionalCommandString(cmd.OutFile)
 	if inFile != "-" && outFile != "-" {
 		return nil, api.SetPageModeFile(inFile, outFile, *pageMode, cmd.Conf)
 	}
@@ -383,12 +370,12 @@ func SetPageMode(cmd *Command) ([]string, error) {
 
 // ResetPageMode resets inFile's page mode.
 func ResetPageMode(cmd *Command) ([]string, error) {
-	inFile, err := pageModeCommandInFile(cmd)
+	inFile, err := validatedCommandInFile(cmd, "reset page mode")
 	if err != nil {
 		return nil, err
 	}
 
-	outFile := pageModeCommandOutFile(cmd)
+	outFile := optionalCommandString(cmd.OutFile)
 	if inFile != "-" && outFile != "-" {
 		return nil, api.ResetPageModeFile(inFile, outFile, cmd.Conf)
 	}
@@ -399,30 +386,9 @@ func ResetPageMode(cmd *Command) ([]string, error) {
 	return nil, err
 }
 
-func viewerPreferencesCommandInFile(cmd *Command) (string, error) {
-	if cmd == nil || cmd.InFile == nil || *cmd.InFile == "" {
-		return "", api.ErrMissingPDFInput
-	}
-	return *cmd.InFile, nil
-}
-
-func viewerPreferencesCommandOutFile(cmd *Command) string {
-	if cmd == nil || cmd.OutFile == nil {
-		return ""
-	}
-	return *cmd.OutFile
-}
-
-func viewerPreferencesCommandJSONInput(cmd *Command) string {
-	if cmd == nil || cmd.InFileJSON == nil {
-		return ""
-	}
-	return *cmd.InFileJSON
-}
-
 // ListViewerPreferences returns inFile's viewer preferences.
 func ListViewerPreferences(cmd *Command) ([]string, error) {
-	inFile, err := viewerPreferencesCommandInFile(cmd)
+	inFile, err := validatedCommandInFile(cmd, "list viewer preferences")
 	if err != nil {
 		return nil, err
 	}
@@ -441,12 +407,12 @@ func ListViewerPreferences(cmd *Command) ([]string, error) {
 
 // SetViewerPreferences sets inFile's viewer preferences.
 func SetViewerPreferences(cmd *Command) ([]string, error) {
-	inFile, err := viewerPreferencesCommandInFile(cmd)
+	inFile, err := validatedCommandInFile(cmd, "set viewer preferences")
 	if err != nil {
 		return nil, err
 	}
-	outFile := viewerPreferencesCommandOutFile(cmd)
-	jsonInput := viewerPreferencesCommandJSONInput(cmd)
+	outFile := optionalCommandString(cmd.OutFile)
+	jsonInput := optionalCommandString(cmd.InFileJSON)
 	if inFile != "-" && outFile != "-" {
 		if jsonInput != "" {
 			return nil, api.SetViewerPreferencesFileFromJSONFile(inFile, outFile, jsonInput, cmd.Conf)
@@ -471,11 +437,11 @@ func SetViewerPreferences(cmd *Command) ([]string, error) {
 
 // ResetViewerPreferences resets inFile's viewer preferences.
 func ResetViewerPreferences(cmd *Command) ([]string, error) {
-	inFile, err := viewerPreferencesCommandInFile(cmd)
+	inFile, err := validatedCommandInFile(cmd, "reset viewer preferences")
 	if err != nil {
 		return nil, err
 	}
-	outFile := viewerPreferencesCommandOutFile(cmd)
+	outFile := optionalCommandString(cmd.OutFile)
 	if inFile != "-" && outFile != "-" {
 		return nil, api.ResetViewerPreferencesFile(inFile, outFile, cmd.Conf)
 	}

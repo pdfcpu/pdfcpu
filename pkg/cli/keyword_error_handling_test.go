@@ -45,7 +45,7 @@ func TestKeywordCommandBoundaryGuards(t *testing.T) {
 		{name: "list nil command", run: func() error {
 			_, err := ListKeywords(nil)
 			return err
-		}, want: api.ErrMissingPDFInput},
+		}, want: ErrMissingCommand},
 		{name: "list missing input", run: func() error {
 			_, err := ListKeywords(&Command{})
 			return err
@@ -57,7 +57,7 @@ func TestKeywordCommandBoundaryGuards(t *testing.T) {
 		{name: "add nil command", run: func() error {
 			_, err := AddKeywords(nil)
 			return err
-		}, want: api.ErrMissingPDFInput},
+		}, want: ErrMissingCommand},
 		{name: "add missing input", run: func() error {
 			_, err := AddKeywords(&Command{OutFile: &outFile})
 			return err
@@ -77,7 +77,7 @@ func TestKeywordCommandBoundaryGuards(t *testing.T) {
 		{name: "remove nil command", run: func() error {
 			_, err := RemoveKeywords(nil)
 			return err
-		}, want: api.ErrMissingPDFInput},
+		}, want: ErrMissingCommand},
 		{name: "remove missing input", run: func() error {
 			_, err := RemoveKeywords(&Command{OutFile: &outFile})
 			return err

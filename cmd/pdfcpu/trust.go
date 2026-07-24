@@ -65,7 +65,7 @@ func certificatesCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "import inFile...",
-			Short: "Import certificates",
+			Short: "Import certificates, replacing matching installed files",
 			Args:  cobra.MinimumNArgs(1),
 			RunE:  wrapHandler(handleImportCertificatesCommand),
 		},
@@ -83,7 +83,7 @@ func signaturesRemoveCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove inFile [ outFile ]",
 		Short: "Remove signatures",
-		Args:  cobra.MinimumNArgs(1),
+		Args:  cobra.RangeArgs(1, 2),
 		RunE:  wrapHandler(handleRemoveSignaturesCommand),
 	}
 	cmd.Flags().BoolVar(&removeEncryption, "rmenc", false, "remove encryption")

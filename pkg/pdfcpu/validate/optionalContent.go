@@ -436,11 +436,31 @@ func validateOptionalContentConfigurationDict(xRefTable *model.XRefTable, d type
 	return nil
 }
 
+func validateOCPropertiesD(xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) error {
+	required := REQUIRED
+	relaxed := xRefTable.ValidationMode == model.ValidationRelaxed
+	if relaxed {
+		required = OPTIONAL
+	}
+
+	d1, err := validateDictEntry(xRefTable, d, dictName, "D", required, sinceVersion, nil)
+	if err != nil {
+		return fmt.Errorf("%s.D: %w", dictName, err)
+	}
+	if d1 == nil {
+		if relaxed {
+			model.ShowDigestedSpecViolation("dict=" + dictName + " required entry=D missing")
+		}
+		return nil
+	}
+	if err = validateOptionalContentConfigurationDict(xRefTable, d1, sinceVersion); err != nil {
+		return fmt.Errorf("%s.D: %w", dictName, err)
+	}
+	return nil
+}
+
+// validateOCProperties validates the optional content properties dictionary described in 8.11.4.
 func validateOCProperties(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-	// aka optional content properties dict.
-
-	// => 8.11.4 Configuring Optional Content
-
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V14
 	}
@@ -466,15 +486,8 @@ func validateOCProperties(xRefTable *model.XRefTable, rootDict types.Dict, requi
 	}
 
 	// "D" required dict, default viewing optional content configuration dict.
-	d1, err := validateDictEntry(xRefTable, d, dictName, "D", r, sinceVersion, nil)
-	if err != nil {
-		return fmt.Errorf("%s.D: %w", dictName, err)
-	}
-	if d1 != nil {
-		err = validateOptionalContentConfigurationDict(xRefTable, d1, sinceVersion)
-		if err != nil {
-			return fmt.Errorf("%s.D: %w", dictName, err)
-		}
+	if err = validateOCPropertiesD(xRefTable, d, dictName, sinceVersion); err != nil {
+		return err
 	}
 
 	// "Configs" optional array of alternate optional content configuration dicts.

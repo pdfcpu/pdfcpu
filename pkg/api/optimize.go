@@ -67,6 +67,7 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err err
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
 	}
+	conf.Cmd = model.OPTIMIZE
 
 	if err := optimize(rs, w, conf); err != nil {
 		return fmt.Errorf("optimize: %w", err)

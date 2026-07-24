@@ -27,38 +27,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-var (
-	// ErrCircularBookmarks signals a circular bookmark tree.
-	ErrCircularBookmarks = pdfcpu.ErrCircularBookmarks
-
-	// ErrExistingBookmarks signals that adding bookmarks would conflict with existing bookmarks.
-	ErrExistingBookmarks = pdfcpu.ErrExistingBookmarks
-
-	// ErrInvalidBookmark signals an invalid bookmark tree.
-	ErrInvalidBookmark = pdfcpu.ErrInvalidBookmark
-
-	// ErrInvalidBookmarkJSON signals malformed bookmark JSON data.
-	ErrInvalidBookmarkJSON = pdfcpu.ErrInvalidBookmarkJSON
-
-	// ErrMissingBookmarks signals that no bookmarks were provided.
-	ErrMissingBookmarks = errors.New("missing bookmarks")
-
-	// ErrMissingJSONReader signals a missing required JSON input reader.
-	ErrMissingJSONReader = errors.New("missing JSON reader")
-
-	// ErrMissingJSONWriter signals a missing required JSON output writer.
-	ErrMissingJSONWriter = errors.New("missing JSON writer")
-
-	// ErrNoBookmarks signals that a PDF has no bookmarks to process.
-	ErrNoBookmarks = pdfcpu.ErrNoBookmarks
-
-	// Deprecated: use ErrNoBookmarks.
-	ErrNoOutlines = ErrNoBookmarks
-
-	// Deprecated: use ErrExistingBookmarks.
-	ErrOutlines = ErrExistingBookmarks
-)
-
 func bookmarkOpError(op string, err error) error {
 	if err == nil {
 		return nil

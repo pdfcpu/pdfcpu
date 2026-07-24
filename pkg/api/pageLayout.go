@@ -27,9 +27,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// ErrInvalidPageLayout signals an unsupported page layout.
-var ErrInvalidPageLayout = errors.New("invalid page layout")
-
 func validPageLayout(pl model.PageLayout) bool {
 	switch pl {
 	case model.PageLayoutSinglePage,

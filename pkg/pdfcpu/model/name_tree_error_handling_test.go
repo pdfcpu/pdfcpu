@@ -76,7 +76,7 @@ func TestLocateNameTreeNamesDictionaryDereferenceContext(t *testing.T) {
 
 	err := xRefTable.LocateNameTree("JavaScript", false)
 
-	requireLocateNameTreeError(t, err, `name tree "JavaScript"`, "dereference Names dictionary", "wrong type")
+	requireLocateNameTreeError(t, err, `name tree "JavaScript"`, "dereference Names dictionary", "expected types.Dict")
 }
 
 func TestLocateNameTreeGuardsNilNamesDictionary(t *testing.T) {
@@ -106,7 +106,7 @@ func TestLocateNameTreeTreeDereferenceContext(t *testing.T) {
 
 	err := xRefTable.LocateNameTree("JavaScript", false)
 
-	requireLocateNameTreeError(t, err, `name tree "JavaScript"`, "dereference tree", "wrong type")
+	requireLocateNameTreeError(t, err, `name tree "JavaScript"`, "dereference tree", "expected types.Dict")
 }
 
 func TestLocateNameTreeGuardsNilTreeDictionary(t *testing.T) {
