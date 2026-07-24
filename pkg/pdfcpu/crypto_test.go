@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -326,9 +327,109 @@ func TestDecryptKeyDoesNotMutateInput(t *testing.T) {
 	key := backing[:5]
 	want := bytes.Clone(backing)
 
-	_ = decryptKey(7, 0, key, false)
+	if _, err := decryptKey(7, 0, key, false); err != nil {
+		t.Fatal(err)
+	}
 	if !bytes.Equal(backing, want) {
 		t.Fatalf("input key backing array mutated: got %x, want %x", backing, want)
+	}
+}
+
+func TestDecryptKeyGenerationRange(t *testing.T) {
+	for _, generation := range []int{0, types.FreeHeadGeneration} {
+		t.Run(fmt.Sprintf("valid_%d", generation), func(t *testing.T) {
+			if _, err := decryptKey(7, generation, make([]byte, 5), false); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+
+	for _, generation := range []int{-1, types.FreeHeadGeneration + 1} {
+		t.Run(fmt.Sprintf("invalid_%d", generation), func(t *testing.T) {
+			_, err := decryptKey(7, generation, make([]byte, 5), false)
+			if err == nil || !strings.Contains(err.Error(), "generation number") {
+				t.Fatalf("expected generation number range error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestDecryptKeyObjectNumberRange(t *testing.T) {
+	valid := []int{0}
+	invalid := []int{-1}
+	if strconv.IntSize == 64 {
+		maxObjectNumber := int64(^uint32(0))
+		valid = append(valid, int(maxObjectNumber))
+		invalid = append(invalid, int(maxObjectNumber+1))
+	}
+
+	for _, objNumber := range valid {
+		t.Run(fmt.Sprintf("valid_%d", objNumber), func(t *testing.T) {
+			if _, err := decryptKey(objNumber, 0, make([]byte, 5), false); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+
+	for _, objNumber := range invalid {
+		t.Run(fmt.Sprintf("invalid_%d", objNumber), func(t *testing.T) {
+			_, err := decryptKey(objNumber, 0, make([]byte, 5), false)
+			if err == nil || !strings.Contains(err.Error(), "object number") {
+				t.Fatalf("expected object number range error, got %v", err)
+			}
+		})
+	}
+}
+
+func TestPermissionInt32Range(t *testing.T) {
+	minPermission := int32(-1 << 31)
+	maxPermission := int32(1<<31 - 1)
+	for _, permission := range []int{int(minPermission), -4, int(maxPermission)} {
+		t.Run(fmt.Sprintf("valid_%d", permission), func(t *testing.T) {
+			got, err := permissionInt32(permission)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != int32(permission) {
+				t.Fatalf("got %d, want %d", got, permission)
+			}
+		})
+	}
+
+	if strconv.IntSize == 64 {
+		minPermission := int64(-1 << 31)
+		maxPermission := int64(1<<31 - 1)
+		for _, permission := range []int{int(minPermission - 1), int(maxPermission + 1)} {
+			t.Run(fmt.Sprintf("invalid_%d", permission), func(t *testing.T) {
+				_, err := permissionInt32(permission)
+				if !errors.Is(err, ErrMalformedEncryption) {
+					t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
+				}
+			})
+		}
+	}
+}
+
+func TestWritePermissionsRejectsOutOfRangePermission(t *testing.T) {
+	if strconv.IntSize != 64 {
+		t.Skip("all int values fit in a signed 32-bit permission on this architecture")
+	}
+
+	maxPermission := int64(1<<31 - 1)
+	ctx := &model.Context{
+		XRefTable: &model.XRefTable{
+			E: &model.Enc{
+				P:     int(maxPermission + 1),
+				R:     6,
+				Perms: make([]byte, 16),
+			},
+			EncKey: make([]byte, 32),
+		},
+	}
+
+	err := writePermissions(ctx, types.Dict{})
+	if !errors.Is(err, ErrMalformedEncryption) {
+		t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
 	}
 }
 

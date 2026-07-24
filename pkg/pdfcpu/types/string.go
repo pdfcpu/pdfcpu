@@ -52,10 +52,20 @@ func NewStringSet(slice []string) StringSet {
 	return strSet
 }
 
-// ByteForOctalString a 1,2 or 3 digit unescaped octal string into the corresponding byte value.
-func ByteForOctalString(octalBytes string) (b byte) {
-	i, _ := strconv.ParseInt(octalBytes, 8, 64)
-	return byte(i)
+// ByteForOctalString converts a one- to three-digit octal string into a byte.
+// High-order overflow is ignored as required for PDF literal strings.
+// Invalid input returns zero.
+func ByteForOctalString(octalBytes string) byte {
+	if len(octalBytes) == 0 || len(octalBytes) > 3 {
+		return 0
+	}
+
+	i, err := strconv.ParseUint(octalBytes, 8, 16)
+	if err != nil {
+		return 0
+	}
+
+	return byte(i & 0xff)
 }
 
 // Escape applies all defined escape sequences to s.

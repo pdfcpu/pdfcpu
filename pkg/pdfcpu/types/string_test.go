@@ -52,6 +52,26 @@ func TestByteForOctalString(t *testing.T) {
 			"377",
 			0xff,
 		},
+		{
+			"400",
+			0x00,
+		},
+		{
+			"777",
+			0xff,
+		},
+		{
+			"",
+			0x00,
+		},
+		{
+			"8",
+			0x00,
+		},
+		{
+			"1000",
+			0x00,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.input, func(t *testing.T) {
@@ -103,6 +123,14 @@ func TestUnescapeStringWithOctal(t *testing.T) {
 		{
 			"\\0053",
 			[]byte{0x05, '3'},
+		},
+		{
+			"\\400",
+			[]byte{0x00},
+		},
+		{
+			"\\777",
+			[]byte{0xff},
 		},
 	}
 	for _, test := range tests {

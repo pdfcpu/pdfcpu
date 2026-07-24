@@ -797,6 +797,19 @@ func PermissionsList(p int) (list []string) {
 	return perms(p)
 }
 
+func permissionInt32(p int) (int32, error) {
+	const (
+		minPermission = int64(-1 << 31)
+		maxPermission = int64(1<<31 - 1)
+	)
+
+	if int64(p) < minPermission || int64(p) > maxPermission {
+		return 0, fmt.Errorf("%w: permission value P %d out of signed 32-bit range", ErrMalformedEncryption, p)
+	}
+
+	return int32(p), nil
+}
+
 func validatePermissions(ctx *model.Context) (bool, error) {
 	// Algorithm 3.2a 5.
 
@@ -822,7 +835,12 @@ func validatePermissions(ctx *model.Context) (bool, error) {
 	}
 
 	b := binary.LittleEndian.Uint32(p[:4])
-	return int32(b) == int32(ctx.E.P), nil
+	expected, err := permissionInt32(ctx.E.P)
+	if err != nil {
+		return false, err
+	}
+
+	return b == uint32(expected), nil
 }
 
 func writePermissions(ctx *model.Context, d types.Dict) error {
@@ -832,8 +850,13 @@ func writePermissions(ctx *model.Context, d types.Dict) error {
 		return nil
 	}
 
+	p, err := permissionInt32(ctx.E.P)
+	if err != nil {
+		return err
+	}
+
 	b := make([]byte, 16)
-	binary.LittleEndian.PutUint64(b, uint64(ctx.E.P))
+	binary.LittleEndian.PutUint32(b, uint32(p))
 
 	b[4] = 0xFF
 	b[5] = 0xFF
@@ -1386,6 +1409,9 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 	if p == nil {
 		return nil, fmt.Errorf("%w: required entry \"P\" missing", ErrMalformedEncryption)
 	}
+	if _, err := permissionInt32(*p); err != nil {
+		return nil, err
+	}
 
 	// EncryptMetadata
 	encMeta := true
@@ -1413,7 +1439,17 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 		nil
 }
 
-func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
+func decryptKey(objNumber, generation int, key []byte, aes bool) ([]byte, error) {
+	const maxObjectNumber = int64(^uint32(0))
+
+	if objNumber < 0 || int64(objNumber) > maxObjectNumber {
+		return nil, fmt.Errorf("decrypt key: object number %d out of range [0,%d]", objNumber, maxObjectNumber)
+	}
+
+	if generation < 0 || generation > types.FreeHeadGeneration {
+		return nil, fmt.Errorf("decrypt key: generation number %d out of range [0,%d]", generation, types.FreeHeadGeneration)
+	}
+
 	m := md5.New()
 
 	nr := uint32(objNumber)
@@ -1439,7 +1475,7 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) []byte {
 		dk = dk[:l]
 	}
 
-	return dk
+	return dk, nil
 }
 
 // EncryptBytes encrypts s using RC4 or AES.
@@ -1447,7 +1483,11 @@ func encryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int
 	if needAES {
 		k := encKey
 		if r != 5 && r != 6 {
-			k = decryptKey(objNr, genNr, encKey, needAES)
+			var err error
+			k, err = decryptKey(objNr, genNr, encKey, needAES)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return encryptAESBytes(b, k)
 	}
@@ -1460,7 +1500,11 @@ func decryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int
 	if needAES {
 		k := encKey
 		if r != 5 && r != 6 {
-			k = decryptKey(objNr, genNr, encKey, needAES)
+			var err error
+			k, err = decryptKey(objNr, genNr, encKey, needAES)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return decryptAESBytes(b, k)
 	}
@@ -1469,7 +1513,12 @@ func decryptBytes(b []byte, objNr, genNr int, encKey []byte, needAES bool, r int
 }
 
 func applyRC4CipherBytes(b []byte, objNr, genNr int, key []byte, needAES bool) ([]byte, error) {
-	c, err := rc4.NewCipher(decryptKey(objNr, genNr, key, needAES))
+	k, err := decryptKey(objNr, genNr, key, needAES)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := rc4.NewCipher(k)
 	if err != nil {
 		return nil, err
 	}
@@ -1724,7 +1773,11 @@ func decryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES
 func encryptStream(buf []byte, objNr, genNr int, encKey []byte, needAES bool, r int) ([]byte, error) {
 	k := encKey
 	if r != 5 && r != 6 {
-		k = decryptKey(objNr, genNr, encKey, needAES)
+		var err error
+		k, err = decryptKey(objNr, genNr, encKey, needAES)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if needAES {
@@ -1738,7 +1791,11 @@ func encryptStream(buf []byte, objNr, genNr int, encKey []byte, needAES bool, r 
 func decryptStream(buf []byte, objNr, genNr int, encKey []byte, needAES bool, r int) ([]byte, error) {
 	k := encKey
 	if r != 5 && r != 6 {
-		k = decryptKey(objNr, genNr, encKey, needAES)
+		var err error
+		k, err = decryptKey(objNr, genNr, encKey, needAES)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if needAES {

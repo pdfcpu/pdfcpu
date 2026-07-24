@@ -1,6 +1,9 @@
 on: [push, pull_request]
 name: Test
 
+permissions:
+  contents: read
+
 jobs:
   # Run tests on native platforms
   test:

@@ -60,11 +60,16 @@ func validateMarkedContentReferenceDict(xRefTable *model.XRefTable, d types.Dict
 	// MCID: required, integer
 	// The marked-content identifier of the marked-content sequence within its content stream.
 
-	if d.IntEntry("MCID") == nil {
-		err = errors.New("marked content reference: missing MCID")
+	obj, ok := d.Find("MCID")
+	if !ok {
+		return errors.New("marked content reference: missing MCID")
 	}
 
-	return err
+	if _, err = xRefTable.DereferenceInteger(obj); err != nil {
+		return fmt.Errorf("marked content reference MCID: dereference: %w", err)
+	}
+
+	return nil
 }
 
 func validateObjectReferenceDict(xRefTable *model.XRefTable, d types.Dict) error {
