@@ -365,7 +365,7 @@ func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	if font.IsCoreFont(f.Name) && utf8.ValidString(v) {
 		v = model.DecodeUTF8ToByte(v)
 	}
-	lineBB, err := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
+	lineBB, err := model.CalcBoundingBoxFloat(v, 0, 0, f.Name, f.Size)
 	if err != nil {
 		return nil, fmt.Errorf("combo box text: %w", err)
 	}
@@ -381,7 +381,7 @@ func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	}
 	y := (cb.BoundingBox.Height()-lineHeight)/2 + descent
 
-	fmt.Fprintf(buf, "BT /%s %d Tf ", cb.fontID, f.Size)
+	fmt.Fprintf(buf, "BT /%s %s Tf ", cb.fontID, formatFontSize(f.Size))
 	fmt.Fprintf(buf, "%.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td (%s) Tj ET ",
 		f.col.R, f.col.G, f.col.B,
 		f.col.R, f.col.G, f.col.B, x, y, s)
@@ -527,7 +527,7 @@ func (cb *ComboBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	}
 	cb.fontID = fontID
 
-	da := fmt.Sprintf("/%s %d Tf %.2f %.2f %.2f rg", fontID, f.Size, fCol.R, fCol.G, fCol.B)
+	da := fmt.Sprintf("/%s %s Tf %.2f %.2f %.2f rg", fontID, formatFontSize(f.Size), fCol.R, fCol.G, fCol.B)
 	// Note: Mac Preview does not honour inherited "DA"
 	d["DA"] = types.StringLiteral(da)
 

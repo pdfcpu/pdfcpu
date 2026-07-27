@@ -400,7 +400,7 @@ func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y f
 	cjk := pdffont.CJK(f.Script, f.Lang)
 	for i := 0; i < len(lines); i++ {
 		s := lines[i]
-		lineBB, err := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
+		lineBB, err := model.CalcBoundingBoxFloat(s, 0, 0, f.Name, f.Size)
 		if err != nil {
 			return fmt.Errorf("line %d: %w", i+1, err)
 		}
@@ -414,8 +414,8 @@ func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y f
 		x := alignedFieldTextX(tf.HorAlign, w, lineBB.Width(), boWidth)
 		fmt.Fprint(buf, "BT ")
 		if i == 0 {
-			fmt.Fprintf(buf, "/%s %d Tf %.2f %.2f %.2f RG %.2f %.2f %.2f rg ",
-				tf.fontID, f.Size,
+			fmt.Fprintf(buf, "/%s %s Tf %.2f %.2f %.2f RG %.2f %.2f %.2f rg ",
+				tf.fontID, formatFontSize(f.Size),
 				f.col.R, f.col.G, f.col.B,
 				f.col.R, f.col.G, f.col.B)
 		}
@@ -435,12 +435,12 @@ func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y f
 	return nil
 }
 
-func textFieldLines(s, fontName string, fontSize int, multiline bool, width float64) ([]string, error) {
+func textFieldLines(s, fontName string, fontSize float64, multiline bool, width float64) ([]string, error) {
 	if font.IsCoreFont(fontName) && utf8.ValidString(s) {
 		s = model.DecodeUTF8ToByte(s)
 	}
 	if multiline {
-		lines, err := model.WordWrap(s, fontName, fontSize, width)
+		lines, err := model.WordWrapFloat(s, fontName, fontSize, width)
 		if err != nil {
 			return nil, err
 		}
@@ -460,7 +460,7 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 
 	f := tf.Font
 
-	if !tf.Multiline && float64(f.Size) > h {
+	if !tf.Multiline && f.Size > h {
 		size, err := fontSizeForLineHeight(f.Name, h)
 		if err != nil {
 			return nil, fmt.Errorf("text field text: %w", err)
@@ -714,7 +714,7 @@ func (tf *TextField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	}
 	tf.fontID = fontID
 
-	da := fmt.Sprintf("/%s %d Tf %.2f %.2f %.2f rg", fontID, f.Size, fCol.R, fCol.G, fCol.B)
+	da := fmt.Sprintf("/%s %s Tf %.2f %.2f %.2f rg", fontID, formatFontSize(f.Size), fCol.R, fCol.G, fCol.B)
 	// Note: Mac Preview does not honour inherited "DA"
 	d["DA"] = types.StringLiteral(da)
 
@@ -841,7 +841,7 @@ func (tf *TextField) prepForRender(p *model.Page, pageNr int, fonts model.FontMa
 		}
 	}
 
-	h := float64(tf.Font.Size)*1.2 + 2*float64(boWidth)
+	h := tf.Font.Size*1.2 + 2*float64(boWidth)
 
 	if tf.Multiline {
 		if tf.Height == 0 {

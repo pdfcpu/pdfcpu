@@ -119,6 +119,24 @@ func TestWriteColumnPropagatesBoundingBoxErrors(t *testing.T) {
 	}
 }
 
+func TestWriteColumnPreservesFractionalFontSize(t *testing.T) {
+	td := TextDescriptor{
+		Text:     "fractional",
+		FontName: "Helvetica",
+		FontKey:  "F1",
+		FontSize: 10.125,
+		Scale:    1,
+		ScaleAbs: true,
+	}
+	var buf bytes.Buffer
+	if _, err := WriteColumn(&XRefTable{}, &buf, types.RectForFormat("A4"), nil, td, 100); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "/F1 10.125 Tf") {
+		t.Fatalf("fractional font size missing from content stream: %s", buf.String())
+	}
+}
+
 func TestWordWrapPropagatesCandidateMeasurementError(t *testing.T) {
 	installTextRenderingMetrics(t)
 	_, err := WordWrap("word", "Missing", 12, 10)
@@ -127,6 +145,25 @@ func TestWordWrapPropagatesCandidateMeasurementError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "wrap candidate") {
 		t.Fatalf("expected candidate context, got %q", err)
+	}
+}
+
+func TestJustifiedTextWrappingDoesNotInsertLinefeeds(t *testing.T) {
+	fontSize := 12.
+	preparer, err := newJustifiedTextPreparer(&XRefTable{}, "Helvetica", fontSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lines []string
+	linefeeds, err := preparer.prepare(&lines, "one two", 25, "Helvetica", &fontSize, false, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if linefeeds != 0 {
+		t.Fatalf("linefeeds = %d, want 0", linefeeds)
+	}
+	if len(lines) != 1 {
+		t.Fatalf("wrapped lines = %d, want 1", len(lines))
 	}
 }
 
@@ -294,7 +331,7 @@ func TestWordWrap(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		gotLines, err := WordWrap(tc.Text, tc.FontName, int(tc.FontSize), tc.MaxWidthPoints)
+		gotLines, err := WordWrapFloat(tc.Text, tc.FontName, tc.FontSize, tc.MaxWidthPoints)
 		if err != nil {
 			t.Fatal(err)
 		}

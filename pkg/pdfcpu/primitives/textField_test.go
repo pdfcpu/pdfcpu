@@ -17,6 +17,7 @@ limitations under the License.
 package primitives
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -24,6 +25,16 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func TestFormFontAcceptsFractionalSize(t *testing.T) {
+	var f FormFont
+	if err := json.Unmarshal([]byte(`{"name":"Helvetica","size":10.125}`), &f); err != nil {
+		t.Fatal(err)
+	}
+	if f.Size != 10.125 {
+		t.Fatalf("font size = %g, want 10.125", f.Size)
+	}
+}
 
 func TestTextFieldCombEscapesEachCell(t *testing.T) {
 	ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())

@@ -504,7 +504,7 @@ func writeUserFontDemoContent(xRefTable *model.XRefTable, p model.Page, fontName
 		FontName:       fontName,
 		Embed:          true,
 		FontKey:        fontKey,
-		FontSize:       baseFontSize,
+		FontSize:       float64(baseFontSize),
 		HAlign:         types.AlignCenter,
 		VAlign:         types.AlignBaseline,
 		Scale:          1.0,
@@ -537,7 +537,7 @@ func writeUserFontDemoContent(xRefTable *model.XRefTable, p model.Page, fontName
 		}
 		buf := make([]byte, 4)
 		td.StrokeCol, td.FillCol = color.Black, color.Black
-		td.FontName, td.FontKey, td.FontSize = fontName, fontKey, fontSize-2
+		td.FontName, td.FontKey, td.FontSize = fontName, fontKey, float64(fontSize-2)
 		for i := range 256 {
 			r := base + rune(j*256+i)
 			s = " "

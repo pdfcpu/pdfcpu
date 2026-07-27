@@ -428,7 +428,7 @@ func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	}
 
 	f := df.Font
-	if float64(f.Size) > h {
+	if f.Size > h {
 		size, err := fontSizeForLineHeight(f.Name, h)
 		if err != nil {
 			return nil, fmt.Errorf("date field text: %w", err)
@@ -436,7 +436,7 @@ func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		f.Size = size
 	}
 
-	lineBB, err := model.CalcBoundingBox(v, 0, 0, f.Name, f.Size)
+	lineBB, err := model.CalcBoundingBoxFloat(v, 0, 0, f.Name, f.Size)
 	if err != nil {
 		return nil, fmt.Errorf("date field text: %w", err)
 	}
@@ -452,7 +452,7 @@ func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	}
 	y := (df.BoundingBox.Height()-lineHeight)/2 + descent
 
-	fmt.Fprintf(buf, "BT /%s %d Tf ", df.fontID, f.Size)
+	fmt.Fprintf(buf, "BT /%s %s Tf ", df.fontID, formatFontSize(f.Size))
 	fmt.Fprintf(buf, "%.2f %.2f %.2f RG %.2f %.2f %.2f rg %.2f %.2f Td (%s) Tj ET ",
 		f.col.R, f.col.G, f.col.B,
 		f.col.R, f.col.G, f.col.B, x, y, s)
@@ -672,7 +672,7 @@ func (df *DateField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	}
 	df.fontID = fontID
 
-	da := fmt.Sprintf("/%s %d Tf %.2f %.2f %.2f rg", fontID, f.Size, fCol.R, fCol.G, fCol.B)
+	da := fmt.Sprintf("/%s %s Tf %.2f %.2f %.2f rg", fontID, formatFontSize(f.Size), fCol.R, fCol.G, fCol.B)
 	// Note: Mac Preview does not honour inherited "DA"
 	d["DA"] = types.StringLiteral(da)
 
@@ -800,7 +800,7 @@ func (df *DateField) prepForRender(p *model.Page, pageNr int, fonts model.FontMa
 		}
 	}
 
-	h := float64(df.Font.Size)*1.2 + 2*float64(boWidth)
+	h := df.Font.Size*1.2 + 2*float64(boWidth)
 
 	df.BoundingBox = types.RectForWidthAndHeight(x, y, df.Width, h)
 

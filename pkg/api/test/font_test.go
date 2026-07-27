@@ -45,7 +45,7 @@ func writeCoreFontDemoContent(xRefTable *model.XRefTable, p model.Page, fontName
 	td := model.TextDescriptor{
 		FontName:       baseFontName,
 		FontKey:        baseFontKey,
-		FontSize:       baseFontSize,
+		FontSize:       float64(baseFontSize),
 		HAlign:         types.AlignCenter,
 		VAlign:         types.AlignBaseline,
 		Scale:          1.0,
@@ -89,7 +89,7 @@ func writeCoreFontDemoContent(xRefTable *model.XRefTable, p model.Page, fontName
 			s = string([]byte{b})
 			td.X, td.Y, td.Text = float64(70+i*30), float64(400-j*30), s
 			td.StrokeCol, td.FillCol = color.Black, color.Black
-			td.FontName, td.FontKey, td.FontSize = fontName, fontKey, fontSize
+			td.FontName, td.FontKey, td.FontSize = fontName, fontKey, float64(fontSize)
 			if _, err := model.WriteMultiLine(xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
 				return fmt.Errorf("render core font byte 0x%02X: %w", b, err)
 			}

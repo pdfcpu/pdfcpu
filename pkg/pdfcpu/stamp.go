@@ -53,7 +53,7 @@ func textDescriptor(wm model.Watermark, timestampFormat string, pageNr, pageCoun
 	td := model.TextDescriptor{
 		Text:           t,
 		FontName:       wm.FontName,
-		FontSize:       wm.FontSize,
+		FontSize:       float64(wm.FontSize),
 		Scale:          wm.Scale,
 		ScaleAbs:       wm.ScaleAbs,
 		RMode:          wm.RenderMode,

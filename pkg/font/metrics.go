@@ -506,12 +506,22 @@ func CharWidth(fontName string, r rune) (int, error) {
 
 // UserSpaceUnits transforms glyphSpaceUnits into userspace units.
 func UserSpaceUnits(glyphSpaceUnits float64, fontScalingFactor int) float64 {
-	return glyphSpaceUnits / 1000 * float64(fontScalingFactor)
+	return UserSpaceUnitsFloat(glyphSpaceUnits, float64(fontScalingFactor))
+}
+
+// UserSpaceUnitsFloat transforms glyphSpaceUnits into userspace units using a fractional font scaling factor.
+func UserSpaceUnitsFloat(glyphSpaceUnits, fontScalingFactor float64) float64 {
+	return glyphSpaceUnits / 1000 * fontScalingFactor
 }
 
 // GlyphSpaceUnits transforms userSpaceUnits into glyphspace Units.
 func GlyphSpaceUnits(userSpaceUnits float64, fontScalingFactor int) float64 {
-	return userSpaceUnits * 1000 / float64(fontScalingFactor)
+	return GlyphSpaceUnitsFloat(userSpaceUnits, float64(fontScalingFactor))
+}
+
+// GlyphSpaceUnitsFloat transforms userSpaceUnits into glyphspace units using a fractional font scaling factor.
+func GlyphSpaceUnitsFloat(userSpaceUnits, fontScalingFactor float64) float64 {
+	return userSpaceUnits * 1000 / fontScalingFactor
 }
 
 func fontScalingFactor(glyphSpaceUnits, userSpaceUnits float64) int {
@@ -570,11 +580,16 @@ func glyphSpaceWidth(text, fontName string) (int, error) {
 
 // TextWidth returns the width in user-space units for text.
 func TextWidth(text, fontName string, fontSize int) (float64, error) {
+	return TextWidthFloat(text, fontName, float64(fontSize))
+}
+
+// TextWidthFloat returns the width in user-space units for text using a fractional font size.
+func TextWidthFloat(text, fontName string, fontSize float64) (float64, error) {
 	w, err := glyphSpaceWidth(text, fontName)
 	if err != nil {
 		return 0, err
 	}
-	return UserSpaceUnits(float64(w), fontSize), nil
+	return UserSpaceUnitsFloat(float64(w), fontSize), nil
 }
 
 // Size returns the font size needed to fit text into width.

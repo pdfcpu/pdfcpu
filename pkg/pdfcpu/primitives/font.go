@@ -35,10 +35,14 @@ type FormFont struct {
 	Name     string
 	Lang     string // ISO-639
 	Script   string // ISO-15924
-	Size     int
+	Size     float64
 	Color    string `json:"col"`
 	col      *color.SimpleColor
 	FillFont bool
+}
+
+func formatFontSize(size float64) string {
+	return strconv.FormatFloat(size, 'f', -1, 64)
 }
 
 // ISO-639 country codes
@@ -51,17 +55,17 @@ var ISO639Codes = []string{"ab", "aa", "af", "ak", "sq", "am", "ar", "an", "hy",
 	"ro", "rm", "rn", "ru", "se", "sm", "sg", "sa", "sc", "sr", "sn", "sd", "si", "sk", "sl", "so", "st", "es", "su", "sw", "ss", "sv", "tl", "ty", "tg", "ta", "tt",
 	"te", "th", "bo", "ti", "to", "ts", "tn", "tr", "tk", "tw", "ug", "uk", "ur", "uz", "ve", "vi", "vo", "wa", "cy", "wo", "xh", "yi", "yo", "za", "zu"}
 
-func fontLineMetrics(fontName string, fontSize int) (float64, float64, error) {
+func fontLineMetrics(fontName string, fontSize float64) (float64, float64, error) {
 	bb, err := font.BoundingBox(fontName)
 	if err != nil {
 		return 0, 0, fmt.Errorf("font %s: bounding box: %w", fontName, err)
 	}
-	lineHeight := font.UserSpaceUnits(bb.Height(), fontSize)
-	descent := font.UserSpaceUnits(-bb.LL.Y, fontSize)
+	lineHeight := font.UserSpaceUnitsFloat(bb.Height(), fontSize)
+	descent := font.UserSpaceUnitsFloat(-bb.LL.Y, fontSize)
 	return lineHeight, descent, nil
 }
 
-func fontSizeForLineHeight(fontName string, lineHeight float64) (int, error) {
+func fontSizeForLineHeight(fontName string, lineHeight float64) (float64, error) {
 	bb, err := font.BoundingBox(fontName)
 	if err != nil {
 		return 0, fmt.Errorf("font %s: bounding box: %w", fontName, err)
@@ -69,7 +73,7 @@ func fontSizeForLineHeight(fontName string, lineHeight float64) (int, error) {
 	if bb.Height() == 0 {
 		return 0, fmt.Errorf("font %s: empty bounding box", fontName)
 	}
-	return int(math.Round(lineHeight / (bb.Height() / 1000))), nil
+	return math.Round(lineHeight/(bb.Height()/1000)*100) / 100, nil
 }
 
 func alignedFieldTextX(align types.HAlignment, width, textWidth, borderWidth float64) float64 {
@@ -143,7 +147,7 @@ func (f *FormFont) validate() error {
 			}
 		}
 		if f.Size <= 0 {
-			return fmt.Errorf("invalid font size: %d", f.Size)
+			return fmt.Errorf("invalid font size: %.2f", f.Size)
 		}
 	}
 
@@ -379,7 +383,7 @@ func fontFromDA(s string) (string, FormFont, error) {
 				// TODO derive size from acroDict DA and then use a default form font size (add to pdfcpu config)
 				fl = 12
 			}
-			f.Size = int(fl)
+			f.Size = fl
 			continue
 		}
 		if da[i] == "rg" {

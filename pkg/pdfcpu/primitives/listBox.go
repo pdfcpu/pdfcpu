@@ -462,7 +462,7 @@ func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		if font.IsCoreFont(f.Name) && utf8.ValidString(s) {
 			s = model.DecodeUTF8ToByte(s)
 		}
-		lineBB, err := model.CalcBoundingBox(s, 0, 0, f.Name, f.Size)
+		lineBB, err := model.CalcBoundingBoxFloat(s, 0, 0, f.Name, f.Size)
 		if err != nil {
 			return nil, fmt.Errorf("list box option %d: %w", i+1, err)
 		}
@@ -473,8 +473,8 @@ func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		x := alignedFieldTextX(lb.HorAlign, w, lineBB.Width(), boWidth)
 		fmt.Fprint(buf, "BT ")
 		if i == 0 {
-			fmt.Fprintf(buf, "/%s %d Tf %.2f %.2f %.2f RG %.2f %.2f %.2f rg ",
-				lb.fontID, f.Size,
+			fmt.Fprintf(buf, "/%s %s Tf %.2f %.2f %.2f RG %.2f %.2f %.2f rg ",
+				lb.fontID, formatFontSize(f.Size),
 				f.col.R, f.col.G, f.col.B,
 				f.col.R, f.col.G, f.col.B)
 		}
@@ -689,7 +689,7 @@ func (lb *ListBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	}
 	lb.fontID = fontID
 
-	da := fmt.Sprintf("/%s %d Tf %.2f %.2f %.2f rg", fontID, f.Size, fCol.R, fCol.G, fCol.B)
+	da := fmt.Sprintf("/%s %s Tf %.2f %.2f %.2f rg", fontID, formatFontSize(f.Size), fCol.R, fCol.G, fCol.B)
 	// Note: Mac Preview does not honour inherited "DA"
 	d["DA"] = types.StringLiteral(da)
 
