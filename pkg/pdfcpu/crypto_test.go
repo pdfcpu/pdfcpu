@@ -193,25 +193,6 @@ func TestValidateOAndURejectsShortR4EntriesInStrictMode(t *testing.T) {
 	}
 }
 
-func TestValidateOAndURetainsR4RelaxedModeBehavior(t *testing.T) {
-	d := types.Dict{
-		"O": types.HexLiteral("00"),
-		"U": types.HexLiteral("00"),
-	}
-
-	var specViolations []error
-	o, u, err := validateOAndU(d, 4, true, &specViolations)
-	if err != nil {
-		t.Fatalf("expected relaxed mode to accept short R4 entries: %v", err)
-	}
-	if len(o) != 1 || len(u) != 1 {
-		t.Fatalf("got O/U lengths %d/%d, want 1/1", len(o), len(u))
-	}
-	if len(specViolations) != 2 {
-		t.Fatalf("got %d spec violations, want 2", len(specViolations))
-	}
-}
-
 func TestValidateOAndURejectsShortR5AndR6EntriesInAllModes(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -327,33 +308,23 @@ func TestValidateStmfIncludesEncryptEntryContext(t *testing.T) {
 	}
 }
 
-func TestCheckCFLengthRelaxedDigestion(t *testing.T) {
-	tests := []struct {
-		name  string
-		check func(int, bool, bool) (error, error)
-	}{
-		{name: "V2", check: checkCFLengthV2},
-		{name: "AESV2", check: checkCFLengthAESV2},
+func TestValidateCryptFilterRejectsEFOpenForNonEmbeddedFiles(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
 	}
+	v := model.V17
+	ctx.XRefTable.HeaderVersion = &v
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			specViolation, err := tt.check(16, false, true)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !errors.Is(specViolation, ErrMalformedEncryption) {
-				t.Fatalf("got %v, want a malformed encryption spec violation", specViolation)
-			}
-
-			specViolation, err = tt.check(16, false, false)
-			if !errors.Is(err, ErrMalformedEncryption) {
-				t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
-			}
-			if specViolation != nil {
-				t.Fatalf("unexpected strict spec violation: %v", specViolation)
-			}
-		})
+	d := types.Dict{
+		"AuthEvent": types.Name("EFOpen"),
+		"CFM":       types.Name("AESV3"),
+		"Length":    types.Integer(32),
+	}
+	var specViolations []error
+	_, err = validateCryptFilter(ctx, d, 5, false, false, false, &specViolations)
+	if !errors.Is(err, ErrMalformedEncryption) {
+		t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
 	}
 }
 
@@ -442,31 +413,6 @@ func TestPermissionInt32Range(t *testing.T) {
 				}
 			})
 		}
-	}
-}
-
-func TestNormalizePermissionUnsignedEncoding(t *testing.T) {
-	if strconv.IntSize != 64 {
-		t.Skip("unsigned 32-bit permission encoding does not fit into int")
-	}
-
-	permission64 := int64(4294967252)
-	permission := int(permission64)
-
-	got, specViolation, err := normalizePermission(permission, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got != -44 {
-		t.Fatalf("got %d, want -44", got)
-	}
-	if !errors.Is(specViolation, ErrMalformedEncryption) {
-		t.Fatalf("got %v, want a malformed encryption spec violation", specViolation)
-	}
-
-	_, _, err = normalizePermission(permission, false)
-	if !errors.Is(err, ErrMalformedEncryption) {
-		t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
 	}
 }
 

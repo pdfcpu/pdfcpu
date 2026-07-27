@@ -306,7 +306,9 @@ func offsetLastXRefSection(ctx *model.Context, skip int64) (*int64, error) {
 		}
 
 		p = p[:posEOF]
-		offset, err = strconv.ParseInt(strings.TrimSpace(string(p)), 10, 64)
+		s := strings.TrimSpace(string(p))
+		s = strings.TrimSpace(strings.TrimRight(s, "%"))
+		offset, err = strconv.ParseInt(s, 10, 64)
 		if err != nil {
 			return nil, errInvalidLastXRefSection
 		}
@@ -984,7 +986,11 @@ func parseTrailerID(xRefTable *model.XRefTable, d types.Dict) error {
 		return nil
 	}
 
-	if xRefTable.Encrypt != nil {
+	if xRefTable.Encrypt == nil {
+		return nil
+	}
+
+	if xRefTable.ValidationMode == model.ValidationStrict {
 		return errMissingTrailerID
 	}
 
@@ -3500,10 +3506,13 @@ func setupEncryptionKey(ctx *model.Context, d types.Dict) (err error) {
 	}
 
 	if len(ctx.ID) == 0 {
-		return fmt.Errorf("read encryption ID: %w", errMissingTrailerID)
-	}
-	if ctx.E.ID, err = ctx.IDFirstElement(); err != nil {
-		return fmt.Errorf("read encryption ID: %w", err)
+		if ctx.XRefTable.ValidationMode == model.ValidationStrict {
+			return fmt.Errorf("read encryption ID: %w", errMissingTrailerID)
+		}
+	} else {
+		if ctx.E.ID, err = ctx.IDFirstElement(); err != nil {
+			return fmt.Errorf("read encryption ID: %w", err)
+		}
 	}
 
 	var ok bool

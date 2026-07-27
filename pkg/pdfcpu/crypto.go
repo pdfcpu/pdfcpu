@@ -1210,6 +1210,7 @@ func validateCryptFilter(
 	v int,
 	pubKeySecHandler,
 	relaxed bool,
+	allowEFOpen bool,
 	specViolations *[]error,
 ) (bool, error) {
 	// v = 4,5,6
@@ -1226,7 +1227,7 @@ func validateCryptFilter(
 
 	length := d.IntEntry("Length")
 	pdf20 := ctx.PDF20()
-	if length == nil && !pdf20 {
+	if length == nil && !pdf20 && v != 5 {
 		return false, fmt.Errorf("%w: crypt filter missing entry \"Length\"", ErrMalformedEncryption)
 	}
 	if v == 4 {
@@ -1238,7 +1239,7 @@ func validateCryptFilter(
 	}
 
 	ae := d.NameEntry("AuthEvent")
-	if ae != nil && *ae != "DocOpen" {
+	if ae != nil && *ae != "DocOpen" && (!allowEFOpen || *ae != "EFOpen") {
 		return false, fmt.Errorf("%w: crypt filter invalid entry \"AuthEvent\"", ErrMalformedEncryption)
 	}
 
@@ -1260,13 +1261,14 @@ func locateCFEntry(
 	key string,
 	pubKeySecHandler,
 	relaxed bool,
+	allowEFOpen bool,
 	specViolations *[]error,
 ) (bool, error) {
 	d1 := d.DictEntry(key)
 	if d1 == nil {
 		return false, fmt.Errorf("%w: entry \"%s\" missing in \"CF\"", ErrMalformedEncryption, key)
 	}
-	return validateCryptFilter(ctx, d1, v, pubKeySecHandler, relaxed, specViolations)
+	return validateCryptFilter(ctx, d1, v, pubKeySecHandler, relaxed, allowEFOpen, specViolations)
 }
 
 func validateStmf(
@@ -1280,7 +1282,7 @@ func validateStmf(
 ) error {
 	n := d.NameEntry("StmF")
 	if n != nil && *n != "Identity" {
-		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed, specViolations)
+		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed, false, specViolations)
 		if err != nil {
 			return fmt.Errorf("encrypt dict entry \"StmF\": %w", err)
 		}
@@ -1300,7 +1302,7 @@ func validateStrf(
 ) error {
 	n := d.NameEntry("StrF")
 	if n != nil && *n != "Identity" {
-		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed, specViolations)
+		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed, false, specViolations)
 		if err != nil {
 			return fmt.Errorf("encrypt dict entry \"StrF\": %w", err)
 		}
@@ -1320,7 +1322,7 @@ func validateEFF(
 ) error {
 	n := d.NameEntry("EFF")
 	if n != nil && *n != "Identity" {
-		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed, specViolations)
+		aes, err := locateCFEntry(ctx, cfDict, v, *n, pubKeySecHandler, relaxed, true, specViolations)
 		if err != nil {
 			return fmt.Errorf("encrypt dict entry \"EFF\": %w", err)
 		}
