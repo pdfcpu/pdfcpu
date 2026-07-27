@@ -36,6 +36,12 @@ var ErrFormFieldCycle = errors.New("circular form field tree")
 // ErrStructureTreeCycle signals a structure tree cycle.
 var ErrStructureTreeCycle = errors.New("circular structure tree")
 
+// ErrActionCycle signals a circular action chain.
+var ErrActionCycle = errors.New("circular action chain")
+
+// ErrBeadCycle signals a circular bead chain that does not terminate correctly.
+var ErrBeadCycle = errors.New("circular bead chain")
+
 // MaxRecursionDepth returns the configured recursion depth limit.
 func (xRefTable *XRefTable) MaxRecursionDepth() int {
 	if xRefTable == nil || xRefTable.Conf == nil || xRefTable.Conf.Limits.MaxRecursionDepth <= 0 {
@@ -167,6 +173,70 @@ func (v *StructureTreeVisit) Enter(objNr int) error {
 
 // Leave leaves the current structure tree node.
 func (v *StructureTreeVisit) Leave(objNr int) {
+	if v == nil || objNr == 0 {
+		return
+	}
+	delete(v.ancestors, objNr)
+}
+
+// ActionVisit tracks action-chain ancestor traversal state.
+type ActionVisit struct {
+	ancestors map[int]bool
+}
+
+// NewActionVisit returns an action-chain traversal state.
+func NewActionVisit() *ActionVisit {
+	return &ActionVisit{
+		ancestors: map[int]bool{},
+	}
+}
+
+// Enter rejects action-chain cycles.
+func (v *ActionVisit) Enter(objNr int) error {
+	if v == nil || objNr == 0 {
+		return nil
+	}
+	if v.ancestors[objNr] {
+		return fmt.Errorf("obj#%d: %w", objNr, ErrActionCycle)
+	}
+	v.ancestors[objNr] = true
+	return nil
+}
+
+// Leave leaves the current action-chain node.
+func (v *ActionVisit) Leave(objNr int) {
+	if v == nil || objNr == 0 {
+		return
+	}
+	delete(v.ancestors, objNr)
+}
+
+// BeadVisit tracks bead-chain ancestor traversal state.
+type BeadVisit struct {
+	ancestors map[int]bool
+}
+
+// NewBeadVisit returns a bead-chain traversal state.
+func NewBeadVisit() *BeadVisit {
+	return &BeadVisit{
+		ancestors: map[int]bool{},
+	}
+}
+
+// Enter rejects bead-chain cycles.
+func (v *BeadVisit) Enter(objNr int) error {
+	if v == nil || objNr == 0 {
+		return nil
+	}
+	if v.ancestors[objNr] {
+		return fmt.Errorf("obj#%d: %w", objNr, ErrBeadCycle)
+	}
+	v.ancestors[objNr] = true
+	return nil
+}
+
+// Leave leaves the current bead-chain node.
+func (v *BeadVisit) Leave(objNr int) {
 	if v == nil || objNr == 0 {
 		return
 	}

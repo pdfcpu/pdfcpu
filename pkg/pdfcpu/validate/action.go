@@ -868,19 +868,40 @@ func validateActionDictCore(xRefTable *model.XRefTable, n *types.Name, d types.D
 }
 
 func validateActionDictObject(xRefTable *model.XRefTable, d types.Dict, o types.Object, context string) error {
-	if err := validateActionDict(xRefTable, d); err != nil {
+	return validateActionDictObjectDepth(xRefTable, d, o, context, 0, model.NewActionVisit())
+}
+
+func validateActionDictObjectDepth(
+	xRefTable *model.XRefTable,
+	d types.Dict,
+	o types.Object,
+	context string,
+	depth int,
+	visit *model.ActionVisit,
+) error {
+	if err := xRefTable.CheckRecursionDepth("action chain", depth); err != nil {
+		return fmt.Errorf("%s: %w", objectContext(context, o), err)
+	}
+
+	objNr, _ := indirectRefObjectNumber(o)
+	if err := visit.Enter(objNr); err != nil {
+		return fmt.Errorf("%s: %w", objectContext(context, o), err)
+	}
+	defer visit.Leave(objNr)
+
+	if err := validateActionDict(xRefTable, d, depth, visit); err != nil {
 		return fmt.Errorf("%s: %w", objectContext(context, o), err)
 	}
 	return nil
 }
 
-func validateNextAction(xRefTable *model.XRefTable, o types.Object) error {
+func validateNextAction(xRefTable *model.XRefTable, o types.Object, depth int, visit *model.ActionVisit) error {
 	d, err := xRefTable.DereferenceDict(o)
 	if err == nil {
 		if d == nil {
 			return nil
 		}
-		if err := validateActionDictObject(xRefTable, d, o, "action Next"); err != nil {
+		if err := validateActionDictObjectDepth(xRefTable, d, o, "action Next", depth+1, visit); err != nil {
 			return err
 		}
 		return nil
@@ -902,7 +923,7 @@ func validateNextAction(xRefTable *model.XRefTable, o types.Object) error {
 		if d == nil {
 			continue
 		}
-		if err := validateActionDictObject(xRefTable, d, v, fmt.Sprintf("action Next[%d]", i)); err != nil {
+		if err := validateActionDictObjectDepth(xRefTable, d, v, fmt.Sprintf("action Next[%d]", i), depth+1, visit); err != nil {
 			return err
 		}
 	}
@@ -910,7 +931,7 @@ func validateNextAction(xRefTable *model.XRefTable, o types.Object) error {
 	return nil
 }
 
-func validateActionDict(xRefTable *model.XRefTable, d types.Dict) error {
+func validateActionDict(xRefTable *model.XRefTable, d types.Dict, depth int, visit *model.ActionVisit) error {
 	dictName := "actionDict"
 
 	// Type, optional, name
@@ -942,7 +963,7 @@ func validateActionDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	if o, ok := d.Find("Next"); ok {
-		if err := validateNextAction(xRefTable, o); err != nil {
+		if err := validateNextAction(xRefTable, o, depth, visit); err != nil {
 			return err
 		}
 	}

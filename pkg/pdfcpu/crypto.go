@@ -1204,6 +1204,14 @@ func checkCryptFilterCFM(cfm string, v int) error {
 	return nil
 }
 
+func validateCryptFilterAuthEvent(d types.Dict, allowEFOpen bool) error {
+	ae := d.NameEntry("AuthEvent")
+	if ae != nil && *ae != "DocOpen" && (!allowEFOpen || *ae != "EFOpen") {
+		return fmt.Errorf("%w: crypt filter invalid entry \"AuthEvent\"", ErrMalformedEncryption)
+	}
+	return nil
+}
+
 func validateCryptFilter(
 	ctx *model.Context,
 	d types.Dict,
@@ -1238,9 +1246,8 @@ func validateCryptFilter(
 		appendSpecViolation(specViolations, specViolation)
 	}
 
-	ae := d.NameEntry("AuthEvent")
-	if ae != nil && *ae != "DocOpen" && (!allowEFOpen || *ae != "EFOpen") {
-		return false, fmt.Errorf("%w: crypt filter invalid entry \"AuthEvent\"", ErrMalformedEncryption)
+	if err := validateCryptFilterAuthEvent(d, allowEFOpen); err != nil {
+		return false, err
 	}
 
 	if pubKeySecHandler {

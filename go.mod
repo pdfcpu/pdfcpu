@@ -3,13 +3,13 @@ module github.com/pdfcpu/pdfcpu
 go 1.25.0
 
 require (
-	github.com/hhrutter/tiff v1.0.5
-	github.com/mattn/go-runewidth v0.0.24
+	github.com/hhrutter/tiff v1.0.6
+	github.com/mattn/go-runewidth v0.0.27
 	github.com/spf13/cobra v1.10.2
-	go.yaml.in/yaml/v3 v3.0.4
-	golang.org/x/crypto v0.53.0
-	golang.org/x/image v0.43.0
-	golang.org/x/text v0.38.0
+	go.yaml.in/yaml/v3 v3.0.5
+	golang.org/x/crypto v0.54.0
+	golang.org/x/image v0.44.0
+	golang.org/x/text v0.40.0
 )
 
 require (
