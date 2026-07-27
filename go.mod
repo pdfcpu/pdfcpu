@@ -6,7 +6,7 @@ require (
 	github.com/hhrutter/lzw v1.0.0
 	github.com/hhrutter/pkcs7 v0.2.2
 	github.com/hhrutter/tiff v1.0.3
-	github.com/mattn/go-runewidth v0.0.24
+	github.com/mattn/go-runewidth v0.0.27
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/crypto v0.52.0
