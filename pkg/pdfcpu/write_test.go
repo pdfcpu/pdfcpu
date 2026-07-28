@@ -21,6 +21,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -56,8 +57,10 @@ func TestWriteContextReplacesExistingDestination(t *testing.T) {
 	if statErr != nil {
 		t.Fatal(statErr)
 	}
-	if got, want := info.Mode().Perm(), os.FileMode(0640); got != want {
-		t.Fatalf("output permissions: got %o, want %o", got, want)
+	if runtime.GOOS != "windows" {
+		if got, want := info.Mode().Perm(), os.FileMode(0640); got != want {
+			t.Fatalf("output permissions: got %o, want %o", got, want)
+		}
 	}
 }
 

@@ -495,13 +495,7 @@ func TestCloseStampFilesErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "replace input",
 			fn: func(t *testing.T) error {
-				f1 := createTempAPITestFile(t)
-				f2 := createTempAPITestFile(t)
-				tmpFile := f2.Name()
-				if err := os.Remove(tmpFile); err != nil {
-					t.Fatal(err)
-				}
-				return newStagedOutput(f1, f2, tmpFile, f1.Name(), "", "", "update watermarks").commit()
+				return commitStagedOutputWithReplaceError(t, "update watermarks")
 			},
 			wantErr: os.ErrNotExist,
 			want:    "update watermarks: replace input",

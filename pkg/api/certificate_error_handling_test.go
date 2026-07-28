@@ -270,7 +270,7 @@ func TestImportCertificatesPreflightPreventsPartialPublication(t *testing.T) {
 		t.Fatalf("expected joined preflight errors, got %v", err)
 	}
 	for _, fileName := range []string{emptyFile, missingFile} {
-		if !strings.Contains(err.Error(), fileName) {
+		if !strings.Contains(err.Error(), fmt.Sprintf("%q", fileName)) {
 			t.Fatalf("expected preflight error for %q, got %v", fileName, err)
 		}
 	}
@@ -311,7 +311,7 @@ func TestImportCertificatesRejectsDuplicateDestinations(t *testing.T) {
 	if !errors.Is(err, ErrDuplicateCertificateDestination) {
 		t.Fatalf("expected %v, got %v", ErrDuplicateCertificateDestination, err)
 	}
-	if !strings.Contains(err.Error(), filepath.Join(trustedDir, "shared.p7c")) {
+	if !strings.Contains(err.Error(), fmt.Sprintf("%q", filepath.Join(trustedDir, "shared.p7c"))) {
 		t.Fatalf("expected duplicate destination context, got %v", err)
 	}
 	if _, statErr := os.Stat(trustedDir); !errors.Is(statErr, os.ErrNotExist) {
@@ -715,7 +715,7 @@ func TestListCertificatesText(t *testing.T) {
 		t.Fatalf("expected %v, got %v", ErrNoCertificates, err)
 	}
 	for _, fileName := range invalidFiles {
-		if !strings.Contains(err.Error(), fileName) {
+		if !strings.Contains(err.Error(), fmt.Sprintf("%q", fileName)) {
 			t.Fatalf("expected joined error for %q, got %v", fileName, err)
 		}
 	}

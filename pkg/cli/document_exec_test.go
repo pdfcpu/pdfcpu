@@ -166,8 +166,8 @@ func TestListInfoFileJSONClosesEachInputBeforeNext(t *testing.T) {
 		_ *model.Configuration,
 	) (*pdfcpu.PDFInfo, error) {
 		if previous != nil {
-			if _, err := previous.Stat(); !errors.Is(err, os.ErrClosed) {
-				t.Fatalf("previous input remains open: %v", err)
+			if got, want := previous.Fd(), ^uintptr(0); got != want {
+				t.Fatalf("previous input descriptor: got %d, want %d", got, want)
 			}
 		}
 		previous = rs.(*os.File)
@@ -179,8 +179,8 @@ func TestListInfoFileJSONClosesEachInputBeforeNext(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := previous.Stat(); !errors.Is(err, os.ErrClosed) {
-		t.Fatalf("last input remains open: %v", err)
+	if got, want := previous.Fd(), ^uintptr(0); got != want {
+		t.Fatalf("last input descriptor: got %d, want %d", got, want)
 	}
 }
 

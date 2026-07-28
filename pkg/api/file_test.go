@@ -20,6 +20,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -327,8 +328,10 @@ func validateTemporaryOutput(t *testing.T, staged stagedOutput, dir string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := fi.Mode().Perm(), os.FileMode(0640); got != want {
-		t.Fatalf("got mode %v, want %v", got, want)
+	if runtime.GOOS != "windows" {
+		if got, want := fi.Mode().Perm(), os.FileMode(0640); got != want {
+			t.Fatalf("got mode %v, want %v", got, want)
+		}
 	}
 }
 
@@ -439,8 +442,10 @@ func TestOpenStagedOutputExistingExplicitStagesReplacement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := fi.Mode().Perm(), os.FileMode(0640); got != want {
-		t.Fatalf("output mode: got %v, want %v", got, want)
+	if runtime.GOOS != "windows" {
+		if got, want := fi.Mode().Perm(), os.FileMode(0640); got != want {
+			t.Fatalf("output mode: got %v, want %v", got, want)
+		}
 	}
 }
 

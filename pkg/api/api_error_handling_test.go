@@ -1498,13 +1498,7 @@ func TestCloseAnnotationFilesErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "replace input",
 			fn: func(t *testing.T) error {
-				f1 := createTempAPITestFile(t)
-				f2 := createTempAPITestFile(t)
-				tmpFile := f2.Name()
-				if err := os.Remove(tmpFile); err != nil {
-					t.Fatal(err)
-				}
-				return newStagedOutput(f1, f2, tmpFile, f1.Name(), "", "", "add annotations").commit()
+				return commitStagedOutputWithReplaceError(t, "add annotations")
 			},
 			wantErr: os.ErrNotExist,
 			want:    "add annotations: replace input",
@@ -1654,13 +1648,7 @@ func TestClosePageLayoutFilesErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "replace input",
 			fn: func(t *testing.T) error {
-				f1 := createTempAPITestFile(t)
-				f2 := createTempAPITestFile(t)
-				tmpFile := f2.Name()
-				if err := os.Remove(tmpFile); err != nil {
-					t.Fatal(err)
-				}
-				return newStagedOutput(f1, f2, tmpFile, f1.Name(), "", "", "set page layout").commit()
+				return commitStagedOutputWithReplaceError(t, "set page layout")
 			},
 			wantErr: os.ErrNotExist,
 			want:    "set page layout: replace input",
@@ -2025,13 +2013,7 @@ func TestClosePageModeFilesErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "replace input",
 			fn: func(t *testing.T) error {
-				f1 := createTempAPITestFile(t)
-				f2 := createTempAPITestFile(t)
-				tmpFile := f2.Name()
-				if err := os.Remove(tmpFile); err != nil {
-					t.Fatal(err)
-				}
-				return newStagedOutput(f1, f2, tmpFile, f1.Name(), "", "", "set page mode").commit()
+				return commitStagedOutputWithReplaceError(t, "set page mode")
 			},
 			wantErr: os.ErrNotExist,
 			want:    "set page mode: replace input",
@@ -2367,13 +2349,7 @@ func TestCloseViewerPreferencesFilesErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "replace input",
 			fn: func(t *testing.T) error {
-				f1 := createTempAPITestFile(t)
-				f2 := createTempAPITestFile(t)
-				tmpFile := f2.Name()
-				if err := os.Remove(tmpFile); err != nil {
-					t.Fatal(err)
-				}
-				return newStagedOutput(f1, f2, tmpFile, f1.Name(), "", "", "set viewer preferences").commit()
+				return commitStagedOutputWithReplaceError(t, "set viewer preferences")
 			},
 			wantErr: os.ErrNotExist,
 			want:    "set viewer preferences: replace input",
@@ -2868,13 +2844,7 @@ func TestCloseTrimFilesErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "replace input",
 			fn: func(t *testing.T) error {
-				f1 := createTempAPITestFile(t)
-				f2 := createTempAPITestFile(t)
-				tmpFile := f2.Name()
-				if err := os.Remove(tmpFile); err != nil {
-					t.Fatal(err)
-				}
-				return newStagedOutput(f1, f2, tmpFile, f1.Name(), "", "", "trim").commit()
+				return commitStagedOutputWithReplaceError(t, "trim")
 			},
 			wantErr: os.ErrNotExist,
 			want:    "trim: replace input",
@@ -3045,13 +3015,7 @@ func TestCloseOptimizeFilesErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "replace input",
 			fn: func(t *testing.T) error {
-				f1 := createTempAPITestFile(t)
-				f2 := createTempAPITestFile(t)
-				tmpFile := f2.Name()
-				if err := os.Remove(tmpFile); err != nil {
-					t.Fatal(err)
-				}
-				return newStagedOutput(f1, f2, tmpFile, f1.Name(), "", "", "optimize").commit()
+				return commitStagedOutputWithReplaceError(t, "optimize")
 			},
 			wantErr: os.ErrNotExist,
 			want:    "optimize: replace input",
@@ -3082,6 +3046,18 @@ func createTempAPITestFile(t *testing.T) *os.File {
 		t.Fatal(err)
 	}
 	return f
+}
+
+func commitStagedOutputWithReplaceError(t *testing.T, operation string) error {
+	t.Helper()
+
+	input := createTempAPITestFile(t)
+	output := createTempAPITestFile(t)
+	staged := newStagedOutput(input, output, output.Name(), input.Name(), "", "", operation)
+	staged.operations.replaceFn = func(string, string) error {
+		return os.ErrNotExist
+	}
+	return staged.commit()
 }
 
 func pdf20Reader(t *testing.T, elems ...string) io.ReadSeeker {

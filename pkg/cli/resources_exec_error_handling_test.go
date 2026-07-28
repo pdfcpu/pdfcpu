@@ -338,7 +338,7 @@ func TestImportImagesSourceErrorsIncludeCLIContext(t *testing.T) {
 		if !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 		}
-		want := "import images: image 2 " + `"` + missing + `": open`
+		want := fmt.Sprintf("import images: image 2 %q: open", missing)
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("expected %q, got %q", want, err)
 		}

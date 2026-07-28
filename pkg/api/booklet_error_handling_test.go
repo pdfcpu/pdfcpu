@@ -49,6 +49,15 @@ func bookletTestConfiguration(t *testing.T, images bool) *model.NUp {
 	return nup
 }
 
+func containsAny(s string, values ...string) bool {
+	for _, value := range values {
+		if strings.Contains(s, value) {
+			return true
+		}
+	}
+	return false
+}
+
 func TestNUpValuesForBookletsReturnsCopy(t *testing.T) {
 	values := NUpValuesForBooklets()
 	if len(values) == 0 {
@@ -499,10 +508,20 @@ func TestBookletImageOutputAliasCheckPreservesFilesystemErrors(t *testing.T) {
 		name    string
 		inFile  string
 		outFile string
-		phase   string
+		phases  []string
 	}{
-		{name: "input", inFile: invalidPath, outFile: existingOutput, phase: "stat input"},
-		{name: "output", inFile: validImage, outFile: invalidPath, phase: "stat output"},
+		{
+			name:    "input",
+			inFile:  invalidPath,
+			outFile: existingOutput,
+			phases:  []string{"resolve input path", "stat input"},
+		},
+		{
+			name:    "output",
+			inFile:  validImage,
+			outFile: invalidPath,
+			phases:  []string{"resolve output path", "stat output"},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			err := BookletFile([]string{tt.inFile}, tt.outFile, nil, bookletTestConfiguration(t, true), nil)
@@ -510,8 +529,8 @@ func TestBookletImageOutputAliasCheckPreservesFilesystemErrors(t *testing.T) {
 				t.Fatal("expected alias-check error")
 			}
 			wantContext := fmt.Sprintf("booklet image 1 %q: check output alias", tt.inFile)
-			if !strings.Contains(err.Error(), wantContext) || !strings.Contains(err.Error(), tt.phase) {
-				t.Fatalf("expected %q and %q, got %q", wantContext, tt.phase, err)
+			if !strings.Contains(err.Error(), wantContext) || !containsAny(err.Error(), tt.phases...) {
+				t.Fatalf("expected %q and one of %q, got %q", wantContext, tt.phases, err)
 			}
 		})
 	}

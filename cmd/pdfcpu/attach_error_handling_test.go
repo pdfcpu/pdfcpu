@@ -18,6 +18,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -113,7 +114,7 @@ func TestAttachmentFilesReportsGlobWithoutMatches(t *testing.T) {
 	if !errors.Is(err, errNoAttachmentGlobMatches) {
 		t.Fatalf("expected %v, got %v", errNoAttachmentGlobMatches, err)
 	}
-	want := `add attachments: expand attachment glob "` + pattern + `": no matches`
+	want := fmt.Sprintf("add attachments: expand attachment glob %q: no matches", pattern)
 	if !strings.Contains(err.Error(), want) {
 		t.Fatalf("expected %q in %q", want, err)
 	}

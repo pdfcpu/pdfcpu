@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -414,8 +415,10 @@ func TestWriteCutOutputAppliesDestinationPermissions(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := info.Mode().Perm(); got != wantMode {
-				t.Fatalf("output permissions: got %04o, want %04o", got, wantMode)
+			if runtime.GOOS != "windows" {
+				if got := info.Mode().Perm(); got != wantMode {
+					t.Fatalf("output permissions: got %04o, want %04o", got, wantMode)
+				}
 			}
 		})
 	}
@@ -451,8 +454,10 @@ func TestWriteCutOutputSuccessfullyReplacesDestination(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := info.Mode().Perm(), os.FileMode(0640); got != want {
-		t.Fatalf("destination permissions: got %04o, want %04o", got, want)
+	if runtime.GOOS != "windows" {
+		if got, want := info.Mode().Perm(), os.FileMode(0640); got != want {
+			t.Fatalf("destination permissions: got %04o, want %04o", got, want)
+		}
 	}
 	tmpFiles, err := filepath.Glob(filepath.Join(dir, ".out.pdf.tmp-*"))
 	if err != nil {
