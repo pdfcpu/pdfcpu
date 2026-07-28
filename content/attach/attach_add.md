@@ -29,6 +29,12 @@ pdfcpu attachments add inFile file [ , desc ]... [flags]
 
 <br>
 
+Attachment paths may use Go-style glob patterns such as `*.png`, `report-?.csv`, or `chapter-[1-3].pdf`.
+An unmatched or malformed pattern is reported as an error.
+A description supplied after a comma is preserved for every file matched by that pattern.
+
+<br>
+
 ## Examples
 
 Attach pictures to a coverpage PDF for easy content delivery:

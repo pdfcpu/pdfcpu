@@ -33,10 +33,20 @@ Some fonts - typically CJKV/Asian fonts cover a wide range of Unicode code point
   <img style="border-color:silver" border="1" src="../resources/planecheat.png" height="300">
 </p>
 
-The following command will produce one cheat sheet for each Unicode plane with code points covered in a font in the current dir:
+## Usage
 
 ```
-$ pdfcpu font cheat Unifont-JPMedium
+pdfcpu fonts cheatsheet [ fontNames... ] [flags]
+```
+
+`fontNames` are the PostScript names shown by `pdfcpu fonts list`.
+When no names are supplied, pdfcpu creates cheat sheets for all installed user fonts.
+
+The following command produces one cheat sheet for each Unicode plane containing code points covered by the installed
+`Unifont-JPMedium` font:
+
+```
+$ pdfcpu fonts cheatsheet Unifont-JPMedium
 creating cheatsheets for: Unifont-JPMedium
 
 ls Unifont-JP*
@@ -49,7 +59,7 @@ ls Unifont-JP*
 The following command will produce cheat sheets for all user fonts installed:
 
 ```
-$ pdfcpu font cheat
+$ pdfcpu fonts cheatsheet
 creating cheatsheets for: Roboto-Regular
 creating cheatsheets for: STSong
 creating cheatsheets for: STSongti-SC-Black
@@ -64,4 +74,3 @@ creating cheatsheets for: Unifont-JPMedium
 creating cheatsheets for: UnifontMedium
 creating cheatsheets for: UnifontUpperMedium
 ```
-

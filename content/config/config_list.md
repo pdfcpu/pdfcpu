@@ -31,10 +31,10 @@ config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 #############################
 
 # Creation date
-created: 2026-06-02 23:04
+created: YYYY-MM-DD HH:MM
 
 # version (Do not edit!)
-version: v0.13.0 dev
+version: v0.14.0-rc.1 dev
 
 # toggle for inFilename extension check (.pdf)
 checkFileNameExt: true
@@ -113,6 +113,10 @@ timeoutCRL: 10
 # http timeout in seconds for OCSP revocation checking.
 timeoutOCSP: 10
 
+# private hosts explicitly trusted for CRL and OCSP requests.
+# example: [ocsp.example.corp, crl.example.corp]
+allowedRevocationHosts: []
+
 # preferred certificate revocation checking mechanism:
 # crl
 # ocsp
@@ -132,3 +136,16 @@ maxDecodeBytes: 512 MB
 maxImagePixels: 100 MP
 maxImageBytes: 512 MB
 ```
+
+## Validation mode
+
+`validationMode` sets the default validation policy used when reading PDFs:
+
+* `ValidationStrict` rejects specification violations detected by pdfcpu's implemented validation rules.
+* `ValidationRelaxed` is the default. It applies the same validation baseline while permitting supported real-world PDF
+  writer deviations and safe, unambiguous recovery.
+
+Both modes use the same security and resource limits. The setting controls conformance decisions; it does not certify
+complete ISO 32000 compliance or disable all low-level reader recovery.
+
+See [Validate](/core/validate) for the full mode definitions and current validation scope.

@@ -18,11 +18,11 @@ You can look up its location either like so:
 
 ```
 $ pdfcpu version
-version: v0.13.0 dev
+version: v0.14.0-rc.1 dev
  config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
- commit: f54bb349
-   date: 2026-06-02 22:21:59 UTC
-     go: go1.26.1
+ commit: f08edb2c
+   date: 2026-07-27 20:44:48 UTC
+     go: go1.26.5
 ```
 
 `pdfcpu config list` will also print the config file path followed by its content.
@@ -60,7 +60,7 @@ $ tree
 
 ## User Fonts
 
-User fonts are installed using the [font install](/fonts/fonts_install) command.
+User fonts are installed using the [fonts install](/fonts/fonts_install) command.
 
 pdfcpu also stores internal representations of installed user fonts in the config dir.
 

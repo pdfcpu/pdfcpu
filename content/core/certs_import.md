@@ -5,9 +5,11 @@ title: "Import Certificates"
 
 # Import Certificates
 
-Import missing root or intermediate certificate material into pdfcpu's local certificate store.
+Import root or intermediate certificate material into pdfcpu's local certificate store.
 
 Imported certificates are stored below `.../pdfcpu/certs` and are used by subsequent signature checks for local chain building.
+If an imported file resolves to the same destination name as an installed file, pdfcpu replaces the installed file
+transactionally. A failed multi-file import restores any files already replaced by that import.
 
 ```
 pdfcpu certificates import inFile...

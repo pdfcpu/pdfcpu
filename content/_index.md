@@ -32,7 +32,6 @@ layout: default
 </div>
 
 <div class="home-follow">
-  <p>Now supporting CLI piping and signature integrity validation!</p>
   <div class="home-social">
     <a href="https://twitter.com/intent/follow?screen_name=pdfcpu"><img src="resources/x.png" height="30"></a>
     <a href="https://bsky.app/profile/pdfcpu.bsky.social"><img src="resources/bluesky.png" height="30"></a>

@@ -18,6 +18,7 @@ It only makes certificate material available to pdfcpu for local trust-chain ins
 
 ```
 pdfcpu certificates list
+pdfcpu certificates list --json
 pdfcpu certificates inspect inFile
 pdfcpu certificates import inFile...
 pdfcpu certificates reset

@@ -29,6 +29,12 @@ pdfcpu portfolio add inFile file [ , desc ]... [flags]
 
 <br>
 
+Portfolio entry paths may use Go-style glob patterns such as `*.jpg`, `scan-?.png`, or `appendix-[A-C].pdf`.
+An unmatched or malformed pattern is reported as an error.
+A description supplied after a comma is preserved for every file matched by that pattern.
+
+<br>
+
 ## Examples
 
 Add pictures to a PDF portfolio for easy content delivery:

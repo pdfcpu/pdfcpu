@@ -95,7 +95,7 @@ pdfcpu grid   [ description ] outFile m n inFile | imageFiles... [flags]
 
 pdfcpu fonts list       [flags]
 pdfcpu fonts install    fontFiles... [flags]
-pdfcpu fonts cheatsheet fontFiles... [flags]
+pdfcpu fonts cheatsheet [ fontNames... ] [flags]
 
 pdfcpu images list    inFile... [flags]
 pdfcpu images extract inFile outDir [flags]

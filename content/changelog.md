@@ -34,6 +34,23 @@ Entries link to GitHub releases or commits where available.
 
 <article class="changelog-entry">
   <div class="changelog-meta">
+    <time datetime="2026-07-28">2026-07-28</time>
+    <span class="changelog-kind">Development</span>
+    <a href="https://github.com/pdfcpu/pdfcpu/compare/v0.13.0...master">v0.14.0-rc.1 dev</a>
+  </div>
+  <p>
+  Harden API and CLI error handling.<br>
+  Harden signature, timestamp, PKCS#7, certificate-path, and revocation processing.<br>
+  Eliminate dependencies by using standard-library error handling and internal LZW and PKCS#7
+  implementations.<br><br>
+  Fix #415, #866, #990, #1051, #1088, #1091, #1101, #1123, #1127, #1161, #1265, #1274, #1279, #1282, #1289,
+  #1302, #1311, #1325, #1326, #1340, #1383, #1385, #1387, #1403, #1404, #1417, #1419, #1431, #1437-#1440,
+  #1448. Add regression coverage for #399, #401, #933, #1059, and #1271.
+  </p>
+</article>
+
+<article class="changelog-entry">
+  <div class="changelog-meta">
     <time datetime="2026-06-09">2026-06-09</time>
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.13.0">v0.13.0</a>

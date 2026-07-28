@@ -7,7 +7,7 @@ title: "Signatures"
 
 Signature commands inspect or remove digital signatures present in a PDF.
 
-pdfcpu's open source signature handling focuses on PDF signature integrity:
+Signature validation is under active development. The current implementation focuses on PDF signature integrity:
 
 * signed byte ranges
 * CMS/PKCS#7 processing

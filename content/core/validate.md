@@ -7,11 +7,14 @@ title: "Validate"
 
 Any PDF file you would like to process with pdfcpu needs to pass validation.
 
-This command validates `inFile` against:
+Validation checks the PDF structures and objects covered by pdfcpu's implemented validation rules against:
 
 * PDF 1.7: [PDF 32000-1:2008](https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/PDF32000_2008.pdf)
 
 * PDF 2.0: basic checks against [PDF 32000-2:2020](https://www.pdfa-inc.org/product/iso-32000-2-pdf-2-0-bundle-sponsored-access/) (ongoing task)
+
+Validation is not a certification of complete ISO 32000 compliance. PDF 2.0 coverage is basic and continuously
+improving.
 
 <br>
 Validation can also check for broken links.
@@ -52,12 +55,34 @@ pdfcpu validate inFile... [flags]
 
 ##### Strict
 
-This mode validates against PDF 32000-1:2008 (PDF 1.7) and performs basic PDF 2.0 checks.
+Strict validation rejects specification violations detected by pdfcpu's implemented validation rules.
+
+It validates against PDF 32000-1:2008 (PDF 1.7) and performs basic PDF 32000-2:2020 (PDF 2.0) checks.
 
 ##### Relaxed
 
-This is the default mode for validation.<br>
-It behaves like strict but does not complain about common seen violations of the specification by PDF writers.
+Relaxed validation is the default and is intended for processing real-world PDFs.
+
+It applies the same validation baseline as strict mode but permits a curated set of common PDF writer deviations.
+Depending on the violation, pdfcpu may accept an alternate representation, tolerate a missing or inconsistent entry, or
+apply a safe, unambiguous repair to the in-memory document.
+
+Relaxed mode broadens compatibility; it does not relax security or resource limits. Unreadable input, ambiguous
+corruption, unsafe structures, and violations outside the supported compatibility exceptions still fail validation.
+
+#### Reader recovery
+
+Validation mode controls conformance decisions, not every aspect of PDF parsing. The reader may perform bounded
+recovery of low-level structures, such as damaged cross-reference information, in either mode when reconstruction is
+unambiguous.
+
+Consequently, strict validation does not mean that the original byte stream was free of defects. It means that the
+document pdfcpu reconstructed passed the strict checks currently implemented.
+
+#### Scope
+
+Strict and relaxed are validation policies. They do not select a PDF/A profile, provide complete PDF 2.0 validation, or
+constitute a signature trust, legal-validity, or regulatory-compliance assessment.
 
 <br>
 

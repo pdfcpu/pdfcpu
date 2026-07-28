@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ site.LanguageCode | default "en-us" }}">
+<html lang="{{ site.Language.Locale | default "en-US" }}">
   <head>
     <title>{{ if .IsHome }}PDF tooling for Go and the command line | {{ site.Title }}{{ else }}{{ .Title }} | {{ site.Title }}{{ end }}</title>
 
@@ -49,6 +49,7 @@
 
         <a href="{{ "changelog" | relURL }}" class="{{ if eq .RelPermalink "/changelog/" }}current{{ end }}">Changelog</a><br>
         <a href="{{ "future" | relURL }}" class="{{ if eq .RelPermalink "/future/" }}current{{ end }}">Future Directions</a><br>
+        <a href="{{ site.Params.repositoryURL }}/blob/master/CONTRIBUTING.md">Contributing</a><br>
       </header>
       <section class="{{ if .IsHome }}home-section{{ else }}content-section{{ end }}">
         {{ .Content }}

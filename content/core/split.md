@@ -36,6 +36,11 @@ pdfcpu split inFile outDir [ span | pageNr... ] [flags]
 | inFile       | PDF input file, use `-` to read from stdin      | yes
 | outDir       | output directory    | yes
 | span         | split span in pages | no       | 1
+| pageNr...    | page numbers at which a new output file starts in `page` mode | yes in `page` mode |
+
+In `span` mode, supply at most one positive span.
+In `bookmark` mode, do not supply a span or page numbers.
+In `page` mode, page numbers must be positive, unique, and sorted in ascending order.
 
 <br>
 
@@ -86,4 +91,3 @@ Split selected pages from a PDF streamed from S3 into a local output directory:
 $ aws s3 cp s3://acme-print/board-pack.pdf - \
    | pdfcpu split -m page - ./board-pack 10 25
 ```
-

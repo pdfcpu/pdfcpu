@@ -1,5 +1,5 @@
 baseURL = "https://pdfcpu.io/"
-languageCode = "en-us"
+locale = "en-US"
 title = "pdfcpu"
 disableKinds = ["taxonomy", "term"]
 

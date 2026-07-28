@@ -12,6 +12,9 @@ This command checks whether signed byte ranges still match their signatures and 
 Trust-related output is based on pdfcpu's configured local certificate store and available revocation information.
 It is useful for inspection and automation, but it is not a legal-validity, eIDAS, enterprise policy, or full long-term validation statement.
 
+Signature validation is under active development.
+Support for additional signature formats, validation rules, trust evidence, and long-term validation is being expanded.
+
 ```
 pdfcpu signatures validate inFile [flags]
 ```
@@ -110,6 +113,13 @@ You can configure timeout values for CRL and OCSP responders with:
 * `timeoutCRL`
 * `timeoutOCSP`
 
+Revocation requests reject loopback, private, link-local, multicast, and unspecified addresses by default.
+Use `allowedRevocationHosts` to explicitly allow private CRL or OCSP hosts that you trust, for example:
+
+```yaml
+allowedRevocationHosts: [ocsp.example.corp, crl.example.corp]
+```
+
 You may also configure your preferred certificate revocation checking mechanism with:
 
 * `preferredCertRevocationChecker`
@@ -126,19 +136,19 @@ While the PDF specification mainly focuses on PAdES-E-BES and PAdES-E-EPES for p
 * B-LTA
 
 PAdES-B levels are widely adopted and useful for describing the evidence present in modern signed PDFs.
-In the open source build, higher levels are reported as evidence indicators.
+Higher levels are reported as evidence indicators.
 They should not be read as a full long-term validation or compliance result.
 
 The PAdES baseline levels are defined in [ETSI EN 319 142-1 V1.2.1 (2024-01)](https://www.etsi.org/deliver/etsi_en/319100_319199/31914201/01.02.01_60/en_31914201v010201p.pdf) 6.1.
 
-| PAdES level | description | OSS handling |
+| PAdES level | description | pdfcpu handling |
 |:------------|:------------|:-------------|
 | B-B | Basic electronic signature | validated/reported |
 | B-T | B-B with timestamp evidence or DTS | detected/reported |
 | B-LT | B-T with embedded CRL and OCSP data | evidence detected/reported |
 | B-LTA | B-LT with archive timestamp evidence | evidence detected/reported |
 
-pdfcpu OSS currently focuses on signature integrity and PAdES-B-B validation.
+pdfcpu currently focuses on signature integrity and PAdES-B-B validation.
 Full trust-policy and LTV validation belong to a dedicated trust validation layer.
 
 ## Limitations
@@ -150,7 +160,7 @@ Current limitations mostly involve either older encryption standards restricted 
   * FieldMDP: not yet processed.
   * UR3: missing document checks for permissions defined by the UR transform method in the UR3 reference dictionary.
 * Catalog DSS: missing processing of the VRI structure.
-* Timestamps and LTV: timestamp, DSS, CRL and OCSP evidence may be detected and reported, but pdfcpu OSS does not perform full RFC3161 trust validation, VRI processing, PAdES-B-LT/B-LTA validation, or enterprise policy validation.
+* Timestamps and LTV: timestamp, DSS, CRL and OCSP evidence may be detected and reported, but pdfcpu does not perform full RFC3161 trust validation, VRI processing, PAdES-B-LT/B-LTA validation, or enterprise policy validation.
 * Elliptic curve encryption algorithms: support needs to be extended as standards keep evolving.
 * Go runtime restrictions: no support for SHA-1, which is considered insecure.
 
@@ -271,7 +281,8 @@ optimizing...
 
 In order to see the details for both signatures, supply `--all` and `--full`.
 Using a combination of short flags also works: `-af`.
-The `trusted` label shown for the document timestamp is pdfcpu's current CLI output for a successfully processed DTS and should be read in the context of the OSS limitations described above.
+The `trusted` label shown for the document timestamp is pdfcpu's current CLI output for a successfully processed DTS and
+should be read in the context of the limitations described above.
 
 At last, we take a look at a PDF with a usage rights signature.
 This is not a signature in the traditional sense, but rather a signed definition of permissions that PDF processors should obey.
