@@ -533,8 +533,18 @@ func TestWriteGobPublishesVerifiedTemporaryFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := validInstalledTTF("Demo", minimalSubsetFont(t))
-	if err := writeGob(fileName, want); err != nil {
+	var mode os.FileMode
+	ops := defaultGobPersistenceOperations()
+	chmod := ops.chmod
+	ops.chmod = func(f *os.File, fileMode os.FileMode) error {
+		mode = fileMode
+		return chmod(f, fileMode)
+	}
+	if err := writeGobWithOperations(fileName, want, ops); err != nil {
 		t.Fatal(err)
+	}
+	if mode != installedFontMode {
+		t.Fatalf("published font mode: got %04o, want %04o", mode, installedFontMode)
 	}
 	got := ttf{}
 	if err := readGob(fileName, &got); err != nil {
@@ -579,6 +589,9 @@ func TestWriteGobFailureSeamsPreserveCauseAndCleanup(t *testing.T) {
 	}{
 		{"encode", "encode", func(ops *gobPersistenceOperations, wantErr error) {
 			ops.encode = func(*os.File, ttf) error { return wantErr }
+		}},
+		{"permissions", "set permissions", func(ops *gobPersistenceOperations, wantErr error) {
+			ops.chmod = func(*os.File, os.FileMode) error { return wantErr }
 		}},
 		{"sync", "sync", func(ops *gobPersistenceOperations, wantErr error) {
 			ops.sync = func(*os.File) error { return wantErr }

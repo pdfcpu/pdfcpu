@@ -35,6 +35,17 @@ func closeAndRemove(t *testing.T, f *os.File, name string) {
 	}
 }
 
+func requireFileContent(t *testing.T, fileName, want, phase string) {
+	t.Helper()
+	bb, err := os.ReadFile(fileName)
+	if err != nil {
+		t.Fatalf("%s: %v", phase, err)
+	}
+	if got := string(bb); got != want {
+		t.Fatalf("%s: got %q, want %q", phase, got, want)
+	}
+}
+
 // TestCloseFile verifies nil handling and contextual close errors.
 func TestCloseFile(t *testing.T) {
 	if err := closeFile(nil, "close nil"); err != nil {
@@ -426,18 +437,14 @@ func TestOpenStagedOutputExistingExplicitStagesReplacement(t *testing.T) {
 	if staged.destination != outFile {
 		t.Fatalf("replacement destination: got %q, want %q", staged.destination, outFile)
 	}
-	if bb, err := os.ReadFile(outFile); err != nil || string(bb) != "previous" {
-		t.Fatalf("output before commit: got %q, err=%v", bb, err)
-	}
+	requireFileContent(t, outFile, "previous", "output before commit")
 	if _, err := f.Write([]byte("replacement")); err != nil {
 		t.Fatal(err)
 	}
 	if err := staged.commit(); err != nil {
 		t.Fatal(err)
 	}
-	if bb, err := os.ReadFile(outFile); err != nil || string(bb) != "replacement" {
-		t.Fatalf("output after commit: got %q, err=%v", bb, err)
-	}
+	requireFileContent(t, outFile, "replacement", "output after commit")
 	fi, err := os.Stat(outFile)
 	if err != nil {
 		t.Fatal(err)
@@ -474,9 +481,7 @@ func TestOpenStagedOutputExistingExplicitSurvivesProcessingFailure(t *testing.T)
 	if !errors.Is(err, processErr) {
 		t.Fatalf("expected %v, got %v", processErr, err)
 	}
-	if bb, err := os.ReadFile(outFile); err != nil || string(bb) != "previous" {
-		t.Fatalf("output after rollback: got %q, err=%v", bb, err)
-	}
+	requireFileContent(t, outFile, "previous", "output after rollback")
 	if _, err := os.Stat(temporaryFile); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("temporary output after rollback: got %v, want not exist", err)
 	}

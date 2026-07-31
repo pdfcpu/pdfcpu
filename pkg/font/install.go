@@ -48,6 +48,7 @@ const (
 	maxInstalledFontSize     = 512 << 20
 	maxFontTableCount        = 1024
 	maxFontCollectionFonts   = 256
+	installedFontMode        = 0644
 )
 
 var (
@@ -1053,6 +1054,7 @@ func parse(tags map[string]*table, tag string, fd *ttf) error {
 type gobPersistenceOperations struct {
 	createTemp func(string, string) (*os.File, error)
 	encode     func(*os.File, ttf) error
+	chmod      func(*os.File, os.FileMode) error
 	sync       func(*os.File) error
 	syncDir    func(string) error
 	close      func(*os.File) error
@@ -1067,6 +1069,7 @@ func defaultGobPersistenceOperations() gobPersistenceOperations {
 		encode: func(f *os.File, fd ttf) error {
 			return gob.NewEncoder(f).Encode(fd)
 		},
+		chmod:   func(f *os.File, mode os.FileMode) error { return f.Chmod(mode) },
 		sync:    func(f *os.File) error { return f.Sync() },
 		syncDir: fileutil.SyncDirectory,
 		close:   func(f *os.File) error { return f.Close() },
@@ -1079,6 +1082,9 @@ func defaultGobPersistenceOperations() gobPersistenceOperations {
 func encodeGobFile(f *os.File, fileName string, fd ttf, ops gobPersistenceOperations) error {
 	if err := ops.encode(f, fd); err != nil {
 		return fmt.Errorf("encode %s: %w", fileName, err)
+	}
+	if err := ops.chmod(f, installedFontMode); err != nil {
+		return fmt.Errorf("set permissions for %s: %w", fileName, err)
 	}
 	if err := ops.sync(f); err != nil {
 		return fmt.Errorf("sync %s: %w", fileName, err)
