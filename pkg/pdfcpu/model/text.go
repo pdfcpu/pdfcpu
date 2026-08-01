@@ -18,9 +18,11 @@ package model
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"math"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -903,17 +905,26 @@ func wrap(lines []string, fontName string, fontSize, maxWidthPoints float64) ([]
 				} else if len(word) > 0 && canBreakAfterChar(lastRune(word)) && canBreakBeforeChar(c) {
 					fullCandidate := line + space + word + string(c)
 
-					if font.TextWidth(fullCandidate, fontName, fontSize) <= maxWidthPoints {
+					getTextWidth := func(text string) float64 {
+						tx, err := font.TextWidth(text, fontName, int(fontSize))
+						if err != nil {
+							return 0
+						}
+
+						return tx
+					}
+
+					if getTextWidth(fullCandidate) <= maxWidthPoints {
 						word += string(c)
 
-					} else if font.TextWidth(word+string(c), fontName, fontSize) <= maxWidthPoints {
+					} else if getTextWidth(word+string(c)) <= maxWidthPoints {
 						word += string(c)
 
 					} else {
 						if len(line) > 0 {
 							ss = append(ss, line)
 						}
-						if font.TextWidth(word, fontName, fontSize) > maxWidthPoints {
+						if getTextWidth(word) > maxWidthPoints {
 							wrapLine(&ss, "", "", word, fontName, fontSize, maxWidthPoints)
 						} else {
 							ss = append(ss, word)
@@ -953,6 +964,8 @@ func lastRune(s string) rune {
 		r = c
 	}
 	return r
+}
+
 // WordWrap wraps text at Unicode whitespace and reports font metric failures.
 func WordWrap(s string, fontName string, fontSize int, maxWidthPoints float64) ([]string, error) {
 	return WordWrapFloat(s, fontName, float64(fontSize), maxWidthPoints)
@@ -961,12 +974,22 @@ func WordWrap(s string, fontName string, fontSize int, maxWidthPoints float64) (
 // WordWrapFloat wraps text at Unicode whitespace using a fractional font size.
 // It reports font metric failures.
 func WordWrapFloat(s string, fontName string, fontSize, maxWidthPoints float64) ([]string, error) {
-func isCJKChar(r rune) bool {
-	return (r >= 0x4E00 && r <= 0x9FFF) ||
-		(r >= 0x3400 && r <= 0x4DBF) ||
-		(r >= 0x3000 && r <= 0x303F) ||
-		(r >= 0xFF00 && r <= 0xFFEF) ||
-		(r >= 0x20000 && r <= 0x2A6DF)
+	if len(s) == 0 || maxWidthPoints <= 0 {
+		return []string{s}, nil
+	}
+
+	lines := SplitMultilineStr(s)
+
+	ss, err := wrap(lines, fontName, fontSize, maxWidthPoints)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ss) == 0 {
+		ss = append(ss, "")
+	}
+
+	return ss, nil
 }
 
 // canBreakAfterChar reports whether a line break is allowed immediately after r.
@@ -1061,28 +1084,6 @@ func isClosingPunct(r rune) bool {
 	return false
 }
 
-// WordWrap wraps text at unicode whitespace to fit within a specified width using the given font and font size.
-// Explicit newlines are honored, and whitespace at the beginning of a line is preserved (unless it
-// would cause a word to overrun the line).  Amounts and types of whitespace are preserved within lines.
-func WordWrap(s string, fontName string, fontSize int, maxWidthPoints float64) []string {
-	if len(s) == 0 || maxWidthPoints <= 0 {
-		return []string{s}, nil
-	}
-
-	lines := SplitMultilineStr(s)
-
-	ss, err := wrap(lines, fontName, fontSize, maxWidthPoints)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(ss) == 0 {
-		ss = append(ss, "")
-	}
-
-	return ss, nil
-}
-
 func scaleTextColumnForRegion(
 	mediaBox, region *types.Rectangle,
 	dx, dy, width *float64,
@@ -1138,7 +1139,11 @@ func writeColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rect
 	lines := SplitMultilineStr(s)
 
 	if width > 0 {
-		lines,_ = wrap(lines, td.FontName, fontSize, width)
+		var err error
+		lines, err = wrap(lines, td.FontName, fontSize, width)
+		if err != nil {
+			return nil, fmt.Errorf("create column bounding box: measure column lines: %w", err)
+		}
 	}
 
 	if !td.ScaleAbs {
