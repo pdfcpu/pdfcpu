@@ -80,7 +80,6 @@ func TestInstallFontsRejectsInvalidInputsBeforeInstalling(t *testing.T) {
 		wantErr   error
 		wantText  string
 	}{
-		{name: "missing slice", wantErr: ErrMissingFontInput, wantText: "install fonts"},
 		{name: "empty filename", fileNames: []string{"font.ttf", " "}, wantErr: ErrMissingFontInput, wantText: "input 2"},
 		{name: "unsupported extension", fileNames: []string{"font.ttf", "font.otf"}, wantErr: ErrUnsupportedFontFile, wantText: "font.otf"},
 	}
@@ -104,6 +103,42 @@ func TestInstallFontsRejectsInvalidInputsBeforeInstalling(t *testing.T) {
 				t.Fatalf("expected validation before installation, got %d install calls", installCalls)
 			}
 		})
+	}
+}
+
+func TestInstallFontsEmptyInputReloadsExistingFonts(t *testing.T) {
+	ops := noOpFontAPIOperations()
+	reloadCalls := 0
+	stagingCalls := 0
+	ops.reloadUserFonts = func() error {
+		reloadCalls++
+		return nil
+	}
+	ops.createStagingDir = func(string) (string, error) {
+		stagingCalls++
+		return "", nil
+	}
+	if err := installFonts(nil, ops); err != nil {
+		t.Fatal(err)
+	}
+	if reloadCalls != 1 {
+		t.Fatalf("expected one metrics reload, got %d", reloadCalls)
+	}
+	if stagingCalls != 0 {
+		t.Fatalf("expected no staging, got %d calls", stagingCalls)
+	}
+}
+
+func TestInstallFontsEmptyInputPreservesReloadError(t *testing.T) {
+	wantErr := errors.New("reload failed")
+	ops := noOpFontAPIOperations()
+	ops.reloadUserFonts = func() error { return wantErr }
+	err := installFonts(nil, ops)
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("expected %v, got %v", wantErr, err)
+	}
+	if !strings.Contains(err.Error(), "install fonts: reload user fonts") {
+		t.Fatalf("expected reload context, got %q", err)
 	}
 }
 

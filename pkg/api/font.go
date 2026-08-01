@@ -202,9 +202,6 @@ func listFonts(userFontNames func() ([]string, error)) ([]string, error) {
 }
 
 func validateFontFiles(fileNames []string) error {
-	if len(fileNames) == 0 {
-		return fmt.Errorf("install fonts: %w", ErrMissingFontInput)
-	}
 	for i, fn := range fileNames {
 		if strings.TrimSpace(fn) == "" {
 			return fmt.Errorf("install fonts: input %d: %w", i+1, ErrMissingFontInput)
@@ -221,6 +218,7 @@ func validateFontFiles(fileNames []string) error {
 // InstallFonts transactionally installs true type fonts for embedding.
 // The batch uses directory staging, backup, commit, and rollback rather than
 // the single-file stagedOutput publication contract.
+// An empty file list reloads already installed user fonts without modifying the font directory.
 func InstallFonts(fileNames []string) error {
 	return installFonts(fileNames, defaultFontAPIOperations())
 }
@@ -402,6 +400,12 @@ func installFontInputs(fileNames []string, stagingDir string, ops fontAPIOperati
 }
 
 func installFonts(fileNames []string, ops fontAPIOperations) (err error) {
+	if len(fileNames) == 0 {
+		if err := ops.reloadUserFonts(); err != nil {
+			return fmt.Errorf("install fonts: reload user fonts: %w", err)
+		}
+		return nil
+	}
 	if err := validateFontFiles(fileNames); err != nil {
 		return err
 	}

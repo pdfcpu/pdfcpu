@@ -275,6 +275,9 @@ func InstallFonts(cmd *Command) ([]string, error) {
 	if err := validateFontsCommand(cmd, model.INSTALLFONTS); err != nil {
 		return nil, err
 	}
+	if len(cmd.InFiles) == 0 {
+		return nil, fmt.Errorf("install fonts: %w", api.ErrMissingFontInput)
+	}
 	return nil, api.InstallFonts(cmd.InFiles)
 }
 

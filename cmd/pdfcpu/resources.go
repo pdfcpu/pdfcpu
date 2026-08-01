@@ -201,6 +201,9 @@ func handleListFontsCommand(conf *model.Configuration, args []string) error {
 }
 
 func handleInstallFontsCommand(conf *model.Configuration, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("install fonts: %w", api.ErrMissingFontInput)
+	}
 	return runCommand(cli.InstallFontsCommand(args, conf))
 }
 
