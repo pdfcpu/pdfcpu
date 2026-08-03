@@ -15,7 +15,7 @@ Please ensure the following:
 - State the expected behavior.
 - Keep the request concise, focused and as short as possible.
 - Describe the problem before suggesting implementation details.
-- Do not submit repository-wide solutions or refactoring proposals without discussing the direction with the maintainers first. 
+- Do not submit repository-wide solutions or refactoring proposals without discussing the direction with the maintainers first.
   The maintainers will determine the appropriate design and any necessary follow-up work.
 
 - Write the request in your own words.

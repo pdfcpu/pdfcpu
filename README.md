@@ -1,5 +1,3 @@
-> **Try the [v0.14.0-rc.1 pre-release](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.14.0-rc.1).**
-
 # pdfcpu: PDF tooling for Go and the command line
 
 [![Test](https://github.com/pdfcpu/pdfcpu/workflows/Test/badge.svg)](https://github.com/pdfcpu/pdfcpu/actions)
