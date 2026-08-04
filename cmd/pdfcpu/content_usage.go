@@ -83,7 +83,7 @@ const (
 
 <description> is a comma separated configuration string containing these optional entries:
 
-      (defaults: "font:Helvetica, points:24, rtl:off, pos:c, off:0,0 scale:0.5 rel, rot:0, d:1, op:1, m:0 and for all colors: 0.5 0.5 0.5")
+      (defaults: "font:Helvetica, points:24, rtl:off, pos:c, off:0,0 scale:0.5 rel, rot:0, d:1, op:1, margins:0 and for all colors: 0.5 0.5 0.5")
 
    fontname:         Please refer to "pdfcpu fonts list"
 
@@ -154,7 +154,7 @@ A color value: 3 color intensities, where 0.0 < i < 1.0, eg 1.0,
 
 All configuration string parameters support completion.
 
-e.g. "pos:bl, off: 20 5"   "rot:45"                 "op:0.5, scale:0.5 abs, rot:0"
+e.g. "pos:bl, off: 20 5"   "rot:45"                    "op:0.5, scale:0.5 abs, rot:0"
      "d:2"                 "scale:.75 abs, points:48"  "rot:-90, scale:0.75 rel"
      "fo:Courier, scale:0.75, str: 0.5 0.0 0.0, rot:20"
 

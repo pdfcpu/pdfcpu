@@ -148,6 +148,19 @@ func TestWordWrapPropagatesCandidateMeasurementError(t *testing.T) {
 	}
 }
 
+func TestWordWrapPropagatesCJKMeasurementError(t *testing.T) {
+	installTextRenderingMetrics(t)
+	_, err := WordWrap("天地", "Missing", 12, 10)
+	if !errors.Is(err, font.ErrUnknownFont) {
+		t.Fatalf("expected %v, got %v", font.ErrUnknownFont, err)
+	}
+	for _, context := range []string{"line 1", "font Missing", "measure CJK wrap text"} {
+		if !strings.Contains(err.Error(), context) {
+			t.Fatalf("expected context %q, got %q", context, err)
+		}
+	}
+}
+
 func TestJustifiedTextWrappingDoesNotInsertLinefeeds(t *testing.T) {
 	fontSize := 12.
 	preparer, err := newJustifiedTextPreparer(&XRefTable{}, "Helvetica", fontSize)

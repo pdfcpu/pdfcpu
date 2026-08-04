@@ -203,7 +203,7 @@ func ExampleNUpFile() {
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 
 	// 9-Up a sequence of images using format Tabloid w/o borders and no margins.
-	nup, _ = ImageNUpConfig(9, "f:Tabloid, b:off, m:0", nil)
+	nup, _ = ImageNUpConfig(9, "f:Tabloid, b:off, margin:0", nil)
 	inFiles = []string{"in1.png", "in2.jpg", "in3.tiff"}
 	NUpFile(inFiles, "out.pdf", nil, nup, nil)
 

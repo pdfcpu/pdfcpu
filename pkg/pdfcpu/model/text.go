@@ -854,16 +854,76 @@ func wrapWord(ss *[]string, line, space, word, nextSpace, fontName string, fontS
 	return line, "", nil
 }
 
+func cjkTextWidth(text, fontName string, fontSize float64) (float64, error) {
+	width, err := font.TextWidth(text, fontName, int(fontSize))
+	if err != nil {
+		return 0, fmt.Errorf("font %s: measure CJK wrap text: %w", fontName, err)
+	}
+	return width, nil
+}
+
+func wrapCJKRune(ss *[]string, line, space, word, fontName string, c rune, fontSize, maxWidthPoints float64) (
+	string, string, string, error,
+) {
+	next := string(c)
+	width, err := cjkTextWidth(line+space+word+next, fontName, fontSize)
+	if err != nil {
+		return line, space, word, err
+	}
+	if width <= maxWidthPoints {
+		return line, space, word + next, nil
+	}
+
+	width, err = cjkTextWidth(word+next, fontName, fontSize)
+	if err != nil {
+		return line, space, word, err
+	}
+	if width <= maxWidthPoints {
+		return line, space, word + next, nil
+	}
+
+	width, err = cjkTextWidth(word, fontName, fontSize)
+	if err != nil {
+		return line, space, word, err
+	}
+	if len(line) > 0 {
+		*ss = append(*ss, line)
+	}
+	if width > maxWidthPoints {
+		if err := wrapLine(ss, "", "", word, fontName, fontSize, maxWidthPoints); err != nil {
+			return line, space, word, err
+		}
+	} else {
+		*ss = append(*ss, word)
+	}
+	return "", "", next, nil
+}
+
+type textWrapState int
+
+const (
+	wrapBeginLine textWrapState = iota
+	wrapInWord
+	wrapLeadingSpace
+	wrapInSpace
+)
+
+func wrapTextRune(ss *[]string, line, space, word, fontName string, c rune, fontSize, maxWidthPoints float64) (
+	string, string, string, textWrapState, error,
+) {
+	if unicode.IsSpace(c) {
+		line, space, err := wrapWord(ss, line, space, word, string(c), fontName, fontSize, maxWidthPoints)
+		return line, space, word, wrapInSpace, err
+	}
+	if len(word) > 0 && canBreakAfterChar(lastRune(word)) && canBreakBeforeChar(c) {
+		line, space, word, err := wrapCJKRune(ss, line, space, word, fontName, c, fontSize, maxWidthPoints)
+		return line, space, word, wrapInWord, err
+	}
+	return line, space, word + string(c), wrapInWord, nil
+}
+
 func wrap(lines []string, fontName string, fontSize, maxWidthPoints float64) ([]string, error) {
-
-	var wrapState int
-
-	const (
-		beginLine = iota
-		inWord
-		leadingSpace
-		inSpace
-	)
+	var wrapState textWrapState
 
 	var ss []string
 
@@ -871,83 +931,49 @@ func wrap(lines []string, fontName string, fontSize, maxWidthPoints float64) ([]
 
 		var word, space, line string
 
-		wrapState = beginLine
+		wrapState = wrapBeginLine
 
 		for _, c := range s {
 
 			switch wrapState {
 
-			case beginLine:
+			case wrapBeginLine:
 				if unicode.IsSpace(c) {
 					line = string(c)
-					wrapState = leadingSpace
+					wrapState = wrapLeadingSpace
 				} else {
 					word = string(c)
-					wrapState = inWord
+					wrapState = wrapInWord
 				}
 
-			case leadingSpace:
+			case wrapLeadingSpace:
 				if unicode.IsSpace(c) {
 					line += string(c)
 				} else {
 					word = string(c)
-					wrapState = inWord
+					wrapState = wrapInWord
 				}
 
-			case inWord:
-				if unicode.IsSpace(c) {
-					var err error
-					line, space, err = wrapWord(&ss, line, space, word, string(c), fontName, fontSize, maxWidthPoints)
-					if err != nil {
-						return nil, fmt.Errorf("line %d: %w", lineIndex+1, err)
-					}
-					wrapState = inSpace
-				} else if len(word) > 0 && canBreakAfterChar(lastRune(word)) && canBreakBeforeChar(c) {
-					fullCandidate := line + space + word + string(c)
-
-					getTextWidth := func(text string) float64 {
-						tx, err := font.TextWidth(text, fontName, int(fontSize))
-						if err != nil {
-							return 0
-						}
-
-						return tx
-					}
-
-					if getTextWidth(fullCandidate) <= maxWidthPoints {
-						word += string(c)
-
-					} else if getTextWidth(word+string(c)) <= maxWidthPoints {
-						word += string(c)
-
-					} else {
-						if len(line) > 0 {
-							ss = append(ss, line)
-						}
-						if getTextWidth(word) > maxWidthPoints {
-							wrapLine(&ss, "", "", word, fontName, fontSize, maxWidthPoints)
-						} else {
-							ss = append(ss, word)
-						}
-						line = ""
-						space = ""
-						word = string(c)
-					}
-				} else {
-					word += string(c)
+			case wrapInWord:
+				var err error
+				line, space, word, wrapState, err = wrapTextRune(
+					&ss, line, space, word, fontName, c, fontSize, maxWidthPoints,
+				)
+				if err != nil {
+					return nil, fmt.Errorf("line %d: %w", lineIndex+1, err)
 				}
 
-			case inSpace:
+			case wrapInSpace:
 				if unicode.IsSpace(c) {
 					space += string(c)
 				} else {
 					word = string(c)
-					wrapState = inWord
+					wrapState = wrapInWord
 				}
 			}
 		}
 
-		if wrapState == inWord {
+		if wrapState == wrapInWord {
 			if err := wrapLine(&ss, line, space, word, fontName, fontSize, maxWidthPoints); err != nil {
 				return nil, fmt.Errorf("line %d: %w", lineIndex+1, err)
 			}
@@ -992,33 +1018,36 @@ func WordWrapFloat(s string, fontName string, fontSize, maxWidthPoints float64) 
 	return ss, nil
 }
 
+func isCJKTextChar(r rune) bool {
+	switch {
+	case r >= 0x4E00 && r <= 0x9FFF:
+		return true
+	case r >= 0x3400 && r <= 0x4DBF:
+		return true
+	case r >= 0x20000 && r <= 0x2A6DF:
+		return true
+	case r >= 0x3040 && r <= 0x309F:
+		return true
+	case r >= 0x30A0 && r <= 0x30FF:
+		return true
+	case r >= 0xAC00 && r <= 0xD7AF:
+		return true
+	case r >= 0x1100 && r <= 0x11FF:
+		return true
+	}
+	return false
+}
+
+func isCJKPunctuationChar(r rune) bool {
+	return r >= 0x3000 && r <= 0x303F || r >= 0xFF00 && r <= 0xFFEF
+}
+
 // canBreakAfterChar reports whether a line break is allowed immediately after r.
 func canBreakAfterChar(r rune) bool {
-	if r >= 0x4E00 && r <= 0x9FFF {
+	if isCJKTextChar(r) {
 		return true
 	}
-	if r >= 0x3400 && r <= 0x4DBF {
-		return true
-	}
-	if r >= 0x20000 && r <= 0x2A6DF {
-		return true
-	}
-	if r >= 0x3040 && r <= 0x309F {
-		return true
-	}
-	if r >= 0x30A0 && r <= 0x30FF {
-		return true
-	}
-	if r >= 0xAC00 && r <= 0xD7AF {
-		return true
-	}
-	if r >= 0x1100 && r <= 0x11FF {
-		return true
-	}
-	if r >= 0x3000 && r <= 0x303F {
-		return !isOpeningPunct(r)
-	}
-	if r >= 0xFF00 && r <= 0xFFEF {
+	if isCJKPunctuationChar(r) {
 		return !isOpeningPunct(r)
 	}
 	return false
@@ -1026,31 +1055,10 @@ func canBreakAfterChar(r rune) bool {
 
 // canBreakBeforeChar reports whether a line break is allowed immediately before r.
 func canBreakBeforeChar(r rune) bool {
-	if r >= 0x4E00 && r <= 0x9FFF {
+	if isCJKTextChar(r) {
 		return true
 	}
-	if r >= 0x3400 && r <= 0x4DBF {
-		return true
-	}
-	if r >= 0x20000 && r <= 0x2A6DF {
-		return true
-	}
-	if r >= 0x3040 && r <= 0x309F {
-		return true
-	}
-	if r >= 0x30A0 && r <= 0x30FF {
-		return true
-	}
-	if r >= 0xAC00 && r <= 0xD7AF {
-		return true
-	}
-	if r >= 0x1100 && r <= 0x11FF {
-		return true
-	}
-	if r >= 0x3000 && r <= 0x303F {
-		return !isClosingPunct(r)
-	}
-	if r >= 0xFF00 && r <= 0xFFEF {
+	if isCJKPunctuationChar(r) {
 		return !isClosingPunct(r)
 	}
 	return false
