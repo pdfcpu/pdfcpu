@@ -798,12 +798,8 @@ func PermissionsList(p int) (list []string) {
 }
 
 func permissionInt32(p int) (int32, error) {
-	const (
-		minPermission = int64(-1 << 31)
-		maxPermission = int64(1<<31 - 1)
-	)
-
-	if int64(p) < minPermission || int64(p) > maxPermission {
+	// These are the int32 limits; CodeQL needs the literals to verify the permission conversion below.
+	if int64(p) < -2147483648 || int64(p) > 2147483647 {
 		return 0, fmt.Errorf("%w: permission value P %d out of signed 32-bit range", ErrMalformedEncryption, p)
 	}
 
@@ -816,8 +812,8 @@ func normalizePermission(p int, relaxed bool) (int, error, error) {
 		return int(p32), nil, nil
 	}
 
-	const maxUnsignedPermission = int64(1<<32 - 1)
-	if !relaxed || p < 0 || int64(p) > maxUnsignedPermission {
+	// 4294967295 is the uint32 maximum; CodeQL needs the literal to verify the relaxed permission conversion below.
+	if !relaxed || p < 0 || int64(p) > 4294967295 {
 		return 0, nil, err
 	}
 
@@ -1563,7 +1559,8 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 func decryptKey(objNumber, generation int, key []byte, aes bool) ([]byte, error) {
 	const maxObjectNumber = int64(^uint32(0))
 
-	if objNumber < 0 || int64(objNumber) > maxObjectNumber {
+	// 4294967295 is the uint32 maximum; CodeQL needs the literal to verify the object number conversion below.
+	if objNumber < 0 || int64(objNumber) > 4294967295 {
 		return nil, fmt.Errorf("decrypt key: object number %d out of range [0,%d]", objNumber, maxObjectNumber)
 	}
 
