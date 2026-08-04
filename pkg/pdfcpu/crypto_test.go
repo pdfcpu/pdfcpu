@@ -341,6 +341,19 @@ func TestDecryptKeyDoesNotMutateInput(t *testing.T) {
 	}
 }
 
+func TestDecryptKeyObjectAndGenerationEncoding(t *testing.T) {
+	key := []byte{0x01, 0x02, 0x03, 0x04, 0x05}
+	want := []byte{0x74, 0x47, 0x46, 0xAB, 0x61, 0xB8, 0xE4, 0xFB, 0x10, 0x56}
+
+	got, err := decryptKey(0x010203, 0x0405, key, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Fatalf("got %x, want %x", got, want)
+	}
+}
+
 func TestDecryptKeyGenerationRange(t *testing.T) {
 	for _, generation := range []int{0, types.FreeHeadGeneration} {
 		t.Run(fmt.Sprintf("valid_%d", generation), func(t *testing.T) {
@@ -387,17 +400,26 @@ func TestDecryptKeyObjectNumberRange(t *testing.T) {
 	}
 }
 
-func TestPermissionInt32Range(t *testing.T) {
+func TestPermissionBytes(t *testing.T) {
 	minPermission := int32(-1 << 31)
 	maxPermission := int32(1<<31 - 1)
-	for _, permission := range []int{int(minPermission), -4, int(maxPermission)} {
-		t.Run(fmt.Sprintf("valid_%d", permission), func(t *testing.T) {
-			got, err := permissionInt32(permission)
+	tests := []struct {
+		permission int
+		want       [4]byte
+	}{
+		{permission: int(minPermission), want: [4]byte{0x00, 0x00, 0x00, 0x80}},
+		{permission: -4, want: [4]byte{0xFC, 0xFF, 0xFF, 0xFF}},
+		{permission: int(maxPermission), want: [4]byte{0xFF, 0xFF, 0xFF, 0x7F}},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("valid_%d", tt.permission), func(t *testing.T) {
+			got, err := permissionBytes(tt.permission)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got != int32(permission) {
-				t.Fatalf("got %d, want %d", got, permission)
+			if got != tt.want {
+				t.Fatalf("got %x, want %x", got, tt.want)
 			}
 		})
 	}
@@ -407,12 +429,41 @@ func TestPermissionInt32Range(t *testing.T) {
 		maxPermission := int64(1<<31 - 1)
 		for _, permission := range []int{int(minPermission - 1), int(maxPermission + 1)} {
 			t.Run(fmt.Sprintf("invalid_%d", permission), func(t *testing.T) {
-				_, err := permissionInt32(permission)
+				_, err := permissionBytes(permission)
 				if !errors.Is(err, ErrMalformedEncryption) {
 					t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
 				}
 			})
 		}
+	}
+}
+
+func TestNormalizeUnsignedPermission(t *testing.T) {
+	if strconv.IntSize != 64 {
+		t.Skip("unsigned 32-bit permission values require a 64-bit int")
+	}
+
+	tests := []struct {
+		permission int
+		want       int
+	}{
+		{permission: 1 << 31, want: -1 << 31},
+		{permission: 1<<32 - 1, want: -1},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("permission_%d", tt.permission), func(t *testing.T) {
+			got, specViolation, err := normalizePermission(tt.permission, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !errors.Is(specViolation, ErrMalformedEncryption) {
+				t.Fatalf("got specification violation %v, want %v", specViolation, ErrMalformedEncryption)
+			}
+			if got != tt.want {
+				t.Fatalf("got %d, want %d", got, tt.want)
+			}
+		})
 	}
 }
 

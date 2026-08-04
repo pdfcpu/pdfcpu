@@ -797,27 +797,48 @@ func PermissionsList(p int) (list []string) {
 	return perms(p)
 }
 
-func permissionInt32(p int) (int32, error) {
-	// These are the int32 limits; CodeQL needs the literals to verify the permission conversion below.
-	if int64(p) < -2147483648 || int64(p) > 2147483647 {
-		return 0, fmt.Errorf("%w: permission value P %d out of signed 32-bit range", ErrMalformedEncryption, p)
+func validatePermission(p int) error {
+	const (
+		minPermission = int64(-1 << 31)
+		maxPermission = int64(1<<31 - 1)
+	)
+
+	if int64(p) < minPermission || int64(p) > maxPermission {
+		return fmt.Errorf("%w: permission value P %d out of signed 32-bit range", ErrMalformedEncryption, p)
 	}
 
-	return int32(p), nil
+	return nil
+}
+
+func permissionBytes(p int) ([4]byte, error) {
+	if err := validatePermission(p); err != nil {
+		return [4]byte{}, err
+	}
+
+	var buf [8]byte
+	binary.LittleEndian.PutUint64(buf[:], uint64(p))
+
+	var bb [4]byte
+	copy(bb[:], buf[:4])
+
+	return bb, nil
 }
 
 func normalizePermission(p int, relaxed bool) (int, error, error) {
-	p32, err := permissionInt32(p)
+	err := validatePermission(p)
 	if err == nil {
-		return int(p32), nil, nil
+		return p, nil, nil
 	}
 
-	// 4294967295 is the uint32 maximum; CodeQL needs the literal to verify the relaxed permission conversion below.
 	if !relaxed || p < 0 || int64(p) > 4294967295 {
 		return 0, nil, err
 	}
 
-	return int(int32(uint32(p))), err, nil
+	// This branch is only reachable on 64-bit architectures because p does not fit into a signed 32-bit integer.
+	permissionRange := 1
+	permissionRange <<= 32
+
+	return p - permissionRange, err, nil
 }
 
 func validatePermissions(ctx *model.Context) (bool, error) {
@@ -844,13 +865,12 @@ func validatePermissions(ctx *model.Context) (bool, error) {
 		return false, nil
 	}
 
-	b := binary.LittleEndian.Uint32(p[:4])
-	expected, err := permissionInt32(ctx.E.P)
+	expected, err := permissionBytes(ctx.E.P)
 	if err != nil {
 		return false, err
 	}
 
-	return b == uint32(expected), nil
+	return bytes.Equal(p[:4], expected[:]), nil
 }
 
 func writePermissions(ctx *model.Context, d types.Dict) error {
@@ -860,13 +880,13 @@ func writePermissions(ctx *model.Context, d types.Dict) error {
 		return nil
 	}
 
-	p, err := permissionInt32(ctx.E.P)
+	p, err := permissionBytes(ctx.E.P)
 	if err != nil {
 		return err
 	}
 
 	b := make([]byte, 16)
-	binary.LittleEndian.PutUint32(b, uint32(p))
+	copy(b, p[:])
 
 	b[4] = 0xFF
 	b[5] = 0xFF
@@ -1559,8 +1579,7 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 func decryptKey(objNumber, generation int, key []byte, aes bool) ([]byte, error) {
 	const maxObjectNumber = int64(^uint32(0))
 
-	// 4294967295 is the uint32 maximum; CodeQL needs the literal to verify the object number conversion below.
-	if objNumber < 0 || int64(objNumber) > 4294967295 {
+	if objNumber < 0 || int64(objNumber) > maxObjectNumber {
 		return nil, fmt.Errorf("decrypt key: object number %d out of range [0,%d]", objNumber, maxObjectNumber)
 	}
 
@@ -1570,11 +1589,11 @@ func decryptKey(objNumber, generation int, key []byte, aes bool) ([]byte, error)
 
 	m := md5.New()
 
-	nr := uint32(objNumber)
-	b1 := []byte{byte(nr), byte(nr >> 8), byte(nr >> 16)}
+	var objectNumberBytes [8]byte
+	binary.LittleEndian.PutUint64(objectNumberBytes[:], uint64(objNumber))
 	b := make([]byte, 0, len(key)+5)
 	b = append(b, key...)
-	b = append(b, b1...)
+	b = append(b, objectNumberBytes[:3]...)
 
 	gen := uint16(generation)
 	b2 := []byte{byte(gen), byte(gen >> 8)}
