@@ -172,7 +172,7 @@ The following description parameters are for text based stamps only:
 #### Default description
 
 ```sh
-'f:Helvetica, points:24, rtl:off, scale:0.5 rel, pos:c, off:0 0, align:c, fillc:#808080, strokec:#808080, rot:0, d:1, op:1, mo:0, ma:0, bo:0'
+'f:Helvetica, points:24, rtl:off, scale:0.5 rel, pos:c, off:0 0, align:c, fillc:#808080, strokec:#808080, rot:0, d:1, op:1, mo:0, margins:0, bo:0'
 ```
 The default stamp configuration is:
 
@@ -263,7 +263,7 @@ $ pdfcpu stamp add 'This is a stamp' 'scale:1, rot:45, mode:2, color:.2 .7 .9' i
 Create a stamp of some multi line text, show its bounding box by setting bgcol, set all margins to 5 and a border width of 7 rendering round corners.
 
 ```sh
-$ pdfcpu stamp add 'Some multi\nline text' 'ma:5, bo:7 round .3 .7 .7, fillc:#3277d3, bgcol:#beded9, rot:0' in.pdf out.pdf --mode text
+$ pdfcpu stamp add 'Some multi\nline text' 'margins:5, bo:7 round .3 .7 .7, fillc:#3277d3, bgcol:#beded9, rot:0' in.pdf out.pdf --mode text
 ```
 
 <p align="center">
