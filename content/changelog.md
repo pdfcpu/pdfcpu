@@ -34,9 +34,9 @@ Entries link to GitHub releases or commits where available.
 
 <article class="changelog-entry">
   <div class="changelog-meta">
-    <time datetime="2026-07-28">2026-07-28</time>
-    <span class="changelog-kind">Development</span>
-    <a href="https://github.com/pdfcpu/pdfcpu/compare/v0.13.0...master">v0.14.0-rc.1 dev</a>
+    <time datetime="2026-08-03">2026-08-03</time>
+    <span class="changelog-kind">Release</span>
+    <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.14.0">v0.14.0</a>
   </div>
   <p>
   Harden API and CLI error handling.<br>
