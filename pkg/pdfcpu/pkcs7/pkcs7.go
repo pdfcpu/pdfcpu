@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"sort"
 
-	_ "crypto/sha1"   // register crypto.SHA1
+	_ "crypto/sha1"   // #nosec G505 -- required to validate existing legacy PKCS#7 signatures.
 	_ "crypto/sha256" // register crypto.SHA224 and crypto.SHA256
 	_ "crypto/sha512" // register crypto.SHA384 and crypto.SHA512
 )

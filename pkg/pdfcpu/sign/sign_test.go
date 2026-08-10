@@ -242,6 +242,28 @@ func TestCertificatePathConclusionPreservesTrustAndRecordsMethod(t *testing.T) {
 	}
 }
 
+// TestRecognizedQualifiedCertificatePolicyEvidence verifies qualified evidence
+// is limited to recognized certificate-policy identifiers.
+func TestRecognizedQualifiedCertificatePolicyEvidence(t *testing.T) {
+	recognized := []asn1.ObjectIdentifier{
+		oidQCESign,
+		oidQCESeal,
+		oidQWebAuthCert,
+		oidETSIQCPublicWithSSCD,
+	}
+	for _, policy := range recognized {
+		cert := &x509.Certificate{PolicyIdentifiers: []asn1.ObjectIdentifier{policy}}
+		if !hasRecognizedQualifiedCertificatePolicy(cert) {
+			t.Errorf("recognized certificate policy %s was not reported", policy)
+		}
+	}
+
+	cert := &x509.Certificate{PolicyIdentifiers: []asn1.ObjectIdentifier{{1, 2, 3, 4}}}
+	if hasRecognizedQualifiedCertificatePolicy(cert) {
+		t.Fatal("unrecognized certificate policy was reported as qualified evidence")
+	}
+}
+
 // TestCertificateAuthorityObservationsDoNotResolvePath verifies CA and
 // self-signature observations remain independent of path resolution.
 func TestCertificateAuthorityObservationsDoNotResolvePath(t *testing.T) {

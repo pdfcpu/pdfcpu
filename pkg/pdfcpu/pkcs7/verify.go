@@ -41,8 +41,10 @@ func VerifyMessageDigestDetached(signer SignerInfo, signedData []byte) error {
 	return nil
 }
 
-// VerifyMessageDigestEmbedded verifies a SHA-1 digest against signedData.
+// VerifyMessageDigestEmbedded verifies the SHA-1 document digest mandated by the legacy adbe.pkcs7.sha1 profile.
+// It supports validation of existing PDFs only.
 func VerifyMessageDigestEmbedded(digest, signedData []byte) error {
+	// #nosec G401 -- SHA-1 is mandated by the legacy profile and is used for verification only.
 	if err := compareMessageDigest(crypto.SHA1, digest, signedData); err != nil {
 		return fmt.Errorf("pkcs7: verify embedded message digest: %w", err)
 	}

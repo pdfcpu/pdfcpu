@@ -19,7 +19,7 @@ package sign
 import (
 	"crypto"
 	"crypto/rsa"
-	"crypto/sha1"
+	"crypto/sha1" // #nosec G505 -- required to verify legacy adbe.x509.rsa_sha1 signatures.
 	"crypto/x509"
 	"encoding/asn1"
 	"errors"
@@ -31,9 +31,10 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// ValidateX509RSASHA1Signature reports observed signature, certificate,
-// timestamp and revocation evidence together with a local assessment for
-// SubFilter adbe.x509.rsa_sha1.
+// ValidateX509RSASHA1Signature validates the legacy SubFilter adbe.x509.rsa_sha1 using best-effort local checks.
+//
+// Deprecated: This compatibility path verifies existing legacy PDF signatures only. It must not be used to create new
+// signatures.
 func ValidateX509RSASHA1Signature(
 	ra io.ReaderAt,
 	sigDict types.Dict,
@@ -281,9 +282,11 @@ func certFromHexLiteral(obj types.HexLiteral) (*x509.Certificate, error) {
 	return parseCertificate(bb)
 }
 
+// verifyRSASHA1Signature verifies an existing legacy PDF signature. SHA-1 and RSA PKCS #1 v1.5 are required by the
+// adbe.x509.rsa_sha1 profile and are not used here to create signatures.
 func verifyRSASHA1Signature(ra io.ReaderAt, sigDict types.Dict, rsaPubKey *rsa.PublicKey) (model.SignatureReason, error) {
 	// Use public key from the signer's certificate to verify the RSA signature.
-	// The signature itself is an RSA-encrypted SHA-1 hash of the signed data.
+	// The signature uses RSA PKCS #1 v1.5 over a SHA-1 digest of the signed data.
 	hl := sigDict.HexLiteralEntry("Contents")
 	if hl == nil {
 		return model.SignatureReasonMalformed, errors.New("signature dict entry Contents: missing")
@@ -311,7 +314,8 @@ func verifyRSASHA1Signature(ra io.ReaderAt, sigDict types.Dict, rsaPubKey *rsa.P
 
 	// Combine hash calculation and signature verification.
 
-	// Hash signed data (extracted using ByteRange) using SHA-1, 160 Bits = 20 bytes
+	// Hash signed data (extracted using ByteRange) using SHA-1, 160 Bits = 20 bytes.
+	// #nosec G401 -- SHA-1 is mandated by the legacy profile and is used for verification only.
 	hashed := sha1.Sum(data)
 
 	// Confirm that the signature was created using the private key corresponding to the public key from the certificate.

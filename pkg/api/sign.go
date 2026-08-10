@@ -151,8 +151,8 @@ func compactSignatureReason(svr *model.SignatureValidationResult) string {
 	return s
 }
 
-// ValidateSignatures reports observed signature, certificate, timestamp and
-// revocation evidence together with a local assessment.
+// ValidateSignatures validates signature integrity, reports available trust evidence and performs a best-effort local
+// assessment.
 func ValidateSignatures(inFile string, all bool, conf *model.Configuration) (results []*model.SignatureValidationResult, err error) {
 	defer fault.Catch(&err)
 	return validateSignaturesFile(inFile, all, conf, pdfcpu.ValidateSignatures)
@@ -186,8 +186,8 @@ func validateSignaturesFile(
 	return validateSignaturesRaw(f, all, conf, operation)
 }
 
-// ValidateSignaturesRaw reports observed signature, certificate, timestamp and
-// revocation evidence together with a local assessment.
+// ValidateSignaturesRaw validates signature integrity, reports available trust evidence and performs a best-effort
+// local assessment.
 func ValidateSignaturesRaw(
 	rs ReadSeekerAt,
 	all bool,
@@ -280,7 +280,8 @@ func RemoveSignatures(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) 
 	return nil
 }
 
-// RemoveSignaturesFile removes all digital signatures from inFile and writes to outFile if provided else overwrites inFile.
+// RemoveSignaturesFile removes all digital signatures from inFile and writes to outFile if provided else overwrites
+// inFile.
 func RemoveSignaturesFile(inFile, outFile string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false

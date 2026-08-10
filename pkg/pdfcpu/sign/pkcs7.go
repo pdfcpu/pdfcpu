@@ -158,9 +158,8 @@ func structuredTimestampTokenInfo(tstInfo *TSTInfo) *timestampTokenInfo {
 	}
 }
 
-// ValidatePKCS7Signatures reports observed signature, certificate, timestamp
-// and revocation evidence together with a local assessment for supported
-// PKCS#7 SubFilters.
+// ValidatePKCS7Signatures validates signature integrity, reports available trust evidence and performs a best-effort
+// local assessment for supported PKCS#7 SubFilters.
 func ValidatePKCS7Signatures(
 	ra io.ReaderAt,
 	sigDict types.Dict,
@@ -261,7 +260,7 @@ func finalizePKCS7Result(
 		return
 	}
 
-	// Show PAdES basic evidence levels for valid signatures only.
+	// Show a supported PAdES-B-B profile result for valid signatures only.
 	for _, signer := range result.Details.Signers {
 		signer.PAdES = ""
 	}
@@ -580,7 +579,8 @@ func applyP7DigestEvidence(
 func verifyP7Digest(p7Signer pkcs7.SignerInfo, p7Content []byte, data []byte, detached bool) (model.SignatureReason, error) {
 	// Verify Message Digest
 	// Calculate fingerprint and compare with p7.Digest (content hash comparison).
-	// Ensures integrity of the document content itself and ensures that the document has not been tampered with since it was signed.
+	// Ensures integrity of the document content itself and ensures that the document has not been tampered with since it
+	// was signed.
 
 	if detached {
 
@@ -601,6 +601,7 @@ func verifyP7Digest(p7Signer pkcs7.SignerInfo, p7Content []byte, data []byte, de
 
 	} else {
 
+		// SHA-1 is mandated by the legacy adbe.pkcs7.sha1 profile and is used here to validate existing signatures only.
 		if err := pkcs7.VerifyMessageDigestEmbedded(p7Content, data); err != nil {
 			return model.SignatureReasonDocModified, fmt.Errorf("pkcs7: verify message digest: mismatch: %w", err)
 		}

@@ -42,8 +42,8 @@ type signatureValidationHandler func(
 	*model.Context,
 ) error
 
-// ValidateSignatures reports observed signature, certificate, timestamp and
-// revocation evidence together with a local assessment.
+// ValidateSignatures validates signature integrity, reports available trust evidence and performs a best-effort local
+// assessment.
 func ValidateSignatures(ra io.ReaderAt, ctx *model.Context, all bool) ([]*model.SignatureValidationResult, error) {
 	var results []*model.SignatureValidationResult
 
@@ -352,9 +352,9 @@ func collectSignedRevisionBoundaryEvidence(sigDict types.Dict, ctx *model.Contex
 
 func sigHandler(subFilter string) signatureValidationHandler {
 	switch subFilter {
-	case "adbe.x509.rsa_sha1": // deprecated as of PDF 2.0
+	case "adbe.x509.rsa_sha1": // legacy validation compatibility; deprecated as of PDF 2.0
 		return validateX509RSASHA1Signature
-	case "adbe.pkcs7.sha1": // deprecated as of PDF 2.0
+	case "adbe.pkcs7.sha1": // legacy validation compatibility; deprecated as of PDF 2.0
 		return validatePKCS7Signatures
 	case "adbe.pkcs7.detached":
 		return validatePKCS7Signatures

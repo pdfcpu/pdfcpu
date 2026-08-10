@@ -19,11 +19,12 @@ package model
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
-// TestCertificatePathEvidenceDoesNotChangeTrustOutput locks down the existing
+// TestCertificatePathEvidenceDoesNotChangeLocalPathOutput locks down the existing
 // CertificateDetails presentation while structured evidence is populated.
-func TestCertificatePathEvidenceDoesNotChangeTrustOutput(t *testing.T) {
+func TestCertificatePathEvidenceDoesNotChangeLocalPathOutput(t *testing.T) {
 	certDetails := CertificateDetails{
 		Trust: TrustDetails{
 			Status: False,
@@ -31,6 +32,12 @@ func TestCertificatePathEvidenceDoesNotChangeTrustOutput(t *testing.T) {
 		},
 	}
 	want := certDetails.String()
+	wantLocalPath := "                             Local Path: Status: not ok\n" +
+		"                                         Reason: certificate path was not resolved using the configured local\n" +
+		"                                                 certificate store"
+	if !strings.Contains(want, wantLocalPath) {
+		t.Fatalf("local path output is misaligned:\n%s", want)
+	}
 	certDetails.PathEvidence = CertificatePathEvidence{
 		AssessmentScope: AssessmentScopeLocal,
 		Method:          CertificatePathMethodLocalTrustStore,
@@ -39,18 +46,21 @@ func TestCertificatePathEvidenceDoesNotChangeTrustOutput(t *testing.T) {
 	}
 
 	if got := certDetails.String(); got != want {
-		t.Fatalf("path evidence changed trust output:\ngot:\n%s\nwant:\n%s", got, want)
+		t.Fatalf("path evidence changed local path output:\ngot:\n%s\nwant:\n%s", got, want)
 	}
 }
 
-// TestRevocationEvidenceDoesNotChangeLegacyOutput locks down the existing
+// TestRevocationEvidenceDoesNotChangeLocalAssessmentOutput locks down the
 // RevocationDetails presentation while structured CRL and OCSP evidence is populated.
-func TestRevocationEvidenceDoesNotChangeLegacyOutput(t *testing.T) {
+func TestRevocationEvidenceDoesNotChangeLocalAssessmentOutput(t *testing.T) {
 	details := RevocationDetails{
 		Status: True,
 		Reason: "CRL: certificate status good",
 	}
 	want := details.String()
+	if !strings.HasPrefix(want, " Local:  ok") {
+		t.Fatalf("revocation output does not scope its assessment as local:\n%s", want)
+	}
 
 	details.CRL = &CRLEvidence{
 		AssessmentScope: AssessmentScopeLocal,
@@ -72,6 +82,63 @@ func TestRevocationEvidenceDoesNotChangeLegacyOutput(t *testing.T) {
 	}
 	if got := details.String(); got != want {
 		t.Fatalf("OCSP evidence changed revocation output:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+// TestSignatureDetailTextWrapsAndAligns verifies long and multiline evidence
+// remains within the output width and aligned beneath its value column.
+func TestSignatureDetailTextWrapsAndAligns(t *testing.T) {
+	reason := "OCSP: " + strings.Repeat("response unavailable ", 8) + "\nCRL: fetch failed"
+	details := RevocationDetails{Status: Unknown, Reason: reason}
+	lines := strings.Split(details.String(), "\n")
+
+	continuation := strings.Repeat(" ", len("                                         Reason: "))
+	crlAligned := false
+	for _, line := range lines {
+		if utf8.RuneCountInString(line) > signatureOutputMaxWidth {
+			t.Errorf("line exceeds %d columns: %q", signatureOutputMaxWidth, line)
+		}
+		if strings.TrimSpace(line) == "CRL: fetch failed" {
+			crlAligned = strings.HasPrefix(line, continuation)
+		}
+	}
+	if !crlAligned {
+		t.Fatalf("multiline reason is not aligned:\n%s", details)
+	}
+
+	signer := Signer{Problems: []string{reason}}
+	problemCRLAligned := false
+	for _, line := range strings.Split(signer.String(false), "\n") {
+		if utf8.RuneCountInString(line) > signatureOutputMaxWidth {
+			t.Errorf("problem line exceeds %d columns: %q", signatureOutputMaxWidth, line)
+		}
+		if strings.TrimSpace(line) == "CRL: fetch failed" {
+			problemCRLAligned = strings.HasPrefix(line, strings.Repeat(" ", 29))
+		}
+	}
+	if !problemCRLAligned {
+		t.Fatalf("multiline problem is not aligned:\n%s", signer.String(false))
+	}
+}
+
+// TestSignerStringOmitsLegacyLTVConclusion verifies the compatibility field is
+// not presented as an LTV validation conclusion.
+func TestSignerStringOmitsLegacyLTVConclusion(t *testing.T) {
+	got := (Signer{LTVEnabled: true}).String(false)
+	if strings.Contains(got, "LTVEnabled") {
+		t.Fatalf("signer output exposes legacy LTV conclusion:\n%s", got)
+	}
+}
+
+// TestCertificateDetailsUsesQCPolicyLabel verifies certificate-policy evidence
+// is not presented as a legal qualification conclusion.
+func TestCertificateDetailsUsesQCPolicyLabel(t *testing.T) {
+	got := (CertificateDetails{Qualified: true}).String()
+	if !strings.Contains(got, "QC Policy:  true") {
+		t.Fatalf("certificate output omits recognized QC policy evidence:\n%s", got)
+	}
+	if strings.Contains(got, "Qualified Evidence:") || strings.Contains(got, "                             Qualified:") {
+		t.Fatalf("certificate output uses legacy qualified conclusion:\n%s", got)
 	}
 }
 
@@ -222,7 +289,7 @@ func TestDTSPresentationUsesLocalValidationLanguage(t *testing.T) {
 	for _, want := range []string{
 		"document timestamp (locally validated, invisible, signed)",
 		"Local Path:",
-		"Revocation:",
+		"Revocation: Local:  ok",
 		"CRL: certificate status good",
 	} {
 		if !strings.Contains(got, want) {
@@ -230,7 +297,8 @@ func TestDTSPresentationUsesLocalValidationLanguage(t *testing.T) {
 		}
 	}
 	if strings.Contains(got, "document timestamp (trusted") ||
-		strings.Contains(got, "                             Trust:") {
+		strings.Contains(got, "                             Trust:") ||
+		strings.Contains(got, "Revocation: Status:") {
 		t.Fatalf("DTS presentation implies a trust decision:\n%s", got)
 	}
 }
@@ -291,6 +359,7 @@ func TestSignaturePresentationUsesStoredConclusions(t *testing.T) {
 			for _, want := range []string{
 				tt.typeString,
 				SignatureReasonCertNotTrusted.String(),
+				"Local Path:",
 				pathReason,
 				SignatureReasonCertRevocationUnknown.String(),
 				signerProblem,
@@ -299,6 +368,9 @@ func TestSignaturePresentationUsesStoredConclusions(t *testing.T) {
 				if !strings.Contains(got, want) {
 					t.Errorf("presentation missing stored text %q:\n%s", want, got)
 				}
+			}
+			if strings.Contains(got, "                             Trust:") {
+				t.Errorf("presentation implies an unrestricted trust decision:\n%s", got)
 			}
 		})
 	}

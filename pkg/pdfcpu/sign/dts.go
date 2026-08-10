@@ -89,9 +89,8 @@ type rawSigningCertificateV2 struct {
 	Policies asn1.RawValue `asn1:"optional"`
 }
 
-// ValidateDTS reports observed signature, certificate, timestamp and
-// revocation evidence together with a local assessment for an ETSI.RFC3161
-// document timestamp.
+// ValidateDTS validates signature integrity, reports available trust evidence and performs a best-effort local
+// assessment for an ETSI.RFC3161 document timestamp.
 func ValidateDTS(
 	ra io.ReaderAt,
 	sigDict types.Dict,

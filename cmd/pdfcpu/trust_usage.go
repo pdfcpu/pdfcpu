@@ -60,11 +60,15 @@ Pipeline examples:
       | aws s3 cp - s3://acme-docs/unsigned.pdf
 	`
 
-	usageLongSignaturesValidate = `Validate PDF signature integrity and report available signature evidence.
+	usageLongSignaturesValidate = `pdfcpu validates signature integrity, reports available trust evidence and performs
+a best-effort local assessment.
 
-This command validates signed byte ranges, CMS/PKCS#7 signature data and signer metadata. 
+This command validates signed byte ranges and supported CMS/PKCS#7 signature data,
+and reports signer metadata.
 It also reports certificate chains, timestamps, revocation responses,
-DSS data and PAdES baseline indicators where available.
+DSS data and PAdES-B-B results from supported profile checks where available.
+
+The legacy adbe.x509.rsa_sha1 and adbe.pkcs7.sha1 profiles are supported for validation of existing PDFs only.
 
 Certificate-path and revocation checks use pdfcpu's configured local certificate
 store and available CRL/OCSP evidence on a best-effort basis.

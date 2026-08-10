@@ -76,8 +76,8 @@ func InspectCertificates(cmd *Command) ([]string, error) {
 	return api.InspectCertificates(cmd.InFiles)
 }
 
-// ValidateSignatures presents observed signature, certificate, timestamp and
-// revocation evidence together with a local assessment.
+// ValidateSignatures validates signature integrity, reports available trust evidence and performs a best-effort local
+// assessment.
 func ValidateSignatures(cmd *Command) ([]string, error) {
 	return validateSignatures(cmd, api.ValidateSignaturesFile)
 }

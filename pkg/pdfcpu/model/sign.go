@@ -48,7 +48,10 @@ const (
 	SigTypeDTS
 )
 
+// SignTSFormat is the timestamp layout used in signature validation output.
 const SignTSFormat = "2006-01-02 15:04:05 -0700"
+
+const signatureOutputMaxWidth = 120
 
 // RevocationDetails contains observed CRL and OCSP evidence together with a
 // local revocation assessment. Its Status and Reason fields are compatibility
@@ -138,11 +141,76 @@ type OCSPEvidence struct {
 // String returns the string value of rd.
 func (rd RevocationDetails) String() string {
 	ss := []string{}
-	ss = append(ss, fmt.Sprintf(" Status: %s", validString(rd.Status)))
+	ss = append(ss, fmt.Sprintf(" Local:  %s", validString(rd.Status)))
 	if len(rd.Reason) > 0 {
-		ss = append(ss, fmt.Sprintf("                                         Reason: %s", rd.Reason))
+		ss = appendWrappedSignatureText(ss, "                                         Reason: ", rd.Reason)
 	}
 	return strings.Join(ss, "\n")
+}
+
+func appendWrappedSignatureText(ss []string, prefix, text string) []string {
+	continuation := strings.Repeat(" ", len(prefix))
+	first := true
+	for _, paragraph := range strings.Split(text, "\n") {
+		linePrefix := continuation
+		if first {
+			linePrefix = prefix
+			first = false
+		}
+		lines := wrapSignatureText(paragraph, signatureOutputMaxWidth-len(linePrefix))
+		if len(lines) == 0 {
+			ss = append(ss, linePrefix)
+			continue
+		}
+		for _, line := range lines {
+			ss = append(ss, linePrefix+line)
+			linePrefix = continuation
+		}
+	}
+	return ss
+}
+
+func wrapSignatureText(text string, width int) []string {
+	if width <= 0 {
+		return []string{text}
+	}
+
+	var lines []string
+	var line []rune
+	for _, word := range strings.Fields(text) {
+		runes := []rune(word)
+		if len(line) > 0 && len(line)+1+len(runes) > width {
+			lines = append(lines, string(line))
+			line = nil
+		}
+		for len(runes) > width {
+			head, tail := splitSignatureWord(runes, width)
+			lines = append(lines, string(head))
+			runes = tail
+		}
+		if len(runes) == 0 {
+			continue
+		}
+		if len(line) > 0 {
+			line = append(line, ' ')
+		}
+		line = append(line, runes...)
+	}
+	if len(line) > 0 {
+		lines = append(lines, string(line))
+	}
+	return lines
+}
+
+func splitSignatureWord(word []rune, width int) ([]rune, []rune) {
+	split := width
+	for i := width; i > 0; i-- {
+		if strings.ContainsRune("/:?&=;", word[i-1]) {
+			split = i
+			break
+		}
+	}
+	return word[:split], word[split:]
 }
 
 // TrustDetails is the legacy compatibility representation of the
@@ -240,9 +308,9 @@ type CertificatePathEvidence struct {
 // String returns the string value of td.
 func (td TrustDetails) String() string {
 	ss := []string{}
-	ss = append(ss, fmt.Sprintf("      Status: %s", validString(td.Status)))
+	ss = append(ss, fmt.Sprintf(" Status: %s", validString(td.Status)))
 	if len(td.Reason) > 0 {
-		ss = append(ss, fmt.Sprintf("                                         Reason: %s", td.Reason))
+		ss = appendWrappedSignatureText(ss, "                                         Reason: ", td.Reason)
 	}
 	// if td.Status == True {
 	// 	ss = append(ss, fmt.Sprintf("                                         SourceObtainedFrom:                    %s", td.SourceObtainedFrom))
@@ -283,10 +351,10 @@ type CertificateDetails struct {
 
 // String returns the string value of cd.
 func (cd CertificateDetails) String() string {
-	return cd.string(false)
+	return cd.string()
 }
 
-func (cd CertificateDetails) string(localPath bool) string {
+func (cd CertificateDetails) string() string {
 	ss := []string{}
 	ss = append(ss, fmt.Sprintf("                             Subject:    %s", cd.Subject))
 	ss = append(ss, fmt.Sprintf("                             Issuer:     %s", cd.Issuer))
@@ -294,18 +362,14 @@ func (cd CertificateDetails) string(localPath bool) string {
 	ss = append(ss, fmt.Sprintf("                             Valid From: %s", cd.ValidFrom.Format(SignTSFormat)))
 	ss = append(ss, fmt.Sprintf("                             Valid Thru: %s", cd.ValidThru.Format(SignTSFormat)))
 	ss = append(ss, fmt.Sprintf("                             Expired:    %t", cd.Expired))
-	ss = append(ss, fmt.Sprintf("                             Qualified:  %t", cd.Qualified))
+	ss = append(ss, fmt.Sprintf("                             QC Policy:  %t", cd.Qualified))
 	ss = append(ss, fmt.Sprintf("                             CA:         %t", cd.CA))
 	ss = append(ss, fmt.Sprintf("                             Usage:      %s", cd.Usage))
 	ss = append(ss, fmt.Sprintf("                             Version:    %d", cd.Version))
 	ss = append(ss, fmt.Sprintf("                             SignAlg:    %s", cd.SignAlg))
 	ss = append(ss, fmt.Sprintf("                             Key Size:   %d bits", cd.KeySize))
 	ss = append(ss, fmt.Sprintf("                             SelfSigned: %t", cd.SelfSigned))
-	label := "Trust"
-	if localPath {
-		label = "Local Path"
-	}
-	ss = append(ss, fmt.Sprintf("                             %s:%s", label, cd.Trust))
+	ss = append(ss, fmt.Sprintf("                             Local Path:%s", cd.Trust))
 	if cd.Leaf && !cd.SelfSigned {
 		ss = append(ss, fmt.Sprintf("                             Revocation:%s", cd.Revocation))
 	}
@@ -319,7 +383,7 @@ func (cd CertificateDetails) string(localPath bool) string {
 			s += "CA"
 		}
 		ss = append(ss, s+":")
-		ss = append(ss, cd.IssuerCertificate.string(localPath))
+		ss = append(ss, cd.IssuerCertificate.string())
 	}
 	return strings.Join(ss, "\n")
 }
@@ -507,8 +571,8 @@ type Signer struct {
 	CertificatePathStatus int       // overall local path status; CA entries do not override it
 	HasTimestamp          bool      // timestamp token presence; does not imply authentication
 	Timestamp             time.Time // observed TSTInfo genTime or document timestamp
-	LTVEnabled            bool      // legacy LTV conclusion; presence alone does not set it
-	PAdES                 string    // supported baseline conclusion: B-B; higher levels require sufficient assessment
+	LTVEnabled            bool      // retained for API compatibility; signature validation does not set it
+	PAdES                 string    // supported baseline conclusion: B-B; timestamp and DSS evidence do not promote it
 	Certified             bool      // indicated by DocMDP entry
 	Authoritative         bool      // true if certified or first (youngest) signature
 	Permissions           int       // see table 257
@@ -546,7 +610,6 @@ func (signer Signer) String(dts bool) string {
 
 	ss = append(ss, fmt.Sprintf("             Timestamp:      %s", s))
 	if !dts {
-		ss = append(ss, fmt.Sprintf("             LTVEnabled:     %t", signer.LTVEnabled))
 		if signer.PAdES != "" {
 			ss = append(ss, fmt.Sprintf("             PAdES:          %s", signer.PAdES))
 		}
@@ -562,15 +625,15 @@ func (signer Signer) String(dts bool) string {
 			s += "(CA)"
 		}
 		ss = append(ss, s+":")
-		ss = append(ss, signer.Certificate.string(dts))
+		ss = append(ss, signer.Certificate.String())
 	}
 
 	for i, s := range signer.Problems {
+		prefix := "                             "
 		if i == 0 {
-			ss = append(ss, fmt.Sprintf("             Problems:       %s", s))
-			continue
+			prefix = "             Problems:       "
 		}
-		ss = append(ss, fmt.Sprintf("                             %s", s))
+		ss = appendWrappedSignatureText(ss, prefix, s)
 	}
 
 	return strings.Join(ss, "\n")
@@ -692,11 +755,11 @@ func (svr SignatureValidationResult) String() string {
 	ss = append(ss, fmt.Sprintf("    Details:\n%s", svr.Details))
 
 	for i, s := range svr.Problems {
+		prefix := "             "
 		if i == 0 {
-			ss = append(ss, fmt.Sprintf("   Problems: %s", s))
-			continue
+			prefix = "   Problems: "
 		}
-		ss = append(ss, fmt.Sprintf("             %s", s))
+		ss = appendWrappedSignatureText(ss, prefix, s)
 	}
 
 	return strings.Join(ss, "\n")
