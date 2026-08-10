@@ -7,14 +7,14 @@ title: "Signatures"
 
 Signature commands inspect or remove digital signatures present in a PDF.
 
-Signature validation is under active development. The current implementation focuses on PDF signature integrity:
+pdfcpu validates signature integrity, reports available trust evidence and performs a best-effort local assessment.
+
+Signature validation is under active development. The current implementation focuses on:
 
 * signed byte ranges
 * CMS/PKCS#7 processing
 * signer and certificate extraction
 * best-effort checks against the configured local certificate store and available revocation information
-
-It reports trust-related evidence such as certificate chains, timestamps, revocation responses, DSS data, and PAdES baseline indicators where available.
 
 This is not a legal-validity, eIDAS, enterprise policy, or full long-term validation statement.
 
