@@ -92,6 +92,9 @@ Progress and validation errors are written to standard error; normal success out
 
 Without `--quiet`, validation already reports the current input and `--progress` does not print a duplicate line.
 
+For large directory trees, see [Corpus Validation](/getting_started/corpus_validation) for recursive runs, progress
+logging, result interpretation, and reporting guidelines.
+
 <br>
 
 ## Examples
