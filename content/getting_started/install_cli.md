@@ -13,24 +13,24 @@ Download a prebuilt binary for your platform and run `pdfcpu version` to verify 
 
 ### macOS
 
-* [Apple Silicon (arm64)](https://dl.pdfcpu.io/releases/download/v0.14.0/pdfcpu_0.14.0_Darwin_arm64.tar.xz)
-* [Intel (x86_64)](https://dl.pdfcpu.io/releases/download/v0.14.0/pdfcpu_0.14.0_Darwin_x86_64.tar.xz)
+* [Apple Silicon (arm64)](https://dl.pdfcpu.io/releases/download/v0.15.0/pdfcpu_0.15.0_Darwin_arm64.tar.xz)
+* [Intel (x86_64)](https://dl.pdfcpu.io/releases/download/v0.15.0/pdfcpu_0.15.0_Darwin_x86_64.tar.xz)
 
 ### Linux
 
-* [x86_64](https://dl.pdfcpu.io/releases/download/v0.14.0/pdfcpu_0.14.0_Linux_x86_64.tar.xz)
-* [arm64](https://dl.pdfcpu.io/releases/download/v0.14.0/pdfcpu_0.14.0_Linux_arm64.tar.xz)
-* [armv7](https://dl.pdfcpu.io/releases/download/v0.14.0/pdfcpu_0.14.0_Linux_armv7.tar.xz)
-* [i386](https://dl.pdfcpu.io/releases/download/v0.14.0/pdfcpu_0.14.0_Linux_i386.tar.xz)
+* [x86_64](https://dl.pdfcpu.io/releases/download/v0.15.0/pdfcpu_0.15.0_Linux_x86_64.tar.xz)
+* [arm64](https://dl.pdfcpu.io/releases/download/v0.15.0/pdfcpu_0.15.0_Linux_arm64.tar.xz)
+* [armv7](https://dl.pdfcpu.io/releases/download/v0.15.0/pdfcpu_0.15.0_Linux_armv7.tar.xz)
+* [i386](https://dl.pdfcpu.io/releases/download/v0.15.0/pdfcpu_0.15.0_Linux_i386.tar.xz)
 
 ### Windows
 
-* [x86_64](https://dl.pdfcpu.io/releases/download/v0.14.0/pdfcpu_0.14.0_Windows_x86_64.zip)
-* [i386](https://dl.pdfcpu.io/releases/download/v0.14.0/pdfcpu_0.14.0_Windows_i386.zip)
+* [x86_64](https://dl.pdfcpu.io/releases/download/v0.15.0/pdfcpu_0.15.0_Windows_x86_64.zip)
+* [i386](https://dl.pdfcpu.io/releases/download/v0.15.0/pdfcpu_0.15.0_Windows_i386.zip)
 
 ### Checksums
 
-* [checksums.txt](https://dl.pdfcpu.io/releases/download/v0.14.0/checksums.txt)
+* [checksums.txt](https://dl.pdfcpu.io/releases/download/v0.15.0/checksums.txt)
 
 ---
 

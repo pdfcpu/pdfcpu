@@ -34,6 +34,21 @@ Entries link to GitHub releases or commits where available.
 
 <article class="changelog-entry">
   <div class="changelog-meta">
+    <time datetime="2026-08-11">2026-08-11</time>
+    <span class="changelog-kind">Release</span>
+    <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.15.0">v0.15.0</a>
+  </div>
+  <p>
+  Improve large-corpus validation diagnostics by streaming per-file failures, reporting a compact summary, and adding
+  <code>validate --progress</code> for quiet runs.<br>
+  Harden malformed PDF reading, validation, optimization, encryption handling, and signature diagnostics.<br>
+  Add automatic CJK wrapping for text watermarks.<br>
+  Fix #1427, #1459.
+  </p>
+</article>
+
+<article class="changelog-entry">
+  <div class="changelog-meta">
     <time datetime="2026-08-03">2026-08-03</time>
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.14.0">v0.14.0</a>
