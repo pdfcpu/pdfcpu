@@ -36,6 +36,7 @@ pdfcpu validate inFile... [flags]
 | m(ode)                           | validation mode | no       | strict, relaxed | relaxed
 | l(inks)                          | check links     | no       |                 |
 | opt, optimize                    | optimize resources | no    |                 |
+| progress                         | print each input before validation | no |          |
 
 <br>
 
@@ -84,6 +85,13 @@ document pdfcpu reconstructed passed the strict checks currently implemented.
 Strict and relaxed are validation policies. They do not select a PDF/A profile, provide complete PDF 2.0 validation, or
 constitute a signature trust, legal-validity, or regulatory-compliance assessment.
 
+#### Progress
+
+Use `--progress` together with `--quiet` for quiet batch validation that still identifies each input as processing starts.
+Progress and validation errors are written to standard error; normal success output remains suppressed.
+
+Without `--quiet`, validation already reports the current input and `--progress` does not print a duplicate line.
+
 <br>
 
 ## Examples
@@ -102,6 +110,16 @@ An example using default validation:
 $ pdfcpu validate test.pdf
 validating(mode=relaxed) test.pdf ...
 validation ok
+```
+
+<br>
+
+Quietly validate a directory while reporting each input as processing starts:
+
+```sh
+$ pdfcpu validate --quiet --progress invoices
+validating(mode=relaxed) invoices/invoice-001.pdf ...
+validating(mode=relaxed) invoices/invoice-002.pdf ...
 ```
 
 <br>
