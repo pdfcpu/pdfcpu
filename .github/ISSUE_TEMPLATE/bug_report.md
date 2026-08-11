@@ -20,9 +20,19 @@ Please ensure the following:
 - When reporting a problem with a specific PDF, do not name the organization responsible for the PDF writer.
   Refer to it simply as the *PDF writer*.
 
-- Write the report in your own words.
-Do not paste AI-generated issue reports, analyses or solutions.
-- If AI was used as a supporting tool, independently verify every claim and be prepared to explain the report without relying on generated text.
+### Corpus and automated reports
+
+- Corpus output is diagnostic input, not an issue backlog. Reproduce one failure individually and report one distinct
+  problem per issue.
+- Do not paste complete corpus logs. Include the final summary and relevant error, and attach large logs as compressed
+  files.
+- Corpus-wide analysis, failure classification and scheduled remediation are separate engineering work and may require
+  a paid engagement.
+- **AI-generated, bulk-generated or mechanically reformatted corpus reports will be closed immediately without
+  investigation. Repeated bulk submissions may be treated as spam.**
+
+- Write the report in your own words. AI may assist your investigation, but every submitted report must be understood,
+  manually verified and independently reproduced by its author.
 
 - Submitting an issue means staying engaged until the problem is understood.
 Be prepared for detailed technical follow-up with the maintainers.
