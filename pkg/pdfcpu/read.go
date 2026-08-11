@@ -296,7 +296,12 @@ func offsetLastXRefSection(ctx *model.Context, skip int64) (*int64, error) {
 			continue
 		}
 
-		p := workBuf[j+len("startxref")+1:]
+		start := j + len("startxref")
+		if start >= len(workBuf) {
+			return nil, errMissingXRefEOF
+		}
+
+		p := workBuf[start+1:]
 		posEOF := strings.Index(string(p), "%%EOF")
 		if posEOF < 0 {
 			posEOF = incrEpilogIndex(string(p))
@@ -1484,22 +1489,26 @@ func headerVersion(rs io.ReadSeeker) (v *model.Version, eolCount int, offset int
 	return &pdfVersion, eolCount, int64(off), nil
 }
 
-func parseAndLoad(c context.Context, ctx *model.Context, line string, offset *int64, incr int, offsetPrev *int64) error {
+func parseAndLoad(c context.Context, ctx *model.Context, line string, offset *int64, incr int, offsetPrev *int64) (int, error) {
 	l := line
 	objNr, generation, err := model.ParseObjectAttributes(&l)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if *objNr == 0 {
-		return nil
+		return 0, nil
 	}
 
 	off := *offset
 
-	obj, err := ParseObjectWithContext(c, ctx, off, *objNr, *generation)
+	obj, endInd, streamInd, streamOffset, err := object(c, ctx, off, *objNr, *generation)
 	if err != nil {
-		return err
+		return endInd, err
+	}
+	obj, err = resolveObject(c, ctx, obj, off, *objNr, *generation, endInd, streamInd, streamOffset)
+	if err != nil {
+		return endInd, err
 	}
 
 	if d, ok := obj.(types.Dict); ok {
@@ -1517,7 +1526,7 @@ func parseAndLoad(c context.Context, ctx *model.Context, line string, offset *in
 	sd, ok := obj.(types.StreamDict)
 	if ok {
 		if err = loadStreamDict(c, ctx, &sd, *objNr, *generation, true); err != nil {
-			return err
+			return endInd, err
 		}
 		obj = sd
 		*offset = sd.StreamOffset + *sd.StreamLength
@@ -1533,19 +1542,24 @@ func parseAndLoad(c context.Context, ctx *model.Context, line string, offset *in
 			Incr:       incr,
 		}
 		ctx.Table[*objNr] = &entry
-		return nil
+		return endInd, nil
 	}
 
 	e.Offset = &off
 	e.Object = obj
 	e.Incr = incr
 
-	return nil
+	return endInd, nil
 }
 
 func processObject(c context.Context, ctx *model.Context, line string, offset *int64, incr int, offsetPrev *int64) (*bufio.Scanner, error) {
-	if err := parseAndLoad(c, ctx, line, offset, incr, offsetPrev); err != nil {
-		return nil, err
+	endInd, err := parseAndLoad(c, ctx, line, offset, incr, offsetPrev)
+	if err != nil {
+		if ctx.XRefTable.ValidationMode != model.ValidationRelaxed || endInd < 0 {
+			return nil, err
+		}
+		model.ShowSkipped(fmt.Sprintf("malformed object at offset %d: %v", *offset, err))
+		*offset += int64(endInd + len("endobj"))
 	}
 	rd, err := newPositionedReader(ctx.Read.RS, offset)
 	if err != nil {
@@ -1925,7 +1939,7 @@ func readXRefTable(c context.Context, ctx *model.Context) (err error) {
 
 	offset, err := offsetLastXRefSection(ctx, 0)
 	if err != nil {
-		if !isMissingXRefSection(err) {
+		if !repairableLastXRefSection(ctx, err) {
 			return err
 		}
 		zero := int64(0)
@@ -1957,6 +1971,13 @@ func readXRefTable(c context.Context, ctx *model.Context) (err error) {
 
 func isMissingXRefSection(err error) bool {
 	return errors.Is(err, ErrMissingXRefSection)
+}
+
+func repairableLastXRefSection(ctx *model.Context, err error) bool {
+	if isMissingXRefSection(err) {
+		return true
+	}
+	return ctx.XRefTable.ValidationMode == model.ValidationRelaxed && errors.Is(err, errMissingXRefEOF)
 }
 
 func growBufBy(buf []byte, size int, rd io.Reader) ([]byte, error) {
@@ -2140,6 +2161,62 @@ func keywordStreamRightAfterEndOfDict(buf string, streamInd int) bool {
 	return ok
 }
 
+// inlineImageFilterAliases are standardized for inline images only.
+// Relaxed validation also accepts them for regular streams for reader compatibility.
+var inlineImageFilterAliases = map[string]string{
+	"AHx": filter.ASCIIHex,
+	"A85": filter.ASCII85,
+	"LZW": filter.LZW,
+	"Fl":  filter.Flate,
+	"RL":  filter.RunLength,
+	"CCF": filter.CCITTFax,
+	"DCT": filter.DCT,
+}
+
+func streamFilterName(ctx *model.Context, name string) string {
+	if ctx.XRefTable.ValidationMode == model.ValidationRelaxed {
+		if canonicalName, ok := inlineImageFilterAliases[name]; ok {
+			return canonicalName
+		}
+	}
+	return name
+}
+
+func normalizeStreamFilterName(ctx *model.Context, dict types.Dict, name string) string {
+	filterName := streamFilterName(ctx, name)
+	if filterName == name {
+		return name
+	}
+	dict.Update("Filter", types.Name(filterName))
+	model.ShowRepaired(fmt.Sprintf("stream filter %s", name))
+	return filterName
+}
+
+func normalizeStreamFilterArray(ctx *model.Context, dict types.Dict, filters types.Array) types.Array {
+	if ctx.XRefTable.ValidationMode != model.ValidationRelaxed {
+		return filters
+	}
+	canonicalFilters := filters.Clone().(types.Array)
+	repaired := false
+	for i, obj := range canonicalFilters {
+		name, ok := obj.(types.Name)
+		if !ok {
+			continue
+		}
+		filterName := streamFilterName(ctx, name.String())
+		if filterName != name.String() {
+			canonicalFilters[i] = types.Name(filterName)
+			repaired = true
+		}
+	}
+	if !repaired {
+		return filters
+	}
+	dict.Update("Filter", canonicalFilters)
+	model.ShowRepaired("stream filter pipeline")
+	return canonicalFilters
+}
+
 func buildFilterPipeline(c context.Context, ctx *model.Context, filterArray, decodeParmsArr types.Array) ([]types.PDFFilter, error) {
 	var filterPipeline []types.PDFFilter
 
@@ -2149,8 +2226,9 @@ func buildFilterPipeline(c context.Context, ctx *model.Context, filterArray, dec
 		if !ok {
 			return nil, fmt.Errorf("filter pipeline entry %d: %w", i, errCorruptFilterArray)
 		}
+		name := streamFilterName(ctx, filterName.Value())
 		if decodeParmsArr == nil || decodeParmsArr[i] == nil {
-			filterPipeline = append(filterPipeline, types.PDFFilter{Name: filterName.Value(), DecodeParms: nil})
+			filterPipeline = append(filterPipeline, types.PDFFilter{Name: name, DecodeParms: nil})
 			continue
 		}
 
@@ -2167,13 +2245,14 @@ func buildFilterPipeline(c context.Context, ctx *model.Context, filterArray, dec
 			dict = d
 		}
 
-		filterPipeline = append(filterPipeline, types.PDFFilter{Name: filterName.String(), DecodeParms: dict})
+		filterPipeline = append(filterPipeline, types.PDFFilter{Name: name, DecodeParms: dict})
 	}
 
 	return filterPipeline, nil
 }
 
 func singleFilter(c context.Context, ctx *model.Context, filterName string, d types.Dict) ([]types.PDFFilter, error) {
+	filterName = streamFilterName(ctx, filterName)
 	obj, found := d.Find("DecodeParms")
 	if !found {
 		// w/o decode parameters.
@@ -2219,10 +2298,10 @@ func singleFilter(c context.Context, ctx *model.Context, filterName string, d ty
 	return nil, fmt.Errorf("single filter %s DecodeParms: %w", filterName, errCorruptDecodeParms)
 }
 
-func filterArraySupportsDecodeParms(filters types.Array) bool {
+func filterArraySupportsDecodeParms(ctx *model.Context, filters types.Array) bool {
 	for _, obj := range filters {
 		if name, ok := obj.(types.Name); ok {
-			if filter.SupportsDecodeParms(name.String()) {
+			if filter.SupportsDecodeParms(streamFilterName(ctx, name.String())) {
 				return true
 			}
 		}
@@ -2257,7 +2336,8 @@ func pdfFilterPipeline(c context.Context, ctx *model.Context, dict types.Dict) (
 	//fmt.Printf("dereferenced filter obj: %s\n", obj)
 
 	if name, ok := o.(types.Name); ok {
-		return singleFilter(c, ctx, name.String(), dict)
+		filterName := normalizeStreamFilterName(ctx, dict, name.String())
+		return singleFilter(c, ctx, filterName, dict)
 	}
 
 	// filter pipeline.
@@ -2272,7 +2352,7 @@ func pdfFilterPipeline(c context.Context, ctx *model.Context, dict types.Dict) (
 	var decodeParmsArr types.Array
 	decodeParms, found := dict.Find("DecodeParms")
 	if found {
-		if filterArraySupportsDecodeParms(filterArray) {
+		if filterArraySupportsDecodeParms(ctx, filterArray) {
 			decodeParmsArr, ok = decodeParms.(types.Array)
 			if ok {
 				if len(decodeParmsArr) != len(filterArray) {
@@ -2281,6 +2361,8 @@ func pdfFilterPipeline(c context.Context, ctx *model.Context, dict types.Dict) (
 			}
 		}
 	}
+
+	filterArray = normalizeStreamFilterArray(ctx, dict, filterArray)
 
 	//fmt.Printf("decodeParmsArr: %s\n", decodeParmsArr)
 

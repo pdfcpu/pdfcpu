@@ -763,12 +763,22 @@ func validateXObjectStreamDictMissingSubtype(xRefTable *model.XRefTable, sd *typ
 		if err := validateFormStreamDict(xRefTable, sd); err != nil {
 			return fmt.Errorf("xObject form stream dict: %w", err)
 		}
+		sd.Dict["Subtype"] = types.Name("Form")
+		model.ShowRepaired("XObject stream dict missing Subtype inferred as Form")
+		return nil
+	}
+
+	_, hasWidth := sd.Find("Width")
+	_, hasHeight := sd.Find("Height")
+	if !hasWidth || !hasHeight {
 		return nil
 	}
 
 	if err := validateImageStreamDict(xRefTable, sd, isNoAlternateImageStreamDict); err != nil {
 		return fmt.Errorf("xObject image stream dict: %w", err)
 	}
+	sd.Dict["Subtype"] = types.Name("Image")
+	model.ShowRepaired("XObject stream dict missing Subtype inferred as Image")
 	return nil
 }
 

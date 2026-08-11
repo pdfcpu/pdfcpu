@@ -17,9 +17,11 @@ limitations under the License.
 package model
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -48,6 +50,17 @@ func TestParseObjectContextRejectsRecursionDepth(t *testing.T) {
 	_, err := ParseObjectContext(t.Context(), &s, 0, 1)
 	if !errors.Is(err, ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
+	}
+}
+
+func TestParseObjectContextBoundsRelaxedFallback(t *testing.T) {
+	s := strings.Repeat("<</Differences[24/breve/quotesingle0 obj\r", 34)
+	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+
+	_, err := ParseObjectContext(ctx, &s, 0)
+	if !errors.Is(err, errArrayNotTerminated) {
+		t.Fatalf("got %v, want errArrayNotTerminated", err)
 	}
 }
 
@@ -186,6 +199,42 @@ func TestPageTreeRejectsDuplicateNode(t *testing.T) {
 	_, err := xRefTable.processPageTreeForPageNumber(root, &pageCount, 1)
 	if !errors.Is(err, ErrPageTreeDuplicate) {
 		t.Fatalf("got %v, want ErrPageTreeDuplicate", err)
+	}
+}
+
+func TestPageTreeOperationsRejectChildMissingType(t *testing.T) {
+	xRefTable := newXRefTable(NewDefaultConfiguration())
+	root := types.NewIndirectRef(1, 0)
+	child := types.NewIndirectRef(2, 0)
+	pageCount := 0
+
+	if _, err := xRefTable.IndRefForObject(1, types.Dict{
+		"Type": types.Name("Pages"),
+		"Kids": types.Array{*child},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := xRefTable.IndRefForObject(2, types.Dict{}); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := xRefTable.processPageTreeForPageNumber(root, &pageCount, 1)
+	if err == nil || !strings.Contains(err.Error(), "page tree kid obj#2: missing dict type") {
+		t.Fatalf("got %v, want missing page node Type error", err)
+	}
+
+	_, err = xRefTable.insertPagesDepth(root, &pageCount, nil, 0, NewPageTreeVisit())
+	if err == nil || !strings.Contains(err.Error(), "page tree kid obj#2: missing dict type") {
+		t.Fatalf("got %v, want missing page node Type error", err)
+	}
+}
+
+func TestDereferencePageNodeDictRejectsMissingDict(t *testing.T) {
+	xRefTable := newXRefTable(NewDefaultConfiguration())
+
+	_, err := xRefTable.DereferencePageNodeDict(*types.NewIndirectRef(7, 0))
+	if err == nil || !strings.Contains(err.Error(), "missing page node dict") {
+		t.Fatalf("got %v, want missing page node dict error", err)
 	}
 }
 

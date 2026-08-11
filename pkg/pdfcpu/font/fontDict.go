@@ -1400,7 +1400,12 @@ func Name(xRefTable *model.XRefTable, fontDict types.Dict, objNumber int) (prefi
 	var found bool
 	var o types.Object
 
-	if *fontDict.Subtype() != "Type3" {
+	subtype := fontDict.Subtype()
+	if subtype == nil || len(*subtype) == 0 {
+		return "", "", errors.New("fontName: missing fontDict entry \"Subtype\"")
+	}
+
+	if *subtype != "Type3" {
 
 		o, found = fontDict.Find("BaseFont")
 		if !found {
@@ -1562,7 +1567,11 @@ func FontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) 
 		return nil, fmt.Errorf("fontDescriptor: descendant font dict is null for %v", a)
 	}
 
-	if *d.Type() != "Font" {
+	dictType := d.Type()
+	if dictType == nil {
+		return nil, fmt.Errorf("fontDescriptor: descendant font dict missing Type for font object %d", objNr)
+	}
+	if *dictType != "Font" {
 		return nil, fmt.Errorf("fontDescriptor: font dict with incorrect dict type for %v", d)
 	}
 

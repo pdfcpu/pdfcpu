@@ -35,6 +35,76 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+func validationInputLabel(fn string) string {
+	if fn == "-" {
+		return "stdin"
+	}
+	return fn
+}
+
+func reportValidationProgress(w io.Writer, conf *model.Configuration, fn string) error {
+	_, err := fmt.Fprintf(w, "validating(mode=%s) %s ...\n", conf.ValidationModeString(), validationInputLabel(fn))
+	return err
+}
+
+func validateInput(fn string, conf *model.Configuration, progressOutput io.Writer) error {
+	if progressOutput != nil {
+		if err := reportValidationProgress(progressOutput, conf, fn); err != nil {
+			return fmt.Errorf("write validation progress: %w", err)
+		}
+	}
+
+	if fn != "-" {
+		return api.ValidateFile(fn, conf)
+	}
+
+	log.CLI.Printf("validating(mode=%s) stdin ...\n", conf.ValidationModeString())
+	_, err := withStdinReadSeeker("validate", func(rs io.ReadSeeker) (struct{}, error) {
+		return struct{}{}, api.Validate(rs, conf)
+	})
+	if err == nil {
+		log.CLI.Println("validation ok")
+	}
+	return err
+}
+
+func reportValidationError(w io.Writer, err error) error {
+	if _, writeErr := fmt.Fprintln(w, err); writeErr != nil {
+		return errors.Join(err, fmt.Errorf("write validation error: %w", writeErr))
+	}
+	return nil
+}
+
+func validateInputs(inFiles []string, conf *model.Configuration, errorOutput, progressOutput io.Writer) error {
+	var errs []error
+	failures := 0
+	for i, fn := range inFiles {
+		if i > 0 {
+			log.CLI.Println()
+		}
+
+		err := validateInput(fn, conf, progressOutput)
+		if err == nil {
+			continue
+		}
+
+		if errorOutput == nil {
+			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
+			continue
+		}
+
+		failures++
+		if err := reportValidationError(errorOutput, err); err != nil {
+			return err
+		}
+	}
+
+	if failures > 0 {
+		return fmt.Errorf("validation failed: %d of %d files invalid", failures, len(inFiles))
+	}
+	return errors.Join(errs...)
+}
+
 // Validate inFile against ISO-32000-1:2008.
 func Validate(cmd *Command) ([]string, error) {
 	if err := validateCommandRequirements(cmd, commandRequirements{
@@ -48,39 +118,23 @@ func Validate(cmd *Command) ([]string, error) {
 		conf = model.NewDefaultConfiguration()
 	}
 
-	stdin := slices.Contains(cmd.InFiles, "-")
-	if !stdin {
+	if len(cmd.InFiles) == 1 {
+		var progressOutput io.Writer
+		if cmd.BoolVal1 {
+			progressOutput = cmd.ErrorOutput
+		}
+		return nil, validateInput(cmd.InFiles[0], conf, progressOutput)
+	}
+
+	if cmd.ErrorOutput == nil && !slices.Contains(cmd.InFiles, "-") {
 		return nil, api.ValidateFiles(cmd.InFiles, conf)
 	}
 
-	var errs []error
-	for i, fn := range cmd.InFiles {
-		if i > 0 {
-			log.CLI.Println()
-		}
-
-		var err error
-		if fn == "-" {
-			log.CLI.Printf("validating(mode=%s) stdin ...\n", conf.ValidationModeString())
-			_, err = withStdinReadSeeker("validate", func(rs io.ReadSeeker) (struct{}, error) {
-				return struct{}{}, api.Validate(rs, conf)
-			})
-			if err == nil {
-				log.CLI.Println("validation ok")
-			}
-		} else {
-			err = api.ValidateFile(fn, conf)
-		}
-
-		if err != nil {
-			if len(cmd.InFiles) == 1 {
-				return nil, err
-			}
-			errs = append(errs, fmt.Errorf("%s: %w", fn, err))
-		}
+	var progressOutput io.Writer
+	if cmd.BoolVal1 {
+		progressOutput = cmd.ErrorOutput
 	}
-
-	return nil, errors.Join(errs...)
+	return nil, validateInputs(cmd.InFiles, conf, cmd.ErrorOutput, progressOutput)
 }
 
 // Optimize inFile and write result to outFile.

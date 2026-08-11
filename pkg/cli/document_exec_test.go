@@ -17,6 +17,7 @@ limitations under the License.
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -28,6 +29,133 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
+
+type validationErrorWriter struct {
+	err error
+}
+
+func (w validationErrorWriter) Write([]byte) (int, error) {
+	return 0, w.err
+}
+
+func TestValidateSingleValidFile(t *testing.T) {
+	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
+
+	if _, err := Validate(ValidateCommand([]string{inFile}, nil)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateSingleMissingFilePreservesNotExist(t *testing.T) {
+	_, err := Validate(ValidateCommand([]string{"missing.pdf"}, nil))
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
+	}
+}
+
+func TestValidateMultipleFilesReturnsJoinedErrorsWithoutReporter(t *testing.T) {
+	inFiles := []string{"missing1.pdf", "missing2.pdf"}
+
+	_, err := Validate(ValidateCommand(inFiles, nil))
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
+	}
+	for _, fn := range inFiles {
+		if !bytes.Contains([]byte(err.Error()), []byte(fn)) {
+			t.Fatalf("expected %q in error, got %q", fn, err.Error())
+		}
+	}
+}
+
+func TestValidateMultipleFilesStreamsFailuresAndContinues(t *testing.T) {
+	validFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
+	inFiles := []string{"missing1.pdf", validFile, "missing2.pdf"}
+	cmd := ValidateCommand(inFiles, nil)
+	var errorOutput bytes.Buffer
+	cmd.ErrorOutput = &errorOutput
+
+	_, err := Validate(cmd)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if err.Error() != "validation failed: 2 of 3 files invalid" {
+		t.Fatalf("got %q", err.Error())
+	}
+
+	got := errorOutput.String()
+	first := strings.Index(got, "missing1.pdf")
+	second := strings.Index(got, "missing2.pdf")
+	if first < 0 || second < 0 {
+		t.Fatalf("expected both failures in error output, got %q", got)
+	}
+	if first >= second {
+		t.Fatalf("expected input order in error output, got %q", got)
+	}
+	for _, fn := range []string{"missing1.pdf", "missing2.pdf"} {
+		if strings.Count(got, fn) != 2 {
+			t.Fatalf("expected no additional multi-file wrapping for %q, got %q", fn, got)
+		}
+	}
+}
+
+func TestValidateProgressPrecedesEachInput(t *testing.T) {
+	validFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
+	inFiles := []string{"missing.pdf", validFile}
+	cmd := ValidateCommand(inFiles, nil)
+	var errorOutput bytes.Buffer
+	cmd.BoolVal1 = true
+	cmd.ErrorOutput = &errorOutput
+
+	_, err := Validate(cmd)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+
+	got := errorOutput.String()
+	missingProgress := strings.Index(got, "validating(mode=relaxed) missing.pdf ...")
+	missingFailure := strings.Index(got, "validate: open missing.pdf")
+	validProgress := strings.Index(got, "validating(mode=relaxed) "+validFile+" ...")
+	if missingProgress < 0 || missingFailure < 0 || validProgress < 0 {
+		t.Fatalf("expected progress and failure output, got %q", got)
+	}
+	if missingProgress >= missingFailure || missingFailure >= validProgress {
+		t.Fatalf("expected progress and failure in input order, got %q", got)
+	}
+}
+
+func TestValidateProgressLabelsStandardInput(t *testing.T) {
+	withStdinFile(t, "not a pdf")
+	cmd := ValidateCommand([]string{"-"}, nil)
+	var errorOutput bytes.Buffer
+	cmd.BoolVal1 = true
+	cmd.ErrorOutput = &errorOutput
+
+	if _, err := Validate(cmd); err == nil {
+		t.Fatal("expected error")
+	}
+	if got, want := errorOutput.String(), "validating(mode=relaxed) stdin ...\n"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestValidateProgressWriterFailurePreservesCause(t *testing.T) {
+	wantErr := errors.New("progress writer failed")
+	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
+	cmd := ValidateCommand([]string{inFile}, nil)
+	cmd.BoolVal1 = true
+	cmd.ErrorOutput = validationErrorWriter{err: wantErr}
+
+	_, err := Validate(cmd)
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("expected %v, got %v", wantErr, err)
+	}
+	if !strings.Contains(err.Error(), "write validation progress") {
+		t.Fatalf("expected progress write context, got %q", err.Error())
+	}
+}
 
 func TestDumpMissingFilePreservesNotExist(t *testing.T) {
 	cmd := DumpCommand("missing.pdf", []int{0, 0}, nil)

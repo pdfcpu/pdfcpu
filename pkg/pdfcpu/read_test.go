@@ -103,6 +103,38 @@ func TestReadClassifiesEmptyInput(t *testing.T) {
 	}
 }
 
+func TestReadClassifiesTruncatedStartXRef(t *testing.T) {
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = model.ValidationStrict
+	_, err := Read(bytes.NewReader([]byte("%PDF-1.7\nstartxref")), conf)
+	if !errors.Is(err, errMissingXRefEOF) {
+		t.Fatalf("got %v, want errMissingXRefEOF", err)
+	}
+}
+
+func TestReadRepairsTruncatedStartXRefInRelaxedMode(t *testing.T) {
+	bb, err := os.ReadFile(filepath.Join("..", "testdata", "test.pdf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := bytes.LastIndex(bb, []byte("startxref"))
+	if i < 0 {
+		t.Fatal("missing startxref")
+	}
+	bb = bb[:i+len("startxref")]
+
+	if _, err := Read(bytes.NewReader(bb), nil); err != nil {
+		t.Fatalf("relaxed read: %v", err)
+	}
+
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = model.ValidationStrict
+	if _, err := Read(bytes.NewReader(bb), conf); !errors.Is(err, errMissingXRefEOF) {
+		t.Fatalf("strict read: got %v, want errMissingXRefEOF", err)
+	}
+}
+
 func TestReadMissingReaderReturnsError(t *testing.T) {
 	_, err := Read(nil, nil)
 	if err == nil {
@@ -129,6 +161,11 @@ func TestOffsetLastXRefSectionClassifiesEpilogueErrors(t *testing.T) {
 		{
 			name:    "missing EOF",
 			in:      "%PDF-1.7\nstartxref\n12\n",
+			wantErr: errMissingXRefEOF,
+		},
+		{
+			name:    "truncated after startxref",
+			in:      "%PDF-1.7\nstartxref",
 			wantErr: errMissingXRefEOF,
 		},
 		{
@@ -173,6 +210,43 @@ func TestOffsetLastXRefSectionPreservesReadError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "scan for startxref") {
 		t.Fatalf("expected startxref scan context, got %q", err.Error())
+	}
+}
+
+func TestProcessObjectSkipsBoundedMalformedObjectRelaxed(t *testing.T) {
+	input := "1 0 obj\n<</D[0/a0 obj\n<</E 1>>\nendobj\n2 0 obj\nnull\nendobj\n"
+	ctx, err := model.NewContext(bytes.NewReader([]byte(input)), model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var offset int64
+	s, err := processObject(t.Context(), ctx, "1 0 obj", &offset, 1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s == nil {
+		t.Fatal("missing scanner")
+	}
+	wantOffset := int64(strings.Index(input, "endobj") + len("endobj"))
+	if offset != wantOffset {
+		t.Fatalf("offset = %d, want %d", offset, wantOffset)
+	}
+}
+
+func TestProcessObjectRejectsBoundedMalformedObjectStrict(t *testing.T) {
+	input := "1 0 obj\n<</D[0/a0 obj\n<</E 1>>\nendobj\n"
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = model.ValidationStrict
+	ctx, err := model.NewContext(bytes.NewReader([]byte(input)), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var offset int64
+	_, err = processObject(t.Context(), ctx, "1 0 obj", &offset, 1, nil)
+	if err == nil || !strings.Contains(err.Error(), "unterminated array") {
+		t.Fatalf("got %v, want malformed object error", err)
 	}
 }
 
@@ -1039,6 +1113,82 @@ func TestFilterPipelineClassifiesCorruptDecodeParms(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "entry 0") {
 		t.Fatalf("expected DecodeParms entry context, got %q", err.Error())
+	}
+}
+
+func TestFilterPipelineNormalizesAliasesInRelaxedMode(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d := types.Dict{"Filter": types.Name("A85")}
+	pipeline, err := pdfFilterPipeline(context.Background(), ctx, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := pipeline[0].Name; got != filter.ASCII85 {
+		t.Fatalf("got filter %q, want %q", got, filter.ASCII85)
+	}
+	if got := d.NameEntry("Filter"); got == nil || *got != filter.ASCII85 {
+		t.Fatalf("got dictionary filter %v, want %q", got, filter.ASCII85)
+	}
+
+	aliases := types.Array{
+		types.Name("AHx"),
+		types.Name("A85"),
+		types.Name("LZW"),
+		types.Name("Fl"),
+		types.Name("RL"),
+		types.Name("CCF"),
+		types.Name("DCT"),
+	}
+	want := []string{
+		filter.ASCIIHex,
+		filter.ASCII85,
+		filter.LZW,
+		filter.Flate,
+		filter.RunLength,
+		filter.CCITTFax,
+		filter.DCT,
+	}
+	d = types.Dict{"Filter": aliases}
+	pipeline, err = pdfFilterPipeline(context.Background(), ctx, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, f := range pipeline {
+		if f.Name != want[i] {
+			t.Errorf("filter %d: got %q, want %q", i, f.Name, want[i])
+		}
+	}
+	filterArray := d.ArrayEntry("Filter")
+	for i, obj := range filterArray {
+		if got := obj.(types.Name).String(); got != want[i] {
+			t.Errorf("dictionary filter %d: got %q, want %q", i, got, want[i])
+		}
+	}
+}
+
+func TestFilterPipelinePreservesAliasesInStrictMode(t *testing.T) {
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = model.ValidationStrict
+	ctx, err := model.NewContext(bytes.NewReader(nil), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d := types.Dict{"Filter": types.Name("A85")}
+	pipeline, err := pdfFilterPipeline(context.Background(), ctx, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := pipeline[0].Name; got != "A85" {
+		t.Fatalf("got filter %q, want A85", got)
+	}
+	sd := types.StreamDict{Raw: []byte("~>"), FilterPipeline: pipeline}
+	if err := sd.Decode(); err == nil || !strings.Contains(err.Error(), "invalid filter") {
+		t.Fatalf("got %v, want invalid filter error", err)
 	}
 }
 

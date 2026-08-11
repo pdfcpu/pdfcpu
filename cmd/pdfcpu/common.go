@@ -310,5 +310,8 @@ func runCommandWithOutput(cmd *cli.Command, w io.Writer, dispatch commandDispatc
 
 // runCommand dispatches a CLI command and writes command output.
 func runCommand(cmd *cli.Command) error {
+	if cmd != nil && cmd.ErrorOutput == nil {
+		cmd.ErrorOutput = os.Stderr
+	}
 	return runCommandWithOutput(cmd, os.Stdout, cli.Dispatch, quiet)
 }

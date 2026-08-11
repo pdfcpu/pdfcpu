@@ -436,19 +436,27 @@ func (xRefTable *XRefTable) DereferenceFontDict(indRef types.IndirectRef) (types
 	return d, nil
 }
 
-// DereferencePageNodeDict returns the page node dict referenced by indRef.
-func (xRefTable *XRefTable) DereferencePageNodeDict(indRef types.IndirectRef) (types.Dict, error) {
+func (xRefTable *XRefTable) dereferencePageNodeDictType(indRef types.IndirectRef) (types.Dict, *string, error) {
 	d, err := xRefTable.DereferenceDict(indRef)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if d == nil {
-		return nil, nil
+		return nil, nil, errors.New("missing page node dict")
 	}
 
 	dictType := d.Type()
 	if dictType == nil {
-		return nil, errors.New("missing dict type")
+		return nil, nil, errors.New("missing dict type")
+	}
+	return d, dictType, nil
+}
+
+// DereferencePageNodeDict returns the page node dict referenced by indRef.
+func (xRefTable *XRefTable) DereferencePageNodeDict(indRef types.IndirectRef) (types.Dict, error) {
+	d, dictType, err := xRefTable.dereferencePageNodeDictType(indRef)
+	if err != nil {
+		return nil, err
 	}
 
 	if *dictType != "Pages" && *dictType != "Page" {

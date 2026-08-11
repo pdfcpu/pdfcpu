@@ -62,6 +62,6 @@ func ShowDigestedSpecViolation(msg string) {
 
 // ShowDigestedSpecViolationError shows digested spec violation error.
 func ShowDigestedSpecViolationError(xRefTable *XRefTable, err error) {
-	msg := fmt.Sprintf("spec violation around obj#(%d): %v\n", xRefTable.CurObj, err)
+	msg := fmt.Sprintf("spec violation around obj#(%d): %v", xRefTable.CurObj, err)
 	ShowMsgTopic("digested", msg)
 }

@@ -2249,6 +2249,112 @@ func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (types.Dic
 	return pageDict, pageDictindRef, &inhPAttrs, nil
 }
 
+func cloneInheritedPageAttrs(pAttrs InheritedPageAttrs) InheritedPageAttrs {
+	if pAttrs.Resources != nil {
+		pAttrs.Resources = pAttrs.Resources.Clone().(types.Dict)
+	}
+	return pAttrs
+}
+
+func (xRefTable *XRefTable) consolidatePageResourcesForKid(
+	o types.Object,
+	pAttrs InheritedPageAttrs,
+	pageNr *int,
+	depth int,
+	visit *PageTreeVisit,
+) error {
+	indRef, ok := o.(types.IndirectRef)
+	if !ok {
+		return errors.New("corrupt page node dict")
+	}
+
+	objType, err := xRefTable.pageObjType(indRef)
+	if err != nil {
+		return err
+	}
+	if objType != "Pages" && objType != "Page" {
+		return errForUnexpectedPageObjectType(xRefTable.ValidationMode, objType, indRef)
+	}
+	return xRefTable.consolidatePageResourcesForNode(&indRef, pAttrs, pageNr, depth+1, visit)
+}
+
+func (xRefTable *XRefTable) consolidatePageResourcesForNode(
+	root *types.IndirectRef,
+	pAttrs InheritedPageAttrs,
+	pageNr *int,
+	depth int,
+	visit *PageTreeVisit,
+) error {
+	if err := xRefTable.CheckRecursionDepth("page tree", depth); err != nil {
+		return err
+	}
+
+	d, err := xRefTable.DereferenceDict(*root)
+	if err != nil {
+		return err
+	}
+	if d == nil {
+		return ErrPageNotFound
+	}
+	pAttrs = cloneInheritedPageAttrs(pAttrs)
+	if err = xRefTable.checkInheritedPageAttrs(d, &pAttrs, true); err != nil {
+		return err
+	}
+
+	kids := d.ArrayEntry("Kids")
+	if kids == nil {
+		currentPageNr := *pageNr + 1
+		if err := xRefTable.consolidateResourcesWithContent(d, pAttrs.Resources, currentPageNr, true); err != nil {
+			return err
+		}
+		if len(pAttrs.Resources) > 0 {
+			d["Resources"] = pAttrs.Resources
+		}
+		*pageNr = currentPageNr
+		return nil
+	}
+
+	objNr := root.ObjectNumber.Value()
+	if err := visit.Enter(objNr); err != nil {
+		return err
+	}
+	defer visit.Leave(objNr)
+
+	for _, o := range kids {
+		if o == nil {
+			continue
+		}
+		if err := xRefTable.consolidatePageResourcesForKid(o, pAttrs, pageNr, depth, visit); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ConsolidatePageResources consolidates inherited resource dictionaries in one page-tree pass.
+func (xRefTable *XRefTable) ConsolidatePageResources() error {
+	root, err := xRefTable.Pages()
+	if err != nil {
+		return fmt.Errorf("page 1: resource dict: %w", err)
+	}
+	if root == nil {
+		return fmt.Errorf("page 1: resource dict: %w", ErrPageNotFound)
+	}
+
+	pageNr := 0
+	err = xRefTable.consolidatePageResourcesForNode(
+		root,
+		InheritedPageAttrs{},
+		&pageNr,
+		0,
+		NewPageTreeVisit(),
+	)
+	if err != nil {
+		return fmt.Errorf("page %d: resource dict: %w", pageNr+1, err)
+	}
+	return nil
+}
+
 // PageDictIndRef returns the pageDict IndRef for a logical page number.
 func (xRefTable *XRefTable) PageDictIndRef(page int) (*types.IndirectRef, error) {
 	var (
@@ -2309,12 +2415,12 @@ func (xRefTable *XRefTable) processPageTreeForPageNumberDepth(root *types.Indire
 
 		objNr := indRef.ObjectNumber.Value()
 
-		pageNodeDict, err := xRefTable.DereferenceDict(indRef)
+		_, pageType, err := xRefTable.dereferencePageNodeDictType(indRef)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("page tree kid obj#%d: %w", objNr, err)
 		}
 
-		switch *pageNodeDict.Type() {
+		switch *pageType {
 
 		case "Pages":
 			// Recurse over sub pagetree.
@@ -2976,12 +3082,12 @@ func (xRefTable *XRefTable) insertPagesDepth(parent *types.IndirectRef, p *int, 
 			return 0, fmt.Errorf("insertPagesDepth: corrupt page node dict")
 		}
 
-		pageNodeDict, err := xRefTable.DereferenceDict(ir)
+		_, pageType, err := xRefTable.dereferencePageNodeDictType(ir)
 		if err != nil {
-			return 0, err
+			return 0, fmt.Errorf("page tree kid obj#%d: %w", ir.ObjectNumber.Value(), err)
 		}
 
-		switch *pageNodeDict.Type() {
+		switch *pageType {
 
 		case "Pages":
 			// Recurse over sub pagetree.

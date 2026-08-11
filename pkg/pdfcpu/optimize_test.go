@@ -44,9 +44,23 @@ func testOptimizeContext(t *testing.T) *model.Context {
 		DuplicateInfoObjects: types.IntSet{},
 		ContentStreamCache:   map[int]*types.StreamDict{},
 		FormStreamCache:      map[int]*types.StreamDict{},
+		FormResourceCache:    map[int]types.IntSet{},
 		Cache:                map[int]bool{},
 	}
 	return ctx
+}
+
+func TestFormResourcesVisitedPerPage(t *testing.T) {
+	ctx := testOptimizeContext(t)
+	if formResourcesVisited(ctx, 0, 7) {
+		t.Fatal("form resources unexpectedly visited")
+	}
+	if !formResourcesVisited(ctx, 0, 7) {
+		t.Fatal("form resources not cached for page")
+	}
+	if formResourcesVisited(ctx, 1, 7) {
+		t.Fatal("form resources cache leaked across pages")
+	}
 }
 
 func addOptimizeTestPage(t *testing.T, ctx *model.Context) types.Dict {
@@ -90,6 +104,56 @@ func TestOptimizeResourceDictsErrorIncludesPageContext(t *testing.T) {
 	}
 }
 
+func TestOptimizeResourceDictsConsolidatesInheritedResources(t *testing.T) {
+	ctx := testOptimizeContext(t)
+	pagesIndRef, err := ctx.Pages()
+	if err != nil {
+		t.Fatal(err)
+	}
+	pagesDict, err := ctx.DereferenceDict(*pagesIndRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pagesDict["Resources"] = types.Dict{
+		"Font": types.Dict{"F0": types.Name("root")},
+	}
+
+	pageDicts := make([]types.Dict, 2)
+	for i := range pageDicts {
+		pageIndRef, err := ctx.EmptyPage(pagesIndRef, types.RectForFormat("A4"), 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := model.AppendPageTree(pageIndRef, 1, pagesDict); err != nil {
+			t.Fatal(err)
+		}
+		pageDicts[i], err = ctx.DereferenceDict(*pageIndRef)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	ctx.PageCount = len(pageDicts)
+	pageDicts[0]["Resources"] = types.Dict{
+		"XObject": types.Dict{"X0": types.Name("pageOne")},
+	}
+
+	if err := optimizeResourceDicts(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	pageOneResources := pageDicts[0].DictEntry("Resources")
+	if pageOneResources == nil || pageOneResources.DictEntry("Font") == nil || pageOneResources.DictEntry("XObject") == nil {
+		t.Fatalf("page one resources not consolidated: %v", pageOneResources)
+	}
+	pageTwoResources := pageDicts[1].DictEntry("Resources")
+	if pageTwoResources == nil || pageTwoResources.DictEntry("Font") == nil {
+		t.Fatalf("page two inherited resources missing: %v", pageTwoResources)
+	}
+	if pageTwoResources.DictEntry("XObject") != nil {
+		t.Fatalf("page one resources leaked into page two: %v", pageTwoResources)
+	}
+}
+
 func TestEnsureDirectWidthForXObjsErrorIncludesImageContext(t *testing.T) {
 	ctx := testOptimizeContext(t)
 	ctx.Optimize.PageImages = []types.IntSet{{7: true}}
@@ -107,6 +171,52 @@ func TestEnsureDirectWidthForXObjsErrorIncludesImageContext(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "image obj#7: resolve width") {
 		t.Fatalf("expected image width context, got %q", err.Error())
+	}
+}
+
+func TestHandleDuplicateImageObjectUsesStreamHashes(t *testing.T) {
+	ctx := testOptimizeContext(t)
+	ctx.Optimize.PageImages = []types.IntSet{{}}
+
+	register := func(objNr int, raw []byte) {
+		t.Helper()
+		sd := &types.StreamDict{
+			Dict: types.Dict{
+				"Length": types.Integer(len(raw)),
+			},
+			Raw: raw,
+		}
+		originalObjNr, alreadyDuplicate, err := handleDuplicateImageObject(ctx, sd, "Im", objNr, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if originalObjNr != nil || alreadyDuplicate {
+			t.Fatalf("image obj#%d unexpectedly classified as duplicate", objNr)
+		}
+		ctx.Optimize.ImageObjects[objNr] = &model.ImageObject{
+			ResourceNames: map[int]string{0: "Im"},
+			ImageDict:     sd,
+		}
+	}
+
+	register(1, []byte("first"))
+	register(2, []byte("other"))
+
+	duplicate := &types.StreamDict{
+		Dict: types.Dict{
+			"Length": types.Integer(5),
+		},
+		Raw: []byte("first"),
+	}
+	originalObjNr, alreadyDuplicate, err := handleDuplicateImageObject(ctx, duplicate, "Im3", 3, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if originalObjNr == nil || *originalObjNr != 1 || alreadyDuplicate {
+		t.Fatalf("duplicate image classified as original: objNr=%v alreadyDuplicate=%t", originalObjNr, alreadyDuplicate)
+	}
+	if len(ctx.Optimize.ImageObjectHashes) != 2 {
+		t.Fatalf("expected two image stream hash buckets, got %d", len(ctx.Optimize.ImageObjectHashes))
 	}
 }
 
@@ -145,6 +255,57 @@ func TestOptimizeXRefTableResourceErrorIncludesDeepPageContext(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("expected %q in %q", want, err.Error())
 		}
+	}
+}
+
+func TestOptimizeXRefTableSkipsUnclassifiableXObject(t *testing.T) {
+	ctx := testOptimizeContext(t)
+	ctx.Conf.OptimizeResourceDicts = false
+	pageDict := addOptimizeTestPage(t, ctx)
+	sd, err := ctx.NewStreamDictForBuf([]byte("BT (Hello World!) Tj ET"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ir, err := ctx.IndRefForNewObject(*sd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pageDict["Resources"] = types.Dict{
+		"XObject": types.Dict{
+			"Im0": *ir,
+		},
+	}
+
+	if err := OptimizeXRefTable(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if subtype := sd.Subtype(); subtype != nil {
+		t.Fatalf("unexpected inferred Subtype %q", *subtype)
+	}
+	if len(ctx.Optimize.PageImages) != 1 || len(ctx.Optimize.PageImages[0]) != 0 {
+		t.Fatalf("unclassifiable XObject registered as image: %v", ctx.Optimize.PageImages)
+	}
+}
+
+func TestOptimizeSMaskResourcesSkipsUnclassifiableXObject(t *testing.T) {
+	ctx := testOptimizeContext(t)
+	sd, err := ctx.NewStreamDictForBuf(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ir, err := ctx.IndRefForNewObject(*sd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sMask := types.Dict{
+		"G": *ir,
+	}
+
+	if err := optimizeSMaskResources(sMask, nil, "", ctx, types.Dict{}, 0, types.IntSet{}, 1); err != nil {
+		t.Fatal(err)
+	}
+	if len(ctx.Optimize.ImageObjects) != 0 {
+		t.Fatalf("unclassifiable SMask XObject registered as image: %v", ctx.Optimize.ImageObjects)
 	}
 }
 

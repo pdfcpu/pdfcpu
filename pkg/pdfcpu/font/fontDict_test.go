@@ -20,7 +20,37 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func TestNameRejectsMissingSubtype(t *testing.T) {
+	for _, subtype := range []types.Object{nil, types.Name("")} {
+		fontDict := types.Dict{
+			"BaseFont": types.Name("Helvetica"),
+		}
+		if subtype != nil {
+			fontDict["Subtype"] = subtype
+		}
+
+		_, _, err := Name(nil, fontDict, 7)
+		if err == nil || err.Error() != `fontName: missing fontDict entry "Subtype"` {
+			t.Fatalf("got %v, want missing Subtype error", err)
+		}
+	}
+}
+
+func TestFontDescriptorRejectsDescendantFontMissingType(t *testing.T) {
+	fontDict := types.Dict{
+		"DescendantFonts": types.Array{types.Dict{}},
+	}
+
+	_, err := FontDescriptor(&model.XRefTable{}, fontDict, 7)
+	if err == nil || !strings.Contains(err.Error(), "descendant font dict missing Type for font object 7") {
+		t.Fatalf("got %v, want missing descendant font Type error", err)
+	}
+}
 
 func usedGIDsFromCMapWithoutPanic(t *testing.T, cMap string) (gids []uint16, err error) {
 	t.Helper()

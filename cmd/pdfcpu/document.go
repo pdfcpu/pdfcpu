@@ -38,6 +38,7 @@ type validateOptions struct {
 	mode     string
 	links    bool
 	optimize bool
+	progress bool
 }
 
 type optimizeCommandOptions struct {
@@ -211,6 +212,7 @@ func validateCmd() *cobra.Command {
 		mode:     "relaxed",
 		links:    false,
 		optimize: false,
+		progress: false,
 	}
 	cmd := &cobra.Command{
 		Use:   "validate inFile...",
@@ -226,6 +228,7 @@ func validateCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&opts.links, "links", "l", opts.links, "check for broken links")
 	cmd.Flags().BoolVar(&opts.optimize, "optimize", opts.optimize, "optimize resources")
 	cmd.Flags().BoolVar(&opts.optimize, "opt", opts.optimize, "optimize resources")
+	cmd.Flags().BoolVar(&opts.progress, "progress", opts.progress, "print each input before validation")
 	return cmd
 }
 
@@ -255,7 +258,9 @@ func handleValidateCommand(conf *model.Configuration, args []string, opts *valid
 
 	conf.Optimize = opts.optimize
 
-	return runCommand(cli.ValidateCommand(inFiles, conf))
+	cmd := cli.ValidateCommand(inFiles, conf)
+	cmd.BoolVal1 = opts.progress && quiet
+	return runCommand(cmd)
 }
 
 func handleOptimizeCommand(conf *model.Configuration, args []string, opts *optimizeCommandOptions) error {

@@ -17,9 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"errors"
 	"io"
+	stdlog "log"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -27,6 +30,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	pdfcpuLog "github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
@@ -287,6 +291,207 @@ func TestHandleValidateCommandReturnsExpansionError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "validate: expand input") {
 		t.Fatalf("got %q", err.Error())
+	}
+}
+
+func TestCollectInFilesExpandsRecursivePDFPattern(t *testing.T) {
+	dir := t.TempDir()
+	nestedDir := filepath.Join(dir, "nested")
+	if err := os.Mkdir(nestedDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	rootFile := filepath.Join(dir, "root.pdf")
+	nestedFile := filepath.Join(nestedDir, "nested.pdf")
+	for _, fn := range []string{rootFile, nestedFile} {
+		if err := os.WriteFile(fn, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	got, err := collectInFiles(model.NewDefaultConfiguration(), []string{filepath.Join(dir, "**", "*.pdf")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{nestedFile, rootFile}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestHandleValidateCommandStreamsFailuresInQuietMode(t *testing.T) {
+	quietSave := quiet
+	quiet = true
+	defer func() {
+		quiet = quietSave
+	}()
+
+	var validationErr error
+	stderr := captureStderr(t, func() {
+		validationErr = handleValidateCommand(
+			model.NewDefaultConfiguration(),
+			[]string{"missing1.pdf", "missing2.pdf"},
+			&validateOptions{mode: "relaxed"},
+		)
+	})
+
+	if validationErr == nil {
+		t.Fatal("expected error")
+	}
+	if validationErr.Error() != "validation failed: 2 of 2 files invalid" {
+		t.Fatalf("got %q", validationErr.Error())
+	}
+	for _, fn := range []string{"missing1.pdf", "missing2.pdf"} {
+		if !strings.Contains(stderr, fn) {
+			t.Fatalf("expected %q in stderr, got %q", fn, stderr)
+		}
+	}
+}
+
+func TestValidateCommandDefinesProgressFlag(t *testing.T) {
+	if flag := validateCmd().Flags().Lookup("progress"); flag == nil {
+		t.Fatal("expected progress flag")
+	}
+}
+
+func TestHandleValidateCommandReportsProgressInQuietMode(t *testing.T) {
+	quietSave := quiet
+	quiet = true
+	defer func() {
+		quiet = quietSave
+	}()
+
+	var validationErr error
+	stderr := captureStderr(t, func() {
+		validationErr = handleValidateCommand(
+			model.NewDefaultConfiguration(),
+			[]string{"missing1.pdf", "missing2.pdf"},
+			&validateOptions{mode: "relaxed", progress: true},
+		)
+	})
+
+	if validationErr == nil {
+		t.Fatal("expected error")
+	}
+	for _, fn := range []string{"missing1.pdf", "missing2.pdf"} {
+		progress := "validating(mode=relaxed) " + fn + " ..."
+		progressIndex := strings.Index(stderr, progress)
+		failureIndex := strings.Index(stderr, "validate: open "+fn)
+		if progressIndex < 0 || failureIndex < 0 {
+			t.Fatalf("expected progress and failure for %q, got %q", fn, stderr)
+		}
+		if progressIndex >= failureIndex {
+			t.Fatalf("expected progress before failure for %q, got %q", fn, stderr)
+		}
+	}
+	if strings.Contains(stderr, "validation ok") {
+		t.Fatalf("expected quiet progress without success output, got %q", stderr)
+	}
+}
+
+func TestHandleValidateCommandQuietProgressForValidInput(t *testing.T) {
+	quietSave := quiet
+	quiet = true
+	pdfcpuLog.SetCLILogger(nil)
+	defer func() {
+		quiet = quietSave
+		pdfcpuLog.SetCLILogger(nil)
+	}()
+
+	inFile := filepath.Join("..", "..", "pkg", "samples", "create", "primitives", "textAndAlignment.pdf")
+	tests := []struct {
+		name     string
+		progress bool
+		want     string
+	}{
+		{name: "quiet", progress: false},
+		{
+			name:     "quiet progress",
+			progress: true,
+			want:     "validating(mode=relaxed) " + inFile + " ...\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var validationErr error
+			stderr := captureStderr(t, func() {
+				validationErr = handleValidateCommand(
+					model.NewDefaultConfiguration(),
+					[]string{inFile},
+					&validateOptions{mode: "relaxed", progress: tt.progress},
+				)
+			})
+			if validationErr != nil {
+				t.Fatal(validationErr)
+			}
+			if stderr != tt.want {
+				t.Fatalf("got %q, want %q", stderr, tt.want)
+			}
+		})
+	}
+}
+
+func TestHandleValidateCommandDoesNotDuplicateNonQuietProgress(t *testing.T) {
+	quietSave := quiet
+	quiet = false
+	var cliOutput bytes.Buffer
+	pdfcpuLog.SetCLILogger(stdlog.New(&cliOutput, "", 0))
+	defer func() {
+		quiet = quietSave
+		pdfcpuLog.SetCLILogger(nil)
+	}()
+
+	inFile := filepath.Join("..", "..", "pkg", "samples", "create", "primitives", "textAndAlignment.pdf")
+	err := handleValidateCommand(
+		model.NewDefaultConfiguration(),
+		[]string{inFile},
+		&validateOptions{mode: "relaxed", progress: true},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Count(cliOutput.String(), "validating(mode=relaxed)"); got != 1 {
+		t.Fatalf("got %d progress lines, want 1: %q", got, cliOutput.String())
+	}
+}
+
+func TestHandleValidateCommandReportsRecursiveProgressInTraversalOrder(t *testing.T) {
+	quietSave := quiet
+	quiet = true
+	defer func() {
+		quiet = quietSave
+	}()
+
+	dir := t.TempDir()
+	nestedDir := filepath.Join(dir, "nested")
+	if err := os.Mkdir(nestedDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	nestedFile := filepath.Join(nestedDir, "nested.pdf")
+	rootFile := filepath.Join(dir, "root.pdf")
+	for _, fn := range []string{nestedFile, rootFile} {
+		if err := os.WriteFile(fn, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var validationErr error
+	stderr := captureStderr(t, func() {
+		validationErr = handleValidateCommand(
+			model.NewDefaultConfiguration(),
+			[]string{filepath.Join(dir, "**", "*.pdf")},
+			&validateOptions{mode: "relaxed", progress: true},
+		)
+	})
+	if validationErr == nil {
+		t.Fatal("expected error")
+	}
+
+	nestedProgress := strings.Index(stderr, "validating(mode=relaxed) "+nestedFile+" ...")
+	rootProgress := strings.Index(stderr, "validating(mode=relaxed) "+rootFile+" ...")
+	if nestedProgress < 0 || rootProgress < 0 || nestedProgress >= rootProgress {
+		t.Fatalf("expected recursive progress in traversal order, got %q", stderr)
 	}
 }
 

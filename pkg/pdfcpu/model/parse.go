@@ -325,7 +325,7 @@ func ParseObjectAttributes(line *string) (*int, *int, error) {
 	return &objNr, &genNr, nil
 }
 
-func parseArray(c context.Context, line *string, level, maxDepth int) (*types.Array, error) {
+func parseArray(c context.Context, line *string, level, maxDepth int, relaxed bool) (*types.Array, error) {
 	if err := CheckRecursionDepth("parse object", level, maxDepth); err != nil {
 		return nil, err
 	}
@@ -365,7 +365,7 @@ func parseArray(c context.Context, line *string, level, maxDepth int) (*types.Ar
 
 	for !strings.HasPrefix(l, "]") {
 
-		obj, err := ParseObjectContext(c, &l, level+1, maxDepth)
+		obj, err := parseObjectContext(c, &l, level+1, maxDepth, relaxed)
 		if err != nil {
 			return nil, err
 		}
@@ -610,7 +610,7 @@ func processDictKeys(c context.Context, line *string, level, maxDepth int, relax
 			// #252: For dicts with kv pairs terminated by eol we accept a missing value as an empty string.
 			val = types.StringLiteral("")
 		} else {
-			if val, err = ParseObjectContext(c, &l, level+1, maxDepth); err != nil {
+			if val, err = parseObjectContext(c, &l, level+1, maxDepth, relaxed); err != nil {
 				return nil, err
 			}
 		}
@@ -860,7 +860,7 @@ func parseNumericOrIndRef(line *string) (types.Object, error) {
 	return parseIndRef(s, l, l1, line, i, i2)
 }
 
-func parseHexLiteralOrDict(c context.Context, l *string, level, maxDepth int) (val types.Object, err error) {
+func parseHexLiteralOrDict(c context.Context, l *string, level, maxDepth int, relaxed bool) (val types.Object, err error) {
 	if len(*l) < 2 {
 		return nil, errBufNotAvailable
 	}
@@ -870,20 +870,12 @@ func parseHexLiteralOrDict(c context.Context, l *string, level, maxDepth int) (v
 		if log.ParseEnabled() {
 			log.Parse.Println("parseHexLiteralOrDict: value = Dictionary")
 		}
-		var (
-			d   types.Dict
-			err error
-		)
 		if err := CheckRecursionDepth("parse object", level, maxDepth); err != nil {
 			return nil, err
 		}
-		if d, err = parseDict(c, l, level, maxDepth, false); err != nil {
-			if errors.Is(err, ErrMaxRecursionDepthExceeded) {
-				return nil, err
-			}
-			if d, err = parseDict(c, l, level, maxDepth, true); err != nil {
-				return nil, err
-			}
+		d, err := parseDict(c, l, level, maxDepth, relaxed)
+		if err != nil {
+			return nil, err
 		}
 		val = d
 	} else {
@@ -952,11 +944,11 @@ func parseObjectDepthLimit(maxDepth []int) int {
 	return depthLimit
 }
 
-func parseObjectValue(c context.Context, l *string, level, depthLimit int) (types.Object, error) {
+func parseObjectValue(c context.Context, l *string, level, depthLimit int, relaxed bool) (types.Object, error) {
 	switch (*l)[0] {
 
 	case '[': // array
-		a, err := parseArray(c, l, level, depthLimit)
+		a, err := parseArray(c, l, level, depthLimit, relaxed)
 		if err != nil {
 			return nil, err
 		}
@@ -970,7 +962,7 @@ func parseObjectValue(c context.Context, l *string, level, depthLimit int) (type
 		return *nameObj, nil
 
 	case '<': // hex literal or dict
-		return parseHexLiteralOrDict(c, l, level, depthLimit)
+		return parseHexLiteralOrDict(c, l, level, depthLimit, relaxed)
 
 	case '(': // string literal
 		return parseStringLiteral(l)
@@ -989,14 +981,11 @@ func parseObjectValue(c context.Context, l *string, level, depthLimit int) (type
 	}
 }
 
-// ParseObjectContext parses next Object from string buffer and returns the updated (left clipped) buffer.
-// If the passed context is cancelled, parsing will be interrupted.
-func ParseObjectContext(c context.Context, line *string, level int, maxDepth ...int) (types.Object, error) {
+func parseObjectContext(c context.Context, line *string, level, depthLimit int, relaxed bool) (types.Object, error) {
 	if noBuf(line) {
 		return nil, errBufNotAvailable
 	}
 
-	depthLimit := parseObjectDepthLimit(maxDepth)
 	if err := CheckRecursionDepth("parse object", level, depthLimit); err != nil {
 		return nil, err
 	}
@@ -1014,7 +1003,7 @@ func ParseObjectContext(c context.Context, line *string, level int, maxDepth ...
 		return nil, errBufNotAvailable
 	}
 
-	value, err := parseObjectValue(c, &l, level, depthLimit)
+	value, err := parseObjectValue(c, &l, level, depthLimit, relaxed)
 	if err != nil {
 		return nil, err
 	}
@@ -1026,6 +1015,24 @@ func ParseObjectContext(c context.Context, line *string, level int, maxDepth ...
 	*line = l
 
 	return value, nil
+}
+
+// ParseObjectContext parses next Object from string buffer and returns the updated (left clipped) buffer.
+// If the passed context is cancelled, parsing will be interrupted.
+func ParseObjectContext(c context.Context, line *string, level int, maxDepth ...int) (types.Object, error) {
+	if noBuf(line) {
+		return nil, errBufNotAvailable
+	}
+
+	depthLimit := parseObjectDepthLimit(maxDepth)
+	original := *line
+	value, err := parseObjectContext(c, line, level, depthLimit, false)
+	if err == nil || errors.Is(err, ErrMaxRecursionDepthExceeded) || c.Err() != nil {
+		return value, err
+	}
+
+	*line = original
+	return parseObjectContext(c, line, level, depthLimit, true)
 }
 
 func createXRefStreamDict(sd *types.StreamDict, objs []int, size int) (*types.XRefStreamDict, error) {

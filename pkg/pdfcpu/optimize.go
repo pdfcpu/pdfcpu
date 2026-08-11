@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"slices"
@@ -445,6 +446,21 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int,
 	return nil
 }
 
+func imageObjectHashes(ctx *model.Context) map[[sha256.Size]byte][]int {
+	hashes := ctx.Optimize.ImageObjectHashes
+	if hashes != nil {
+		return hashes
+	}
+
+	hashes = map[[sha256.Size]byte][]int{}
+	for objNr, imageObject := range ctx.Optimize.ImageObjects {
+		h := sha256.Sum256(imageObject.ImageDict.Raw)
+		hashes[h] = append(hashes[h], objNr)
+	}
+	ctx.Optimize.ImageObjectHashes = hashes
+	return hashes
+}
+
 // handleDuplicateImageObject returns nil or the object number of the registered image if it matches this image.
 func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict, resourceName string, objNr, pageNr int) (*int, bool, error) {
 	// Get the set of image object numbers for pageNr.
@@ -469,14 +485,16 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 		return &newObjNr, false, nil
 	}
 
-	// Process image dict, check if this is a duplicate.
-	for imageObjNr, imageObject := range ctx.Optimize.ImageObjects {
+	if imageObject, ok := ctx.Optimize.ImageObjects[objNr]; ok {
+		imageObject.AddResourceName(pageNr, resourceName)
+		return nil, true, nil
+	}
 
-		if imageObjNr == objNr {
-			// Add the resource name of this duplicate image to the list of registered resource names.
-			imageObject.AddResourceName(pageNr, resourceName)
-			return nil, true, nil
-		}
+	// Process image dict, check if this is a duplicate.
+	h := sha256.Sum256(imageDict.Raw)
+	imageHashes := imageObjectHashes(ctx)
+	for _, imageObjNr := range imageHashes[h] {
+		imageObject := ctx.Optimize.ImageObjects[imageObjNr]
 
 		if log.OptimizeEnabled() {
 			log.Optimize.Printf("handleDuplicateImageObject: comparing with imagedict Obj %d\n", imageObjNr)
@@ -512,6 +530,7 @@ func handleDuplicateImageObject(ctx *model.Context, imageDict *types.StreamDict,
 		return &imageObjNr, false, nil
 	}
 
+	imageHashes[h] = append(imageHashes[h], objNr)
 	return nil, false, nil
 }
 
@@ -609,6 +628,25 @@ func visited(o types.Object, visited []types.Object) bool {
 	return slices.Contains(visited, o)
 }
 
+func formResourcesVisited(ctx *model.Context, pageNr, objNr int) bool {
+	cache := ctx.Optimize.FormResourceCache
+	if cache == nil {
+		cache = map[int]types.IntSet{}
+		ctx.Optimize.FormResourceCache = cache
+	}
+
+	forms := cache[pageNr]
+	if forms == nil {
+		forms = types.IntSet{}
+		cache[pageNr] = forms
+	}
+	if forms[objNr] {
+		return true
+	}
+	forms[objNr] = true
+	return false
+}
+
 func optimizeForm(ctx *model.Context, osd *types.StreamDict, rNamePrefix, rName string, rDict types.Dict, objNr, pageNr, pageObjNumber int, vis []types.Object) error {
 	ir, err := optimizeXObjectForm(ctx, osd, objNr)
 	if err != nil {
@@ -617,6 +655,10 @@ func optimizeForm(ctx *model.Context, osd *types.StreamDict, rNamePrefix, rName 
 
 	if ir != nil {
 		rDict[rName] = *ir
+		return nil
+	}
+
+	if formResourcesVisited(ctx, pageNr, objNr) {
 		return nil
 	}
 
@@ -691,13 +733,19 @@ func optimizeSMaskResources(dict types.Dict, vis []types.Object, rNamePrefix str
 		return nil
 	}
 
-	if *sd.Subtype() == "Image" {
+	subtype := sd.Subtype()
+	if subtype == nil || len(*subtype) == 0 {
+		model.ShowSkipped(fmt.Sprintf("unclassifiable XObject SMask G obj#%d: missing Subtype", objNr))
+		return nil
+	}
+
+	if *subtype == "Image" {
 		if err := optimizeXObjectImage(ctx, sd, rNamePrefix, "G", rDict, objNr, pageNr, pageObjNumber, pageImages); err != nil {
 			return fmt.Errorf("SMask G image: %w", err)
 		}
 	}
 
-	if *sd.Subtype() == "Form" {
+	if *subtype == "Form" {
 		if err := optimizeForm(ctx, sd, rNamePrefix, "G", rDict, objNr, pageNr, pageObjNumber, vis); err != nil {
 			return fmt.Errorf("SMask G form: %w", err)
 		}
@@ -753,6 +801,33 @@ func optimizeExtGStateResourcesDict(ctx *model.Context, rDict types.Dict, pageNr
 	return nil
 }
 
+func optimizeXObjectResource(ctx *model.Context, sd *types.StreamDict, rDict types.Dict, rNamePrefix, rName string,
+	qualifiedRName string, objNr, pageNr, pageObjNumber int, pageImages types.IntSet, vis []types.Object) error {
+	subtype := sd.Subtype()
+	if subtype == nil || len(*subtype) == 0 {
+		model.ShowSkipped(fmt.Sprintf("unclassifiable XObject resource %s obj#%d: missing Subtype", qualifiedRName, objNr))
+		return nil
+	}
+
+	if *subtype == "Image" {
+		if err := optimizeXObjectImage(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, pageImages); err != nil {
+			return fmt.Errorf("XObject resource %s obj#%d: image: %w", qualifiedRName, objNr, err)
+		}
+	}
+
+	if *subtype == "Form" {
+		// Get rid of PieceInfo dict from form XObjects.
+		if err := ctx.DeleteDictEntry(sd.Dict, "PieceInfo"); err != nil {
+			return fmt.Errorf("XObject resource %s obj#%d: delete PieceInfo: %w", qualifiedRName, objNr, err)
+		}
+		if err := optimizeForm(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, vis); err != nil {
+			return fmt.Errorf("XObject resource %s obj#%d: form: %w", qualifiedRName, objNr, err)
+		}
+	}
+
+	return nil
+}
+
 func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, pageObjNumber int, rNamePrefix string, vis []types.Object) error {
 	if log.OptimizeEnabled() {
 		log.Optimize.Printf("optimizeXObjectResourcesDict page#%dbegin: %s\n", pageObjNumber, rDict)
@@ -789,20 +864,9 @@ func optimizeXObjectResourcesDict(ctx *model.Context, rDict types.Dict, pageNr, 
 			continue
 		}
 
-		if *sd.Subtype() == "Image" {
-			if err := optimizeXObjectImage(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, pageImages); err != nil {
-				return fmt.Errorf("XObject resource %s obj#%d: image: %w", qualifiedRName, objNr, err)
-			}
-		}
-
-		if *sd.Subtype() == "Form" {
-			// Get rid of PieceInfo dict from form XObjects.
-			if err := ctx.DeleteDictEntry(sd.Dict, "PieceInfo"); err != nil {
-				return fmt.Errorf("XObject resource %s obj#%d: delete PieceInfo: %w", qualifiedRName, objNr, err)
-			}
-			if err := optimizeForm(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, vis); err != nil {
-				return fmt.Errorf("XObject resource %s obj#%d: form: %w", qualifiedRName, objNr, err)
-			}
+		if err := optimizeXObjectResource(
+			ctx, sd, rDict, rNamePrefix, rName, qualifiedRName, objNr, pageNr, pageObjNumber, pageImages, vis); err != nil {
+			return err
 		}
 
 	}
@@ -1165,6 +1229,7 @@ func optimizeFontAndImages(ctx *model.Context) error {
 	// Prepare optimization environment.
 	ctx.Optimize.PageFonts = make([]types.IntSet, ctx.PageCount)
 	ctx.Optimize.PageImages = make([]types.IntSet, ctx.PageCount)
+	ctx.Optimize.FormResourceCache = map[int]types.IntSet{}
 
 	// Iterate over page dicts and optimize resources.
 	_, err = parsePagesDict(ctx, pageTreeRootDict, 0)
@@ -1603,17 +1668,8 @@ func CacheFormFonts(ctx *model.Context) error {
 }
 
 func optimizeResourceDicts(ctx *model.Context) error {
-	for i := 1; i <= ctx.PageCount; i++ {
-		d, _, inhPAttrs, err := ctx.PageDict(i, true)
-		if err != nil {
-			return fmt.Errorf("page %d: resource dict: %w", i, err)
-		}
-		if d == nil {
-			continue
-		}
-		if len(inhPAttrs.Resources) > 0 {
-			d["Resources"] = inhPAttrs.Resources
-		}
+	if err := ctx.ConsolidatePageResources(); err != nil {
+		return err
 	}
 	// TODO Remove resource dicts from inner nodes.
 	return nil

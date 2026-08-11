@@ -86,6 +86,22 @@ func validateAppearanceDictEntry(xRefTable *model.XRefTable, o types.Object) err
 	return err
 }
 
+func validateAppearanceEntry(xRefTable *model.XRefTable, d types.Dict, entryName string) error {
+	o, ok := d.Find(entryName)
+	if !ok {
+		return nil
+	}
+
+	err := validateAppearanceDictEntry(xRefTable, o)
+	if err == nil || xRefTable.ValidationMode == model.ValidationStrict {
+		return err
+	}
+
+	d.Delete(entryName)
+	model.ShowSkipped(fmt.Sprintf("corrupt appearance %s: %v", entryName, err))
+	return nil
+}
+
 func validateAppearanceDict(xRefTable *model.XRefTable, o types.Object) error {
 	// see 12.5.5 Appearance Streams
 
@@ -95,36 +111,23 @@ func validateAppearanceDict(xRefTable *model.XRefTable, o types.Object) error {
 	}
 
 	// Normal Appearance
-	o, ok := d.Find("N")
+	_, ok := d.Find("N")
 	if !ok {
 		if xRefTable.ValidationMode == model.ValidationStrict {
 			logMissingRequiredEntry("appearanceDict", "N", d)
 			return missingRequiredEntryError(xRefTable, "appearanceDict", "N", "add normal appearance stream/subdict or validate in relaxed mode")
 		}
-	} else {
-		err = validateAppearanceDictEntry(xRefTable, o)
-		if err != nil {
-			return err
-		}
+	} else if err = validateAppearanceEntry(xRefTable, d, "N"); err != nil {
+		return err
 	}
 
 	// Rollover Appearance
-	if o, ok = d.Find("R"); ok {
-		err = validateAppearanceDictEntry(xRefTable, o)
-		if err != nil {
-			return err
-		}
+	if err = validateAppearanceEntry(xRefTable, d, "R"); err != nil {
+		return err
 	}
 
 	// Down Appearance
-	if o, ok = d.Find("D"); ok {
-		err = validateAppearanceDictEntry(xRefTable, o)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return validateAppearanceEntry(xRefTable, d, "D")
 }
 
 func validateDA(s string) bool {
