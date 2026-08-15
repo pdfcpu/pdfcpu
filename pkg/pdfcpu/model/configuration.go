@@ -214,6 +214,11 @@ type Configuration struct {
 	// Enable validation right before writing.
 	PostProcessValidate bool
 
+	// PreserveInfoDict preserves existing Producer, CreationDate and ModDate entry objects after input validation.
+	// It does not bypass validation, restore discarded Info data or preserve complete serialized Info dictionary bytes.
+	// This is a runtime option and is not read from config.yml.
+	PreserveInfoDict bool
+
 	// Check for broken links in LinkedAnnotations/URIActions.
 	ValidateLinks bool
 

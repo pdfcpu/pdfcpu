@@ -967,6 +967,53 @@ func parseTrailerInfo(xRefTable *model.XRefTable, d types.Dict) error {
 		if log.ReadEnabled() {
 			log.Read.Printf("parseTrailerInfo: Info object: %s\n", *xRefTable.Info)
 		}
+		return nil
+	}
+
+	infoDict := d.DictEntry("Info")
+	if infoDict == nil {
+		return nil
+	}
+	xRefTable.DirectInfoDict = infoDict
+	if log.ReadEnabled() {
+		log.Read.Printf("parseTrailerInfo: direct Info dictionary pending PDF version identification\n")
+	}
+	return nil
+}
+
+func materializeDirectInfoDict(xRefTable *model.XRefTable) error {
+	if xRefTable.DirectInfoDict == nil {
+		return nil
+	}
+	if !xRefTable.PDF20() {
+		xRefTable.DirectInfoDict = nil
+		return nil
+	}
+	if xRefTable.Size == nil {
+		return errMissingTrailerSize
+	}
+	if xRefTable.Table == nil {
+		xRefTable.Table = map[int]*model.XRefTableEntry{}
+	}
+
+	objNr := *xRefTable.Size
+	for {
+		if _, found := xRefTable.Table[objNr]; !found {
+			break
+		}
+		objNr++
+	}
+	entry := model.NewXRefTableEntryGen0(xRefTable.DirectInfoDict)
+	entry.RefCount = 1
+	xRefTable.Table[objNr] = entry
+	*xRefTable.Size = objNr + 1
+	if objNr > xRefTable.MaxObjNr {
+		xRefTable.MaxObjNr = objNr
+	}
+	xRefTable.Info = types.NewIndirectRef(objNr, 0)
+	xRefTable.DirectInfoDict = nil
+	if log.ReadEnabled() {
+		log.Read.Printf("materializeDirectInfoDict: PDF 2.0 Info dictionary: %s\n", *xRefTable.Info)
 	}
 	return nil
 }
@@ -1027,7 +1074,7 @@ func parseTrailer(xRefTable *model.XRefTable, d types.Dict) error {
 		}
 	}
 
-	if xRefTable.Info == nil {
+	if xRefTable.Info == nil && xRefTable.DirectInfoDict == nil {
 		if err := parseTrailerInfo(xRefTable, d); err != nil {
 			return err
 		}
@@ -3527,6 +3574,9 @@ func dereferenceXRefTable(c context.Context, ctx *model.Context) error {
 
 	// Identify an optional Version entry in the root object/catalog.
 	if err := identifyRootVersion(xRefTable); err != nil {
+		return err
+	}
+	if err := materializeDirectInfoDict(xRefTable); err != nil {
 		return err
 	}
 

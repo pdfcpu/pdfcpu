@@ -135,7 +135,8 @@ type XRefTable struct {
 
 	// Document information section
 	ID             types.Array        // from trailer
-	Info           *types.IndirectRef // Infodict (reference to info dict object)
+	Info           *types.IndirectRef // reference of info dict object
+	DirectInfoDict types.Dict         // direct trailer info dict pending PDF version identification
 	Title          string
 	Subject        string
 	Author         string

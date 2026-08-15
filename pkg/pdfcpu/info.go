@@ -81,8 +81,11 @@ func handleInfoDict(ctx *model.Context, d types.Dict) (err error) {
 			}
 
 		case "Producer", "CreationDate", "ModDate":
-			// pdfcpu will modify these as direct dict entries.
 			logKey(key)
+			if ctx.PreserveInfoDict {
+				continue
+			}
+			// pdfcpu will modify these as direct dict entries.
 			if indRef, ok := value.(types.IndirectRef); ok {
 				// Get rid of these extra objects.
 				ctx.Optimize.DuplicateInfoObjects[int(indRef.ObjectNumber)] = true
@@ -149,10 +152,11 @@ func ensureInfoDict(ctx *model.Context) error {
 	if err = handleInfoDict(ctx, d); err != nil {
 		return err
 	}
-
-	d.Update("CreationDate", types.StringLiteral(now))
-	d.Update("ModDate", types.StringLiteral(now))
-	d.Update("Producer", types.StringLiteral(v))
+	if !ctx.PreserveInfoDict {
+		d.Update("CreationDate", types.StringLiteral(now))
+		d.Update("ModDate", types.StringLiteral(now))
+		d.Update("Producer", types.StringLiteral(v))
+	}
 
 	if ctx.Write.Increment {
 		ctx.Write.IncrementWithObjNr((*ctx.Info).ObjectNumber.Value())
