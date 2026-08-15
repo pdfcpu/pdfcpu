@@ -177,8 +177,8 @@ func TestCreateDemoPDF(t *testing.T) {
 	msg := "TestCreateDemoPDF"
 	mediaBox := types.RectForFormat("A4")
 	p := model.Page{MediaBox: mediaBox, Fm: model.FontMap{}, Buf: new(bytes.Buffer)}
-	pdfcpu.CreateTestPageContent(p)
-	xRefTable, err := pdfcpu.CreateDemoXRef()
+	createTestPageContent(p)
+	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -186,7 +186,7 @@ func TestCreateDemoPDF(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
+	if err = addPageTreeWithPage(xRefTable, rootDict, p); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 	createAndValidate(t, xRefTable, "Test.pdf", msg)
@@ -198,7 +198,7 @@ func TestResourceDictInheritanceDemoPDF(t *testing.T) {
 	// Resources may be inherited from ANY parent node.
 	// Case in point: fonts
 	msg := "TestResourceDictInheritanceDemoPDF"
-	xRefTable, err := pdfcpu.CreateResourceDictInheritanceDemoXRef()
+	xRefTable, err := createResourceDictInheritanceDemoXRef()
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -208,11 +208,21 @@ func TestResourceDictInheritanceDemoPDF(t *testing.T) {
 // TestAnnotationDemoPDF verifies annotation demo PDF.
 func TestAnnotationDemoPDF(t *testing.T) {
 	msg := "TestAnnotationDemoPDF"
-	xRefTable, err := pdfcpu.CreateAnnotationDemoXRef()
+	xRefTable, err := createAnnotationDemoXRef()
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 	createAndValidate(t, xRefTable, "AnnotationDemo.pdf", msg)
+}
+
+// TestFormDemoPDF verifies the form demo PDF.
+func TestFormDemoPDF(t *testing.T) {
+	msg := "TestFormDemoPDF"
+	xRefTable, err := createFormDemoXRef()
+	if err != nil {
+		t.Fatalf("%s: %v\n", msg, err)
+	}
+	createAndValidate(t, xRefTable, "FormDemo.pdf", msg)
 }
 
 func writeTextDemoAlignedWidthAndMargin(
@@ -221,7 +231,6 @@ func writeTextDemoAlignedWidthAndMargin(
 	region *types.Rectangle,
 	hAlign types.HAlignment,
 	w, mLeft, mRight, mTop, mBot float64) {
-
 	buf := p.Buf
 	mediaBox := p.MediaBox
 
@@ -1669,7 +1678,7 @@ func createTextBorderNoMarginAlignJustifyTest(xRefTable *model.XRefTable, mediaB
 
 func createXRefAndWritePDF(t *testing.T, msg, fileName string, mediaBox *types.Rectangle, f func(xRefTable *model.XRefTable, mediaBox *types.Rectangle) model.Page) {
 	t.Helper()
-	xRefTable, err := pdfcpu.CreateDemoXRef()
+	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -1680,7 +1689,7 @@ func createXRefAndWritePDF(t *testing.T, msg, fileName string, mediaBox *types.R
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
+	if err = addPageTreeWithPage(xRefTable, rootDict, p); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -1900,7 +1909,7 @@ func createTestUserFontJustified(xRefTable *model.XRefTable, mediaBox *types.Rec
 
 func createXRefAndWriteJustifiedPDF(t *testing.T, msg, fileName string, mediaBox *types.Rectangle, rtl bool) {
 	t.Helper()
-	xRefTable, err := pdfcpu.CreateDemoXRef()
+	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -1911,7 +1920,7 @@ func createXRefAndWriteJustifiedPDF(t *testing.T, msg, fileName string, mediaBox
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
+	if err = addPageTreeWithPage(xRefTable, rootDict, p); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -1935,7 +1944,7 @@ func createXRefAndWriteRTLPDF(t *testing.T,
 	f func(xRefTable *model.XRefTable, mediaBox *types.Rectangle, language, fontName string) model.Page) {
 	t.Helper()
 
-	xRefTable, err := pdfcpu.CreateDemoXRef()
+	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -1946,7 +1955,7 @@ func createXRefAndWriteRTLPDF(t *testing.T,
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
+	if err = addPageTreeWithPage(xRefTable, rootDict, p); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 	outDir := filepath.Join("..", "..", "samples", "basic")
@@ -2060,7 +2069,7 @@ Bây giờ với sự hỗ trợ cho các phông chữ CJKV!`
 func TestCJKV(t *testing.T) {
 	msg := "TestCJKV"
 	mediaBox := types.RectForDim(600, 600)
-	xRefTable, err := pdfcpu.CreateDemoXRef()
+	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -2071,7 +2080,7 @@ func TestCJKV(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
+	if err = addPageTreeWithPage(xRefTable, rootDict, p); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 	outDir := filepath.Join("..", "..", "samples", "basic")

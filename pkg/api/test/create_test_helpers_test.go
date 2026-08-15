@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The pdfcpu Authors.
+Copyright 2026 The pdfcpu Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,89 +14,50 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pdfcpu
+package test
 
 // Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)
 
 import (
 	"bytes"
 	"fmt"
-	"path/filepath"
 
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-var (
-	testDir          = "../../testdata"
-	testAudioFileWAV = filepath.Join(testDir, "resources", "test.wav")
+const (
+	demoAudioFileName = "test.wav"
+	demoAudio         = "RIFF\x24\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x02\x00" +
+		"\x44\xac\x00\x00\x88\x58\x01\x00\x02\x00\x08\x00data\x00\x00\x00\x00"
+	demoPDFFileName = "go.pdf"
+	demoPDF         = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1 1] >>
+endobj
+xref
+0 4
+` + "0000000000 65535 f \n" +
+		"0000000009 00000 n \n" +
+		"0000000058 00000 n \n" +
+		"0000000115 00000 n \n" +
+		`trailer
+<< /Size 4 /Root 1 0 R >>
+startxref
+182
+%%EOF
+`
 )
 
-// CreateXRefTableWithRootDict creates x ref table with root dict.
-func CreateXRefTableWithRootDict() (*model.XRefTable, error) {
-	// TODO
-	//xRefTable := model.NewXRefTable(nil)
-	xRefTable := &model.XRefTable{
-		Table:             map[int]*model.XRefTableEntry{},
-		Names:             map[string]*model.Node{},
-		NameRefs:          map[string]model.NameMap{},
-		KeywordList:       types.StringSet{},
-		Properties:        map[string]string{},
-		LinearizationObjs: types.IntSet{},
-		PageAnnots:        map[int]model.PgAnnots{},
-		PageThumbs:        map[int]types.IndirectRef{},
-		Signatures:        map[int]map[int]model.Signature{},
-		Stats:             model.NewPDFStats(),
-		ValidationMode:    model.ValidationRelaxed,
-		ValidateLinks:     false,
-		URIs:              map[int]map[string]string{},
-		UsedGIDs:          map[string]map[uint16]bool{},
-		FillFonts:         map[string]types.IndirectRef{},
-		Conf:              nil,
-	}
-
-	xRefTable.Table[0] = model.NewFreeHeadXRefTableEntry()
-
-	one := 1
-	xRefTable.Size = &one
-
-	v := model.V17
-	xRefTable.HeaderVersion = &v
-
-	xRefTable.PageCount = 0
-
-	// Optional infoDict.
-	xRefTable.Info = nil
-
-	// Additional streams not implemented.
-	xRefTable.AdditionalStreams = nil
-
-	rootDict := types.NewDict()
-	rootDict.InsertName("Type", "Catalog")
-
-	ir, err := xRefTable.IndRefForNewObject(rootDict)
-	if err != nil {
-		return nil, err
-	}
-
-	xRefTable.Root = ir
-
-	return xRefTable, nil
-}
-
-// CreateDemoXRef creates a minimal single page PDF file for demo purposes.
-func CreateDemoXRef() (*model.XRefTable, error) {
-	xRefTable, err := CreateXRefTableWithRootDict()
-	if err != nil {
-		return nil, err
-	}
-
-	return xRefTable, nil
-}
-
 func addPageTreeForResourceDictInheritanceDemo(xRefTable *model.XRefTable, rootDict types.Dict) error {
-
 	// Create root page node.
 
 	fIndRef, err := pdffont.EnsureFontDict(xRefTable, "Courier", "", "", false, nil)
@@ -222,9 +183,8 @@ func addPageTreeForResourceDictInheritanceDemo(xRefTable *model.XRefTable, rootD
 	return nil
 }
 
-// CreateResourceDictInheritanceDemoXRef creates a page tree for testing resource dict inheritance.
-func CreateResourceDictInheritanceDemoXRef() (*model.XRefTable, error) {
-	xRefTable, err := CreateXRefTableWithRootDict()
+func createResourceDictInheritanceDemoXRef() (*model.XRefTable, error) {
+	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
 	if err != nil {
 		return nil, err
 	}
@@ -647,8 +607,7 @@ func addResources(xRefTable *model.XRefTable, pageDict types.Dict, fontName stri
 	return nil
 }
 
-// CreateTestPageContent draws a test grid.
-func CreateTestPageContent(p model.Page) {
+func createTestPageContent(p model.Page) {
 	b := p.Buf
 	mb := p.MediaBox
 
@@ -684,7 +643,7 @@ func CreateTestPageContent(p model.Page) {
 }
 
 func addContents(xRefTable *model.XRefTable, pageDict types.Dict, p model.Page) error {
-	CreateTestPageContent(p)
+	createTestPageContent(p)
 	sd, _ := xRefTable.NewStreamDictForBuf(p.Buf.Bytes())
 
 	if err := sd.Encode(); err != nil {
@@ -983,60 +942,6 @@ func createPageWithForm(xRefTable *model.XRefTable, parentPageIndRef types.Indir
 	return xRefTable.IndRefForNewObject(pageDict)
 }
 
-func addPageTreeWithoutPage(xRefTable *model.XRefTable, rootDict types.Dict, d *types.Dim) error {
-	// May be modified later on.
-	mediaBox := types.RectForDim(d.Width, d.Height)
-
-	pagesDict := types.Dict(
-		map[string]types.Object{
-			"Type":     types.Name("Pages"),
-			"Count":    types.Integer(0),
-			"MediaBox": mediaBox.Array(),
-		},
-	)
-
-	pagesDict.Insert("Kids", types.Array{})
-
-	pagesRootIndRef, err := xRefTable.IndRefForNewObject(pagesDict)
-	if err != nil {
-		return err
-	}
-
-	rootDict.Insert("Pages", *pagesRootIndRef)
-
-	return nil
-}
-
-// AddPageTreeWithSamplePage adds page tree with sample page.
-func AddPageTreeWithSamplePage(xRefTable *model.XRefTable, rootDict types.Dict, p model.Page) error {
-
-	// mediabox = physical page dimensions
-	mba := p.MediaBox.Array()
-
-	pagesDict := types.Dict(
-		map[string]types.Object{
-			"Type":     types.Name("Pages"),
-			"Count":    types.Integer(1),
-			"MediaBox": mba,
-		},
-	)
-
-	parentPageIndRef, err := xRefTable.IndRefForNewObject(pagesDict)
-	if err != nil {
-		return err
-	}
-
-	pageIndRef, err := createDemoPage(xRefTable, *parentPageIndRef, p)
-	if err != nil {
-		return err
-	}
-
-	pagesDict.Insert("Kids", types.Array{*pageIndRef})
-	rootDict.Insert("Pages", *parentPageIndRef)
-
-	return nil
-}
-
 func addPageTreeWithAnnotations(xRefTable *model.XRefTable, rootDict types.Dict, fontName string) (*types.IndirectRef, error) {
 	// mediabox = physical page dimensions
 	mediaBox := types.RectForFormat("A4")
@@ -1279,11 +1184,10 @@ func addRequirements(rootDict types.Dict) {
 	rootDict.Insert("Requirements", types.Array{d})
 }
 
-// CreateAnnotationDemoXRef creates a PDF file with examples of annotations and actions.
-func CreateAnnotationDemoXRef() (*model.XRefTable, error) {
+func createAnnotationDemoXRef() (*model.XRefTable, error) {
 	fontName := "Helvetica"
 
-	xRefTable, err := CreateXRefTableWithRootDict()
+	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
 	if err != nil {
 		return nil, err
 	}
@@ -1898,11 +1802,10 @@ func createFormDict(xRefTable *model.XRefTable, fontName string) (types.Dict, ty
 	return d, pageAnnots, nil
 }
 
-// CreateFormDemoXRef creates an xRefTable with an AcroForm example.
-func CreateFormDemoXRef() (*model.XRefTable, error) {
+func createFormDemoXRef() (*model.XRefTable, error) {
 	fontName := "Helvetica"
 
-	xRefTable, err := CreateXRefTableWithRootDict()
+	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
 	if err != nil {
 		return nil, err
 	}
@@ -1936,39 +1839,6 @@ func CreateFormDemoXRef() (*model.XRefTable, error) {
 	return xRefTable, nil
 }
 
-// CreateContext creates a Context for given cross reference table and configuration.
-func CreateContext(xRefTable *model.XRefTable, conf *model.Configuration) *model.Context {
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	xRefTable.Conf = conf
-	xRefTable.ValidationMode = conf.ValidationMode
-	return &model.Context{
-		Configuration: conf,
-		XRefTable:     xRefTable,
-		Write:         model.NewWriteContext(conf.Eol),
-	}
-}
-
-// CreateContextWithXRefTable creates a Context with an xRefTable without pages for given configuration.
-func CreateContextWithXRefTable(conf *model.Configuration, pageDim *types.Dim) (*model.Context, error) {
-	xRefTable, err := CreateXRefTableWithRootDict()
-	if err != nil {
-		return nil, err
-	}
-
-	rootDict, err := xRefTable.Catalog()
-	if err != nil {
-		return nil, err
-	}
-
-	if err = addPageTreeWithoutPage(xRefTable, rootDict, pageDim); err != nil {
-		return nil, err
-	}
-
-	return CreateContext(xRefTable, conf), nil
-}
-
 func createDemoContentStreamDict(xRefTable *model.XRefTable, b []byte) (*types.IndirectRef, error) {
 	sd, _ := xRefTable.NewStreamDictForBuf(b)
 	if err := sd.Encode(); err != nil {
@@ -1977,8 +1847,32 @@ func createDemoContentStreamDict(xRefTable *model.XRefTable, b []byte) (*types.I
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createDemoPage(xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, p model.Page) (*types.IndirectRef, error) {
+func addPageTreeWithPage(xRefTable *model.XRefTable, rootDict types.Dict, p model.Page) error {
+	pagesDict := types.Dict(
+		map[string]types.Object{
+			"Type":     types.Name("Pages"),
+			"Count":    types.Integer(1),
+			"MediaBox": p.MediaBox.Array(),
+		},
+	)
 
+	parentPageIndRef, err := xRefTable.IndRefForNewObject(pagesDict)
+	if err != nil {
+		return err
+	}
+
+	pageIndRef, err := createDemoPage(xRefTable, *parentPageIndRef, p)
+	if err != nil {
+		return err
+	}
+
+	pagesDict.Insert("Kids", types.Array{*pageIndRef})
+	rootDict.Insert("Pages", *parentPageIndRef)
+
+	return nil
+}
+
+func createDemoPage(xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, p model.Page) (*types.IndirectRef, error) {
 	pageDict := types.Dict(
 		map[string]types.Object{
 			"Type":   types.Name("Page"),

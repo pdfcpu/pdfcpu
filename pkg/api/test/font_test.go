@@ -112,7 +112,7 @@ func TestCoreFontDemoPDF(t *testing.T) {
 	msg := "TestCoreFontDemoPDF"
 	w, h := 600, 600
 	for _, fn := range font.CoreFontNames() {
-		xRefTable, err := pdfcpu.CreateDemoXRef()
+		xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
@@ -124,7 +124,7 @@ func TestCoreFontDemoPDF(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
-		if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
+		if err = addPageTreeWithPage(xRefTable, rootDict, p); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 		outFile := filepath.Join("..", "..", "samples", "fonts", "core", fn+".pdf")
@@ -144,7 +144,7 @@ func TestUserFontDemoPDF(t *testing.T) {
 	}
 	for _, fn := range fontNames {
 		fmt.Println(fn)
-		if err := api.CreateUserFontDemoFiles(filepath.Join("..", "..", "samples", "fonts", "user"), fn); err != nil {
+		if err := api.CreateUserFontCheatSheets(filepath.Join("..", "..", "samples", "fonts", "user"), fn); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 	}

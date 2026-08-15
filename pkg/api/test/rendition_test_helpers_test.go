@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The pdfcpu Authors.
+Copyright 2026 The pdfcpu Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package pdfcpu
+package test
 
 import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -24,7 +24,6 @@ import (
 // Functions needed to create a test.pdf that gets used for validation testing (see process_test.go)
 
 func createMHBEDict() *types.Dict {
-
 	softwareIdentDict := types.Dict(
 		map[string]types.Object{
 			"Type": types.Name("SoftwareIdentifier"),
@@ -70,7 +69,6 @@ func createMHBEDict() *types.Dict {
 }
 
 func createMediaPlayersDict() *types.Dict {
-
 	softwareIdentDict := types.Dict(
 		map[string]types.Object{
 			"Type": types.Name("SoftwareIdentifier"),
@@ -99,7 +97,6 @@ func createMediaPlayersDict() *types.Dict {
 }
 
 func createMediaOffsetDict() *types.Dict {
-
 	timeSpanDict := types.Dict(
 		map[string]types.Object{
 			"Type": types.Name("Timespan"),
@@ -120,7 +117,6 @@ func createMediaOffsetDict() *types.Dict {
 }
 
 func createSectionMHBEDict() *types.Dict {
-
 	d := createMediaOffsetDict()
 
 	d1 := types.Dict(
@@ -134,10 +130,9 @@ func createSectionMHBEDict() *types.Dict {
 }
 
 func createMediaClipDataDict(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
-
 	// not supported: mp3,mp4,m4a
 
-	fileSpecDict, err := createFileSpecDict(xRefTable, testAudioFileWAV)
+	fileSpecDict, err := createFileSpecDict(xRefTable, demoAudioFileName, demoAudio)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +169,6 @@ func createMediaClipDataDict(xRefTable *model.XRefTable) (*types.IndirectRef, er
 }
 
 func createMediaPlayParamsMHBE() *types.Dict {
-
 	timeSpanDict := types.Dict(
 		map[string]types.Object{
 			"Type": types.Name("Timespan"),
@@ -206,7 +200,6 @@ func createMediaPlayParamsMHBE() *types.Dict {
 }
 
 func createMediaPlayParamsDict() *types.Dict {
-
 	d := createMediaPlayersDict()
 	mhbe := createMediaPlayParamsMHBE()
 
@@ -223,7 +216,6 @@ func createMediaPlayParamsDict() *types.Dict {
 }
 
 func createFloatingWindowsParamsDict() *types.Dict {
-
 	d := types.Dict(
 		map[string]types.Object{
 			"Type": types.Name("FWParams"),
@@ -242,7 +234,6 @@ func createFloatingWindowsParamsDict() *types.Dict {
 }
 
 func createScreenParamsDict() *types.Dict {
-
 	d := createFloatingWindowsParamsDict()
 
 	mhbe := types.Dict(
@@ -268,7 +259,6 @@ func createScreenParamsDict() *types.Dict {
 }
 
 func createMediaRendition(mediaClipDataDict *types.IndirectRef) *types.Dict {
-
 	mhbe := createMHBEDict()
 
 	d1 := createMediaPlayParamsDict()
@@ -290,7 +280,6 @@ func createMediaRendition(mediaClipDataDict *types.IndirectRef) *types.Dict {
 }
 
 func createSectionMediaRendition(mediaClipDataDict *types.IndirectRef) *types.Dict {
-
 	mhbe := createSectionMHBEDict()
 
 	mediaClipSectionDict := types.Dict(
@@ -321,7 +310,6 @@ func createSectionMediaRendition(mediaClipDataDict *types.IndirectRef) *types.Di
 }
 
 func createSelectorRendition(mediaClipDataDict *types.IndirectRef) *types.Dict {
-
 	mhbe := createMHBEDict()
 
 	r := createSectionMediaRendition(mediaClipDataDict)

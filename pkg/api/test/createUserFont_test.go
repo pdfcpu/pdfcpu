@@ -555,7 +555,7 @@ func TestUserFonts(t *testing.T) {
 	mediaBox := types.RectForDim(w, h)
 	p := model.NewPageWithBg(mediaBox, color.NewSimpleColor(0xbeded9))
 
-	xRefTable, err := pdfcpu.CreateDemoXRef()
+	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -572,7 +572,7 @@ func TestUserFonts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err = pdfcpu.AddPageTreeWithSamplePage(xRefTable, rootDict, p); err != nil {
+	if err = addPageTreeWithPage(xRefTable, rootDict, p); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 	outDir := filepath.Join("..", "..", "samples", "basic")

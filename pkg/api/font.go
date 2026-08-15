@@ -30,7 +30,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/internal/fileutil"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
@@ -85,7 +84,7 @@ func defaultFontInstallFileOperations() fontInstallFileOperations {
 	}
 }
 
-type fontDemoOperations struct {
+type fontCheatSheetOperations struct {
 	loadUserFonts func() error
 	userFont      func(string) (font.TTFLight, bool, error)
 	userFontNames func() ([]string, error)
@@ -154,15 +153,15 @@ func defaultFontAPIOperations() fontAPIOperations {
 	return ops
 }
 
-func defaultFontDemoOperations() fontDemoOperations {
-	return fontDemoOperations{
+func defaultFontCheatSheetOperations() fontCheatSheetOperations {
+	return fontCheatSheetOperations{
 		loadUserFonts: font.LoadUserFonts,
 		userFont:      font.UserFont,
 		userFontNames: font.UserFontNames,
-		createXRef:    pdfcpu.CreateDemoXRef,
-		createPage:    createUserFontDemoPage,
+		createXRef:    createFontXRefTable,
+		createPage:    createUserFontCheatSheetPage,
 		catalog:       func(xRefTable *model.XRefTable) (types.Dict, error) { return xRefTable.Catalog() },
-		addPageTree:   pdfcpu.AddPageTreeWithSamplePage,
+		addPageTree:   addFontPageTree,
 		createPDFFile: CreatePDFFile,
 		files:         defaultCheatSheetFileOperations(),
 	}
@@ -493,7 +492,7 @@ func surrogate(r rune) bool {
 	return r >= 0xD800 && r <= 0xDFFF
 }
 
-func writeUserFontDemoContent(xRefTable *model.XRefTable, p model.Page, fontName string, plane int) error {
+func writeUserFontCheatSheetContent(xRefTable *model.XRefTable, p model.Page, fontName string, plane int) error {
 	baseFontName := "Helvetica"
 	baseFontSize := 24
 	baseFontKey := p.Fm.EnsureKey(baseFontName)
@@ -564,11 +563,11 @@ func writeUserFontDemoContent(xRefTable *model.XRefTable, p model.Page, fontName
 	return nil
 }
 
-func createUserFontDemoPage(xRefTable *model.XRefTable, w, h, plane int, fontName string) (p model.Page, err error) {
+func createUserFontCheatSheetPage(xRefTable *model.XRefTable, w, h, plane int, fontName string) (p model.Page, err error) {
 	defer fault.Catch(&err)
 	mediaBox := types.RectForDim(float64(w), float64(h))
 	p = model.NewPageWithBg(mediaBox, color.NewSimpleColor(0xbeded9))
-	if err := writeUserFontDemoContent(xRefTable, p, fontName, plane); err != nil {
+	if err := writeUserFontCheatSheetContent(xRefTable, p, fontName, plane); err != nil {
 		return model.Page{}, fmt.Errorf("render font demo page: %w", err)
 	}
 	return p, nil
@@ -685,15 +684,15 @@ func normalizeCheatSheetDir(dir string) string {
 	return dir
 }
 
-// CreateUserFontDemoFiles atomically generates and publishes one PDF for each covered Unicode plane.
+// CreateUserFontCheatSheets atomically generates and publishes one PDF for each covered Unicode plane.
 // Generation failure leaves all existing output files untouched. Publication failure
 // attempts to restore every replaced file and joins any rollback failure.
-func CreateUserFontDemoFiles(dir, fn string) (err error) {
+func CreateUserFontCheatSheets(dir, fn string) (err error) {
 	defer fault.Catch(&err)
-	return createUserFontDemoFiles(dir, fn, defaultFontDemoOperations())
+	return createUserFontCheatSheets(dir, fn, defaultFontCheatSheetOperations())
 }
 
-func createUserFontDemoFiles(dir, fn string, ops fontDemoOperations) error {
+func createUserFontCheatSheets(dir, fn string, ops fontCheatSheetOperations) error {
 	if err := validateNoEmptyStrings([]string{fn}, "font name"); err != nil {
 		return fmt.Errorf("create font cheat sheet: %w", err)
 	}
@@ -708,13 +707,13 @@ func createUserFontDemoFiles(dir, fn string, ops fontDemoOperations) error {
 	if !ok {
 		return fmt.Errorf("create font cheat sheet: font %s: %w", fn, ErrUserFontNotFound)
 	}
-	if err := createUserFontDemoBatch(dir, []string{fn}, map[string]font.TTFLight{fn: ttf}, ops); err != nil {
+	if err := createUserFontCheatSheetBatch(dir, []string{fn}, map[string]font.TTFLight{fn: ttf}, ops); err != nil {
 		return fmt.Errorf("create font cheat sheet: %w", err)
 	}
 	return nil
 }
 
-func stageUserFontDemoFiles(dir, fn string, ttf font.TTFLight, ops fontDemoOperations) ([]string, error) {
+func stageUserFontCheatSheets(dir, fn string, ttf font.TTFLight, ops fontCheatSheetOperations) ([]string, error) {
 	const w, h = 7800, 7800
 	planes, err := coveredUnicodePlanes(ttf.Planes)
 	if err != nil {
@@ -754,7 +753,12 @@ func stageUserFontDemoFiles(dir, fn string, ttf font.TTFLight, ops fontDemoOpera
 	return names, nil
 }
 
-func createUserFontDemoBatch(dir string, fontNames []string, fonts map[string]font.TTFLight, ops fontDemoOperations) (err error) {
+func createUserFontCheatSheetBatch(
+	dir string,
+	fontNames []string,
+	fonts map[string]font.TTFLight,
+	ops fontCheatSheetOperations,
+) (err error) {
 	dir = normalizeCheatSheetDir(dir)
 	stagingDir, err := ops.files.mkdirTemp(dir, ".pdfcpu-font-cheatsheets-")
 	if err != nil {
@@ -774,7 +778,7 @@ func createUserFontDemoBatch(dir string, fontNames []string, fonts map[string]fo
 	names := []string{}
 	seen := map[string]bool{}
 	for _, fn := range fontNames {
-		staged, err := stageUserFontDemoFiles(stagingDir, fn, fonts[fn], ops)
+		staged, err := stageUserFontCheatSheets(stagingDir, fn, fonts[fn], ops)
 		if err != nil {
 			return err
 		}
@@ -805,10 +809,10 @@ func createUserFontDemoBatch(dir string, fontNames []string, fonts map[string]fo
 // publication is returned as an error and does not retract published PDFs.
 func CreateCheatSheetsUserFonts(fontNames []string) (err error) {
 	defer fault.Catch(&err)
-	return createCheatSheetsUserFonts(fontNames, defaultFontDemoOperations())
+	return createCheatSheetsUserFonts(fontNames, defaultFontCheatSheetOperations())
 }
 
-func createCheatSheetsUserFonts(fontNames []string, ops fontDemoOperations) error {
+func createCheatSheetsUserFonts(fontNames []string, ops fontCheatSheetOperations) error {
 	if err := validateNoEmptyStrings(fontNames, "font name"); err != nil {
 		return fmt.Errorf("create font cheat sheets: %w", err)
 	}
@@ -836,7 +840,7 @@ func createCheatSheetsUserFonts(fontNames []string, ops fontDemoOperations) erro
 		}
 		fonts[fn] = ttf
 	}
-	if err := createUserFontDemoBatch(".", names, fonts, ops); err != nil {
+	if err := createUserFontCheatSheetBatch(".", names, fonts, ops); err != nil {
 		return fmt.Errorf("create font cheat sheets: %w", err)
 	}
 	return nil

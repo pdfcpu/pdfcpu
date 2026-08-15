@@ -54,7 +54,7 @@ Pipeline example:
     json ... output JSON
   inFile ... a list of PDF input files, use - to read from stdin
 
-Pipeline example:
+Pipeline example using a file from a pdfcpu Git checkout:
    cat pkg/testdata/go.pdf \
       | pdfcpu info --json - \
       | jq '.infos[] \
@@ -88,9 +88,9 @@ A minimalistic sample json:
    }
 }
 
-For more info on json syntax & samples please refer to:
-   pdfcpu/pkg/testdata/json/*
-   pdfcpu/pkg/samples/create/*
+For more info on JSON syntax and examples in a pdfcpu Git checkout:
+   pkg/testdata/json/*
+   pkg/samples/create/*
 
 Pipeline examples:
    pdfcpu create invoice.json - \
