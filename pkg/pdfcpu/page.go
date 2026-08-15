@@ -151,8 +151,8 @@ func addPage(
 	pageNr int,
 	pagesIndRef types.IndirectRef,
 	pagesDict types.Dict,
-	fieldsSrc, fieldsDest *types.Array,
-	migrated map[int]int) (*types.IndirectRef, error) {
+	migrated map[int]int,
+	selection *formFieldSelection) (*types.IndirectRef, error) {
 	d, pageIndRef, inhPAttrs, err := migratedPageDict(ctxSrc, ctxDest, pageNr, migrated)
 	if err != nil {
 		return nil, fmt.Errorf("page %d: %w", pageNr, err)
@@ -165,14 +165,8 @@ func addPage(
 		d["Rotate"] = types.Integer(inhPAttrs.Rotate)
 	}
 
-	if err := migratePageDict(d, *pageIndRef, ctxSrc, ctxDest, migrated); err != nil {
+	if err := migratePageDict(d, *pageIndRef, ctxSrc, ctxDest, migrated, selection); err != nil {
 		return nil, fmt.Errorf("page %d: migrate page dict: %w", pageNr, err)
-	}
-
-	if d["Annots"] != nil && len(*fieldsSrc) > 0 {
-		if err := migrateFields(d, fieldsSrc, fieldsDest, ctxSrc, ctxDest, migrated); err != nil {
-			return nil, fmt.Errorf("page %d: migrate fields: %w", pageNr, err)
-		}
 	}
 
 	if err := model.AppendPageTree(pageIndRef, 1, pagesDict); err != nil {
@@ -194,6 +188,7 @@ func addPages(
 	}
 	// Used by collect, extractPages, split
 	pageCache := map[int]*types.IndirectRef{}
+	selection := newFormFieldSelection()
 
 	for _, i := range pageNrs {
 		if usePgCache {
@@ -205,7 +200,7 @@ func addPages(
 			}
 		}
 
-		pageIndRef, err := addPage(ctxSrc, ctxDest, i, pagesIndRef, pagesDict, fieldsSrc, fieldsDest, migrated)
+		pageIndRef, err := addPage(ctxSrc, ctxDest, i, pagesIndRef, pagesDict, migrated, selection)
 		if err != nil {
 			return err
 		}
@@ -215,6 +210,12 @@ func addPages(
 		}
 	}
 
+	if len(selection.widgets) == 0 || len(*fieldsSrc) == 0 {
+		return nil
+	}
+	if err := migrateFields(fieldsSrc, fieldsDest, ctxSrc, ctxDest, migrated, selection); err != nil {
+		return fmt.Errorf("migrate fields: %w", err)
+	}
 	return nil
 }
 

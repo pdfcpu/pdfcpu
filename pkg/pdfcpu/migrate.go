@@ -23,6 +23,25 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// formFieldSelection tracks source widget annotations selected during page migration.
+type formFieldSelection struct {
+	seen    map[int]bool
+	widgets []types.IndirectRef
+}
+
+func newFormFieldSelection() *formFieldSelection {
+	return &formFieldSelection{seen: map[int]bool{}}
+}
+
+func (s *formFieldSelection) addWidget(indRef types.IndirectRef) {
+	objNr := indRef.ObjectNumber.Value()
+	if s.seen[objNr] {
+		return
+	}
+	s.seen[objNr] = true
+	s.widgets = append(s.widgets, indRef)
+}
+
 func migrateIndRef(ir *types.IndirectRef, ctxSource, ctxDest *model.Context, migrated map[int]int) (types.Object, error) {
 	o, err := ctxSource.Dereference(*ir)
 	if err != nil {
@@ -90,52 +109,71 @@ func migrateObject(o types.Object, ctxSource, ctxDest *model.Context, migrated m
 	return o, nil
 }
 
-func migrateAnnots(o types.Object, pageIndRef types.IndirectRef, ctxSrc, ctxDest *model.Context, migrated map[int]int) (types.Object, error) {
+func migrateAnnotEntry(
+	o types.Object,
+	index int,
+	ctxSrc, ctxDest *model.Context,
+	migrated map[int]int,
+) (types.Object, types.Dict, *types.IndirectRef, bool, error) {
+	indRef, ok := o.(types.IndirectRef)
+	if !ok {
+		d, ok := o.(types.Dict)
+		if !ok {
+			return nil, nil, nil, false, fmt.Errorf("annotation entry %d: wrong type %T", index, o)
+		}
+		return o, d, nil, false, nil
+	}
+
+	sourceIndRef := indRef
+	objNr := indRef.ObjectNumber.Value()
+	if migrated[objNr] > 0 {
+		indRef.ObjectNumber = types.Integer(migrated[objNr])
+		return indRef, nil, nil, true, nil
+	}
+	o, err := migrateIndRef(&indRef, ctxSrc, ctxDest, migrated)
+	if err != nil {
+		return nil, nil, nil, false, err
+	}
+	d, ok := o.(types.Dict)
+	if !ok {
+		return nil, nil, nil, false, fmt.Errorf("annotation obj#%d: wrong type %T", objNr, o)
+	}
+	return indRef, d, &sourceIndRef, false, nil
+}
+
+func migrateAnnots(
+	o types.Object,
+	pageIndRef types.IndirectRef,
+	ctxSrc, ctxDest *model.Context,
+	migrated map[int]int,
+	selection *formFieldSelection,
+) (types.Object, error) {
 	arr, ok := o.(types.Array)
 	if !ok {
 		return nil, fmt.Errorf("annotations: wrong type %T", o)
 	}
 	for i, v := range arr {
-		var d types.Dict
-		o, ok := v.(types.IndirectRef)
-		if ok {
-			objNr := o.ObjectNumber.Value()
-			if migrated[objNr] > 0 {
-				o.ObjectNumber = types.Integer(migrated[objNr])
-				arr[i] = o
-				continue
-			}
-			o1, err := migrateIndRef(&o, ctxSrc, ctxDest, migrated)
-			if err != nil {
-				return nil, err
-			}
-			arr[i] = o
-			d, ok = o1.(types.Dict)
-			if !ok {
-				return nil, fmt.Errorf("annotation obj#%d: wrong type %T", objNr, o1)
-			}
-		} else {
-			d, ok = v.(types.Dict)
-			if !ok {
-				return nil, fmt.Errorf("annotation entry %d: wrong type %T", i, v)
-			}
+		o, d, sourceIndRef, done, err := migrateAnnotEntry(v, i, ctxSrc, ctxDest, migrated)
+		if err != nil {
+			return nil, err
+		}
+		arr[i] = o
+		if done {
+			continue
+		}
+		subtype := d.Subtype()
+		isWidget := subtype != nil && *subtype == "Widget"
+		if isWidget && sourceIndRef != nil {
+			selection.addWidget(*sourceIndRef)
 		}
 		for k, v := range d {
 			if k == "P" {
 				d["P"] = pageIndRef
 				continue
 			}
-			if k == "Parent" {
-				pDict, err := ctxSrc.DereferenceDict(v)
-				if err != nil {
-					return nil, err
-				}
-				ft := pDict.NameEntry("FT")
-				if ft == nil || *ft != "Btn" {
-					d.Delete("Parent")
-					continue
-				}
-				pDict.Delete("Parent")
+			if k == "Parent" && isWidget {
+				d.Delete("Parent")
+				continue
 			}
 			o1, err := migrateObject(v, ctxSrc, ctxDest, migrated)
 			if err != nil {
@@ -148,7 +186,13 @@ func migrateAnnots(o types.Object, pageIndRef types.IndirectRef, ctxSrc, ctxDest
 	return arr, nil
 }
 
-func migratePageDict(d types.Dict, pageIndRef types.IndirectRef, ctxSrc, ctxDest *model.Context, migrated map[int]int) error {
+func migratePageDict(
+	d types.Dict,
+	pageIndRef types.IndirectRef,
+	ctxSrc, ctxDest *model.Context,
+	migrated map[int]int,
+	selection *formFieldSelection,
+) error {
 	if err := requireContextWithXRefTable(ctxSrc); err != nil {
 		return fmt.Errorf("source context: %w", err)
 	}
@@ -157,6 +201,9 @@ func migratePageDict(d types.Dict, pageIndRef types.IndirectRef, ctxSrc, ctxDest
 	}
 	if migrated == nil {
 		return fmt.Errorf("missing migration map")
+	}
+	if selection == nil {
+		return fmt.Errorf("missing form field selection")
 	}
 
 	var err error
@@ -178,12 +225,12 @@ func migratePageDict(d types.Dict, pageIndRef types.IndirectRef, ctxSrc, ctxDest
 					return fmt.Errorf("page dict entry %s: migrate annotation reference: %w", k, err)
 				}
 				d[k] = o
-				if _, err = migrateAnnots(v, pageIndRef, ctxSrc, ctxDest, migrated); err != nil {
+				if _, err = migrateAnnots(v, pageIndRef, ctxSrc, ctxDest, migrated, selection); err != nil {
 					return fmt.Errorf("page dict entry %s: migrate annotations: %w", k, err)
 				}
 				continue
 			}
-			if d[k], err = migrateAnnots(v, pageIndRef, ctxSrc, ctxDest, migrated); err != nil {
+			if d[k], err = migrateAnnots(v, pageIndRef, ctxSrc, ctxDest, migrated, selection); err != nil {
 				return fmt.Errorf("page dict entry %s: migrate annotations: %w", k, err)
 			}
 			continue
@@ -195,73 +242,178 @@ func migratePageDict(d types.Dict, pageIndRef types.IndirectRef, ctxSrc, ctxDest
 	return nil
 }
 
-func migrateAnnot(indRef *types.IndirectRef, fieldsSrc, fieldsDest *types.Array, ctxSrc *model.Context, migrated map[int]int) error {
-	for _, v := range *fieldsSrc {
-		ir, ok := v.(types.IndirectRef)
-		if !ok {
-			continue
-		}
-		objNr := ir.ObjectNumber.Value()
-		if migrated[objNr] == indRef.ObjectNumber.Value() {
-			*fieldsDest = append(*fieldsDest, *indRef)
-			break
-		}
-		d, err := ctxSrc.DereferenceDict(ir)
+type formFieldMigration struct {
+	ctxSrc, ctxDest *model.Context
+	migrated        map[int]int
+	fields          map[int]types.IndirectRef
+	sources         map[int]types.IndirectRef
+	roots           map[int]bool
+}
+
+func migratedFieldRef(indRef types.IndirectRef, migrated map[int]int) *types.IndirectRef {
+	objNr := migrated[indRef.ObjectNumber.Value()]
+	if objNr == 0 {
+		return nil
+	}
+	indRef.ObjectNumber = types.Integer(objNr)
+	return &indRef
+}
+
+func (fm *formFieldMigration) cloneField(indRef types.IndirectRef, dSrc types.Dict) (types.IndirectRef, error) {
+	dDest := dSrc.Clone().(types.Dict)
+	dDest.Delete("Kids")
+	dDest.Delete("Parent")
+
+	objNr, err := fm.ctxDest.InsertObject(dDest)
+	if err != nil {
+		return types.IndirectRef{}, err
+	}
+	fm.migrated[indRef.ObjectNumber.Value()] = objNr
+	indRef.ObjectNumber = types.Integer(objNr)
+
+	for k, v := range dDest {
+		dDest[k], err = migrateObject(v, fm.ctxSrc, fm.ctxDest, fm.migrated)
 		if err != nil {
-			return err
-		}
-		o, ok := d.Find("Kids")
-		if !ok {
-			continue
-		}
-		kids, err := ctxSrc.DereferenceArray(o)
-		if err != nil {
-			return err
-		}
-		if ok, err = detectMigratedAnnot(ctxSrc, indRef, kids, migrated); err != nil {
-			return err
-		}
-		if ok {
-			*fieldsDest = append(*fieldsDest, *indRef)
+			return types.IndirectRef{}, fmt.Errorf("field entry %s: %w", k, err)
 		}
 	}
 
-	return nil
+	return indRef, nil
 }
 
-func migrateFields(d types.Dict, fieldsSrc, fieldsDest *types.Array, ctxSrc, ctxDest *model.Context, migrated map[int]int) error {
-	o, _ := d.Find("Annots")
-	annots, err := ctxDest.DereferenceArray(o)
+func (fm *formFieldMigration) selectField(indRef types.IndirectRef) (types.IndirectRef, error) {
+	objNr := indRef.ObjectNumber.Value()
+	fm.sources[objNr] = indRef
+	if destIndRef, ok := fm.fields[objNr]; ok {
+		return destIndRef, nil
+	}
+	if destIndRef := migratedFieldRef(indRef, fm.migrated); destIndRef != nil {
+		fm.fields[objNr] = *destIndRef
+		return *destIndRef, nil
+	}
+
+	dSrc, err := fm.ctxSrc.DereferenceDict(indRef)
+	if err != nil {
+		return types.IndirectRef{}, err
+	}
+	if dSrc == nil {
+		return types.IndirectRef{}, fmt.Errorf("missing form field dict obj#%d", objNr)
+	}
+	destIndRef, err := fm.cloneField(indRef, dSrc)
+	if err != nil {
+		return types.IndirectRef{}, err
+	}
+	fm.fields[objNr] = destIndRef
+	return destIndRef, nil
+}
+
+func (fm *formFieldMigration) selectWidget(indRef types.IndirectRef) error {
+	seen := map[int]bool{}
+	for {
+		objNr := indRef.ObjectNumber.Value()
+		if seen[objNr] {
+			return fmt.Errorf("form field parent cycle at obj#%d", objNr)
+		}
+		seen[objNr] = true
+		if _, err := fm.selectField(indRef); err != nil {
+			return fmt.Errorf("select form field obj#%d: %w", objNr, err)
+		}
+
+		dSrc, err := fm.ctxSrc.DereferenceDict(indRef)
+		if err != nil {
+			return fmt.Errorf("dereference form field obj#%d: %w", objNr, err)
+		}
+		parentIndRef := dSrc.IndirectRefEntry("Parent")
+		if parentIndRef == nil {
+			fm.roots[objNr] = true
+			return nil
+		}
+		indRef = *parentIndRef
+	}
+}
+
+func (fm *formFieldMigration) rebuildField(objNr int, destIndRef types.IndirectRef) error {
+	srcIndRef := fm.sources[objNr]
+	dSrc, err := fm.ctxSrc.DereferenceDict(srcIndRef)
 	if err != nil {
 		return err
 	}
-	for _, v := range annots {
-		indRef, ok := v.(types.IndirectRef)
-		if !ok {
-			continue
-		}
-		d, err := ctxDest.DereferenceDict(indRef)
-		if err != nil {
-			return err
-		}
-		if pIndRef := d.IndirectRefEntry("Parent"); pIndRef != nil {
-			indRef = *pIndRef
-		}
-		var found bool
-		for _, v := range *fieldsDest {
-			if v.(types.IndirectRef) == indRef {
-				found = true
-				break
-			}
-		}
-		if found {
-			continue
-		}
-		if err := migrateAnnot(&indRef, fieldsSrc, fieldsDest, ctxSrc, migrated); err != nil {
-			return err
+	if dSrc == nil {
+		return fmt.Errorf("missing source form field dict")
+	}
+	dDest, err := fm.ctxDest.DereferenceDict(destIndRef)
+	if err != nil {
+		return err
+	}
+	if dDest == nil {
+		return fmt.Errorf("missing destination form field dict")
+	}
+	dDest.Delete("Kids")
+	dDest.Delete("Parent")
+
+	if parentIndRef := dSrc.IndirectRefEntry("Parent"); parentIndRef != nil {
+		if parentDest, ok := fm.fields[parentIndRef.ObjectNumber.Value()]; ok {
+			dDest["Parent"] = parentDest
 		}
 	}
 
+	o, ok := dSrc.Find("Kids")
+	if !ok {
+		return nil
+	}
+	kidsSrc, err := fm.ctxSrc.DereferenceArray(o)
+	if err != nil {
+		return err
+	}
+	kidsDest := types.Array{}
+	for i, o := range kidsSrc {
+		kidIndRef, ok := o.(types.IndirectRef)
+		if !ok {
+			return fmt.Errorf("form field obj#%d Kids[%d]: wrong type %T", objNr, i, o)
+		}
+		if kidDest, ok := fm.fields[kidIndRef.ObjectNumber.Value()]; ok {
+			kidsDest = append(kidsDest, kidDest)
+		}
+	}
+	if len(kidsDest) > 0 {
+		dDest["Kids"] = kidsDest
+	}
+	return nil
+}
+
+func migrateFields(
+	fieldsSrc, fieldsDest *types.Array,
+	ctxSrc, ctxDest *model.Context,
+	migrated map[int]int,
+	selection *formFieldSelection,
+) error {
+	fm := formFieldMigration{
+		ctxSrc:   ctxSrc,
+		ctxDest:  ctxDest,
+		migrated: migrated,
+		fields:   map[int]types.IndirectRef{},
+		sources:  map[int]types.IndirectRef{},
+		roots:    map[int]bool{},
+	}
+	for _, indRef := range selection.widgets {
+		if err := fm.selectWidget(indRef); err != nil {
+			return err
+		}
+	}
+	for objNr, destIndRef := range fm.fields {
+		if err := fm.rebuildField(objNr, destIndRef); err != nil {
+			return fmt.Errorf("rebuild form field obj#%d: %w", objNr, err)
+		}
+	}
+
+	*fieldsDest = types.Array{}
+	for _, o := range *fieldsSrc {
+		indRef, ok := o.(types.IndirectRef)
+		if !ok || !fm.roots[indRef.ObjectNumber.Value()] {
+			continue
+		}
+		*fieldsDest = append(*fieldsDest, fm.fields[indRef.ObjectNumber.Value()])
+	}
 	return nil
 }
 
@@ -277,36 +429,4 @@ func migrateFormDict(d types.Dict, fields types.Array, ctxSrc, ctxDest *model.Co
 		}
 	}
 	return nil
-}
-
-func detectMigratedAnnot(ctxSrc *model.Context, indRef *types.IndirectRef, kids types.Array, migrated map[int]int) (bool, error) {
-	for _, v := range kids {
-		ir, ok := v.(types.IndirectRef)
-		if !ok {
-			continue
-		}
-		objNr := ir.ObjectNumber.Value()
-		if migrated[objNr] == indRef.ObjectNumber.Value() {
-			return true, nil
-		}
-		d, err := ctxSrc.DereferenceDict(ir)
-		if err != nil {
-			return false, err
-		}
-		o, ok := d.Find("Kids")
-		if !ok {
-			continue
-		}
-		kids, err := ctxSrc.DereferenceArray(o)
-		if err != nil {
-			return false, err
-		}
-		if ok, err = detectMigratedAnnot(ctxSrc, indRef, kids, migrated); err != nil {
-			return false, err
-		}
-		if ok {
-			return true, nil
-		}
-	}
-	return false, nil
 }

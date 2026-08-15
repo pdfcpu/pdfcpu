@@ -450,14 +450,13 @@ func validateFormFieldParts(xRefTable *model.XRefTable, objNr, incr int, d types
 	if err != nil {
 		return err
 	}
+	if fieldType == nil {
+		return fmt.Errorf("form field obj#%d: missing effective field type", objNr)
+	}
 
 	// Validate widget annotation - Validation of AA redundant because of merged acrofield with widget annotation.
 	if _, err = validateAnnotationDict(xRefTable, d); err != nil {
 		return err
-	}
-
-	if fieldType == nil && xRefTable.ValidationMode == model.ValidationRelaxed {
-		model.ShowDigestedSpecViolation("dict=formFieldDict required entry=FT missing")
 	}
 
 	return nil

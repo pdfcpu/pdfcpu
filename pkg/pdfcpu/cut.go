@@ -217,7 +217,7 @@ func createOutline(
 		return fmt.Errorf("outline page obj#%d: mark valid: %w", pageIndRef.ObjectNumber.Value(), err)
 	}
 
-	if err := migratePageDict(d1, *pageIndRef, ctxSrc, ctxDest, migrated); err != nil {
+	if err := migratePageDict(d1, *pageIndRef, ctxSrc, ctxDest, migrated, newFormFieldSelection()); err != nil {
 		return fmt.Errorf("outline page obj#%d: migrate dictionary: %w", pageIndRef.ObjectNumber.Value(), err)
 	}
 
@@ -463,7 +463,7 @@ func createTiles(
 				return fmt.Errorf("tile row %d column %d obj#%d: mark valid: %w", i+1, j+1, pageIndRef.ObjectNumber.Value(), err)
 			}
 
-			if err := migratePageDict(d1, *pageIndRef, ctxSrc, ctxDest, migrated); err != nil {
+			if err := migratePageDict(d1, *pageIndRef, ctxSrc, ctxDest, migrated, newFormFieldSelection()); err != nil {
 				return fmt.Errorf("tile row %d column %d obj#%d: migrate dictionary: %w", i+1, j+1, pageIndRef.ObjectNumber.Value(), err)
 			}
 
