@@ -221,6 +221,66 @@ func TestCreateImageStreamDictPreservesTransparentIndexedPNG(t *testing.T) {
 	assertSoftMask(t, sd, []byte{0xFF, 0x7F, 0x00, 0x00, 0x7F, 0xFF})
 }
 
+func TestCreateImageStreamDictPreservesNRGBAGraySamples(t *testing.T) {
+	img := image.NewNRGBA(image.Rect(0, 0, 3, 1))
+	img.SetNRGBA(0, 0, color.NRGBA{R: 0xFF, G: 0xFF, B: 0xFF, A: 0xFF})
+	img.SetNRGBA(1, 0, color.NRGBA{R: 0xFF, G: 0xFF, B: 0xFF, A: 0x80})
+	img.SetNRGBA(2, 0, color.NRGBA{R: 0xFF, G: 0xFF, B: 0xFF, A: 0x00})
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+
+	sd, w, h, err := model.CreateImageStreamDict(xRefTable, bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w != 3 || h != 1 {
+		t.Fatalf("got dimensions %dx%d, want 3x1", w, h)
+	}
+	if cs := sd.NameEntry("ColorSpace"); cs == nil || *cs != model.DeviceGrayCS {
+		t.Fatalf("got ColorSpace %v, want %s", cs, model.DeviceGrayCS)
+	}
+	if bpc := sd.IntEntry("BitsPerComponent"); bpc == nil || *bpc != 8 {
+		t.Fatalf("got BitsPerComponent %v, want 8", bpc)
+	}
+	if want := []byte{0xFF, 0xFF, 0xFF}; !bytes.Equal(sd.Content, want) {
+		t.Fatalf("got image bytes %x, want %x", sd.Content, want)
+	}
+	assertSoftMask(t, sd, []byte{0xFF, 0x80, 0x00})
+}
+
+func TestCreateImageStreamDictPreservesNRGBA64GraySamples(t *testing.T) {
+	img := image.NewNRGBA64(image.Rect(0, 0, 3, 1))
+	img.SetNRGBA64(0, 0, color.NRGBA64{R: 0xFFFF, G: 0xFFFF, B: 0xFFFF, A: 0xFFFF})
+	img.SetNRGBA64(1, 0, color.NRGBA64{R: 0xFFFF, G: 0xFFFF, B: 0xFFFF, A: 0x8001})
+	img.SetNRGBA64(2, 0, color.NRGBA64{R: 0xFFFF, G: 0xFFFF, B: 0xFFFF, A: 0x0000})
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+
+	sd, w, h, err := model.CreateImageStreamDict(xRefTable, bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w != 3 || h != 1 {
+		t.Fatalf("got dimensions %dx%d, want 3x1", w, h)
+	}
+	if cs := sd.NameEntry("ColorSpace"); cs == nil || *cs != model.DeviceGrayCS {
+		t.Fatalf("got ColorSpace %v, want %s", cs, model.DeviceGrayCS)
+	}
+	if bpc := sd.IntEntry("BitsPerComponent"); bpc == nil || *bpc != 16 {
+		t.Fatalf("got BitsPerComponent %v, want 16", bpc)
+	}
+	if want := []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; !bytes.Equal(sd.Content, want) {
+		t.Fatalf("got image bytes %x, want %x", sd.Content, want)
+	}
+	assertSoftMask(t, sd, []byte{0xFF, 0xFF, 0x80, 0x01, 0x00, 0x00})
+}
+
 func streamDictForPalettedPNG(t *testing.T, img *image.Paletted) *types.StreamDict {
 	t.Helper()
 

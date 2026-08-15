@@ -640,13 +640,27 @@ func convertToGray(img image.Image) image.Image {
 	cm := img.ColorModel()
 	if cm == color.RGBA64Model || cm == color.NRGBA64Model {
 		m := image.NewGray16(image.Rect(0, 0, b.Dx(), b.Dy()))
-		draw.Draw(m, m.Bounds(), img, b.Min, draw.Src)
-		return m
-	} else {
-		m := image.NewGray(image.Rect(0, 0, b.Dx(), b.Dy()))
-		draw.Draw(m, m.Bounds(), img, b.Min, draw.Src)
+		for y := b.Min.Y; y < b.Max.Y; y++ {
+			for x := b.Min.X; x < b.Max.X; x++ {
+				c := color.NRGBA64Model.Convert(img.At(x, y)).(color.NRGBA64)
+				c.A = 0xFFFF
+				g := color.Gray16Model.Convert(c).(color.Gray16)
+				m.SetGray16(x-b.Min.X, y-b.Min.Y, g)
+			}
+		}
 		return m
 	}
+
+	m := image.NewGray(image.Rect(0, 0, b.Dx(), b.Dy()))
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			c := color.NRGBAModel.Convert(img.At(x, y)).(color.NRGBA)
+			c.A = 0xFF
+			g := color.GrayModel.Convert(c).(color.Gray)
+			m.SetGray(x-b.Min.X, y-b.Min.Y, g)
+		}
+	}
+	return m
 }
 
 func convertToSepia(img image.Image) *image.RGBA {
