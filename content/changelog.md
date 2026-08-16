@@ -34,6 +34,26 @@ Entries link to GitHub releases or commits where available.
 
 <article class="changelog-entry">
   <div class="changelog-meta">
+    <time datetime="2026-08-15">2026-08-15</time>
+    <span class="changelog-kind">Release</span>
+    <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.0">v0.16.0</a>
+  </div>
+  <p>
+  Reduce the published Go module archive from 280,914,373 to 16,694,815 bytes (94.06%) and its extracted footprint from
+  341,264 to 26,660 KiB by excluding repository samples and test fixtures.<br>
+  Git checkouts remain self-contained for <code>go test ./...</code>. Module-cache copies support building and consuming
+  pdfcpu but omit the large integration fixtures required by the complete test suite.<br>
+  Add the runtime-only API option <code>Configuration.PreserveInfoDict</code> for preserving existing
+  <code>Producer</code>, <code>CreationDate</code> and <code>ModDate</code> entry values and encodings after validation.<br>
+  This preserves the entry payloads and PDF object types, not the complete serialized Info dictionary byte sequence.<br>
+  Support direct trailer Info dictionaries in PDF 2.0.<br>
+  Preserve AcroForm field hierarchies when extracting pages and reject terminal fields without an effective field type.<br>
+  Fix #1449, #1457, #1460, #1461.
+  </p>
+</article>
+
+<article class="changelog-entry">
+  <div class="changelog-meta">
     <time datetime="2026-08-11">2026-08-11</time>
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.15.0">v0.15.0</a>
