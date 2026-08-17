@@ -8,8 +8,8 @@ require (
 	github.com/spf13/cobra v1.10.2
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/crypto v0.54.0
-	golang.org/x/image v0.44.0
-	golang.org/x/text v0.40.0
+	golang.org/x/image v0.45.0
+	golang.org/x/text v0.41.0
 )
 
 require (
