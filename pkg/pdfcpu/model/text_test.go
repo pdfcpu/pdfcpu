@@ -137,6 +137,64 @@ func TestWriteColumnPreservesFractionalFontSize(t *testing.T) {
 	}
 }
 
+// TestWordWrapCoreFontUsesWinAnsiWidths verifies that UTF-8 text is measured using the encoded core-font glyphs.
+func TestWordWrapCoreFontUsesWinAnsiWidths(t *testing.T) {
+	const (
+		fontName = "Helvetica"
+		fontSize = 12.
+		text     = "Schöne Grüße"
+	)
+
+	winAnsiWidth, err := font.TextWidthFloat(DecodeUTF8ToByte(text), fontName, fontSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+	utf8Width, err := font.TextWidthFloat(text, fontName, fontSize)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if winAnsiWidth >= utf8Width {
+		t.Fatalf("invalid test widths: WinAnsi=%.2f UTF-8=%.2f", winAnsiWidth, utf8Width)
+	}
+
+	lines, err := WordWrapFloat(text, fontName, fontSize, (winAnsiWidth+utf8Width)/2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(lines) != 1 || lines[0] != text {
+		t.Fatalf("wrapped lines = %q, want [%q]", lines, text)
+	}
+}
+
+// TestWriteColumnPreservesWrappedCoreFontEncoding verifies that wrapping does not corrupt WinAnsi text bytes.
+func TestWriteColumnPreservesWrappedCoreFontEncoding(t *testing.T) {
+	const text = "Die österreichischen Grüße überm Frühstück ändern € – — ‘eins’ “zwei”"
+	td := TextDescriptor{
+		Text:     text,
+		FontName: "Helvetica",
+		FontKey:  "F1",
+		FontSize: 24,
+		Scale:    1,
+		ScaleAbs: true,
+	}
+
+	var buf bytes.Buffer
+	if _, err := WriteColumn(&XRefTable{}, &buf, types.RectForFormat("A4"), nil, td, 150); err != nil {
+		t.Fatal(err)
+	}
+
+	got := buf.Bytes()
+	want := []byte(DecodeUTF8ToByte(text))
+	for _, b := range []byte{0x80, 0x91, 0x92, 0x93, 0x94, 0x96, 0x97, 0xDF, 0xE4, 0xF6, 0xFC} {
+		if gotCount, wantCount := bytes.Count(got, []byte{b}), bytes.Count(want, []byte{b}); gotCount != wantCount {
+			t.Errorf("byte 0x%X count = %d, want %d", b, gotCount, wantCount)
+		}
+	}
+	if bytes.Contains(got, []byte("\uFFFD")) {
+		t.Fatal("wrapped content contains replacement characters")
+	}
+}
+
 func TestWordWrapPropagatesCandidateMeasurementError(t *testing.T) {
 	installTextRenderingMetrics(t)
 	_, err := WordWrap("word", "Missing", 12, 10)

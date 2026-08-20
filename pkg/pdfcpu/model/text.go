@@ -812,8 +812,30 @@ func SplitMultilineStr(s string) []string {
 	return append(lines, fieldsFunc(s, func(c rune) bool { return c == 0x0a })...)
 }
 
-func textFits(candidate, fontName string, fontSize, maxWidthPoints float64) (bool, error) {
-	width, err := font.TextWidthFloat(candidate, fontName, fontSize)
+func encodeCoreFontText(s, fontName string) string {
+	if font.IsCoreFont(fontName) && utf8.ValidString(s) {
+		return DecodeUTF8ToByte(s)
+	}
+	return s
+}
+
+func coreFontTextForWidth(s, fontName string) string {
+	if !font.IsCoreFont(fontName) || !utf8.ValidString(s) {
+		return s
+	}
+	for _, r := range s {
+		if r > 0xFF {
+			if _, ok := unicodeToCP1252[r]; !ok {
+				return s
+			}
+		}
+	}
+	return DecodeUTF8ToByte(s)
+}
+
+func textFits(s, fontName string, fontSize, maxWidthPoints float64) (bool, error) {
+	s = coreFontTextForWidth(s, fontName)
+	width, err := font.TextWidthFloat(s, fontName, fontSize)
 	if err != nil {
 		return false, fmt.Errorf("font %s: wrap candidate: %w", fontName, err)
 	}
@@ -1140,10 +1162,6 @@ func writeColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rect
 	// Cache haircross coordinates.
 	x0, y0 := x, y
 
-	if font.IsCoreFont(td.FontName) && utf8.ValidString(s) {
-		s = DecodeUTF8ToByte(s)
-	}
-
 	lines := SplitMultilineStr(s)
 
 	if width > 0 {
@@ -1152,6 +1170,10 @@ func writeColumn(xRefTable *XRefTable, w io.Writer, mediaBox, region *types.Rect
 		if err != nil {
 			return nil, fmt.Errorf("create column bounding box: measure column lines: %w", err)
 		}
+	}
+
+	for i, line := range lines {
+		lines[i] = encodeCoreFontText(line, td.FontName)
 	}
 
 	if !td.ScaleAbs {
