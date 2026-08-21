@@ -31,11 +31,11 @@ import (
 )
 
 func imageTestPDF() string {
-	return filepath.Join("..", "samples", "images", "test.pdf")
+	return filepath.Join("..", "testdata", "image-fixtures", "test.pdf")
 }
 
 func imageTestImage() string {
-	return filepath.Join("..", "samples", "images", "test_1_Im1.png")
+	return filepath.Join("..", "testdata", "image-fixtures", "test_1_Im1.png")
 }
 
 // TestImageArgumentValidation verifies public image boundary guards.

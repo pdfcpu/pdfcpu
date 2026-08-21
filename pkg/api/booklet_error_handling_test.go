@@ -146,7 +146,7 @@ func TestBookletImageErrorIncludesPhaseContext(t *testing.T) {
 }
 
 func TestBookletFromImagesAcceptsNilPDFReader(t *testing.T) {
-	imageFile := filepath.Join("..", "samples", "images", "any.jpg")
+	imageFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 	var out bytes.Buffer
 	err := Booklet(nil, &out, []string{imageFile}, nil, bookletTestConfiguration(t, true), nil)
 	if err != nil {
@@ -158,7 +158,7 @@ func TestBookletFromImagesAcceptsNilPDFReader(t *testing.T) {
 }
 
 func TestBookletFromImagesDefaultsConfiguration(t *testing.T) {
-	imageFile := filepath.Join("..", "samples", "images", "any.jpg")
+	imageFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 	nup := bookletTestConfiguration(t, true)
 	ctx, err := BookletFromImages(nil, []string{imageFile}, nup)
 	if err != nil {

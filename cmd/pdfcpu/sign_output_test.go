@@ -49,7 +49,7 @@ func TestValidateSignaturesCLIOutput(t *testing.T) {
 	}{
 		{
 			name: "ETSI.CAdES.detached",
-			file: filepath.Join("..", "..", "pkg", "samples", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf"),
+			file: filepath.Join("..", "..", "pkg", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf"),
 			want: `
 1 form signature (authoritative, visible, signed) on page 1
    Status: validity of the signature is unknown
@@ -59,7 +59,7 @@ func TestValidateSignaturesCLIOutput(t *testing.T) {
 		},
 		{
 			name: "adbe.pkcs7.detached",
-			file: filepath.Join("..", "..", "pkg", "samples", "signatures", "adbe.pkcs7.detached", "sample1.pdf"),
+			file: filepath.Join("..", "..", "pkg", "testdata", "signatures", "adbe.pkcs7.detached", "sample1.pdf"),
 			want: `
 1 form signature (authoritative, visible, signed) on page 1
    Status: validity of the signature is unknown
@@ -69,7 +69,7 @@ func TestValidateSignaturesCLIOutput(t *testing.T) {
 		},
 		{
 			name: "adbe.x509.rsa_sha1",
-			file: filepath.Join("..", "..", "pkg", "samples", "signatures", "adbe.x509.rsa_sha1", "sample01.pdf"),
+			file: filepath.Join("..", "..", "pkg", "testdata", "signatures", "adbe.x509.rsa_sha1", "sample01.pdf"),
 			want: `
 1 form signature (authoritative, visible, signed) on page 1
    Status: validity of the signature is unknown

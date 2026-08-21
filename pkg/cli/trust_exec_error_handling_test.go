@@ -165,7 +165,7 @@ func TestSignatureCLIFileErrorsRetainOperationAndReadContext(t *testing.T) {
 // TestSignatureCLIPreservesPositionalReadCause verifies the CLI boundary
 // returns a fatal API signature-read error without flattening its cause.
 func TestSignatureCLIPreservesPositionalReadCause(t *testing.T) {
-	inFile := filepath.Join("..", "samples", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
+	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
 	bb, err := os.ReadFile(inFile)
 	if err != nil {
 		t.Fatal(err)
@@ -246,7 +246,7 @@ func TestSignatureCLIStdinErrorsRetainOperationAndCleanup(t *testing.T) {
 
 // TestSignatureCLIStagesSignedStdin verifies validation retains staging for a non-seekable CLI input.
 func TestSignatureCLIStagesSignedStdin(t *testing.T) {
-	inFile := filepath.Join("..", "samples", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
+	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
 	bb, err := os.ReadFile(inFile)
 	if err != nil {
 		t.Fatal(err)

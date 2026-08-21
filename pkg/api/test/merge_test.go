@@ -85,7 +85,7 @@ func TestMergeCreateZipped(t *testing.T) {
 // TestMergeCreatePreserveBookmarks verifies merge create preserves source bookmarks without filename wrappers.
 func TestMergeCreatePreserveBookmarks(t *testing.T) {
 	msg := "TestMergeCreatePreserveBookmarks"
-	inFile := filepath.Join(samplesDir, "bookmarks", "bookmarkTree.pdf")
+	inFile := filepath.Join(inDir, "bookmarks", "bookmarkTree.pdf")
 	inFiles := []string{inFile, inFile}
 	outFile := filepath.Join(outDir, "outPreserveBookmarks1.pdf")
 	conf := model.NewDefaultConfiguration()

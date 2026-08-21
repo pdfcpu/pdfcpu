@@ -196,7 +196,7 @@ func (signPanicReadSeekerAt) Seek(int64, int) (int64, error) {
 
 func signedPDFBytes(t *testing.T) []byte {
 	t.Helper()
-	inFile := filepath.Join("..", "samples", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
+	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
 	bb, err := os.ReadFile(inFile)
 	if err != nil {
 		t.Fatal(err)
@@ -446,7 +446,7 @@ func TestValidateSignaturesRawPreservesSignedDataReadFailure(t *testing.T) {
 
 // TestValidateSignaturesRawInitializesOperationState verifies default configuration and flags reach the domain boundary.
 func TestValidateSignaturesRawInitializesOperationState(t *testing.T) {
-	inFile := filepath.Join("..", "samples", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
+	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
 	bb, err := os.ReadFile(inFile)
 	if err != nil {
 		t.Fatal(err)
@@ -603,7 +603,7 @@ func TestValidateSignaturesRawDomainErrorPreservesCauseAndPhase(t *testing.T) {
 		return nil, cause
 	}
 
-	inFile := filepath.Join("..", "samples", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
+	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
 	bb, err := os.ReadFile(inFile)
 	if err != nil {
 		t.Fatal(err)
@@ -632,7 +632,7 @@ func TestValidateSignaturesFileLifecycleJoinsOperationAndCloseErrors(t *testing.
 		return nil, cause
 	}
 
-	inFile := filepath.Join("..", "samples", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
+	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
 	_, err := validateSignaturesFile(inFile, false, nil, operation)
 	for _, want := range []error{cause, fs.ErrClosed} {
 		if !errors.Is(err, want) {
@@ -660,7 +660,7 @@ func TestValidateSignaturesFileLifecycleReturnsCloseErrorAfterSuccess(t *testing
 		return wantResults, nil
 	}
 
-	inFile := filepath.Join("..", "samples", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
+	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
 	results, err := validateSignaturesFile(inFile, false, nil, operation)
 	if !errors.Is(err, fs.ErrClosed) {
 		t.Fatalf("expected close failure %v, got results %v and error %v", fs.ErrClosed, results, err)
@@ -725,7 +725,7 @@ func TestValidateSignaturesTrustPoolErrorContext(t *testing.T) {
 		pdfcpu.InvalidateCertificatePool()
 	})
 
-	inFile := filepath.Join("..", "samples", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
+	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
 	_, err := ValidateSignatures(inFile, false, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
@@ -810,7 +810,7 @@ func TestSignAPIMalformedPDFErrorsIncludeOperationAndReadPhase(t *testing.T) {
 
 // TestRemoveSignaturesWriteErrorPreservesCauseAndContext verifies output failures retain their operation phase.
 func TestRemoveSignaturesWriteErrorPreservesCauseAndContext(t *testing.T) {
-	inFile := filepath.Join("..", "samples", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
+	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
 	f, err := os.Open(inFile)
 	if err != nil {
 		t.Fatal(err)

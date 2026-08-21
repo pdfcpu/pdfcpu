@@ -48,7 +48,7 @@ func signatureOutputTestCases() []signatureOutputTestCase {
 	return []signatureOutputTestCase{
 		{
 			name: "ETSI.CAdES.detached",
-			file: filepath.Join("..", "samples", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf"),
+			file: filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf"),
 			want: []string{
 				"",
 				"1 form signature (authoritative, visible, signed) on page 1",
@@ -59,7 +59,7 @@ func signatureOutputTestCases() []signatureOutputTestCase {
 		},
 		{
 			name: "adbe.pkcs7.detached",
-			file: filepath.Join("..", "samples", "signatures", "adbe.pkcs7.detached", "sample1.pdf"),
+			file: filepath.Join("..", "testdata", "signatures", "adbe.pkcs7.detached", "sample1.pdf"),
 			want: []string{
 				"",
 				"1 form signature (authoritative, visible, signed) on page 1",
@@ -70,7 +70,7 @@ func signatureOutputTestCases() []signatureOutputTestCase {
 		},
 		{
 			name: "adbe.x509.rsa_sha1",
-			file: filepath.Join("..", "samples", "signatures", "adbe.x509.rsa_sha1", "sample01.pdf"),
+			file: filepath.Join("..", "testdata", "signatures", "adbe.x509.rsa_sha1", "sample01.pdf"),
 			want: []string{
 				"",
 				"1 form signature (authoritative, visible, signed) on page 1",

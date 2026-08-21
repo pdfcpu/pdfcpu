@@ -37,8 +37,8 @@ func testUpdateImages(t *testing.T, msg string, inFile, imgFile, outFile string,
 // TestUpdateImages verifies update images.
 func TestUpdateImages(t *testing.T) {
 
+	fixtureDir := filepath.Join(inDir, "image-fixtures")
 	outDir := filepath.Join(samplesDir, "images")
-	inDir := outDir
 
 	for _, tt := range []struct {
 		msg     string
@@ -127,6 +127,13 @@ func TestUpdateImages(t *testing.T) {
 			8,
 			0,
 			""},
+		{"TestUpdateByObjNrTIFFGray",
+			"test.pdf",
+			"any_gray.png",
+			"imageUpdatedByObjNrTIFFGray.pdf",
+			8,
+			0,
+			""},
 		{"TestUpdateByPageNrAndIdGray",
 			"test.pdf",
 			"any_gray.png",
@@ -136,8 +143,8 @@ func TestUpdateImages(t *testing.T) {
 			"Im1"},
 	} {
 		testUpdateImages(t, tt.msg,
-			filepath.Join(inDir, tt.inFile),
-			filepath.Join(outDir, tt.imgFile),
+			filepath.Join(fixtureDir, tt.inFile),
+			filepath.Join(fixtureDir, tt.imgFile),
 			filepath.Join(outDir, tt.outFile),
 			tt.objNr,
 			tt.pageNr,

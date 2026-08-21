@@ -3231,7 +3231,7 @@ func TestMergeZipWriteErrorIncludesPhaseContext(t *testing.T) {
 
 // TestBookmarkFileWrapperErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestBookmarkFileWrapperErrorsIncludePhaseContext(t *testing.T) {
-	inFile := filepath.Join("..", "samples", "bookmarks", "bookmarkTree.pdf")
+	inFile := filepath.Join("..", "testdata", "bookmarks", "bookmarkTree.pdf")
 	tests := []struct {
 		name string
 		fn   func() error
@@ -3663,7 +3663,7 @@ func TestSplitByBookmarkNoBookmarksError(t *testing.T) {
 
 // TestAddBookmarksMapsExistingBookmarksError verifies the corresponding behavior.
 func TestAddBookmarksMapsExistingBookmarksError(t *testing.T) {
-	f := openAPITestPDF(t, "..", "samples", "bookmarks", "bookmarkTree.pdf")
+	f := openAPITestPDF(t, "..", "testdata", "bookmarks", "bookmarkTree.pdf")
 
 	bms := []pdfcpu.Bookmark{{Title: "new bookmark", PageFrom: 1}}
 	err := AddBookmarks(f, io.Discard, bms, false, nil)

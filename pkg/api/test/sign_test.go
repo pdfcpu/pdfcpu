@@ -36,7 +36,7 @@ func TestValidateSignature_X509_RSA_SHA1(t *testing.T) {
 	msg := "ValidateSignature_X509_RSA_SHA1"
 
 	// You may provide your signed PDFs in this dir.
-	dir := filepath.Join(samplesDir, "signatures", "adbe.x509.rsa_sha1")
+	dir := filepath.Join(inDir, "signatures", "adbe.x509.rsa_sha1")
 
 	for _, fn := range AllPDFs(t, dir) {
 		inFile := filepath.Join(dir, fn)
@@ -56,7 +56,7 @@ func TestValidateSignature_PKCS7_SHA1(t *testing.T) {
 	msg := "ValidateSignature_PKCS7_SHA1"
 
 	// You may provide your signed PDFs in this dir.
-	dir := filepath.Join(samplesDir, "signatures", "adbe.pkcs7.sha1")
+	dir := filepath.Join(inDir, "signatures", "adbe.pkcs7.sha1")
 
 	for _, fn := range AllPDFs(t, dir) {
 		inFile := filepath.Join(dir, fn)
@@ -76,7 +76,7 @@ func TestValidateSignature_PKCS7_Detached(t *testing.T) {
 	msg := "ValidateSignature_PKCS7_Detached"
 
 	// You may provide your signed PDFs in this dir.
-	dir := filepath.Join(samplesDir, "signatures", "adbe.pkcs7.detached")
+	dir := filepath.Join(inDir, "signatures", "adbe.pkcs7.detached")
 
 	for _, fn := range AllPDFs(t, dir) {
 		inFile := filepath.Join(dir, fn)
@@ -96,7 +96,7 @@ func TestValidateSignature_ETSI_CAdES_Detached(t *testing.T) {
 	msg := "ValidateSignature_ETSI_CAdES_Detached"
 
 	// You may provide your signed PDFs in this dir.
-	dir := filepath.Join(samplesDir, "signatures", "ETSI.CAdES.detached")
+	dir := filepath.Join(inDir, "signatures", "ETSI.CAdES.detached")
 
 	for _, fn := range AllPDFs(t, dir) {
 		inFile := filepath.Join(dir, fn)
@@ -114,8 +114,8 @@ func TestValidateSignature_ETSI_CAdES_Detached(t *testing.T) {
 func TestRemoveSignatures(t *testing.T) {
 	msg := "TestRemoveSignatures"
 
-	inDir := filepath.Join(samplesDir, "signatures", "ETSI.CAdES.detached")
-	inFile := filepath.Join(inDir, "testPAdES_BB.pdf")
+	signatureDir := filepath.Join(inDir, "signatures", "ETSI.CAdES.detached")
+	inFile := filepath.Join(signatureDir, "testPAdES_BB.pdf")
 	outFile := filepath.Join(outDir, "testPAdES_BB_noSigs.pdf")
 
 	//conf := model.NewDefaultConfiguration()

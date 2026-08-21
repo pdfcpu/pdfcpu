@@ -207,7 +207,7 @@ func TestNUpFromPDFPreservesExplicitPageDimensions(t *testing.T) {
 }
 
 func TestNUpOperationsSynchronizeContextAndPageTreeCounts(t *testing.T) {
-	imageFile := filepath.Join("..", "samples", "images", "any.jpg")
+	imageFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 	tests := []struct {
 		name      string
 		wantCount int
@@ -255,7 +255,7 @@ func TestNUpOperationsSynchronizeContextAndPageTreeCounts(t *testing.T) {
 
 func TestNUpFromMultipleImagesFailureLeavesPageCountUncommitted(t *testing.T) {
 	ctx, nup, pagesDict, pagesIndRef := nUpOperationTestContext(t, true)
-	imageFile := filepath.Join("..", "samples", "images", "any.jpg")
+	imageFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 	missingImage := filepath.Join(t.TempDir(), "missing.jpg")
 	fileNames := []string{imageFile, imageFile, imageFile, imageFile, missingImage}
 

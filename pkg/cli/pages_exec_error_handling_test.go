@@ -588,7 +588,7 @@ func TestGridImageStdout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	inFile := filepath.Join("..", "samples", "images", "any.jpg")
+	inFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 	_, gridErr := Dispatch(GridCommand([]string{inFile}, "-", nil, nup, nil))
 	os.Stdout = stdout
 	if gridErr != nil {
@@ -765,7 +765,7 @@ func TestNUpStdoutWriterFailure(t *testing.T) {
 		_ = pipeWriter.Close()
 		log.SetDefaultCLILogger()
 	})
-	inFile := filepath.Join("..", "samples", "images", "any.jpg")
+	inFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 	_, nUpErr := NUp(NUpCommand([]string{inFile}, "-", nil, nup, nil))
 	os.Stdout = stdout
 
@@ -938,7 +938,7 @@ func TestBookletMissingImages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	imageFile := filepath.Join("..", "samples", "images", "any.jpg")
+	imageFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 
 	for _, tt := range []struct {
 		name    string
@@ -1019,7 +1019,7 @@ func TestBookletOutputCreationFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	inFile := filepath.Join("..", "samples", "images", "any.jpg")
+	inFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 	outFile := filepath.Join(t.TempDir(), "missing", "out.pdf")
 
 	_, err = Booklet(BookletCommand([]string{inFile}, outFile, nil, nup, nil))
@@ -1059,7 +1059,7 @@ func TestBookletStdoutWriterFailure(t *testing.T) {
 		_ = pipeWriter.Close()
 		log.SetDefaultCLILogger()
 	})
-	inFile := filepath.Join("..", "samples", "images", "any.jpg")
+	inFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 	_, bookletErr := Booklet(BookletCommand([]string{inFile}, "-", nil, nup, nil))
 	os.Stdout = stdout
 
@@ -1124,7 +1124,7 @@ func TestBookletFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 	inFiles := []string{
-		filepath.Join("..", "samples", "images", "any.jpg"),
+		filepath.Join("..", "testdata", "image-fixtures", "any.jpg"),
 		filepath.Join(t.TempDir(), "missing.jpg"),
 	}
 
