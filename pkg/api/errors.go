@@ -23,6 +23,9 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 )
 
+// VersionRequirementError reports an element requiring a newer PDF version.
+type VersionRequirementError = pdfcpu.VersionRequirementError
+
 var (
 	// ErrAttachmentOutputCollision signals attachments resolving to the same output path.
 	ErrAttachmentOutputCollision = errors.New("attachment output collision")
@@ -84,11 +87,11 @@ var (
 	// ErrInvalidPageMode signals an unsupported page mode.
 	ErrInvalidPageMode = errors.New("invalid page mode")
 
-	// ErrInvalidRotation signals a rotation that is not a multiple of 90 degrees.
-	ErrInvalidRotation = errors.New("invalid rotation")
-
 	// ErrInvalidResizeConfiguration signals an invalid resize configuration.
 	ErrInvalidResizeConfiguration = errors.New("invalid resize configuration")
+
+	// ErrInvalidRotation signals a rotation that is not a multiple of 90 degrees.
+	ErrInvalidRotation = errors.New("invalid rotation")
 
 	// ErrInvalidSplitPageNumberSequence signals an invalid split page number sequence.
 	ErrInvalidSplitPageNumberSequence = errors.New("invalid split page number sequence")
@@ -105,11 +108,11 @@ var (
 	// ErrMissingAnnotation signals a missing required annotation.
 	ErrMissingAnnotation = pdfcpu.ErrMissingAnnotation
 
-	// ErrMissingBookmarks signals that no bookmarks were provided.
-	ErrMissingBookmarks = errors.New("missing bookmarks")
-
 	// ErrMissingBookletConfiguration signals a missing booklet configuration.
 	ErrMissingBookletConfiguration = errors.New("missing booklet configuration")
+
+	// ErrMissingBookmarks signals that no bookmarks were provided.
+	ErrMissingBookmarks = errors.New("missing bookmarks")
 
 	// ErrMissingBoxConfiguration signals a missing box configuration.
 	ErrMissingBoxConfiguration = errors.New("missing box configuration")
@@ -226,14 +229,14 @@ var (
 	// Deprecated: viewer-preferences reset operations are idempotent and no longer return ErrNoOp.
 	ErrNoOp = errors.New("no operation")
 
+	// Deprecated: use ErrNoBookmarks.
+	ErrNoOutlines = ErrNoBookmarks
+
 	// ErrNoPropertyRemoved signals that a remove operation did not match any property.
 	ErrNoPropertyRemoved = errors.New("no property removed")
 
 	// ErrNoSignatures signals that a PDF has no signatures to process.
 	ErrNoSignatures = pdfcpu.ErrNoSignatures
-
-	// Deprecated: use ErrNoBookmarks.
-	ErrNoOutlines = ErrNoBookmarks
 
 	// ErrNUpImageOutputConflict signals that n-up output aliases an image input.
 	ErrNUpImageOutputConflict = errors.New("n-up image output aliases input")
@@ -258,4 +261,7 @@ var (
 
 	// ErrUserFontNotFound is retained as a compatibility alias for ErrUnknownFont.
 	ErrUserFontNotFound = font.ErrUnknownFont
+
+	// ErrVersionTooLow signals that an element requires a newer declared PDF version.
+	ErrVersionTooLow = pdfcpu.ErrVersionTooLow
 )

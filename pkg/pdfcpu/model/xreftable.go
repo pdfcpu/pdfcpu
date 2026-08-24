@@ -260,8 +260,13 @@ func (xRefTable *XRefTable) ParseRootVersion() (v *string, err error) {
 
 // ValidateVersion validates against the xRefTable's version.
 func (xRefTable *XRefTable) ValidateVersion(element string, sinceVersion Version) error {
-	if xRefTable.Version() < sinceVersion {
-		return fmt.Errorf("%s: unsupported in version %s", element, xRefTable.VersionString())
+	actualVersion := xRefTable.Version()
+	if actualVersion < sinceVersion {
+		return &VersionRequirementError{
+			Element:         element,
+			ActualVersion:   actualVersion,
+			RequiredVersion: sinceVersion,
+		}
 	}
 
 	return nil
