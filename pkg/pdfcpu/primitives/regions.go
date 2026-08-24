@@ -25,6 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// Regions divides page content into two horizontal or vertical regions.
 type Regions struct {
 	page        *PDFPage
 	parent      *Content

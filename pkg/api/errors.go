@@ -229,6 +229,7 @@ var (
 	// Deprecated: viewer-preferences reset operations are idempotent and no longer return ErrNoOp.
 	ErrNoOp = errors.New("no operation")
 
+	// ErrNoOutlines is retained for source compatibility.
 	// Deprecated: use ErrNoBookmarks.
 	ErrNoOutlines = ErrNoBookmarks
 
@@ -241,6 +242,7 @@ var (
 	// ErrNUpImageOutputConflict signals that n-up output aliases an image input.
 	ErrNUpImageOutputConflict = errors.New("n-up image output aliases input")
 
+	// ErrOutlines is retained for source compatibility.
 	// Deprecated: use ErrExistingBookmarks.
 	ErrOutlines = ErrExistingBookmarks
 

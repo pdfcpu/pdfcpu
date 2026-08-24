@@ -45,8 +45,7 @@ func MarkCertificateStoreChanged() {
 	certificateStoreRevision.Add(1)
 }
 
-// IsPEM Do we need locking?
-
+// IsPEM reports whether fname has a PEM file extension.
 func IsPEM(fname string) bool {
 	return strings.HasSuffix(strings.ToLower(fname), ".pem")
 }

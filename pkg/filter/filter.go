@@ -45,6 +45,7 @@ var ErrUnsupportedFilter = errors.New("filter not supported")
 // ErrDecodeLimitExceeded signals that decoded filter output exceeds the configured decode limit.
 var ErrDecodeLimitExceeded = errors.New("filter decode limit exceeded")
 
+// DefaultMaxDecodeBytes is the default maximum decoded stream size.
 const DefaultMaxDecodeBytes int64 = 512 << 20 // 512 MiB
 
 const maxInt = int(^uint(0) >> 1)
@@ -52,7 +53,9 @@ const maxInt64 = int64(^uint64(0) >> 1)
 
 // Filter defines an interface for encoding/decoding PDF object streams.
 type Filter interface {
+	// Encode returns a reader for the encoded contents of r.
 	Encode(r io.Reader) (io.Reader, error)
+	// Decode returns a reader for the decoded contents of r.
 	Decode(r io.Reader) (io.Reader, error)
 	// DecodeLength will decode at least maxLen bytes. For filters where decoding
 	// parts doesn't make sense (e.g. DCT), the whole stream is decoded.

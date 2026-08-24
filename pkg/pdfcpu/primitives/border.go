@@ -24,6 +24,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// Border defines the width, color, and line-join style of an element border.
 type Border struct {
 	pdf   *PDF
 	Name  string

@@ -14,6 +14,7 @@
 	limitations under the License.
 */
 
+// Package create generates PDF documents from declarative descriptions.
 package create
 
 import (

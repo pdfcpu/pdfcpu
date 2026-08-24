@@ -16,6 +16,7 @@ limitations under the License.
 
 package model
 
+// FontInfo contains the properties of a PDF font resource.
 type FontInfo struct {
 	Prefix   string `json:"prefix"`
 	Name     string `json:"name"`

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package format provides locale-independent PDF number formatting.
 package format
 
 import (

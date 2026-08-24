@@ -28,7 +28,8 @@ import (
 // AnnotationFlags represents the PDF annotation flags.
 type AnnotationFlags int
 
-const ( // See table 165
+// Annotation flag bit values defined by PDF 32000 table 165.
+const (
 	AnnInvisible AnnotationFlags = 1 << iota
 	AnnHidden
 	AnnPrint
@@ -44,6 +45,7 @@ const ( // See table 165
 // AnnotationType represents the various PDF annotation types.
 type AnnotationType int
 
+// Supported annotation types.
 const (
 	AnnText AnnotationType = iota
 	AnnLink
@@ -74,6 +76,7 @@ const (
 	AnnCustom
 )
 
+// AnnotTypes maps PDF annotation subtype names to annotation types.
 var AnnotTypes = map[string]AnnotationType{
 	"Text":           AnnText,
 	"Link":           AnnLink,
@@ -138,6 +141,7 @@ var AnnotTypeStrings = map[AnnotationType]string{
 // BorderStyle (see table 168)
 type BorderStyle int
 
+// Supported annotation border styles.
 const (
 	BSSolid BorderStyle = iota
 	BSDashed
@@ -191,6 +195,7 @@ func borderArray(rx, ry, width float64) types.Array {
 // LineEndingStyle (see table 179)
 type LineEndingStyle int
 
+// Supported annotation line-ending styles.
 const (
 	LESquare LineEndingStyle = iota
 	LECircle
@@ -236,14 +241,23 @@ func LineEndingStyleName(les LineEndingStyle) string {
 // Pointer-backed implementations must not pass a typed nil pointer through this interface;
 // generic typed-nil detection is intentionally not performed in production code.
 type AnnotationRenderer interface {
+	// RenderDict renders the annotation as a PDF dictionary.
 	RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error)
+	// Type returns the annotation type.
 	Type() AnnotationType
+	// Rectangle returns the annotation rectangle.
 	Rectangle() types.Rectangle
+	// RectString returns the annotation rectangle as a string.
 	RectString() string
+	// APObjNrInt returns the appearance stream object number.
 	APObjNrInt() int
+	// ID returns the annotation identifier.
 	ID() string
+	// Content returns the annotation contents.
 	Content() string
+	// ContentString returns the annotation contents formatted for display.
 	ContentString() string
+	// CustomTypeString returns the custom annotation subtype.
 	CustomTypeString() string
 }
 
@@ -728,6 +742,7 @@ func (ann TextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.Ind
 // FreeTextIntent represents the various free text annotation intents.
 type FreeTextIntent int
 
+// Supported free-text annotation intents.
 const (
 	IntentFreeText FreeTextIntent = 1 << iota
 	IntentFreeTextCallout
@@ -748,7 +763,7 @@ func FreeTextIntentName(fti FreeTextIntent) string {
 	return s
 }
 
-// FreeText Annotation displays text directly on the page.
+// FreeTextAnnotation displays text directly on the page.
 type FreeTextAnnotation struct {
 	MarkupAnnotation
 	Text                   string             // Rich text string, see XFA 3.3
@@ -913,6 +928,7 @@ func (ann FreeTextAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types
 // LineIntent represents the various line annotation intents.
 type LineIntent int
 
+// Supported line annotation intents.
 const (
 	IntentLineArrow LineIntent = 1 << iota
 	IntentLineDimension
@@ -1248,6 +1264,7 @@ func (ann CircleAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.I
 // PolygonIntent represents the various polygon annotation intents.
 type PolygonIntent int
 
+// Supported polygon annotation intents.
 const (
 	IntentPolygonCloud PolygonIntent = 1 << iota
 	IntentPolygonDimension
@@ -1374,6 +1391,7 @@ func (ann PolygonAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.
 // PolyLineIntent represents the various polyline annotation intents.
 type PolyLineIntent int
 
+// Supported polyline annotation intents.
 const (
 	IntentPolyLinePolygonCloud PolyLineIntent = 1 << iota
 	IntentPolyLineDimension
@@ -1389,6 +1407,7 @@ func PolyLineIntentName(pi PolyLineIntent) string {
 	return s
 }
 
+// PolyLineAnnotation represents a polyline annotation.
 type PolyLineAnnotation struct {
 	MarkupAnnotation
 	Vertices    types.Array // Array of numbers specifying the alternating horizontal and vertical coordinates, respectively, of each vertex, in default user space.
@@ -1495,6 +1514,7 @@ func (ann PolyLineAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types
 	return d, nil
 }
 
+// TextMarkupAnnotation represents text markup shared by highlight, underline, squiggly, and strikeout annotations.
 type TextMarkupAnnotation struct {
 	MarkupAnnotation
 	Quad types.QuadPoints
@@ -1541,6 +1561,7 @@ func (ann TextMarkupAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *typ
 	return d, nil
 }
 
+// HighlightAnnotation represents a text highlight annotation.
 type HighlightAnnotation struct {
 	TextMarkupAnnotation
 }
@@ -1568,6 +1589,7 @@ func NewHighlightAnnotation(
 	}
 }
 
+// UnderlineAnnotation represents a text underline annotation.
 type UnderlineAnnotation struct {
 	TextMarkupAnnotation
 }
@@ -1595,6 +1617,7 @@ func NewUnderlineAnnotation(
 	}
 }
 
+// SquigglyAnnotation represents a text squiggly-underline annotation.
 type SquigglyAnnotation struct {
 	TextMarkupAnnotation
 }
@@ -1622,6 +1645,7 @@ func NewSquigglyAnnotation(
 	}
 }
 
+// StrikeOutAnnotation represents a text strikeout annotation.
 type StrikeOutAnnotation struct {
 	TextMarkupAnnotation
 }
@@ -1649,6 +1673,7 @@ func NewStrikeOutAnnotation(
 	}
 }
 
+// CaretAnnotation represents a text-editing caret annotation.
 type CaretAnnotation struct {
 	MarkupAnnotation
 	RD        *types.Rectangle // A set of four numbers that shall describe the numerical differences between two rectangles: the Rect entry of the annotation and the actual boundaries of the underlying caret.
@@ -1701,9 +1726,10 @@ func (ann CaretAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.In
 	return d, nil
 }
 
-// A series of alternating x and y coordinates in PDF user space, specifying points along the path.
+// InkPath contains alternating x and y coordinates in PDF user space that specify a stroked path.
 type InkPath []float64
 
+// InkAnnotation represents one or more freehand ink paths.
 type InkAnnotation struct {
 	MarkupAnnotation
 	InkList     []InkPath // Array of n arrays, each representing a stroked path of points in user space.

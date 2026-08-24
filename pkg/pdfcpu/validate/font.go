@@ -27,6 +27,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// ErrMissingFont signals a missing required font dictionary.
 var ErrMissingFont = errors.New("missing font dict")
 
 func validateStandardType1Font(s string) bool {

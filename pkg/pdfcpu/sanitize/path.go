@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package sanitize validates and normalizes filesystem paths derived from PDF data.
 package sanitize
 
 import (

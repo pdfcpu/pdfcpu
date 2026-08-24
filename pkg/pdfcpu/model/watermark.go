@@ -27,6 +27,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// Angle conversion factors.
 const (
 	DegToRad = math.Pi / 180
 	RadToDeg = 180 / math.Pi
@@ -48,6 +49,7 @@ const (
 
 type formCache map[types.Rectangle]*types.IndirectRef
 
+// PdfResources contains rendered PDF watermark content and its resources.
 type PdfResources struct {
 	Content []byte
 	ResDict *types.IndirectRef

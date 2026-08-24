@@ -25,6 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// Buttons defines the choices and label layout of a radio-button group.
 type Buttons struct {
 	pdf         *PDF
 	Values      []string

@@ -22,18 +22,20 @@ import (
 	"time"
 )
 
+// Three-state result values.
 const (
 	Unknown = iota
 	False   // aka invalid, not ok
 	True    // aka  valid, ok
 )
 
-// Preferred cert revocation checking mechanism values
+// Preferred certificate revocation checking mechanisms.
 const (
 	CRL = iota
 	OCSP
 )
 
+// Certified signature permission levels.
 const (
 	CertifiedSigPermNone = iota
 	CertifiedSigPermNoChangesAllowed
@@ -41,6 +43,7 @@ const (
 	CertifiedSigPermFillingAnnotatingAndSigningOK
 )
 
+// Supported PDF signature field types.
 const (
 	SigTypeForm = iota
 	SigTypePage
@@ -69,6 +72,7 @@ type RevocationDetails struct {
 // RevocationEvidenceSource identifies where revocation evidence originated.
 type RevocationEvidenceSource uint8
 
+// Revocation evidence source values.
 const (
 	// RevocationEvidenceSourceUnspecified identifies unavailable provenance.
 	RevocationEvidenceSourceUnspecified RevocationEvidenceSource = iota
@@ -491,6 +495,7 @@ func (sigStats *SignatureStats) Counter(svr *SignatureValidationResult) (*int, *
 // enterprise-policy or policy-based trust decision.
 type SignatureStatus int
 
+// Signature validation status values.
 const (
 	SignatureStatusUnknown SignatureStatus = 1 << iota
 
@@ -516,6 +521,7 @@ func (st SignatureStatus) String() string {
 // SignatureReason identifies the reported reason associated with a signature status.
 type SignatureReason int
 
+// Signature validation reason values.
 const (
 	SignatureReasonUnknown SignatureReason = 1 << iota
 	SignatureReasonDocNotModified

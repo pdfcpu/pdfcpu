@@ -127,6 +127,7 @@ func (n *Node) AppendToNames(k string, v types.Object) {
 	}
 }
 
+// NameMap maps name-tree keys to their associated dictionaries.
 type NameMap map[string][]types.Dict
 
 // Add adds key k and value v to n.

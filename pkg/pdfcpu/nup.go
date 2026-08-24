@@ -40,6 +40,7 @@ var (
 )
 
 var (
+	// NUpValues contains the supported n-up page counts.
 	NUpValues = []int{2, 3, 4, 6, 8, 9, 12, 16}
 	nUpDims   = map[int]types.Dim{
 		2:  {Width: 2, Height: 1},

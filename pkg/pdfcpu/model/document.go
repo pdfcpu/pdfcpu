@@ -25,8 +25,10 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// PageMode identifies how a document is displayed when opened.
 type PageMode int
 
+// Supported initial page modes.
 const (
 	PageModeUseNone PageMode = iota
 	PageModeUseOutlines
@@ -84,8 +86,10 @@ func (pm *PageMode) String() string {
 	}
 }
 
+// PageLayout identifies the page arrangement used when a document is opened.
 type PageLayout int
 
+// Supported initial page layouts.
 const (
 	PageLayoutSinglePage PageLayout = iota
 	PageLayoutTwoColumnLeft
@@ -143,8 +147,10 @@ func (pl *PageLayout) String() string {
 	}
 }
 
+// NonFullScreenPageMode identifies the page mode used after leaving full-screen mode.
 type NonFullScreenPageMode PageMode
 
+// Supported page modes after leaving full-screen mode.
 const (
 	NFSPageModeUseNone NonFullScreenPageMode = iota
 	NFSPageModeUseOutlines
@@ -152,8 +158,10 @@ const (
 	NFSPageModeUseOC
 )
 
+// PageBoundary identifies a PDF page boundary box.
 type PageBoundary int
 
+// Supported PDF page boundary boxes.
 const (
 	MediaBox PageBoundary = iota
 	CropBox
@@ -206,8 +214,10 @@ func (pb *PageBoundary) String() string {
 	}
 }
 
+// PrintScaling identifies the page-scaling option used for printing.
 type PrintScaling int
 
+// Supported print-scaling options.
 const (
 	PrintScalingNone PrintScaling = iota
 	PrintScalingAppDefault
@@ -245,8 +255,10 @@ func (ps *PrintScaling) String() string {
 	}
 }
 
+// Direction identifies the predominant reading order for pages.
 type Direction int
 
+// Supported page reading directions.
 const (
 	L2R Direction = iota
 	R2L
@@ -284,8 +296,10 @@ func (d *Direction) String() string {
 	}
 }
 
+// PaperHandling identifies the duplex mode used when printing.
 type PaperHandling int
 
+// Supported paper-handling modes.
 const (
 	Simplex PaperHandling = iota
 	DuplexFlipShortEdge
@@ -541,6 +555,7 @@ func ViewerPreferencesWithDefaults(vp *ViewerPreferences, version Version) (*Vie
 	return vp1, nil
 }
 
+// ViewerPrefJSON represents viewer preferences in their JSON form.
 type ViewerPrefJSON struct {
 	HideToolbar           *bool    `json:"hideToolbar,omitempty"`
 	HideMenubar           *bool    `json:"hideMenubar,omitempty"`

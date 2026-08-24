@@ -428,6 +428,7 @@ func prepareHeader(horSep *[]int, maxLen *AnnotListMaxLengths, customAnnot bool)
 	return s
 }
 
+// AnnotListMaxLengths contains the maximum display width of each annotation list column.
 type AnnotListMaxLengths struct {
 	ObjNr, ID, Rect, Content, Type int
 }

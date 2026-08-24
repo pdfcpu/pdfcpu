@@ -103,8 +103,10 @@ func (sd StreamDict) Image() bool {
 	return true
 }
 
+// DecodeLazyObjectStreamObjectFunc decodes one serialized object from an object stream.
 type DecodeLazyObjectStreamObjectFunc func(c context.Context, s string) (Object, error)
 
+// LazyObjectStreamObject defers decoding an object-stream entry until it is accessed.
 type LazyObjectStreamObject struct {
 	osd         *ObjectStreamDict
 	startOffset int

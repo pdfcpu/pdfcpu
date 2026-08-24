@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package form reads, writes, fills, and manages PDF form fields.
 package form
 
 import (
@@ -35,6 +36,7 @@ import (
 // FieldType represents a form field type.
 type FieldType int
 
+// Supported form field types.
 const (
 	FTText FieldType = iota
 	FTDate
@@ -97,6 +99,7 @@ func (f Field) pageString() string {
 	return strings.Join(ss, ",")
 }
 
+// FieldMeta tracks the columns and widths needed to render a form field table.
 type FieldMeta struct {
 	altName, def, val, opt                              bool
 	pageMax, defMax, valMax, idMax, nameMax, altNameMax int

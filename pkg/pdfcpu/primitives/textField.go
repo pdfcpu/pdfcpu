@@ -32,6 +32,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// TextField defines a text form field and its visual appearance.
 type TextField struct {
 	pdf             *PDF
 	content         *Content
@@ -511,7 +512,7 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// RefreshN.
+// RefreshN regenerates and stores the field's normal appearance stream.
 func (tf *TextField) RefreshN(xRefTable *model.XRefTable, indRef *types.IndirectRef) error {
 	bb, err := tf.renderN(xRefTable)
 	if err != nil {

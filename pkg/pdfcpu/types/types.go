@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package types defines low-level PDF objects, geometry, streams, and layout values.
 package types
 
 import (
@@ -67,7 +68,9 @@ type StringSet map[string]bool
 // Object defines an interface for all Objects.
 type Object interface {
 	fmt.Stringer
+	// Clone returns an independent copy of the object.
 	Clone() Object
+	// PDFString returns the object's PDF syntax representation.
 	PDFString() string
 }
 

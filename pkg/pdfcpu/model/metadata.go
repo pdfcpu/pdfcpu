@@ -26,6 +26,7 @@ import (
 // ErrMissingMetadata signals a missing required metadata buffer.
 var ErrMissingMetadata = errors.New("missing metadata")
 
+// UserDate represents an XMP date and time value.
 type UserDate time.Time
 
 const userDateFormatNoTimeZone = "2006-01-02T15:04:05Z"
@@ -57,31 +58,37 @@ func (ud *UserDate) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return err
 }
 
+// Alt represents an RDF alternative-value container.
 type Alt struct {
 	//XMLName xml.Name `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Alt"`
 	Entries []string `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# li"`
 }
 
+// Seq represents an RDF sequence container.
 type Seq struct {
 	//XMLName xml.Name `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Seq"`
 	Entries []string `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# li"`
 }
 
+// Title represents Dublin Core title metadata.
 type Title struct {
 	//XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ title"`
 	Alt Alt `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Alt"`
 }
 
+// Desc represents Dublin Core description metadata.
 type Desc struct {
 	//XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ description"`
 	Alt Alt `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Alt"`
 }
 
+// Creator represents Dublin Core creator metadata.
 type Creator struct {
 	//XMLName xml.Name `xml:"http://purl.org/dc/elements/1.1/ creator"`
 	Seq Seq `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Seq"`
 }
 
+// Description represents the RDF description embedded in XMP metadata.
 type Description struct {
 	//XMLName      xml.Name `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# Description"`
 	Title        Title    `xml:"http://purl.org/dc/elements/1.1/ title"`
@@ -95,11 +102,13 @@ type Description struct {
 	Keywords     string   `xml:"http://ns.adobe.com/pdf/1.3/ Keywords"`
 }
 
+// RDF represents the root RDF element in XMP metadata.
 type RDF struct {
 	XMLName     xml.Name `xml:"http://www.w3.org/1999/02/22-rdf-syntax-ns# RDF"`
 	Description Description
 }
 
+// XMPMeta represents an XMP metadata document.
 type XMPMeta struct {
 	XMLName xml.Name `xml:"adobe:ns:meta/ xmpmeta"`
 	RDF     RDF

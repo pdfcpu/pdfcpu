@@ -61,6 +61,7 @@ const (
 	DownLeft
 )
 
+// BorderStyling defines the color, join style, and width of an imposition border.
 type BorderStyling struct {
 	Color     *color.SimpleColor
 	LineStyle *types.LineJoinStyle

@@ -21,6 +21,7 @@ import (
 	"fmt"
 )
 
+// Padding defines uniform or per-edge spacing within an element.
 type Padding struct {
 	Name                     string
 	Width                    float64

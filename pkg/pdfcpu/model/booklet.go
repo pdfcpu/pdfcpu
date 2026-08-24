@@ -25,6 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// BookletType identifies a booklet layout strategy.
 type BookletType int
 
 // These are the types of booklet layouts.
@@ -47,8 +48,10 @@ func (b BookletType) String() string {
 	return ""
 }
 
+// BookletBinding identifies the edge along which booklet pages are bound.
 type BookletBinding int
 
+// Supported booklet binding edges.
 const (
 	LongEdge BookletBinding = iota
 	ShortEdge
@@ -65,6 +68,7 @@ func (b BookletBinding) String() string {
 	return ""
 }
 
+// BookletPage identifies a source page and whether it must be rotated for imposition.
 type BookletPage struct {
 	Number int
 	Rotate bool

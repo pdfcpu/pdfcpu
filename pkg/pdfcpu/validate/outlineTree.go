@@ -24,6 +24,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// ErrBookmarksRepair signals that a malformed bookmark tree could not be repaired.
 var ErrBookmarksRepair = errors.New("bookmarks repair failed")
 
 func validateOutlineItemDictTitle(xRefTable *model.XRefTable, d types.Dict, dictName string) error {

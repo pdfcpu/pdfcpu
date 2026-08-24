@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package draw writes PDF drawing primitives and table separators.
 package draw
 
 import (
@@ -177,6 +178,7 @@ func DrawHairCross(w io.Writer, x, y float64, r *types.Rectangle) {
 
 // CLI drawing
 
+// CLI drawing elements.
 const (
 	HBar     = "\u2501"
 	VBar     = "\u2502"

@@ -50,6 +50,7 @@ type CheckBox struct {
 	Hide            bool
 }
 
+// AP caches the appearance streams shared by checkboxes or radio buttons.
 type AP struct {
 	irDOffL, irDYesL *types.IndirectRef
 	irNOffL, irNYesL *types.IndirectRef

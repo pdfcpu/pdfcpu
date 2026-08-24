@@ -30,6 +30,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// FormFont defines a font used to render form fields.
 type FormFont struct {
 	pdf      *PDF
 	Name     string
@@ -45,8 +46,7 @@ func formatFontSize(size float64) string {
 	return strconv.FormatFloat(size, 'f', -1, 64)
 }
 
-// ISO-639 country codes
-// See https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+// ISO639Codes contains supported ISO 639-1 language codes.
 var ISO639Codes = []string{"ab", "aa", "af", "ak", "sq", "am", "ar", "an", "hy", "as", "av", "ae", "ay", "az", "bm", "ba", "eu", "be", "bn", "bi", "bs", "br", "bg",
 	"my", "ca", "ch", "ce", "ny", "zh", "cu", "cv", "kw", "co", "cr", "hr", "cs", "da", "dv", "nl", "dz", "en", "eo", "et", "ee", "fo", "fj", "fi", "fr", "fy", "ff",
 	"gd", "gl", "lg", "ka", "de", "el", "kl", "gn", "gu", "ht", "ha", "he", "hz", "hi", "ho", "hu", "is", "io", "ig", "id", "ia", "ie", "iu", "ik", "ga", "it", "ja",

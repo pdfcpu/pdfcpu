@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package safemath provides checked integer arithmetic for untrusted PDF data.
 package safemath
 
 import (

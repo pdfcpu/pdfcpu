@@ -26,6 +26,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// Cut contains page subdivision and output settings for cut and poster operations.
 type Cut struct {
 	Hor      []float64          // Horizontal cut points
 	Vert     []float64          // Vertical cut points

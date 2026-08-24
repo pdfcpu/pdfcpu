@@ -25,6 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// Resource identifies an indirect PDF resource object.
 type Resource struct {
 	ID     string
 	IndRef *types.IndirectRef
@@ -66,6 +67,7 @@ type ImageResource struct {
 // ImageMap maps image filenames to image resources.
 type ImageMap map[string]ImageResource
 
+// FieldAnnotation represents a widget annotation and its form-field relationship.
 type FieldAnnotation struct {
 	Dict   types.Dict
 	IndRef *types.IndirectRef

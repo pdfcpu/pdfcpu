@@ -39,9 +39,10 @@ const (
 	ValidationRelaxed
 )
 
-// See table 22 - User access permissions
+// PermissionFlags represents the user access permissions defined by PDF 32000 table 22.
 type PermissionFlags int
 
+// User access permission bits.
 const (
 	UnusedFlag1              PermissionFlags = 1 << iota // Bit 1:  unused
 	UnusedFlag2                                          // Bit 2:  unused
@@ -57,6 +58,7 @@ const (
 	PermissionPrintRev3                                  // Bit 12: Print (security handlers >= rev.3)
 )
 
+// Common permission sets.
 const (
 	PermissionsNone  = PermissionFlags(0xF0C3)
 	PermissionsPrint = PermissionsNone + PermissionPrintRev2 + PermissionPrintRev3

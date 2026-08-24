@@ -31,8 +31,10 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// DataFormat identifies a supported form data format.
 type DataFormat int
 
+// Supported form data formats.
 const (
 	CSV DataFormat = iota
 	JSON

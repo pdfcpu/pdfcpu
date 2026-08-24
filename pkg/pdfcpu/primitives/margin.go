@@ -21,6 +21,7 @@ import (
 	"fmt"
 )
 
+// Margin defines uniform or per-edge spacing around an element.
 type Margin struct {
 	Name                     string
 	Width                    float64

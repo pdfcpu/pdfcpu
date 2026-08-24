@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package sign validates PDF signatures and their certificate evidence.
 package sign
 
 import (

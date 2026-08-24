@@ -183,9 +183,11 @@ func AnchorPosition(a Anchor, r *Rectangle, w, h float64) (x float64, y float64)
 	return
 }
 
-// TODO Refactor because of orientation in nup.go
+// Orientation identifies a horizontal or vertical layout direction.
+// TODO: Refactor because of orientation in nup.go.
 type Orientation int
 
+// Supported layout orientations.
 const (
 	Horizontal Orientation = iota
 	Vertical

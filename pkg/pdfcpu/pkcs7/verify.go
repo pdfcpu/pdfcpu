@@ -494,6 +494,7 @@ type MessageDigestMismatchError struct {
 	ActualDigest   []byte
 }
 
+// Error returns the message-digest mismatch details.
 func (err *MessageDigestMismatchError) Error() string {
 	return fmt.Sprintf("pkcs7: message digest mismatch: expected %X, actual %X", err.ExpectedDigest, err.ActualDigest)
 }

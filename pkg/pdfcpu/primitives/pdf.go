@@ -14,6 +14,7 @@
 	limitations under the License.
 */
 
+// Package primitives renders declarative page content and interactive form elements.
 package primitives
 
 import (
@@ -38,6 +39,7 @@ import (
 // See table 221 et.al.
 type FieldFlags int
 
+// PDF form field flag bits defined by PDF 32000 table 221 and related field-specific tables.
 const (
 	FieldReadOnly FieldFlags = 1 << iota
 	FieldRequired

@@ -93,13 +93,13 @@ func certificateParseError(err error) error {
 
 // PKCS#7 content, attribute, digest, signature and curve object identifiers.
 var (
-	// Signed Data OIDs
+	// OIDData and OIDSignedData identify signed-data content types.
 	OIDData                   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 7, 1}
 	OIDSignedData             = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 7, 2}
 	oidAttributeContentType   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 3}
 	oidAttributeMessageDigest = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 4}
 
-	// Digest Algorithms
+	// OIDDigestAlgorithmSHA1 and the following values identify digest algorithms.
 	OIDDigestAlgorithmSHA1   = asn1.ObjectIdentifier{1, 3, 14, 3, 2, 26}
 	OIDDigestAlgorithmSHA256 = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 1}
 	OIDDigestAlgorithmSHA384 = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 2}
@@ -113,7 +113,7 @@ var (
 	OIDDigestAlgorithmECDSASHA384 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 3}
 	OIDDigestAlgorithmECDSASHA512 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 4}
 
-	// Signature Algorithms
+	// OIDEncryptionAlgorithmRSA and the following values identify signature algorithms and elliptic curves.
 	OIDEncryptionAlgorithmRSA       = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
 	OIDEncryptionAlgorithmRSASHA1   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 5}
 	OIDEncryptionAlgorithmRSAPSS    = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 10}

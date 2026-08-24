@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package color provides PDF color types and parsing utilities.
 package color
 
 import (
@@ -39,6 +40,7 @@ var (
 	Yellow    = SimpleColor{.5, .5, 0}
 )
 
+// ErrInvalidColor signals an invalid color constant.
 var ErrInvalidColor = errors.New("invalid color constant")
 
 // SimpleColor is a simple rgb wrapper.

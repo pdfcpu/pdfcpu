@@ -30,6 +30,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// TableHeader defines table header values and their layout.
 type TableHeader struct {
 	Values          []string
 	ColAnchors      []string

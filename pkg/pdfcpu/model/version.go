@@ -30,6 +30,7 @@ var VersionStr = "v0.15.0 dev"
 // Version is a type for the internal representation of PDF versions.
 type Version int
 
+// Supported PDF versions.
 const (
 	V10 Version = iota
 	V11

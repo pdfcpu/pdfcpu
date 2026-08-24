@@ -321,6 +321,7 @@ func pageInfo(info *PDFInfo, selectedPages types.IntSet) ([]string, error) {
 	return ss, nil
 }
 
+// PDFInfo contains document properties and structural information for a PDF file.
 type PDFInfo struct {
 	FileName           string                          `json:"source,omitempty"`
 	Version            string                          `json:"version"`

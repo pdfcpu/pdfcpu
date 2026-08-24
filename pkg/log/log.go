@@ -48,16 +48,16 @@ type writerLogger interface {
 	Writer() io.Writer
 }
 
-// pdfcpu's loggers.
+// Debug, Info, Stats, and Trace are horizontal loggers.
 var (
-
-	// Horizontal loggers
 	Debug = &logger{}
 	Info  = &logger{}
 	Stats = &logger{}
 	Trace = &logger{}
+)
 
-	// Vertical loggers
+// Parse, Read, Validate, Optimize, Write, and CLI are vertical loggers.
+var (
 	Parse    = &logger{}
 	Read     = &logger{}
 	Validate = &logger{}

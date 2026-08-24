@@ -51,7 +51,8 @@ var (
 	errXrefStreamCorruptIndex  = errors.New("parse: xref stream dict corrupt entry Index")
 	errObjStreamMissingN       = errors.New("parse: obj stream dict missing entry W")
 	errObjStreamMissingFirst   = errors.New("parse: obj stream dict missing entry First")
-	ErrCorruptObjectOffset     = errors.New("corrupt object offset")
+	// ErrCorruptObjectOffset signals an invalid object offset in a cross-reference entry.
+	ErrCorruptObjectOffset = errors.New("corrupt object offset")
 )
 
 func positionToNextWhitespace(s string) (int, string) {
