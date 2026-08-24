@@ -3515,6 +3515,11 @@ func dereferenceXRefTable(c context.Context, ctx *model.Context) error {
 	}
 	//fmt.Println("pw authenticated")
 
+	// Xref repair may have already loaded objects before EncKey existed.
+	if err := decryptAlreadyLoadedObjects(ctx); err != nil {
+		return err
+	}
+
 	// Prepare decompressed objects.
 	if err := decodeObjectStreams(c, ctx); err != nil {
 		return err
@@ -3579,6 +3584,77 @@ func handlePermissions(ctx *model.Context) error {
 		return ErrPermissionDenied
 	}
 
+	return nil
+}
+
+func skipDecryptForAlreadyLoadedObject(ctx *model.Context, objNr int, o types.Object) bool {
+	if ctx.Encrypt != nil && objNr == ctx.Encrypt.ObjectNumber.Value() {
+		return true
+	}
+	switch sd := o.(type) {
+	case types.StreamDict:
+		if t := sd.Type(); t != nil && (*t == "XRef" || *t == "ObjStm") {
+			return true
+		}
+	case types.ObjectStreamDict, types.XRefStreamDict:
+		return true
+	}
+	return false
+}
+
+func decryptAlreadyLoadedObject(ctx *model.Context, objNr, genNr int, entry *model.XRefTableEntry) error {
+	switch o := entry.Object.(type) {
+	case types.StreamDict:
+		if _, err := decryptDeepObject(o.Dict, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
+			return err
+		}
+		if err := decryptStreamContent(ctx, &o, objNr, genNr); err != nil {
+			return err
+		}
+		entry.Object = o
+	case types.Dict:
+		if _, err := decryptDeepObject(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
+			return err
+		}
+	case types.Array:
+		if _, err := decryptDeepObject(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
+			return err
+		}
+	case types.StringLiteral:
+		sl, err := decryptStringLiteral(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
+		if err != nil {
+			return err
+		}
+		entry.Object = *sl
+	case types.HexLiteral:
+		hl, err := decryptHexLiteral(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
+		if err != nil {
+			return err
+		}
+		entry.Object = *hl
+	}
+	return nil
+}
+
+func decryptAlreadyLoadedObjects(ctx *model.Context) error {
+	if ctx == nil || ctx.EncKey == nil || ctx.E == nil {
+		return nil
+	}
+	for objNr, entry := range ctx.Table {
+		if entry == nil || entry.Free || entry.Object == nil {
+			continue
+		}
+		if skipDecryptForAlreadyLoadedObject(ctx, objNr, entry.Object) {
+			continue
+		}
+		genNr := 0
+		if entry.Generation != nil {
+			genNr = *entry.Generation
+		}
+		if err := decryptAlreadyLoadedObject(ctx, objNr, genNr, entry); err != nil {
+			return fmt.Errorf("decrypt repaired object %d: %w", objNr, err)
+		}
+	}
 	return nil
 }
 
