@@ -31,8 +31,13 @@ func DocumentProperty(s string) bool {
 	return !types.MemberOf(s, []string{"Keywords", "Producer", "CreationDate", "ModDate", "Trapped"})
 }
 
-func validateInfoDictDate(xRefTable *model.XRefTable, name string, o types.Object) (string, error) {
-	s, err := validateDateObject(xRefTable, o, model.V10)
+func validateInfoDictDate(xRefTable *model.XRefTable, name string, o types.Object, ownerObjNr int) (s string, err error) {
+	objNr := validationObjectNumber(ownerObjNr, o)
+	defer func() {
+		err = model.WithValidationErrorObject(err, objNr)
+	}()
+
+	s, err = validateDateObject(xRefTable, o, model.V10)
 	if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
 		err = nil
 		model.ShowRepaired(fmt.Sprintf("info dict \"%s\"", name))
@@ -40,8 +45,28 @@ func validateInfoDictDate(xRefTable *model.XRefTable, name string, o types.Objec
 	return s, err
 }
 
-func validateInfoDictTrapped(xRefTable *model.XRefTable, o types.Object) ([]error, error) {
-	o, err := xRefTable.Dereference(o)
+func validateInfoDictTrappedVersion(xRefTable *model.XRefTable, specViolations *[]error) error {
+	err := xRefTable.ValidateVersion("DereferenceName", model.V13)
+	if err == nil {
+		return nil
+	}
+	if xRefTable.ValidationMode == model.ValidationStrict {
+		return err
+	}
+	*specViolations = append(*specViolations, err)
+	return nil
+}
+
+func validateInfoDictTrapped(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (violations []error, err error) {
+	objNr := validationObjectNumber(ownerObjNr, o)
+	defer func() {
+		err = model.WithValidationErrorObject(err, objNr)
+		for i, violation := range violations {
+			violations[i] = model.WithValidationErrorObject(violation, objNr)
+		}
+	}()
+
+	o, err = xRefTable.Dereference(o)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -84,17 +109,19 @@ func validateInfoDictTrapped(xRefTable *model.XRefTable, o types.Object) ([]erro
 		return nil, fmt.Errorf("wrong type <%v>", o)
 	}
 
-	if err := xRefTable.ValidateVersion("DereferenceName", model.V13); err != nil {
-		if xRefTable.ValidationMode == model.ValidationStrict {
-			return nil, err
-		}
-		specViolations = append(specViolations, err)
+	if err := validateInfoDictTrappedVersion(xRefTable, &specViolations); err != nil {
+		return nil, err
 	}
 
 	return specViolations, nil
 }
 
-func handleProperties(xRefTable *model.XRefTable, key string, val types.Object) error {
+func handleProperties(xRefTable *model.XRefTable, key string, val types.Object, ownerObjNr int) (err error) {
+	objNr := validationObjectNumber(ownerObjNr, val)
+	defer func() {
+		err = model.WithValidationErrorObject(err, objNr)
+	}()
+
 	v, err := xRefTable.DereferenceStringOrHexLiteral(val, model.V10, nil)
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
@@ -120,7 +147,12 @@ func handleProperties(xRefTable *model.XRefTable, key string, val types.Object) 
 	return nil
 }
 
-func validateKeywords(xRefTable *model.XRefTable, v types.Object) (err error) {
+func validateKeywords(xRefTable *model.XRefTable, v types.Object, ownerObjNr int) (err error) {
+	objNr := validationObjectNumber(ownerObjNr, v)
+	defer func() {
+		err = model.WithValidationErrorObject(err, objNr)
+	}()
+
 	xRefTable.Keywords, err = xRefTable.DereferenceStringOrHexLiteral(v, model.V10, nil)
 	if err != nil {
 		return fmt.Errorf("dereference string or hex literal: %w", err)
@@ -141,18 +173,23 @@ func validateDocInfoDictEntry(
 	v types.Object,
 ) (bool, error) {
 	var specViolations []error
-	return validateDocInfoDictEntryWithSpecViolations(xRefTable, k, v, &specViolations)
+	return validateDocInfoDictEntryWithSpecViolations(xRefTable, k, v, 0, &specViolations)
 }
 
 func validateDocInfoDictEntryWithSpecViolations(
 	xRefTable *model.XRefTable,
 	k string,
 	v types.Object,
+	ownerObjNr int,
 	specViolations *[]error,
-) (bool, error) {
+) (hasModDate bool, err error) {
+	entryObjNr := validationObjectNumber(ownerObjNr, v)
+	defer func() {
+		err = model.WithValidationErrorObject(err, entryObjNr)
+	}()
+
 	var (
-		err        error
-		hasModDate bool
+		violations []error
 	)
 
 	switch k {
@@ -171,8 +208,8 @@ func validateDocInfoDictEntryWithSpecViolations(
 
 	// text string, optional, since V1.1
 	case "Keywords":
-		if err := validateKeywords(xRefTable, v); err != nil {
-			return hasModDate, fmt.Errorf("document info entry %q: %w", k, err)
+		if err := validateKeywords(xRefTable, v, ownerObjNr); err != nil {
+			return hasModDate, fmt.Errorf("entry %q: %w", k, err)
 		}
 
 	// text string, optional
@@ -185,17 +222,16 @@ func validateDocInfoDictEntryWithSpecViolations(
 
 	// date, optional
 	case "CreationDate":
-		xRefTable.CreationDate, err = validateInfoDictDate(xRefTable, "CreationDate", v)
+		xRefTable.CreationDate, err = validateInfoDictDate(xRefTable, "CreationDate", v, ownerObjNr)
 
 	// date, required if PieceInfo is present in document catalog.
 	case "ModDate":
 		hasModDate = true
-		xRefTable.ModDate, err = validateInfoDictDate(xRefTable, "ModDate", v)
+		xRefTable.ModDate, err = validateInfoDictDate(xRefTable, "ModDate", v, ownerObjNr)
 
 	// name, optional, since V1.3
 	case "Trapped":
-		var violations []error
-		violations, err = validateInfoDictTrapped(xRefTable, v)
+		violations, err = validateInfoDictTrapped(xRefTable, v, ownerObjNr)
 		if err == nil {
 			*specViolations = append(*specViolations, violations...)
 		}
@@ -205,17 +241,22 @@ func validateDocInfoDictEntryWithSpecViolations(
 
 	// text string, optional
 	default:
-		err = handleProperties(xRefTable, k, v)
+		err = handleProperties(xRefTable, k, v, ownerObjNr)
 	}
 
 	if err != nil {
-		return hasModDate, fmt.Errorf("document info entry %q: %w", k, err)
+		return hasModDate, fmt.Errorf("entry %q: %w", k, err)
 	}
 
 	return hasModDate, err
 }
 
-func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (bool, []error, error) {
+func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (hasModDate bool, specViolations []error, err error) {
+	infoObjNr := validationObjectNumber(0, obj)
+	defer func() {
+		err = model.WithValidationErrorObject(err, infoObjNr)
+	}()
+
 	d, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
 		return false, nil, fmt.Errorf("document info: dereference dict: %w", err)
@@ -225,12 +266,9 @@ func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (boo
 		return false, nil, nil
 	}
 
-	hasModDate := false
-	var specViolations []error
-
 	for k, v := range d {
 
-		hmd, err := validateDocInfoDictEntryWithSpecViolations(xRefTable, k, v, &specViolations)
+		hmd, err := validateDocInfoDictEntryWithSpecViolations(xRefTable, k, v, infoObjNr, &specViolations)
 
 		if errors.Is(err, types.ErrInvalidUTF16BE) {
 			// Fix for #264:
@@ -249,7 +287,7 @@ func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (boo
 	return hasModDate, specViolations, nil
 }
 
-func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
+func validateDocumentInfoObject(xRefTable *model.XRefTable) (err error) {
 	if xRefTable.Info == nil {
 		return nil
 	}
@@ -257,6 +295,11 @@ func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 	if log.ValidateEnabled() {
 		log.Validate.Println("*** validateDocumentInfoObject begin ***")
 	}
+
+	infoObjNr := xRefTable.Info.ObjectNumber.Value()
+	defer func() {
+		err = model.WithValidationErrorObject(err, infoObjNr)
+	}()
 
 	hasModDate, specViolations, err := validateDocumentInfoDict(xRefTable, *xRefTable.Info)
 	if err != nil {
@@ -270,17 +313,20 @@ func validateDocumentInfoObject(xRefTable *model.XRefTable) error {
 
 	hasPieceInfo, err := xRefTable.CatalogHasPieceInfo()
 	if err != nil {
-		return fmt.Errorf("document info: catalog PieceInfo lookup: %w", err)
+		err = fmt.Errorf("document info: catalog PieceInfo lookup: %w", err)
+		return model.WithValidationErrorObject(err, validationRootObjectNumber(xRefTable))
 	}
 
 	if hasPieceInfo && !hasModDate {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return errors.New("document info: missing required entry \"ModDate\"")
+			return model.WithValidationErrorObject(
+				errors.New("document info: missing required entry \"ModDate\""), infoObjNr,
+			)
 		}
 		model.ShowDigestedSpecViolation("infoDict with \"PieceInfo\" but missing \"ModDate\"")
 	}
 
-	showDigestedSpecViolations(xRefTable, specViolations)
+	showDigestedSpecViolations(specViolations)
 
 	if log.ValidateEnabled() {
 		log.Validate.Println("*** validateDocumentInfoObject end ***")

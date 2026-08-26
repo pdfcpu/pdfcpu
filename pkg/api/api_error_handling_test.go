@@ -80,6 +80,36 @@ func invalidValidationTestPDF() []byte {
 	return buf.Bytes()
 }
 
+func attributedValidationTestPDF() []byte {
+	var buf bytes.Buffer
+	buf.WriteString("%PDF-1.7\n%\xFF\xFF\xFF\xFF\n")
+
+	objects := map[int]string{
+		1:  "<< /Type /Catalog /Pages 2 0 R /AcroForm 20 0 R >>",
+		2:  "<< /Type /Pages /Count 0 /Kids [] >>",
+		20: "<< /Fields [30 0 R] /NeedAppearances 1 >>",
+		30: "<< /FT /Btn /Subtype /Widget /Rect [0 0 10 10] >>",
+	}
+	offsets := map[int]int{}
+	for _, objNr := range []int{1, 2, 20, 30} {
+		offsets[objNr] = appendValidationTestObject(&buf, objNr, objects[objNr])
+	}
+
+	xrefOffset := buf.Len()
+	buf.WriteString("xref\n0 31\n")
+	buf.WriteString("0000000000 65535 f \n")
+	for objNr := 1; objNr <= 30; objNr++ {
+		if offset, ok := offsets[objNr]; ok {
+			fmt.Fprintf(&buf, "%010d 00000 n \n", offset)
+			continue
+		}
+		buf.WriteString("0000000000 00000 f \n")
+	}
+	fmt.Fprintf(&buf, "trailer\n<< /Size 31 /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", xrefOffset)
+
+	return buf.Bytes()
+}
+
 // TestAPIArgumentErrors verifies the corresponding behavior.
 func TestAPIArgumentErrors(t *testing.T) {
 	tests := []struct {
@@ -887,8 +917,18 @@ func TestReadAndValidateValidationErrorsMatchValidateAPIContext(t *testing.T) {
 			if err == nil {
 				t.Fatal("expected validation error")
 			}
+			if !strings.Contains(err.Error(), "validation error") {
+				t.Fatalf("expected validation context, got %q", err.Error())
+			}
+			var validationErr *model.ValidationError
+			if !errors.As(err, &validationErr) {
+				t.Fatalf("got %T, want *model.ValidationError", err)
+			}
+			if validationErr.ObjectNumber() != 1 {
+				t.Fatalf("object number = %d, want 1", validationErr.ObjectNumber())
+			}
 			if !strings.Contains(err.Error(), "validation error (obj#:1)") {
-				t.Fatalf("expected validation object context, got %q", err.Error())
+				t.Fatalf("expected attributed API error, got %q", err)
 			}
 			if strings.Contains(err.Error(), "try --mode=relaxed") != tt.wantHint {
 				t.Fatalf("unexpected strict-mode hint presence in %q", err.Error())
@@ -897,6 +937,27 @@ func TestReadAndValidateValidationErrorsMatchValidateAPIContext(t *testing.T) {
 				t.Fatalf("unexpected old validate context wrapper: %q", err.Error())
 			}
 		})
+	}
+}
+
+func TestValidateUsesTypedValidationObjectAttribution(t *testing.T) {
+	err := Validate(bytes.NewReader(attributedValidationTestPDF()), nil)
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+
+	var validationErr *model.ValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("got %T, want *model.ValidationError", err)
+	}
+	if validationErr.ObjectNumber() != 20 {
+		t.Fatalf("object number = %d, want 20", validationErr.ObjectNumber())
+	}
+	if !strings.Contains(err.Error(), "validation error (obj#:20)") {
+		t.Fatalf("expected attributed API error, got %q", err)
+	}
+	if strings.Contains(err.Error(), "obj#:30") {
+		t.Fatalf("error uses previously visited form field object: %q", err)
 	}
 }
 

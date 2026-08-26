@@ -82,6 +82,7 @@ var (
 	errCorruptXRefSubsection        = errors.New("corrupt xref subsection")
 	errIncompleteXRefSubsection     = errors.New("incomplete xref subsection")
 	errMissingScannerLine           = errors.New("missing scanner line")
+	errMissingTrailerDict           = errors.New("missing trailer dict")
 	errMissingTrailerSize           = errors.New("missing trailer Size")
 	errMissingTrailerRoot           = errors.New("missing trailer Root")
 	errInvalidTrailerID             = errors.New("invalid trailer ID")
@@ -607,12 +608,21 @@ func parseObjectStream(c context.Context, osd *types.ObjectStreamDict, limits mo
 	if len(objs)%2 > 0 {
 		return errCorruptObjectStreamDict
 	}
-	if len(objs)/2 > limits.MaxObjectStreamCount {
+	entryCount := len(objs) / 2
+	if entryCount > limits.MaxObjectStreamCount {
 		return fmt.Errorf(
 			"object stream object count %d exceeds limit %d: %w",
-			len(objs)/2,
+			entryCount,
 			limits.MaxObjectStreamCount,
 			errObjectStreamObjectCountLimit,
+		)
+	}
+	if entryCount != osd.ObjCount {
+		return fmt.Errorf(
+			"object stream index contains %d entries, expected %d: %w",
+			entryCount,
+			osd.ObjCount,
+			errCorruptObjectStreamDict,
 		)
 	}
 
@@ -809,10 +819,21 @@ func xRefStreamDict(c context.Context, ctx *model.Context, o types.Object, objNr
 		return nil, fmt.Errorf("xRefStreamDict: cannot decode stream for obj#:%d: %w", objNr, err)
 	}
 
+	declaredSize := sd.Size()
+	var xsd *types.XRefStreamDict
 	if ctx.Configuration.ValidationMode == model.ValidationRelaxed {
-		return model.ParseXRefStreamDictRelaxedWithLimits(&sd, ctx.Configuration.Limits)
+		xsd, err = model.ParseXRefStreamDictRelaxedWithLimits(&sd, ctx.Configuration.Limits)
+	} else {
+		xsd, err = model.ParseXRefStreamDictWithLimits(&sd, ctx.Configuration.Limits)
 	}
-	return model.ParseXRefStreamDictWithLimits(&sd, ctx.Configuration.Limits)
+	if err != nil {
+		return nil, err
+	}
+	if declaredSize != nil && *declaredSize != xsd.Size {
+		xsd.Dict.Update("Size", types.Integer(xsd.Size))
+		model.ShowRepaired(fmt.Sprintf("xref stream obj#%d Size from %d to %d", objNr, *declaredSize, xsd.Size))
+	}
+	return xsd, nil
 }
 
 func processXRefStream(ctx *model.Context, xsd *types.XRefStreamDict, objNr *int, offset *int64, offExtra int64, incr int) (prevOffset *int64, err error) {
@@ -1400,7 +1421,7 @@ func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, f
 	}
 
 	if !strings.HasPrefix(line, "trailer") {
-		return nil, fmt.Errorf("xrefsection: missing trailer dict, line = <%s>", line)
+		return nil, fmt.Errorf("xrefsection: %w, line = <%s>", errMissingTrailerDict, line)
 	}
 
 	if log.ReadEnabled() {
@@ -1906,6 +1927,13 @@ func parseXRefStreamOrRepair(c context.Context, ctx *model.Context, rs io.ReadSe
 	return nil, true, bypassXrefSection(c, ctx, offExtra, err, incr)
 }
 
+func repairCorruptXRefSection(c context.Context, ctx *model.Context, offExtra int64, err error, incr int) error {
+	if ctx.Configuration.ValidationMode != model.ValidationRelaxed || incr != 1 || !errors.Is(err, errMissingTrailerDict) {
+		return err
+	}
+	return bypassXrefSection(c, ctx, offExtra, err, incr)
+}
+
 // Build XRefTable by reading XRef streams or XRef sections.
 func buildXRefTableStartingAt(c context.Context, ctx *model.Context, offset *int64) error {
 	if log.ReadEnabled() {
@@ -1947,7 +1975,7 @@ func buildXRefTableStartingAt(c context.Context, ctx *model.Context, offset *int
 
 		off, err := tryXRefSection(c, ctx, rs, offset, offExtra, &xrefSectionCount, incr)
 		if err != nil {
-			return err
+			return repairCorruptXRefSection(c, ctx, offExtra, err, incr)
 		}
 
 		if off == nil || *off != 0 {

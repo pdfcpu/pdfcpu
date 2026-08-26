@@ -34,27 +34,27 @@ func validateExponentialInterpolationFunctionDict(xRefTable *model.XRefTable, d 
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Domain", REQUIRED, model.V13, nil)
+	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Domain", REQUIRED, model.V13, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Domain: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Range", OPTIONAL, model.V13, nil)
+	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Range", OPTIONAL, model.V13, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Range: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "C0", OPTIONAL, model.V13, nil)
+	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "C0", OPTIONAL, model.V13, nil)
 	if err != nil {
 		return fmt.Errorf("%s.C0: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "C1", OPTIONAL, model.V13, nil)
+	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "C1", OPTIONAL, model.V13, nil)
 	if err != nil {
 		return fmt.Errorf("%s.C1: %w", dictName, err)
 	}
 
-	_, err = validateNumberEntry(xRefTable, d, dictName, "N", REQUIRED, model.V13, nil)
+	_, err = validateNumberEntry(xRefTable, d, 0, dictName, "N", REQUIRED, model.V13, nil)
 	if err != nil {
 		return fmt.Errorf("%s.N: %w", dictName, err)
 	}
@@ -70,27 +70,27 @@ func validateStitchingFunctionDict(xRefTable *model.XRefTable, d types.Dict) err
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Domain", REQUIRED, model.V13, nil)
+	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Domain", REQUIRED, model.V13, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Domain: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Range", OPTIONAL, model.V13, nil)
+	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Range", OPTIONAL, model.V13, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Range: %w", dictName, err)
 	}
 
-	_, err = validateFunctionArrayEntry(xRefTable, d, dictName, "Functions", REQUIRED, model.V13, nil)
+	_, err = validateFunctionArrayEntry(xRefTable, d, 0, dictName, "Functions", REQUIRED, model.V13, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Functions: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Bounds", REQUIRED, model.V13, nil)
+	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Bounds", REQUIRED, model.V13, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Bounds: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, dictName, "Encode", REQUIRED, model.V13, nil)
+	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Encode", REQUIRED, model.V13, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Encode: %w", dictName, err)
 	}
@@ -109,38 +109,38 @@ func validateSampledFunctionStreamDictVersion(
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Domain", REQUIRED, version, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Domain", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Domain: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Range", REQUIRED, version, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Range", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Range: %w", dictName, err)
 	}
 
-	_, err = validateIntegerArrayEntry(xRefTable, sd.Dict, dictName, "Size", REQUIRED, version, nil)
+	_, err = validateIntegerArrayEntry(xRefTable, sd.Dict, 0, dictName, "Size", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Size: %w", dictName, err)
 	}
 
 	validate := func(i int) bool { return types.IntMemberOf(i, []int{1, 2, 4, 8, 12, 16, 24, 32}) }
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "BitsPerSample", REQUIRED, version, validate)
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "BitsPerSample", REQUIRED, version, validate)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerSample: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, dictName, "Order", OPTIONAL, version, func(i int) bool { return i == 1 || i == 3 })
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "Order", OPTIONAL, version, func(i int) bool { return i == 1 || i == 3 })
 	if err != nil {
 		return fmt.Errorf("%s.Order: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Encode", OPTIONAL, version, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Encode", OPTIONAL, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Encode: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Decode", OPTIONAL, version, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Decode", OPTIONAL, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Decode: %w", dictName, err)
 	}
@@ -174,12 +174,12 @@ func validatePostScriptCalculatorFunctionStreamDictVersion(
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Domain", REQUIRED, version, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Domain", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Domain: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, dictName, "Range", REQUIRED, version, nil)
+	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Range", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Range: %w", dictName, err)
 	}
@@ -203,7 +203,7 @@ func validatePostScriptCalculatorFunctionStreamDict(xRefTable *model.XRefTable, 
 }
 
 func processFunctionDict(xRefTable *model.XRefTable, d types.Dict) error {
-	funcType, err := validateIntegerEntry(xRefTable, d, "functionDict", "FunctionType", REQUIRED, model.V10, func(i int) bool { return i == 2 || i == 3 })
+	funcType, err := validateIntegerEntry(xRefTable, d, 0, "functionDict", "FunctionType", REQUIRED, model.V10, func(i int) bool { return i == 2 || i == 3 })
 	if err != nil {
 		return fmt.Errorf("function dictionary: FunctionType: %w", err)
 	}
@@ -226,7 +226,7 @@ func processFunctionDict(xRefTable *model.XRefTable, d types.Dict) error {
 }
 
 func processFunctionStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {
-	funcType, err := validateIntegerEntry(xRefTable, sd.Dict, "functionDict", "FunctionType", REQUIRED, model.V10, func(i int) bool { return i == 0 || i == 4 })
+	funcType, err := validateIntegerEntry(xRefTable, sd.Dict, 0, "functionDict", "FunctionType", REQUIRED, model.V10, func(i int) bool { return i == 0 || i == 4 })
 	if err != nil {
 		return fmt.Errorf("function stream dictionary: FunctionType: %w", err)
 	}
@@ -247,7 +247,11 @@ func processFunctionStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict)
 	return nil
 }
 
-func processFunction(xRefTable *model.XRefTable, o types.Object) (err error) {
+func processFunction(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
+	defer func() {
+		err = model.WithValidationErrorObject(err, ownerObjNr)
+	}()
+
 	// Function dict: dict or stream dict with required entry "FunctionType" (integer):
 	// 0: Sampled function (stream dict)
 	// 2: Exponential interpolation function (dict)
@@ -273,8 +277,13 @@ func processFunction(xRefTable *model.XRefTable, o types.Object) (err error) {
 	return err
 }
 
-func validateFunction(xRefTable *model.XRefTable, o types.Object) error {
-	o, err := xRefTable.Dereference(o)
+func validateFunction(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
+	objNr := validationObjectNumber(ownerObjNr, o)
+	defer func() {
+		err = model.WithValidationErrorObject(err, objNr)
+	}()
+
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return fmt.Errorf("function: dereference: %w", err)
 	}
@@ -282,5 +291,5 @@ func validateFunction(xRefTable *model.XRefTable, o types.Object) error {
 		return errors.New("function: missing object")
 	}
 
-	return processFunction(xRefTable, o)
+	return processFunction(xRefTable, o, objNr)
 }

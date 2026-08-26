@@ -24,17 +24,17 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func validateDirection(xRefTable *model.XRefTable, d types.Dict, dictName string, vp *model.ViewerPreferences) error {
+func validateDirection(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, vp *model.ViewerPreferences) error {
 	validate := func(s string) bool {
 		return types.MemberOf(s, []string{"L2R", "R2L"})
 	}
 
-	n, err := validateNameEntry(xRefTable, d, dictName, "Direction", OPTIONAL, model.V13, validate)
+	n, err := validateNameEntry(xRefTable, d, ownerObjNr, dictName, "Direction", OPTIONAL, model.V13, validate)
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
 			return fmt.Errorf("%s.Direction: %w", dictName, err)
 		}
-		s, err := validateStringEntry(xRefTable, d, dictName, "Direction", OPTIONAL, model.V13, validate)
+		s, err := validateStringEntry(xRefTable, d, ownerObjNr, dictName, "Direction", OPTIONAL, model.V13, validate)
 		if err != nil {
 			return fmt.Errorf("%s.Direction: %w", dictName, err)
 		}
@@ -51,12 +51,12 @@ func validateDirection(xRefTable *model.XRefTable, d types.Dict, dictName string
 	return nil
 }
 
-func validatePageBoundaries(xRefTable *model.XRefTable, d types.Dict, dictName string, vp *model.ViewerPreferences) error {
+func validatePageBoundaries(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, vp *model.ViewerPreferences) error {
 	validate := func(s string) bool {
 		return types.MemberOf(s, []string{"MediaBox", "CropBox", "BleedBox", "TrimBox", "ArtBox"})
 	}
 
-	n, err := validateNameEntry(xRefTable, d, dictName, "ViewArea", OPTIONAL, model.V14, validate)
+	n, err := validateNameEntry(xRefTable, d, ownerObjNr, dictName, "ViewArea", OPTIONAL, model.V14, validate)
 	if err != nil {
 		return fmt.Errorf("%s.ViewArea: %w", dictName, err)
 	}
@@ -64,7 +64,7 @@ func validatePageBoundaries(xRefTable *model.XRefTable, d types.Dict, dictName s
 		vp.ViewArea = model.PageBoundaryFor(n.String())
 	}
 
-	n, err = validateNameEntry(xRefTable, d, dictName, "PrintArea", OPTIONAL, model.V14, validate)
+	n, err = validateNameEntry(xRefTable, d, ownerObjNr, dictName, "PrintArea", OPTIONAL, model.V14, validate)
 	if err != nil {
 		return fmt.Errorf("%s.PrintArea: %w", dictName, err)
 	}
@@ -72,7 +72,7 @@ func validatePageBoundaries(xRefTable *model.XRefTable, d types.Dict, dictName s
 		vp.PrintArea = model.PageBoundaryFor(n.String())
 	}
 
-	n, err = validateNameEntry(xRefTable, d, dictName, "ViewClip", OPTIONAL, model.V14, validate)
+	n, err = validateNameEntry(xRefTable, d, ownerObjNr, dictName, "ViewClip", OPTIONAL, model.V14, validate)
 	if err != nil {
 		return fmt.Errorf("%s.ViewClip: %w", dictName, err)
 	}
@@ -80,7 +80,7 @@ func validatePageBoundaries(xRefTable *model.XRefTable, d types.Dict, dictName s
 		vp.ViewClip = model.PageBoundaryFor(n.String())
 	}
 
-	n, err = validateNameEntry(xRefTable, d, dictName, "PrintClip", OPTIONAL, model.V14, validate)
+	n, err = validateNameEntry(xRefTable, d, ownerObjNr, dictName, "PrintClip", OPTIONAL, model.V14, validate)
 	if err != nil {
 		return fmt.Errorf("%s.PrintClip: %w", dictName, err)
 	}
@@ -91,7 +91,7 @@ func validatePageBoundaries(xRefTable *model.XRefTable, d types.Dict, dictName s
 	return nil
 }
 
-func validatePrintPageRange(xRefTable *model.XRefTable, d types.Dict, dictName string, vp *model.ViewerPreferences) error {
+func validatePrintPageRange(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, vp *model.ViewerPreferences) error {
 	validate := func(arr types.Array) bool {
 		if len(arr) > 0 && len(arr)%2 > 0 {
 			return false
@@ -104,7 +104,9 @@ func validatePrintPageRange(xRefTable *model.XRefTable, d types.Dict, dictName s
 		return true
 	}
 
-	arr, err := validateIntegerArrayEntry(xRefTable, d, dictName, "PrintPageRange", OPTIONAL, model.V17, validate)
+	arr, err := validateIntegerArrayEntry(
+		xRefTable, d, ownerObjNr, dictName, "PrintPageRange", OPTIONAL, model.V17, validate,
+	)
 	if err != nil {
 		return fmt.Errorf("%s.PrintPageRange: %w", dictName, err)
 	}
@@ -116,7 +118,7 @@ func validatePrintPageRange(xRefTable *model.XRefTable, d types.Dict, dictName s
 	return nil
 }
 
-func validateEnforcePrintScaling(xRefTable *model.XRefTable, d types.Dict, dictName string, vp *model.ViewerPreferences) error {
+func validateEnforcePrintScaling(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, vp *model.ViewerPreferences) error {
 	validate := func(arr types.Array) bool {
 		if len(arr) != 1 {
 			return false
@@ -124,14 +126,15 @@ func validateEnforcePrintScaling(xRefTable *model.XRefTable, d types.Dict, dictN
 		return arr[0].String() == "PrintScaling"
 	}
 
-	arr, err := validateNameArrayEntry(xRefTable, d, dictName, "Enforce", OPTIONAL, model.V20, validate)
+	arr, err := validateNameArrayEntry(xRefTable, d, ownerObjNr, dictName, "Enforce", OPTIONAL, model.V20, validate)
 	if err != nil {
 		return fmt.Errorf("%s.Enforce: %w", dictName, err)
 	}
 
 	if len(arr) > 0 {
 		if vp.PrintScaling != nil && *vp.PrintScaling == model.PrintScalingAppDefault {
-			return errors.New(`ViewerPreferences.Enforce: PrintScaling requires PrintScaling != "AppDefault"`)
+			err := errors.New(`ViewerPreferences.Enforce: PrintScaling requires PrintScaling != "AppDefault"`)
+			return model.WithValidationErrorObject(err, ownerObjNr)
 		}
 		vp.Enforce = types.NewNameArray("PrintScaling")
 	}
@@ -139,7 +142,7 @@ func validateEnforcePrintScaling(xRefTable *model.XRefTable, d types.Dict, dictN
 	return nil
 }
 
-func validatePrinterPreferences(xRefTable *model.XRefTable, d types.Dict, dictName string, vp *model.ViewerPreferences) error {
+func validatePrinterPreferences(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, vp *model.ViewerPreferences) error {
 	sinceVersion := model.V16
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V13
@@ -147,7 +150,7 @@ func validatePrinterPreferences(xRefTable *model.XRefTable, d types.Dict, dictNa
 	validate := func(s string) bool {
 		return types.MemberOf(s, []string{"None", "AppDefault"})
 	}
-	n, err := validateNameEntry(xRefTable, d, dictName, "PrintScaling", OPTIONAL, sinceVersion, validate)
+	n, err := validateNameEntry(xRefTable, d, ownerObjNr, dictName, "PrintScaling", OPTIONAL, sinceVersion, validate)
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
 			return fmt.Errorf("%s.PrintScaling: %w", dictName, err)
@@ -165,7 +168,7 @@ func validatePrinterPreferences(xRefTable *model.XRefTable, d types.Dict, dictNa
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V14
 	}
-	n, err = validateNameEntry(xRefTable, d, dictName, "Duplex", OPTIONAL, sinceVersion, validate)
+	n, err = validateNameEntry(xRefTable, d, ownerObjNr, dictName, "Duplex", OPTIONAL, sinceVersion, validate)
 	if err != nil {
 		return fmt.Errorf("%s.Duplex: %w", dictName, err)
 	}
@@ -177,7 +180,9 @@ func validatePrinterPreferences(xRefTable *model.XRefTable, d types.Dict, dictNa
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V15
 	}
-	vp.PickTrayByPDFSize, err = validateFlexBooleanEntry(xRefTable, d, dictName, "PickTrayByPDFSize", OPTIONAL, sinceVersion)
+	vp.PickTrayByPDFSize, err = validateFlexBooleanEntry(
+		xRefTable, d, ownerObjNr, dictName, "PickTrayByPDFSize", OPTIONAL, sinceVersion,
+	)
 	if err != nil {
 		return fmt.Errorf("%s.PickTrayByPDFSize: %w", dictName, err)
 	}
@@ -186,41 +191,43 @@ func validatePrinterPreferences(xRefTable *model.XRefTable, d types.Dict, dictNa
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V15
 	}
-	vp.NumCopies, err = validateIntegerEntry(xRefTable, d, dictName, "NumCopies", OPTIONAL, sinceVersion, func(i int) bool { return i >= 1 })
+	vp.NumCopies, err = validateIntegerEntry(
+		xRefTable, d, ownerObjNr, dictName, "NumCopies", OPTIONAL, sinceVersion, func(i int) bool { return i >= 1 },
+	)
 	if err != nil {
 		return fmt.Errorf("%s.NumCopies: %w", dictName, err)
 	}
 
-	if err := validatePrintPageRange(xRefTable, d, dictName, vp); err != nil {
+	if err := validatePrintPageRange(xRefTable, d, ownerObjNr, dictName, vp); err != nil {
 		return err
 	}
 
-	return validateEnforcePrintScaling(xRefTable, d, dictName, vp)
+	return validateEnforcePrintScaling(xRefTable, d, ownerObjNr, dictName, vp)
 }
 
-func validateViewerPreferencesFlags(xRefTable *model.XRefTable, d types.Dict, dictName string, vp *model.ViewerPreferences) error {
+func validateViewerPreferencesFlags(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, vp *model.ViewerPreferences) error {
 	var err error
-	vp.HideToolbar, err = validateFlexBooleanEntry(xRefTable, d, dictName, "HideToolbar", OPTIONAL, model.V10)
+	vp.HideToolbar, err = validateFlexBooleanEntry(xRefTable, d, ownerObjNr, dictName, "HideToolbar", OPTIONAL, model.V10)
 	if err != nil {
 		return fmt.Errorf("%s.HideToolbar: %w", dictName, err)
 	}
 
-	vp.HideMenubar, err = validateFlexBooleanEntry(xRefTable, d, dictName, "HideMenubar", OPTIONAL, model.V10)
+	vp.HideMenubar, err = validateFlexBooleanEntry(xRefTable, d, ownerObjNr, dictName, "HideMenubar", OPTIONAL, model.V10)
 	if err != nil {
 		return fmt.Errorf("%s.HideMenubar: %w", dictName, err)
 	}
 
-	vp.HideWindowUI, err = validateFlexBooleanEntry(xRefTable, d, dictName, "HideWindowUI", OPTIONAL, model.V10)
+	vp.HideWindowUI, err = validateFlexBooleanEntry(xRefTable, d, ownerObjNr, dictName, "HideWindowUI", OPTIONAL, model.V10)
 	if err != nil {
 		return fmt.Errorf("%s.HideWindowUI: %w", dictName, err)
 	}
 
-	vp.FitWindow, err = validateFlexBooleanEntry(xRefTable, d, dictName, "FitWindow", OPTIONAL, model.V10)
+	vp.FitWindow, err = validateFlexBooleanEntry(xRefTable, d, ownerObjNr, dictName, "FitWindow", OPTIONAL, model.V10)
 	if err != nil {
 		return fmt.Errorf("%s.FitWindow: %w", dictName, err)
 	}
 
-	vp.CenterWindow, err = validateFlexBooleanEntry(xRefTable, d, dictName, "CenterWindow", OPTIONAL, model.V10)
+	vp.CenterWindow, err = validateFlexBooleanEntry(xRefTable, d, ownerObjNr, dictName, "CenterWindow", OPTIONAL, model.V10)
 	if err != nil {
 		return fmt.Errorf("%s.CenterWindow: %w", dictName, err)
 	}
@@ -229,7 +236,9 @@ func validateViewerPreferencesFlags(xRefTable *model.XRefTable, d types.Dict, di
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V10
 	}
-	vp.DisplayDocTitle, err = validateFlexBooleanEntry(xRefTable, d, dictName, "DisplayDocTitle", OPTIONAL, sinceVersion)
+	vp.DisplayDocTitle, err = validateFlexBooleanEntry(
+		xRefTable, d, ownerObjNr, dictName, "DisplayDocTitle", OPTIONAL, sinceVersion,
+	)
 	if err != nil {
 		return fmt.Errorf("%s.DisplayDocTitle: %w", dictName, err)
 	}
@@ -241,13 +250,19 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 	// => 12.2 Viewer Preferences
 
 	dictName := "rootDict"
+	rawPreferences, _ := rootDict.Find("ViewerPreferences")
+	preferencesObjNr := validationObjectNumber(validationRootObjectNumber(xRefTable), rawPreferences)
 
-	d, err := validateDictEntry(xRefTable, rootDict, dictName, "ViewerPreferences", required, sinceVersion, nil)
+	d, err := validateDictEntry(
+		xRefTable, rootDict, validationRootObjectNumber(xRefTable), dictName, "ViewerPreferences", required, sinceVersion, nil,
+	)
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
 			return fmt.Errorf("rootDict.ViewerPreferences: %w", err)
 		}
-		arr, err := validateArrayEntry(xRefTable, rootDict, dictName, "ViewerPreferences", required, sinceVersion, nil)
+		arr, err := validateArrayEntry(
+			xRefTable, rootDict, validationRootObjectNumber(xRefTable), dictName, "ViewerPreferences", required, sinceVersion, nil,
+		)
 		if err != nil || len(arr) == 0 {
 			if err != nil {
 				return fmt.Errorf("rootDict.ViewerPreferences: %w", err)
@@ -260,7 +275,8 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 		for i, v := range arr {
 			n, ok := v.(types.Name)
 			if !ok {
-				return fmt.Errorf("rootDict.ViewerPreferences[%d]: expected name, got %T", i, v)
+				err := fmt.Errorf("rootDict.ViewerPreferences[%d]: expected name, got %T", i, v)
+				return model.WithValidationErrorObject(err, preferencesObjNr)
 			}
 			d[n.Value()] = types.Boolean(true)
 		}
@@ -276,7 +292,7 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 
 	dictName = "ViewerPreferences"
 
-	if err := validateViewerPreferencesFlags(xRefTable, d, dictName, &vp); err != nil {
+	if err := validateViewerPreferencesFlags(xRefTable, d, preferencesObjNr, dictName, &vp); err != nil {
 		return err
 	}
 
@@ -287,7 +303,9 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 	validate := func(s string) bool {
 		return types.MemberOf(s, vv)
 	}
-	n, err := validateNameEntry(xRefTable, d, dictName, "NonFullScreenPageMode", OPTIONAL, model.V10, validate)
+	n, err := validateNameEntry(
+		xRefTable, d, preferencesObjNr, dictName, "NonFullScreenPageMode", OPTIONAL, model.V10, validate,
+	)
 	if err != nil {
 		return fmt.Errorf("%s.NonFullScreenPageMode: %w", dictName, err)
 	}
@@ -295,13 +313,13 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 		vp.NonFullScreenPageMode = (*model.NonFullScreenPageMode)(model.PageModeFor(n.String()))
 	}
 
-	if err := validateDirection(xRefTable, d, dictName, &vp); err != nil {
+	if err := validateDirection(xRefTable, d, preferencesObjNr, dictName, &vp); err != nil {
 		return err
 	}
 
-	if err := validatePageBoundaries(xRefTable, d, dictName, &vp); err != nil {
+	if err := validatePageBoundaries(xRefTable, d, preferencesObjNr, dictName, &vp); err != nil {
 		return err
 	}
 
-	return validatePrinterPreferences(xRefTable, d, dictName, &vp)
+	return validatePrinterPreferences(xRefTable, d, preferencesObjNr, dictName, &vp)
 }

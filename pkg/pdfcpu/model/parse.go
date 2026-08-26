@@ -1088,7 +1088,7 @@ func ParseXRefStreamDict(sd *types.StreamDict) (*types.XRefStreamDict, error) {
 	return ParseXRefStreamDictWithLimits(sd, DefaultResourceLimits())
 }
 
-func xRefStreamSize(sd *types.StreamDict, limits ResourceLimits) (int, error) {
+func xRefStreamSize(sd *types.StreamDict, limits ResourceLimits, relaxed bool) (int, error) {
 	sizePtr := sd.Size()
 	if sizePtr == nil {
 		return 0, errors.New("\"Size\" not available")
@@ -1096,6 +1096,9 @@ func xRefStreamSize(sd *types.StreamDict, limits ResourceLimits) (int, error) {
 
 	size := *sizePtr
 	if size <= 0 {
+		if relaxed && sd.Index() != nil {
+			return 0, nil
+		}
 		return 0, errors.New("invalid \"Size\"")
 	}
 	if size > limits.MaxObjectCount {
@@ -1194,7 +1197,7 @@ func parseXRefStreamDictWithLimits(sd *types.StreamDict, limits ResourceLimits, 
 		log.Parse.Println("ParseXRefStreamDict: begin")
 	}
 
-	size, err := xRefStreamSize(sd, limits)
+	size, err := xRefStreamSize(sd, limits, relaxed)
 	if err != nil {
 		return nil, err
 	}
@@ -1202,6 +1205,12 @@ func parseXRefStreamDictWithLimits(sd *types.StreamDict, limits ResourceLimits, 
 	objs, size, err := xRefStreamObjects(sd, size, limits, relaxed)
 	if err != nil {
 		return nil, err
+	}
+	if size <= 0 {
+		return nil, errors.New("invalid \"Size\"")
+	}
+	if declaredSize := sd.Size(); declaredSize != nil && *declaredSize <= 0 && len(objs) == 0 {
+		return nil, errors.New("invalid \"Size\"")
 	}
 
 	xsd, err := createXRefStreamDict(sd, objs, size)

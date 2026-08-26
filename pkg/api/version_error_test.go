@@ -56,14 +56,14 @@ func TestVersionErrorsAliasLowerLayers(t *testing.T) {
 func TestValidationErrorPreservesVersionRequirement(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationStrict
-	ctx := &model.Context{XRefTable: &model.XRefTable{CurObj: 42}}
-	cause := &model.VersionRequirementError{
+	versionCause := &model.VersionRequirementError{
 		Element:         "dict=Example entry=Feature",
 		ActualVersion:   model.V13,
 		RequiredVersion: model.V14,
 	}
+	cause := model.WithValidationErrorObject(versionCause, 20)
 
-	err := fmt.Errorf("validate example.pdf: %w", validationError(ctx, conf, cause))
+	err := fmt.Errorf("validate example.pdf: %w", validationError(conf, cause))
 	if !errors.Is(err, ErrVersionTooLow) {
 		t.Fatalf("got %v, want %v", err, ErrVersionTooLow)
 	}
@@ -72,14 +72,26 @@ func TestValidationErrorPreservesVersionRequirement(t *testing.T) {
 	if !errors.As(err, &versionErr) {
 		t.Fatalf("got %T, want *VersionRequirementError", err)
 	}
-	if versionErr.Element != cause.Element || versionErr.ActualVersion != cause.ActualVersion ||
-		versionErr.RequiredVersion != cause.RequiredVersion {
-		t.Fatalf("got %+v, want %+v", versionErr, cause)
+	if versionErr.Element != versionCause.Element || versionErr.ActualVersion != versionCause.ActualVersion ||
+		versionErr.RequiredVersion != versionCause.RequiredVersion {
+		t.Fatalf("got %+v, want %+v", versionErr, versionCause)
 	}
 
-	for _, want := range []string{"validate example.pdf", "validation error (obj#:42)", "try --mode=relaxed"} {
+	for _, want := range []string{"validate example.pdf", "validation error (obj#:20)", "try --mode=relaxed"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("missing context %q in %q", want, err)
 		}
+	}
+}
+
+func TestValidationErrorOmitsUnknownObject(t *testing.T) {
+	conf := model.NewDefaultConfiguration()
+
+	err := validationError(conf, errors.New("validation failed"))
+	if strings.Contains(err.Error(), "obj#:") {
+		t.Fatalf("error uses last dereferenced object: %q", err)
+	}
+	if want := "validation error: validation failed"; err.Error() != want {
+		t.Fatalf("got %q, want %q", err, want)
 	}
 }

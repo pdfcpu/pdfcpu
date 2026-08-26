@@ -222,7 +222,7 @@ func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Co
 	}
 
 	if err := ValidateContext(ctx); err != nil {
-		return nil, validationError(ctx, conf, err)
+		return nil, validationError(conf, err)
 	}
 
 	if conf.Cmd == model.REMOVESIGNATURES || ctx.RemoveSignatures && conf.Cmd.AllowRemoveSignatures() {

@@ -17,6 +17,7 @@ limitations under the License.
 package model
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -60,8 +61,15 @@ func ShowDigestedSpecViolation(msg string) {
 	ShowMsgTopic("digested", msg)
 }
 
+func digestedSpecViolationMessage(err error) string {
+	var validationErr *ValidationError
+	if errors.As(err, &validationErr) {
+		return fmt.Sprintf("spec violation (obj#:%d): %v", validationErr.ObjectNumber(), err)
+	}
+	return fmt.Sprintf("spec violation: %v", err)
+}
+
 // ShowDigestedSpecViolationError shows digested spec violation error.
-func ShowDigestedSpecViolationError(xRefTable *XRefTable, err error) {
-	msg := fmt.Sprintf("spec violation around obj#(%d): %v", xRefTable.CurObj, err)
-	ShowMsgTopic("digested", msg)
+func ShowDigestedSpecViolationError(err error) {
+	ShowMsgTopic("digested", digestedSpecViolationMessage(err))
 }

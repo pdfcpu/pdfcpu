@@ -1494,8 +1494,19 @@ func validateEncryptPermissions(
 	return normalizedP, encMeta, specViolation, nil
 }
 
+func attributeEncryptionError(ctx *model.Context, err error) error {
+	if ctx.Encrypt == nil {
+		return err
+	}
+	return model.WithValidationErrorObject(err, ctx.Encrypt.ObjectNumber.Value())
+}
+
 // supportedEncryption returns a pointer to a struct encapsulating used encryption.
-func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
+func supportedEncryption(ctx *model.Context, d types.Dict) (enc *model.Enc, err error) {
+	defer func() {
+		err = attributeEncryptionError(ctx, err)
+	}()
+
 	var specViolations []error
 
 	// Filter
@@ -1554,7 +1565,7 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 		return nil, err
 	}
 
-	enc := &model.Enc{
+	enc = &model.Enc{
 		O:     o,
 		OE:    oe,
 		U:     u,
@@ -1570,7 +1581,7 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (*model.Enc, error) {
 		appendSpecViolation(&specViolations, specViolation)
 	}
 	for _, specViolation := range specViolations {
-		model.ShowDigestedSpecViolationError(ctx.XRefTable, specViolation)
+		model.ShowDigestedSpecViolationError(attributeEncryptionError(ctx, specViolation))
 	}
 
 	return enc, nil

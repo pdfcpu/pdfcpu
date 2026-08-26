@@ -24,7 +24,12 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
+func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) (err error) {
+	objNr := validationObjectNumber(0, o)
+	defer func() {
+		err = model.WithValidationErrorObject(err, objNr)
+	}()
+
 	// see 14.6.2
 	// a dictionary containing private information meaningful to the conforming writer creating marked content.
 	// anything possible +
@@ -67,7 +72,9 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 
 		case "Contents":
 			logProp("known", key, val)
-			if err = validateStringOrStreamEntry(xRefTable, d, "propertiesDict", "Contents", OPTIONAL, model.V10); err != nil {
+			if err = validateStringOrStreamEntry(
+				xRefTable, d, objNr, "propertiesDict", "Contents", OPTIONAL, model.V10,
+			); err != nil {
 				return fmt.Errorf("%s: %w", dictEntryContext("propertiesDict", "Contents", val), err)
 			}
 
@@ -94,7 +101,8 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 		default:
 			logProp("unknown", key, val)
 			if _, err = xRefTable.Dereference(val); err != nil {
-				return fmt.Errorf("%s: dereference: %w", dictEntryContext("propertiesDict", key, val), err)
+				err = fmt.Errorf("%s: dereference: %w", dictEntryContext("propertiesDict", key, val), err)
+				return model.WithValidationErrorObject(err, validationObjectNumber(objNr, val))
 			}
 		}
 
@@ -103,7 +111,12 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) error {
 	return nil
 }
 
-func validatePropertiesResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+func validatePropertiesResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (err error) {
+	objNr := validationObjectNumber(0, o)
+	defer func() {
+		err = model.WithValidationErrorObject(err, objNr)
+	}()
+
 	if err := xRefTable.ValidateVersion("PropertiesResourceDict", sinceVersion); err != nil {
 		return fmt.Errorf("propertiesResourceDict: %w", err)
 	}

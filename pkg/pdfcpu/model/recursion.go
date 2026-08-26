@@ -24,6 +24,20 @@ import (
 // ErrMaxRecursionDepthExceeded signals excessive parser or object graph nesting.
 var ErrMaxRecursionDepthExceeded = errors.New("max recursion depth exceeded")
 
+type recursionDepthError struct {
+	name  string
+	depth int
+	limit int
+}
+
+func (e *recursionDepthError) Error() string {
+	return fmt.Sprintf("%s: max recursion depth exceeded (depth %d, limit %d)", e.name, e.depth, e.limit)
+}
+
+func (e *recursionDepthError) Unwrap() error {
+	return ErrMaxRecursionDepthExceeded
+}
+
 // ErrPageTreeCycle signals a page tree node cycle.
 var ErrPageTreeCycle = errors.New("circular page tree")
 
@@ -61,9 +75,17 @@ func CheckRecursionDepth(name string, depth, maxDepth int) error {
 		maxDepth = DefaultResourceLimits().MaxRecursionDepth
 	}
 	if depth > maxDepth {
-		return fmt.Errorf("%s depth %d exceeds limit %d: %w", name, depth, maxDepth, ErrMaxRecursionDepthExceeded)
+		return &recursionDepthError{name: name, depth: depth, limit: maxDepth}
 	}
 	return nil
+}
+
+// WrapRecursionError adds context to err without expanding a recursion-limit error during stack unwinding.
+func WrapRecursionError(context string, err error) error {
+	if err == nil || errors.Is(err, ErrMaxRecursionDepthExceeded) {
+		return err
+	}
+	return fmt.Errorf("%s: %w", context, err)
 }
 
 // PageTreeVisit tracks page tree traversal state.

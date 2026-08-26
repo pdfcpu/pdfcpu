@@ -691,7 +691,7 @@ func Dump(cmd *Command) ([]string, error) {
 	}
 
 	if err = api.ValidateContext(ctx); err != nil {
-		return nil, dumpValidationError(ctx, conf, err)
+		return nil, dumpValidationError(conf, err)
 	}
 
 	ctx.DumpObject(objNr, mode)
@@ -705,8 +705,13 @@ func dumpValidationModeHint(mode int) string {
 	return " (try --mode=relaxed)"
 }
 
-func dumpValidationError(ctx *model.Context, conf *model.Configuration, err error) error {
-	return fmt.Errorf("validation error (obj#:%d)%s: %w", ctx.CurObj, dumpValidationModeHint(conf.ValidationMode), err)
+func dumpValidationError(conf *model.Configuration, err error) error {
+	prefix := "validation error"
+	var validationErr *model.ValidationError
+	if errors.As(err, &validationErr) {
+		prefix += fmt.Sprintf(" (obj#:%d)", validationErr.ObjectNumber())
+	}
+	return fmt.Errorf("%s%s: %w", prefix, dumpValidationModeHint(conf.ValidationMode), err)
 }
 
 // Create renders page content corresponding to declarations found in inFileJSON and writes the result to outFile.

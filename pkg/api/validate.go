@@ -36,8 +36,13 @@ func validationModeHint(mode int) string {
 	return " (try --mode=relaxed)"
 }
 
-func validationError(ctx *model.Context, conf *model.Configuration, err error) error {
-	return fmt.Errorf("validation error (obj#:%d)%s: %w", ctx.CurObj, validationModeHint(conf.ValidationMode), err)
+func validationError(conf *model.Configuration, err error) error {
+	prefix := "validation error"
+	var validationErr *model.ValidationError
+	if errors.As(err, &validationErr) {
+		prefix += fmt.Sprintf(" (obj#:%d)", validationErr.ObjectNumber())
+	}
+	return fmt.Errorf("%s%s: %w", prefix, validationModeHint(conf.ValidationMode), err)
 }
 
 // Validate validates a PDF stream read from rs.
@@ -64,7 +69,7 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) (err error) {
 	from2 := time.Now()
 
 	if err = ValidateContext(ctx); err != nil {
-		err = validationError(ctx, conf, err)
+		err = validationError(conf, err)
 	}
 
 	if err == nil && conf.Optimize {

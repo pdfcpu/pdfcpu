@@ -182,7 +182,6 @@ type XRefTable struct {
 
 	// Validation
 	CurPage        int                       // current page during validation
-	CurObj         int                       // current object during validation, the last dereferenced object
 	Conf           *Configuration            // current command being executed
 	ValidationMode int                       // see Configuration
 	ValidateLinks  bool                      // check for broken links in LinkAnnotations/URIDicts.
@@ -2020,7 +2019,20 @@ func (xRefTable *XRefTable) consolidateResourceSubDict(d types.Dict, key string,
 	o := d[key]
 	if o == nil {
 		if prn.HasResources(key) {
-			return fmt.Errorf("page %d: missing required resource subdict: %s: %s", pageNr, key, prn)
+			resources := make([]string, 0, len(prn.Resources(key)))
+			for resourceName := range prn.Resources(key) {
+				resources = append(resources, resourceName)
+			}
+			sort.Strings(resources)
+			s := fmt.Sprintf(
+				"missing required %s resource dictionary (referenced resources: %s)",
+				key,
+				strings.Join(resources, ", "),
+			)
+			if xRefTable.ValidationMode == ValidationStrict {
+				return errors.New(s)
+			}
+			ShowSkipped(fmt.Sprintf("page %d: %s", pageNr, s))
 		}
 		return nil
 	}
@@ -2063,30 +2075,74 @@ func (xRefTable *XRefTable) consolidateResourceDict(d types.Dict, prn PageResour
 	return nil
 }
 
+func (xRefTable *XRefTable) pageContentContext(pageDict types.Dict) string {
+	o := pageDict["Contents"]
+	objNr := 0
+	if ir, ok := o.(types.IndirectRef); ok {
+		objNr = ir.ObjectNumber.Value()
+		var err error
+		o, err = xRefTable.Dereference(ir)
+		if err != nil {
+			return "page content"
+		}
+	}
+
+	context := "page content"
+	switch o.(type) {
+	case types.StreamDict:
+		context = "content stream"
+	case types.Array:
+		context = "content stream array"
+	}
+	if objNr > 0 {
+		return fmt.Sprintf("%s obj#%d", context, objNr)
+	}
+	return context
+}
+
+type contentParseError struct {
+	err error
+}
+
+func (e *contentParseError) Error() string {
+	if errors.Is(e.err, errHexLiteralCorrupt) {
+		return "corrupt hex string literal"
+	}
+	return e.err.Error()
+}
+
+func (e *contentParseError) Unwrap() error {
+	return e.err
+}
+
 func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict types.Dict, pageNr int, consolidateRes bool) error {
 	if !consolidateRes {
 		return nil
 	}
 
+	contentContext := xRefTable.pageContentContext(pageDict)
 	bb, err := xRefTable.PageContent(pageDict, pageNr)
 	if err != nil {
 		if err == ErrNoContent {
 			return nil
 		}
-		return err
+		return fmt.Errorf("%s: %w", contentContext, err)
 	}
 
 	// Calculate resources required by the content stream of this page.
 	prn, err := parseContent(string(bb))
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", contentContext, &contentParseError{err})
 	}
 
 	// Compare required resources (prn) with available resources (pAttrs.resources).
 	// Remove any resource that's not required.
 	// Return an error for any required resource missing.
 	// TODO Calculate and accumulate resources required by content streams of any present form or type 3 fonts.
-	return xRefTable.consolidateResourceDict(resDict, prn, pageNr)
+	if err := xRefTable.consolidateResourceDict(resDict, prn, pageNr); err != nil {
+		return fmt.Errorf("resource dict: %w", err)
+	}
+	return nil
 }
 
 func (xRefTable *XRefTable) pageObjType(indRef types.IndirectRef) (string, error) {
@@ -2284,6 +2340,20 @@ func (xRefTable *XRefTable) consolidatePageResourcesForKid(
 	return xRefTable.consolidatePageResourcesForNode(&indRef, pAttrs, pageNr, depth+1, visit)
 }
 
+type pageResourceContextError struct {
+	pageNr int
+	objNr  int
+	err    error
+}
+
+func (e *pageResourceContextError) Error() string {
+	return fmt.Sprintf("page %d obj#%d: %v", e.pageNr, e.objNr, e.err)
+}
+
+func (e *pageResourceContextError) Unwrap() error {
+	return e.err
+}
+
 func (xRefTable *XRefTable) consolidatePageResourcesForNode(
 	root *types.IndirectRef,
 	pAttrs InheritedPageAttrs,
@@ -2311,7 +2381,11 @@ func (xRefTable *XRefTable) consolidatePageResourcesForNode(
 	if kids == nil {
 		currentPageNr := *pageNr + 1
 		if err := xRefTable.consolidateResourcesWithContent(d, pAttrs.Resources, currentPageNr, true); err != nil {
-			return err
+			return &pageResourceContextError{
+				pageNr: currentPageNr,
+				objNr:  root.ObjectNumber.Value(),
+				err:    err,
+			}
 		}
 		if len(pAttrs.Resources) > 0 {
 			d["Resources"] = pAttrs.Resources
@@ -2356,6 +2430,10 @@ func (xRefTable *XRefTable) ConsolidatePageResources() error {
 		NewPageTreeVisit(),
 	)
 	if err != nil {
+		var pageErr *pageResourceContextError
+		if errors.As(err, &pageErr) {
+			return err
+		}
 		return fmt.Errorf("page %d: resource dict: %w", pageNr+1, err)
 	}
 	return nil

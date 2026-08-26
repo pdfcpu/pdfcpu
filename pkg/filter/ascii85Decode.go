@@ -59,16 +59,12 @@ func (f ascii85Decode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error
 
 	// fmt.Printf("dump:\n%s", hex.Dump(bb))
 
-	// Strip trailing whitespace (CR, LF, CRLF, etc.)
-	// Per PDF spec, whitespace should be ignored in ASCII85 encoding
-	bb = bytes.TrimRight(bb, "\r\n")
-
-	if !bytes.HasSuffix(bb, []byte(eodASCII85)) {
+	i := bytes.Index(bb, []byte(eodASCII85))
+	if i < 0 {
 		return nil, errors.New("ASCII85 decode: missing eod marker")
 	}
 
-	// Strip eod sequence: "~>"
-	bb = bb[:len(bb)-2]
+	bb = bb[:i]
 
 	decoder := ascii85.NewDecoder(bytes.NewReader(bb))
 

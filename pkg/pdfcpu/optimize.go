@@ -917,7 +917,10 @@ func processExtGStateResources(ctx *model.Context, obj types.Object, pageNr, pag
 	}
 
 	if d == nil {
-		return fmt.Errorf("processExtGStateResources: extGState resource dict is null for page %d pageObj %d", pageNr, pageObjNumber)
+		if ir, ok := obj.(types.IndirectRef); ok {
+			return fmt.Errorf("resource dict obj#%d is null", ir.ObjectNumber.Value())
+		}
+		return errors.New("resource dict is null")
 	}
 
 	if err := optimizeExtGStateResourcesDict(ctx, d, pageNr, pageObjNumber, rNamePrefix, visitedRes); err != nil {

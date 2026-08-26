@@ -254,6 +254,10 @@ func linkAnnotation(xRefTable *model.XRefTable, d types.Dict, r *types.Rectangle
 	var uri string
 	o, found := d.Find("A")
 	if found && o != nil {
+		actionObjNr := 0
+		if ir, ok := o.(types.IndirectRef); ok {
+			actionObjNr = ir.ObjectNumber.Value()
+		}
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
 			if xRefTable.ValidationMode == model.ValidationStrict {
@@ -265,7 +269,13 @@ func linkAnnotation(xRefTable *model.XRefTable, d types.Dict, r *types.Rectangle
 		if d != nil {
 			bb, err := xRefTable.DereferenceStringEntryBytes(d, "URI")
 			if err != nil {
-				return nil, err
+				context := "link annotation action"
+				var validationErr *model.ValidationError
+				if errors.As(err, &validationErr) && validationErr.ObjectNumber() != actionObjNr && actionObjNr > 0 {
+					context = fmt.Sprintf("link annotation action obj#%d", actionObjNr)
+				}
+				err = fmt.Errorf("%s: %w", context, err)
+				return nil, model.WithValidationErrorObject(err, actionObjNr)
 			}
 			if len(bb) > 0 {
 				uri = string(bb)

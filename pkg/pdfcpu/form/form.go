@@ -154,7 +154,7 @@ func dictNameEntry(xRefTable *model.XRefTable, d types.Dict, key string) (types.
 
 func fullyQualifiedFieldNameDepth(xRefTable *model.XRefTable, indRef types.IndirectRef, fields types.Array, id, name *string, depth int, visit *model.FormFieldVisit) (bool, error) {
 	if err := xRefTable.CheckRecursionDepth("form field tree", depth); err != nil {
-		return false, err
+		return false, fmt.Errorf("field obj#%d: %w", indRef.ObjectNumber.Value(), err)
 	}
 	objNr := indRef.ObjectNumber.Value()
 	if err := visit.Enter(objNr); err != nil {
@@ -196,7 +196,8 @@ func fullyQualifiedFieldNameDepth(xRefTable *model.XRefTable, indRef types.Indir
 
 	ok, err := fullyQualifiedFieldNameDepth(xRefTable, *pIndRef, fields, id, name, depth+1, visit)
 	if err != nil {
-		return false, fmt.Errorf("field obj#%d: parent obj#%d: %w", objNr, pIndRef.ObjectNumber.Value(), err)
+		context := fmt.Sprintf("field obj#%d: parent obj#%d", objNr, pIndRef.ObjectNumber.Value())
+		return false, model.WrapRecursionError(context, err)
 	}
 	if !ok {
 		return false, nil

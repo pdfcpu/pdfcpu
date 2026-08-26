@@ -262,7 +262,7 @@ func outlineItemDict(ctx *model.Context, ir *types.IndirectRef, visited map[int]
 
 func bookmarksForOutlineItem(ctx *model.Context, item *types.IndirectRef, parent *Bookmark, depth int, visited map[int]bool) ([]Bookmark, error) {
 	if err := checkBookmarkRecursionDepth(ctx, "outline item", depth); err != nil {
-		return nil, fmt.Errorf("outline item depth %d: %w", depth, err)
+		return nil, fmt.Errorf("outline item obj#%d: %w", item.ObjectNumber.Value(), err)
 	}
 
 	bms := []Bookmark{}
@@ -324,7 +324,8 @@ func bookmarksForOutlineItem(ctx *model.Context, item *types.IndirectRef, parent
 			}
 			kids, err := bookmarksForOutlineItem(ctx, &indRef, &bm, depth+1, visited)
 			if err != nil {
-				return nil, fmt.Errorf("outline item %s kids: %w", *ir, err)
+				context := fmt.Sprintf("outline item %s kids", *ir)
+				return nil, model.WrapRecursionError(context, err)
 			}
 			bm.Kids = kids
 		}
@@ -407,7 +408,7 @@ func Bookmarks(ctx *model.Context) ([]Bookmark, error) {
 
 func bookmarkList(bms []Bookmark, level, maxDepth int) ([]string, error) {
 	if err := model.CheckRecursionDepth("bookmark list", level, maxDepth); err != nil {
-		return nil, fmt.Errorf("bookmark list level %d: %w", level, err)
+		return nil, err
 	}
 
 	pre := strings.Repeat("    ", level)
@@ -417,7 +418,7 @@ func bookmarkList(bms []Bookmark, level, maxDepth int) ([]string, error) {
 		if len(bm.Kids) > 0 {
 			ss1, err := bookmarkList(bm.Kids, level+1, maxDepth)
 			if err != nil {
-				return nil, fmt.Errorf("bookmark %q kids: %w", bm.Title, err)
+				return nil, model.WrapRecursionError(fmt.Sprintf("bookmark %q kids", bm.Title), err)
 			}
 			ss = append(ss, ss1...)
 		}

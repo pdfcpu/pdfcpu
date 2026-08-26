@@ -40,7 +40,7 @@ do
     if [[ $q == */test ]]; then
         idep=${idep%/test}
     fi
-    go test -coverprofile=c1.out -coverpkg=$idep $q && tail -n +2 c1.out  >> c.out
+    go test -count=1 -coverprofile=c1.out -coverpkg=$idep $q && tail -n +2 c1.out  >> c.out
 done
 
 rm c1.out

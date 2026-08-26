@@ -292,9 +292,8 @@ func TestEncodeDecodeFilterPipeline(t *testing.T) {
 	}
 }
 
-// TestASCII85DecodeWithCRLF tests that ASCII85 decoding works correctly
-// when the encoded data has CRLF line endings (issue #1112)
-func TestASCII85DecodeWithCRLF(t *testing.T) {
+// TestASCII85DecodeEODHandling verifies decoding stops at the EOD marker.
+func TestASCII85DecodeEODHandling(t *testing.T) {
 	f, err := filter.NewFilter(filter.ASCII85, nil)
 	if err != nil {
 		t.Fatalf("Failed to create ASCII85 filter: %v", err)
@@ -309,6 +308,8 @@ func TestASCII85DecodeWithCRLF(t *testing.T) {
 		{"LF ending", "Hello, Gopher!", "\n", "Hello, Gopher!"},
 		{"CR ending", "Hello, Gopher!", "\r", "Hello, Gopher!"},
 		{"CRLF ending", "Hello, Gopher!", "\r\n", "Hello, Gopher!"},
+		{"space after EOD", "Hello, Gopher!", " ", "Hello, Gopher!"},
+		{"non-whitespace after EOD", "Hello, Gopher!", "\xA0", "Hello, Gopher!"},
 		{"No ending", "Hello, Gopher!", "", "Hello, Gopher!"},
 	}
 
@@ -345,6 +346,18 @@ func TestASCII85DecodeWithCRLF(t *testing.T) {
 				t.Errorf("Mismatch: got %q, want %q", string(result), tc.expected)
 			}
 		})
+	}
+}
+
+// TestASCII85DecodeMissingEOD verifies an unterminated ASCII85 stream remains invalid.
+func TestASCII85DecodeMissingEOD(t *testing.T) {
+	f, err := filter.NewFilter(filter.ASCII85, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := f.Decode(strings.NewReader("87cURD_*#TDfTZ)+T")); err == nil {
+		t.Fatal("expected missing EOD marker error")
 	}
 }
 

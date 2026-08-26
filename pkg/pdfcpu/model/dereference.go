@@ -105,8 +105,6 @@ func (xRefTable *XRefTable) indRefToObject(ir *types.IndirectRef, decodeLazy boo
 		return nil, 0, nil
 	}
 
-	xRefTable.CurObj = int(ir.ObjectNumber)
-
 	if l, ok := entry.Object.(types.LazyObjectStreamObject); ok && decodeLazy {
 		ob, err := l.DecodedObject(context.TODO())
 		if err != nil {
@@ -519,25 +517,28 @@ func (xRefTable *XRefTable) DereferenceStringEntryBytes(d types.Dict, key string
 	if !found || o == nil {
 		return nil, nil
 	}
+	objNr := 0
+	if ir, ok := o.(types.IndirectRef); ok {
+		objNr = ir.ObjectNumber.Value()
+	}
 	o, err := xRefTable.Dereference(o)
 	if err != nil {
-		return nil, nil
+		return nil, WithValidationErrorObject(err, objNr)
 	}
 
 	switch o := o.(type) {
 	case types.StringLiteral:
 		bb, err := types.Unescape(o.Value())
-		if err != nil {
-			return nil, err
-		}
-		return bb, nil
+		return bb, WithValidationErrorObject(err, objNr)
 
 	case types.HexLiteral:
-		return o.Bytes()
+		bb, err := o.Bytes()
+		return bb, WithValidationErrorObject(err, objNr)
 
 	}
 
-	return nil, fmt.Errorf("dereferenceStringEntryBytes dict=%s entry=%s, wrong type %T <%v>", d, key, o, o)
+	err = fmt.Errorf("entry=%s: expected string or hex literal, got %T", key, o)
+	return nil, WithValidationErrorObject(err, objNr)
 }
 
 // DestName returns the destination name for o.

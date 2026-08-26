@@ -46,8 +46,17 @@ func objectContext(context string, o types.Object) string {
 	return context
 }
 
-func validateDestinationArrayFirstElement(xRefTable *model.XRefTable, a types.Array) (types.Object, error) {
-	o, err := xRefTable.Dereference(a[0])
+func validateDestinationArrayFirstElement(
+	xRefTable *model.XRefTable,
+	a types.Array,
+	ownerObjNr int,
+) (o types.Object, err error) {
+	objNr := validationObjectNumber(ownerObjNr, a[0])
+	defer func() {
+		err = model.WithValidationErrorObject(err, objNr)
+	}()
+
+	o, err = xRefTable.Dereference(a[0])
 	if err != nil {
 		return nil, fmt.Errorf("destination array[0]: dereference page: %w", err)
 	}
@@ -116,7 +125,11 @@ func validateDestType(a types.Array, destType types.Name) error {
 	return nil
 }
 
-func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
+func validateDestinationArray(xRefTable *model.XRefTable, a types.Array, ownerObjNr int) (err error) {
+	defer func() {
+		err = model.WithValidationErrorObject(err, ownerObjNr)
+	}()
+
 	if !validateDestinationArrayLength(a) {
 		if xRefTable.ValidationMode == model.ValidationStrict {
 			return fmt.Errorf("destination array: invalid length %d", len(a))
@@ -125,23 +138,31 @@ func validateDestinationArray(xRefTable *model.XRefTable, a types.Array) error {
 	}
 
 	// Validate first element: indRef of page dict or pageNumber(int) of remote doc for remote Go-to Action or nil.
-	o, err := validateDestinationArrayFirstElement(xRefTable, a)
+	o, err := validateDestinationArrayFirstElement(xRefTable, a, ownerObjNr)
 	if err != nil || o == nil {
 		return err
 	}
 
 	name, ok := a[1].(types.Name)
 	if !ok {
-		return fmt.Errorf("destination array[1]: expected name, got %T", a[1])
+		err := fmt.Errorf("destination array[1]: expected name, got %T", a[1])
+		return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, a[1]))
 	}
 
 	return validateDestType(a, name)
 }
 
-func validateDestinationDict(xRefTable *model.XRefTable, d types.Dict) error {
+func validateDestinationDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (err error) {
+	defer func() {
+		err = model.WithValidationErrorObject(err, ownerObjNr)
+	}()
+
 	// D, required, array
 	o, _ := d.Find("D")
-	a, err := validateArrayEntry(xRefTable, d, "DestinationDict", "D", REQUIRED, model.V10, nil)
+	destinationObjNr := validationObjectNumber(ownerObjNr, o)
+	a, err := validateArrayEntry(
+		xRefTable, d, ownerObjNr, "DestinationDict", "D", REQUIRED, model.V10, nil,
+	)
 	if err != nil || a == nil {
 		if err != nil {
 			return fmt.Errorf("%s: %w", dictEntryContext("destination dictionary", "D", o), err)
@@ -149,15 +170,25 @@ func validateDestinationDict(xRefTable *model.XRefTable, d types.Dict) error {
 		return nil
 	}
 
-	if err := validateDestinationArray(xRefTable, a); err != nil {
+	if err := validateDestinationArray(xRefTable, a, destinationObjNr); err != nil {
 		return fmt.Errorf("%s: %w", dictEntryContext("destination dictionary", "D", o), err)
 	}
 
 	return nil
 }
 
-func validateDestination(xRefTable *model.XRefTable, o types.Object, forAction bool) (string, error) {
-	o, err := xRefTable.Dereference(o)
+func validateDestination(
+	xRefTable *model.XRefTable,
+	o types.Object,
+	ownerObjNr int,
+	forAction bool,
+) (name string, err error) {
+	objNr := validationObjectNumber(ownerObjNr, o)
+	defer func() {
+		err = model.WithValidationErrorObject(err, objNr)
+	}()
+
+	o, err = xRefTable.Dereference(o)
 	if err != nil {
 		return "", fmt.Errorf("destination: dereference: %w", err)
 	}
@@ -180,10 +211,10 @@ func validateDestination(xRefTable *model.XRefTable, o types.Object, forAction b
 		if forAction {
 			return "", fmt.Errorf("destination: action destination cannot be dict")
 		}
-		err = validateDestinationDict(xRefTable, o)
+		err = validateDestinationDict(xRefTable, o, objNr)
 
 	case types.Array:
-		err = validateDestinationArray(xRefTable, o)
+		err = validateDestinationArray(xRefTable, o, objNr)
 
 	default:
 		err = fmt.Errorf("destination: unsupported object type %T", o)
@@ -196,14 +227,18 @@ func validateDestination(xRefTable *model.XRefTable, o types.Object, forAction b
 func validateActionDestinationEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
 	// see 12.3.2
 
-	o, err := validateEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
+	rawEntry := d[entryName]
+	o, err := validateEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion)
 	if err != nil {
-		return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, d[entryName]), err)
+		return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
+	}
+	if o == nil {
+		return nil
 	}
 
-	name, err := validateDestination(xRefTable, o, true)
+	name, err := validateDestination(xRefTable, rawEntry, 0, true)
 	if err != nil {
-		return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, d[entryName]), err)
+		return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
 	}
 
 	if len(name) > 0 && xRefTable.IsMerging() {

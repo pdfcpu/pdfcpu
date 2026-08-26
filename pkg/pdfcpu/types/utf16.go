@@ -73,7 +73,7 @@ func decodeUTF16String(b []byte) (string, error) {
 
 		val := (uint16(b[i]) << 8) + uint16(b[i+1])
 
-		if val <= 0xD7FF || val > 0xE000 && val <= 0xFFFF {
+		if val <= 0xD7FF || val >= 0xE000 && val <= 0xFFFF {
 			// Basic Multilingual Plane
 			u16 = append(u16, val)
 			i += 2
