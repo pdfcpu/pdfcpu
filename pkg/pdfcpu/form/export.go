@@ -339,16 +339,20 @@ func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict,
 
 	rbg.Options = opts
 
-	if s := d.NameEntry("DV"); s != nil {
-		n, err := resolveOption(*s, opts, explicit)
+	if s, _, err := xRefTable.DereferenceNameEntry(d, "DV"); err != nil {
+		return nil, fmt.Errorf("radio button group %s: %w", id, err)
+	} else if s != nil {
+		n, err := resolveOption(s.Value(), opts, explicit)
 		if err != nil {
 			return nil, err
 		}
 		rbg.Default = n
 	}
 
-	if s := d.NameEntry("V"); s != nil {
-		n, err := resolveOption(*s, opts, explicit)
+	if s, _, err := xRefTable.DereferenceNameEntry(d, "V"); err != nil {
+		return nil, fmt.Errorf("radio button group %s: %w", id, err)
+	} else if s != nil {
+		n, err := resolveOption(s.Value(), opts, explicit)
 		if err != nil {
 			return nil, err
 		}
@@ -363,16 +367,17 @@ func extractRadioButtonGroup(xRefTable *model.XRefTable, page int, d types.Dict,
 func extractCheckBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, locked bool) (*CheckBox, error) {
 	cb := &CheckBox{Pages: []int{page}, ID: id, Name: name, AltName: altName, Locked: locked}
 
-	if n, found, err := dictNameEntry(xRefTable, d, "DV"); err != nil {
+	if n, _, err := xRefTable.DereferenceNameEntry(d, "DV"); err != nil {
 		return nil, fmt.Errorf("checkbox %s: %w", id, err)
-	} else if found {
-		cb.Default = n != "Off"
+	} else if n != nil {
+		cb.Default = n.Value() != "Off"
 	}
 
-	if n, found, err := dictNameEntry(xRefTable, d, "V"); err != nil {
+	if n, _, err := xRefTable.DereferenceNameEntry(d, "V"); err != nil {
 		return nil, fmt.Errorf("checkbox %s: %w", id, err)
-	} else if found {
-		cb.Value = len(n) > 0 && n != "Off"
+	} else if n != nil {
+		v := n.Value()
+		cb.Value = len(v) > 0 && v != "Off"
 	}
 
 	return cb, nil
@@ -381,20 +386,20 @@ func extractCheckBox(xRefTable *model.XRefTable, page int, d types.Dict, id, nam
 func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, locked bool) (*ComboBox, error) {
 	cb := &ComboBox{Pages: []int{page}, ID: id, Name: name, AltName: altName, Locked: locked}
 
-	if sl := d.StringLiteralEntry("DV"); sl != nil {
-		s, err := types.StringLiteralToString(*sl)
-		if err != nil {
-			return nil, err
-		}
-		cb.Default = strings.TrimSpace(s)
+	dv, _, err := xRefTable.DereferenceStringEntry(d, "DV")
+	if err != nil {
+		return nil, fmt.Errorf("entry DV: %w", err)
+	}
+	if dv != nil {
+		cb.Default = strings.TrimSpace(*dv)
 	}
 
-	if sl := d.StringLiteralEntry("V"); sl != nil {
-		s, err := types.StringLiteralToString(*sl)
-		if err != nil {
-			return nil, err
-		}
-		cb.Value = strings.TrimSpace(s)
+	v, _, err := xRefTable.DereferenceStringEntry(d, "V")
+	if err != nil {
+		return nil, fmt.Errorf("entry V: %w", err)
+	}
+	if v != nil {
+		cb.Value = strings.TrimSpace(*v)
 	}
 
 	opts, err := parseOptions(xRefTable, d, OPTIONAL)
@@ -407,27 +412,27 @@ func extractComboBox(xRefTable *model.XRefTable, page int, d types.Dict, id, nam
 	return cb, nil
 }
 
-func dateFormatFromJSAction(d types.Dict) (*primitives.DateFormat, error) {
+func dateFormatFromJSAction(xRefTable *model.XRefTable, d types.Dict) (*primitives.DateFormat, error) {
 	d1 := d.DictEntry("AA")
 	if len(d1) > 0 {
 		d2 := d1.DictEntry("F")
 		if len(d2) > 0 {
-			sl := d2.StringLiteralEntry("JS")
-			if sl != nil {
-				s, err := types.StringLiteralToString(*sl)
-				if err != nil {
-					return nil, err
-				}
-				i := strings.Index(s, "AFDate_FormatEx(\"")
+			s, _, err := xRefTable.DereferenceStringEntry(d2, "JS")
+			if err != nil {
+				return nil, fmt.Errorf("date format action entry JS: %w", err)
+			}
+			if s != nil {
+				value := *s
+				i := strings.Index(value, "AFDate_FormatEx(\"")
 				if i >= 0 {
 					from := i + len("AFDate_FormatEx(\"")
-					to := strings.IndexByte(s[from:], '"')
+					to := strings.IndexByte(value[from:], '"')
 					if to < 0 {
 						return nil, errors.New("date format action: missing closing quote")
 					}
-					s = s[from : from+to]
+					value = value[from : from+to]
 				}
-				if df, err := primitives.DateFormatForFmtExt(s); err == nil {
+				if df, err := primitives.DateFormatForFmtExt(value); err == nil {
 					return df, nil
 				}
 			}
@@ -459,7 +464,7 @@ func dateStringEntry(xRefTable *model.XRefTable, d types.Dict, key string) (stri
 }
 
 func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.DateFormat, error) {
-	df, err := dateFormatFromJSAction(d)
+	df, err := dateFormatFromJSAction(xRefTable, d)
 	if err != nil {
 		return nil, err
 	}
@@ -508,13 +513,16 @@ func extractDateField(xRefTable *model.XRefTable, page int, d types.Dict, id, na
 	return dfield, nil
 }
 
-func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, ff *int, locked bool) (*TextField, error) {
-	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
+func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, ff *types.Integer, locked bool) (*TextField, error) {
+	multiLine := ff != nil && uint(primitives.FieldFlags(ff.Value()))&uint(primitives.FieldMultiline) > 0
 
 	maxLen := 0
-	i := d.IntEntry("MaxLen")
+	i, _, err := xRefTable.DereferenceIntegerEntry(d, "MaxLen")
+	if err != nil {
+		return nil, err
+	}
 	if i != nil {
-		maxLen = *i
+		maxLen = i.Value()
 	}
 
 	tf := &TextField{Pages: []int{page}, ID: id, Name: name, AltName: altName, Multiline: multiLine, MaxLen: maxLen, Locked: locked}
@@ -538,19 +546,19 @@ func extractListBox(xRefTable *model.XRefTable, page int, d types.Dict, id, name
 	lb := &ListBox{Pages: []int{page}, ID: id, Name: name, AltName: altName, Locked: locked, Multi: multi}
 
 	if !multi {
-		if sl := d.StringLiteralEntry("DV"); sl != nil {
-			s, err := types.StringLiteralToString(*sl)
-			if err != nil {
-				return nil, err
-			}
-			lb.Defaults = []string{strings.TrimSpace(s)}
+		dv, _, err := xRefTable.DereferenceStringEntry(d, "DV")
+		if err != nil {
+			return nil, fmt.Errorf("entry DV: %w", err)
 		}
-		if sl := d.StringLiteralEntry("V"); sl != nil {
-			s, err := types.StringLiteralToString(*sl)
-			if err != nil {
-				return nil, err
-			}
-			lb.Values = []string{strings.TrimSpace(s)}
+		if dv != nil {
+			lb.Defaults = []string{strings.TrimSpace(*dv)}
+		}
+		v, _, err := xRefTable.DereferenceStringEntry(d, "V")
+		if err != nil {
+			return nil, fmt.Errorf("entry V: %w", err)
+		}
+		if v != nil {
+			lb.Values = []string{strings.TrimSpace(*v)}
 		}
 	} else {
 		ss, err := parseStringLiteralArray(xRefTable, d, "DV")
@@ -673,9 +681,12 @@ func exportCh(
 	id, name, altName string,
 	locked bool,
 	ok *bool) error {
-	ff := d.IntEntry("Ff")
+	ff, _, err := xRefTable.DereferenceIntegerEntry(d, "Ff")
+	if err != nil {
+		return err
+	}
 
-	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
+	if ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldCombo > 0 {
 
 		for _, cb := range form.ComboBoxes {
 			if cb.Name == name && cb.ID == id {
@@ -700,7 +711,7 @@ func exportCh(
 		}
 	}
 
-	multi := ff != nil && primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
+	multi := ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldMultiselect > 0
 	lb, err := extractListBox(xRefTable, i, d, id, name, altName, locked, multi)
 	if err != nil {
 		return err
@@ -717,7 +728,7 @@ func exportTx(
 	form *Form,
 	d types.Dict,
 	id, name, altName string,
-	ff *int,
+	ff *types.Integer,
 	locked bool,
 	ok *bool) error {
 	df, err := extractDateFormat(xRefTable, d)
@@ -761,7 +772,7 @@ func exportTx(
 	return nil
 }
 
-func exportPageField(ft string, xRefTable *model.XRefTable, i int, form *Form, d types.Dict, id, name, altName string, locked bool, ok *bool, ff *int) error {
+func exportPageField(ft string, xRefTable *model.XRefTable, i int, form *Form, d types.Dict, id, name, altName string, locked bool, ok *bool, ff *types.Integer) error {
 	var err error
 
 	switch ft {
@@ -789,32 +800,39 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 			continue
 		}
 
-		var locked bool
-		ff := d.IntEntry("Ff")
-		if ff != nil {
-			locked = uint(primitives.FieldFlags(*ff))&uint(primitives.FieldReadOnly) > 0
+		ff, locked, err := formFieldFlags(xRefTable, d)
+		if err != nil {
+			return fmt.Errorf("field %s: %w", id, err)
 		}
 
 		ft := fi.ft
 		if ft == nil {
-			ft = d.NameEntry("FT")
+			ft, _, err = xRefTable.DereferenceNameEntry(d, "FT")
+			if err != nil {
+				return fmt.Errorf("field %s: entry FT: %w", id, err)
+			}
 			if ft == nil {
 				return errors.New("corrupt form field: missing entry FT")
 			}
 		}
 
 		altName := ""
-		if o, found := d.Find("TU"); found {
-			s, err := types.StringOrHexLiteral(o)
-			if err != nil {
-				return fmt.Errorf("field %s: entry TU: %w", id, err)
+		s, found, err := xRefTable.DereferenceStringEntry(d, "TU")
+		if found && s == nil {
+			if err == nil {
+				err = errors.New("expected StringLiteral or HexLiteral")
 			}
+		}
+		if err != nil {
+			return fmt.Errorf("field %s: entry TU: %w", id, err)
+		}
+		if found {
 			if s != nil {
 				altName = *s
 			}
 		}
 
-		if err := exportPageField(*ft, xRefTable, i, form, d, id, name, altName, locked, ok, ff); err != nil {
+		if err := exportPageField(ft.Value(), xRefTable, i, form, d, id, name, altName, locked, ok, ff); err != nil {
 			return fmt.Errorf("field %s: %w", id, err)
 		}
 	}

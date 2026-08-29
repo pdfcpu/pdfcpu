@@ -57,7 +57,12 @@ func validateOptionalContentGroupIntent(xRefTable *model.XRefTable, d types.Dict
 				continue
 			}
 
-			n, ok := v.(types.Name)
+			o, err := xRefTable.Dereference(v)
+			if err != nil {
+				err = fmt.Errorf("%s.%s[%d]: %w", dictName, entryName, i, err)
+				return model.WithValidationErrorObject(err, intentObjNr)
+			}
+			n, ok := o.(types.Name)
 			if !ok {
 				err = fmt.Errorf("%s.%s[%d]: invalid type", dictName, entryName, i)
 				return model.WithValidationErrorObject(err, intentObjNr)

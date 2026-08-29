@@ -117,18 +117,18 @@ func writePageDict(ctx *model.Context, indRef *types.IndirectRef, pageDict types
 	return nil
 }
 
-func pageNodeDict(ctx *model.Context, o types.Object) (types.Dict, *types.IndirectRef, error) {
+func pageNodeDict(ctx *model.Context, o types.Object) (types.Dict, *types.IndirectRef, *types.Name, error) {
 	if o == nil {
 		if log.WriteEnabled() {
 			log.Write.Println("pageNodeDict: is nil")
 		}
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	// Dereference next page node dict.
 	indRef, ok := o.(types.IndirectRef)
 	if !ok {
-		return nil, nil, errors.New("missing indirect reference")
+		return nil, nil, nil, errors.New("missing indirect reference")
 	}
 	if log.WriteEnabled() {
 		log.Write.Printf("pageNodeDict: PageNode: %s\n", indRef)
@@ -136,18 +136,21 @@ func pageNodeDict(ctx *model.Context, o types.Object) (types.Dict, *types.Indire
 
 	d, err := ctx.DereferenceDict(indRef)
 	if err != nil {
-		return nil, nil, errors.New("cannot dereference page node dict")
+		return nil, nil, nil, errors.New("cannot dereference page node dict")
 	}
 	if d == nil {
-		return nil, nil, errors.New("page node dict is null")
+		return nil, nil, nil, errors.New("page node dict is null")
 	}
 
-	dictType := d.Type()
+	dictType, _, err := ctx.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("page node dict Type: %w", err)
+	}
 	if dictType == nil {
-		return nil, nil, errors.New("missing page node dict type")
+		return nil, nil, nil, errors.New("missing page node dict type")
 	}
 
-	return d, &indRef, nil
+	return d, &indRef, dictType, nil
 }
 
 func writeKids(ctx *model.Context, a types.Array, pageNr *int, depth int, visit *model.PageTreeVisit) (types.Array, int, error) {
@@ -156,7 +159,7 @@ func writeKids(ctx *model.Context, a types.Array, pageNr *int, depth int, visit 
 
 	for _, o := range a {
 
-		d, ir, err := pageNodeDict(ctx, o)
+		d, ir, dictType, err := pageNodeDict(ctx, o)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -164,7 +167,7 @@ func writeKids(ctx *model.Context, a types.Array, pageNr *int, depth int, visit 
 			continue
 		}
 
-		switch *d.Type() {
+		switch dictType.Value() {
 
 		case "Pages":
 			// Recurse over pagetree
@@ -209,7 +212,7 @@ func writeKids(ctx *model.Context, a types.Array, pageNr *int, depth int, visit 
 			}
 
 		default:
-			err = fmt.Errorf("unexpected dict type: %s", *d.Type())
+			err = fmt.Errorf("unexpected dict type: %s", dictType.Value())
 
 		}
 

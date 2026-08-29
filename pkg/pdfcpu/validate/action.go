@@ -494,9 +494,9 @@ func validateMovieActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 func validateHideActionDictEntryT(xRefTable *model.XRefTable, o types.Object) error {
 	switch o := o.(type) {
 
-	case types.StringLiteral:
+	case types.StringLiteral, types.HexLiteral:
 		// Ensure UTF16 correctness.
-		_, err := types.StringLiteralToString(o)
+		_, err := model.Text(o)
 		if err != nil {
 			return err
 		}
@@ -523,11 +523,11 @@ func validateHideActionDictEntryT(xRefTable *model.XRefTable, o types.Object) er
 
 			switch o := o.(type) {
 
-			case types.StringLiteral:
+			case types.StringLiteral, types.HexLiteral:
 				// Ensure UTF16 correctness.
-				_, err = types.StringLiteralToString(o)
+				_, err = model.Text(o)
 				if err != nil {
-					return fmt.Errorf("Hide.T[%d]: string literal: %w", i, err)
+					return fmt.Errorf("Hide.T[%d]: string: %w", i, err)
 				}
 
 			case types.Dict:
@@ -622,12 +622,27 @@ func validateSubmitFormActionDict(xRefTable *model.XRefTable, d types.Dict, dict
 	}
 
 	for i, v := range a {
-		switch v.(type) {
-		case types.StringLiteral, types.IndirectRef:
-			// no further processing
-
+		objNr := validationObjectNumber(validationEntryObjectNumber(0, d, "Fields"), v)
+		if _, ok := v.(types.IndirectRef); !ok {
+			switch v.(type) {
+			case types.StringLiteral, types.HexLiteral:
+				continue
+			default:
+				err := fmt.Errorf("SubmitForm.Fields[%d]: expected string or indirect reference, got %T", i, v)
+				return model.WithValidationErrorObject(err, objNr)
+			}
+		}
+		o, err := xRefTable.Dereference(v)
+		if err != nil {
+			err = fmt.Errorf("SubmitForm.Fields[%d]: dereference: %w", i, err)
+			return model.WithValidationErrorObject(err, objNr)
+		}
+		switch o.(type) {
+		case types.StringLiteral, types.HexLiteral, types.Dict:
+			// no further processing.
 		default:
-			return fmt.Errorf("SubmitForm.Fields[%d]: expected string or indirect reference, got %T", i, v)
+			err := fmt.Errorf("SubmitForm.Fields[%d]: expected string or field dictionary, got %T", i, o)
+			return model.WithValidationErrorObject(err, objNr)
 		}
 	}
 
@@ -649,12 +664,27 @@ func validateResetFormActionDict(xRefTable *model.XRefTable, d types.Dict, dictN
 	}
 
 	for i, v := range a {
-		switch v.(type) {
-		case types.StringLiteral, types.IndirectRef:
-			// no further processing
-
+		objNr := validationObjectNumber(validationEntryObjectNumber(0, d, "Fields"), v)
+		if _, ok := v.(types.IndirectRef); !ok {
+			switch v.(type) {
+			case types.StringLiteral, types.HexLiteral:
+				continue
+			default:
+				err := fmt.Errorf("ResetForm.Fields[%d]: expected string or indirect reference, got %T", i, v)
+				return model.WithValidationErrorObject(err, objNr)
+			}
+		}
+		o, err := xRefTable.Dereference(v)
+		if err != nil {
+			err = fmt.Errorf("ResetForm.Fields[%d]: dereference: %w", i, err)
+			return model.WithValidationErrorObject(err, objNr)
+		}
+		switch o.(type) {
+		case types.StringLiteral, types.HexLiteral, types.Dict:
+			// no further processing.
 		default:
-			return fmt.Errorf("ResetForm.Fields[%d]: expected string or indirect reference, got %T", i, v)
+			err := fmt.Errorf("ResetForm.Fields[%d]: expected string or field dictionary, got %T", i, o)
+			return model.WithValidationErrorObject(err, objNr)
 		}
 	}
 

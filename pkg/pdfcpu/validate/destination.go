@@ -69,16 +69,24 @@ func validateDestinationArrayFirstElement(
 	switch o := o.(type) {
 
 	case types.Dict:
-		if o.Type() == nil || (o.Type() != nil && (*o.Type() != "Page" && *o.Type() != "Pages")) {
+		dictType, _, typeErr := xRefTable.DereferenceNameEntry(o, "Type")
+		if typeErr != nil {
 			if xRefTable.ValidationMode == model.ValidationRelaxed {
 				model.ShowDigestedSpecViolation(s)
 				return nil, nil
 			}
-			dictType := "<missing>"
-			if o.Type() != nil {
-				dictType = *o.Type()
+			return o, fmt.Errorf("destination array[0] Type: %w", typeErr)
+		}
+		if dictType == nil || (dictType.Value() != "Page" && dictType.Value() != "Pages") {
+			if xRefTable.ValidationMode == model.ValidationRelaxed {
+				model.ShowDigestedSpecViolation(s)
+				return nil, nil
 			}
-			err = fmt.Errorf("destination array[0]: expected page dict, got dict type %q", dictType)
+			dictTypeString := "<missing>"
+			if dictType != nil {
+				dictTypeString = dictType.Value()
+			}
+			err = fmt.Errorf("destination array[0]: expected page dict, got dict type %q", dictTypeString)
 		}
 
 	default:
@@ -143,9 +151,14 @@ func validateDestinationArray(xRefTable *model.XRefTable, a types.Array, ownerOb
 		return err
 	}
 
-	name, ok := a[1].(types.Name)
+	o, err = xRefTable.Dereference(a[1])
+	if err != nil {
+		err = fmt.Errorf("destination array[1]: %w", err)
+		return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, a[1]))
+	}
+	name, ok := o.(types.Name)
 	if !ok {
-		err := fmt.Errorf("destination array[1]: expected name, got %T", a[1])
+		err = fmt.Errorf("destination array[1]: expected name, got %T", o)
 		return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, a[1]))
 	}
 

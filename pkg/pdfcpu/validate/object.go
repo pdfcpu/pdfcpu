@@ -234,17 +234,17 @@ func validateBooleanArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerOb
 		log.Validate.Printf("validateBooleanArrayEntry begin: entry=%s\n", entryName)
 	}
 
-	entryObjNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
 	a, err := validateArrayEntry(
-		xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, validate,
+		xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, nil,
 	)
 	if err != nil || a == nil {
-		return nil, model.WithValidationErrorObject(err, entryObjNr)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
-	for i, raw := range a {
-		objNr := validationObjectNumber(entryObjNr, raw)
-		o, err := xRefTable.Dereference(raw)
+	for i, o := range a {
+		objNr := validationObjectNumber(objNr, o)
+		o, err := xRefTable.Dereference(o)
 		if err != nil {
 			return nil, model.WithValidationErrorObject(err, objNr)
 		}
@@ -256,6 +256,11 @@ func validateBooleanArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerOb
 			err := fmt.Errorf("dict=%s entry=%s invalid type at index %d", dictName, entryName, i)
 			return nil, model.WithValidationErrorObject(err, objNr)
 		}
+	}
+
+	if validate != nil && !validate(a) {
+		err := fmt.Errorf("dict=%s entry=%s invalid dict entry", dictName, entryName)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
 	if log.ValidateEnabled() {
@@ -441,16 +446,16 @@ func validateFunctionArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerO
 		log.Validate.Printf("validateFunctionArrayEntry begin: entry=%s\n", entryName)
 	}
 
-	entryObjNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
 	a, err := validateArrayEntry(
 		xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, validate,
 	)
 	if err != nil || a == nil {
-		return nil, model.WithValidationErrorObject(err, entryObjNr)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
 	for _, o := range a {
-		if err = validateFunction(xRefTable, o, entryObjNr); err != nil {
+		if err = validateFunction(xRefTable, o, objNr); err != nil {
 			return nil, err
 		}
 	}
@@ -468,19 +473,19 @@ func validateFunctionOrArrayOfFunctionsEntry(xRefTable *model.XRefTable, d types
 	}
 
 	o, _, err := d.Entry(dictName, entryName, required)
-	entryObjNr := validationObjectNumber(ownerObjNr, o)
+	objNr := validationObjectNumber(ownerObjNr, o)
 	if err != nil || o == nil {
-		return model.WithValidationErrorObject(err, entryObjNr)
+		return model.WithValidationErrorObject(err, objNr)
 	}
 
 	if o, err = xRefTable.Dereference(o); err != nil {
-		return model.WithValidationErrorObject(err, entryObjNr)
+		return model.WithValidationErrorObject(err, objNr)
 	}
 
 	if o == nil {
 		if required {
 			err := fmt.Errorf("dict=%s required entry=%s is nil", dictName, entryName)
-			return model.WithValidationErrorObject(err, entryObjNr)
+			return model.WithValidationErrorObject(err, objNr)
 		}
 		if log.ValidateEnabled() {
 			log.Validate.Printf("validateFunctionOrArrayOfFunctionsEntry end: optional entry %s is nil\n", entryName)
@@ -498,21 +503,21 @@ func validateFunctionOrArrayOfFunctionsEntry(xRefTable *model.XRefTable, d types
 				continue
 			}
 
-			if err = validateFunction(xRefTable, o, entryObjNr); err != nil {
+			if err = validateFunction(xRefTable, o, objNr); err != nil {
 				return err
 			}
 
 		}
 
 	default:
-		if err = processFunction(xRefTable, o, entryObjNr); err != nil {
+		if err = processFunction(xRefTable, o, objNr); err != nil {
 			return err
 		}
 
 	}
 
 	if err = xRefTable.ValidateVersion("dict="+dictName+" entry="+entryName, sinceVersion); err != nil {
-		return model.WithValidationErrorObject(err, entryObjNr)
+		return model.WithValidationErrorObject(err, objNr)
 	}
 
 	if log.ValidateEnabled() {
@@ -555,12 +560,12 @@ func validateIndRefArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerObj
 		log.Validate.Printf("validateIndRefArrayEntry begin: entry=%s\n", entryName)
 	}
 
-	arrayObjNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
 	a, err := validateArrayEntry(
 		xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, validate,
 	)
 	if err != nil || a == nil {
-		return nil, model.WithValidationErrorObject(err, arrayObjNr)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
 	for i, o := range a {
@@ -569,7 +574,7 @@ func validateIndRefArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerObj
 		}
 		if _, ok := o.(types.IndirectRef); !ok {
 			err := fmt.Errorf("indirect reference array: invalid type at index %d", i)
-			return nil, model.WithValidationErrorObject(err, arrayObjNr)
+			return nil, model.WithValidationErrorObject(err, objNr)
 		}
 	}
 
@@ -671,30 +676,31 @@ func validateIntegerArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerOb
 		log.Validate.Printf("validateIntegerArrayEntry begin: entry=%s\n", entryName)
 	}
 
-	rawEntry, _ := d.Find(entryName)
-	entryObjNr := validationObjectNumber(ownerObjNr, rawEntry)
-	a, err := validateArrayEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion, validate)
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	a, err := validateArrayEntry(xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || a == nil {
-		return nil, model.WithValidationErrorObject(err, entryObjNr)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
-	for i, o := range a {
-		objNr := validationObjectNumber(entryObjNr, o)
-
+	for j, o := range a {
+		objNr := validationObjectNumber(objNr, o)
 		o, err := xRefTable.Dereference(o)
 		if err != nil {
 			return nil, model.WithValidationErrorObject(err, objNr)
 		}
-
 		if o == nil {
 			continue
 		}
 
 		if _, ok := o.(types.Integer); !ok {
-			err := fmt.Errorf("dict=%s entry=%s invalid type at index %d", dictName, entryName, i)
+			err := fmt.Errorf("dict=%s entry=%s invalid type at index %d", dictName, entryName, j)
 			return nil, model.WithValidationErrorObject(err, objNr)
 		}
+	}
 
+	if validate != nil && !validate(a) {
+		err := fmt.Errorf("dict=%s entry=%s invalid dict entry", dictName, entryName)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
 	if log.ValidateEnabled() {
@@ -796,14 +802,14 @@ func validateNameArray(xRefTable *model.XRefTable, o types.Object, ownerObjNr in
 		log.Validate.Println("validateNameArray begin")
 	}
 
-	arrayObjNr := validationObjectNumber(ownerObjNr, o)
+	objNr := validationObjectNumber(ownerObjNr, o)
 	a, err := xRefTable.DereferenceArray(o)
 	if err != nil || a == nil {
-		return nil, model.WithValidationErrorObject(err, arrayObjNr)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
 	for i, raw := range a {
-		objNr := validationObjectNumber(arrayObjNr, raw)
+		objNr := validationObjectNumber(objNr, raw)
 
 		o, err := xRefTable.Dereference(raw)
 		if err != nil {
@@ -834,14 +840,14 @@ func validateNameArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr
 	}
 
 	rawEntry, _ := d.Find(entryName)
-	entryObjNr := validationObjectNumber(ownerObjNr, rawEntry)
+	objNr := validationObjectNumber(ownerObjNr, rawEntry)
 	a, err := validateArrayEntry(xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, validate)
 	if err != nil || a == nil {
-		return nil, model.WithValidationErrorObject(err, entryObjNr)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
 	for i, o := range a {
-		objNr := validationObjectNumber(entryObjNr, o)
+		objNr := validationObjectNumber(objNr, o)
 
 		o, err := xRefTable.Dereference(o)
 		if err != nil {
@@ -972,14 +978,14 @@ func validateNumberArray(xRefTable *model.XRefTable, o types.Object, ownerObjNr 
 		log.Validate.Println("validateNumberArray begin")
 	}
 
-	arrayObjNr := validationObjectNumber(ownerObjNr, o)
+	objNr := validationObjectNumber(ownerObjNr, o)
 	a, err := xRefTable.DereferenceArray(o)
 	if err != nil || a == nil {
-		return nil, model.WithValidationErrorObject(err, arrayObjNr)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
 	for i, raw := range a {
-		objNr := validationObjectNumber(arrayObjNr, raw)
+		objNr := validationObjectNumber(objNr, raw)
 
 		o, err := xRefTable.Dereference(raw)
 		if err != nil {
@@ -1017,14 +1023,14 @@ func validateNumberArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerObj
 		log.Validate.Printf("validateNumberArrayEntry begin: entry=%s\n", entryName)
 	}
 
-	entryObjNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
-	a, err := validateArrayEntry(xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, validate)
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	a, err := validateArrayEntry(xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || a == nil {
-		return nil, model.WithValidationErrorObject(err, entryObjNr)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
 	for i, o := range a {
-		objNr := validationObjectNumber(entryObjNr, o)
+		objNr := validationObjectNumber(objNr, o)
 
 		o, err := xRefTable.Dereference(o)
 		if err != nil {
@@ -1048,6 +1054,11 @@ func validateNumberArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerObj
 			return nil, model.WithValidationErrorObject(err, objNr)
 		}
 
+	}
+
+	if validate != nil && !validate(a) {
+		err := fmt.Errorf("dict=%s entry=%s invalid dict entry", dictName, entryName)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
 	if log.ValidateEnabled() {
@@ -1242,11 +1253,11 @@ func validateStringArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerObj
 	if err != nil || a == nil {
 		return nil, err
 	}
-	arrayObjNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
 
 	for i, o := range a {
 		context := objectContext(fmt.Sprintf("dict=%s entry=%s[%d]", dictName, entryName, i), o)
-		objNr := validationObjectNumber(arrayObjNr, o)
+		objNr := validationObjectNumber(objNr, o)
 
 		o, err := xRefTable.Dereference(o)
 		if err != nil {
@@ -1289,16 +1300,16 @@ func validateArrayArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjN
 		log.Validate.Printf("validateArrayArrayEntry begin: entry=%s\n", entryName)
 	}
 
-	entryObjNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
 	a, err := validateArrayEntry(
 		xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, validate,
 	)
 	if err != nil || a == nil {
-		return nil, model.WithValidationErrorObject(err, entryObjNr)
+		return nil, model.WithValidationErrorObject(err, objNr)
 	}
 
 	for i, raw := range a {
-		objNr := validationObjectNumber(entryObjNr, raw)
+		objNr := validationObjectNumber(objNr, raw)
 		o, err := xRefTable.Dereference(raw)
 		if err != nil {
 			return nil, model.WithValidationErrorObject(err, objNr)
@@ -1402,7 +1413,7 @@ func validateNameOrStringEntry(xRefTable *model.XRefTable, d types.Dict, ownerOb
 
 	switch o.(type) {
 
-	case types.StringLiteral, types.Name:
+	case types.StringLiteral, types.HexLiteral, types.Name:
 		// no further processing
 
 	default:
@@ -1547,10 +1558,10 @@ func validateStreamDictOrDictEntry(xRefTable *model.XRefTable, d types.Dict, own
 	switch o.(type) {
 
 	case types.StreamDict:
-		// TODO validate 3D stream dict
+		// no further processing
 
 	case types.Dict:
-		// TODO validate 3D reference dict
+		// no further processing
 
 	default:
 		err := fmt.Errorf("dict=%s entry=%s invalid type", dictName, entryName)

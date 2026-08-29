@@ -77,23 +77,14 @@ func StreamLength(ctx *model.Context, sd *types.StreamDict) (int64, error) {
 		return 0, err
 	}
 
-	if val := sd.Int64Entry("Length"); val != nil {
-		return *val, nil
-	}
-
-	indRef := sd.IndirectRefEntry("Length")
-	if indRef == nil {
-		return 0, nil
-	}
-
-	i, err := ctx.DereferenceInteger(*indRef)
+	i, _, err := ctx.DereferenceIntegerEntry(sd.Dict, "Length")
 	if err != nil {
 		return 0, fmt.Errorf("stream length: %w", err)
 	}
 	if i == nil {
-		return 0, fmt.Errorf("stream length: missing integer value")
+		return 0, nil
 	}
-	return int64(*i), nil
+	return int64(i.Value()), nil
 }
 
 // ColorSpaceString returns a string representation for sd's colorspace.
@@ -122,7 +113,7 @@ func ColorSpaceString(ctx *model.Context, sd *types.StreamDict) (string, error) 
 		return string(cs), nil
 
 	case types.Array:
-		name, err := colorSpaceArrayName(cs)
+		name, err := colorSpaceArrayName(ctx.XRefTable, cs)
 		if err != nil {
 			return "", err
 		}
@@ -132,13 +123,17 @@ func ColorSpaceString(ctx *model.Context, sd *types.StreamDict) (string, error) 
 	return "", nil
 }
 
-func colorSpaceArrayName(cs types.Array) (types.Name, error) {
+func colorSpaceArrayName(xRefTable *model.XRefTable, cs types.Array) (types.Name, error) {
 	if len(cs) == 0 {
 		return "", fmt.Errorf("colorspace: empty array")
 	}
-	name, ok := cs[0].(types.Name)
+	o, err := xRefTable.Dereference(cs[0])
+	if err != nil {
+		return "", fmt.Errorf("colorspace[0]: %w", err)
+	}
+	name, ok := o.(types.Name)
 	if !ok {
-		return "", fmt.Errorf("colorspace: expected name, got %T", cs[0])
+		return "", fmt.Errorf("colorspace: expected name, got %T", o)
 	}
 	return name, nil
 }
@@ -226,27 +221,30 @@ func iccBasedColorSpaceComponents(xRefTable *model.XRefTable, cs types.Array) (i
 	if err != nil {
 		return 0, err
 	}
-	n := iccProfileStream.IntEntry("N")
-	if n == nil {
-		return 0, nil
+	n, err := integerEntryValue(xRefTable, iccProfileStream.Dict, "N", "colorspace ICCBased profile", true)
+	if err != nil {
+		return 0, err
 	}
 	return *n, nil
 }
 
-func deviceNColorSpaceComponents(cs types.Array) (int, error) {
+func deviceNColorSpaceComponents(xRefTable *model.XRefTable, cs types.Array) (int, error) {
 	o, err := colorSpaceArrayEntry(cs, 1)
 	if err != nil {
 		return 0, err
 	}
-	colorants, ok := o.(types.Array)
-	if !ok {
-		return 0, fmt.Errorf("colorspace: DeviceN colorants: expected array, got %T", o)
+	colorants, err := xRefTable.DereferenceArray(o)
+	if err != nil {
+		return 0, fmt.Errorf("colorspace: DeviceN colorants: %w", err)
+	}
+	if colorants == nil {
+		return 0, fmt.Errorf("colorspace: DeviceN colorants: expected array")
 	}
 	return len(colorants), nil
 }
 
 func colorSpaceArrayComponents(xRefTable *model.XRefTable, cs types.Array) (int, error) {
-	name, err := colorSpaceArrayName(cs)
+	name, err := colorSpaceArrayName(xRefTable, cs)
 	if err != nil {
 		return 0, err
 	}
@@ -261,7 +259,7 @@ func colorSpaceArrayComponents(xRefTable *model.XRefTable, cs types.Array) (int,
 	case model.SeparationCS:
 		return 1, nil
 	case model.DeviceNCS:
-		return deviceNColorSpaceComponents(cs)
+		return deviceNColorSpaceComponents(xRefTable, cs)
 	case model.IndexedCS:
 		return indexedColorSpaceComponents(xRefTable, cs)
 	}
@@ -308,18 +306,11 @@ func imageWidth(ctx *model.Context, sd *types.StreamDict, objNr int) (int, error
 		return 0, err
 	}
 
-	obj, ok := sd.Find("Width")
-	if !ok {
-		return 0, fmt.Errorf("missing image width obj#%d", objNr)
-	}
-	i, err := ctx.DereferenceInteger(obj)
+	i, err := integerEntryValue(ctx.XRefTable, sd.Dict, "Width", fmt.Sprintf("image obj#%d", objNr), true)
 	if err != nil {
-		return 0, fmt.Errorf("image obj#%d width: %w", objNr, err)
+		return 0, err
 	}
-	if i == nil {
-		return 0, fmt.Errorf("image obj#%d width: missing integer value", objNr)
-	}
-	return i.Value(), nil
+	return *i, nil
 }
 
 func imageHeight(ctx *model.Context, sd *types.StreamDict, objNr int) (int, error) {
@@ -330,18 +321,11 @@ func imageHeight(ctx *model.Context, sd *types.StreamDict, objNr int) (int, erro
 		return 0, err
 	}
 
-	obj, ok := sd.Find("Height")
-	if !ok {
-		return 0, fmt.Errorf("missing image height obj#%d", objNr)
-	}
-	i, err := ctx.DereferenceInteger(obj)
+	i, err := integerEntryValue(ctx.XRefTable, sd.Dict, "Height", fmt.Sprintf("image obj#%d", objNr), true)
 	if err != nil {
-		return 0, fmt.Errorf("image obj#%d height: %w", objNr, err)
+		return 0, err
 	}
-	if i == nil {
-		return 0, fmt.Errorf("image obj#%d height: missing integer value", objNr)
-	}
-	return i.Value(), nil
+	return *i, nil
 }
 
 func imageStub(
@@ -375,7 +359,17 @@ func imageStub(
 	}
 
 	bpc := 0
-	if i := sd.IntEntry("BitsPerComponent"); i != nil {
+	i, err := integerEntryValue(
+		ctx.XRefTable,
+		sd.Dict,
+		"BitsPerComponent",
+		fmt.Sprintf("image obj#%d", objNr),
+		false,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if i != nil {
 		bpc = *i
 	}
 	// if jpx, bpc is undefined
@@ -383,9 +377,9 @@ func imageStub(
 		bpc = 1
 	}
 
-	var interpol bool
-	if b := sd.BooleanEntry("Interpolate"); b != nil && *b {
-		interpol = true
+	interpol, err := imageBooleanEntry(ctx.XRefTable, sd, "Interpolate", objNr)
+	if err != nil {
+		return nil, err
 	}
 
 	size, err := StreamLength(ctx, sd)
@@ -419,12 +413,7 @@ func imageStub(
 	return img, nil
 }
 
-func prepareExtractImage(sd *types.StreamDict) (string, string, types.Dict, bool) {
-	var imgMask bool
-	if im := sd.BooleanEntry("ImageMask"); im != nil && *im {
-		imgMask = true
-	}
-
+func prepareExtractImage(sd *types.StreamDict) (string, string, types.Dict) {
 	var (
 		filters    string
 		lastFilter string
@@ -444,10 +433,14 @@ func prepareExtractImage(sd *types.StreamDict) (string, string, types.Dict, bool
 		filters = strings.Join(s, ",")
 	}
 
-	return filters, lastFilter, d, imgMask
+	return filters, lastFilter, d
 }
 
 func decodeImage(ctx *model.Context, sd *types.StreamDict, filters, lastFilter string, objNr int) error {
+	if err := prepareImageDecode(ctx.XRefTable, sd, fmt.Sprintf("image obj#%d", objNr)); err != nil {
+		return err
+	}
+
 	// CCITTDecoded images / (bit) masks don't have a ColorSpace attribute, but we render image files.
 	if lastFilter == filter.CCITTFax {
 		if _, err := ctx.DereferenceDictEntry(sd.Dict, "ColorSpace"); err != nil {
@@ -521,7 +514,12 @@ func ExtractImage(ctx *model.Context, sd *types.StreamDict, thumb bool, resource
 		return nil, err
 	}
 
-	filters, lastFilter, decodeParms, imgMask := prepareExtractImage(sd)
+	imgMask, err := imageBooleanEntry(ctx.XRefTable, sd, "ImageMask", objNr)
+	if err != nil {
+		return nil, err
+	}
+
+	filters, lastFilter, decodeParms := prepareExtractImage(sd)
 
 	if stub {
 		return imageStub(ctx, sd, resourceID, filters, lastFilter, decodeParms, thumb, imgMask, objNr)
@@ -851,8 +849,12 @@ func extractMetadataFromDict(ctx *model.Context, d types.Dict, parentObjNr int) 
 	objNr := ir.ObjectNumber.Value()
 	// Get container dict type.
 	dt := "unknown"
-	if d.Type() != nil {
-		dt = *d.Type()
+	t, _, err := ctx.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return nil, fmt.Errorf("metadata obj#%d: container Type: %w", objNr, err)
+	}
+	if t != nil {
+		dt = t.Value()
 	}
 	// Decode streamDict for supported filters only.
 	if err = sd.Decode(); errors.Is(err, filter.ErrUnsupportedFilter) {

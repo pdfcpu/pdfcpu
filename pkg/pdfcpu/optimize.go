@@ -352,6 +352,32 @@ func qualifiedRName(rNamePrefix, rName string) string {
 	return s
 }
 
+func newFontObject(
+	ctx *model.Context,
+	fontDict types.Dict,
+	resourceName, prefix, fontName string,
+) model.FontObject {
+	// pdffont.Name has already resolved and validated Subtype for this dictionary.
+	subtype, _, _ := ctx.DereferenceNameEntry(fontDict, "Subtype")
+
+	encodingName := "Built-in"
+	if _, found := fontDict.Find("Encoding"); found {
+		encodingName = "Custom"
+		if enc, _, err := ctx.DereferenceNameEntry(fontDict, "Encoding"); err == nil && enc != nil {
+			encodingName = enc.Value()
+		}
+	}
+
+	return model.FontObject{
+		ResourceNames: []string{resourceName},
+		Prefix:        prefix,
+		FontName:      fontName,
+		FontDict:      fontDict,
+		SubtypeName:   *subtype,
+		EncodingName:  encodingName,
+	}
+}
+
 // Get rid of redundant fonts for given fontResources dictionary.
 func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int, rNamePrefix string) error {
 	pageFonts := pageFonts(ctx, pageNr)
@@ -424,12 +450,7 @@ func optimizeFontResourcesDict(ctx *model.Context, rDict types.Dict, pageNr int,
 
 		registerFontDictObjNr(ctx, fName, objNr)
 
-		fontObj := model.FontObject{
-			ResourceNames: []string{qualifiedRName},
-			Prefix:        prefix,
-			FontName:      fName,
-			FontDict:      fontDict,
-		}
+		fontObj := newFontObject(ctx, fontDict, qualifiedRName, prefix, fName)
 
 		if checkForEmbeddedFont(ctx) {
 			fontObj.Embedded, err = pdffont.Embedded(ctx.XRefTable, fontDict, objNr)
@@ -733,19 +754,22 @@ func optimizeSMaskResources(dict types.Dict, vis []types.Object, rNamePrefix str
 		return nil
 	}
 
-	subtype := sd.Subtype()
-	if subtype == nil || len(*subtype) == 0 {
+	subtype, _, err := ctx.DereferenceNameEntry(sd.Dict, "Subtype")
+	if err != nil {
+		return fmt.Errorf("SMask G obj#%d: Subtype: %w", objNr, err)
+	}
+	if subtype == nil || len(subtype.Value()) == 0 {
 		model.ShowSkipped(fmt.Sprintf("unclassifiable XObject SMask G obj#%d: missing Subtype", objNr))
 		return nil
 	}
 
-	if *subtype == "Image" {
+	if subtype.Value() == "Image" {
 		if err := optimizeXObjectImage(ctx, sd, rNamePrefix, "G", rDict, objNr, pageNr, pageObjNumber, pageImages); err != nil {
 			return fmt.Errorf("SMask G image: %w", err)
 		}
 	}
 
-	if *subtype == "Form" {
+	if subtype.Value() == "Form" {
 		if err := optimizeForm(ctx, sd, rNamePrefix, "G", rDict, objNr, pageNr, pageObjNumber, vis); err != nil {
 			return fmt.Errorf("SMask G form: %w", err)
 		}
@@ -803,19 +827,22 @@ func optimizeExtGStateResourcesDict(ctx *model.Context, rDict types.Dict, pageNr
 
 func optimizeXObjectResource(ctx *model.Context, sd *types.StreamDict, rDict types.Dict, rNamePrefix, rName string,
 	qualifiedRName string, objNr, pageNr, pageObjNumber int, pageImages types.IntSet, vis []types.Object) error {
-	subtype := sd.Subtype()
-	if subtype == nil || len(*subtype) == 0 {
+	subtype, _, err := ctx.DereferenceNameEntry(sd.Dict, "Subtype")
+	if err != nil {
+		return fmt.Errorf("XObject resource %s obj#%d: Subtype: %w", qualifiedRName, objNr, err)
+	}
+	if subtype == nil || len(subtype.Value()) == 0 {
 		model.ShowSkipped(fmt.Sprintf("unclassifiable XObject resource %s obj#%d: missing Subtype", qualifiedRName, objNr))
 		return nil
 	}
 
-	if *subtype == "Image" {
+	if subtype.Value() == "Image" {
 		if err := optimizeXObjectImage(ctx, sd, rNamePrefix, rName, rDict, objNr, pageNr, pageObjNumber, pageImages); err != nil {
 			return fmt.Errorf("XObject resource %s obj#%d: image: %w", qualifiedRName, objNr, err)
 		}
 	}
 
-	if *subtype == "Form" {
+	if subtype.Value() == "Form" {
 		// Get rid of PieceInfo dict from form XObjects.
 		if err := ctx.DeleteDictEntry(sd.Dict, "PieceInfo"); err != nil {
 			return fmt.Errorf("XObject resource %s obj#%d: delete PieceInfo: %w", qualifiedRName, objNr, err)
@@ -1023,7 +1050,11 @@ func parsePageTreeKid(ctx *model.Context, v types.Object, kidNr, pageNr int) (in
 		return 0, fmt.Errorf("kid %d obj#%d: dereference page node: %w", kidNr, ir.ObjectNumber.Value(), err)
 	}
 
-	if *d.Type() == "Pages" {
+	pageType, _, err := ctx.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return 0, fmt.Errorf("kid %d obj#%d: page node Type: %w", kidNr, ir.ObjectNumber.Value(), err)
+	}
+	if pageType.Value() == "Pages" {
 		pageNr, err = parsePagesDict(ctx, d, pageNr)
 		if err != nil {
 			return 0, fmt.Errorf("kid %d pages obj#%d: %w", kidNr, ir.ObjectNumber.Value(), err)
@@ -1658,13 +1689,8 @@ func CacheFormFonts(ctx *model.Context) error {
 
 		registerFontDictObjNr(ctx, fName, objNr)
 
-		ctx.Optimize.FormFontObjects[objNr] =
-			&model.FontObject{
-				ResourceNames: []string{rName},
-				Prefix:        prefix,
-				FontName:      fName,
-				FontDict:      fontDict,
-			}
+		fontObj := newFontObject(ctx, fontDict, rName, prefix, fName)
+		ctx.Optimize.FormFontObjects[objNr] = &fontObj
 	}
 
 	return nil

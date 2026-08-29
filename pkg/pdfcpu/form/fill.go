@@ -554,16 +554,12 @@ func fillRadioButtonGroup(
 		return nil
 	}
 
-	if locked {
-		if !lock {
-			unlockFormField(d)
-			*ok = true
-		}
-	} else {
-		if lock {
-			lockFormField(d)
-			*ok = true
-		}
+	changed, err := updateFieldLock(ctx.XRefTable, d, locked, lock)
+	if err != nil {
+		return err
+	}
+	if changed {
+		*ok = true
 	}
 
 	vNew := vv[0]
@@ -578,8 +574,12 @@ func fillRadioButtonGroup(
 	}
 
 	vOld := ""
-	if s := d.NameEntry("V"); s != nil {
-		n, err := types.DecodeName(*s)
+	n, _, err := ctx.DereferenceNameEntry(d, "V")
+	if err != nil {
+		return fmt.Errorf("radio button group %s: %w", id, err)
+	}
+	if n != nil {
+		n, err := types.DecodeName(n.Value())
 		if err != nil {
 			return err
 		}
@@ -628,25 +628,22 @@ func fillCheckBox(
 		return nil
 	}
 
-	if locked {
-		if !lock {
-			unlockFormField(d)
-			*ok = true
-		}
-	} else {
-		if lock {
-			lockFormField(d)
-			*ok = true
-		}
+	changed, err := updateFieldLock(ctx.XRefTable, d, locked, lock)
+	if err != nil {
+		return err
+	}
+	if changed {
+		*ok = true
 	}
 
 	s := strings.ToLower(vv[0])
 	vNew := strings.HasPrefix(s, "t") // true
 	vOld := false
-	if n, found, err := dictNameEntry(ctx.XRefTable, d, "V"); err != nil {
+	if n, _, err := ctx.DereferenceNameEntry(d, "V"); err != nil {
 		return fmt.Errorf("checkbox %s: %w", id, err)
-	} else if found {
-		vOld = len(n) > 0 && n != "Off"
+	} else if n != nil {
+		v := n.Value()
+		vOld = len(v) > 0 && v != "Off"
 	}
 	if vNew == vOld {
 		return nil
@@ -659,7 +656,6 @@ func fillCheckBox(
 
 	d["V"] = v
 	d1 := d
-	var err error
 
 	kids := d.ArrayEntry("Kids")
 	if len(kids) == 1 {
@@ -694,8 +690,11 @@ func fillBtn(
 	format DataFormat,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ok *bool) error {
-	ff := d.IntEntry("Ff")
-	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldPushbutton > 0 {
+	ff, _, err := ctx.XRefTable.DereferenceIntegerEntry(d, "Ff")
+	if err != nil {
+		return err
+	}
+	if ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldPushbutton > 0 {
 		return nil
 	}
 
@@ -732,36 +731,40 @@ func fillComboBox(
 		return nil
 	}
 
-	da := d.StringEntry("DA")
+	da, _, err := ctx.DereferenceStringEntry(d, "DA")
+	if err != nil {
+		return fmt.Errorf("entry DA: %w", err)
+	}
 
 	vNew := vv[0]
-	if locked {
-		if !lock {
-			unlockFormField(d)
+	changed, err := updateFieldLock(ctx.XRefTable, d, locked, lock)
+	if err != nil {
+		return err
+	}
+	if changed {
+		if lock {
+			if err := primitives.EnsureComboBoxAP(ctx, d, vNew, da, fonts); err != nil {
+				return fmt.Errorf("appearance: %w", err)
+			}
+		} else {
 			d.Delete("AP")
-			*ok = true
-		}
-	} else if lock {
-		lockFormField(d)
-		if err := primitives.EnsureComboBoxAP(ctx, d, vNew, da, fonts); err != nil {
-			return fmt.Errorf("appearance: %w", err)
 		}
 		*ok = true
 	}
 
 	vOld := ""
-	if sl := d.StringLiteralEntry("V"); sl != nil {
-		s, err := types.StringLiteralToString(*sl)
-		if err != nil {
-			return err
-		}
-		vOld = s
+	s, _, err := ctx.DereferenceStringEntry(d, "V")
+	if err != nil {
+		return fmt.Errorf("entry V: %w", err)
+	}
+	if s != nil {
+		vOld = *s
 	}
 	if vNew == vOld {
 		return nil
 	}
 
-	s, err := types.EscapedUTF16String(vNew)
+	s1, err := types.EscapedUTF16String(vNew)
 	if err != nil {
 		return err
 	}
@@ -775,7 +778,7 @@ func fillComboBox(
 	}
 	if len(ind) > 0 {
 		d["I"] = ind
-		d["V"] = types.StringLiteral(*s)
+		d["V"] = types.StringLiteral(*s1)
 	} else {
 		d.Delete("I")
 		d.Delete("V")
@@ -842,7 +845,7 @@ func fillListBox(
 	format DataFormat,
 	fonts map[string]types.IndirectRef,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
-	ff *int,
+	ff *types.Integer,
 	ok *bool) error {
 	vNew, lock, found := fillDetails(id, name, FTListBox, format)
 	if !found {
@@ -850,14 +853,14 @@ func fillListBox(
 	}
 
 	var vOld []string
-	multi := ff != nil && primitives.FieldFlags(*ff)&primitives.FieldMultiselect > 0
+	multi := ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldMultiselect > 0
 	if !multi {
-		if sl := d.StringLiteralEntry("V"); sl != nil {
-			s, err := types.StringLiteralToString(*sl)
-			if err != nil {
-				return err
-			}
-			vOld = []string{s}
+		s, _, err := ctx.DereferenceStringEntry(d, "V")
+		if err != nil {
+			return fmt.Errorf("entry V: %w", err)
+		}
+		if s != nil {
+			vOld = []string{*s}
 		}
 	} else {
 		ss, err := parseStringLiteralArray(ctx.XRefTable, d, "V")
@@ -867,17 +870,15 @@ func fillListBox(
 		vOld = ss
 	}
 
-	if locked {
-		if !lock {
-			unlockFormField(d)
-			*ok = true
-		}
-		return nil
+	changed, err := updateFieldLock(ctx.XRefTable, d, locked, lock)
+	if err != nil {
+		return err
 	}
-
-	if lock {
-		lockFormField(d)
+	if changed {
 		*ok = true
+	}
+	if locked {
+		return nil
 	}
 
 	if types.EqualSlices(vOld, vNew) {
@@ -889,7 +890,10 @@ func fillListBox(
 		return err
 	}
 
-	da := d.StringEntry("DA")
+	da, _, err := ctx.DereferenceStringEntry(d, "DA")
+	if err != nil {
+		return fmt.Errorf("entry DA: %w", err)
+	}
 
 	if err := primitives.EnsureListBoxAP(ctx, d, opts, ind, da, fonts); err != nil {
 		return fmt.Errorf("appearance: %w", err)
@@ -908,14 +912,14 @@ func fillCh(
 	format DataFormat,
 	fonts map[string]types.IndirectRef,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
-	ff *int,
+	ff *types.Integer,
 	ok *bool) error {
 	opts, err := parseOptions(ctx.XRefTable, d, OPTIONAL)
 	if err != nil {
 		return err
 	}
 
-	if ff != nil && primitives.FieldFlags(*ff)&primitives.FieldCombo > 0 {
+	if ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldCombo > 0 {
 		return fillComboBox(ctx, d, id, name, opts, locked, format, fonts, fillDetails, ok)
 	}
 
@@ -936,16 +940,12 @@ func fillDateField(
 		return nil
 	}
 
-	if locked {
-		if !lock {
-			unlockFormField(d)
-			*ok = true
-		}
-	} else {
-		if lock {
-			lockFormField(d)
-			*ok = true
-		}
+	changed, err := updateFieldLock(ctx.XRefTable, d, locked, lock)
+	if err != nil {
+		return err
+	}
+	if changed {
+		*ok = true
 	}
 
 	vNew := vv[0]
@@ -960,7 +960,10 @@ func fillDateField(
 	}
 	d["V"] = types.StringLiteral(*s)
 
-	da := d.StringEntry("DA")
+	da, _, err := ctx.DereferenceStringEntry(d, "DA")
+	if err != nil {
+		return fmt.Errorf("entry DA: %w", err)
+	}
 
 	kids := d.ArrayEntry("Kids")
 	if len(kids) > 0 {
@@ -997,24 +1000,18 @@ func fillTextField(
 	format DataFormat,
 	fonts map[string]types.IndirectRef,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
-	ff *int,
+	ff *types.Integer,
 	ok *bool) error {
 	vv, lock, found := fillDetails(id, name, FTText, format)
 	if !found {
 		return nil
 	}
 
-	if locked {
-		if !lock {
-			unlockFormField(d)
-			*ok = true
-		}
-	} else {
-		if lock {
-			lockFormField(d)
-			*ok = true
-		}
+	changed, err := updateFieldLock(ctx.XRefTable, d, locked, lock)
+	if err != nil {
+		return err
 	}
+	*ok = *ok || changed
 
 	vNew := vv[0]
 
@@ -1028,17 +1025,21 @@ func fillTextField(
 	}
 	d["V"] = types.StringLiteral(*s)
 
-	multiLine := ff != nil && uint(primitives.FieldFlags(*ff))&uint(primitives.FieldMultiline) > 0
-
-	comb := ff != nil && primitives.FieldFlags(*ff)&primitives.FieldComb > 0
+	multiLine, comb := textFieldFlags(ff)
 
 	maxLen := 0
-	i := d.IntEntry("MaxLen")
+	i, _, err := ctx.XRefTable.DereferenceIntegerEntry(d, "MaxLen")
+	if err != nil {
+		return err
+	}
 	if i != nil {
-		maxLen = *i
+		maxLen = i.Value()
 	}
 
-	da := d.StringEntry("DA")
+	da, _, err := ctx.DereferenceStringEntry(d, "DA")
+	if err != nil {
+		return fmt.Errorf("entry DA: %w", err)
+	}
 
 	kids := d.ArrayEntry("Kids")
 	if len(kids) > 0 {
@@ -1075,7 +1076,7 @@ func fillTx(
 	format DataFormat,
 	fonts map[string]types.IndirectRef,
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
-	ff *int,
+	ff *types.Integer,
 	ok *bool) error {
 	df, err := extractDateFormat(ctx.XRefTable, d)
 	if err != nil {
@@ -1092,6 +1093,28 @@ func fillTx(
 	}
 
 	return fillTextField(ctx, d, id, name, vOld, locked, format, fonts, fillDetails, ff, ok)
+}
+
+func fillField(
+	ctx *model.Context,
+	d types.Dict,
+	id, name, ft string,
+	locked bool,
+	format DataFormat,
+	fonts map[string]types.IndirectRef,
+	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
+	ff *types.Integer,
+	ok *bool,
+) error {
+	switch ft {
+	case "Btn":
+		return fillBtn(ctx, d, id, name, locked, format, fillDetails, ok)
+	case "Ch":
+		return fillCh(ctx, d, id, name, locked, format, fonts, fillDetails, ff, ok)
+	case "Tx":
+		return fillTx(ctx, d, id, name, locked, format, fonts, fillDetails, ff, ok)
+	}
+	return nil
 }
 
 func fillWidgetAnnots(
@@ -1131,32 +1154,23 @@ func fillWidgetAnnots(
 			continue
 		}
 
-		var locked bool
-		ff := d.IntEntry("Ff")
-		if ff != nil {
-			locked = uint(primitives.FieldFlags(*ff))&uint(primitives.FieldReadOnly) > 0
+		ff, locked, err := formFieldFlags(ctx.XRefTable, d)
+		if err != nil {
+			return fmt.Errorf("field %s: %w", id, err)
 		}
 
 		ft := fi.ft
 		if ft == nil {
-			ft = d.NameEntry("FT")
+			ft, _, err = ctx.DereferenceNameEntry(d, "FT")
+			if err != nil {
+				return fmt.Errorf("field %s: entry FT: %w", id, err)
+			}
 			if ft == nil {
 				return fmt.Errorf("corrupt form field %s: missing entry FT: %s", id, d)
 			}
 		}
 
-		switch *ft {
-		case "Btn":
-			err = fillBtn(ctx, d, id, name, locked, format, fillDetails, ok)
-
-		case "Ch":
-			err = fillCh(ctx, d, id, name, locked, format, fonts, fillDetails, ff, ok)
-
-		case "Tx":
-			err = fillTx(ctx, d, id, name, locked, format, fonts, fillDetails, ff, ok)
-		}
-
-		if err != nil {
+		if err = fillField(ctx, d, id, name, ft.Value(), locked, format, fonts, fillDetails, ff, ok); err != nil {
 			return fmt.Errorf("field %s: %w", id, err)
 		}
 	}

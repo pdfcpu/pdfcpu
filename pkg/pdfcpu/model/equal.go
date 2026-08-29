@@ -181,13 +181,35 @@ func equalFontNames(v1, v2 types.Object, xRefTable *XRefTable) (bool, error) {
 	return bf1 == bf2, nil
 }
 
+func fontDictPair(d1, d2 types.Dict, xRefTable *XRefTable) (bool, error) {
+	t1, _, err := xRefTable.DereferenceNameEntry(d1, "Type")
+	if err != nil {
+		return false, fmt.Errorf("first dict Type: %w", err)
+	}
+	t2, _, err := xRefTable.DereferenceNameEntry(d2, "Type")
+	if err != nil {
+		return false, fmt.Errorf("second dict Type: %w", err)
+	}
+
+	return t1 != nil && t1.Value() == "Font" && t2 != nil && t2.Value() == "Font", nil
+}
+
+func fontNameEntry(fontDicts bool, key string) bool {
+	if !fontDicts {
+		return false
+	}
+	return key == "BaseFont" || key == "FontName" || key == "Name"
+}
+
 func equalDicts(d1, d2 types.Dict, xRefTable *XRefTable, pairs []int) (bool, error) {
 	if d1.Len() != d2.Len() {
 		return false, nil
 	}
 
-	t1, t2 := d1.Type(), d2.Type()
-	fontDicts := (t1 != nil && *t1 == "Font") && (t2 != nil && *t2 == "Font")
+	fontDicts, err := fontDictPair(d1, d2, xRefTable)
+	if err != nil {
+		return false, err
+	}
 
 	for key, v1 := range d1 {
 
@@ -197,7 +219,7 @@ func equalDicts(d1, d2 types.Dict, xRefTable *XRefTable, pairs []int) (bool, err
 		}
 
 		// Special treatment for font dicts
-		if fontDicts && (key == "BaseFont" || key == "FontName" || key == "Name") {
+		if fontNameEntry(fontDicts, key) {
 			ok, err := equalFontNames(v1, v2, xRefTable)
 			if err != nil {
 				return false, err

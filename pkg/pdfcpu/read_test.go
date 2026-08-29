@@ -288,6 +288,12 @@ func TestParseTrailerClassifiesMissingEntries(t *testing.T) {
 			wantErr: errMissingTrailerSize,
 		},
 		{
+			name:    "indirect size",
+			table:   &model.XRefTable{},
+			d:       types.Dict{"Size": *types.NewIndirectRef(7, 0)},
+			wantErr: errCorruptTrailerDict,
+		},
+		{
 			name:    "missing root",
 			table:   &model.XRefTable{Size: intPtr(1)},
 			d:       types.Dict{},
@@ -321,6 +327,20 @@ func TestParseTrailerClassifiesMissingEntries(t *testing.T) {
 				t.Fatalf("got %v, want %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestOffsetPrevRejectsIndirectValue(t *testing.T) {
+	d := types.Dict{"Prev": *types.NewIndirectRef(7, 0)}
+	if _, err := offsetPrev(&model.Context{}, d, nil); !errors.Is(err, errCorruptTrailerDict) {
+		t.Fatalf("got %v, want %v", err, errCorruptTrailerDict)
+	}
+}
+
+func TestLinearizationMarkerRequiresDirectInteger(t *testing.T) {
+	d := types.Dict{"Linearized": *types.NewIndirectRef(7, 0)}
+	if d.IsLinearizationParmDict() {
+		t.Fatal("indirect Linearized value identified as a linearization parameter dictionary")
 	}
 }
 
@@ -419,6 +439,116 @@ func TestDereferencedTypedObjectClassification(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "object 8") {
 		t.Fatalf("expected object context, got %q", err.Error())
+	}
+}
+
+func TestBootstrapIntegerEntry(t *testing.T) {
+	compressed := model.NewXRefTableEntryGen0(types.Integer(11))
+	compressed.Compressed = true
+	ctx := &model.Context{XRefTable: &model.XRefTable{Table: map[int]*model.XRefTableEntry{
+		7: model.NewXRefTableEntryGen0(types.Integer(42)),
+		8: model.NewXRefTableEntryGen0(types.Name("wrong")),
+		9: compressed,
+	}}}
+
+	tests := []struct {
+		name     string
+		value    types.Object
+		want     int
+		wantText string
+	}{
+		{"direct", types.Integer(42), 42, ""},
+		{"indirect", *types.NewIndirectRef(7, 0), 42, ""},
+		{"missing target", *types.NewIndirectRef(6, 0), 0, "missing indirect target"},
+		{"wrong target type", *types.NewIndirectRef(8, 0), 0, "corrupt integer object"},
+		{"compressed target", *types.NewIndirectRef(9, 0), 0, "compressed during bootstrap"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := types.Dict{"Value": tt.value}
+			got, found, err := bootstrapIntegerEntry(context.Background(), ctx, d, "Value")
+			if tt.wantText != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantText) {
+					t.Fatalf("got %v, want error containing %q", err, tt.wantText)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !found || got == nil || got.Value() != tt.want {
+				t.Fatalf("got value=%v found=%t, want %d", got, found, tt.want)
+			}
+		})
+	}
+}
+
+func TestBootstrapIntegerEntryMaterializesUncompressedTarget(t *testing.T) {
+	pdf := []byte("7 0 obj\n42\nendobj\n")
+	ctx, err := model.NewContext(bytes.NewReader(pdf), model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	offset, generation := int64(0), 0
+	ctx.XRefTable.Table[7] = &model.XRefTableEntry{Offset: &offset, Generation: &generation}
+	d := types.Dict{"Value": *types.NewIndirectRef(7, 0)}
+
+	i, _, err := bootstrapIntegerEntry(context.Background(), ctx, d, "Value")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if i == nil || i.Value() != 42 {
+		t.Fatalf("got %v, want 42", i)
+	}
+	if ctx.XRefTable.Table[7].Object != types.Integer(42) {
+		t.Fatalf("target object was not materialized: %v", ctx.XRefTable.Table[7].Object)
+	}
+}
+
+func TestXRefStreamOffsetResolvesIndirectValue(t *testing.T) {
+	ctx := &model.Context{XRefTable: &model.XRefTable{Table: map[int]*model.XRefTableEntry{
+		7: model.NewXRefTableEntryGen0(types.Integer(128)),
+	}}}
+	indRef := *types.NewIndirectRef(7, 0)
+	d := types.Dict{"XRefStm": indRef}
+
+	offset, err := xrefStreamOffset(context.Background(), ctx, d, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if offset == nil || *offset != 128 {
+		t.Fatalf("offset = %v, want 128", offset)
+	}
+	if d["XRefStm"] != indRef {
+		t.Fatalf("XRefStm = %v, want original indirect reference", d["XRefStm"])
+	}
+}
+
+func TestObjectStreamBootstrapIntegers(t *testing.T) {
+	ctx := &model.Context{XRefTable: &model.XRefTable{Table: map[int]*model.XRefTableEntry{
+		7: model.NewXRefTableEntryGen0(types.Integer(2)),
+		8: model.NewXRefTableEntryGen0(types.Integer(10)),
+	}}}
+	sd := types.StreamDict{Dict: types.Dict{
+		"Type":  types.Name("ObjStm"),
+		"N":     *types.NewIndirectRef(7, 0),
+		"First": *types.NewIndirectRef(8, 0),
+	}}
+	n, _, err := bootstrapIntegerEntry(context.Background(), ctx, sd.Dict, "N")
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, _, err := bootstrapIntegerEntry(context.Background(), ctx, sd.Dict, "First")
+	if err != nil {
+		t.Fatal(err)
+	}
+	osd, err := model.ObjectStreamDictWithResolvedIntegers(&sd, model.DefaultResourceLimits(), n, first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if osd.ObjCount != 2 || osd.FirstObjOffset != 10 {
+		t.Fatalf("got N=%d First=%d, want N=2 First=10", osd.ObjCount, osd.FirstObjOffset)
 	}
 }
 
@@ -1077,7 +1207,7 @@ func TestFilterPipelineClassifiesCorruptFilterArray(t *testing.T) {
 		t.Fatalf("expected filter pipeline context, got %q", err.Error())
 	}
 
-	_, err = buildFilterPipeline(context.Background(), ctx, types.Array{types.Integer(1)}, nil)
+	_, err = filterNames(context.Background(), ctx, types.Array{types.Integer(1)})
 	if !errors.Is(err, errCorruptFilterArray) {
 		t.Fatalf("got %v, want %v", err, errCorruptFilterArray)
 	}
@@ -1105,7 +1235,7 @@ func TestFilterPipelineClassifiesCorruptDecodeParms(t *testing.T) {
 	_, err = buildFilterPipeline(
 		context.Background(),
 		ctx,
-		types.Array{types.Name(filter.Flate)},
+		[]string{filter.Flate},
 		types.Array{types.Integer(1)},
 	)
 	if !errors.Is(err, errCorruptDecodeParms) {

@@ -90,36 +90,39 @@ func repairSelfReferentialFontToUnicode(
 	model.ShowRepaired("self-referential font ToUnicode entry removed")
 }
 
-func validateFontFile3SubType(sd *types.StreamDict, fontType string, relaxed bool) error {
+func validateFontFile3SubType(xRefTable *model.XRefTable, sd *types.StreamDict, fontType string) error {
 	// Hint about used font program.
-	dictSubType := sd.Subtype()
-
-	if dictSubType == nil {
+	st, _, err := xRefTable.DereferenceNameEntry(sd.Dict, "Subtype")
+	if err != nil {
+		return fmt.Errorf("font file stream Subtype: %w", err)
+	}
+	if st == nil {
 		return errors.New("missing Subtype")
 	}
+	s := st.Value()
 
 	switch fontType {
 	case "Type1":
-		if *dictSubType != "Type1C" && *dictSubType != "OpenType" {
-			if !relaxed {
-				return fmt.Errorf("Type1: unexpected Subtype %s", *dictSubType)
+		if s != "Type1C" && s != "OpenType" {
+			if xRefTable.ValidationMode != model.ValidationRelaxed {
+				return fmt.Errorf("Type1: unexpected Subtype %s", s)
 			}
-			model.ShowSkipped(fmt.Sprintf("validateFontFile3SubType: Type1: unexpected Subtype %s", *dictSubType))
+			model.ShowSkipped(fmt.Sprintf("validateFontFile3SubType: Type1: unexpected Subtype %s", s))
 		}
 
 	case "MMType1":
-		if *dictSubType != "Type1C" {
-			return fmt.Errorf("MMType1: unexpected Subtype %s", *dictSubType)
+		if s != "Type1C" {
+			return fmt.Errorf("MMType1: unexpected Subtype %s", s)
 		}
 
 	case "CIDFontType0":
-		if *dictSubType != "CIDFontType0C" && *dictSubType != "OpenType" {
-			return fmt.Errorf("CIDFontType0: unexpected Subtype %s", *dictSubType)
+		if s != "CIDFontType0C" && s != "OpenType" {
+			return fmt.Errorf("CIDFontType0: unexpected Subtype %s", s)
 		}
 
 	case "CIDFontType2", "TrueType":
-		if *dictSubType != "OpenType" {
-			return fmt.Errorf("%s: unexpected Subtype %s", fontType, *dictSubType)
+		if s != "OpenType" {
+			return fmt.Errorf("%s: unexpected Subtype %s", fontType, s)
 		}
 	}
 
@@ -137,7 +140,7 @@ func validateFontFile(xRefTable *model.XRefTable, d types.Dict, dictName string,
 
 	// SubType
 	if entryName == "FontFile3" {
-		err = validateFontFile3SubType(sd, fontType, xRefTable.ValidationMode == model.ValidationRelaxed)
+		err = validateFontFile3SubType(xRefTable, sd, fontType)
 		if err != nil {
 			return model.WithValidationErrorObject(err, fontFileObjNr)
 		}
@@ -168,7 +171,10 @@ func validateFontFile(xRefTable *model.XRefTable, d types.Dict, dictName string,
 }
 
 func validateFontDescriptorType(xRefTable *model.XRefTable, d types.Dict) (err error) {
-	dictType := d.Type()
+	dictType, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return fmt.Errorf("font descriptor Type: %w", err)
+	}
 
 	if dictType == nil {
 
@@ -182,7 +188,7 @@ func validateFontDescriptorType(xRefTable *model.XRefTable, d types.Dict) (err e
 
 	}
 
-	if dictType != nil && *dictType != "FontDescriptor" && *dictType != "Font" {
+	if dictType != nil && dictType.Value() != "FontDescriptor" && dictType.Value() != "Font" {
 		return errors.New("corrupt font descriptor dict")
 	}
 
@@ -491,14 +497,20 @@ func validateFontDescriptor(xRefTable *model.XRefTable, d types.Dict, fontDictNa
 	return nil
 }
 
-func isZapfDingbatsFont(d types.Dict) bool {
-	subtype := d.NameEntry("Subtype")
-	if subtype == nil || *subtype != "Type1" {
-		return false
+func isZapfDingbatsFont(xRefTable *model.XRefTable, d types.Dict) (bool, error) {
+	subtype, _, err := xRefTable.DereferenceNameEntry(d, "Subtype")
+	if err != nil {
+		return false, err
+	}
+	if subtype == nil || subtype.Value() != "Type1" {
+		return false, nil
 	}
 
-	baseFont := d.NameEntry("BaseFont")
-	return baseFont != nil && *baseFont == "ZapfDingbats"
+	baseFont, _, err := xRefTable.DereferenceNameEntry(d, "BaseFont")
+	if err != nil {
+		return false, err
+	}
+	return baseFont != nil && baseFont.Value() == "ZapfDingbats", nil
 }
 
 func validateFontEncoding(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool) (err error) {
@@ -520,7 +532,11 @@ func validateFontEncoding(xRefTable *model.XRefTable, d types.Dict, dictName str
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		encodings = append(encodings,
 			"FontSpecific", "StandardEncoding", "SymbolEncoding", "SymbolSetEncoding", "PDFDocEncoding")
-		if isZapfDingbatsFont(d) {
+		zapfDingbats, err := isZapfDingbatsFont(xRefTable, d)
+		if err != nil {
+			return fmt.Errorf("%s: classify ZapfDingbats font: %w", dictName, err)
+		}
+		if zapfDingbats {
 			encodings = append(encodings, "ZapfDingbatsEncoding")
 		}
 	}
@@ -1172,7 +1188,10 @@ func _validateFontDict(xRefTable *model.XRefTable, d types.Dict, isIndRef bool, 
 	repairStringType1FontDict(xRefTable, d)
 	repairSelfReferentialFontToUnicode(xRefTable, d, isIndRef, indRef)
 
-	subtype := d.Subtype()
+	subtype, _, err := xRefTable.DereferenceNameEntry(d, "Subtype")
+	if err != nil {
+		return "", fmt.Errorf("font dict Subtype: %w", err)
+	}
 	if subtype == nil {
 		if isIndRef {
 			return "", errors.New("font: missing Subtype")
@@ -1180,7 +1199,7 @@ func _validateFontDict(xRefTable *model.XRefTable, d types.Dict, isIndRef bool, 
 		return "", errors.New("font dict: missing Subtype")
 	}
 
-	switch *subtype {
+	switch subtype.Value() {
 
 	case "TrueType":
 		fontName, err = validateTrueTypeFontDict(xRefTable, d)
@@ -1198,7 +1217,7 @@ func _validateFontDict(xRefTable *model.XRefTable, d types.Dict, isIndRef bool, 
 		err = validateType3FontDict(xRefTable, d)
 
 	default:
-		return "", fmt.Errorf("font dict: unknown Subtype %q", *subtype)
+		return "", fmt.Errorf("font dict: unknown Subtype %q", subtype.Value())
 
 	}
 
@@ -1209,7 +1228,7 @@ func _validateFontDict(xRefTable *model.XRefTable, d types.Dict, isIndRef bool, 
 	}
 
 	if err != nil {
-		return fontName, fmt.Errorf("font dict Subtype %s: %w", *subtype, err)
+		return fontName, fmt.Errorf("font dict Subtype %s: %w", subtype.Value(), err)
 	}
 	return fontName, nil
 }
@@ -1274,7 +1293,11 @@ func validateFontDict(xRefTable *model.XRefTable, isIndRef bool, indRef types.In
 	}
 	repairStringType1FontDict(xRefTable, d)
 
-	if d.Type() == nil || *d.Type() != "Font" {
+	typ, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return "", fmt.Errorf("font Type: %w", err)
+	}
+	if typ == nil || typ.Value() != "Font" {
 		if xRefTable.ValidationMode == model.ValidationStrict {
 			return "", errors.New("font: expected Type Font")
 		}
@@ -1322,8 +1345,8 @@ func isEncodingDict(xRefTable *model.XRefTable, o types.Object) bool {
 	if err != nil || d == nil {
 		return false
 	}
-	t := d.Type()
-	return t != nil && *t == "Encoding"
+	t, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+	return err == nil && t != nil && t.Value() == "Encoding"
 }
 
 func isMisplacedEncodingResourceDict(xRefTable *model.XRefTable, id string, o types.Object) bool {

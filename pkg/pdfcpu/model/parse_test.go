@@ -258,6 +258,18 @@ func TestParseXRefStreamDictRejectsSizeLimit(t *testing.T) {
 	}
 }
 
+func TestParseXRefStreamDictRequiresDirectSize(t *testing.T) {
+	sd := types.StreamDict{Dict: types.Dict{
+		"Size": *types.NewIndirectRef(7, 0),
+		"W":    types.Array{types.Integer(1), types.Integer(1), types.Integer(1)},
+	}}
+
+	_, err := ParseXRefStreamDictWithLimits(&sd, DefaultResourceLimits())
+	if err == nil || !strings.Contains(err.Error(), `"Size" not available`) {
+		t.Fatalf("got %v, want direct Size error", err)
+	}
+}
+
 // TestParseXRefStreamDictRepairsIndexSizeMismatch verifies relaxed parsing repairs
 // an undersized Size entry without weakening strict parsing or resource limits.
 func TestParseXRefStreamDictRepairsIndexSizeMismatch(t *testing.T) {
@@ -313,6 +325,29 @@ func TestObjectStreamDictRejectsLimits(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "First") {
 		t.Fatalf("got %v, want First limit error", err)
+	}
+}
+
+func TestObjectStreamDictWithResolvedIntegersPreservesIndirectEntries(t *testing.T) {
+	nRef := *types.NewIndirectRef(7, 0)
+	firstRef := *types.NewIndirectRef(8, 0)
+	sd := types.StreamDict{Dict: types.Dict{
+		"Type":  types.Name("ObjStm"),
+		"N":     nRef,
+		"First": firstRef,
+	}}
+	n := types.Integer(3)
+	first := types.Integer(12)
+
+	osd, err := ObjectStreamDictWithResolvedIntegers(&sd, DefaultResourceLimits(), &n, &first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if osd.ObjCount != 3 || osd.FirstObjOffset != 12 {
+		t.Fatalf("got N=%d First=%d, want N=3 First=12", osd.ObjCount, osd.FirstObjOffset)
+	}
+	if sd.Dict["N"] != nRef || sd.Dict["First"] != firstRef {
+		t.Fatalf("object stream dictionary was normalized in place: %v", sd.Dict)
 	}
 }
 

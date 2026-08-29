@@ -192,14 +192,24 @@ func validateNumberTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict,
 		return err
 	}
 
+	i, err := xRefTable.DereferenceInteger(a[0])
+	if err != nil {
+		err = fmt.Errorf("number tree Limits[0]: %w", err)
+		return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, a[0]))
+	}
 	fk := 0
-	if a[0] != nil {
-		fk = a[0].(types.Integer).Value()
+	if i != nil {
+		fk = i.Value()
 	}
 
+	i, err = xRefTable.DereferenceInteger(a[1])
+	if err != nil {
+		err = fmt.Errorf("number tree Limits[1]: %w", err)
+		return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, a[1]))
+	}
 	lk := 0
-	if a[1] != nil {
-		lk = a[1].(types.Integer).Value()
+	if i != nil {
+		lk = i.Value()
 	}
 
 	if firstKey < fk || lastKey > lk {

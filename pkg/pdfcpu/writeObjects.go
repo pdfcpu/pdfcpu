@@ -384,7 +384,13 @@ func sigDict(d types.Dict) bool {
 	return false
 }
 
-func sigDictPDFString(ctx *model.Context, d types.Dict, objNr, genNr int) string {
+func sigDictPDFString(ctx *model.Context, d types.Dict, objNr, genNr int) (string, error) {
+	for key, o := range d {
+		if _, ok := o.(types.IndirectRef); ok {
+			return "", fmt.Errorf("signature dict entry %s: value must be direct", key)
+		}
+	}
+
 	// worst case [0 0000000000 0000000000 0000000000]
 	byteRangePDFString := fmt.Sprintf("/ByteRange%-36v", d["ByteRange"].PDFString())
 	contentsPDFString := fmt.Sprintf("/Contents%s", d["Contents"].PDFString())
@@ -402,7 +408,11 @@ func sigDictPDFString(ctx *model.Context, d types.Dict, objNr, genNr int) string
 	s = append(s, fmt.Sprintf("/Filter%s", d["Filter"].PDFString()))
 	s = append(s, fmt.Sprintf("/SubFilter%s", d["SubFilter"].PDFString()))
 
-	if *d.NameEntry("SubFilter") != "ETSI.RFC3161" {
+	subFilter := d.NameEntry("SubFilter")
+	if subFilter == nil {
+		return "", fmt.Errorf("signature dict: missing or invalid direct SubFilter")
+	}
+	if *subFilter != "ETSI.RFC3161" {
 		if d["M"] != nil {
 			s = append(s, fmt.Sprintf("/M%s", d["M"].PDFString()))
 		}
@@ -426,7 +436,7 @@ func sigDictPDFString(ctx *model.Context, d types.Dict, objNr, genNr int) string
 	}
 
 	s = append(s, ">>")
-	return strings.Join(s, "")
+	return strings.Join(s, ""), nil
 }
 
 func writeDictObject(ctx *model.Context, objNr, genNr int, d types.Dict) error {
@@ -448,7 +458,10 @@ func writeDictObject(ctx *model.Context, objNr, genNr int, d types.Dict) error {
 
 	s := d.PDFString()
 	if sigDict(d) {
-		s = sigDictPDFString(ctx, d, objNr, genNr)
+		s, err = sigDictPDFString(ctx, d, objNr, genNr)
+		if err != nil {
+			return err
+		}
 	}
 
 	return writeObject(ctx, objNr, genNr, s)
@@ -654,7 +667,11 @@ func writeNullObject(ctx *model.Context, objNumber, genNumber int) error {
 }
 
 func writeDeepDict(ctx *model.Context, d types.Dict, objNr, genNr int) error {
-	if d.IsPage() {
+	dictType, _, err := ctx.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return fmt.Errorf("write dict obj#%d gen#%d Type: %w", objNr, genNr, err)
+	}
+	if dictType != nil && dictType.Value() == "Page" {
 		valid, err := ctx.IsObjValid(objNr, genNr)
 		if err != nil {
 			return fmt.Errorf("write page dict obj#%d gen#%d: check valid: %w", objNr, genNr, err)

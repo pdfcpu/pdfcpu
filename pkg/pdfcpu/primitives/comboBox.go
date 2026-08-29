@@ -729,8 +729,12 @@ func NewComboBox(
 	}
 
 	cb.HorAlign = types.AlignLeft
-	if q := d.IntEntry("Q"); q != nil {
-		cb.HorAlign = types.HAlignment(*q)
+	q, _, err := ctx.XRefTable.DereferenceIntegerEntry(d, "Q")
+	if err != nil {
+		return nil, nil, err
+	}
+	if q != nil {
+		cb.HorAlign = types.HAlignment(q.Value())
 	}
 
 	bgCol, boCol, err := calcColsFromMK(ctx, d)
@@ -740,7 +744,10 @@ func NewComboBox(
 	cb.BgCol = bgCol
 
 	var b Border
-	boWidth := calcBorderWidth(d)
+	boWidth, err := calcBorderWidth(ctx, d)
+	if err != nil {
+		return nil, nil, err
+	}
 	if boWidth > 0 {
 		b.Width = boWidth
 		b.col = boCol

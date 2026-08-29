@@ -228,15 +228,22 @@ func (tf *TextField) validate() error {
 	return tf.validateTab()
 }
 
-func locateDA(ctx *model.Context, d types.Dict, inhDA *string) *string {
-	s := d.StringEntry("DA")
+func locateDA(ctx *model.Context, d types.Dict, inhDA *string) (*string, error) {
+	s, _, err := ctx.DereferenceStringEntry(d, "DA")
+	if err != nil {
+		return nil, fmt.Errorf("field entry DA: %w", err)
+	}
 	if s != nil {
-		return s
+		return s, nil
 	}
 	if inhDA != nil {
-		return inhDA
+		return inhDA, nil
 	}
-	return ctx.Form.StringEntry("DA")
+	s, _, err = ctx.DereferenceStringEntry(ctx.Form, "DA")
+	if err != nil {
+		return nil, fmt.Errorf("form entry DA: %w", err)
+	}
+	return s, nil
 }
 
 func (tf *TextField) calcFontFromDA(ctx *model.Context, d types.Dict, da *string, needUTF8 bool, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
@@ -902,41 +909,69 @@ func (tf *TextField) render(p *model.Page, pageNr int, fonts model.FontMap) erro
 	return tf.doRender(p, fonts)
 }
 
-func calcColsFromMK(ctx *model.Context, d types.Dict) (*color.SimpleColor, *color.SimpleColor, error) {
-	var bgCol, boCol *color.SimpleColor
+func calcMKColor(ctx *model.Context, d types.Dict, key string) (*color.SimpleColor, error) {
+	o, found := d.Find(key)
+	if !found {
+		return nil, nil
+	}
+	a, err := ctx.DereferenceArray(o)
+	if err != nil {
+		return nil, fmt.Errorf("widget MK.%s: %w", key, err)
+	}
+	if len(a) != 3 {
+		return nil, nil
+	}
 
+	var rgb [3]float64
+	for i, o := range a {
+		rgb[i], err = ctx.DereferenceNumber(o)
+		if err != nil {
+			return nil, fmt.Errorf("widget MK.%s[%d]: %w", key, i, err)
+		}
+	}
+
+	return &color.SimpleColor{R: float32(rgb[0]), G: float32(rgb[1]), B: float32(rgb[2])}, nil
+}
+
+func calcColsFromMK(ctx *model.Context, d types.Dict) (*color.SimpleColor, *color.SimpleColor, error) {
 	if o, found := d.Find("MK"); found {
 		d1, err := ctx.DereferenceDict(o)
 		if err != nil {
 			return nil, nil, err
 		}
 		if len(d1) > 0 {
-			if arr := d1.ArrayEntry("BG"); len(arr) == 3 {
-				sc := color.NewSimpleColorForArray(arr)
-				bgCol = &sc
+			bgCol, err := calcMKColor(ctx, d1, "BG")
+			if err != nil {
+				return nil, nil, err
 			}
-			if arr := d1.ArrayEntry("BC"); len(arr) == 3 {
-				sc := color.NewSimpleColorForArray(arr)
-				boCol = &sc
+			boCol, err := calcMKColor(ctx, d1, "BC")
+			if err != nil {
+				return nil, nil, err
 			}
+			return bgCol, boCol, nil
 		}
 	}
 
-	return bgCol, boCol, nil
+	return nil, nil, nil
 }
 
-func calcBorderWidth(d types.Dict) int {
-	w := 0
-	if arr := d.ArrayEntry("Border"); len(arr) == 3 {
-		// 0, 1 ??
-		bw, ok := arr[2].(types.Integer)
-		if ok {
-			w = bw.Value()
-		} else {
-			w = int(arr[2].(types.Float).Value())
-		}
+func calcBorderWidth(ctx *model.Context, d types.Dict) (int, error) {
+	o, found := d.Find("Border")
+	if !found {
+		return 0, nil
 	}
-	return w
+	a, err := ctx.DereferenceArray(o)
+	if err != nil {
+		return 0, fmt.Errorf("widget Border: %w", err)
+	}
+	if len(a) != 3 {
+		return 0, nil
+	}
+	width, err := ctx.DereferenceNumber(a[2])
+	if err != nil {
+		return 0, fmt.Errorf("widget Border[2]: %w", err)
+	}
+	return int(width), nil
 }
 
 func hasUTF(s string) bool {
@@ -962,9 +997,12 @@ func NewTextField(
 
 	tf := &TextField{Value: v, Multiline: multiLine, Comb: comb}
 
-	i := d.IntEntry("MaxLen") // Inheritable!
+	i, _, err := ctx.XRefTable.DereferenceIntegerEntry(d, "MaxLen") // Inheritable!
+	if err != nil {
+		return nil, nil, err
+	}
 	if i != nil {
-		maxLen = *i
+		maxLen = i.Value()
 	}
 	tf.MaxLen = maxLen
 
@@ -984,8 +1022,12 @@ func NewTextField(
 	}
 
 	tf.HorAlign = types.AlignLeft
-	if q := d.IntEntry("Q"); q != nil {
-		tf.HorAlign = types.HAlignment(*q)
+	q, _, err := ctx.XRefTable.DereferenceIntegerEntry(d, "Q")
+	if err != nil {
+		return nil, nil, err
+	}
+	if q != nil {
+		tf.HorAlign = types.HAlignment(q.Value())
 	}
 
 	bgCol, boCol, err := calcColsFromMK(ctx, d)
@@ -995,7 +1037,10 @@ func NewTextField(
 	tf.BgCol = bgCol
 
 	var b Border
-	boWidth := calcBorderWidth(d)
+	boWidth, err := calcBorderWidth(ctx, d)
+	if err != nil {
+		return nil, nil, err
+	}
 	if boWidth > 0 {
 		b.Width = boWidth
 		b.col = boCol
@@ -1108,16 +1153,15 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine,
 	if err != nil {
 		return err
 	}
-	if d1 == nil {
-		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, da, fonts)
-	}
-
 	fd := d1.DictEntry("Font")
 	if fd == nil {
 		return renderTextFieldAP(ctx, d, text, multiLine, comb, maxLen, da, fonts)
 	}
 
-	s := locateDA(ctx, d, da)
+	s, err := locateDA(ctx, d, da)
+	if err != nil {
+		return err
+	}
 	if s == nil {
 		return errors.New("textfield missing \"DA\"")
 	}

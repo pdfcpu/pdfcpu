@@ -161,8 +161,11 @@ func migrateAnnots(
 		if done {
 			continue
 		}
-		subtype := d.Subtype()
-		isWidget := subtype != nil && *subtype == "Widget"
+		subtype, _, err := ctxSrc.DereferenceNameEntry(d, "Subtype")
+		if err != nil {
+			return nil, fmt.Errorf("annotation entry %d Subtype: %w", i, err)
+		}
+		isWidget := subtype != nil && subtype.Value() == "Widget"
 		if isWidget && sourceIndRef != nil {
 			selection.addWidget(*sourceIndRef)
 		}

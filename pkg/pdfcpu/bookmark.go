@@ -144,6 +144,22 @@ func outlineItemTitle(s string) string {
 }
 
 func destArray(ctx *model.Context, dest types.Object) (types.Array, error) {
+	objNr := 0
+	if ir, ok := dest.(types.IndirectRef); ok {
+		objNr = ir.ObjectNumber.Value()
+		entry, found := ctx.FindTableEntryForIndRef(&ir)
+		if !found || entry == nil || entry.Free {
+			err := fmt.Errorf("destination obj#%d: missing indirect target", objNr)
+			return nil, model.WithValidationErrorObject(err, objNr)
+		}
+	}
+
+	var err error
+	dest, err = ctx.Dereference(dest)
+	if err != nil {
+		return nil, model.WithValidationErrorObject(fmt.Errorf("destination: dereference: %w", err), objNr)
+	}
+
 	switch dest := dest.(type) {
 	case types.Name:
 		return ctx.DereferenceDestArray(dest.Value())
@@ -162,7 +178,8 @@ func destArray(ctx *model.Context, dest types.Object) (types.Array, error) {
 	case types.Array:
 		return dest, nil
 	}
-	return nil, fmt.Errorf("unable to resolve destination array %v", dest)
+	err = fmt.Errorf("unable to resolve destination array %v", dest)
+	return nil, model.WithValidationErrorObject(err, objNr)
 }
 
 // PageNrFromDestination returns the page number of a destination.
@@ -187,6 +204,13 @@ func PageNrFromDestination(ctx *model.Context, dest types.Object) (int, error) {
 	}
 
 	if ir, ok := arr[0].(types.IndirectRef); ok {
+		o, err := ctx.Dereference(ir)
+		if err != nil {
+			return 0, fmt.Errorf("resolve destination page reference: %w", err)
+		}
+		if i, ok := o.(types.Integer); ok {
+			return i.Value(), nil
+		}
 		return ctx.PageNumber(ir.ObjectNumber.Value())
 	}
 
@@ -210,7 +234,7 @@ func title(ctx *model.Context, d types.Dict) (string, error) {
 	return outlineItemTitle(s), nil
 }
 
-func bookmark(d types.Dict, title string, pageFrom int, parent *Bookmark) Bookmark {
+func bookmark(ctx *model.Context, d types.Dict, title string, pageFrom int, parent *Bookmark) (Bookmark, error) {
 	bm := Bookmark{
 		Title:    title,
 		PageFrom: pageFrom,
@@ -219,17 +243,46 @@ func bookmark(d types.Dict, title string, pageFrom int, parent *Bookmark) Bookma
 		Italic:   false,
 	}
 
-	if arr := d.ArrayEntry("C"); len(arr) == 3 {
-		col := color.NewSimpleColorForArray(arr)
-		bm.Color = &col
+	if o, found := d.Find("C"); found {
+		a, err := ctx.DereferenceArray(o)
+		if err != nil {
+			return bm, fmt.Errorf("bookmark entry C: %w", err)
+		}
+		if len(a) != 3 {
+			return bm, fmt.Errorf("bookmark entry C: expected 3 elements, got %d", len(a))
+		}
+		var rgb [3]float64
+		for i, o := range a {
+			rgb[i], err = ctx.DereferenceNumber(o)
+			if err != nil {
+				return bm, fmt.Errorf("bookmark entry C[%d]: %w", i, err)
+			}
+		}
+		bm.Color = &color.SimpleColor{R: float32(rgb[0]), G: float32(rgb[1]), B: float32(rgb[2])}
 	}
 
-	if f := d.IntEntry("F"); f != nil {
-		bm.Bold = *f&0x02 > 0
-		bm.Italic = *f&0x01 > 0
+	f, _, err := ctx.DereferenceIntegerEntry(d, "F")
+	if err != nil {
+		return bm, fmt.Errorf("bookmark entry F: %w", err)
+	}
+	if f != nil {
+		bm.Bold = f.Value()&0x02 > 0
+		bm.Italic = f.Value()&0x01 > 0
 	}
 
-	return bm
+	return bm, nil
+}
+
+func updateBookmarkPageThru(bms []Bookmark, pageFrom int) {
+	if len(bms) == 0 {
+		return
+	}
+
+	pageThru := bms[len(bms)-1].PageFrom
+	if pageFrom > pageThru {
+		pageThru = pageFrom - 1
+	}
+	bms[len(bms)-1].PageThru = pageThru
 }
 
 func checkBookmarkRecursionDepth(ctx *model.Context, name string, depth int) error {
@@ -306,15 +359,12 @@ func bookmarksForOutlineItem(ctx *model.Context, item *types.IndirectRef, parent
 			return nil, fmt.Errorf("outline item %s destination page: %w", *ir, err)
 		}
 
-		if len(bms) > 0 {
-			if pageFrom > bms[len(bms)-1].PageFrom {
-				bms[len(bms)-1].PageThru = pageFrom - 1
-			} else {
-				bms[len(bms)-1].PageThru = bms[len(bms)-1].PageFrom
-			}
-		}
+		updateBookmarkPageThru(bms, pageFrom)
 
-		bm := bookmark(d, title, pageFrom, parent)
+		bm, err := bookmark(ctx, d, title, pageFrom, parent)
+		if err != nil {
+			return nil, fmt.Errorf("outline item %s flags: %w", *ir, err)
+		}
 
 		first := d["First"]
 		if first != nil {
@@ -357,8 +407,11 @@ func outlineItemDestination(ctx *model.Context, d types.Dict) (types.Object, boo
 		return nil, false, nil
 	}
 
-	actType := actionDict["S"]
-	if actType == nil || actType.String() != "GoTo" {
+	actType, _, err := ctx.DereferenceNameEntry(actionDict, "S")
+	if err != nil {
+		return nil, false, fmt.Errorf("action S: %w", err)
+	}
+	if actType == nil || actType.Value() != "GoTo" {
 		return nil, false, nil
 	}
 

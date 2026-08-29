@@ -333,24 +333,59 @@ func validatePageEntryDur(xRefTable *model.XRefTable, d types.Dict, ownerObjNr i
 	return err
 }
 
-func validateTransitionDictEntryDi(d types.Dict) error {
+func validateTransitionDictEntryDi(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
 	o, found := d.Find("Di")
 	if !found {
 		return nil
 	}
 
+	objNr := validationObjectNumber(ownerObjNr, o)
+	if ir, ok := o.(types.IndirectRef); ok {
+		entry, found := xRefTable.FindTableEntryForIndRef(&ir)
+		if !found || entry == nil || entry.Free {
+			err := errors.New("transition dict: entry Di missing indirect target")
+			return model.WithValidationErrorObject(err, objNr)
+		}
+	}
+	o, err := xRefTable.Dereference(o)
+	if err != nil {
+		return model.WithValidationErrorObject(err, objNr)
+	}
+	if o == nil {
+		return nil
+	}
+
+	validNumber := func(f float64) bool {
+		switch f {
+		case 0, 90, 180, 270, 315:
+			return true
+		}
+		return false
+	}
+
 	switch o := o.(type) {
 
 	case types.Integer:
-		validate := func(i int) bool { return types.IntMemberOf(i, []int{0, 90, 180, 270, 315}) }
-		if !validate(o.Value()) {
-			return errors.New("transition dict: entry Di int value undefined")
+		if !validNumber(float64(o.Value())) {
+			err := errors.New("transition dict: entry Di number value undefined")
+			return model.WithValidationErrorObject(err, objNr)
+		}
+
+	case types.Float:
+		if !validNumber(o.Value()) {
+			err := errors.New("transition dict: entry Di number value undefined")
+			return model.WithValidationErrorObject(err, objNr)
 		}
 
 	case types.Name:
 		if o.Value() != "None" {
-			return errors.New("transition dict: entry Di name value undefined")
+			err := errors.New("transition dict: entry Di name value undefined")
+			return model.WithValidationErrorObject(err, objNr)
 		}
+
+	default:
+		err := fmt.Errorf("transition dict: entry Di invalid type %T", o)
+		return model.WithValidationErrorObject(err, objNr)
 	}
 
 	return nil
@@ -370,42 +405,37 @@ func validateTransitionDictEntryM(xRefTable *model.XRefTable, d types.Dict, owne
 	return err
 }
 
-func repairTransitionStyle(xRefTable *model.XRefTable, d types.Dict) {
+func repairTransitionStyle(xRefTable *model.XRefTable, d types.Dict) error {
 	if xRefTable.ValidationMode != model.ValidationRelaxed {
-		return
+		return nil
 	}
 
-	s := d.NameEntry("S")
-	if s == nil || *s != "Replace" {
-		return
+	s, _, err := xRefTable.DereferenceNameEntry(d, "S")
+	if err != nil {
+		return err
+	}
+	if s == nil || s.Value() != "Replace" {
+		return nil
 	}
 
 	d.Update("S", types.Name("R"))
 	model.ShowRepaired("transition style Replace converted to R")
+	return nil
 }
 
 func validateTransitionDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
 	dictName := "transitionDict"
-	repairTransitionStyle(xRefTable, d)
+	if err := repairTransitionStyle(xRefTable, d); err != nil {
+		return fmt.Errorf("%s.S: %w", dictName, err)
+	}
 
 	// S, name, optional
 
-	validateTransitionStyle := func(s string) bool {
-		return types.MemberOf(s, []string{"Split", "Blinds", "Box", "Wipe", "Dissolve", "Glitter", "R"})
-	}
-
-	validate := validateTransitionStyle
-
+	styles := []string{"Split", "Blinds", "Box", "Wipe", "Dissolve", "Glitter", "R"}
 	if xRefTable.Version() >= model.V15 {
-		validate = func(s string) bool {
-
-			if validateTransitionStyle(s) {
-				return true
-			}
-
-			return types.MemberOf(s, []string{"Fly", "Push", "Cover", "Uncover", "Fade"})
-		}
+		styles = append(styles, "Fly", "Push", "Cover", "Uncover", "Fade")
 	}
+	validate := func(s string) bool { return types.MemberOf(s, styles) }
 	transStyle, err := validateNameEntry(xRefTable, d, ownerObjNr, dictName, "S", OPTIONAL, model.V10, validate)
 	if err != nil {
 		return err
@@ -435,9 +465,9 @@ func validateTransitionDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr
 	}
 
 	// Di, optional, number or name
-	err = validateTransitionDictEntryDi(d)
+	err = validateTransitionDictEntryDi(xRefTable, d, ownerObjNr)
 	if err != nil {
-		return model.WithValidationErrorObject(err, ownerObjNr)
+		return err
 	}
 
 	// SS, optional, number, since V1.5
@@ -1173,19 +1203,23 @@ func validatePagesDictGeneralEntries(xRefTable *model.XRefTable, d types.Dict, o
 	return hasResources, mediaBoxArr, nil
 }
 
-func dictTypeForPageNodeDict(d types.Dict, objNr int) (string, error) {
+func dictTypeForPageNodeDict(xRefTable *model.XRefTable, d types.Dict, objNr int) (string, error) {
 	if d == nil {
 		err := errors.New("page tree: node is null")
 		return "", model.WithValidationErrorObject(err, objNr)
 	}
 
-	dictType := d.Type()
+	dictType, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		err = fmt.Errorf("page tree: node Type: %w", err)
+		return "", model.WithValidationErrorObject(err, objNr)
+	}
 	if dictType == nil {
 		err := errors.New("page tree: node missing Type")
 		return "", model.WithValidationErrorObject(err, objNr)
 	}
 
-	return *dictType, nil
+	return dictType.Value(), nil
 }
 
 func validateResources(xRefTable *model.XRefTable, d types.Dict) (hasResources bool, err error) {
@@ -1346,7 +1380,7 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr 
 			return nil, err
 		}
 
-		dictType, err := dictTypeForPageNodeDict(pageNodeDict, objNr)
+		dictType, err := dictTypeForPageNodeDict(xRefTable, pageNodeDict, objNr)
 		if err != nil {
 			return nil, err
 		}

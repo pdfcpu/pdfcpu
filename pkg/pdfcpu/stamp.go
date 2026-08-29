@@ -679,20 +679,25 @@ func setWatermarkType(mode int, s string, wm *model.Watermark) (err error) {
 	return err
 }
 
-func appearanceState(d, normalAppearanceDict types.Dict) string {
-	if as := d.NameEntry("AS"); as != nil {
-		if _, found := normalAppearanceDict.Find(*as); found {
-			return *as
+func appearanceState(xRefTable *model.XRefTable, d, normalAppearanceDict types.Dict) (string, error) {
+	as, _, err := xRefTable.DereferenceNameEntry(d, "AS")
+	if err != nil {
+		return "", fmt.Errorf("annotation entry AS: %w", err)
+	}
+	if as != nil {
+		name := as.Value()
+		if _, found := normalAppearanceDict.Find(name); found {
+			return name, nil
 		}
 	}
 
 	for k := range normalAppearanceDict {
 		if k != "Off" {
-			return k
+			return k, nil
 		}
 	}
 
-	return "Off"
+	return "Off", nil
 }
 
 func normalAppearanceObject(xRefTable *model.XRefTable, d types.Dict) (types.Object, bool, error) {
@@ -722,7 +727,11 @@ func normalAppearanceObject(xRefTable *model.XRefTable, d types.Dict) (types.Obj
 		return o, ok, nil
 	}
 
-	o, found = normalAppearanceDict.Find(appearanceState(d, normalAppearanceDict))
+	state, err := appearanceState(xRefTable, d, normalAppearanceDict)
+	if err != nil {
+		return nil, false, err
+	}
+	o, found = normalAppearanceDict.Find(state)
 	return o, found, nil
 }
 
@@ -2674,17 +2683,20 @@ func detectPageTreeChildWatermarks(ctx *model.Context, o types.Object, pos int) 
 	if d == nil {
 		return fmt.Errorf("page tree child %d obj#%d: missing dictionary", pos, ir.ObjectNumber.Value())
 	}
-	typ := d.Type()
+	typ, _, err := ctx.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return fmt.Errorf("page tree child %d obj#%d: Type: %w", pos, ir.ObjectNumber.Value(), err)
+	}
 	if typ == nil {
 		return nil
 	}
-	if *typ == "Pages" {
+	if typ.Value() == "Pages" {
 		if err := detectPageTreeWatermarks(ctx, &ir); err != nil {
 			return fmt.Errorf("page tree child %d obj#%d: nested pages: %w", pos, ir.ObjectNumber.Value(), err)
 		}
 		return nil
 	}
-	if *typ != "Page" {
+	if typ.Value() != "Page" {
 		return nil
 	}
 	found, err := findPageWatermarks(ctx, &ir)
@@ -2766,28 +2778,18 @@ func isWatermarkOCG(ctx *model.Context, o types.Object, pos int) (bool, error) {
 	if d == nil {
 		return false, nil
 	}
-	o, found := d.Find("Type")
-	if !found {
-		return false, nil
-	}
-	n, err := ctx.Dereference(o)
+	typ, _, err := ctx.DereferenceNameEntry(d, "Type")
 	if err != nil {
 		return false, fmt.Errorf("optional content group %d: type: %w", pos, err)
 	}
-	typ, ok := n.(types.Name)
-	if !ok || typ != "OCG" {
+	if typ == nil || typ.Value() != "OCG" {
 		return false, nil
 	}
-	o, found = d.Find("Name")
-	if !found {
-		return false, nil
-	}
-	n, err = ctx.Dereference(o)
+	name, _, err := ctx.DereferenceStringEntry(d, "Name")
 	if err != nil {
 		return false, fmt.Errorf("optional content group %d: name: %w", pos, err)
 	}
-	name, ok := n.(types.StringLiteral)
-	return ok && (name == "Background" || name == "Watermark"), nil
+	return name != nil && (*name == "Background" || *name == "Watermark"), nil
 }
 
 func containsWatermarkOCG(ctx *model.Context, a types.Array) (bool, error) {

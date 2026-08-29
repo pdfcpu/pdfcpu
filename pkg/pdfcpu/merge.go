@@ -26,6 +26,18 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+func outlineCount(ctx *model.Context, d types.Dict, context string) (int, error) {
+	i, _, err := ctx.DereferenceIntegerEntry(d, "Count")
+	if err != nil {
+		return 0, fmt.Errorf("%s Count: %w", context, err)
+	}
+	if i == nil {
+		return 0, nil
+	}
+
+	return i.Value(), nil
+}
+
 func newOutlinesDict(ctx *model.Context, fName string) (types.Dict, *types.IndirectRef, *types.IndirectRef, error) {
 	if ctx == nil {
 		return nil, nil, nil, errors.New("ensure outlines: missing context")
@@ -63,7 +75,10 @@ func foldExistingOutlines(ctx *model.Context, rootDict types.Dict, first *types.
 		if d == nil {
 			return errors.New("ensure outlines: missing existing outlines dict")
 		}
-		count := d.IntEntry("Count")
+		count, err := outlineCount(ctx, d, "ensure outlines")
+		if err != nil {
+			return err
+		}
 		c := 0
 		f, l := d.IndirectRefEntry("First"), d.IndirectRefEntry("Last")
 		if f == nil || l == nil {
@@ -90,8 +105,8 @@ func foldExistingOutlines(ctx *model.Context, rootDict types.Dict, first *types.
 
 		d["First"] = *f
 		d["Last"] = *l
-		if count != nil && *count != 0 {
-			c = *count
+		if count != 0 {
+			c = count
 		}
 		d["Count"] = types.Integer(-c)
 	}
@@ -149,7 +164,11 @@ func mergeOutlinesWrapped(fName string, p int, ctxSrc, ctxDest *model.Context) e
 		return nil
 	}
 
-	topCount := outlineTopCount(outlinesDict) + 1
+	topCount, err := outlineCount(ctxDest, outlinesDict, "merge destination outlines")
+	if err != nil {
+		return err
+	}
+	topCount++
 
 	rootDictSource, err := ctxSrc.Catalog()
 	if err != nil {
@@ -202,8 +221,12 @@ func attachWrappedSourceOutlines(ctxDest *model.Context, rootDictSource, wrapper
 		}
 
 		d["Parent"] = *first
-		if i := d.IntEntry("Count"); i != nil && *i > 0 {
-			c += *i
+		itemCount, err := outlineCount(ctxDest, d, "merge source outline item")
+		if err != nil {
+			return 0, err
+		}
+		if itemCount > 0 {
+			c += itemCount
 		}
 		c++
 	}
@@ -233,14 +256,6 @@ func destOutlines(ctxDest *model.Context) (*types.IndirectRef, types.Dict, *type
 	}
 
 	return indRef, outlinesDict, outlinesDict.IndirectRefEntry("Last"), nil
-}
-
-func outlineTopCount(outlinesDict types.Dict) int {
-	count := outlinesDict.IntEntry("Count")
-	if count == nil {
-		return 0
-	}
-	return *count
 }
 
 func appendOutlineWrapper(ctxDest *model.Context, outlinesDict types.Dict, indRef, oldLast *types.IndirectRef, fName string, p int) (*types.IndirectRef, types.Dict, error) {
@@ -352,12 +367,12 @@ func sourceOutlines(ctxSrc, ctxDest *model.Context) (*types.IndirectRef, *types.
 		return nil, nil, 0, nil
 	}
 
-	count := d.IntEntry("Count")
-	if count != nil {
-		return first, last, *count, nil
+	count, err := outlineCount(ctxDest, d, "source outlines")
+	if err != nil {
+		return nil, nil, 0, err
 	}
 
-	return first, last, 0, nil
+	return first, last, count, nil
 }
 
 func reparentOutlineItems(ctx *model.Context, first, parent *types.IndirectRef) (int, error) {
@@ -379,8 +394,12 @@ func reparentOutlineItems(ctx *model.Context, first, parent *types.IndirectRef) 
 		}
 		d["Parent"] = *parent
 
-		if i := d.IntEntry("Count"); i != nil && *i > 0 {
-			count += *i
+		itemCount, err := outlineCount(ctx, d, "reparent outline item")
+		if err != nil {
+			return 0, err
+		}
+		if itemCount > 0 {
+			count += itemCount
 		}
 		count++
 		ir = d.IndirectRefEntry("Next")
@@ -432,9 +451,11 @@ func mergeOutlinesPreserve(ctxSrc, ctxDest *model.Context) error {
 	}
 
 	outlinesDict["Last"] = *last
-	if c := outlinesDict.IntEntry("Count"); c != nil {
-		count += *c
+	destCount, err := outlineCount(ctxDest, outlinesDict, "destination outlines")
+	if err != nil {
+		return err
 	}
+	count += destCount
 	outlinesDict["Count"] = types.Integer(count)
 
 	return nil
@@ -504,15 +525,21 @@ func handleDR(ctxSrc *model.Context, dSrc, dDest types.Dict) error {
 	return nil
 }
 
-func handleDA(ctxSrc *model.Context, dSrc, dDest types.Dict, arrFieldsSrc types.Array) error {
+func handleDA(ctxSrc, ctxDest *model.Context, dSrc, dDest types.Dict, arrFieldsSrc types.Array) error {
 	// (for each with field type  /FT /Tx w/o DA, set DA to default DA)
 	// TODO Walk field tree and inspect terminal fields.
 
-	sSrc := dSrc.StringEntry("DA")
+	sSrc, _, err := ctxSrc.DereferenceStringEntry(dSrc, "DA")
+	if err != nil {
+		return fmt.Errorf("source entry DA: %w", err)
+	}
 	if sSrc == nil || len(*sSrc) == 0 {
 		return nil
 	}
-	sDest := dDest.StringEntry("DA")
+	sDest, _, err := ctxDest.DereferenceStringEntry(dDest, "DA")
+	if err != nil {
+		return fmt.Errorf("destination entry DA: %w", err)
+	}
 	if sDest == nil {
 		dDest["DA"] = types.StringLiteral(*sSrc)
 		return nil
@@ -523,8 +550,11 @@ func handleDA(ctxSrc *model.Context, dSrc, dDest types.Dict, arrFieldsSrc types.
 		if err != nil {
 			return fmt.Errorf("form DA: dereference source field: %w", err)
 		}
-		n := d.NameEntry("FT")
-		if n != nil && *n == "Tx" {
+		n, _, err := ctxSrc.DereferenceNameEntry(d, "FT")
+		if err != nil {
+			return fmt.Errorf("form DA: source field entry FT: %w", err)
+		}
+		if n != nil && n.Value() == "Tx" {
 			_, found := d.Find("DA")
 			if !found {
 				d["DA"] = types.StringLiteral(*sSrc)
@@ -534,17 +564,23 @@ func handleDA(ctxSrc *model.Context, dSrc, dDest types.Dict, arrFieldsSrc types.
 	return nil
 }
 
-func handleQ(ctxSrc *model.Context, dSrc, dDest types.Dict, arrFieldsSrc types.Array) error {
+func handleQ(ctxSrc, ctxDest *model.Context, dSrc, dDest types.Dict, arrFieldsSrc types.Array) error {
 	// (for each with field type /FT /Tx w/o Q, set Q to default Q)
 	// TODO Walk field tree and inspect terminal fields.
 
-	iSrc := dSrc.IntEntry("Q")
+	iSrc, _, err := ctxSrc.DereferenceIntegerEntry(dSrc, "Q")
+	if err != nil {
+		return fmt.Errorf("source entry Q: %w", err)
+	}
 	if iSrc == nil {
 		return nil
 	}
-	iDest := dDest.IntEntry("Q")
+	iDest, _, err := ctxDest.DereferenceIntegerEntry(dDest, "Q")
+	if err != nil {
+		return fmt.Errorf("destination entry Q: %w", err)
+	}
 	if iDest == nil {
-		dDest["Q"] = types.Integer(*iSrc)
+		dDest["Q"] = *iSrc
 		return nil
 	}
 	// Push iSrc down to all top level fields of dSource
@@ -553,11 +589,14 @@ func handleQ(ctxSrc *model.Context, dSrc, dDest types.Dict, arrFieldsSrc types.A
 		if err != nil {
 			return fmt.Errorf("form Q: dereference source field: %w", err)
 		}
-		n := d.NameEntry("FT")
-		if n != nil && *n == "Tx" {
+		n, _, err := ctxSrc.DereferenceNameEntry(d, "FT")
+		if err != nil {
+			return fmt.Errorf("form Q: source field entry FT: %w", err)
+		}
+		if n != nil && n.Value() == "Tx" {
 			_, found := d.Find("Q")
 			if !found {
-				d["Q"] = types.Integer(*iSrc)
+				d["Q"] = *iSrc
 			}
 		}
 	}
@@ -585,12 +624,12 @@ func handleFormAttributes(ctxSrc, ctxDest *model.Context, dSrc, dDest types.Dict
 	}
 
 	// DA: default appearance streams for variable text fields
-	if err := handleDA(ctxSrc, dSrc, dDest, arrFieldsSrc); err != nil {
+	if err := handleDA(ctxSrc, ctxDest, dSrc, dDest, arrFieldsSrc); err != nil {
 		return fmt.Errorf("DA: %w", err)
 	}
 
 	// Q: left, center, right for variable text fields
-	if err := handleQ(ctxSrc, dSrc, dDest, arrFieldsSrc); err != nil {
+	if err := handleQ(ctxSrc, ctxDest, dSrc, dDest, arrFieldsSrc); err != nil {
 		return fmt.Errorf("Q: %w", err)
 	}
 
@@ -704,11 +743,15 @@ func sourceFieldWidgetObjNrs(ctx *model.Context) (types.IntSet, error) {
 	return m, nil
 }
 
-func renameOrphanWidgetField(d types.Dict, namespace string) error {
-	if typ := d.NameEntry("Subtype"); typ == nil || *typ != "Widget" {
+func renameOrphanWidgetField(ctx *model.Context, d types.Dict, namespace string) error {
+	typ, _, err := ctx.DereferenceNameEntry(d, "Subtype")
+	if err != nil {
+		return fmt.Errorf("orphan widget field: Subtype: %w", err)
+	}
+	if typ == nil || typ.Value() != "Widget" {
 		return nil
 	}
-	name, err := d.StringOrHexLiteralEntry("T")
+	name, _, err := ctx.DereferenceStringEntry(d, "T")
 	if err != nil {
 		return fmt.Errorf("orphan widget field: T: %w", err)
 	}
@@ -732,7 +775,7 @@ func renameSourceOrphanWidgetFields(ctx *model.Context, namespace string) error 
 		if !ok {
 			continue
 		}
-		if err := renameOrphanWidgetField(d, namespace); err != nil {
+		if err := renameOrphanWidgetField(ctx, d, namespace); err != nil {
 			return fmt.Errorf("rename orphan widget fields: obj#%d: %w", objNr, err)
 		}
 	}
@@ -1246,8 +1289,11 @@ func pageTreeRoot(ctx *model.Context) (*types.IndirectRef, types.Dict, error) {
 		return nil, nil, fmt.Errorf("page tree root: dereference root: %w", err)
 	}
 
-	pageCount := d.IntEntry("Count")
-	if pageCount == nil || *pageCount != ctx.PageCount {
+	pageCount, _, err := ctx.DereferenceIntegerEntry(d, "Count")
+	if err != nil {
+		return nil, nil, fmt.Errorf("page tree root Count: %w", err)
+	}
+	if pageCount == nil || pageCount.Value() != ctx.PageCount {
 		return nil, nil, fmt.Errorf("corrupt page node at obj #%d", indRef.ObjectNumber)
 	}
 

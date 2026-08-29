@@ -128,11 +128,13 @@ func getModDate(xRefTable *XRefTable, obj types.Object) (*time.Time, error) {
 	if o == nil {
 		return nil, errInvalidModDateType
 	}
-	sl, ok := o.(types.StringLiteral)
-	if !ok {
+	switch o.(type) {
+	case types.StringLiteral, types.HexLiteral:
+		// no further processing
+	default:
 		return nil, errInvalidModDateType
 	}
-	s, err := types.StringLiteralToString(sl)
+	s, err := Text(o)
 	if err != nil {
 		return nil, fmt.Errorf("decode text: %w", err)
 	}

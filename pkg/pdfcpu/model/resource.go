@@ -30,6 +30,8 @@ type FontObject struct {
 	Prefix        string
 	FontName      string
 	FontDict      types.Dict
+	SubtypeName   types.Name
+	EncodingName  string
 	Data          []byte
 	Extension     string
 	Embedded      bool
@@ -59,6 +61,10 @@ func (fo FontObject) ResourceNamesString() string {
 
 // SubType returns the SubType of this font.
 func (fo FontObject) SubType() string {
+	if len(fo.SubtypeName) > 0 {
+		return fo.SubtypeName.Value()
+	}
+
 	var subType string
 	if fo.FontDict.Subtype() != nil {
 		subType = *fo.FontDict.Subtype()
@@ -68,6 +74,10 @@ func (fo FontObject) SubType() string {
 
 // Encoding returns the Encoding of this font.
 func (fo FontObject) Encoding() string {
+	if len(fo.EncodingName) > 0 {
+		return fo.EncodingName
+	}
+
 	encoding := "Built-in"
 	pdfObject, found := fo.FontDict.Find("Encoding")
 	if found {

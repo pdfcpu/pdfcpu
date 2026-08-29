@@ -70,7 +70,7 @@ func TestEncryptionDictionaryErrorsClassified(t *testing.T) {
 		{
 			name: "missing filter",
 			err: func() error {
-				_, err := validateEncryptFilter(nil)
+				_, err := validateEncryptFilter(&model.Context{XRefTable: &model.XRefTable{}}, nil)
 				return err
 			}(),
 			want: ErrMalformedEncryption,
@@ -78,7 +78,10 @@ func TestEncryptionDictionaryErrorsClassified(t *testing.T) {
 		{
 			name: "unsupported filter",
 			err: func() error {
-				_, err := validateEncryptFilter(types.Dict{"Filter": types.Name("Adobe.PubSec")})
+				_, err := validateEncryptFilter(
+					&model.Context{XRefTable: &model.XRefTable{}},
+					types.Dict{"Filter": types.Name("Adobe.PubSec")},
+				)
 				return err
 			}(),
 			want: ErrUnsupportedEncryptionFeature,
@@ -86,7 +89,7 @@ func TestEncryptionDictionaryErrorsClassified(t *testing.T) {
 		{
 			name: "missing V",
 			err: func() error {
-				_, err := validateEncryptV(nil)
+				_, err := validateEncryptV(&model.Context{XRefTable: &model.XRefTable{}}, nil)
 				return err
 			}(),
 			want: ErrMalformedEncryption,
@@ -94,7 +97,7 @@ func TestEncryptionDictionaryErrorsClassified(t *testing.T) {
 		{
 			name: "invalid V",
 			err: func() error {
-				_, err := validateEncryptV(types.Dict{"V": types.Integer(9)})
+				_, err := validateEncryptV(&model.Context{XRefTable: &model.XRefTable{}}, types.Dict{"V": types.Integer(9)})
 				return err
 			}(),
 			want: ErrMalformedEncryption,
@@ -102,7 +105,7 @@ func TestEncryptionDictionaryErrorsClassified(t *testing.T) {
 		{
 			name: "unsupported V",
 			err: func() error {
-				_, err := validateEncryptV(types.Dict{"V": types.Integer(6)})
+				_, err := validateEncryptV(&model.Context{XRefTable: &model.XRefTable{}}, types.Dict{"V": types.Integer(6)})
 				return err
 			}(),
 			want: ErrUnsupportedEncryptionFeature,
@@ -110,7 +113,11 @@ func TestEncryptionDictionaryErrorsClassified(t *testing.T) {
 		{
 			name: "invalid length",
 			err: func() error {
-				_, err := validateEncryptLength(types.Dict{"Length": types.Integer(44)}, 2)
+				_, err := validateEncryptLength(
+					&model.Context{XRefTable: &model.XRefTable{}},
+					types.Dict{"Length": types.Integer(44)},
+					2,
+				)
 				return err
 			}(),
 			want: ErrMalformedEncryption,
@@ -133,7 +140,7 @@ func TestEncryptionDictionaryErrorsClassified(t *testing.T) {
 
 func TestValidateEncryptLengthClassifiesInvalidVersion(t *testing.T) {
 	t.Parallel()
-	_, err := validateEncryptLength(nil, 7)
+	_, err := validateEncryptLength(&model.Context{XRefTable: &model.XRefTable{}}, nil, 7)
 	if !errors.Is(err, ErrMalformedEncryption) {
 		t.Fatalf("got %v, want ErrMalformedEncryption", err)
 	}
@@ -547,6 +554,137 @@ func TestValidatePermissionsChecksEncryptMetadata(t *testing.T) {
 			}
 			if ok {
 				t.Fatal("mismatched EncryptMetadata flag accepted")
+			}
+		})
+	}
+}
+
+// TestValidateEncryptPermissionsResolvesEncryptMetadata verifies direct, indirect and defaulted values are equivalent.
+func TestValidateEncryptPermissionsResolvesEncryptMetadata(t *testing.T) {
+	xRefTable := &model.XRefTable{
+		Table: map[int]*model.XRefTableEntry{
+			1: model.NewXRefTableEntryGen0(types.Boolean(true)),
+			2: model.NewXRefTableEntryGen0(types.Boolean(false)),
+			3: model.NewXRefTableEntryGen0(nil),
+		},
+	}
+	ctx := &model.Context{XRefTable: xRefTable}
+
+	tests := []struct {
+		name    string
+		present bool
+		value   types.Object
+		want    bool
+	}{
+		{"absent", false, nil, true},
+		{"direct null", true, nil, true},
+		{"indirect null", true, *types.NewIndirectRef(3, 0), true},
+		{"direct true", true, types.Boolean(true), true},
+		{"direct false", true, types.Boolean(false), false},
+		{"indirect true", true, *types.NewIndirectRef(1, 0), true},
+		{"indirect false", true, *types.NewIndirectRef(2, 0), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := types.Dict{"P": types.Integer(-4)}
+			if tt.present {
+				d["EncryptMetadata"] = tt.value
+			}
+
+			_, got, _, err := validateEncryptPermissions(ctx, d, false, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tt.want {
+				t.Fatalf("got EncryptMetadata=%t, want %t", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestValidateEncryptPermissionsRejectsInvalidEncryptMetadata verifies invalid references do not select the default.
+func TestValidateEncryptPermissionsRejectsInvalidEncryptMetadata(t *testing.T) {
+	xRefTable := &model.XRefTable{
+		Table: map[int]*model.XRefTableEntry{
+			2: model.NewXRefTableEntryGen0(types.Integer(1)),
+		},
+	}
+	ctx := &model.Context{XRefTable: xRefTable}
+
+	for _, objNr := range []int{1, 2} {
+		t.Run(fmt.Sprintf("object %d", objNr), func(t *testing.T) {
+			d := types.Dict{
+				"P":               types.Integer(-4),
+				"EncryptMetadata": *types.NewIndirectRef(objNr, 0),
+			}
+
+			_, _, _, err := validateEncryptPermissions(ctx, d, false, "")
+			if !errors.Is(err, ErrMalformedEncryption) {
+				t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
+			}
+			if !strings.Contains(err.Error(), "EncryptMetadata") {
+				t.Fatalf("missing entry context: %v", err)
+			}
+
+			var validationErr *model.ValidationError
+			if !errors.As(err, &validationErr) || validationErr.ObjectNumber() != objNr {
+				t.Fatalf("got object attribution %v, want object #%d", validationErr, objNr)
+			}
+		})
+	}
+}
+
+func TestSupportedEncryptionResolvesIndirectIntegers(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := model.V17
+	ctx.XRefTable.HeaderVersion = &v
+	ctx.XRefTable.ValidationMode = model.ValidationStrict
+
+	d := newEncryptDict(false, true, 128, -4)
+	refs := map[string]int{"V": 7, "Length": 8, "R": 9, "P": 10}
+	for key, objNr := range refs {
+		ctx.XRefTable.Table[objNr] = model.NewXRefTableEntryGen0(d[key])
+		d[key] = *types.NewIndirectRef(objNr, 0)
+	}
+	cf := d.DictEntry("CF").DictEntry("StdCF")
+	ctx.XRefTable.Table[11] = model.NewXRefTableEntryGen0(cf["Length"])
+	cf["Length"] = *types.NewIndirectRef(11, 0)
+
+	enc, err := supportedEncryption(ctx, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if enc.V != 4 || enc.L != 128 || enc.R != 4 || enc.P != -4 {
+		t.Fatalf("got V=%d L=%d R=%d P=%d", enc.V, enc.L, enc.R, enc.P)
+	}
+}
+
+func TestSupportedEncryptionRejectsInvalidIndirectInteger(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := model.V17
+	ctx.XRefTable.HeaderVersion = &v
+	ctx.XRefTable.ValidationMode = model.ValidationStrict
+	ctx.XRefTable.Table[8] = model.NewXRefTableEntryGen0(types.Name("wrong"))
+
+	for _, objNr := range []int{7, 8} {
+		t.Run(fmt.Sprintf("object %d", objNr), func(t *testing.T) {
+			d := newEncryptDict(false, true, 128, -4)
+			d["V"] = *types.NewIndirectRef(objNr, 0)
+
+			_, err := supportedEncryption(ctx, d)
+			if !errors.Is(err, ErrMalformedEncryption) {
+				t.Fatalf("got %v, want %v", err, ErrMalformedEncryption)
+			}
+			var validationErr *model.ValidationError
+			if !errors.As(err, &validationErr) || validationErr.ObjectNumber() != objNr {
+				t.Fatalf("got object attribution %v, want object #%d", validationErr, objNr)
 			}
 		})
 	}

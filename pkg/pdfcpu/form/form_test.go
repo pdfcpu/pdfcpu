@@ -299,7 +299,7 @@ func TestCollectButtonFieldIdentityAppearsOnce(t *testing.T) {
 			collected := []Field{}
 
 			err = collectPageFields(ctx.XRefTable, wAnnots, fields, 1, &FieldMeta{}, &collected, 0)
-			want := fmt.Sprintf(`field 7: entry %q`, tt.entry)
+			want := fmt.Sprintf("field 7: entry=%s", tt.entry)
 			if err == nil || !strings.Contains(err.Error(), want) {
 				t.Fatalf("expected %q, got %v", want, err)
 			}

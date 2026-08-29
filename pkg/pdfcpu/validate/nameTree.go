@@ -553,14 +553,17 @@ func validateIDTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersio
 		return errors.New("IDTree value: missing structure element dict")
 	}
 
-	dictType := d.Type()
-	if dictType == nil || *dictType == "StructElem" {
+	dictType, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return fmt.Errorf("IDTree value Type: %w", err)
+	}
+	if dictType == nil || dictType.Value() == "StructElem" {
 		err = validateStructElementDict(xRefTable, d, true)
 		if err != nil {
 			return err
 		}
 	} else {
-		return fmt.Errorf("IDTree value: unexpected dict Type %s, expected StructElem", *dictType)
+		return fmt.Errorf("IDTree value: unexpected dict Type %s, expected StructElem", dictType.Value())
 	}
 
 	return nil
@@ -711,17 +714,13 @@ func validateNameTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict, o
 	lkv := *s
 
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-
-		if fkv != firstKey && xRefTable.ValidationMode == model.ValidationRelaxed {
+		if fkv != firstKey {
 			fkv = firstKey
-			a[0] = types.StringLiteral(fkv)
 		}
 
-		if lkv != lastKey && xRefTable.ValidationMode == model.ValidationRelaxed {
+		if lkv != lastKey {
 			lkv = lastKey
-			a[1] = types.StringLiteral(lkv)
 		}
-
 	}
 
 	if firstKey != fkv || lastKey != lkv {

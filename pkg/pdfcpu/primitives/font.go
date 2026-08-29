@@ -217,8 +217,12 @@ func FormFontDetails(xRefTable *model.XRefTable, indRef types.IndirectRef) (stri
 	}
 
 	fScript := ""
-	if enc := fontDict.NameEntry("Encoding"); enc != nil {
-		fScript = pdffont.ScriptForEncoding(*enc)
+	enc, _, err := xRefTable.DereferenceNameEntry(fontDict, "Encoding")
+	if err != nil {
+		return "", "", "", fmt.Errorf("font %s Encoding: %w", fName, err)
+	}
+	if enc != nil {
+		fScript = pdffont.ScriptForEncoding(enc.Value())
 	}
 
 	return fName, fLang, fScript, nil
@@ -275,7 +279,11 @@ func FontIndRef(fName string, ctx *model.Context, fonts map[string]types.Indirec
 		if err != nil {
 			return nil, err
 		}
-		if enc := d.NameEntry("Encoding"); *enc == "Identity-H" {
+		enc, _, err := ctx.DereferenceNameEntry(d, "Encoding")
+		if err != nil {
+			return nil, fmt.Errorf("font %s Encoding: %w", fName, err)
+		}
+		if enc != nil && enc.Value() == "Identity-H" {
 			return &indRef, nil
 		}
 	}
@@ -287,7 +295,11 @@ func FontIndRef(fName string, ctx *model.Context, fonts map[string]types.Indirec
 			if err != nil {
 				return nil, err
 			}
-			if enc := d.NameEntry("Encoding"); *enc == "Identity-H" {
+			enc, _, err := ctx.DereferenceNameEntry(d, "Encoding")
+			if err != nil {
+				return nil, fmt.Errorf("font %s Encoding: %w", fName, err)
+			}
+			if enc != nil && enc.Value() == "Identity-H" {
 				fonts[fName] = *indRef
 				return indRef, nil
 			}
@@ -403,7 +415,10 @@ func fontFromDA(s string) (string, FormFont, error) {
 }
 
 func calcFontDetailsFromDA(ctx *model.Context, d types.Dict, da *string, needUTF8 bool, fonts map[string]types.IndirectRef) (string, *FormFont, bool, *types.IndirectRef, error) {
-	s := locateDA(ctx, d, da)
+	s, err := locateDA(ctx, d, da)
+	if err != nil {
+		return "", nil, false, nil, err
+	}
 	if s == nil {
 		return "", nil, false, nil, errors.New("missing \"DA\"")
 	}

@@ -168,22 +168,24 @@ func validateStructElementKArrayElement(
 		return nil
 
 	case types.Dict:
+		dictType, _, err := xRefTable.DereferenceNameEntry(o, "Type")
+		if err != nil {
+			return fmt.Errorf("structure element K Type: %w", err)
+		}
 
-		dictType := o.Type()
-
-		if dictType == nil || *dictType == "StructElem" {
+		if dictType == nil || dictType.Value() == "StructElem" {
 			return validateStructElementDictDepth(xRefTable, o, ownerObjNr, useIDs, depth+1, visit)
 		}
 
-		if *dictType == "MCR" {
+		if dictType.Value() == "MCR" {
 			return validateMarkedContentReferenceDict(xRefTable, o)
 		}
 
-		if *dictType == "OBJR" {
+		if dictType.Value() == "OBJR" {
 			return validateObjectReferenceDict(xRefTable, o)
 		}
 
-		err := fmt.Errorf("unexpected dict Type %s, expected StructElem, OBJR or MCR", *dictType)
+		err = fmt.Errorf("unexpected dict Type %s, expected StructElem, OBJR or MCR", dictType.Value())
 		return &invalidStructElementKError{err}
 
 	}
@@ -319,34 +321,14 @@ func validateStructElementDictEntryKDepth(
 	case types.Integer:
 
 	case types.Dict:
-		dictType := o.Type()
-
-		if dictType == nil || *dictType == "StructElem" {
-			err = validateStructElementDictDepth(xRefTable, o, ownerObjNr, useIDs, depth+1, visit)
-			if err != nil {
-				return model.WrapRecursionError(context, err)
+		if err = validateStructElementKArrayElement(xRefTable, o, ownerObjNr, useIDs, depth, visit); err != nil {
+			err = model.WrapRecursionError(context, err)
+			var invalidK *invalidStructElementKError
+			if errors.As(err, &invalidK) {
+				return handleInvalidStructElementK(xRefTable, err, specViolations)
 			}
-			break
+			return err
 		}
-
-		if *dictType == "MCR" {
-			err = validateMarkedContentReferenceDict(xRefTable, o)
-			if err != nil {
-				return fmt.Errorf("%s: %w", context, err)
-			}
-			break
-		}
-
-		if *dictType == "OBJR" {
-			err = validateObjectReferenceDict(xRefTable, o)
-			if err != nil {
-				return fmt.Errorf("%s: %w", context, err)
-			}
-			break
-		}
-
-		err := fmt.Errorf("%s: unexpected dict Type %s, expected StructElem, OBJR or MCR", context, *dictType)
-		return handleInvalidStructElementK(xRefTable, err, specViolations)
 
 	case types.Array:
 
@@ -408,7 +390,15 @@ func processStructElementDictPgEntry(xRefTable *model.XRefTable, ir types.Indire
 		return fmt.Errorf("page: expected page dict, got %T", o)
 	}
 
-	if t := pageDict.Type(); t == nil || *t != "Page" {
+	t, _, err := xRefTable.DereferenceNameEntry(pageDict, "Type")
+	if err != nil {
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			model.ShowSkipped(fmt.Sprintf("invalid structElementDict Pg entry, objNr: %d ", ir.ObjectNumber))
+			return nil
+		}
+		return fmt.Errorf("page Type: %w", err)
+	}
+	if t == nil || t.Value() != "Page" {
 		if xRefTable.ValidationMode == model.ValidationRelaxed {
 			model.ShowSkipped(fmt.Sprintf("invalid structElementDict Pg entry, objNr: %d ", ir.ObjectNumber))
 			return nil
@@ -807,15 +797,18 @@ func validateStructTreeRootDictEntryKArrayElement(
 		return handleInvalidStructTreeObject(xRefTable, err)
 	}
 
-	dictType := d.Type()
-	if dictType == nil || *dictType == "StructElem" {
+	dictType, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return fmt.Errorf("%s: Type: %w", context, err)
+	}
+	if dictType == nil || dictType.Value() == "StructElem" {
 		if err := validateStructElementDictDepth(xRefTable, d, ownerObjNr, useIDs, 1, visit); err != nil {
 			return fmt.Errorf("%s: %w", context, err)
 		}
 		return nil
 	}
 
-	err = fmt.Errorf("%s: unexpected dict Type %s, expected StructElem", context, *dictType)
+	err = fmt.Errorf("%s: unexpected dict Type %s, expected StructElem", context, dictType.Value())
 
 	return handleInvalidStructTreeObject(xRefTable, err)
 }
@@ -871,10 +864,12 @@ func validateStructTreeRootDictEntryKDepth(
 	switch o := o.(type) {
 
 	case types.Dict:
+		dictType, _, err := xRefTable.DereferenceNameEntry(o, "Type")
+		if err != nil {
+			return fmt.Errorf("%s: Type: %w", context, err)
+		}
 
-		dictType := o.Type()
-
-		if dictType == nil || *dictType == "StructElem" {
+		if dictType == nil || dictType.Value() == "StructElem" {
 			err = validateStructElementDictDepth(xRefTable, o, ownerObjNr, useIDs, 1, visit)
 			if err != nil {
 				return fmt.Errorf("%s: %w", context, err)
@@ -882,7 +877,7 @@ func validateStructTreeRootDictEntryKDepth(
 			break
 		}
 
-		err := fmt.Errorf("%s: unexpected dict Type %s, expected StructElem", context, *dictType)
+		err = fmt.Errorf("%s: unexpected dict Type %s, expected StructElem", context, dictType.Value())
 		return handleInvalidStructTreeObject(xRefTable, err)
 
 	case types.Array:
@@ -979,6 +974,18 @@ func validateStructTreeRootDictEntryParentTree(xRefTable *model.XRefTable, ir *t
 	return err
 }
 
+func validateStructTreeRootType(xRefTable *model.XRefTable, d types.Dict) error {
+	t, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return fmt.Errorf("structure tree root Type: %w", err)
+	}
+	if t == nil || t.Value() != "StructTreeRoot" {
+		return errors.New("structure tree root: missing Type StructTreeRoot")
+	}
+
+	return nil
+}
+
 func validateStructTreeRootDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (err error) {
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
@@ -987,8 +994,8 @@ func validateStructTreeRootDict(xRefTable *model.XRefTable, d types.Dict, ownerO
 	dictName := "StructTreeRootDict"
 
 	// required entry Type: name:StructTreeRoot
-	if d.Type() == nil || *d.Type() != "StructTreeRoot" {
-		return errors.New("structure tree root: missing Type StructTreeRoot")
+	if err := validateStructTreeRootType(xRefTable, d); err != nil {
+		return err
 	}
 
 	useIDs := false

@@ -184,7 +184,7 @@ func validateSignature(sig model.Signature, ctx *model.Context, ra io.ReaderAt, 
 		return nil, errors.New("signature field dict: missing")
 	}
 
-	fieldDetails(sigField, &result)
+	fieldDetails(ctx, sigField, &result)
 
 	indRef := sigField.IndirectRefEntry("V")
 	if indRef == nil {
@@ -251,6 +251,7 @@ func signatureSubFilter(sigDict types.Dict, usageRights bool, result *model.Sign
 		)
 		return "", nil, false
 	}
+
 	name, ok := obj.(types.Name)
 	if !ok {
 		recordSubFilterProblem(
@@ -439,22 +440,20 @@ func validateDTS(
 	)
 }
 
-func fieldDetails(sigField types.Dict, result *model.SignatureValidationResult) {
-	sl := sigField.StringLiteralEntry("T")
-	if sl == nil {
-		return
-	}
-	s, err := types.StringLiteralToString(*sl)
+func fieldDetails(ctx *model.Context, sigField types.Dict, result *model.SignatureValidationResult) {
+	s, _, err := ctx.DereferenceStringEntry(sigField, "T")
 	if err != nil {
 		result.AddProblem(fmt.Sprintf("signature field dict entry T: %v", err))
 		return
 	}
-	result.Details.FieldName = strings.TrimSpace(s)
+	if s != nil {
+		result.Details.FieldName = strings.TrimSpace(*s)
+	}
 }
 
 func signatureDetails(sigDict types.Dict, ctx *model.Context, result *model.SignatureValidationResult) {
-	if sl := sigDict.StringLiteralEntry("Name"); sl != nil {
-		s, err := types.StringLiteralToString(*sl)
+	if o, found := sigDict.Find("Name"); found {
+		s, err := model.Text(o)
 		if err != nil {
 			result.AddProblem(fmt.Sprintf("signature dict entry Name: %v", err))
 		} else {
@@ -462,8 +461,8 @@ func signatureDetails(sigDict types.Dict, ctx *model.Context, result *model.Sign
 		}
 	}
 
-	if sl := sigDict.StringLiteralEntry("ContactInfo"); sl != nil {
-		s, err := types.StringLiteralToString(*sl)
+	if o, found := sigDict.Find("ContactInfo"); found {
+		s, err := model.Text(o)
 		if err != nil {
 			result.AddProblem(fmt.Sprintf("signature dict entry ContactInfo: %v", err))
 		} else {
@@ -471,8 +470,8 @@ func signatureDetails(sigDict types.Dict, ctx *model.Context, result *model.Sign
 		}
 	}
 
-	if sl := sigDict.StringLiteralEntry("Location"); sl != nil {
-		s, err := types.StringLiteralToString(*sl)
+	if o, found := sigDict.Find("Location"); found {
+		s, err := model.Text(o)
 		if err != nil {
 			result.AddProblem(fmt.Sprintf("signature dict entry Location: %v", err))
 		} else {
@@ -480,8 +479,8 @@ func signatureDetails(sigDict types.Dict, ctx *model.Context, result *model.Sign
 		}
 	}
 
-	if sl := sigDict.StringLiteralEntry("Reason"); sl != nil {
-		s, err := types.StringLiteralToString(*sl)
+	if o, found := sigDict.Find("Reason"); found {
+		s, err := model.Text(o)
 		if err != nil {
 			result.AddProblem(fmt.Sprintf("signature dict entry Reason: %v", err))
 		} else {
@@ -491,7 +490,7 @@ func signatureDetails(sigDict types.Dict, ctx *model.Context, result *model.Sign
 
 	if o, ok := sigDict.Find("M"); ok {
 		// informational (cannot be relied upon for long term validation)
-		s, err := ctx.DereferenceStringOrHexLiteral(o, model.V10, nil)
+		s, err := model.Text(o)
 		if err != nil {
 			result.AddProblem(fmt.Sprintf("signature dict entry M: %v", err))
 		} else if t, ok := types.DateTime(s, ctx.XRefTable.ValidationMode == model.ValidationRelaxed); s != "" && ok {
@@ -532,7 +531,16 @@ func detectPermissions(sigDict types.Dict, ctx *model.Context, result *model.Sig
 		if !ok {
 			continue
 		}
-		if tm := d.NameEntry("TransformMethod"); tm == nil || *tm != "DocMDP" {
+		tm, _, err := ctx.DereferenceNameEntry(d, "TransformMethod")
+		if err != nil {
+			result.AddProblem(fmt.Sprintf(
+				"signature dict entry Reference, reference index %d, signature reference dict entry TransformMethod: %v",
+				refIndex+1,
+				err,
+			))
+			continue
+		}
+		if tm == nil || tm.Value() != "DocMDP" {
 			continue
 		}
 		if perm, ok := docMDPPermission(d, refIndex, ctx, result); ok {
@@ -630,7 +638,16 @@ func docMDPPermission(refDict types.Dict, refIndex int, ctx *model.Context, resu
 		))
 		return 0, false
 	}
-	if typ := params.Type(); typ == nil || *typ != "TransformParams" {
+	typ, _, err := ctx.DereferenceNameEntry(params, "Type")
+	if err != nil {
+		result.AddProblem(fmt.Sprintf(
+			"signature dict entry Reference, reference index %d, TransformParams dict entry Type: expected TransformParams: %v",
+			refIndex+1,
+			err,
+		))
+		return 0, false
+	}
+	if typ == nil || typ.Value() != "TransformParams" {
 		result.AddProblem(fmt.Sprintf(
 			"signature dict entry Reference, reference index %d, TransformParams dict entry Type: expected TransformParams",
 			refIndex+1,

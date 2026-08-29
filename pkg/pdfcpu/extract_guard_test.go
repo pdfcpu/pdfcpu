@@ -31,6 +31,176 @@ func emptyStreamDict() *types.StreamDict {
 	return &types.StreamDict{Dict: types.Dict{}}
 }
 
+func booleanImageStreamDict() *types.StreamDict {
+	return &types.StreamDict{
+		Dict: types.Dict{
+			"BitsPerComponent": types.Integer(8),
+			"ColorSpace":       types.Name(model.DeviceGrayCS),
+			"Height":           types.Integer(1),
+			"Length":           types.Integer(1),
+			"Width":            types.Integer(1),
+		},
+		Raw: []byte{0},
+	}
+}
+
+// TestExtractImageResolvesIndirectBooleanEntries verifies image metadata uses resolved boolean values.
+func TestExtractImageResolvesIndirectBooleanEntries(t *testing.T) {
+	ir := *types.NewIndirectRef(9, 0)
+	ctx := &model.Context{XRefTable: &model.XRefTable{
+		Table: map[int]*model.XRefTableEntry{
+			9: model.NewXRefTableEntryGen0(types.Boolean(true)),
+		},
+	}}
+	sd := booleanImageStreamDict()
+	sd.Insert("ImageMask", ir)
+	sd.Insert("Interpolate", ir)
+
+	img, err := ExtractImage(ctx, sd, false, "Im0", 7, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !img.IsImgMask || !img.Interpol {
+		t.Fatalf("got ImageMask=%t Interpolate=%t, want both true", img.IsImgMask, img.Interpol)
+	}
+}
+
+// TestExtractImageResolvesIndirectIntegerEntries verifies image metadata uses resolved dimensions and bit depth.
+func TestExtractImageResolvesIndirectIntegerEntries(t *testing.T) {
+	ctx := &model.Context{XRefTable: &model.XRefTable{
+		Table: map[int]*model.XRefTableEntry{
+			10: model.NewXRefTableEntryGen0(types.Integer(1)),
+			11: model.NewXRefTableEntryGen0(types.Integer(8)),
+		},
+	}}
+	sd := booleanImageStreamDict()
+	sd.Insert("Width", *types.NewIndirectRef(10, 0))
+	sd.Insert("Height", *types.NewIndirectRef(10, 0))
+	sd.Insert("BitsPerComponent", *types.NewIndirectRef(11, 0))
+
+	img, err := ExtractImage(ctx, sd, false, "Im0", 7, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if img.Width != 1 || img.Height != 1 || img.Bpc != 8 {
+		t.Fatalf("got width=%d height=%d bpc=%d, want 1x1 at 8 bpc", img.Width, img.Height, img.Bpc)
+	}
+}
+
+func TestStreamLengthResolvesIndirectInteger(t *testing.T) {
+	indRef := *types.NewIndirectRef(12, 0)
+	ctx := &model.Context{XRefTable: &model.XRefTable{Table: map[int]*model.XRefTableEntry{
+		12: model.NewXRefTableEntryGen0(types.Integer(99)),
+	}}}
+	sd := &types.StreamDict{Dict: types.Dict{"Length": indRef}}
+
+	got, err := StreamLength(ctx, sd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != 99 {
+		t.Fatalf("stream length = %d, want 99", got)
+	}
+	if sd.Dict["Length"] != indRef {
+		t.Fatalf("Length = %v, want original indirect reference", sd.Dict["Length"])
+	}
+}
+
+// TestICCBasedColorSpaceComponentsResolvesIndirectN verifies ICC component lookup resolves the profile entry.
+func TestICCBasedColorSpaceComponentsResolvesIndirectN(t *testing.T) {
+	xRefTable := &model.XRefTable{Table: map[int]*model.XRefTableEntry{
+		20: model.NewXRefTableEntryGen0(types.Integer(3)),
+		21: model.NewXRefTableEntryGen0(types.StreamDict{Dict: types.Dict{
+			"N": *types.NewIndirectRef(20, 0),
+		}}),
+	}}
+	sd := &types.StreamDict{Dict: types.Dict{
+		"ColorSpace": types.Array{types.Name(model.ICCBasedCS), *types.NewIndirectRef(21, 0)},
+	}}
+
+	got, err := ColorSpaceComponents(xRefTable, sd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != 3 {
+		t.Fatalf("got %d components, want 3", got)
+	}
+}
+
+// TestPrepareImageDecodeResolvesCCITTIntegers verifies decode parameters and the Height fallback are xref-aware.
+func TestPrepareImageDecodeResolvesCCITTIntegers(t *testing.T) {
+	xRefTable := &model.XRefTable{Table: map[int]*model.XRefTableEntry{
+		30: model.NewXRefTableEntryGen0(types.Integer(-1)),
+		31: model.NewXRefTableEntryGen0(types.Integer(1728)),
+		32: model.NewXRefTableEntryGen0(types.Integer(12)),
+		33: model.NewXRefTableEntryGen0(types.Integer(9)),
+	}}
+
+	tests := []struct {
+		name     string
+		rows     types.Object
+		wantRows int
+	}{
+		{"height fallback", nil, 12},
+		{"indirect rows", *types.NewIndirectRef(33, 0), 9},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parms := types.Dict{
+				"K":       *types.NewIndirectRef(30, 0),
+				"Columns": *types.NewIndirectRef(31, 0),
+			}
+			if tt.rows != nil {
+				parms["Rows"] = tt.rows
+			}
+			sd := &types.StreamDict{
+				Dict: types.Dict{"Height": *types.NewIndirectRef(32, 0)},
+				FilterPipeline: []types.PDFFilter{{
+					Name:        filter.CCITTFax,
+					DecodeParms: parms,
+				}},
+			}
+
+			if err := prepareImageDecode(xRefTable, sd, "test image"); err != nil {
+				t.Fatal(err)
+			}
+			got := sd.FilterPipeline[0].DecodeParms
+			if k, columns, rows := got.IntEntry("K"), got.IntEntry("Columns"), got.IntEntry("Rows"); k == nil || *k != -1 || columns == nil || *columns != 1728 || rows == nil || *rows != tt.wantRows {
+				t.Fatalf("got decode parameters %v, want K=-1 Columns=1728 Rows=%d", got, tt.wantRows)
+			}
+			if _, ok := parms["K"].(types.IndirectRef); !ok {
+				t.Fatalf("raw decode parameters were mutated: %v", parms)
+			}
+		})
+	}
+}
+
+// TestExtractImageBooleanErrorsIncludeContext verifies invalid boolean references are not treated as defaults.
+func TestExtractImageBooleanErrorsIncludeContext(t *testing.T) {
+	for _, key := range []string{"ImageMask", "Interpolate"} {
+		t.Run(key, func(t *testing.T) {
+			ctx := &model.Context{XRefTable: &model.XRefTable{Table: map[int]*model.XRefTableEntry{}}}
+			sd := booleanImageStreamDict()
+			sd.Insert(key, *types.NewIndirectRef(9, 0))
+
+			_, err := ExtractImage(ctx, sd, false, "Im0", 7, true)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			for _, want := range []string{"image obj#7", key} {
+				if !strings.Contains(err.Error(), want) {
+					t.Fatalf("missing %q in %q", want, err)
+				}
+			}
+
+			var validationErr *model.ValidationError
+			if !errors.As(err, &validationErr) || validationErr.ObjectNumber() != 9 {
+				t.Fatalf("got object attribution %v, want object #9", validationErr)
+			}
+		})
+	}
+}
+
 // TestExtractFunctionsRejectMissingInput verifies stable extraction precondition errors.
 func TestExtractFunctionsRejectMissingInput(t *testing.T) {
 	ctx := &model.Context{XRefTable: &model.XRefTable{}}

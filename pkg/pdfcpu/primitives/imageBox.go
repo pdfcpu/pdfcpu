@@ -246,7 +246,15 @@ func (ib *ImageBox) checkForExistingImage(sd *types.StreamDict, w, h int) (*type
 	// For each existing image in xRefTable with matching w,h check for byte level identity.
 	for objNr, io := range ib.pdf.Optimize.ImageObjects {
 		d := io.ImageDict.Dict
-		if w != *d.IntEntry("Width") || h != *d.IntEntry("Height") {
+		width, _, err := ib.pdf.XRefTable.DereferenceIntegerEntry(d, "Width")
+		if err != nil {
+			return nil, err
+		}
+		height, _, err := ib.pdf.XRefTable.DereferenceIntegerEntry(d, "Height")
+		if err != nil {
+			return nil, err
+		}
+		if width == nil || height == nil || w != width.Value() || h != height.Value() {
 			continue
 		}
 		// compare decoded content from sd and io.ImageDict

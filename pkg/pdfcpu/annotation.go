@@ -214,7 +214,10 @@ func findAnnotByID(ctx *model.Context, id string, annots types.Array) (int, erro
 		if err != nil {
 			return -1, fmt.Errorf("annotation array[%d]: dereference dict: %w", i, err)
 		}
-		s := d.StringEntry("NM")
+		s, _, err := ctx.DereferenceStringEntry(d, "NM")
+		if err != nil {
+			return -1, fmt.Errorf("annotation array[%d]: NM: %w", i, err)
+		}
 		if s == nil {
 			continue
 		}
@@ -286,26 +289,47 @@ func linkAnnotation(xRefTable *model.XRefTable, d types.Dict, r *types.Rectangle
 	return model.NewLinkAnnotation(*r, apObjNr, contents, nm, "", f, nil, dest, uri, nil, false, 0, model.BSSolid), nil
 }
 
-// Annotation returns an annotation renderer.
-// Validation sets up a cache of annotation renderers.
-func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRenderer, error) {
-	subtype := d.NameEntry("Subtype")
+func annotationFlags(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationFlags, error) {
+	i, _, err := xRefTable.DereferenceIntegerEntry(d, "F")
+	if err != nil {
+		return 0, fmt.Errorf("annotation entry F: %w", err)
+	}
+	if i == nil {
+		return 0, nil
+	}
 
+	return model.AnnotationFlags(i.Value()), nil
+}
+
+func annotationRendererRect(xRefTable *model.XRefTable, d types.Dict) (*types.Rectangle, error) {
 	o, _ := d.Find("Rect")
 	arr, err := xRefTable.DereferenceArray(o)
 	if err != nil {
 		return nil, err
 	}
-
-	var r *types.Rectangle
-
 	if len(arr) == 4 {
-		r, err = xRefTable.RectForArray(arr)
-		if err != nil {
-			return nil, err
-		}
-	} else if xRefTable.ValidationMode == model.ValidationRelaxed {
-		r = types.NewRectangle(0, 0, 0, 0)
+		return xRefTable.RectForArray(arr)
+	}
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		return types.NewRectangle(0, 0, 0, 0), nil
+	}
+	return nil, nil
+}
+
+// Annotation returns an annotation renderer.
+// Validation sets up a cache of annotation renderers.
+func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRenderer, error) {
+	subtype, _, err := xRefTable.DereferenceNameEntry(d, "Subtype")
+	if err != nil {
+		return nil, fmt.Errorf("annotation entry Subtype: %w", err)
+	}
+	if subtype == nil {
+		return nil, errors.New("annotation: missing Subtype")
+	}
+
+	r, err := annotationRendererRect(xRefTable, d)
+	if err != nil {
+		return nil, err
 	}
 
 	var apObjNr int
@@ -324,20 +348,22 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 	}
 
 	var nm string
-	s := d.StringEntry("NM") // This is what pdfcpu refers to as the annotation id.
+	s, _, err := xRefTable.DereferenceStringEntry(d, "NM") // This is what pdfcpu refers to as the annotation id.
+	if err != nil {
+		return nil, fmt.Errorf("annotation entry NM: %w", err)
+	}
 	if s != nil {
 		nm = *s
 	}
 
-	var f model.AnnotationFlags
-	i := d.IntEntry("F")
-	if i != nil {
-		f = model.AnnotationFlags(*i)
+	f, err := annotationFlags(xRefTable, d)
+	if err != nil {
+		return nil, err
 	}
 
 	var ann model.AnnotationRenderer
 
-	switch *subtype {
+	switch subtype.Value() {
 
 	case "Text":
 		popupIndRef := d.IndirectRefEntry("Popup")
@@ -356,7 +382,7 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 	// TODO handle remaining annotation types.
 
 	default:
-		ann = model.NewAnnotationForRawType(*subtype, *r, apObjNr, contents, nm, "", f, nil, 0, 0, 0)
+		ann = model.NewAnnotationForRawType(subtype.Value(), *r, apObjNr, contents, nm, "", f, nil, 0, 0, 0)
 
 	}
 

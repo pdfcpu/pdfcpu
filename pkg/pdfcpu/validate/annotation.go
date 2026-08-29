@@ -817,10 +817,16 @@ func validateAnnotationDictInk(xRefTable *model.XRefTable, d types.Dict, dictNam
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = OPTIONAL
 	}
-	if _, err := validateArrayArrayEntry(
+	a, err := validateArrayArrayEntry(
 		xRefTable, d, 0, dictName, "InkList", required, model.V10, nil,
-	); err != nil {
+	)
+	if err != nil {
 		return err
+	}
+	for i, o := range a {
+		if _, err := validateNumberArray(xRefTable, o, validationObjectNumber(0, o)); err != nil {
+			return fmt.Errorf("%s.InkList[%d]: %w", dictName, i, err)
+		}
 	}
 
 	// BS, optional, border style dict
@@ -943,6 +949,10 @@ func validateAnnotationDictMovie(xRefTable *model.XRefTable, d types.Dict, dictN
 				if err != nil {
 					return model.WithValidationErrorObject(err, activationObjNr)
 				}
+
+			default:
+				err = fmt.Errorf("dict=%s entry=A invalid type %T", dictName, o)
+				return model.WithValidationErrorObject(err, activationObjNr)
 			}
 		}
 
@@ -1048,6 +1058,43 @@ func validateAnnotationDictPrinterMark(xRefTable *model.XRefTable, d types.Dict,
 	return validateAppearDictEntry(xRefTable, d, dictName, REQUIRED, sinceVersion)
 }
 
+func validateTrapNetFontFauxing(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	a, err := validateArrayEntry(xRefTable, d, 0, dictName, "FontFauxing", OPTIONAL, model.V10, nil)
+	if err != nil || a == nil {
+		return err
+	}
+
+	found := false
+	for i, o := range a {
+		if o == nil {
+			continue
+		}
+
+		fontDict, err := xRefTable.DereferenceDict(o)
+		if err != nil {
+			return fmt.Errorf("%s.FontFauxing[%d]: dereference font dict: %w", dictName, i, err)
+		}
+		if fontDict == nil {
+			continue
+		}
+
+		t, _, err := xRefTable.DereferenceNameEntry(fontDict, "Type")
+		if err != nil {
+			return fmt.Errorf("%s.FontFauxing[%d] Type: %w", dictName, i, err)
+		}
+		if t == nil || t.Value() != "Font" {
+			return fmt.Errorf("dict=%s entry=FontFauxing invalid dict entry", dictName)
+		}
+		found = true
+	}
+
+	if !found {
+		return fmt.Errorf("dict=%s entry=FontFauxing invalid dict entry", dictName)
+	}
+
+	return nil
+}
+
 func validateAnnotationDictTrapNet(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// see 12.5.6.21
 
@@ -1067,37 +1114,7 @@ func validateAnnotationDictTrapNet(xRefTable *model.XRefTable, d types.Dict, dic
 	}
 
 	// FontFauxing, optional, font dict array
-	validateFontDictArray := func(a types.Array) bool {
-
-		var retValue bool
-
-		for _, v := range a {
-
-			if v == nil {
-				continue
-			}
-
-			d, err := xRefTable.DereferenceDict(v)
-			if err != nil {
-				return false
-			}
-
-			if d == nil {
-				continue
-			}
-
-			if d.Type() == nil || *d.Type() != "Font" {
-				return false
-			}
-
-			retValue = true
-
-		}
-
-		return retValue
-	}
-
-	if _, err := validateArrayEntry(xRefTable, d, 0, dictName, "FontFauxing", OPTIONAL, model.V10, validateFontDictArray); err != nil {
+	if err := validateTrapNetFontFauxing(xRefTable, d, dictName); err != nil {
 		return err
 	}
 
@@ -1519,8 +1536,8 @@ func validateBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
 		if i == 3 {
 			// validate dash pattern array
 			// len must be 0,1,2,3 numbers (dont'allow only 0s)
-			dpa, ok := a[i].(types.Array)
-			if !ok {
+			dpa, err := xRefTable.DereferenceArray(a[i])
+			if err != nil || dpa == nil {
 				return xRefTable.ValidationMode == model.ValidationRelaxed
 			}
 
@@ -1555,28 +1572,26 @@ func validateBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
 	return true
 }
 
-func repairAnnotationBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
+func digestAnnotationBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
 	if xRefTable.ValidationMode != model.ValidationRelaxed || len(a) < 3 || len(a) > 4 {
 		return false
 	}
 
-	horizontalRadius, ok := a[0].(types.Integer)
-	if !ok || horizontalRadius.Value() != uninitializedAnnotationBorderRadius {
+	horizontalRadius, err := xRefTable.DereferenceInteger(a[0])
+	if err != nil || horizontalRadius == nil || horizontalRadius.Value() != uninitializedAnnotationBorderRadius {
 		return false
 	}
 
-	verticalRadius, ok := a[1].(types.Integer)
-	if !ok || verticalRadius.Value() != uninitializedAnnotationBorderRadius {
+	verticalRadius, err := xRefTable.DereferenceInteger(a[1])
+	if err != nil || verticalRadius == nil || verticalRadius.Value() != uninitializedAnnotationBorderRadius {
 		return false
 	}
 
-	width, ok := a[2].(types.Integer)
-	if !ok || width.Value() != 0 {
+	width, err := xRefTable.DereferenceInteger(a[2])
+	if err != nil || width == nil || width.Value() != 0 {
 		return false
 	}
 
-	a[0] = types.Integer(0)
-	a[1] = types.Integer(0)
 	return true
 }
 
@@ -1685,10 +1700,9 @@ func validateAnnotationDictGeneralPart2(xRefTable *model.XRefTable, d types.Dict
 		if err != nil {
 			return err
 		}
-		if repairAnnotationBorderArray(xRefTable, a) {
-			model.ShowRepaired("annotation border array corner radii converted to 0")
-		}
-		if !validateBorderArray(xRefTable, a) {
+		if digestAnnotationBorderArray(xRefTable, a) {
+			model.ShowDigestedSpecViolation("annotation border array uninitialized corner radii treated as 0")
+		} else if !validateBorderArray(xRefTable, a) {
 			return fmt.Errorf("annotation border array: invalid value %s", a)
 		}
 	}
@@ -2069,12 +2083,15 @@ func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage 
 		if d == nil {
 			return curPage, fmt.Errorf("%s: page node is null", pageAnnotationWalkKidContext(v, i))
 		}
-		dictType := d.Type()
+		dictType, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+		if err != nil {
+			return curPage, fmt.Errorf("%s: page node Type: %w", pageAnnotationWalkKidContext(v, i), err)
+		}
 		if dictType == nil {
 			return curPage, fmt.Errorf("%s: missing page node Type", pageAnnotationWalkKidContext(v, i))
 		}
 
-		switch *dictType {
+		switch dictType.Value() {
 
 		case "Pages":
 			// Recurse over pagetree
@@ -2091,7 +2108,7 @@ func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage 
 			}
 
 		default:
-			return curPage, fmt.Errorf("%s: unexpected page node Type %s", pageAnnotationWalkKidContext(v, i), *dictType)
+			return curPage, fmt.Errorf("%s: unexpected page node Type %s", pageAnnotationWalkKidContext(v, i), dictType.Value())
 
 		}
 

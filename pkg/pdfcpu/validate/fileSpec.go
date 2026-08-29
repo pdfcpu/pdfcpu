@@ -232,8 +232,10 @@ func validateRFDictFilesArray(xRefTable *model.XRefTable, a types.Array, ownerOb
 
 		if k%2 > 0 {
 
-			_, ok := o.(types.StringLiteral)
-			if !ok {
+			switch o.(type) {
+			case types.StringLiteral, types.HexLiteral:
+				// no further processing
+			default:
 				err = fmt.Errorf("related files array[%d]: expected description string", k)
 				return model.WithValidationErrorObject(err, objNr)
 			}

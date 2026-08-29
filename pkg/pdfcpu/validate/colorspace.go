@@ -600,13 +600,29 @@ func validateCSArray(xRefTable *model.XRefTable, a types.Array, ownerObjNr int, 
 
 }
 
+func colorSpaceArrayName(xRefTable *model.XRefTable, a types.Array, ownerObjNr int) (types.Name, error) {
+	o, err := xRefTable.Dereference(a[0])
+	if err != nil {
+		return "", model.WithValidationErrorObject(
+			fmt.Errorf("color space array[0]: %w", err), validationObjectNumber(ownerObjNr, a[0]),
+		)
+	}
+	name, ok := o.(types.Name)
+	if !ok {
+		return "", model.WithValidationErrorObject(
+			fmt.Errorf("color space array[0]: expected name, got %T", o), validationObjectNumber(ownerObjNr, a[0]),
+		)
+	}
+	return name, nil
+}
+
 func validateColorSpaceArraySubset(xRefTable *model.XRefTable, a types.Array, ownerObjNr int, cs []string) error {
 	if len(a) == 0 {
 		return errors.New("color space array: empty")
 	}
-	csName, ok := a[0].(types.Name)
-	if !ok {
-		return fmt.Errorf("color space array[0]: expected name, got %T", a[0])
+	csName, err := colorSpaceArrayName(xRefTable, a, ownerObjNr)
+	if err != nil {
+		return err
 	}
 
 	for _, v := range cs {
@@ -625,9 +641,9 @@ func validateColorSpaceArray(xRefTable *model.XRefTable, a types.Array, ownerObj
 	if len(a) == 0 {
 		return errors.New("color space array: empty")
 	}
-	name, ok := a[0].(types.Name)
-	if !ok {
-		return fmt.Errorf("color space array[0]: expected name, got %T", a[0])
+	name, err := colorSpaceArrayName(xRefTable, a, ownerObjNr)
+	if err != nil {
+		return err
 	}
 
 	switch name {

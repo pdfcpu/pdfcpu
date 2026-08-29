@@ -1225,31 +1225,52 @@ func parseXRefStreamDictWithLimits(sd *types.StreamDict, limits ResourceLimits, 
 	return xsd, nil
 }
 
-// ObjectStreamDict creates a ObjectStreamDict out of a StreamDict.
+// ObjectStreamDict creates an ObjectStreamDict out of a StreamDict.
 func ObjectStreamDict(sd *types.StreamDict) (*types.ObjectStreamDict, error) {
 	return ObjectStreamDictWithLimits(sd, DefaultResourceLimits())
 }
 
-// ObjectStreamDictWithLimits creates a ObjectStreamDict out of a StreamDict using resource limits.
+// ObjectStreamDictWithLimits creates an ObjectStreamDict out of a StreamDict using resource limits.
 func ObjectStreamDictWithLimits(sd *types.StreamDict, limits ResourceLimits) (*types.ObjectStreamDict, error) {
-	if sd.First() == nil {
+	return objectStreamDict(sd, limits, sd.N(), sd.First())
+}
+
+// ObjectStreamDictWithResolvedIntegers creates an object stream dictionary using resolved N and First entries.
+func ObjectStreamDictWithResolvedIntegers(
+	sd *types.StreamDict,
+	limits ResourceLimits,
+	n, first *types.Integer,
+) (*types.ObjectStreamDict, error) {
+	var nValue, firstValue *int
+	if n != nil {
+		i := n.Value()
+		nValue = &i
+	}
+	if first != nil {
+		i := first.Value()
+		firstValue = &i
+	}
+	return objectStreamDict(sd, limits, nValue, firstValue)
+}
+
+func objectStreamDict(sd *types.StreamDict, limits ResourceLimits, n, first *int) (*types.ObjectStreamDict, error) {
+	if first == nil {
 		return nil, errObjStreamMissingFirst
 	}
-
-	if sd.N() == nil {
+	if n == nil {
 		return nil, errObjStreamMissingN
 	}
-	if *sd.N() <= 0 || *sd.N() > limits.MaxObjectStreamCount {
-		return nil, fmt.Errorf("object stream N %d exceeds limit %d", *sd.N(), limits.MaxObjectStreamCount)
+	if *n <= 0 || *n > limits.MaxObjectStreamCount {
+		return nil, fmt.Errorf("object stream N %d exceeds limit %d", *n, limits.MaxObjectStreamCount)
 	}
-	if *sd.First() < 0 || int64(*sd.First()) > limits.MaxObjectStreamFirst {
-		return nil, fmt.Errorf("object stream First %d exceeds limit %d", *sd.First(), limits.MaxObjectStreamFirst)
+	if *first < 0 || int64(*first) > limits.MaxObjectStreamFirst {
+		return nil, fmt.Errorf("object stream First %d exceeds limit %d", *first, limits.MaxObjectStreamFirst)
 	}
 
 	osd := types.ObjectStreamDict{
 		StreamDict:     *sd,
-		ObjCount:       *sd.N(),
-		FirstObjOffset: *sd.First(),
+		ObjCount:       *n,
+		FirstObjOffset: *first,
 		MaxDecodeBytes: limits.MaxDecodeBytes,
 		ObjArray:       nil}
 

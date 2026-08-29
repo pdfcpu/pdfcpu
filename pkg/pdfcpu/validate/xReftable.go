@@ -264,16 +264,69 @@ func validateRootVersion(xRefTable *model.XRefTable, rootDict types.Dict, requir
 	return nil
 }
 
+func validateExtensionsDirectObject(xRefTable *model.XRefTable, o types.Object, path string, depth int) error {
+	if err := xRefTable.CheckRecursionDepth("Extensions dictionary", depth); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+
+	switch o := o.(type) {
+	case types.IndirectRef:
+		return fmt.Errorf("%s: indirect reference not permitted", path)
+
+	case types.Array:
+		for i, o := range o {
+			path := fmt.Sprintf("%s array index %d", path, i)
+			if err := validateExtensionsDirectObject(xRefTable, o, path, depth+1); err != nil {
+				return err
+			}
+		}
+
+	case types.Dict:
+		keys := make([]string, 0, len(o))
+		for key := range o {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			path := fmt.Sprintf("%s key %s", path, key)
+			if err := validateExtensionsDirectObject(xRefTable, o[key], path, depth+1); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func validateExtensions(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 7.12 Extensions Dictionary
+	rootObjNr := validationRootObjectNumber(xRefTable)
+	o, _, err := rootDict.Entry("rootDict", "Extensions", required)
+	if err != nil || o == nil {
+		return model.WithValidationErrorObject(err, rootObjNr)
+	}
 
-	_, err := validateDictEntry(
-		xRefTable, rootDict, validationRootObjectNumber(xRefTable), "rootDict", "Extensions", required, sinceVersion, nil,
-	)
+	if _, ok := o.(types.IndirectRef); ok {
+		err := fmt.Errorf("catalog obj#%d entry Extensions: value must be direct", rootObjNr)
+		return model.WithValidationErrorObject(err, rootObjNr)
+	}
 
-	// No validation due to lack of documentation.
+	if err := xRefTable.ValidateVersion("dict=rootDict entry=Extensions", sinceVersion); err != nil {
+		return model.WithValidationErrorObject(err, rootObjNr)
+	}
 
-	return err
+	d, ok := o.(types.Dict)
+	if !ok {
+		err := fmt.Errorf("dict=rootDict entry=Extensions invalid type %T", o)
+		return model.WithValidationErrorObject(err, rootObjNr)
+	}
+
+	path := fmt.Sprintf("catalog obj#%d entry Extensions", rootObjNr)
+	if err := validateExtensionsDirectObject(xRefTable, d, path, 0); err != nil {
+		return model.WithValidationErrorObject(err, rootObjNr)
+	}
+
+	return nil
 }
 
 func validatePageLabels(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
@@ -1466,7 +1519,7 @@ func validateRootObject(ctx *model.Context, rootDict types.Dict) (err error) {
 		sinceVersion model.Version
 	}{
 		//{validateRootVersion, OPTIONAL, model.V14}, Note: moved up
-		{"Extensions", validateExtensions, OPTIONAL, model.V10},
+		{"Extensions", validateExtensions, OPTIONAL, model.V17},
 		{"PageLabels", validatePageLabels, OPTIONAL, model.V13},
 		{"Names", validateNames, OPTIONAL, model.V11}, //model.V12},
 		{"Dests", validateNamedDestinations, OPTIONAL, model.V11},

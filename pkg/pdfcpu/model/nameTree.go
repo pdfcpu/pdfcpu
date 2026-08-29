@@ -165,9 +165,12 @@ func (n *Node) insertIntoLeaf(k string, v types.Object, m NameMap) error {
 	return nil
 }
 
-func updateNameRef(d types.Dict, keys []string, nameOld, nameNew string) error {
+func updateNameRef(xRefTable *XRefTable, d types.Dict, keys []string, nameOld, nameNew string) error {
 	for _, k := range keys {
-		s, err := d.StringOrHexLiteralEntry(k)
+		s, found, err := xRefTable.DereferenceStringEntry(d, k)
+		if found && s == nil && err == nil {
+			err = errors.New("expected StringLiteral or HexLiteral")
+		}
 		if err != nil {
 			return fmt.Errorf("name reference entry %q: update key %q to %q: %w", k, nameOld, nameNew, err)
 		}
@@ -187,13 +190,18 @@ func updateNameRef(d types.Dict, keys []string, nameOld, nameNew string) error {
 	return nil
 }
 
-func updateNameRefDicts(dd []types.Dict, nameRefDictKeys []string, nameOld, nameNew string) error {
+func updateNameRefDicts(
+	xRefTable *XRefTable,
+	dd []types.Dict,
+	nameRefDictKeys []string,
+	nameOld, nameNew string,
+) error {
 	// eg.
 	// "Dests": "D", "Dest"    		[]string{"D", "Dest"}
 	// "EmbeddedFiles": F", "UF"	[]string{"F", "UF"}
 
 	for _, d := range dd {
-		if err := updateNameRef(d, nameRefDictKeys, nameOld, nameNew); err != nil {
+		if err := updateNameRef(xRefTable, d, nameRefDictKeys, nameOld, nameNew); err != nil {
 			return err
 		}
 	}
@@ -201,7 +209,13 @@ func updateNameRefDicts(dd []types.Dict, nameRefDictKeys []string, nameOld, name
 	return nil
 }
 
-func (n *Node) insertUniqueIntoLeaf(k string, v types.Object, m NameMap, nameRefDictKeys []string) (bool, error) {
+func (n *Node) insertUniqueIntoLeaf(
+	xRefTable *XRefTable,
+	k string,
+	v types.Object,
+	m NameMap,
+	nameRefDictKeys []string,
+) (bool, error) {
 	var err error
 	kOrig := k
 	for first := true; first || errors.Is(err, errNameTreeDuplicateKey); first = false {
@@ -220,7 +234,7 @@ func (n *Node) insertUniqueIntoLeaf(k string, v types.Object, m NameMap, nameRef
 		if !ok {
 			return true, nil
 		}
-		if err := updateNameRefDicts(dd, nameRefDictKeys, k, kNew); err != nil {
+		if err := updateNameRefDicts(xRefTable, dd, nameRefDictKeys, k, kNew); err != nil {
 			return false, err
 		}
 		k = kNew
@@ -267,7 +281,7 @@ func (n *Node) HandleLeaf(xRefTable *XRefTable, k string, v types.Object, m Name
 		n.Names = append(n.Names, entry{k, v})
 	} else {
 		// Insert (k,v) while ensuring unique k.
-		ok, err := n.insertUniqueIntoLeaf(k, v, m, nameRefDictKeys)
+		ok, err := n.insertUniqueIntoLeaf(xRefTable, k, v, m, nameRefDictKeys)
 		if err != nil {
 			return err
 		}

@@ -176,6 +176,54 @@ func (xRefTable *XRefTable) DereferenceBoolean(o types.Object, sinceVersion Vers
 	return &b, nil
 }
 
+// DereferenceBooleanEntry resolves a direct or indirect boolean dictionary entry.
+func (xRefTable *XRefTable) DereferenceBooleanEntry(d types.Dict, key string) (*types.Boolean, bool, error) {
+	o, found, objNr, err := xRefTable.dereferenceEntry(d, key)
+	if err != nil || !found || o == nil {
+		return nil, found, err
+	}
+
+	b, ok := o.(types.Boolean)
+	if !ok {
+		return nil, true, scalarEntryTypeError(key, "boolean", o, objNr)
+	}
+
+	return &b, true, nil
+}
+
+func (xRefTable *XRefTable) dereferenceEntry(d types.Dict, key string) (types.Object, bool, int, error) {
+	o, found := d.Find(key)
+	if !found {
+		return nil, false, 0, nil
+	}
+	if o == nil {
+		return nil, true, 0, nil
+	}
+
+	objNr := 0
+	if ir, ok := o.(types.IndirectRef); ok {
+		objNr = ir.ObjectNumber.Value()
+		entry, found := xRefTable.FindTableEntryForIndRef(&ir)
+		if !found || entry == nil || entry.Free {
+			err := fmt.Errorf("entry=%s: missing indirect target", key)
+			return nil, true, objNr, WithValidationErrorObject(err, objNr)
+		}
+	}
+
+	o, err := xRefTable.Dereference(o)
+	if err != nil {
+		err = fmt.Errorf("entry=%s: %w", key, err)
+		return nil, true, objNr, WithValidationErrorObject(err, objNr)
+	}
+
+	return o, true, objNr, nil
+}
+
+func scalarEntryTypeError(key, want string, o types.Object, objNr int) error {
+	err := fmt.Errorf("entry=%s: expected %s, got %T", key, want, o)
+	return WithValidationErrorObject(err, objNr)
+}
+
 // DereferenceInteger resolves and validates an integer object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceInteger(o types.Object) (*types.Integer, error) {
 	o, err := xRefTable.Dereference(o)
@@ -189,6 +237,21 @@ func (xRefTable *XRefTable) DereferenceInteger(o types.Object) (*types.Integer, 
 	}
 
 	return &i, nil
+}
+
+// DereferenceIntegerEntry resolves a direct or indirect integer dictionary entry.
+func (xRefTable *XRefTable) DereferenceIntegerEntry(d types.Dict, key string) (*types.Integer, bool, error) {
+	o, found, objNr, err := xRefTable.dereferenceEntry(d, key)
+	if err != nil || !found || o == nil {
+		return nil, found, err
+	}
+
+	i, ok := o.(types.Integer)
+	if !ok {
+		return nil, true, scalarEntryTypeError(key, "integer", o, objNr)
+	}
+
+	return &i, true, nil
 }
 
 // DereferenceNumber resolves a number object, which may be an indirect reference and returns a float64.
@@ -219,6 +282,26 @@ func (xRefTable *XRefTable) DereferenceNumber(o types.Object) (float64, error) {
 	return f, err
 }
 
+// DereferenceNumberEntry resolves a direct or indirect number dictionary entry.
+func (xRefTable *XRefTable) DereferenceNumberEntry(d types.Dict, key string) (*float64, bool, error) {
+	o, found, objNr, err := xRefTable.dereferenceEntry(d, key)
+	if err != nil || !found || o == nil {
+		return nil, found, err
+	}
+
+	var f float64
+	switch o := o.(type) {
+	case types.Integer:
+		f = float64(o.Value())
+	case types.Float:
+		f = o.Value()
+	default:
+		return nil, true, scalarEntryTypeError(key, "number", o, objNr)
+	}
+
+	return &f, true, nil
+}
+
 // DereferenceName resolves and validates a name object, which may be an indirect reference.
 func (xRefTable *XRefTable) DereferenceName(o types.Object, sinceVersion Version, validate func(string) bool) (n types.Name, err error) {
 	o, err = xRefTable.Dereference(o)
@@ -242,6 +325,21 @@ func (xRefTable *XRefTable) DereferenceName(o types.Object, sinceVersion Version
 	}
 
 	return n, nil
+}
+
+// DereferenceNameEntry resolves a direct or indirect name dictionary entry.
+func (xRefTable *XRefTable) DereferenceNameEntry(d types.Dict, key string) (*types.Name, bool, error) {
+	o, found, objNr, err := xRefTable.dereferenceEntry(d, key)
+	if err != nil || !found || o == nil {
+		return nil, found, err
+	}
+
+	n, ok := o.(types.Name)
+	if !ok {
+		return nil, true, scalarEntryTypeError(key, "name", o, objNr)
+	}
+
+	return &n, true, nil
 }
 
 // DereferenceStringLiteral resolves and validates a string literal object, which may be an indirect reference.
@@ -312,6 +410,28 @@ func (xRefTable *XRefTable) DereferenceStringOrHexLiteral(obj types.Object, sinc
 	}
 
 	return s, nil
+}
+
+// DereferenceStringEntry resolves a direct or indirect literal or hexadecimal string dictionary entry.
+func (xRefTable *XRefTable) DereferenceStringEntry(d types.Dict, key string) (*string, bool, error) {
+	o, found, objNr, err := xRefTable.dereferenceEntry(d, key)
+	if err != nil || !found || o == nil {
+		return nil, found, err
+	}
+
+	switch o.(type) {
+	case types.StringLiteral, types.HexLiteral:
+	default:
+		return nil, true, scalarEntryTypeError(key, "string or hex literal", o, objNr)
+	}
+
+	s, err := Text(o)
+	if err != nil {
+		err = fmt.Errorf("entry=%s: %w", key, err)
+		return nil, true, WithValidationErrorObject(err, objNr)
+	}
+
+	return &s, true, nil
 }
 
 // Text returns a string based representation for String and Hexliterals.
@@ -422,19 +542,23 @@ func (xRefTable *XRefTable) DereferenceFontDict(indRef types.IndirectRef) (types
 	}
 
 	if xRefTable.ValidationMode == ValidationStrict {
-		if d.Type() == nil {
+		t, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+		if err != nil {
+			return nil, fmt.Errorf("font dict Type: %w", err)
+		}
+		if t == nil {
 			return nil, fmt.Errorf("missing dict type %s", indRef)
 		}
 
-		if *d.Type() != "Font" {
-			return nil, fmt.Errorf("expected Type=Font, unexpected Type: %s", *d.Type())
+		if t.Value() != "Font" {
+			return nil, fmt.Errorf("expected Type=Font, unexpected Type: %s", t.Value())
 		}
 	}
 
 	return d, nil
 }
 
-func (xRefTable *XRefTable) dereferencePageNodeDictType(indRef types.IndirectRef) (types.Dict, *string, error) {
+func (xRefTable *XRefTable) dereferencePageNodeDictType(indRef types.IndirectRef) (types.Dict, *types.Name, error) {
 	d, err := xRefTable.DereferenceDict(indRef)
 	if err != nil {
 		return nil, nil, err
@@ -443,10 +567,14 @@ func (xRefTable *XRefTable) dereferencePageNodeDictType(indRef types.IndirectRef
 		return nil, nil, errors.New("missing page node dict")
 	}
 
-	dictType := d.Type()
+	dictType, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return nil, nil, err
+	}
 	if dictType == nil {
 		return nil, nil, errors.New("missing dict type")
 	}
+
 	return d, dictType, nil
 }
 
@@ -457,8 +585,8 @@ func (xRefTable *XRefTable) DereferencePageNodeDict(indRef types.IndirectRef) (t
 		return nil, err
 	}
 
-	if *dictType != "Pages" && *dictType != "Page" {
-		return nil, fmt.Errorf("unexpected Type: %s", *dictType)
+	if dictType.Value() != "Pages" && dictType.Value() != "Page" {
+		return nil, fmt.Errorf("unexpected Type: %s", dictType.Value())
 	}
 
 	return d, nil

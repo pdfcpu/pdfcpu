@@ -92,38 +92,47 @@ func validatePageBoundaries(xRefTable *model.XRefTable, d types.Dict, ownerObjNr
 }
 
 func validatePrintPageRange(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, vp *model.ViewerPreferences) error {
-	validate := func(arr types.Array) bool {
-		if len(arr) > 0 && len(arr)%2 > 0 {
-			return false
-		}
-		for i := 0; i < len(arr); i += 2 {
-			if arr[i].(types.Integer) >= arr[i+1].(types.Integer) {
-				return false
-			}
-		}
-		return true
-	}
-
 	arr, err := validateIntegerArrayEntry(
-		xRefTable, d, ownerObjNr, dictName, "PrintPageRange", OPTIONAL, model.V17, validate,
+		xRefTable, d, ownerObjNr, dictName, "PrintPageRange", OPTIONAL, model.V17,
+		func(a types.Array) bool { return len(a)%2 == 0 },
 	)
 	if err != nil {
 		return fmt.Errorf("%s.PrintPageRange: %w", dictName, err)
 	}
-
-	if len(arr) > 0 {
-		vp.PrintPageRange = arr
+	if len(arr) == 0 {
+		return nil
 	}
+
+	pageRange := make([]int, len(arr))
+	for j, o := range arr {
+		objNr := validationObjectNumber(ownerObjNr, o)
+		i, err := xRefTable.DereferenceInteger(o)
+		if err != nil || i == nil {
+			if err == nil {
+				err = fmt.Errorf("missing integer at index %d", j)
+			}
+			err = fmt.Errorf("%s.PrintPageRange[%d]: %w", dictName, j, err)
+			return model.WithValidationErrorObject(err, objNr)
+		}
+		pageRange[j] = i.Value()
+	}
+
+	for j := 0; j < len(pageRange); j += 2 {
+		if pageRange[j] >= pageRange[j+1] {
+			err := fmt.Errorf("dict=%s entry=PrintPageRange invalid dict entry", dictName)
+			err = model.WithValidationErrorObject(err, validationEntryObjectNumber(ownerObjNr, d, "PrintPageRange"))
+			return fmt.Errorf("%s.PrintPageRange: %w", dictName, err)
+		}
+	}
+
+	vp.PrintPageRange = pageRange
 
 	return nil
 }
 
 func validateEnforcePrintScaling(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, vp *model.ViewerPreferences) error {
 	validate := func(arr types.Array) bool {
-		if len(arr) != 1 {
-			return false
-		}
-		return arr[0].String() == "PrintScaling"
+		return len(arr) == 1
 	}
 
 	arr, err := validateNameArrayEntry(xRefTable, d, ownerObjNr, dictName, "Enforce", OPTIONAL, model.V20, validate)
@@ -132,11 +141,17 @@ func validateEnforcePrintScaling(xRefTable *model.XRefTable, d types.Dict, owner
 	}
 
 	if len(arr) > 0 {
+		objNr := validationObjectNumber(validationEntryObjectNumber(ownerObjNr, d, "Enforce"), arr[0])
+		n, err := xRefTable.DereferenceName(arr[0], model.V20, func(s string) bool { return s == "PrintScaling" })
+		if err != nil {
+			err = fmt.Errorf("%s.Enforce[0]: %w", dictName, err)
+			return model.WithValidationErrorObject(err, objNr)
+		}
 		if vp.PrintScaling != nil && *vp.PrintScaling == model.PrintScalingAppDefault {
 			err := errors.New(`ViewerPreferences.Enforce: PrintScaling requires PrintScaling != "AppDefault"`)
 			return model.WithValidationErrorObject(err, ownerObjNr)
 		}
-		vp.Enforce = types.NewNameArray("PrintScaling")
+		vp.Enforce = []string{n.Value()}
 	}
 
 	return nil
@@ -246,13 +261,29 @@ func validateViewerPreferencesFlags(xRefTable *model.XRefTable, d types.Dict, ow
 	return nil
 }
 
+func digestViewerPreferencesArray(xRefTable *model.XRefTable, arr types.Array, ownerObjNr int) error {
+	model.ShowDigestedSpecViolation("viewer preferences array instead of dict")
+	for i, v := range arr {
+		objNr := validationObjectNumber(ownerObjNr, v)
+		o, err := xRefTable.Dereference(v)
+		if err != nil {
+			err = fmt.Errorf("rootDict.ViewerPreferences[%d]: %w", i, err)
+			return model.WithValidationErrorObject(err, objNr)
+		}
+		if _, ok := o.(types.Name); !ok {
+			err := fmt.Errorf("rootDict.ViewerPreferences[%d]: expected name, got %T", i, o)
+			return model.WithValidationErrorObject(err, objNr)
+		}
+	}
+	return nil
+}
+
 func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 12.2 Viewer Preferences
 
 	dictName := "rootDict"
 	rawPreferences, _ := rootDict.Find("ViewerPreferences")
 	preferencesObjNr := validationObjectNumber(validationRootObjectNumber(xRefTable), rawPreferences)
-
 	d, err := validateDictEntry(
 		xRefTable, rootDict, validationRootObjectNumber(xRefTable), dictName, "ViewerPreferences", required, sinceVersion, nil,
 	)
@@ -270,17 +301,7 @@ func validateViewerPreferences(xRefTable *model.XRefTable, rootDict types.Dict, 
 			return nil
 		}
 		// For an out-of-spec viewer preferences array, we assume it only contains boolean flags set to true.
-		model.ShowDigestedSpecViolation("viewer preferences array instead of dict")
-		d = types.NewDict()
-		for i, v := range arr {
-			n, ok := v.(types.Name)
-			if !ok {
-				err := fmt.Errorf("rootDict.ViewerPreferences[%d]: expected name, got %T", i, v)
-				return model.WithValidationErrorObject(err, preferencesObjNr)
-			}
-			d[n.Value()] = types.Boolean(true)
-		}
-		return nil
+		return digestViewerPreferencesArray(xRefTable, arr, preferencesObjNr)
 	}
 
 	if d == nil {

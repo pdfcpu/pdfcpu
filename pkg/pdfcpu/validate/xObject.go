@@ -346,11 +346,19 @@ func validateOPIVersionDict(xRefTable *model.XRefTable, d types.Dict) error {
 }
 
 func validateMaskStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {
-	if sd.Type() != nil && *sd.Type() != "XObject" {
-		return fmt.Errorf("mask stream dict Type: expected XObject, got %q", *sd.Type())
+	t, _, err := xRefTable.DereferenceNameEntry(sd.Dict, "Type")
+	if err != nil {
+		return fmt.Errorf("mask stream dict Type: %w", err)
+	}
+	if t != nil && t.Value() != "XObject" {
+		return fmt.Errorf("mask stream dict Type: expected XObject, got %q", t.Value())
 	}
 
-	if sd.Subtype() == nil || *sd.Subtype() != "Image" {
+	subtype, _, err := xRefTable.DereferenceNameEntry(sd.Dict, "Subtype")
+	if err != nil {
+		return fmt.Errorf("mask stream dict Subtype: %w", err)
+	}
+	if subtype == nil || subtype.Value() != "Image" {
 		return errors.New("mask stream dict Subtype: expected Image")
 	}
 
@@ -684,24 +692,32 @@ func validateEntryOPI(xRefTable *model.XRefTable, d types.Dict, dictName, entryN
 	return err
 }
 
+func validateFormStreamPieceInfo(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		return nil
+	}
+
+	hasPieceInfo, err := validatePieceInfo(xRefTable, d, 0, dictName, "PieceInfo", OPTIONAL, model.V13)
+	if err != nil {
+		return err
+	}
+
+	// LastModified, date, required if PieceInfo present, since V1.3
+	lm, err := validateDateEntry(xRefTable, d, 0, dictName, "LastModified", OPTIONAL, model.V13)
+	if err != nil {
+		return err
+	}
+	if hasPieceInfo && lm == nil {
+		return errors.New("missing \"LastModified\" (required by \"PieceInfo\")")
+	}
+
+	return nil
+}
+
 func validateFormStreamDictPart2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// PieceInfo, dict, optional, since V1.3
-	if xRefTable.ValidationMode != model.ValidationRelaxed {
-		hasPieceInfo, err := validatePieceInfo(xRefTable, d, 0, dictName, "PieceInfo", OPTIONAL, model.V13)
-		if err != nil {
-			return err
-		}
-
-		// LastModified, date, required if PieceInfo present, since V1.3
-		lm, err := validateDateEntry(xRefTable, d, 0, dictName, "LastModified", OPTIONAL, model.V13)
-		if err != nil {
-			return err
-		}
-
-		if hasPieceInfo && lm == nil {
-			err = errors.New("missing \"LastModified\" (required by \"PieceInfo\")")
-			return err
-		}
+	if err := validateFormStreamPieceInfo(xRefTable, d, dictName); err != nil {
+		return err
 	}
 
 	// StructParent, integer

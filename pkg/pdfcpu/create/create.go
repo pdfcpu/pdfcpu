@@ -426,7 +426,10 @@ func cacheFormFieldIDs(ctx *model.Context, pdf *primitives.PDF) error {
 		if len(d) == 0 {
 			continue
 		}
-		id := d.StringEntry("T")
+		id, _, err := ctx.DereferenceStringEntry(d, "T")
+		if err != nil {
+			return fmt.Errorf("form field %d: entry T: %w", i+1, err)
+		}
 		if id != nil {
 			pdf.OldFieldIDs[*id] = true
 		}

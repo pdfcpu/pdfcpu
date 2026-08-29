@@ -1069,6 +1069,7 @@ func signatureSubFilterContext(sigDict types.Dict) *model.Context {
 func TestFieldDetailsReportsEvidence(t *testing.T) {
 	result := model.SignatureValidationResult{}
 	fieldDetails(
+		signatureSubFilterContext(types.Dict{}),
 		types.Dict{"T": types.StringLiteral(string([]byte{0xFE, 0xFF, 0xD8, 0x00}))},
 		&result,
 	)

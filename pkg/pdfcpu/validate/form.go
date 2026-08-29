@@ -280,8 +280,11 @@ func detectRectArray(xRefTable *model.XRefTable, d types.Dict, dictName string) 
 }
 
 func cacheSig(xRefTable *model.XRefTable, d types.Dict, dictName string, form bool, objNr, incr int) error {
-	fieldType := d.NameEntry("FT")
-	if fieldType == nil || *fieldType != "Sig" {
+	ft, _, err := xRefTable.DereferenceNameEntry(d, "FT")
+	if err != nil {
+		return fmt.Errorf("%s.FT: %w", dictName, err)
+	}
+	if ft == nil || ft.Value() != "Sig" {
 		return nil
 	}
 
@@ -297,11 +300,13 @@ func cacheSig(xRefTable *model.XRefTable, d types.Dict, dictName string, form bo
 		if err != nil {
 			return nil
 		}
-		if typ := sigDict.Type(); typ != nil {
-			if *typ == "DocTimeStamp" {
-				sig.Type = model.SigTypeDTS
-				dts = true
-			}
+		typ, _, err := xRefTable.DereferenceNameEntry(sigDict, "Type")
+		if err != nil {
+			return fmt.Errorf("signature dict Type: %w", err)
+		}
+		if typ != nil && typ.Value() == "DocTimeStamp" {
+			sig.Type = model.SigTypeDTS
+			dts = true
 		}
 	}
 
@@ -310,7 +315,10 @@ func cacheSig(xRefTable *model.XRefTable, d types.Dict, dictName string, form bo
 		return err
 	}
 
-	r := types.RectForArray(arr)
+	r, err := xRefTable.RectForArray(arr)
+	if err != nil {
+		return fmt.Errorf("%s.Rect: %w", dictName, err)
+	}
 	sig.Visible = r.Visible() && !dts
 
 	if _, ok := xRefTable.Signatures[incr]; !ok {
@@ -491,8 +499,15 @@ func formFieldKidsElementError(err error, fieldObjNr, kidsObjNr, index int) erro
 	return model.WithValidationErrorObject(err, kidsObjNr)
 }
 
-func isWidget(d types.Dict) bool {
-	return d.Subtype() != nil && *d.Subtype() == "Widget"
+func validateNonTerminalFieldSubtype(xRefTable *model.XRefTable, d types.Dict) error {
+	st, _, err := xRefTable.DereferenceNameEntry(d, "Subtype")
+	if err != nil {
+		return fmt.Errorf("form field Subtype: %w", err)
+	}
+	if st != nil && st.Value() == "Widget" && xRefTable.ValidationMode == model.ValidationStrict {
+		return errors.New("form field: non-terminal field cannot be widget annotation")
+	}
+	return nil
 }
 
 func validateFormFieldKids(
@@ -512,10 +527,8 @@ func validateFormFieldKids(
 	}()
 
 	// dict represents a non terminal field.
-	if isWidget(d) {
-		if xRefTable.ValidationMode == model.ValidationStrict {
-			return errors.New("form field: non-terminal field cannot be widget annotation")
-		}
+	if err := validateNonTerminalFieldSubtype(xRefTable, d); err != nil {
+		return err
 	}
 
 	kidsObjNr := validationObjectNumber(objNr, o)
@@ -672,11 +685,21 @@ func acroFormFieldError(err error, index, fieldObjNr int) error {
 	return model.WithValidationErrorObject(err, fieldObjNr)
 }
 
-func nonWidgetAnnotation(d types.Dict) bool {
-	t := d.Type()
-	st := d.Subtype()
+func nonWidgetAnnotation(xRefTable *model.XRefTable, d types.Dict) bool {
+	t, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+	if err != nil || t == nil || t.Value() != "Annot" {
+		return false
+	}
+	st, _, err := xRefTable.DereferenceNameEntry(d, "Subtype")
+	if err != nil || st == nil || st.Value() == "Widget" {
+		return false
+	}
+	ft, _, err := xRefTable.DereferenceNameEntry(d, "FT")
+	if err != nil || ft != nil {
+		return false
+	}
 	_, hasKids := d.Find("Kids")
-	return t != nil && *t == "Annot" && st != nil && *st != "Widget" && d.NameEntry("FT") == nil && !hasKids
+	return !hasKids
 }
 
 func removeNonWidgetAnnotationsFromFormFields(xRefTable *model.XRefTable, arr types.Array) (types.Array, bool) {
@@ -691,7 +714,7 @@ func removeNonWidgetAnnotationsFromFormFields(xRefTable *model.XRefTable, arr ty
 		}
 
 		d, err := xRefTable.DereferenceDict(ir)
-		if err != nil || d == nil || !nonWidgetAnnotation(d) {
+		if err != nil || d == nil || !nonWidgetAnnotation(xRefTable, d) {
 			cleaned = append(cleaned, value)
 			continue
 		}
@@ -796,9 +819,7 @@ func validateFormXFA(xRefTable *model.XRefTable, d types.Dict, sinceVersion mode
 			}
 
 			if i%2 == 0 {
-
-				_, ok := o.(types.StringLiteral)
-				if !ok {
+				if _, err := types.StringOrHexLiteral(o); err != nil {
 					return fmt.Errorf("AcroForm XFA[%d]: expected string", i)
 				}
 
@@ -1058,7 +1079,11 @@ func pageAnnotIndRefForAcroField(xRefTable *model.XRefTable, indRef types.Indire
 	}
 
 	// Possible orphan sig field dicts.
-	if ft := d.NameEntry("FT"); ft != nil && *ft == "Sig" {
+	ft, _, err := xRefTable.DereferenceNameEntry(d, "FT")
+	if err != nil {
+		return nil, fmt.Errorf("form field obj#%d FT: %w", indRef.ObjectNumber.Value(), err)
+	}
+	if ft != nil && ft.Value() == "Sig" {
 		// Signature Field
 		if _, ok := d.Find("V"); !ok {
 			// without linked sig dict (unsigned)

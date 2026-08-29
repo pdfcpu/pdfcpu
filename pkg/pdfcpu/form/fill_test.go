@@ -68,21 +68,21 @@ func TestFormNameEntriesRejectWrongTypesWithoutPanic(t *testing.T) {
 				_, err := extractCheckBox(ctx.XRefTable, 1, types.Dict{"V": types.Integer(1)}, "7", "field", "", false)
 				return err
 			},
-			want: `checkbox 7: entry "V": expected name`,
+			want: `checkbox 7: entry=V: expected name`,
 		},
 		{
 			name: "collect checkbox value",
 			fn: func() error {
 				return collectBtn(ctx.XRefTable, types.Dict{"V": types.Integer(1)}, &Field{ID: "7"}, &FieldMeta{})
 			},
-			want: `entry "V": expected name`,
+			want: `entry=V: expected name`,
 		},
 		{
 			name: "reset checkbox default",
 			fn: func() error {
 				return resetBtn(ctx.XRefTable, types.Dict{"DV": types.Integer(1)})
 			},
-			want: `entry "DV": expected name`,
+			want: `entry=DV: expected name`,
 		},
 		{
 			name: "fill checkbox value",
@@ -92,7 +92,7 @@ func TestFormNameEntriesRejectWrongTypesWithoutPanic(t *testing.T) {
 				}
 				return fillCheckBox(ctx, types.Dict{"V": types.Integer(1)}, "7", "field", false, JSON, fillDetails, new(bool))
 			},
-			want: `checkbox 7: entry "V": expected name`,
+			want: `checkbox 7: entry=V: expected name`,
 		},
 	}
 
@@ -461,7 +461,7 @@ func TestFillRadioButtonsAddsChildIndexAndPhase(t *testing.T) {
 
 func TestDateFormatActionRejectsMissingQuoteWithoutPanic(t *testing.T) {
 	d := types.Dict{"AA": types.Dict{"F": types.Dict{"JS": types.StringLiteral(`AFDate_FormatEx("broken`)}}}
-	_, err := dateFormatFromJSAction(d)
+	_, err := dateFormatFromJSAction(emptyFormContext(t).XRefTable, d)
 	if err == nil || !strings.Contains(err.Error(), "missing closing quote") {
 		t.Fatalf("expected malformed date format error, got %v", err)
 	}

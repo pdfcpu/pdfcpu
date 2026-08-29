@@ -108,6 +108,50 @@ func TestValidatePDFImageDimensionsRejectsByteLimit(t *testing.T) {
 	}
 }
 
+// TestPDFImageResolvesIndirectImageMask verifies image writing preserves an indirect image-mask value.
+func TestPDFImageResolvesIndirectImageMask(t *testing.T) {
+	xRefTable := &model.XRefTable{
+		Table: map[int]*model.XRefTableEntry{
+			9: model.NewXRefTableEntryGen0(types.Boolean(true)),
+		},
+	}
+
+	for _, value := range []types.Object{types.Boolean(true), *types.NewIndirectRef(9, 0)} {
+		sd := booleanImageStreamDict()
+		sd.Insert("ImageMask", value)
+
+		im, err := pdfImage(xRefTable, sd, false, 7)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !im.imageMask {
+			t.Fatal("ImageMask=false, want true")
+		}
+	}
+}
+
+// TestPDFImageResolvesIndirectIntegerEntries verifies image writing uses referenced dimensions and bit depth.
+func TestPDFImageResolvesIndirectIntegerEntries(t *testing.T) {
+	xRefTable := &model.XRefTable{
+		Table: map[int]*model.XRefTableEntry{
+			10: model.NewXRefTableEntryGen0(types.Integer(1)),
+			11: model.NewXRefTableEntryGen0(types.Integer(8)),
+		},
+	}
+	sd := booleanImageStreamDict()
+	sd.Insert("Width", *types.NewIndirectRef(10, 0))
+	sd.Insert("Height", *types.NewIndirectRef(10, 0))
+	sd.Insert("BitsPerComponent", *types.NewIndirectRef(11, 0))
+
+	im, err := pdfImage(xRefTable, sd, false, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if im.w != 1 || im.h != 1 || im.bpc != 8 {
+		t.Fatalf("got width=%d height=%d bpc=%d, want 1x1 at 8 bpc", im.w, im.h, im.bpc)
+	}
+}
+
 // TestWriteReaderLabelsCreateFailure verifies the corresponding behavior.
 func TestWriteReaderLabelsCreateFailure(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "missing", "out.bin")
@@ -463,7 +507,9 @@ func TestUnsupportedImageRenderingReturnsSentinel(t *testing.T) {
 			name: "DeviceN alternate type",
 			want: "DeviceN alternate colorspace type types.Integer",
 			fn: func() error {
-				_, _, err := renderDeviceN(im, types.Array{types.Name(model.DeviceNCS), types.Array{}, types.Integer(1)})
+				_, _, err := renderDeviceN(
+					xRefTable, im, types.Array{types.Name(model.DeviceNCS), types.Array{}, types.Integer(1)},
+				)
 				return err
 			},
 		},
@@ -471,7 +517,9 @@ func TestUnsupportedImageRenderingReturnsSentinel(t *testing.T) {
 			name: "DeviceN alternate colorspace",
 			want: "DeviceN alternate colorspace Lab",
 			fn: func() error {
-				_, _, err := renderDeviceN(im, types.Array{types.Name(model.DeviceNCS), types.Array{}, types.Name(model.LabCS)})
+				_, _, err := renderDeviceN(
+					xRefTable, im, types.Array{types.Name(model.DeviceNCS), types.Array{}, types.Name(model.LabCS)},
+				)
 				return err
 			},
 		},

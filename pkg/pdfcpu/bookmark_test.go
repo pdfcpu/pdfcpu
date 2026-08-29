@@ -91,6 +91,27 @@ func TestPageNrFromDestinationIgnoresRelaxedDestinationError(t *testing.T) {
 	}
 }
 
+func TestPageNrFromDestinationResolvesIndirectInteger(t *testing.T) {
+	ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx.XRefTable.Table[7] = model.NewXRefTableEntryGen0(types.Integer(4))
+	indRef := *types.NewIndirectRef(7, 0)
+	dest := types.Array{indRef, types.Name("Fit")}
+
+	pageNr, err := PageNrFromDestination(ctx, dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pageNr != 4 {
+		t.Fatalf("page number = %d, want 4", pageNr)
+	}
+	if dest[0] != indRef {
+		t.Fatalf("destination was normalized in place: %v", dest)
+	}
+}
+
 func TestPageNrFromDestinationRejectsInvalidInput(t *testing.T) {
 	ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())
 	if err != nil {

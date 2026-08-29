@@ -197,6 +197,28 @@ func evalOutlineCount(xRefTable *model.XRefTable, d types.Dict, c, visc int, cou
 	return nil
 }
 
+func dereferenceOutlineCount(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (*int, error) {
+	i, _, err := xRefTable.DereferenceIntegerEntry(d, "Count")
+	if err != nil {
+		return nil, model.WithValidationErrorObject(err, ownerObjNr)
+	}
+	if i == nil {
+		return nil, nil
+	}
+
+	count := i.Value()
+	return &count, nil
+}
+
+func outlineCountValue(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (int, error) {
+	count, err := dereferenceOutlineCount(xRefTable, d, ownerObjNr)
+	if err != nil || count == nil {
+		return 0, err
+	}
+
+	return *count, nil
+}
+
 func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.IndirectRef, m map[int]bool, fixed *bool) (int, int, error) {
 	return validateOutlineTreeDepth(xRefTable, first, last, m, fixed, 0)
 }
@@ -228,9 +250,9 @@ func validateOutlineTreeDepth(xRefTable *model.XRefTable, first, last *types.Ind
 			return 0, 0, err
 		}
 
-		var count int
-		if c := d.IntEntry("Count"); c != nil {
-			count = *c
+		count, err := outlineCountValue(xRefTable, d, objNr)
+		if err != nil {
+			return 0, 0, fmt.Errorf("%s: %w", outlineItemContext(err, objNr), err)
 		}
 
 		firstChild := d.IndirectRefEntry("First")
@@ -460,7 +482,7 @@ func removeOutlines(xRefTable *model.XRefTable, rootDict types.Dict) {
 	delete(rootDict, "Outlines")
 }
 
-func validateOutlinesGeneral(xRefTable *model.XRefTable, rootDict types.Dict) (*types.IndirectRef, *types.IndirectRef, *int, error) {
+func validateOutlinesGeneral(xRefTable *model.XRefTable, rootDict types.Dict, outlineObjNr int) (*types.IndirectRef, *types.IndirectRef, *int, error) {
 	d := xRefTable.Outlines
 
 	// Type, optional, name
@@ -485,7 +507,10 @@ func validateOutlinesGeneral(xRefTable *model.XRefTable, rootDict types.Dict) (*
 		return nil, nil, nil, errors.New("missing Last")
 	}
 
-	count := d.IntEntry("Count")
+	count, err := dereferenceOutlineCount(xRefTable, d, outlineObjNr)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	if xRefTable.ValidationMode == model.ValidationStrict && count != nil && *count < 0 {
 		return nil, nil, nil, errors.New("Count must be non-negative")
 	}
@@ -553,7 +578,7 @@ func validateOutlines(xRefTable *model.XRefTable, rootDict types.Dict, required 
 
 	xRefTable.Outlines = d
 
-	first, last, count, err := validateOutlinesGeneral(xRefTable, rootDict)
+	first, last, count, err := validateOutlinesGeneral(xRefTable, rootDict, ir.ObjectNumber.Value())
 	if err != nil {
 		return fmt.Errorf("outline root: %w", err)
 	}

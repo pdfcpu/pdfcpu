@@ -23,10 +23,24 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func imageBooleanEntry(
+	xRefTable *model.XRefTable,
+	sd *types.StreamDict,
+	key string,
+	objNr int,
+) (bool, error) {
+	b, _, err := xRefTable.DereferenceBooleanEntry(sd.Dict, key)
+	if err != nil {
+		return false, fmt.Errorf("image obj#%d entry %q: %w", objNr, key, err)
+	}
+	return b != nil && b.Value(), nil
+}
 
 // Images returns all embedded images of ctx.
 func Images(ctx *model.Context, selectedPages types.IntSet) ([]map[int]model.Image, *ImageListMaxLengths, error) {
@@ -267,6 +281,79 @@ func ListImages(ctx *model.Context, selectedPages types.IntSet) ([]string, error
 	return append([]string{s}, ss...), nil
 }
 
+func integerEntryValue(
+	xRefTable *model.XRefTable,
+	d types.Dict,
+	key, context string,
+	required bool,
+) (*int, error) {
+	i, _, err := xRefTable.DereferenceIntegerEntry(d, key)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", context, err)
+	}
+	if i == nil {
+		if required {
+			return nil, fmt.Errorf("%s: missing entry=%s", context, key)
+		}
+		return nil, nil
+	}
+
+	v := i.Value()
+	return &v, nil
+}
+
+func resolvedCCITTDecodeParms(
+	xRefTable *model.XRefTable,
+	sd *types.StreamDict,
+	parms types.Dict,
+	context string,
+) (types.Dict, error) {
+	resolved := types.NewDict()
+	if parms != nil {
+		resolved = parms.Clone().(types.Dict)
+	}
+
+	var rows *int
+	for _, key := range []string{"K", "Columns", "Rows"} {
+		v, err := integerEntryValue(xRefTable, parms, key, context+" decode parameters", false)
+		if err != nil {
+			return nil, err
+		}
+		if v != nil {
+			resolved[key] = types.Integer(*v)
+		}
+		if key == "Rows" {
+			rows = v
+		}
+	}
+
+	if rows == nil {
+		height, err := integerEntryValue(xRefTable, sd.Dict, "Height", context, true)
+		if err != nil {
+			return nil, err
+		}
+		resolved["Rows"] = types.Integer(*height)
+	}
+
+	return resolved, nil
+}
+
+func prepareImageDecode(xRefTable *model.XRefTable, sd *types.StreamDict, context string) error {
+	for i := range sd.FilterPipeline {
+		if sd.FilterPipeline[i].Name != filter.CCITTFax {
+			continue
+		}
+
+		parms, err := resolvedCCITTDecodeParms(xRefTable, sd, sd.FilterPipeline[i].DecodeParms, context)
+		if err != nil {
+			return err
+		}
+		sd.FilterPipeline[i].DecodeParms = parms
+	}
+
+	return nil
+}
+
 func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
 	imgObj := ctx.Optimize.ImageObjects[objNr]
 	if imgObj == nil {
@@ -276,8 +363,15 @@ func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
 	if d == nil {
 		return fmt.Errorf("image obj#%d: missing image dictionary", objNr)
 	}
-	width := d.IntEntry("Width")
-	height := d.IntEntry("Height")
+	context := fmt.Sprintf("image obj#%d", objNr)
+	width, err := integerEntryValue(ctx.XRefTable, d.Dict, "Width", context, false)
+	if err != nil {
+		return err
+	}
+	height, err := integerEntryValue(ctx.XRefTable, d.Dict, "Height", context, false)
+	if err != nil {
+		return err
+	}
 	if width == nil || height == nil {
 		return fmt.Errorf("image obj#%d: missing width or height", objNr)
 	}

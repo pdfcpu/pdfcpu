@@ -79,11 +79,15 @@ func ScriptForEncoding(enc string) string {
 	return ""
 }
 
-func fontDescriptorIndRefs(fd types.Dict, lang, fontName string, font *model.FontResource) error {
+func fontDescriptorIndRefs(xRefTable *model.XRefTable, fd types.Dict, lang, fontName string, font *model.FontResource) error {
 	phase := "inspect user font references"
 	if lang != "" {
-		if s := fd.NameEntry("Lang"); s != nil {
-			if strings.ToLower(*s) != lang {
+		n, _, err := xRefTable.DereferenceNameEntry(fd, "Lang")
+		if err != nil {
+			return fmt.Errorf("%s: %w", fontPhase(fontName, phase), err)
+		}
+		if n != nil {
+			if strings.ToLower(n.Value()) != lang {
 				return fmt.Errorf("font %s: inspect font descriptor references: %w: language mismatch", fontName, ErrCorruptFontDict)
 			}
 		}
@@ -102,28 +106,47 @@ func fontDescriptorIndRefs(fd types.Dict, lang, fontName string, font *model.Fon
 	return nil
 }
 
-func fontDictName(d types.Dict) string {
-	if name := d.NameEntry("Name"); name != nil {
-		return *name
+func fontDictName(xRefTable *model.XRefTable, d types.Dict) (string, error) {
+	for _, key := range []string{"Name", "BaseFont"} {
+		name, _, err := xRefTable.DereferenceNameEntry(d, key)
+		if err != nil {
+			return "", fmt.Errorf("font dict %s: %w", key, err)
+		}
+		if name != nil {
+			return name.Value(), nil
+		}
 	}
-	if name := d.NameEntry("BaseFont"); name != nil {
-		return *name
+	return "<unknown>", nil
+}
+
+func validateUserfontEncoding(xRefTable *model.XRefTable, d types.Dict, fontName, phase string) error {
+	enc, _, err := xRefTable.DereferenceNameEntry(d, "Encoding")
+	if err != nil {
+		return fmt.Errorf("%s: %w", fontPhase(fontName, phase), err)
 	}
-	return "<unknown>"
+	if enc == nil || enc.Value() != "Identity-H" {
+		return fmt.Errorf("%s: %w: invalid encoding", fontPhase(fontName, phase), ErrCorruptFontDict)
+	}
+	return nil
 }
 
 // IndRefsForUserfontUpdate detects used indirect references for a possible user font update.
 func IndRefsForUserfontUpdate(xRefTable *model.XRefTable, d types.Dict, lang string, font *model.FontResource) error {
-	fontName := fontDictName(d)
 	phase := "inspect user font references"
+	fontName := "<unknown>"
 	if err := requireFontXRef(xRefTable, fontName, phase); err != nil {
+		return err
+	}
+	var err error
+	fontName, err = fontDictName(xRefTable, d)
+	if err != nil {
 		return err
 	}
 	if font == nil {
 		return fmt.Errorf("%s: %w: missing font resource destination", fontPhase(fontName, phase), ErrCorruptFontDict)
 	}
-	if enc := d.NameEntry("Encoding"); enc == nil || *enc != "Identity-H" {
-		return fmt.Errorf("%s: %w: invalid encoding", fontPhase(fontName, phase), ErrCorruptFontDict)
+	if err := validateUserfontEncoding(xRefTable, d, fontName, phase); err != nil {
+		return err
 	}
 
 	// TODO some indRefs may be direct objs => don't reuse userFont.
@@ -167,7 +190,7 @@ func IndRefsForUserfontUpdate(xRefTable *model.XRefTable, d types.Dict, lang str
 		return fmt.Errorf("%s: dereference font descriptor: %w", fontPhase(fontName, phase), err)
 	}
 
-	if err := fontDescriptorIndRefs(fd, lang, fontName, font); err != nil {
+	if err := fontDescriptorIndRefs(xRefTable, fd, lang, fontName, font); err != nil {
 		return err
 	}
 	return nil
@@ -1398,46 +1421,42 @@ func FontResources(xRefTable *model.XRefTable, fm model.FontMap) (types.Dict, er
 
 // Name evaluates the font name for a given font dict.
 func Name(xRefTable *model.XRefTable, fontDict types.Dict, objNumber int) (prefix, fontName string, err error) {
-	var found bool
-	var o types.Object
-
-	subtype := fontDict.Subtype()
-	if subtype == nil || len(*subtype) == 0 {
+	subtype, _, err := xRefTable.DereferenceNameEntry(fontDict, "Subtype")
+	if err != nil {
+		return "", "", fmt.Errorf("fontName: %w", err)
+	}
+	if subtype == nil || len(subtype.Value()) == 0 {
 		return "", "", errors.New("fontName: missing fontDict entry \"Subtype\"")
 	}
 
-	if *subtype != "Type3" {
-
-		o, found = fontDict.Find("BaseFont")
+	entryName := "Name"
+	if subtype.Value() != "Type3" {
+		entryName = "BaseFont"
+		_, found := fontDict.Find(entryName)
 		if !found {
-			o, found = fontDict.Find("Name")
+			entryName = "Name"
+			_, found = fontDict.Find(entryName)
 			if !found {
 				return "", "", errors.New("fontName: missing fontDict entries \"BaseFont\" and \"Name\"")
 			}
 		}
-
 	} else {
-
 		// Type3 fonts only have Name in V1.0 else use generic name.
-
-		o, found = fontDict.Find("Name")
+		_, found := fontDict.Find(entryName)
 		if !found {
 			return "", fmt.Sprintf("Type3_%d", objNumber), nil
 		}
-
 	}
 
-	o, err = xRefTable.Dereference(o)
+	baseFont, _, err := xRefTable.DereferenceNameEntry(fontDict, entryName)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("fontName: %w", err)
 	}
-
-	baseFont, ok := o.(types.Name)
-	if !ok {
+	if baseFont == nil {
 		return "", "", errors.New("fontName: corrupt fontDict entry BaseFont")
 	}
 
-	n := string(baseFont)
+	n := baseFont.Value()
 
 	// Isolate Postscript prefix.
 	var p string
@@ -1454,53 +1473,50 @@ func Name(xRefTable *model.XRefTable, fontDict types.Dict, objNumber int) (prefi
 
 // Lang detects the optional language indicator in a font dict.
 func Lang(xRefTable *model.XRefTable, fontDict types.Dict) (string, error) {
+	var fd types.Dict
 	o, found := fontDict.Find("FontDescriptor")
 	if found {
-		fd, err := xRefTable.DereferenceDict(o)
+		var err error
+		fd, err = xRefTable.DereferenceDict(o)
 		if err != nil {
 			return "", err
 		}
-		var s string
-		n := fd.NameEntry("Lang")
-		if n != nil {
-			s = *n
+	} else {
+		o, found = fontDict.Find("DescendantFonts")
+		if !found {
+			return "", ErrCorruptFontDict
 		}
-		return s, nil
-	}
 
-	o, found = fontDict.Find("DescendantFonts")
-	if !found {
-		return "", ErrCorruptFontDict
-	}
-
-	arr, err := xRefTable.DereferenceArray(o)
-	if err != nil {
-		return "", err
-	}
-
-	if len(arr) != 1 {
-		return "", ErrCorruptFontDict
-	}
-
-	d1, err := xRefTable.DereferenceDict(arr[0])
-	if err != nil {
-		return "", err
-	}
-	o, found = d1.Find("FontDescriptor")
-	if found {
-		fd, err := xRefTable.DereferenceDict(o)
+		arr, err := xRefTable.DereferenceArray(o)
 		if err != nil {
 			return "", err
 		}
-		var s string
-		n := fd.NameEntry("Lang")
-		if n != nil {
-			s = *n
+		if len(arr) != 1 {
+			return "", ErrCorruptFontDict
 		}
-		return s, nil
+
+		d, err := xRefTable.DereferenceDict(arr[0])
+		if err != nil {
+			return "", err
+		}
+		o, found = d.Find("FontDescriptor")
+		if !found {
+			return "", nil
+		}
+		fd, err = xRefTable.DereferenceDict(o)
+		if err != nil {
+			return "", err
+		}
 	}
 
-	return "", nil
+	n, _, err := xRefTable.DereferenceNameEntry(fd, "Lang")
+	if err != nil {
+		return "", fmt.Errorf("font descriptor Lang: %w", err)
+	}
+	if n == nil {
+		return "", nil
+	}
+	return n.Value(), nil
 }
 
 func trivialFontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) (types.Dict, error) {
@@ -1520,29 +1536,18 @@ func trivialFontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objN
 		return nil, fmt.Errorf("trivialFontDescriptor: FontDescriptor is null for font object %d", objNr)
 	}
 
-	if d.Type() != nil && *d.Type() != "FontDescriptor" {
+	t, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return nil, fmt.Errorf("trivialFontDescriptor: Type: %w", err)
+	}
+	if t != nil && t.Value() != "FontDescriptor" {
 		return nil, fmt.Errorf("trivialFontDescriptor: FontDescriptor dict incorrect dict type for font object %d", objNr)
 	}
 
 	return d, nil
 }
 
-// FontDescriptor gets the font descriptor for this font.
-func FontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) (types.Dict, error) {
-	if log.OptimizeEnabled() {
-		log.Optimize.Println("fontDescriptor begin")
-	}
-
-	d, err := trivialFontDescriptor(xRefTable, fontDict, objNr)
-	if err != nil {
-		return nil, err
-	}
-	if d != nil {
-		return d, nil
-	}
-
-	// Try to access a fontDescriptor in a Descendent font for Type0 fonts.
-
+func descendantFontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) (types.Dict, error) {
 	o, ok := fontDict.Find("DescendantFonts")
 	if !ok {
 		//logErrorOptimize.Printf("FontDescriptor: Neither FontDescriptor nor DescendantFonts for font object %d\n", objectNumber)
@@ -1560,7 +1565,7 @@ func FontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) 
 	}
 
 	// dict is the fontDict of the descendant font.
-	d, err = xRefTable.DereferenceDict(a[0])
+	d, err := xRefTable.DereferenceDict(a[0])
 	if err != nil {
 		return nil, fmt.Errorf("fontDescriptor: No descendant font dict for %v", a)
 	}
@@ -1568,11 +1573,14 @@ func FontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) 
 		return nil, fmt.Errorf("fontDescriptor: descendant font dict is null for %v", a)
 	}
 
-	dictType := d.Type()
+	dictType, _, err := xRefTable.DereferenceNameEntry(d, "Type")
+	if err != nil {
+		return nil, fmt.Errorf("fontDescriptor: descendant font dict Type: %w", err)
+	}
 	if dictType == nil {
 		return nil, fmt.Errorf("fontDescriptor: descendant font dict missing Type for font object %d", objNr)
 	}
-	if *dictType != "Font" {
+	if dictType.Value() != "Font" {
 		return nil, fmt.Errorf("fontDescriptor: font dict with incorrect dict type for %v", d)
 	}
 
@@ -1592,6 +1600,20 @@ func FontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) 
 	}
 
 	return d, nil
+}
+
+// FontDescriptor gets the font descriptor for this font.
+func FontDescriptor(xRefTable *model.XRefTable, fontDict types.Dict, objNr int) (types.Dict, error) {
+	if log.OptimizeEnabled() {
+		log.Optimize.Println("fontDescriptor begin")
+	}
+
+	d, err := trivialFontDescriptor(xRefTable, fontDict, objNr)
+	if err != nil || d != nil {
+		return d, err
+	}
+
+	return descendantFontDescriptor(xRefTable, fontDict, objNr)
 }
 
 // Embedded returns true if the font represented by fontDict is embedded.

@@ -418,9 +418,19 @@ func (d Dict) First() *int {
 	return d.IntEntry("First")
 }
 
-// IsLinearizationParmDict returns true if this dict has an int entry for key "Linearized".
+// IsLinearizationParmDict returns true if this dict has a direct number entry with value 1 for key "Linearized".
 func (d Dict) IsLinearizationParmDict() bool {
-	return d.IntEntry("Linearized") != nil
+	o, found := d.Find("Linearized")
+	if !found {
+		return false
+	}
+	switch o := o.(type) {
+	case Integer:
+		return o.Value() == 1
+	case Float:
+		return o.Value() == 1
+	}
+	return false
 }
 
 // IncrementBy increments the integer value for given key by i.
