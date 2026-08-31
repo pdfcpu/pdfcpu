@@ -24,9 +24,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"os"
 	"path"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -764,15 +766,18 @@ func (xRefTable *XRefTable) freeObjects() types.IntSet {
 	return m
 }
 
-func anyKey(m types.IntSet) int {
+func lowestKey(m types.IntSet) int {
+	min := -1
 	for k := range m {
-		return k
+		if min < 0 || k < min {
+			min = k
+		}
 	}
-	return -1
+	return min
 }
 
 func (xRefTable *XRefTable) handleDanglingFree(m types.IntSet, head *XRefTableEntry) error {
-	for i := range m {
+	for _, i := range slices.Sorted(maps.Keys(m)) {
 
 		entry, found := xRefTable.FindTableEntryLight(i)
 		if !found {
@@ -807,7 +812,7 @@ func (xRefTable *XRefTable) validateFreeList(f int, m types.IntSet, e *XRefTable
 		if !m[f] {
 			if len(m) > 0 && lastValid == nil {
 				lastValid = e
-				f = anyKey(m)
+				f = lowestKey(m)
 				nextFree = f
 				continue
 			}
@@ -1844,10 +1849,10 @@ func (xRefTable *XRefTable) consolidateResources(obj types.Object, pAttrs *Inher
 		// Create a resource dict that eventually will contain any inherited resources
 		// walking down from page root to leaf node representing the page in question.
 		pAttrs.Resources = d.Clone().(types.Dict)
-		for k, v := range pAttrs.Resources {
-			o, err := xRefTable.Dereference(v)
+		for _, k := range slices.Sorted(maps.Keys(pAttrs.Resources)) {
+			o, err := xRefTable.Dereference(pAttrs.Resources[k])
 			if err != nil {
-				return err
+				return fmt.Errorf("resource %s: %w", k, err)
 			}
 			if o != nil {
 				pAttrs.Resources[k] = o.Clone()
@@ -1860,13 +1865,14 @@ func (xRefTable *XRefTable) consolidateResources(obj types.Object, pAttrs *Inher
 	}
 
 	// Accumulate any resources defined in this page node into the inherited resources.
-	for k, v := range d {
+	for _, k := range slices.Sorted(maps.Keys(d)) {
+		v := d[k]
 		if k == "ProcSet" || v == nil {
 			continue
 		}
 		d1, err := xRefTable.DereferenceDict(v)
 		if err != nil {
-			return err
+			return fmt.Errorf("resource %s: %w", k, err)
 		}
 		if d1 == nil {
 			continue
@@ -2064,7 +2070,7 @@ func (xRefTable *XRefTable) consolidateResourceSubDict(d types.Dict, key string,
 		set[ki] = true
 	}
 	// Check for missing resource sub dict entries.
-	for k := range res {
+	for _, k := range slices.Sorted(maps.Keys(res)) {
 		if !set[k] {
 			s := fmt.Sprintf("page %d: missing required %s: %s", pageNr, key, k)
 			if xRefTable.ValidationMode == ValidationStrict {
@@ -2078,7 +2084,7 @@ func (xRefTable *XRefTable) consolidateResourceSubDict(d types.Dict, key string,
 }
 
 func (xRefTable *XRefTable) consolidateResourceDict(d types.Dict, prn PageResourceNames, pageNr int) error {
-	for k := range resourceTypes {
+	for _, k := range resourceTypes {
 		if err := xRefTable.consolidateResourceSubDict(d, k, prn, pageNr); err != nil {
 			return err
 		}

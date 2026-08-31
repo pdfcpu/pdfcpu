@@ -19,6 +19,8 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -187,7 +189,8 @@ func validatePatternResourceDict(xRefTable *model.XRefTable, o types.Object, sin
 	}
 
 	// Iterate over pattern resource dictionary
-	for name, o := range d {
+	for _, name := range slices.Sorted(maps.Keys(d)) {
+		o := d[name]
 		// Process pattern
 		if err = validatePattern(xRefTable, o); err != nil {
 			return fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("patternResourceDict.%s", name), o), err)

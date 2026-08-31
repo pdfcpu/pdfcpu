@@ -19,6 +19,8 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -969,10 +971,12 @@ func validateCharProcsDict(xRefTable *model.XRefTable, d types.Dict, dictName st
 		return nil
 	}
 
-	for _, v := range d1 {
+	for _, key := range slices.Sorted(maps.Keys(d1)) {
+		v := d1[key]
 
 		_, _, err = xRefTable.DereferenceStreamDict(v)
 		if err != nil {
+			err = fmt.Errorf("CharProcs entry %s: %w", key, err)
 			return model.WithValidationErrorObject(err, validationObjectNumber(objNr, v))
 		}
 
@@ -1327,7 +1331,8 @@ func validateFontObject(xRefTable *model.XRefTable, obj types.Object) (string, b
 }
 
 func fixFontObjNr(m1 map[string]string, m2 map[string]types.IndirectRef, d types.Dict) {
-	for k, v := range m1 {
+	for _, k := range slices.Sorted(maps.Keys(m1)) {
+		v := m1[k]
 		if v != "" {
 			indRef, ok := m2[v]
 			if ok {
@@ -1394,7 +1399,8 @@ func validateFontResourceDict(xRefTable *model.XRefTable, o types.Object, sinceV
 	var defFontName string
 
 	// Iterate over font resource dict
-	for id, obj := range d {
+	for _, id := range slices.Sorted(maps.Keys(d)) {
+		obj := d[id]
 		if xRefTable.ValidationMode == model.ValidationRelaxed && isMisplacedEncodingResourceDict(xRefTable, id, obj) {
 			d.Delete(id)
 			model.ShowMsg("removed misplaced Encoding dictionary from Font resources")

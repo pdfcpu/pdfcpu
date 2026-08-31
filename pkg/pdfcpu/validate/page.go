@@ -26,6 +26,46 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+type resourceDictValidator struct {
+	name         string
+	sinceVersion model.Version
+}
+
+var resourceDictValidators = []resourceDictValidator{
+	{"ExtGState", model.V10},
+	{"Font", model.V10},
+	{"XObject", model.V10},
+	{"Properties", model.V10},
+	{"ColorSpace", model.V10},
+	{"Pattern", model.V10},
+	{"Shading", model.V13},
+}
+
+func validateResourceCategory(
+	xRefTable *model.XRefTable,
+	name string,
+	o types.Object,
+	sinceVersion model.Version,
+) error {
+	switch name {
+	case "ExtGState":
+		return validateExtGStateResourceDict(xRefTable, o, sinceVersion)
+	case "Font":
+		return validateFontResourceDict(xRefTable, o, sinceVersion)
+	case "XObject":
+		return validateXObjectResourceDict(xRefTable, o, sinceVersion)
+	case "Properties":
+		return validatePropertiesResourceDict(xRefTable, o, sinceVersion)
+	case "ColorSpace":
+		return validateColorSpaceResourceDict(xRefTable, o, sinceVersion)
+	case "Pattern":
+		return validatePatternResourceDict(xRefTable, o, sinceVersion)
+	case "Shading":
+		return validateShadingResourceDict(xRefTable, o, sinceVersion)
+	}
+	return nil
+}
+
 func validateResourceDict(xRefTable *model.XRefTable, o types.Object) (hasResources bool, err error) {
 	resourceObjNr := validationObjectNumber(0, o)
 	d, err := xRefTable.DereferenceDict(o)
@@ -33,21 +73,10 @@ func validateResourceDict(xRefTable *model.XRefTable, o types.Object) (hasResour
 		return false, model.WithValidationErrorObject(err, resourceObjNr)
 	}
 
-	for k, v := range map[string]struct {
-		validate     func(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error
-		sinceVersion model.Version
-	}{
-		"ExtGState":  {validateExtGStateResourceDict, model.V10},
-		"Font":       {validateFontResourceDict, model.V10},
-		"XObject":    {validateXObjectResourceDict, model.V10},
-		"Properties": {validatePropertiesResourceDict, model.V10},
-		"ColorSpace": {validateColorSpaceResourceDict, model.V10},
-		"Pattern":    {validatePatternResourceDict, model.V10},
-		"Shading":    {validateShadingResourceDict, model.V13},
-	} {
-		if o, ok := d.Find(k); ok {
+	for _, v := range resourceDictValidators {
+		if o, ok := d.Find(v.name); ok {
 			categoryObjNr := validationObjectNumber(resourceObjNr, o)
-			err = v.validate(xRefTable, o, v.sinceVersion)
+			err = validateResourceCategory(xRefTable, v.name, o, v.sinceVersion)
 			if err != nil {
 				return false, model.WithValidationErrorObject(err, categoryObjNr)
 			}

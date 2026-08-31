@@ -19,6 +19,8 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -361,7 +363,8 @@ func validateSeparationColorSpace(xRefTable *model.XRefTable, a types.Array, own
 }
 
 func validateDeviceNColorSpaceColorantsDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
-	for name, obj := range d {
+	for _, name := range slices.Sorted(maps.Keys(d)) {
+		obj := d[name]
 		objNr := validationObjectNumber(ownerObjNr, obj)
 
 		a, err := xRefTable.DereferenceArray(obj)
@@ -396,7 +399,8 @@ func validateDeviceNColorSpaceProcessDict(xRefTable *model.XRefTable, d types.Di
 }
 
 func validateDeviceNColorSpaceSoliditiesDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
-	for name, obj := range d {
+	for _, name := range slices.Sorted(maps.Keys(d)) {
+		obj := d[name]
 		objNr := validationObjectNumber(ownerObjNr, obj)
 		_, err := validateFloatForObject(
 			xRefTable, obj, ownerObjNr, func(f float64) bool { return f >= 0.0 && f <= 1.0 },
@@ -411,7 +415,8 @@ func validateDeviceNColorSpaceSoliditiesDict(xRefTable *model.XRefTable, d types
 }
 
 func validateDeviceNColorSpaceDotGainDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
-	for name, obj := range d {
+	for _, name := range slices.Sorted(maps.Keys(d)) {
+		obj := d[name]
 		err := validateFunction(xRefTable, obj, ownerObjNr)
 		if err != nil {
 			return fmt.Errorf("DeviceN dot gain %s: %w", name, err)
@@ -787,7 +792,8 @@ func validateColorSpaceResourceDict(xRefTable *model.XRefTable, o types.Object, 
 	}
 
 	// Iterate over colorspace resource dictionary
-	for name, o := range d {
+	for _, name := range slices.Sorted(maps.Keys(d)) {
+		o := d[name]
 		colorSpaceObjNr := validationObjectNumber(resourceObjNr, o)
 		// Process colorspace
 		err = validateColorSpace(xRefTable, o, resourceObjNr, IncludePatternCS)

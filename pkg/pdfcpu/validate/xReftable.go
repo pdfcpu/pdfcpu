@@ -20,9 +20,11 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"sort"
 	"strconv"
 	"time"
@@ -381,7 +383,8 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 
 	d1 := types.Dict{}
 
-	for treeName, value := range d {
+	for _, treeName := range slices.Sorted(maps.Keys(d)) {
+		value := d[treeName]
 		treeObjNr := validationObjectNumber(namesObjNr, value)
 
 		if ok := validateNameTreeName(treeName); !ok {
@@ -440,8 +443,10 @@ func validateNamedDestinations(xRefTable *model.XRefTable, rootDict types.Dict, 
 		return err
 	}
 
-	for _, o := range xRefTable.Dests {
+	for _, key := range slices.Sorted(maps.Keys(xRefTable.Dests)) {
+		o := xRefTable.Dests[key]
 		if _, err = validateDestination(xRefTable, o, destsObjNr, false); err != nil {
+			err = fmt.Errorf("named destination %s: %w", key, err)
 			return model.WithValidationErrorObject(err, validationObjectNumber(destsObjNr, o))
 		}
 	}
@@ -847,7 +852,8 @@ func validatePieceDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int)
 
 	dictName := "pieceDict"
 
-	for name, o := range d {
+	for _, name := range slices.Sorted(maps.Keys(d)) {
+		o := d[name]
 		pieceObjNr := validationObjectNumber(ownerObjNr, o)
 
 		d1, err := xRefTable.DereferenceDict(o)
@@ -1147,7 +1153,8 @@ func validateCollectionSchemaDict(xRefTable *model.XRefTable, d types.Dict, owne
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
 
-	for k, v := range d {
+	for _, k := range slices.Sorted(maps.Keys(d)) {
+		v := d[k]
 		entryObjNr := validationObjectNumber(ownerObjNr, v)
 
 		if k == "Type" {
@@ -1347,7 +1354,8 @@ func logURIError(xRefTable *model.XRefTable, pages []int) {
 		log.CLI.Println()
 	}
 	for _, page := range pages {
-		for uri, resp := range xRefTable.URIs[page] {
+		for _, uri := range slices.Sorted(maps.Keys(xRefTable.URIs[page])) {
+			resp := xRefTable.URIs[page][uri]
 			if resp != "" {
 				var s string
 				switch resp {
@@ -1371,7 +1379,7 @@ func logURIError(xRefTable *model.XRefTable, pages []int) {
 func checkLinks(xRefTable *model.XRefTable, client http.Client, pages []int) bool {
 	var httpErr bool
 	for _, page := range pages {
-		for uri := range xRefTable.URIs[page] {
+		for _, uri := range slices.Sorted(maps.Keys(xRefTable.URIs[page])) {
 			if log.CLIEnabled() {
 				log.CLI.Print(".")
 			}

@@ -18,6 +18,8 @@ package validate
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -1083,7 +1085,8 @@ func validateExtGStateResourceDict(xRefTable *model.XRefTable, o types.Object, s
 	}
 
 	// Iterate over extGState resource dictionary
-	for name, o := range d {
+	for _, name := range slices.Sorted(maps.Keys(d)) {
+		o := d[name]
 		// Process extGStateDict
 		err = validateExtGStateDict(xRefTable, o)
 		if err != nil {

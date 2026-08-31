@@ -18,6 +18,8 @@ package validate
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -386,7 +388,8 @@ func validateShadingResourceDict(xRefTable *model.XRefTable, obj types.Object, s
 	}
 
 	// Iterate over shading resource dictionary
-	for name, obj := range d {
+	for _, name := range slices.Sorted(maps.Keys(d)) {
+		obj := d[name]
 		// Process shading
 		err = validateShading(xRefTable, obj)
 		if err != nil {

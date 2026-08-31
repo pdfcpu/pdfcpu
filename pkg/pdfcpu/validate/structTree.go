@@ -19,6 +19,8 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -905,7 +907,8 @@ func processStructTreeClassMapDict(xRefTable *model.XRefTable, d types.Dict, own
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
 
-	for name, o := range d {
+	for _, name := range slices.Sorted(maps.Keys(d)) {
+		o := d[name]
 		entryObjNr := validationObjectNumber(ownerObjNr, o)
 
 		// Process dict or array of dicts.

@@ -24,7 +24,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -2870,7 +2872,8 @@ func materializeEncryptionIntegers(c context.Context, ctx *model.Context, d type
 	}
 
 	cf := d.DictEntry("CF")
-	for name, o := range cf {
+	for _, name := range slices.Sorted(maps.Keys(cf)) {
+		o := cf[name]
 		d, ok := o.(types.Dict)
 		if !ok {
 			continue
@@ -3522,7 +3525,8 @@ func decodeObjectStreams(c context.Context, ctx *model.Context) error {
 }
 
 func validateLinearizationDirectEntries(d types.Dict, objNr int) error {
-	for key, o := range d {
+	for _, key := range slices.Sorted(maps.Keys(d)) {
+		o := d[key]
 		if _, ok := o.(types.IndirectRef); ok {
 			return fmt.Errorf("linearization dict obj#%d entry %s: value must be direct", objNr, key)
 		}
@@ -3676,6 +3680,10 @@ func dereferenceAndLoad(c context.Context, ctx *model.Context, objNr int, entry 
 }
 
 func dereferenceObject(c context.Context, ctx *model.Context, objNr int) error {
+	return dereferenceObjectEntry(c, ctx, objNr, ctx.Table[objNr])
+}
+
+func dereferenceObjectEntry(c context.Context, ctx *model.Context, objNr int, entry *model.XRefTableEntry) error {
 	if log.ReadEnabled() {
 		log.Read.Printf("dereferenceObject: begin, dereferencing object %d\n", objNr)
 	}
@@ -3683,8 +3691,6 @@ func dereferenceObject(c context.Context, ctx *model.Context, objNr int) error {
 	if objNr > ctx.MaxObjNr {
 		ctx.MaxObjNr = objNr
 	}
-
-	entry := ctx.Table[objNr]
 
 	if entry.Free {
 		if log.ReadEnabled() {
@@ -3767,19 +3773,46 @@ func dereferenceObjectsSorted(c context.Context, ctx *model.Context) error {
 	return nil
 }
 
-func dereferenceObjectsRaw(c context.Context, ctx *model.Context) error {
+func maxObjectNumber(table map[int]*model.XRefTableEntry) int {
+	maxObjNr := -1
+	for objNr := range table {
+		if objNr > maxObjNr {
+			maxObjNr = objNr
+		}
+	}
+	return maxObjNr
+}
+
+// denseXRefTable reports whether at least half of the object-number range through maxObjNr is populated.
+func denseXRefTable(table map[int]*model.XRefTableEntry, maxObjNr int) bool {
+	return len(table) > 0 && maxObjNr >= 0 && maxObjNr/2 < len(table)
+}
+
+func dereferenceObjectsAscending(c context.Context, ctx *model.Context) error {
 	xRefTable := ctx.XRefTable
-	for objNr := range xRefTable.Table {
+	maxObjNr := maxObjectNumber(xRefTable.Table)
+	if !denseXRefTable(xRefTable.Table, maxObjNr) {
+		return dereferenceObjectsSorted(c, ctx)
+	}
+
+	for objNr := 0; objNr <= maxObjNr; objNr++ {
+		entry, found := xRefTable.Table[objNr]
+		if !found {
+			continue
+		}
 		if err := c.Err(); err != nil {
 			return err
 		}
-		if err := dereferenceObject(c, ctx, objNr); err != nil {
+		if err := dereferenceObjectEntry(c, ctx, objNr, entry); err != nil {
 			return err
 		}
 	}
 
-	for objNr := range xRefTable.Table {
-		entry := xRefTable.Table[objNr]
+	for objNr := 0; objNr <= maxObjNr; objNr++ {
+		entry, found := xRefTable.Table[objNr]
+		if !found {
+			continue
+		}
 		if entry.Free || entry.Compressed {
 			continue
 		}
@@ -3808,8 +3841,8 @@ func validateHintStreamObject(ctx *model.Context, o types.Object, path string, d
 			}
 		}
 	case types.Dict:
-		for key, o := range o {
-			if err := validateHintStreamObject(ctx, o, fmt.Sprintf("%s key %s", path, key), depth+1); err != nil {
+		for _, key := range slices.Sorted(maps.Keys(o)) {
+			if err := validateHintStreamObject(ctx, o[key], fmt.Sprintf("%s key %s", path, key), depth+1); err != nil {
 				return err
 			}
 		}
@@ -3818,15 +3851,30 @@ func validateHintStreamObject(ctx *model.Context, o types.Object, path string, d
 }
 
 func validateHintStreamDict(ctx *model.Context, d types.Dict, objNr int) error {
-	for key, o := range d {
+	for _, key := range slices.Sorted(maps.Keys(d)) {
 		if key == "Length" {
 			continue
 		}
-		if err := validateHintStreamObject(ctx, o, fmt.Sprintf("hint stream obj#%d entry %s", objNr, key), 0); err != nil {
+		if err := validateHintStreamObject(ctx, d[key], fmt.Sprintf("hint stream obj#%d entry %s", objNr, key), 0); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func hintStreamEntryForOffset(ctx *model.Context, offset int64) (int, *model.XRefTableEntry) {
+	objNr := -1
+	var selected *model.XRefTableEntry
+	for candidate, entry := range ctx.Table {
+		if entry == nil || entry.Offset == nil || *entry.Offset != offset {
+			continue
+		}
+		if objNr < 0 || candidate < objNr {
+			objNr = candidate
+			selected = entry
+		}
+	}
+	return objNr, selected
 }
 
 func validateHintStreamDictionaries(ctx *model.Context) error {
@@ -3837,17 +3885,15 @@ func validateHintStreamDictionaries(ctx *model.Context) error {
 		if offset == nil {
 			continue
 		}
-		for objNr, entry := range ctx.Table {
-			if entry == nil || entry.Offset == nil || *entry.Offset != *offset {
-				continue
+		objNr, entry := hintStreamEntryForOffset(ctx, *offset)
+		if entry == nil {
+			continue
+		}
+		sd, ok := entry.Object.(types.StreamDict)
+		if ok {
+			if err := validateHintStreamDict(ctx, sd.Dict, objNr); err != nil {
+				return err
 			}
-			sd, ok := entry.Object.(types.StreamDict)
-			if ok {
-				if err := validateHintStreamDict(ctx, sd.Dict, objNr); err != nil {
-					return err
-				}
-			}
-			break
 		}
 	}
 	return nil
@@ -3859,7 +3905,7 @@ func dereferenceObjects(c context.Context, ctx *model.Context) error {
 		log.Read.Println("dereferenceObjects: begin")
 	}
 
-	f := dereferenceObjectsRaw
+	f := dereferenceObjectsAscending
 	if log.StatsEnabled() {
 		f = dereferenceObjectsSorted
 	}

@@ -33,7 +33,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math/big"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -1925,13 +1927,13 @@ func decryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int
 			isSig = true
 		}
 	}
-	for k, v := range d {
+	for _, k := range slices.Sorted(maps.Keys(d)) {
 		if isSig && k == "Contents" {
 			continue
 		}
-		s, err := decryptDeepObject(v, objNr, genNr, key, needAES, r)
+		s, err := decryptDeepObject(d[k], objNr, genNr, key, needAES, r)
 		if err != nil {
-			return err
+			return fmt.Errorf("decrypt dict entry %s: %w", k, err)
 		}
 		if s != nil {
 			d[k] = s

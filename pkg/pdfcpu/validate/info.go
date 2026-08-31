@@ -19,6 +19,8 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -266,7 +268,8 @@ func validateDocumentInfoDict(xRefTable *model.XRefTable, obj types.Object) (has
 		return false, nil, nil
 	}
 
-	for k, v := range d {
+	for _, k := range slices.Sorted(maps.Keys(d)) {
+		v := d[k]
 
 		hmd, err := validateDocInfoDictEntryWithSpecViolations(xRefTable, k, v, infoObjNr, &specViolations)
 

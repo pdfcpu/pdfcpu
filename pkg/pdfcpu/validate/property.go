@@ -18,6 +18,8 @@ package validate
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -63,7 +65,8 @@ func validatePropertiesDict(xRefTable *model.XRefTable, o types.Object) (err err
 		return fmt.Errorf("%s: %w", dictEntryContext("propertiesDict", "Metadata", d["Metadata"]), err)
 	}
 
-	for key, val := range d {
+	for _, key := range slices.Sorted(maps.Keys(d)) {
+		val := d[key]
 
 		switch key {
 
@@ -130,7 +133,8 @@ func validatePropertiesResourceDict(xRefTable *model.XRefTable, o types.Object, 
 	}
 
 	// Iterate over properties resource dict
-	for name, o := range d {
+	for _, name := range slices.Sorted(maps.Keys(d)) {
+		o := d[name]
 		if err = validatePropertiesDict(xRefTable, o); err != nil {
 			return fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("propertiesResourceDict.%s", name), o), err)
 		}

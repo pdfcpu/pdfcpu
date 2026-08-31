@@ -19,6 +19,8 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -1070,7 +1072,8 @@ func validateAdditionalActions(xRefTable *model.XRefTable, dict types.Dict, dict
 		return false
 	}
 
-	for k, v := range d {
+	for _, k := range slices.Sorted(maps.Keys(d)) {
+		v := d[k]
 		actionObjNr := validationObjectNumber(actionsObjNr, v)
 
 		if !validateAdditionalAction(k, source) {

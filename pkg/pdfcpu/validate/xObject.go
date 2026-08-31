@@ -19,6 +19,8 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -952,7 +954,8 @@ func validateXObjectResourceDict(xRefTable *model.XRefTable, o types.Object, sin
 	//fmt.Printf("XObjResDict:\n%s\n", d)
 
 	// Iterate over XObject resource dictionary
-	for name, o := range d {
+	for _, name := range slices.Sorted(maps.Keys(d)) {
+		o := d[name]
 		xObjectObjNr := validationObjectNumber(resourceObjNr, o)
 		// Process XObject dict
 		err = validateXObjectStreamDict(xRefTable, o)

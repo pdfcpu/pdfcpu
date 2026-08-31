@@ -18,7 +18,8 @@ package pdfcpu
 
 import (
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strconv"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -87,7 +88,7 @@ func arrayObjectNeedsSpace(obj types.Object) bool {
 
 func appendPDFDict(dst []byte, d types.Dict) ([]byte, error) {
 	dst = append(dst, "<<"...)
-	for _, key := range sortedDictKeys(d) {
+	for _, key := range slices.Sorted(maps.Keys(d)) {
 		var err error
 		dst, err = appendPDFDictEntry(dst, key, d[key])
 		if err != nil {
@@ -95,15 +96,6 @@ func appendPDFDict(dst []byte, d types.Dict) ([]byte, error) {
 		}
 	}
 	return append(dst, ">>"...), nil
-}
-
-func sortedDictKeys(d types.Dict) []string {
-	keys := make([]string, 0, len(d))
-	for key := range d {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 func appendPDFDictEntry(dst []byte, key string, obj types.Object) ([]byte, error) {

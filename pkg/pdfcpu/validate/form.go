@@ -19,6 +19,8 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -43,7 +45,8 @@ import (
 
 func validateAppearanceSubDict(xRefTable *model.XRefTable, d types.Dict) error {
 	// dict of xobjects
-	for _, o := range d {
+	for _, key := range slices.Sorted(maps.Keys(d)) {
+		o := d[key]
 
 		if xRefTable.ValidationMode == model.ValidationRelaxed {
 			if d, ok := o.(types.Dict); ok && len(d) == 0 {
@@ -53,7 +56,7 @@ func validateAppearanceSubDict(xRefTable *model.XRefTable, d types.Dict) error {
 
 		err := validateXObjectStreamDict(xRefTable, o)
 		if err != nil {
-			return err
+			return fmt.Errorf("appearance subdict entry %s: %w", key, err)
 		}
 
 	}
@@ -1025,22 +1028,32 @@ func validateForm(xRefTable *model.XRefTable, rootDict types.Dict, required bool
 }
 
 func locateAnnForAPAndRect(d types.Dict, r *types.Rectangle, pageAnnots map[int]model.PgAnnots) *types.IndirectRef {
-	if indRef1 := d.IndirectRefEntry("AP"); indRef1 != nil {
-		apObjNr := indRef1.ObjectNumber.Value()
-		for _, m := range pageAnnots {
-			annots, ok := m[model.AnnWidget]
-			if ok {
-				for objNr, annRend := range annots.Map {
-					if objNr > 0 {
-						if annRend.RectString() == r.ShortString() && annRend.APObjNrInt() == apObjNr {
-							return types.NewIndirectRef(objNr, 0)
-						}
-					}
-				}
+	indRef := d.IndirectRefEntry("AP")
+	if indRef == nil {
+		return nil
+	}
+
+	apObjNr := indRef.ObjectNumber.Value()
+	rect := r.ShortString()
+	pageNr, objNr := 0, 0
+	for page, m := range pageAnnots {
+		annots, ok := m[model.AnnWidget]
+		if !ok {
+			continue
+		}
+		for candidateObjNr, annRend := range annots.Map {
+			if candidateObjNr <= 0 || annRend.RectString() != rect || annRend.APObjNrInt() != apObjNr {
+				continue
+			}
+			if objNr == 0 || page < pageNr || page == pageNr && candidateObjNr < objNr {
+				pageNr, objNr = page, candidateObjNr
 			}
 		}
 	}
-	return nil
+	if objNr == 0 {
+		return nil
+	}
+	return types.NewIndirectRef(objNr, 0)
 }
 
 func pageAnnotIndRefForAcroField(xRefTable *model.XRefTable, indRef types.IndirectRef) (*types.IndirectRef, error) {

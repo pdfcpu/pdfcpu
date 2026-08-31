@@ -19,7 +19,9 @@ package validate
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
+	"slices"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -174,7 +176,8 @@ func validateFileSpecDictEntryEFDict(xRefTable *model.XRefTable, d types.Dict, o
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
 
-	for k, obj := range d {
+	for _, k := range slices.Sorted(maps.Keys(d)) {
+		obj := d[k]
 
 		if !validateFileSpecDictEntriesEFAndRFKeys(k) {
 			return fmt.Errorf("embedded file dict: invalid key %s", k)
@@ -278,7 +281,8 @@ func validateFileSpecDictEntriesEFAndRF(
 		return err
 	}
 
-	for k, val := range rfDict {
+	for _, k := range slices.Sorted(maps.Keys(rfDict)) {
+		val := rfDict[k]
 		arrayObjNr := validationObjectNumber(rfObjNr, val)
 
 		if _, ok := efDict.Find(k); !ok {

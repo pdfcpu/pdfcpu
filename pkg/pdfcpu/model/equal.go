@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -211,7 +213,8 @@ func equalDicts(d1, d2 types.Dict, xRefTable *XRefTable, pairs []int) (bool, err
 		return false, err
 	}
 
-	for key, v1 := range d1 {
+	for _, key := range slices.Sorted(maps.Keys(d1)) {
+		v1 := d1[key]
 
 		v2, found := d2[key]
 		if !found {
@@ -222,7 +225,7 @@ func equalDicts(d1, d2 types.Dict, xRefTable *XRefTable, pairs []int) (bool, err
 		if fontNameEntry(fontDicts, key) {
 			ok, err := equalFontNames(v1, v2, xRefTable)
 			if err != nil {
-				return false, err
+				return false, fmt.Errorf("dict entry %s: %w", key, err)
 			}
 
 			if !ok {
@@ -234,7 +237,7 @@ func equalDicts(d1, d2 types.Dict, xRefTable *XRefTable, pairs []int) (bool, err
 
 		ok, err := EqualObjects(v1, v2, xRefTable, pairs)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("dict entry %s: %w", key, err)
 		}
 
 		if !ok {

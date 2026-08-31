@@ -20,6 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -32,17 +34,18 @@ func processDictRefCounts(xRefTable *XRefTable, d types.Dict, depth int) error {
 	if err := xRefTable.CheckRecursionDepth("reference count traversal", depth); err != nil {
 		return err
 	}
-	for _, e := range d {
+	for _, key := range slices.Sorted(maps.Keys(d)) {
+		e := d[key]
 		switch o1 := e.(type) {
 		case types.IndirectRef:
 			xRefTable.IncrementRefCount(&o1)
 		case types.Dict:
 			if err := processRefCounts(xRefTable, o1, depth+1); err != nil {
-				return err
+				return fmt.Errorf("dict entry %s: %w", key, err)
 			}
 		case types.Array:
 			if err := processRefCounts(xRefTable, o1, depth+1); err != nil {
-				return err
+				return fmt.Errorf("dict entry %s: %w", key, err)
 			}
 		}
 	}
