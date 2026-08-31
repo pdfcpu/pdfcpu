@@ -1827,6 +1827,22 @@ func processXRefRepairLine(c context.Context, ctx *model.Context, state *xrefRep
 	return true, nil
 }
 
+func discardPreEncryptionObjects(ctx *model.Context) {
+	if ctx.Encrypt == nil || ctx.EncKey != nil {
+		return
+	}
+
+	for _, entry := range ctx.Table {
+		if entry == nil || entry.Free || entry.Compressed || entry.Offset == nil {
+			continue
+		}
+		entry.Object = nil
+	}
+
+	ctx.RootDict = nil
+	ctx.Read.BinaryTotalSize = 0
+}
+
 // bypassXrefSection is a fix for digesting corrupt xref sections.
 // It populates the xRefTable by reading in all indirect objects line by line
 // and works on the assumption of a single xref section - meaning no incremental updates.
@@ -1903,6 +1919,7 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 		state.offset += int64(length + eolCount)
 		continue
 	}
+	discardPreEncryptionObjects(ctx)
 	return nil
 }
 
