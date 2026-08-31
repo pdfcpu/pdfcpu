@@ -448,7 +448,7 @@ func validateAnnotationDictFreeTextPart1(xRefTable *model.XRefTable, d types.Dic
 	validateCL := func(a types.Array) bool { return len(a) == 4 || len(a) == 6 }
 	sinceVersion = model.V16
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		sinceVersion = model.V14
+		sinceVersion = model.V13
 		validateCL = nil
 	}
 
