@@ -115,3 +115,23 @@ func TestMergeHonorsValidationModeForEverySubject(t *testing.T) {
 		})
 	}
 }
+
+// TestMergeAppendFileFailurePreservesExistingOutput verifies staged append publication.
+func TestMergeAppendFileFailurePreservesExistingOutput(t *testing.T) {
+	outFile := filepath.Join(t.TempDir(), "append.pdf")
+	original := []byte("existing output")
+	if err := os.WriteFile(outFile, original, 0640); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := MergeAppendFile(nil, outFile, false, nil); err == nil {
+		t.Fatal("expected merge-append failure")
+	}
+	bb, err := os.ReadFile(outFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(bb, original) {
+		t.Fatalf("existing output changed: got %q, want %q", bb, original)
+	}
+}

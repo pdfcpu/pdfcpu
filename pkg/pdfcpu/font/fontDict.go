@@ -262,7 +262,7 @@ func ttfFontFile(xRefTable *model.XRefTable, fontName string) (*types.IndirectRe
 	if err := requireFontXRef(xRefTable, fontName, "embed font file"); err != nil {
 		return nil, err
 	}
-	bb, err := font.Read(fontName)
+	bb, err := xRefTable.FontRepository().Read(fontName)
 	if err != nil {
 		return nil, fmt.Errorf("embed font %s: read installed font: %w", fontName, err)
 	}
@@ -326,7 +326,7 @@ func ttfSubFontFile(xRefTable *model.XRefTable, fontName string, indRef *types.I
 		}
 		sd = obj.(types.StreamDict)
 	}
-	bb, err := font.Subset(fontName, xRefTable.UsedGIDs[fontName])
+	bb, err := xRefTable.FontRepository().Subset(fontName, xRefTable.UsedGIDs[fontName])
 	if err != nil {
 		return nil, fmt.Errorf("embed subset font: %w", err)
 	}
@@ -1040,7 +1040,7 @@ func UpdateUserfont(xRefTable *model.XRefTable, fontName string, f model.FontRes
 	if err := requireFontXRef(xRefTable, fontName, "update user font"); err != nil {
 		return err
 	}
-	ttf, ok, err := font.UserFont(fontName)
+	ttf, ok, err := xRefTable.FontRepository().UserFont(fontName)
 	if err != nil {
 		return fmt.Errorf("font %s: load metrics: %w", fontName, err)
 	}
@@ -1288,7 +1288,7 @@ func type0FontDict(xRefTable *model.XRefTable, fontName, lang, script string, in
 			return nil, err
 		}
 	}
-	ttf, ok, err := font.UserFont(fontName)
+	ttf, ok, err := xRefTable.FontRepository().UserFont(fontName)
 	if err != nil {
 		return nil, fmt.Errorf("font %s: load metrics: %w", fontName, err)
 	}
@@ -1321,7 +1321,7 @@ func trueTypeFontDict(xRefTable *model.XRefTable, fontName, fontLang string) (*t
 	if err := requireFontXRef(xRefTable, fontName, "create TrueType font dictionary"); err != nil {
 		return nil, err
 	}
-	ttf, ok, err := font.UserFont(fontName)
+	ttf, ok, err := xRefTable.FontRepository().UserFont(fontName)
 	if err != nil {
 		return nil, fmt.Errorf("font %s: load metrics: %w", fontName, err)
 	}

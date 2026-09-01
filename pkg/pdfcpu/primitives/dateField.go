@@ -221,7 +221,6 @@ func (df *DateField) validateTab() error {
 }
 
 func (df *DateField) validate() error {
-
 	if err := df.validateID(); err != nil {
 		return err
 	}
@@ -344,7 +343,6 @@ func (df *DateField) calcMargin() (float64, float64, float64, float64, error) {
 }
 
 func (df *DateField) labelPos(labelHeight, w, g float64) (float64, float64) {
-
 	var x, y float64
 	bb, horAlign := df.BoundingBox, df.Label.HorAlign
 
@@ -405,8 +403,8 @@ func (tf *DateField) renderBackground(w io.Writer, bgCol, boCol *color.SimpleCol
 }
 
 func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
-
 	w, h := df.BoundingBox.Width(), df.BoundingBox.Height()
+	repo := xRefTable.FontRepository()
 	bgCol := df.BgCol
 	boWidth, boCol := df.calcBorder()
 	buf := new(bytes.Buffer)
@@ -429,14 +427,14 @@ func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 
 	f := df.Font
 	if f.Size > h {
-		size, err := fontSizeForLineHeight(f.Name, h)
+		size, err := fontSizeForLineHeight(repo, f.Name, h)
 		if err != nil {
 			return nil, fmt.Errorf("date field text: %w", err)
 		}
 		f.Size = size
 	}
 
-	lineBB, err := model.CalcBoundingBoxFloat(v, 0, 0, f.Name, f.Size)
+	lineBB, err := repo.TextBoundingBox(v, f.Name, f.Size)
 	if err != nil {
 		return nil, fmt.Errorf("date field text: %w", err)
 	}
@@ -446,7 +444,7 @@ func (df *DateField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	}
 	x := alignedFieldTextX(df.HorAlign, w, lineBB.Width(), boWidth)
 
-	lineHeight, descent, err := fontLineMetrics(f.Name, f.Size)
+	lineHeight, descent, err := fontLineMetrics(repo, f.Name, f.Size)
 	if err != nil {
 		return nil, fmt.Errorf("date field text: %w", err)
 	}
@@ -489,7 +487,6 @@ func (df *DateField) RefreshN(xRefTable *model.XRefTable, indRef *types.Indirect
 }
 
 func (df *DateField) irN(fonts model.FontMap) (*types.IndirectRef, error) {
-
 	bb, err := df.renderN(df.pdf.XRefTable)
 	if err != nil {
 		return nil, err
@@ -712,7 +709,6 @@ func (df *DateField) prepareRectLL(mTop, mRight, mBottom, mLeft float64) (float6
 }
 
 func (df *DateField) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	if df.Label == nil {
 		return nil
 	}
@@ -781,7 +777,6 @@ func (df *DateField) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) e
 }
 
 func (df *DateField) prepForRender(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	mTop, mRight, mBottom, mLeft, err := df.calcMargin()
 	if err != nil {
 		return err
@@ -808,7 +803,6 @@ func (df *DateField) prepForRender(p *model.Page, pageNr int, fonts model.FontMa
 }
 
 func (df *DateField) doRender(p *model.Page, fonts model.FontMap) error {
-
 	d, err := df.prepareDict(fonts)
 	if err != nil {
 		return err
@@ -835,7 +829,6 @@ func (df *DateField) doRender(p *model.Page, fonts model.FontMap) error {
 }
 
 func (df *DateField) render(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	if err := df.prepForRender(p, pageNr, fonts); err != nil {
 		return err
 	}
@@ -899,7 +892,6 @@ func NewDateField(
 }
 
 func renderDateFieldAP(ctx *model.Context, d types.Dict, v string, da *string, fonts map[string]types.IndirectRef) error {
-
 	df, fontIndRef, err := NewDateField(ctx, d, v, da, nil, fonts)
 	if err != nil {
 		return err

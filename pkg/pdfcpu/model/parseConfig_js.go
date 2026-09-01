@@ -477,9 +477,8 @@ func parseKeyValue(k, v string, c *Configuration) error {
 	return parseKeysPart4(k, v, c)
 }
 
-func parseConfigFile(r io.Reader, configPath string) error {
-	//fmt.Println("parseConfigFile For JS")
-	conf := *newDefaultConfiguration()
+func readConfiguration(r io.Reader, configPath string) (*Configuration, error) {
+	conf := *NewStatelessConfiguration()
 	conf.Path = configPath
 
 	s := bufio.NewScanner(r)
@@ -499,21 +498,29 @@ func parseConfigFile(r io.Reader, configPath string) error {
 		}
 		ss := strings.Split(t, ": ")
 		if len(ss) != 2 {
-			return fmt.Errorf("invalid entry: <%s>", t)
+			return nil, fmt.Errorf("invalid entry: <%s>", t)
 		}
 		k := strings.TrimSpace(ss[0])
 		v := strings.TrimSpace(ss[1])
 		if len(k) == 0 || len(v) == 0 {
-			return fmt.Errorf("invalid entry: <%s>", t)
+			return nil, fmt.Errorf("invalid entry: <%s>", t)
 		}
 		if err := parseKeyValue(k, v, &conf); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if err := s.Err(); err != nil {
-		return err
+		return nil, err
 	}
 
-	loadedDefaultConfig = &conf
+	return &conf, nil
+}
+
+func parseConfigFile(r io.Reader, configPath string) error {
+	conf, err := readConfiguration(r, configPath)
+	if err != nil {
+		return err
+	}
+	loadedDefaultConfig = conf
 	return nil
 }

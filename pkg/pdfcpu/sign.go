@@ -45,10 +45,39 @@ type signatureValidationHandler func(
 // ValidateSignatures validates signature integrity, reports available trust evidence and performs a best-effort local
 // assessment.
 func ValidateSignatures(ra io.ReaderAt, ctx *model.Context, all bool) ([]*model.SignatureValidationResult, error) {
+	return validateSignatures(ra, ctx, all, userCertificatePool())
+}
+
+// ValidateSignaturesWithCertificatePool validates signatures using rootCerts as the local trust pool.
+// A nil pool is treated as an empty local trust pool.
+func ValidateSignaturesWithCertificatePool(
+	ra io.ReaderAt,
+	ctx *model.Context,
+	all bool,
+	rootCerts *x509.CertPool,
+) ([]*model.SignatureValidationResult, error) {
+	if rootCerts == nil {
+		rootCerts = x509.NewCertPool()
+	}
+	return validateSignatures(ra, ctx, all, rootCerts)
+}
+
+func validateSignatures(
+	ra io.ReaderAt,
+	ctx *model.Context,
+	all bool,
+	rootCerts *x509.CertPool,
+) ([]*model.SignatureValidationResult, error) {
 	var results []*model.SignatureValidationResult
 
 	if ctx.URSignature != nil {
-		svr, err := validateURSignature(ctx.URSignature, ctx.URSignatureIncrement, ctx, ra)
+		svr, err := validateURSignatureWithCertificatePool(
+			ctx.URSignature,
+			ctx.URSignatureIncrement,
+			ctx,
+			ra,
+			rootCerts,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("usage rights signature: %w", err)
 		}
@@ -73,7 +102,7 @@ func ValidateSignatures(ra io.ReaderAt, ctx *model.Context, all bool) ([]*model.
 				continue
 			}
 
-			svr, err := validateSignature(sig, ctx, ra, first, all, inc)
+			svr, err := validateSignatureWithCertificatePool(sig, ctx, ra, first, all, inc, rootCerts)
 			if err != nil {
 				return nil, fmt.Errorf("signature obj#%d: %w", sig.ObjNr, err)
 			}
@@ -126,7 +155,22 @@ func checkForAbortAfterFirst(first bool, svr *model.SignatureValidationResult, c
 	return svr.Certified()
 }
 
-func validateURSignature(sigDict types.Dict, increment int, ctx *model.Context, ra io.ReaderAt) (*model.SignatureValidationResult, error) {
+func validateURSignature(
+	sigDict types.Dict,
+	increment int,
+	ctx *model.Context,
+	ra io.ReaderAt,
+) (*model.SignatureValidationResult, error) {
+	return validateURSignatureWithCertificatePool(sigDict, increment, ctx, ra, userCertificatePool())
+}
+
+func validateURSignatureWithCertificatePool(
+	sigDict types.Dict,
+	increment int,
+	ctx *model.Context,
+	ra io.ReaderAt,
+	rootCerts *x509.CertPool,
+) (*model.SignatureValidationResult, error) {
 	sig := model.Signature{Type: model.SigTypeUR, Visible: false, Signed: true}
 	result := model.SignatureValidationResult{Signature: sig}
 
@@ -155,7 +199,7 @@ func validateURSignature(sigDict types.Dict, increment int, ctx *model.Context, 
 		false,
 		true,
 		0,
-		userCertificatePool(),
+		rootCerts,
 		&result,
 		ctx,
 	); err != nil {
@@ -165,7 +209,24 @@ func validateURSignature(sigDict types.Dict, increment int, ctx *model.Context, 
 	return &result, nil
 }
 
-func validateSignature(sig model.Signature, ctx *model.Context, ra io.ReaderAt, first, all bool, increment int) (*model.SignatureValidationResult, error) {
+func validateSignature(
+	sig model.Signature,
+	ctx *model.Context,
+	ra io.ReaderAt,
+	first, all bool,
+	increment int,
+) (*model.SignatureValidationResult, error) {
+	return validateSignatureWithCertificatePool(sig, ctx, ra, first, all, increment, userCertificatePool())
+}
+
+func validateSignatureWithCertificatePool(
+	sig model.Signature,
+	ctx *model.Context,
+	ra io.ReaderAt,
+	first, all bool,
+	increment int,
+	rootCerts *x509.CertPool,
+) (*model.SignatureValidationResult, error) {
 	sigField, err := ctx.DereferenceDict(*types.NewIndirectRef(sig.ObjNr, 0))
 	if err != nil {
 		return nil, fmt.Errorf("signature field dict: dereference: %w", err)
@@ -231,7 +292,7 @@ func validateSignature(sig model.Signature, ctx *model.Context, ra io.ReaderAt, 
 		result.Signature.Authoritative,
 		all,
 		perms,
-		userCertificatePool(),
+		rootCerts,
 		&result,
 		ctx,
 	); err != nil {

@@ -18,9 +18,12 @@ package primitives
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"strings"
 	"testing"
 
+	corefont "github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -69,5 +72,42 @@ func TestTextFieldCombEscapesEachCell(t *testing.T) {
 	}
 	if got := strings.Count(content, " Tj "); got != 3 {
 		t.Fatalf("comb appearance Tj count = %d, want 3: %s", got, content)
+	}
+}
+
+func TestTextFieldMetricsUseStatelessRepository(t *testing.T) {
+	useMissingGlobalFontDirectory(t)
+	ctx, err := model.NewContext(strings.NewReader(""), model.NewStatelessConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tf := TextField{
+		Value:       "text",
+		BoundingBox: types.RectForDim(60, 20),
+		Font: &FormFont{
+			Name: "Demo",
+			Size: 10,
+			col:  &color.Black,
+		},
+		fontID: "F0",
+	}
+
+	if _, err := tf.renderN(ctx.XRefTable); !errors.Is(err, corefont.ErrUnknownFont) {
+		t.Fatalf("expected %v, got %v", corefont.ErrUnknownFont, err)
+	}
+	if _, err := textFieldLines(ctx.XRefTable, "text", "Demo", 10, true, 60); !errors.Is(err, corefont.ErrUnknownFont) {
+		t.Fatalf("expected %v from multiline wrapping, got %v", corefont.ErrUnknownFont, err)
+	}
+	if err := tf.renderLines(
+		ctx.XRefTable,
+		ctx.XRefTable.FontRepository(),
+		0,
+		10,
+		60,
+		10,
+		[]string{"text"},
+		io.Discard,
+	); !errors.Is(err, corefont.ErrUnknownFont) {
+		t.Fatalf("expected %v from text bounding box, got %v", corefont.ErrUnknownFont, err)
 	}
 }

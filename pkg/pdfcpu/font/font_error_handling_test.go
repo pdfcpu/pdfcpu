@@ -291,6 +291,36 @@ func TestUpdateUserfontUpdatesExistingObjectsInPlace(t *testing.T) {
 	}
 }
 
+func TestStatelessFontEmbeddingDoesNotUseGlobalRepository(t *testing.T) {
+	installUpdateUserfontMetrics(t)
+	if _, ok, err := corefont.UserFont("Demo"); err != nil || !ok {
+		t.Fatalf("expected Demo in global font repository: available=%t, err=%v", ok, err)
+	}
+
+	xRefTable := &model.XRefTable{
+		Conf:     model.NewStatelessConfiguration(),
+		Table:    map[int]*model.XRefTableEntry{},
+		UsedGIDs: map[string]map[uint16]bool{"Demo": {0: true}},
+	}
+	tests := []struct {
+		name string
+		fn   func() error
+	}{
+		{"font file", func() error { _, err := ttfFontFile(xRefTable, "Demo"); return err }},
+		{"subset font file", func() error { _, err := ttfSubFontFile(xRefTable, "Demo", nil); return err }},
+		{"update user font", func() error { return UpdateUserfont(xRefTable, "Demo", model.FontResource{}) }},
+		{"Type0 font dictionary", func() error { _, err := type0FontDict(xRefTable, "Demo", "", "", nil); return err }},
+		{"TrueType font dictionary", func() error { _, err := trueTypeFontDict(xRefTable, "Demo", ""); return err }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.fn(); !errors.Is(err, corefont.ErrUnknownFont) {
+				t.Fatalf("expected %v, got %v", corefont.ErrUnknownFont, err)
+			}
+		})
+	}
+}
+
 func TestReferencedFontObjectRejectsMissingXRefEntry(t *testing.T) {
 	indRef := types.NewIndirectRef(7, 0)
 	xRefTable := &model.XRefTable{Table: map[int]*model.XRefTableEntry{}}

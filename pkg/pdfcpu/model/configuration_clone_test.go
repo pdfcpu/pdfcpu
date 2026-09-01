@@ -41,6 +41,7 @@ func containsMutableReferences(t reflect.Type) bool {
 }
 
 type configurationScalarValues struct {
+	resources                       configurationResources
 	Path                            string
 	CreationDate                    string
 	Version                         string
@@ -86,6 +87,7 @@ type configurationScalarValues struct {
 
 func scalarValues(c *Configuration) configurationScalarValues {
 	return configurationScalarValues{
+		resources:                       c.resources,
 		Path:                            c.Path,
 		CreationDate:                    c.CreationDate,
 		Version:                         c.Version,
@@ -132,6 +134,8 @@ func scalarValues(c *Configuration) configurationScalarValues {
 
 func configurationCloneFixture() *Configuration {
 	return &Configuration{
+		resources: resourcesForConfigurationDir(configurationResourceModeReadOnly, "test/config"),
+
 		Path:                            "test/path",
 		CreationDate:                    "2026-08-31 12:34",
 		Version:                         "v0.16.0-test",

@@ -32,7 +32,7 @@ func TestBuiltInRevocationTimeoutsMatchEmbeddedConfig(t *testing.T) {
 		t.Fatalf("parse embedded configuration: %v", err)
 	}
 
-	conf := newDefaultConfiguration()
+	conf := NewStatelessConfiguration()
 	tests := []struct {
 		name string
 		got  int
@@ -81,7 +81,7 @@ func TestUnsupportedResourcePolicyDefaultsToSkip(t *testing.T) {
 		conf *Configuration
 		mode int
 	}{
-		{"default", newDefaultConfiguration(), ValidationRelaxed},
+		{"default", NewStatelessConfiguration(), ValidationRelaxed},
 		{"strict YAML", loadedConfig(configuration{ValidationMode: "ValidationStrict"}, ""), ValidationStrict},
 		{"relaxed YAML", loadedConfig(configuration{ValidationMode: "ValidationRelaxed"}, ""), ValidationRelaxed},
 	}

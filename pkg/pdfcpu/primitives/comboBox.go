@@ -335,6 +335,7 @@ func (cb *ComboBox) labelPos(labelHeight, w, g float64) (float64, float64) {
 
 func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	w, h := cb.BoundingBox.Width(), cb.BoundingBox.Height()
+	repo := xRefTable.FontRepository()
 	bgCol := cb.BgCol
 	boWidth, boCol := cb.calcBorder()
 	buf := new(bytes.Buffer)
@@ -365,7 +366,7 @@ func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	if font.IsCoreFont(f.Name) && utf8.ValidString(v) {
 		v = model.DecodeUTF8ToByte(v)
 	}
-	lineBB, err := model.CalcBoundingBoxFloat(v, 0, 0, f.Name, f.Size)
+	lineBB, err := repo.TextBoundingBox(v, f.Name, f.Size)
 	if err != nil {
 		return nil, fmt.Errorf("combo box text: %w", err)
 	}
@@ -375,7 +376,7 @@ func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	}
 	x := alignedFieldTextX(cb.HorAlign, w, lineBB.Width(), boWidth)
 
-	lineHeight, descent, err := fontLineMetrics(f.Name, f.Size)
+	lineHeight, descent, err := fontLineMetrics(repo, f.Name, f.Size)
 	if err != nil {
 		return nil, fmt.Errorf("combo box text: %w", err)
 	}

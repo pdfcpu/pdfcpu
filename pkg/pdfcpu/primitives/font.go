@@ -55,8 +55,8 @@ var ISO639Codes = []string{"ab", "aa", "af", "ak", "sq", "am", "ar", "an", "hy",
 	"ro", "rm", "rn", "ru", "se", "sm", "sg", "sa", "sc", "sr", "sn", "sd", "si", "sk", "sl", "so", "st", "es", "su", "sw", "ss", "sv", "tl", "ty", "tg", "ta", "tt",
 	"te", "th", "bo", "ti", "to", "ts", "tn", "tr", "tk", "tw", "ug", "uk", "ur", "uz", "ve", "vi", "vo", "wa", "cy", "wo", "xh", "yi", "yo", "za", "zu"}
 
-func fontLineMetrics(fontName string, fontSize float64) (float64, float64, error) {
-	bb, err := font.BoundingBox(fontName)
+func fontLineMetrics(repo *font.Repository, fontName string, fontSize float64) (float64, float64, error) {
+	bb, err := repo.BoundingBox(fontName)
 	if err != nil {
 		return 0, 0, fmt.Errorf("font %s: bounding box: %w", fontName, err)
 	}
@@ -65,8 +65,8 @@ func fontLineMetrics(fontName string, fontSize float64) (float64, float64, error
 	return lineHeight, descent, nil
 }
 
-func fontSizeForLineHeight(fontName string, lineHeight float64) (float64, error) {
-	bb, err := font.BoundingBox(fontName)
+func fontSizeForLineHeight(repo *font.Repository, fontName string, lineHeight float64) (float64, error) {
+	bb, err := repo.BoundingBox(fontName)
 	if err != nil {
 		return 0, fmt.Errorf("font %s: bounding box: %w", fontName, err)
 	}
@@ -97,8 +97,8 @@ func (f *FormFont) validateISO639() error {
 	return nil
 }
 
-func (f *FormFont) validateScriptSupport() error {
-	fd, ok, err := font.UserFont(f.Name)
+func (f *FormFont) validateScriptSupport(repo *font.Repository) error {
+	fd, ok, err := repo.UserFont(f.Name)
 	if err != nil {
 		return fmt.Errorf("userfont %s: load metrics: %w", f.Name, err)
 	}
@@ -121,14 +121,15 @@ func (f *FormFont) validate() error {
 	}
 
 	if f.Name != "" && f.Name[0] != '$' {
-		supported, err := font.SupportedFont(f.Name)
+		repo := f.pdf.XRefTable.FontRepository()
+		supported, err := repo.SupportedFont(f.Name)
 		if err != nil {
 			return fmt.Errorf("font %s: load metrics: %w", f.Name, err)
 		}
 		if !supported {
 			return fmt.Errorf("font %s is unsupported, please refer to \"pdfcpu fonts list\"", f.Name)
 		}
-		userFont, err := font.IsUserFont(f.Name)
+		userFont, err := repo.IsUserFont(f.Name)
 		if err != nil {
 			return fmt.Errorf("font %s: load metrics: %w", f.Name, err)
 		}
@@ -141,7 +142,7 @@ func (f *FormFont) validate() error {
 			}
 			if f.Script != "" {
 				f.Script = strings.ToUpper(f.Script)
-				if err := f.validateScriptSupport(); err != nil {
+				if err := f.validateScriptSupport(repo); err != nil {
 					return err
 				}
 			}
@@ -205,7 +206,7 @@ func FormFontDetails(xRefTable *model.XRefTable, indRef types.IndirectRef) (stri
 	}
 
 	var fLang string
-	userFont, err := font.IsUserFont(fName)
+	userFont, err := xRefTable.FontRepository().IsUserFont(fName)
 	if err != nil {
 		return "", "", "", fmt.Errorf("font %s: load metrics: %w", fName, err)
 	}

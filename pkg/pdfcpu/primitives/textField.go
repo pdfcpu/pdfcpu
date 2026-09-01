@@ -403,12 +403,18 @@ func (tf *TextField) renderCombLine(xRefTable *model.XRefTable, x, y float64, rr
 	return nil
 }
 
-func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y float64, lines []string, buf io.Writer) error {
+func (tf *TextField) renderLines(
+	xRefTable *model.XRefTable,
+	repo *font.Repository,
+	boWidth, lh, w, y float64,
+	lines []string,
+	buf io.Writer,
+) error {
 	f := tf.Font
 	cjk := pdffont.CJK(f.Script, f.Lang)
 	for i := 0; i < len(lines); i++ {
 		s := lines[i]
-		lineBB, err := model.CalcBoundingBoxFloat(s, 0, 0, f.Name, f.Size)
+		lineBB, err := repo.TextBoundingBox(s, f.Name, f.Size)
 		if err != nil {
 			return fmt.Errorf("line %d: %w", i+1, err)
 		}
@@ -443,12 +449,18 @@ func (tf *TextField) renderLines(xRefTable *model.XRefTable, boWidth, lh, w, y f
 	return nil
 }
 
-func textFieldLines(s, fontName string, fontSize float64, multiline bool, width float64) ([]string, error) {
+func textFieldLines(
+	xRefTable *model.XRefTable,
+	s, fontName string,
+	fontSize float64,
+	multiline bool,
+	width float64,
+) ([]string, error) {
 	if font.IsCoreFont(fontName) && utf8.ValidString(s) {
 		s = model.DecodeUTF8ToByte(s)
 	}
 	if multiline {
-		lines, err := model.WordWrapFloat(s, fontName, fontSize, width)
+		lines, err := xRefTable.WordWrapFloat(s, fontName, fontSize, width)
 		if err != nil {
 			return nil, err
 		}
@@ -460,6 +472,7 @@ func textFieldLines(s, fontName string, fontSize float64, multiline bool, width 
 
 func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	w, h := tf.BoundingBox.Width(), tf.BoundingBox.Height()
+	repo := xRefTable.FontRepository()
 	bgCol := tf.BgCol
 	boWidth, boCol := tf.calcBorder()
 	buf := new(bytes.Buffer)
@@ -469,7 +482,7 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	f := tf.Font
 
 	if !tf.Multiline && f.Size > h {
-		size, err := fontSizeForLineHeight(f.Name, h)
+		size, err := fontSizeForLineHeight(repo, f.Name, h)
 		if err != nil {
 			return nil, fmt.Errorf("text field text: %w", err)
 		}
@@ -481,14 +494,14 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		s = tf.Default
 	}
 
-	lines, err := textFieldLines(s, f.Name, f.Size, tf.Multiline, w-2*boWidth)
+	lines, err := textFieldLines(xRefTable, s, f.Name, f.Size, tf.Multiline, w-2*boWidth)
 	if err != nil {
 		return nil, fmt.Errorf("text field text: %w", err)
 	}
 
 	fmt.Fprint(buf, "/Tx BMC ")
 
-	lh, descent, err := fontLineMetrics(f.Name, f.Size)
+	lh, descent, err := fontLineMetrics(repo, f.Name, f.Size)
 	if err != nil {
 		return nil, fmt.Errorf("text field text: %w", err)
 	}
@@ -501,7 +514,7 @@ func (tf *TextField) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		fmt.Fprintf(buf, "q 1 1 %.1f %.1f re W n ", w-2, h-2)
 	}
 
-	if err := tf.renderLines(xRefTable, boWidth, lh, w, y, lines, buf); err != nil {
+	if err := tf.renderLines(xRefTable, repo, boWidth, lh, w, y, lines, buf); err != nil {
 		return nil, fmt.Errorf("text field text: %w", err)
 	}
 
@@ -1107,7 +1120,7 @@ func fontAttrs(ctx *model.Context, fd types.Dict, fontID, text string, fonts map
 			if err != nil {
 				return "", "", "", "", nil, err
 			}
-			supported, err := font.SupportedFont(name)
+			supported, err := ctx.XRefTable.FontRepository().SupportedFont(name)
 			if err != nil {
 				return "", "", "", "", nil, fmt.Errorf("font %s: load metrics: %w", name, err)
 			}
@@ -1192,7 +1205,7 @@ func EnsureTextFieldAP(ctx *model.Context, d types.Dict, text string, multiLine,
 	tf.Font = &f
 	tf.RTL = pdffont.RTL(lang)
 
-	supported, err := font.SupportedFont(name)
+	supported, err := ctx.XRefTable.FontRepository().SupportedFont(name)
 	if err != nil {
 		return fmt.Errorf("font %s: load metrics: %w", name, err)
 	}

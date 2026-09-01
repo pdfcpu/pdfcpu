@@ -24,7 +24,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/font"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
@@ -1179,10 +1178,6 @@ func fillWidgetAnnots(
 }
 
 func setupFillFonts(xRefTable *model.XRefTable) error {
-	if err := font.LoadUserFonts(); err != nil {
-		return fmt.Errorf("load form fonts: %w", err)
-	}
-
 	d, err := primitives.FormFontResDict(xRefTable)
 	if err != nil {
 		return fmt.Errorf("AcroForm DR Font: %w", err)
@@ -1205,7 +1200,7 @@ func setupFillFonts(xRefTable *model.XRefTable) error {
 			return fmt.Errorf("form font resource %q obj#%d: %w", k, indRef.ObjectNumber.Value(), err)
 		}
 
-		supported, err := font.SupportedFont(fontName)
+		supported, err := xRefTable.FontRepository().SupportedFont(fontName)
 		if err != nil {
 			return fmt.Errorf("form font resource %q: load metrics: %w", k, err)
 		}

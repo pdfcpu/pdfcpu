@@ -428,13 +428,19 @@ func validateWatermarkMode(wmMode string) error {
 	return nil
 }
 
-func parseWatermark(args []string, onTop bool, wmMode string, unit types.DisplayUnit) (*model.Watermark, error) {
+func parseWatermark(
+	conf *model.Configuration,
+	args []string,
+	onTop bool,
+	wmMode string,
+	unit types.DisplayUnit,
+) (*model.Watermark, error) {
 	switch wmMode {
 	case "text":
 		if err := pdfcpu.ValidateWatermarkModeParam(model.WMText, args[0], onTop); err != nil {
 			return nil, err
 		}
-		return pdfcpu.ParseTextWatermarkDetails(args[0], args[1], onTop, unit)
+		return pdfcpu.ParseTextWatermarkDetailsWithConfiguration(args[0], args[1], onTop, unit, conf)
 	case "image":
 		if err := pdfcpu.ValidateWatermarkModeParam(model.WMImage, args[0], onTop); err != nil {
 			return nil, err
@@ -457,7 +463,7 @@ func watermarkCommand(conf *model.Configuration, args []string, onTop bool, wmMo
 		return err
 	}
 
-	wm, err := parseWatermark(args, onTop, wmMode, conf.Unit)
+	wm, err := parseWatermark(conf, args, onTop, wmMode, conf.Unit)
 	if err != nil {
 		return err
 	}

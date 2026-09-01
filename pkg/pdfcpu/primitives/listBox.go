@@ -420,6 +420,7 @@ func selectItem(w io.Writer, i int, width, height, lineHeight, boWidth float64, 
 
 func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	w, h := lb.BoundingBox.Width(), lb.BoundingBox.Height()
+	repo := xRefTable.FontRepository()
 	bgCol := lb.BgCol
 	boWidth, boCol := lb.calcBorder()
 	buf := new(bytes.Buffer)
@@ -440,7 +441,7 @@ func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	fmt.Fprintf(buf, "1 1 %.2f %.2f re W n ", w-2, h-2)
 
 	f, ind := lb.Font, lb.Ind
-	lh, descent, err := fontLineMetrics(f.Name, f.Size)
+	lh, descent, err := fontLineMetrics(repo, f.Name, f.Size)
 	if err != nil {
 		return nil, fmt.Errorf("list box text: %w", err)
 	}
@@ -462,7 +463,7 @@ func (lb *ListBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 		if font.IsCoreFont(f.Name) && utf8.ValidString(s) {
 			s = model.DecodeUTF8ToByte(s)
 		}
-		lineBB, err := model.CalcBoundingBoxFloat(s, 0, 0, f.Name, f.Size)
+		lineBB, err := repo.TextBoundingBox(s, f.Name, f.Size)
 		if err != nil {
 			return nil, fmt.Errorf("list box option %d: %w", i+1, err)
 		}

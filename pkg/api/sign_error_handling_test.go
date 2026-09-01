@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"crypto/x509"
 	"encoding/asn1"
 	"encoding/hex"
 	"errors"
@@ -377,7 +378,7 @@ func TestValidateSignaturesRawUnsignedPDFSkipsDomainOperation(t *testing.T) {
 		t.Fatal(err)
 	}
 	called := false
-	operation := func(io.ReaderAt, *model.Context, bool) ([]*model.SignatureValidationResult, error) {
+	operation := func(io.ReaderAt, *model.Context, bool, *x509.CertPool) ([]*model.SignatureValidationResult, error) {
 		called = true
 		return nil, errors.New("unexpected domain operation")
 	}
@@ -395,6 +396,44 @@ func TestValidateSignaturesRawUnsignedPDFSkipsDomainOperation(t *testing.T) {
 	if strings.Contains(err.Error(), "load trust pool") ||
 		strings.Contains(err.Error(), "verify signatures") {
 		t.Fatalf("later phase took precedence: %q", err)
+	}
+}
+
+// TestValidateSignaturesRawStatelessUsesEmptyTrustPool verifies stateless validation does not read or inherit trust state.
+func TestValidateSignaturesRawStatelessUsesEmptyTrustPool(t *testing.T) {
+	oldDir := model.TrustedCertDir
+	model.TrustedCertDir = filepath.Join(t.TempDir(), "missing")
+	pdfcpu.InvalidateCertificatePool()
+	t.Cleanup(func() {
+		model.TrustedCertDir = oldDir
+		pdfcpu.InvalidateCertificatePool()
+	})
+
+	called := false
+	operation := func(
+		_ io.ReaderAt,
+		_ *model.Context,
+		_ bool,
+		pool *x509.CertPool,
+	) ([]*model.SignatureValidationResult, error) {
+		called = true
+		if pool == nil || len(pool.Subjects()) != 0 {
+			t.Fatalf("stateless trust pool: got %v, want empty non-nil pool", pool)
+		}
+		return []*model.SignatureValidationResult{{}}, nil
+	}
+
+	results, err := validateSignaturesRaw(
+		bytes.NewReader(signedPDFBytes(t)),
+		false,
+		model.NewStatelessConfiguration(),
+		operation,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !called || len(results) != 1 {
+		t.Fatalf("domain operation: called=%t, results=%d; want called=true, results=1", called, len(results))
 	}
 }
 
@@ -453,7 +492,12 @@ func TestValidateSignaturesRawInitializesOperationState(t *testing.T) {
 	}
 
 	called := false
-	operation := func(_ io.ReaderAt, ctx *model.Context, all bool) ([]*model.SignatureValidationResult, error) {
+	operation := func(
+		_ io.ReaderAt,
+		ctx *model.Context,
+		all bool,
+		_ *x509.CertPool,
+	) ([]*model.SignatureValidationResult, error) {
 		called = true
 		if ctx.Configuration == nil {
 			t.Fatal("expected initialized configuration")
@@ -599,7 +643,7 @@ func TestValidateSignaturesRawReportsDigestMismatchEvidence(t *testing.T) {
 // TestValidateSignaturesRawDomainErrorPreservesCauseAndPhase verifies API-domain boundary wrapping.
 func TestValidateSignaturesRawDomainErrorPreservesCauseAndPhase(t *testing.T) {
 	cause := errors.New("domain signature failure")
-	operation := func(io.ReaderAt, *model.Context, bool) ([]*model.SignatureValidationResult, error) {
+	operation := func(io.ReaderAt, *model.Context, bool, *x509.CertPool) ([]*model.SignatureValidationResult, error) {
 		return nil, cause
 	}
 
@@ -621,7 +665,12 @@ func TestValidateSignaturesRawDomainErrorPreservesCauseAndPhase(t *testing.T) {
 // TestValidateSignaturesFileLifecycleJoinsOperationAndCloseErrors verifies production cleanup preserves both failures.
 func TestValidateSignaturesFileLifecycleJoinsOperationAndCloseErrors(t *testing.T) {
 	cause := errors.New("domain signature failure")
-	operation := func(ra io.ReaderAt, _ *model.Context, _ bool) ([]*model.SignatureValidationResult, error) {
+	operation := func(
+		ra io.ReaderAt,
+		_ *model.Context,
+		_ bool,
+		_ *x509.CertPool,
+	) ([]*model.SignatureValidationResult, error) {
 		f, ok := ra.(*os.File)
 		if !ok {
 			return nil, errors.New("domain input is not *os.File")
@@ -649,7 +698,12 @@ func TestValidateSignaturesFileLifecycleJoinsOperationAndCloseErrors(t *testing.
 // TestValidateSignaturesFileLifecycleReturnsCloseErrorAfterSuccess verifies cleanup failure changes a successful result.
 func TestValidateSignaturesFileLifecycleReturnsCloseErrorAfterSuccess(t *testing.T) {
 	wantResults := []*model.SignatureValidationResult{{}}
-	operation := func(ra io.ReaderAt, _ *model.Context, _ bool) ([]*model.SignatureValidationResult, error) {
+	operation := func(
+		ra io.ReaderAt,
+		_ *model.Context,
+		_ bool,
+		_ *x509.CertPool,
+	) ([]*model.SignatureValidationResult, error) {
 		f, ok := ra.(*os.File)
 		if !ok {
 			return nil, errors.New("domain input is not *os.File")
@@ -717,6 +771,7 @@ func TestValidateSignaturesPDFErrorsPrecedeTrustPoolError(t *testing.T) {
 
 // TestValidateSignaturesTrustPoolErrorContext verifies trust failures surface after successful signed-PDF parsing.
 func TestValidateSignaturesTrustPoolErrorContext(t *testing.T) {
+	conf := model.NewDefaultConfiguration()
 	oldDir := model.TrustedCertDir
 	model.TrustedCertDir = filepath.Join(t.TempDir(), "missing")
 	pdfcpu.InvalidateCertificatePool()
@@ -726,7 +781,7 @@ func TestValidateSignaturesTrustPoolErrorContext(t *testing.T) {
 	})
 
 	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
-	_, err := ValidateSignatures(inFile, false, nil)
+	_, err := ValidateSignatures(inFile, false, conf)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}

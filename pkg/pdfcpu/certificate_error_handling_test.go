@@ -78,6 +78,75 @@ func installCertificatePoolTestFile(t *testing.T, dir string) {
 	}
 }
 
+// TestCertificatePoolForStatelessConfigurationDoesNotLoadStore verifies stateless trust isolation.
+func TestCertificatePoolForStatelessConfigurationDoesNotLoadStore(t *testing.T) {
+	preserveCertificatePoolState(t)
+	model.TrustedCertDir = filepath.Join(t.TempDir(), "missing")
+
+	pool, err := CertificatePoolForConfiguration(model.NewStatelessConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pool == nil || len(pool.Subjects()) != 0 {
+		t.Fatalf("stateless certificate pool: got %v, want empty non-nil pool", pool)
+	}
+
+	trustedCertificatePool.RLock()
+	loaded := trustedCertificatePool.loaded
+	trustedCertificatePool.RUnlock()
+	if loaded {
+		t.Fatal("stateless configuration populated the certificate cache")
+	}
+	if model.UserCertPool != nil {
+		t.Fatal("stateless configuration published a legacy certificate pool")
+	}
+}
+
+// TestCertificatePoolForConfigurationLoadsSelectedStore verifies configuration-aware trust loading.
+func TestCertificatePoolForConfigurationLoadsSelectedStore(t *testing.T) {
+	preserveCertificatePoolState(t)
+	trustedDir := t.TempDir()
+	model.TrustedCertDir = trustedDir
+	installCertificatePoolTestFile(t, trustedDir)
+
+	pool, err := CertificatePoolForConfiguration(&model.Configuration{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pool == nil || len(pool.Subjects()) == 0 {
+		t.Fatal("expected certificate pool from selected store")
+	}
+	if model.UserCertPool != nil {
+		t.Fatal("configuration-aware load published a legacy certificate pool")
+	}
+}
+
+// TestConfigurationCertificatePoolDoesNotReplaceLegacyPool verifies configuration-specific trust loading remains isolated.
+func TestConfigurationCertificatePoolDoesNotReplaceLegacyPool(t *testing.T) {
+	preserveCertificatePoolState(t)
+	legacyDir := t.TempDir()
+	installCertificatePoolTestFile(t, legacyDir)
+	model.TrustedCertDir = legacyDir
+	if err := LoadCertificates(); err != nil {
+		t.Fatal(err)
+	}
+	legacyPool := userCertificatePool()
+
+	configurationDir := t.TempDir()
+	installCertificatePoolTestFile(t, configurationDir)
+	model.TrustedCertDir = configurationDir
+	configurationPool, err := CertificatePoolForConfiguration(&model.Configuration{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if configurationPool == legacyPool {
+		t.Fatal("configuration-specific load reused the legacy certificate pool")
+	}
+	if got := userCertificatePool(); got != legacyPool {
+		t.Fatal("configuration-specific load replaced the legacy certificate pool")
+	}
+}
+
 // TestLoadCertificatesRetriesAfterFailure verifies failed loads do not poison the cache.
 func TestLoadCertificatesRetriesAfterFailure(t *testing.T) {
 	preserveCertificatePoolState(t)

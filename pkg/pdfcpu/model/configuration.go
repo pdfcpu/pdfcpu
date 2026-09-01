@@ -18,6 +18,7 @@ package model
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -188,8 +189,32 @@ func (cmd CommandMode) AllowRemoveSignatures() bool {
 	return cmd == MERGEAPPEND || cmd == MERGECREATE || cmd == MERGECREATEZIP || cmd == OPTIMIZE
 }
 
+type configurationResourceMode uint8
+
+const (
+	configurationResourceModeAuto configurationResourceMode = iota
+	configurationResourceModeReadOnly
+	configurationResourceModeStateless
+)
+
+type configurationResources struct {
+	mode           configurationResourceMode
+	userFontDir    string
+	trustedCertDir string
+}
+
+func resourcesForConfigurationDir(mode configurationResourceMode, dir string) configurationResources {
+	return configurationResources{
+		mode:           mode,
+		userFontDir:    filepath.Join(dir, "fonts"),
+		trustedCertDir: filepath.Join(dir, "certs"),
+	}
+}
+
 // Configuration of a Context.
 type Configuration struct {
+	resources configurationResources
+
 	// Location of corresponding config.yml
 	Path string
 
@@ -347,6 +372,34 @@ func (c *Configuration) Clone() *Configuration {
 	return &clone
 }
 
+// TrustedCertificateStore returns the certificate directory selected for c.
+// available is false when certificate resources are intentionally unavailable.
+func (c *Configuration) TrustedCertificateStore() (dir string, available bool) {
+	if c != nil {
+		switch c.resources.mode {
+		case configurationResourceModeReadOnly:
+			return c.resources.trustedCertDir, true
+		case configurationResourceModeStateless:
+			return "", false
+		}
+	}
+	return TrustedCertDir, true
+}
+
+// UserFontStore returns the user-font directory selected for c.
+// available is false when user-font resources are intentionally unavailable.
+func (c *Configuration) UserFontStore() (dir string, available bool) {
+	if c != nil {
+		switch c.resources.mode {
+		case configurationResourceModeReadOnly:
+			return c.resources.userFontDir, true
+		case configurationResourceModeStateless:
+			return "", false
+		}
+	}
+	return font.UserFontDir, true
+}
+
 // ResourceLimits controls resource usage for input-driven allocation.
 type ResourceLimits struct {
 	// MaxStreamBytes limits encoded stream bytes read from a PDF.
@@ -416,12 +469,8 @@ var configFileBytes []byte
 //go:embed resources/Roboto-Regular.ttf
 var robotoFontFileBytes []byte
 
-func ensureConfigFileAt(path string, override bool) error {
-	f, err := os.Open(path)
-	if err != nil || override {
-		f.Close()
-
-		s := fmt.Sprintf(`
+func defaultConfigurationFileBytes() []byte {
+	header := fmt.Sprintf(`
 #############################
 #   Default configuration   #
 #############################
@@ -433,21 +482,70 @@ created: %s
 version: %s 
 
 `,
-			time.Now().Format("2006-01-02 15:04"),
-			VersionStr)
+		time.Now().Format("2006-01-02 15:04"),
+		VersionStr)
 
-		bb := append([]byte(s), configFileBytes...)
-		if err := os.WriteFile(path, bb, 0600); err != nil {
-			return err
+	return append([]byte(header), configFileBytes...)
+}
+
+func initializeConfigurationFile(path string) error {
+	return os.WriteFile(path, defaultConfigurationFileBytes(), 0600)
+}
+
+func readOpenConfigurationFile(f *os.File, path string) (conf *Configuration, err error) {
+	defer func() {
+		if closeErr := f.Close(); closeErr != nil {
+			err = errors.Join(err, closeErr)
 		}
-		f, err = os.Open(path)
-		if err != nil {
-			return err
+	}()
+	return readConfiguration(f, path)
+}
+
+func readConfigurationFile(path string) (*Configuration, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return readOpenConfigurationFile(f, path)
+}
+
+func readConfigurationAt(root string) (*Configuration, error) {
+	if root == "" {
+		return nil, errors.New("missing configuration root")
+	}
+	configDir := filepath.Join(root, "pdfcpu")
+	conf, err := readConfigurationFile(filepath.Join(configDir, "config.yml"))
+	if err != nil {
+		return nil, err
+	}
+	conf.resources = resourcesForConfigurationDir(configurationResourceModeReadOnly, configDir)
+	return conf, nil
+}
+
+func ensureConfigFileAt(path string, override bool) error {
+	if !override {
+		f, err := os.Open(path)
+		if err == nil {
+			conf, err := readOpenConfigurationFile(f, path)
+			if err != nil {
+				return err
+			}
+			conf.resources = resourcesForConfigurationDir(configurationResourceModeAuto, filepath.Dir(path))
+			loadedDefaultConfig = conf
+			return nil
 		}
 	}
-	defer f.Close()
-	// Load configuration into loadedDefaultConfig.
-	return parseConfigFile(f, path)
+
+	if err := initializeConfigurationFile(path); err != nil {
+		return err
+	}
+	conf, err := readConfigurationFile(path)
+	if err != nil {
+		return err
+	}
+	conf.resources = resourcesForConfigurationDir(configurationResourceModeAuto, filepath.Dir(path))
+	loadedDefaultConfig = conf
+	return nil
 }
 
 func onlyHidden(files []os.DirEntry) bool {
@@ -533,13 +631,17 @@ func EnsureDefaultConfigAt(path string, override bool) error {
 	return nil
 }
 
-func newDefaultConfiguration() *Configuration {
+// NewStatelessConfiguration returns an independent configuration using built-in defaults without accessing filesystem
+// state.
+func NewStatelessConfiguration() *Configuration {
 	// NOTE: Needs to stay in sync with config.yml
 	//
 	// Takes effect whenever the installed config.yml is disabled:
 	// 		cli: supply -conf disable
 	// 		api: call api.DisableConfigDir()
 	return &Configuration{
+		resources: configurationResources{mode: configurationResourceModeStateless},
+
 		CreationDate:                    time.Now().Format("2006-01-02 15:04"),
 		Version:                         VersionStr,
 		CheckFileNameExt:                true,
@@ -602,7 +704,7 @@ func NewDefaultConfiguration() *Configuration {
 		fault.Fail("config problem: %w", err)
 	}
 	// Bypass config.yml
-	return newDefaultConfiguration()
+	return NewStatelessConfiguration()
 }
 
 // NewAESConfiguration returns a default configuration for AES encryption.

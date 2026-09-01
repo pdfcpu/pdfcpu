@@ -48,7 +48,7 @@ func ensureFontIndRef(xRefTable *model.XRefTable, fontName string, frPage model.
 			return nil, fmt.Errorf("multiple objstreams for font: %s detected", fontName)
 		}
 
-		userFont, err := font.IsUserFont(fontName)
+		userFont, err := xRefTable.FontRepository().IsUserFont(fontName)
 		if err != nil {
 			return nil, fmt.Errorf("font %s: load metrics: %w", fontName, err)
 		}
@@ -719,7 +719,7 @@ func handleForm(
 		userFont := false
 		var err error
 		if !strings.HasPrefix(fName, "cjk:") {
-			userFont, err = font.IsUserFont(fName)
+			userFont, err = ctx.XRefTable.FontRepository().IsUserFont(fName)
 			if err != nil {
 				return fmt.Errorf("font %s: load metrics: %w", fName, err)
 			}

@@ -374,13 +374,12 @@ func load(fileName string, fd *TTFLight) (err error) {
 	return nil
 }
 
-// Read reads the embedded font bytes from an installed font representation.
-func Read(fileName string) (bb []byte, err error) {
+func readInstalledFont(dir, fileName string) (bb []byte, err error) {
 	fileName, err = sanitize.Path(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("sanitize font name: %w", err)
 	}
-	fn := filepath.Join(UserFontDir, fileName+".gob")
+	fn := filepath.Join(dir, fileName+".gob")
 	f, err := openInstalledGob(fn)
 	if err != nil {
 		return nil, fmt.Errorf("read installed font %s: %w", fn, err)
@@ -401,41 +400,51 @@ func Read(fileName string) (bb []byte, err error) {
 	return fd.FontFile, nil
 }
 
+// Read reads the embedded font bytes from an installed font representation.
+func Read(fileName string) ([]byte, error) {
+	return readInstalledFont(UserFontDir, fileName)
+}
+
 func isSupportedFontFile(filename string) bool {
 	return strings.HasSuffix(strings.ToLower(filename), ".gob")
 }
 
-// doLoadUserFonts performs the actual font loading logic.
-// This is called exactly once by LoadUserFonts via sync.Once.
-func doLoadUserFonts() error {
-	if UserFontDir == "" {
-		userFontMetricsLock.Lock()
-		clear(userFontMetrics)
-		userFontMetricsLock.Unlock()
-		return nil
-	}
-
-	//fmt.Printf("*** loading userFonts from %s ***\n", UserFontDir)
-
-	files, err := os.ReadDir(UserFontDir)
-	if err != nil {
-		return fmt.Errorf("read user font directory %s: %w", UserFontDir, err)
-	}
-
+func loadUserFontMetrics(dir string) (map[string]TTFLight, error) {
 	loadedMetrics := map[string]TTFLight{}
+	if dir == "" {
+		return loadedMetrics, nil
+	}
+
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("read user font directory %s: %w", dir, err)
+	}
+
 	for _, f := range files {
 		if !isSupportedFontFile(f.Name()) {
 			continue
 		}
 		ttf := TTFLight{}
-		fn := filepath.Join(UserFontDir, f.Name())
+		fn := filepath.Join(dir, f.Name())
 		if err := load(fn, &ttf); err != nil {
-			return fmt.Errorf("load user font %s: %w", f.Name(), err)
+			return nil, fmt.Errorf("load user font %s: %w", f.Name(), err)
 		}
 		fn = strings.TrimSuffix(f.Name(), path.Ext(f.Name()))
 		//fmt.Printf("loading %s.ttf...\n", fn)
 		//fmt.Printf("Loaded %s:\n%s", fn, ttf)
 		loadedMetrics[fn] = ttf
+	}
+	return loadedMetrics, nil
+}
+
+// doLoadUserFonts performs the actual font loading logic.
+// This is called exactly once by LoadUserFonts via sync.Once.
+func doLoadUserFonts() error {
+	//fmt.Printf("*** loading userFonts from %s ***\n", UserFontDir)
+
+	loadedMetrics, err := loadUserFontMetrics(UserFontDir)
+	if err != nil {
+		return err
 	}
 	userFontMetricsLock.Lock()
 	clear(userFontMetrics)
@@ -464,6 +473,9 @@ func ReloadUserFonts() error {
 	defer loadUserFontsMutex.Unlock()
 	loadUserFontsErr = doLoadUserFonts()
 	loadUserFontsOnce.Do(func() {})
+	if loadUserFontsErr == nil {
+		invalidateRepository(UserFontDir)
+	}
 	return loadUserFontsErr
 }
 

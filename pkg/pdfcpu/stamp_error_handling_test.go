@@ -20,11 +20,13 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
+	corefont "github.com/pdfcpu/pdfcpu/pkg/font"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -47,6 +49,39 @@ func TestParseWatermarkDetailsPreservesScaleNumericCause(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "scale factor must be a float value") {
 		t.Fatalf("expected scale-factor context, got %q", err)
+	}
+}
+
+func TestParseTextWatermarkDetailsUsesConfigurationFontRepository(t *testing.T) {
+	originalDir := corefont.UserFontDir
+	corefont.UserFontDir = filepath.Join(t.TempDir(), "missing")
+	if err := corefont.ReloadUserFonts(); err == nil {
+		t.Fatal("expected missing global font directory error")
+	}
+	t.Cleanup(func() {
+		corefont.UserFontDir = originalDir
+		if err := corefont.ReloadUserFonts(); err != nil {
+			t.Errorf("restore global font directory: %v", err)
+		}
+	})
+
+	_, err := ParseTextWatermarkDetailsWithConfiguration(
+		"draft",
+		"fontname:Demo",
+		false,
+		types.POINTS,
+		model.NewStatelessConfiguration(),
+	)
+	if err == nil || !strings.Contains(err.Error(), "Demo is unsupported") {
+		t.Fatalf("expected unsupported stateless font, got %v", err)
+	}
+	if strings.Contains(err.Error(), "read user font directory") {
+		t.Fatalf("stateless parser consulted global font directory: %v", err)
+	}
+
+	_, err = ParseTextWatermarkDetails("draft", "fontname:Demo", false, types.POINTS)
+	if err == nil || !strings.Contains(err.Error(), "load metrics") {
+		t.Fatalf("expected legacy parser to retain global repository behavior, got %v", err)
 	}
 }
 

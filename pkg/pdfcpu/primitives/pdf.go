@@ -259,22 +259,22 @@ func (pdf *PDF) validateFonts() error {
 
 func (pdf *PDF) validateHeader() error {
 	if pdf.Header != nil {
+		pdf.Header.pdf = pdf
 		if err := pdf.Header.validate(); err != nil {
 			return err
 		}
 		pdf.Header.position = types.TopCenter
-		pdf.Header.pdf = pdf
 	}
 	return nil
 }
 
 func (pdf *PDF) validateFooter() error {
 	if pdf.Footer != nil {
+		pdf.Footer.pdf = pdf
 		if err := pdf.Footer.validate(); err != nil {
 			return err
 		}
 		pdf.Footer.position = types.BottomCenter
-		pdf.Footer.pdf = pdf
 	}
 	return nil
 }
@@ -611,7 +611,7 @@ func (pdf *PDF) idForFontName(fontName, fontLang string, pageFonts, globalFonts 
 				//fmt.Printf("searching for %s - obj:%d fontName:%s prefix:%s\n", fontName, objNr, fo.FontName, fo.Prefix)
 				if fontName == fo.FontName {
 					indRef = types.NewIndirectRef(objNr, 0)
-					userFont, err := font.IsUserFont(fontName)
+					userFont, err := pdf.XRefTable.FontRepository().IsUserFont(fontName)
 					if err != nil {
 						return "", fmt.Errorf("font %s: load metrics: %w", fontName, err)
 					}
@@ -642,7 +642,7 @@ func fontIndRef(xRefTable *model.XRefTable, fontName, fontLang string) (*types.I
 	if strings.HasPrefix(fontName, "cjk:") {
 		fName = strings.TrimPrefix(fontName, "cjk:")
 	}
-	userFont, err := font.IsUserFont(fName)
+	userFont, err := xRefTable.FontRepository().IsUserFont(fName)
 	if err != nil {
 		return nil, fmt.Errorf("font %s: load metrics: %w", fName, err)
 	}
@@ -663,7 +663,7 @@ func (pdf *PDF) ensureFont(fontID, fontName, fontLang string, fonts model.FontMa
 			ir  *types.IndirectRef
 			err error
 		)
-		userFont, err := font.IsUserFont(fontName)
+		userFont, err := pdf.XRefTable.FontRepository().IsUserFont(fontName)
 		if err != nil {
 			return nil, fmt.Errorf("font %s: load metrics: %w", fontName, err)
 		}

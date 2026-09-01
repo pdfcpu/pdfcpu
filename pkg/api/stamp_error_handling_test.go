@@ -44,6 +44,99 @@ func stampTestInputFile() string {
 	return filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 }
 
+func TestWatermarkConstructorsRejectEmptyUserStrings(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		fn   func() error
+		want string
+	}{
+		{
+			name: "text watermark",
+			fn: func() error {
+				_, err := TextWatermark("", "", false, false, types.POINTS)
+				return err
+			},
+			want: "watermark text must not be empty",
+		},
+		{
+			name: "image stamp",
+			fn: func() error {
+				_, err := ImageWatermark(" \t", "", true, false, types.POINTS)
+				return err
+			},
+			want: "stamp image filename must not be empty",
+		},
+		{
+			name: "PDF watermark",
+			fn: func() error {
+				_, err := PDFWatermark("", "", false, false, types.POINTS)
+				return err
+			},
+			want: "watermark PDF filename must not be empty",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.fn()
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("expected error containing %q, got %q", tt.want, err.Error())
+			}
+		})
+	}
+}
+
+func TestWatermarkReaderConstructorsRejectNil(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		fn   func() error
+		want string
+	}{
+		{
+			name: "image reader",
+			fn: func() error {
+				_, err := ImageWatermarkForReader(nil, "", false, false, types.POINTS)
+				return err
+			},
+			want: "missing image reader",
+		},
+		{
+			name: "PDF read seeker",
+			fn: func() error {
+				_, err := PDFWatermarkForReadSeeker(nil, 1, "", false, false, types.POINTS)
+				return err
+			},
+			want: "missing PDF read seeker",
+		},
+		{
+			name: "PDF multi read seeker",
+			fn: func() error {
+				_, err := PDFMultiWatermarkForReadSeeker(nil, 1, 1, "", false, false, types.POINTS)
+				return err
+			},
+			want: "missing PDF read seeker",
+		},
+		{
+			name: "PDF read seeker file helper",
+			fn: func() error {
+				return AddPDFWatermarksForReadSeekerFile("", "", nil, false, nil, 1, "", nil)
+			},
+			want: "missing PDF read seeker",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.fn()
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if err.Error() != tt.want {
+				t.Fatalf("expected %q, got %q", tt.want, err.Error())
+			}
+		})
+	}
+}
+
 func TestStampMapErrorsPreserveSentinelsWithoutPanic(t *testing.T) {
 	tests := []struct {
 		name        string

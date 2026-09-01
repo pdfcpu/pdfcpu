@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/scan"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -223,6 +224,15 @@ func newXRefTable(conf *Configuration) (xRefTable *XRefTable) {
 		FillFonts:         map[string]types.IndirectRef{},
 		Conf:              conf,
 	}
+}
+
+// FontRepository returns the font repository selected by xRefTable's configuration.
+func (xRefTable *XRefTable) FontRepository() *font.Repository {
+	if xRefTable == nil || xRefTable.Conf == nil {
+		return font.RepositoryForDir(font.UserFontDir)
+	}
+	dir, _ := xRefTable.Conf.UserFontStore()
+	return font.RepositoryForDir(dir)
 }
 
 // Version returns the PDF version of the PDF writer that created this file.

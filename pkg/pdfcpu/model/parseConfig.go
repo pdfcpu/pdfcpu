@@ -215,7 +215,7 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	return &conf
 }
 
-func parseConfigFile(r io.Reader, configPath string) error {
+func readConfiguration(r io.Reader, configPath string) (*Configuration, error) {
 	var c configuration
 
 	// Enforce default for old config files.
@@ -223,41 +223,48 @@ func parseConfigFile(r io.Reader, configPath string) error {
 
 	var buf bytes.Buffer
 	if _, err := io.Copy(&buf, r); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := yaml.Unmarshal(buf.Bytes(), &c); err != nil {
-		return err
+		return nil, err
 	}
 
 	if !types.MemberOf(c.ValidationMode, []string{"ValidationStrict", "ValidationRelaxed"}) {
-		return fmt.Errorf("invalid validationMode: %s", c.ValidationMode)
+		return nil, fmt.Errorf("invalid validationMode: %s", c.ValidationMode)
 	}
 
 	if !types.MemberOf(c.Eol, []string{"EolLF", "EolCR", "EolCRLF"}) {
-		return fmt.Errorf("invalid eol: %s", c.Eol)
+		return nil, fmt.Errorf("invalid eol: %s", c.Eol)
 	}
 
 	if !types.MemberOf(c.Unit, []string{"points", "inches", "cm", "mm"}) {
-		return fmt.Errorf("invalid unit: %s", c.Unit)
+		return nil, fmt.Errorf("invalid unit: %s", c.Unit)
 	}
 
 	if !types.IntMemberOf(c.EncryptKeyLength, []int{40, 128, 256}) {
-		return fmt.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
+		return nil, fmt.Errorf("encryptKeyLength possible values: 40, 128, 256, got: %s", c.Unit)
 	}
 
 	if !types.MemberOf(c.PreferredCertRevocationChecker, []string{"crl", "ocsp"}) {
 		if c.PreferredCertRevocationChecker != "" {
-			return fmt.Errorf("invalid preferred certificate revocation checker: %s", c.PreferredCertRevocationChecker)
+			return nil, fmt.Errorf("invalid preferred certificate revocation checker: %s", c.PreferredCertRevocationChecker)
 		}
 		c.PreferredCertRevocationChecker = "crl"
 	}
 
 	if c.FormFieldListMaxColWidth < 0 {
-		return fmt.Errorf("formFieldListMaxColWidth must be >= 0: %d", c.FormFieldListMaxColWidth)
+		return nil, fmt.Errorf("formFieldListMaxColWidth must be >= 0: %d", c.FormFieldListMaxColWidth)
 	}
 
-	loadedDefaultConfig = loadedConfig(c, configPath)
+	return loadedConfig(c, configPath), nil
+}
 
+func parseConfigFile(r io.Reader, configPath string) error {
+	conf, err := readConfiguration(r, configPath)
+	if err != nil {
+		return err
+	}
+	loadedDefaultConfig = conf
 	return nil
 }

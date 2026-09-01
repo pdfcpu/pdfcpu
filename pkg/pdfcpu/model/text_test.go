@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -34,12 +35,29 @@ func installTextRenderingMetrics(t *testing.T) {
 	t.Helper()
 	originalDir := font.UserFontDir
 	font.UserFontDir = t.TempDir()
-	f, err := os.Create(filepath.Join(font.UserFontDir, "RenderTest.gob"))
+	writeTextRenderingMetrics(t, font.UserFontDir, "RenderTest", 600)
+	if err := font.ReloadUserFonts(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		font.UserFontDir = originalDir
+		if err := font.ReloadUserFonts(); err != nil {
+			t.Errorf("restore user fonts: %v", err)
+		}
+	})
+}
+
+func writeTextRenderingMetrics(t *testing.T, dir, name string, glyphWidth int) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Create(filepath.Join(dir, name+".gob"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	ttf := font.TTFLight{
-		PostscriptName:  "RenderTest",
+		PostscriptName:  name,
 		UnitsPerEm:      1000,
 		FirstChar:       'A',
 		LastChar:        'B',
@@ -49,7 +67,7 @@ func installTextRenderingMetrics(t *testing.T) {
 		URy:             800,
 		HorMetricsCount: 2,
 		GlyphCount:      2,
-		GlyphWidths:     []int{500, 600},
+		GlyphWidths:     []int{500, glyphWidth},
 		Chars:           map[uint32]uint16{'A': 1, 'B': 1},
 		ToUnicode:       map[uint16]uint32{1: 'A'},
 		Planes:          map[int]bool{0: true},
@@ -61,15 +79,6 @@ func installTextRenderingMetrics(t *testing.T) {
 	if err := f.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if err := font.ReloadUserFonts(); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		font.UserFontDir = originalDir
-		if err := font.ReloadUserFonts(); err != nil {
-			t.Errorf("restore user fonts: %v", err)
-		}
-	})
 }
 
 func TestPrepBytesPropagatesFontErrors(t *testing.T) {
@@ -90,6 +99,54 @@ func TestPrepBytesPropagatesFontErrors(t *testing.T) {
 	}
 	if !xRefTable.UsedGIDs["RenderTest"][1] {
 		t.Fatal("expected initialized used-glyph map")
+	}
+}
+
+func TestTextRenderingUsesConfigurationFontRepository(t *testing.T) {
+	originalDir := font.UserFontDir
+	font.UserFontDir = t.TempDir()
+	writeTextRenderingMetrics(t, font.UserFontDir, "GlobalOnly", 500)
+	if err := font.ReloadUserFonts(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		font.UserFontDir = originalDir
+		if err := font.ReloadUserFonts(); err != nil {
+			t.Errorf("restore user fonts: %v", err)
+		}
+	})
+
+	configDir := filepath.Join(t.TempDir(), "pdfcpu")
+	writeTextRenderingMetrics(t, filepath.Join(configDir, "fonts"), "Scoped", 700)
+	conf := &Configuration{
+		resources: resourcesForConfigurationDir(configurationResourceModeReadOnly, configDir),
+	}
+	xRefTable := &XRefTable{Conf: conf}
+
+	if _, err := PrepBytes(xRefTable, "A", "Scoped", true, false, false); err != nil {
+		t.Fatalf("prepare scoped font: %v", err)
+	}
+	if _, err := PrepBytes(xRefTable, "A", "GlobalOnly", false, false, false); !errors.Is(err, font.ErrUnknownFont) {
+		t.Fatalf("prepare global-only font: got %v, want %v", err, font.ErrUnknownFont)
+	}
+
+	td := TextDescriptor{
+		Text:      "A",
+		FontName:  "Scoped",
+		FontKey:   "F1",
+		FontSize:  12,
+		ScaleAbs:  true,
+		Scale:     1,
+		FillCol:   color.Black,
+		StrokeCol: color.Black,
+	}
+	if _, err := WriteColumn(xRefTable, io.Discard, types.RectForFormat("A4"), nil, td, 100); err != nil {
+		t.Fatalf("render scoped font: %v", err)
+	}
+
+	stateless := &XRefTable{Conf: NewStatelessConfiguration()}
+	if _, err := PrepBytes(stateless, "A", "GlobalOnly", false, false, false); !errors.Is(err, font.ErrUnknownFont) {
+		t.Fatalf("prepare stateless global font: got %v, want %v", err, font.ErrUnknownFont)
 	}
 }
 

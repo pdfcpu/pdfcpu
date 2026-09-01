@@ -20,12 +20,50 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func useMissingGlobalFontDirectory(t *testing.T) {
+	t.Helper()
+	originalDir := font.UserFontDir
+	font.UserFontDir = filepath.Join(t.TempDir(), "missing")
+	if err := font.ReloadUserFonts(); err == nil {
+		t.Fatal("expected missing global font directory error")
+	}
+	t.Cleanup(func() {
+		font.UserFontDir = originalDir
+		if err := font.ReloadUserFonts(); err != nil {
+			t.Errorf("restore global font directory: %v", err)
+		}
+	})
+}
+
+func TestSetupFillFontsUsesStatelessRepository(t *testing.T) {
+	useMissingGlobalFontDirectory(t)
+	ctx := emptyFormContext(t)
+	ctx.XRefTable.Conf = model.NewStatelessConfiguration()
+	indRef := types.NewIndirectRef(7, 0)
+	ctx.XRefTable.Table[7] = model.NewXRefTableEntryGen0(types.Dict{
+		"Subtype":  types.Name("Type1"),
+		"BaseFont": types.Name("Helvetica"),
+	})
+	ctx.XRefTable.Form = types.Dict{
+		"DR": types.Dict{"Font": types.Dict{"F0": *indRef}},
+	}
+
+	if err := setupFillFonts(ctx.XRefTable); err != nil {
+		t.Fatal(err)
+	}
+	if got, ok := ctx.XRefTable.FillFonts["F0"]; !ok || got != *indRef {
+		t.Fatalf("expected form font reference %v, got %v, available=%t", indRef, got, ok)
+	}
+}
 
 type formJSONErrorWriter struct {
 	err error

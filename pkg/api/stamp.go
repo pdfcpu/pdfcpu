@@ -553,6 +553,23 @@ func TextWatermark(text, desc string, onTop, update bool, u types.DisplayUnit) (
 	return watermark(model.WMText, text, desc, onTop, update, u)
 }
 
+func textWatermarkWithConfiguration(
+	text, desc string,
+	onTop, update bool,
+	u types.DisplayUnit,
+	conf *model.Configuration,
+) (*model.Watermark, error) {
+	if err := pdfcpu.ValidateWatermarkModeParam(model.WMText, text, onTop); err != nil {
+		return nil, fmt.Errorf("create watermark: validate configuration: %w", err)
+	}
+	wm, err := pdfcpu.ParseTextWatermarkDetailsWithConfiguration(text, desc, onTop, u, conf)
+	if err != nil {
+		return nil, fmt.Errorf("create watermark: parse configuration: %w", err)
+	}
+	wm.Update = update
+	return wm, nil
+}
+
 // ImageWatermark returns an image watermark configuration.
 func ImageWatermark(fileName, desc string, onTop, update bool, u types.DisplayUnit) (*model.Watermark, error) {
 	return watermark(model.WMImage, fileName, desc, onTop, update, u)
@@ -574,7 +591,7 @@ func AddTextWatermarksFile(inFile, outFile string, selectedPages []string, onTop
 		unit = conf.Unit
 	}
 
-	wm, err := TextWatermark(text, desc, onTop, false, unit)
+	wm, err := textWatermarkWithConfiguration(text, desc, onTop, false, unit, conf)
 	if err != nil {
 		return fmt.Errorf("add watermarks: configure: %w", err)
 	}
@@ -673,7 +690,7 @@ func UpdateTextWatermarksFile(inFile, outFile string, selectedPages []string, on
 		unit = conf.Unit
 	}
 
-	wm, err := TextWatermark(text, desc, onTop, true, unit)
+	wm, err := textWatermarkWithConfiguration(text, desc, onTop, true, unit, conf)
 	if err != nil {
 		return fmt.Errorf("update watermarks: configure: %w", err)
 	}

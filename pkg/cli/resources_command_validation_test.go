@@ -98,3 +98,19 @@ func TestDispatchRejectsIncompleteResourceCommandsWithoutPanic(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateFontsCommandRejectsInappropriateModes(t *testing.T) {
+	if err := validateFontsCommand(&Command{Mode: model.LISTFONTS}, model.INSTALLFONTS); err == nil {
+		t.Fatal("expected mismatched mode error")
+	}
+	if err := validateFontsCommand(&Command{Mode: model.LISTFONTS}, model.VALIDATE); err == nil {
+		t.Fatal("expected inappropriate expected mode error")
+	}
+}
+
+func TestInstallFontsExecutorPreservesAPICause(t *testing.T) {
+	_, err := InstallFonts(&Command{Mode: model.INSTALLFONTS})
+	if !errors.Is(err, api.ErrMissingFontInput) {
+		t.Fatalf("expected %v, got %v", api.ErrMissingFontInput, err)
+	}
+}

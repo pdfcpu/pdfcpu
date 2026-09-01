@@ -114,11 +114,14 @@ func useTestCertificatePool(t *testing.T, pool *x509.CertPool) {
 
 	trustedCertificatePool.Lock()
 	oldPool := trustedCertificatePool.pool
+	oldModelPool := model.UserCertPool
 	trustedCertificatePool.pool = pool
+	model.UserCertPool = pool
 	trustedCertificatePool.Unlock()
 	t.Cleanup(func() {
 		trustedCertificatePool.Lock()
 		trustedCertificatePool.pool = oldPool
+		model.UserCertPool = oldModelPool
 		trustedCertificatePool.Unlock()
 	})
 }

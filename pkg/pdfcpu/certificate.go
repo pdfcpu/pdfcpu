@@ -98,30 +98,49 @@ func buildCurrentCertificatePool(dir string) (*x509.CertPool, uint64, error) {
 	}
 }
 
-// LoadCertificates loads and caches certificates from the configured local
-// certificate store for signature validation.
-// Failed loads are not cached and may be retried.
-func LoadCertificates() error {
+func loadCertificatePool(dir string) (*x509.CertPool, error) {
 	trustedCertificatePool.Lock()
 	defer trustedCertificatePool.Unlock()
 
-	dir := model.TrustedCertDir
 	storeRevision := model.CertificateStoreRevision()
 	if trustedCertificatePool.loaded &&
 		trustedCertificatePool.dir == dir &&
 		trustedCertificatePool.storeRevision == storeRevision {
-		return nil
+		return trustedCertificatePool.pool, nil
 	}
 
 	certPool, storeRevision, err := buildCurrentCertificatePool(dir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	trustedCertificatePool.dir = dir
 	trustedCertificatePool.loaded = true
 	trustedCertificatePool.pool = certPool
 	trustedCertificatePool.storeRevision = storeRevision
+	return certPool, nil
+}
+
+// CertificatePoolForConfiguration returns the local trust pool selected by conf.
+// Stateless configurations receive an empty pool without filesystem access.
+func CertificatePoolForConfiguration(conf *model.Configuration) (*x509.CertPool, error) {
+	dir, available := conf.TrustedCertificateStore()
+	if !available {
+		return x509.NewCertPool(), nil
+	}
+	return loadCertificatePool(dir)
+}
+
+// LoadCertificates loads and caches certificates from the configured local
+// certificate store for signature validation.
+// Failed loads are not cached and may be retried.
+func LoadCertificates() error {
+	certPool, err := loadCertificatePool(model.TrustedCertDir)
+	if err != nil {
+		return err
+	}
+	trustedCertificatePool.Lock()
 	model.UserCertPool = certPool
+	trustedCertificatePool.Unlock()
 	return nil
 }
 
@@ -136,7 +155,7 @@ func InvalidateCertificatePool() {
 func userCertificatePool() *x509.CertPool {
 	trustedCertificatePool.RLock()
 	defer trustedCertificatePool.RUnlock()
-	return trustedCertificatePool.pool
+	return model.UserCertPool
 }
 
 func loadSingleCertFile(filename string) (*x509.Certificate, error) {

@@ -60,6 +60,12 @@ var (
 	// ErrInvalidCSV signals malformed or incomplete CSV form data.
 	ErrInvalidCSV = errors.New("invalid csv input file")
 
+	// ErrInvalidConfigurationMode signals an unsupported configuration loading mode.
+	ErrInvalidConfigurationMode = errors.New("invalid configuration mode")
+
+	// ErrInvalidConfigurationSchema signals malformed configuration schema metadata.
+	ErrInvalidConfigurationSchema = errors.New("invalid configuration schema")
+
 	// ErrInvalidCutConfiguration signals an invalid cut configuration.
 	ErrInvalidCutConfiguration = errors.New("invalid cut configuration")
 
@@ -251,6 +257,9 @@ var (
 
 	// ErrUnsupportedCertificateFile signals an unsupported certificate input file.
 	ErrUnsupportedCertificateFile = pdfcpu.ErrUnsupportedCertificateFile
+
+	// ErrUnsupportedConfigurationSchema signals a configuration schema newer than the supported range.
+	ErrUnsupportedConfigurationSchema = errors.New("unsupported configuration schema")
 
 	// ErrUnsupportedFontFile signals an unsupported font input file.
 	ErrUnsupportedFontFile = errors.New("unsupported font file")

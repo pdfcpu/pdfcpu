@@ -152,18 +152,21 @@ func parseScaleFactorWM(s string, wm *model.Watermark) (err error) {
 }
 
 func parseFontName(s string, wm *model.Watermark) error {
-	supported, err := font.SupportedFont(s)
-	if err != nil {
-		return fmt.Errorf("font %s: load metrics: %w", s, err)
-	}
-	if !supported {
-		return fmt.Errorf("%s is unsupported, please refer to \"pdfcpu fonts list\"", s)
-	}
 	wm.FontName = s
 	if strings.HasSuffix(strings.ToUpper(wm.FontName), "GB2312") {
 		wm.ScriptName = "HANS"
 	}
+	return nil
+}
 
+func validateWatermarkFont(repo *font.Repository, wm *model.Watermark) error {
+	supported, err := repo.SupportedFont(wm.FontName)
+	if err != nil {
+		return fmt.Errorf("font %s: load metrics: %w", wm.FontName, err)
+	}
+	if !supported {
+		return fmt.Errorf("%s is unsupported, please refer to \"pdfcpu fonts list\"", wm.FontName)
+	}
 	return nil
 }
 
@@ -488,46 +491,71 @@ func ValidateWatermarkModeParam(mode int, modeParm string, onTop bool) error {
 	return nil
 }
 
-func parseWatermarkDetails(mode int, modeParm, s string, onTop bool, u types.DisplayUnit) (*model.Watermark, error) {
+func parseWatermarkDetails(
+	mode int,
+	modeParm, s string,
+	onTop bool,
+	u types.DisplayUnit,
+	repo *font.Repository,
+) (*model.Watermark, error) {
 	wm := model.DefaultWatermarkConfig()
 	wm.OnTop = onTop
 	wm.InpUnit = u
 
 	ss := strings.Split(s, ",")
-	if len(ss) > 0 && len(ss[0]) == 0 {
-		return wm, setWatermarkType(mode, modeParm, wm)
-	}
+	if len(ss) > 0 && len(ss[0]) > 0 {
+		for _, s := range ss {
+			ss1 := strings.Split(s, ":")
+			if len(ss1) != 2 {
+				return nil, parseWatermarkError(onTop)
+			}
 
-	for _, s := range ss {
-		ss1 := strings.Split(s, ":")
-		if len(ss1) != 2 {
-			return nil, parseWatermarkError(onTop)
-		}
+			paramPrefix := strings.TrimSpace(ss1[0])
+			paramValueStr := strings.TrimSpace(ss1[1])
 
-		paramPrefix := strings.TrimSpace(ss1[0])
-		paramValueStr := strings.TrimSpace(ss1[1])
-
-		if err := handleParameter(wmParamMap, paramPrefix, paramValueStr, wm); err != nil {
-			return nil, err
+			if err := handleParameter(wmParamMap, paramPrefix, paramValueStr, wm); err != nil {
+				return nil, err
+			}
 		}
 	}
 
+	if err := validateWatermarkFont(repo, wm); err != nil {
+		return nil, err
+	}
 	return wm, setWatermarkType(mode, modeParm, wm)
+}
+
+func watermarkFontRepository(conf *model.Configuration) *font.Repository {
+	if conf == nil {
+		return font.RepositoryForDir(font.UserFontDir)
+	}
+	dir, _ := conf.UserFontStore()
+	return font.RepositoryForDir(dir)
 }
 
 // ParseTextWatermarkDetails parses a text Watermark/Stamp command string into an internal structure.
 func ParseTextWatermarkDetails(text, desc string, onTop bool, u types.DisplayUnit) (*model.Watermark, error) {
-	return parseWatermarkDetails(model.WMText, text, desc, onTop, u)
+	return parseWatermarkDetails(model.WMText, text, desc, onTop, u, watermarkFontRepository(nil))
+}
+
+// ParseTextWatermarkDetailsWithConfiguration parses a text watermark/stamp command using conf's font repository.
+func ParseTextWatermarkDetailsWithConfiguration(
+	text, desc string,
+	onTop bool,
+	u types.DisplayUnit,
+	conf *model.Configuration,
+) (*model.Watermark, error) {
+	return parseWatermarkDetails(model.WMText, text, desc, onTop, u, watermarkFontRepository(conf))
 }
 
 // ParseImageWatermarkDetails parses an image Watermark/Stamp command string into an internal structure.
 func ParseImageWatermarkDetails(fileName, desc string, onTop bool, u types.DisplayUnit) (*model.Watermark, error) {
-	return parseWatermarkDetails(model.WMImage, fileName, desc, onTop, u)
+	return parseWatermarkDetails(model.WMImage, fileName, desc, onTop, u, watermarkFontRepository(nil))
 }
 
 // ParsePDFWatermarkDetails parses a PDF Watermark/Stamp command string into an internal structure.
 func ParsePDFWatermarkDetails(fileName, desc string, onTop bool, u types.DisplayUnit) (*model.Watermark, error) {
-	return parseWatermarkDetails(model.WMPDF, fileName, desc, onTop, u)
+	return parseWatermarkDetails(model.WMPDF, fileName, desc, onTop, u, watermarkFontRepository(nil))
 }
 
 func onTopString(onTop bool) string {

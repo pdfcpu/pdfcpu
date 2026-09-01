@@ -2227,8 +2227,7 @@ func createTTF(header []byte, tables map[string]*table) ([]byte, error) {
 	return bb, nil
 }
 
-// Subset creates a new font file based on usedGIDs.
-func Subset(fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
+func subsetWithReader(fontName string, usedGIDs map[uint16]bool, readFont func(string) ([]byte, error)) ([]byte, error) {
 	if strings.TrimSpace(fontName) == "" {
 		return nil, fmt.Errorf("subset font: %w", ErrMissingFontName)
 	}
@@ -2237,7 +2236,7 @@ func Subset(fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
 	} else {
 		usedGIDs = maps.Clone(usedGIDs)
 	}
-	bb, err := Read(fontName)
+	bb, err := readFont(fontName)
 	if err != nil {
 		return nil, fmt.Errorf("subset font %s: read installed font: %w", fontName, err)
 	}
@@ -2261,4 +2260,9 @@ func Subset(fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
 		return nil, fmt.Errorf("subset font %s: rebuild font: %w", fontName, err)
 	}
 	return bb, nil
+}
+
+// Subset creates a new font file based on usedGIDs.
+func Subset(fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
+	return subsetWithReader(fontName, usedGIDs, Read)
 }

@@ -53,6 +53,13 @@ type domainValidationFunc func(
 	bool,
 ) ([]*model.SignatureValidationResult, error)
 
+type domainValidationWithPoolFunc func(
+	io.ReaderAt,
+	*model.Context,
+	bool,
+	*x509.CertPool,
+) ([]*model.SignatureValidationResult, error)
+
 type apiFileValidationFunc func(
 	string,
 	bool,
@@ -73,13 +80,14 @@ type apiPresentationFunc func(
 ) ([]string, error)
 
 var (
-	_ exportedValidationFunc = sign.ValidatePKCS7Signatures
-	_ exportedValidationFunc = sign.ValidateDTS
-	_ exportedValidationFunc = sign.ValidateX509RSASHA1Signature
-	_ domainValidationFunc   = pdfcpu.ValidateSignatures
-	_ apiFileValidationFunc  = api.ValidateSignatures
-	_ apiRawValidationFunc   = api.ValidateSignaturesRaw
-	_ apiPresentationFunc    = api.ValidateSignaturesFile
+	_ exportedValidationFunc       = sign.ValidatePKCS7Signatures
+	_ exportedValidationFunc       = sign.ValidateDTS
+	_ exportedValidationFunc       = sign.ValidateX509RSASHA1Signature
+	_ domainValidationFunc         = pdfcpu.ValidateSignatures
+	_ domainValidationWithPoolFunc = pdfcpu.ValidateSignaturesWithCertificatePool
+	_ apiFileValidationFunc        = api.ValidateSignatures
+	_ apiRawValidationFunc         = api.ValidateSignaturesRaw
+	_ apiPresentationFunc          = api.ValidateSignaturesFile
 )
 
 // TestPublicSignatureAPIRejectsServiceInjection prevents the public API,

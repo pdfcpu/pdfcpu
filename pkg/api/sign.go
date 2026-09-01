@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -37,6 +38,7 @@ type signatureValidationOperation func(
 	io.ReaderAt,
 	*model.Context,
 	bool,
+	*x509.CertPool,
 ) ([]*model.SignatureValidationResult, error)
 
 func signatureStats(signValidResults []*model.SignatureValidationResult) model.SignatureStats {
@@ -155,7 +157,7 @@ func compactSignatureReason(svr *model.SignatureValidationResult) string {
 // assessment.
 func ValidateSignatures(inFile string, all bool, conf *model.Configuration) (results []*model.SignatureValidationResult, err error) {
 	defer fault.Catch(&err)
-	return validateSignaturesFile(inFile, all, conf, pdfcpu.ValidateSignatures)
+	return validateSignaturesFile(inFile, all, conf, pdfcpu.ValidateSignaturesWithCertificatePool)
 }
 
 func validateSignaturesFile(
@@ -195,7 +197,7 @@ func ValidateSignaturesRaw(
 ) (results []*model.SignatureValidationResult, err error) {
 	defer fault.Catch(&err)
 
-	return validateSignaturesRaw(rs, all, conf, pdfcpu.ValidateSignatures)
+	return validateSignaturesRaw(rs, all, conf, pdfcpu.ValidateSignaturesWithCertificatePool)
 }
 
 func validateSignaturesRaw(
@@ -221,14 +223,15 @@ func validateSignaturesRaw(
 		return nil, fmt.Errorf("validate signatures: %w", ErrNoSignatures)
 	}
 
-	if err := pdfcpu.LoadCertificates(); err != nil {
+	certPool, err := pdfcpu.CertificatePoolForConfiguration(conf)
+	if err != nil {
 		return nil, fmt.Errorf(
 			"validate signatures: load trust pool: %w",
 			err,
 		)
 	}
 
-	results, err = operation(rs, ctx, all)
+	results, err = operation(rs, ctx, all, certPool)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"validate signatures: verify signatures: %w",
