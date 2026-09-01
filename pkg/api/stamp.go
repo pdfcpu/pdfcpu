@@ -67,14 +67,11 @@ func AddWatermarksMap(rs io.ReadSeeker, w io.Writer, m map[int]*model.Watermark,
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.ADDWATERMARKS
-
 	if err := validateWatermarkMap(m); err != nil {
 		return err
 	}
+
+	conf = operationConfiguration(conf, model.ADDWATERMARKS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -193,14 +190,11 @@ func AddWatermarksSliceMap(rs io.ReadSeeker, w io.Writer, m map[int][]*model.Wat
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.ADDWATERMARKS
-
 	if err := validateWatermarkSliceMap(m); err != nil {
 		return err
 	}
+
+	conf = operationConfiguration(conf, model.ADDWATERMARKS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -275,10 +269,7 @@ func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *mo
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.ADDWATERMARKS
+	conf = operationConfiguration(conf, model.ADDWATERMARKS)
 	conf.OptimizeDuplicateContentStreams = false
 
 	if wm == nil {
@@ -365,10 +356,7 @@ func RemoveWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, con
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.REMOVEWATERMARKS
+	conf = operationConfiguration(conf, model.REMOVEWATERMARKS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

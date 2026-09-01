@@ -155,41 +155,38 @@ func TestAttachmentAPIsValidateFileNamesBeforeReading(t *testing.T) {
 	}
 }
 
-func TestAttachmentAPIsSetCommandMode(t *testing.T) {
+func TestAttachmentAPIsPreserveCallerCommandMode(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func(*model.Configuration) error
-		want model.CommandMode
 	}{
 		{
 			name: "add attachments",
 			run: func(conf *model.Configuration) error {
 				return AddAttachments(bytes.NewReader(nil), io.Discard, []string{"attachment.pdf"}, false, conf)
 			},
-			want: model.ADDATTACHMENTS,
 		},
 		{
 			name: "add portfolio attachments",
 			run: func(conf *model.Configuration) error {
 				return AddAttachments(bytes.NewReader(nil), io.Discard, []string{"attachment.pdf"}, true, conf)
 			},
-			want: model.ADDATTACHMENTSPORTFOLIO,
 		},
 		{
 			name: "remove attachments",
 			run: func(conf *model.Configuration) error {
 				return RemoveAttachments(bytes.NewReader(nil), io.Discard, nil, conf)
 			},
-			want: model.REMOVEATTACHMENTS,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := model.NewDefaultConfiguration()
+			conf.Cmd = model.OPTIMIZE
 			_ = tt.run(conf)
-			if conf.Cmd != tt.want {
-				t.Fatalf("expected command %d, got %d", tt.want, conf.Cmd)
+			if conf.Cmd != model.OPTIMIZE {
+				t.Fatalf("expected command %d, got %d", model.OPTIMIZE, conf.Cmd)
 			}
 		})
 	}

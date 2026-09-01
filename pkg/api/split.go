@@ -95,10 +95,7 @@ func readSplitContext(rs io.ReadSeeker, conf *model.Configuration) (*model.Conte
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.SPLIT
+	conf = operationConfiguration(conf, model.SPLIT)
 
 	return ReadValidateAndOptimize(rs, conf)
 }

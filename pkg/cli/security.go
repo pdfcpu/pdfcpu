@@ -22,8 +22,8 @@ import "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 func EncryptCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ENCRYPT
 	}
-	conf.Cmd = model.ENCRYPT
 	return &Command{
 		Mode:    model.ENCRYPT,
 		InFile:  &inFile,
@@ -35,8 +35,8 @@ func EncryptCommand(inFile, outFile string, conf *model.Configuration) *Command 
 func DecryptCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.DECRYPT
 	}
-	conf.Cmd = model.DECRYPT
 	return &Command{
 		Mode:    model.DECRYPT,
 		InFile:  &inFile,
@@ -48,8 +48,8 @@ func DecryptCommand(inFile, outFile string, conf *model.Configuration) *Command 
 func ChangeUserPWCommand(inFile, outFile string, pwOld, pwNew *string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.CHANGEUPW
 	}
-	conf.Cmd = model.CHANGEUPW
 	return &Command{
 		Mode:    model.CHANGEUPW,
 		InFile:  &inFile,
@@ -63,8 +63,8 @@ func ChangeUserPWCommand(inFile, outFile string, pwOld, pwNew *string, conf *mod
 func ChangeOwnerPWCommand(inFile, outFile string, pwOld, pwNew *string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.CHANGEOPW
 	}
-	conf.Cmd = model.CHANGEOPW
 	return &Command{
 		Mode:    model.CHANGEOPW,
 		InFile:  &inFile,
@@ -78,8 +78,8 @@ func ChangeOwnerPWCommand(inFile, outFile string, pwOld, pwNew *string, conf *mo
 func ListPermissionsCommand(inFiles []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTPERMISSIONS
 	}
-	conf.Cmd = model.LISTPERMISSIONS
 	return &Command{
 		Mode:    model.LISTPERMISSIONS,
 		InFiles: inFiles,
@@ -90,8 +90,8 @@ func ListPermissionsCommand(inFiles []string, conf *model.Configuration) *Comman
 func SetPermissionsCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.SETPERMISSIONS
 	}
-	conf.Cmd = model.SETPERMISSIONS
 	return &Command{
 		Mode:    model.SETPERMISSIONS,
 		InFile:  &inFile,

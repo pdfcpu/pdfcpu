@@ -204,10 +204,7 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *model.Conf
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.EXTRACTIMAGES
+	conf = operationConfiguration(conf, model.EXTRACTIMAGES)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -248,10 +245,7 @@ func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(mo
 		return fmt.Errorf("extract images: %w", ErrMissingDigestFunction)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.EXTRACTIMAGES
+	conf = operationConfiguration(conf, model.EXTRACTIMAGES)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -344,10 +338,7 @@ func ExtractFonts(rs io.ReadSeeker, selectedPages []string, digestFont func(pdfc
 		return fmt.Errorf("extract fonts: %w", ErrMissingDigestFunction)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.EXTRACTFONTS
+	conf = operationConfiguration(conf, model.EXTRACTFONTS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -448,10 +439,7 @@ func ExtractPages(rs io.ReadSeeker, selectedPages []string, digestPage func(io.R
 		return fmt.Errorf("extract pages: %w", ErrMissingDigestFunction)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.EXTRACTPAGES
+	conf = operationConfiguration(conf, model.EXTRACTPAGES)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -526,10 +514,7 @@ func ExtractContent(rs io.ReadSeeker, selectedPages []string, digestContent func
 		return fmt.Errorf("extract content: %w", ErrMissingDigestFunction)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.EXTRACTCONTENT
+	conf = operationConfiguration(conf, model.EXTRACTCONTENT)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -597,10 +582,7 @@ func ExtractMetadata(rs io.ReadSeeker, digestMetadata func(pdfcpu.Metadata) erro
 		return fmt.Errorf("extract metadata: %w", ErrMissingDigestFunction)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.EXTRACTMETADATA
+	conf = operationConfiguration(conf, model.EXTRACTMETADATA)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

@@ -62,10 +62,7 @@ func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configurati
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.CREATE
+	conf = operationConfiguration(conf, model.CREATE)
 
 	var ctx *model.Context
 

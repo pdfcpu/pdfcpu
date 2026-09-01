@@ -73,10 +73,7 @@ func Zoom(rs io.ReadSeeker, w io.Writer, selectedPages []string, zoom *model.Zoo
 		return fmt.Errorf("zoom: validate configuration: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.ZOOM
+	conf = operationConfiguration(conf, model.ZOOM)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

@@ -35,12 +35,7 @@ func Properties(rs io.ReadSeeker, conf *model.Configuration) (m map[string]strin
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.LISTPROPERTIES
+	conf = operationConfiguration(conf, model.LISTPROPERTIES)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -66,12 +61,7 @@ func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, 
 		return fmt.Errorf("add properties: validate properties: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.ADDPROPERTIES
+	conf = operationConfiguration(conf, model.ADDPROPERTIES)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -164,12 +154,7 @@ func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *
 		return fmt.Errorf("remove properties: validate properties: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.REMOVEPROPERTIES
+	conf = operationConfiguration(conf, model.REMOVEPROPERTIES)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

@@ -35,12 +35,7 @@ func Keywords(rs io.ReadSeeker, conf *model.Configuration) (ss []string, err err
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.LISTKEYWORDS
+	conf = operationConfiguration(conf, model.LISTKEYWORDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -70,12 +65,7 @@ func AddKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *model.C
 		return fmt.Errorf("add keywords: validate keywords: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.ADDKEYWORDS
+	conf = operationConfiguration(conf, model.ADDKEYWORDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -164,12 +154,7 @@ func RemoveKeywords(rs io.ReadSeeker, w io.Writer, keywords []string, conf *mode
 		return fmt.Errorf("remove keywords: validate keywords: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.REMOVEKEYWORDS
+	conf = operationConfiguration(conf, model.REMOVEKEYWORDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

@@ -38,12 +38,7 @@ func ViewerPreferences(rs io.ReadSeeker, conf *model.Configuration) (vp *model.V
 		return nil, nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.LISTVIEWERPREFERENCES
+	conf = operationConfiguration(conf, model.LISTVIEWERPREFERENCES)
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
@@ -124,12 +119,7 @@ func ListViewerPreferences(rs io.ReadSeeker, all bool, conf *model.Configuration
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.LISTVIEWERPREFERENCES
+	conf = operationConfiguration(conf, model.LISTVIEWERPREFERENCES)
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
@@ -215,12 +205,7 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.SETVIEWERPREFERENCES
+	conf = operationConfiguration(conf, model.SETVIEWERPREFERENCES)
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
@@ -404,12 +389,7 @@ func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configura
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.RESETVIEWERPREFERENCES
+	conf = operationConfiguration(conf, model.RESETVIEWERPREFERENCES)
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {

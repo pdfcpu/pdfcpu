@@ -22,8 +22,8 @@ import "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 func AddWatermarksCommand(inFile, outFile string, pageSelection []string, wm *model.Watermark, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ADDWATERMARKS
 	}
-	conf.Cmd = model.ADDWATERMARKS
 	return &Command{
 		Mode:          model.ADDWATERMARKS,
 		InFile:        &inFile,
@@ -37,8 +37,8 @@ func AddWatermarksCommand(inFile, outFile string, pageSelection []string, wm *mo
 func RemoveWatermarksCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVEWATERMARKS
 	}
-	conf.Cmd = model.REMOVEWATERMARKS
 	return &Command{
 		Mode:          model.REMOVEWATERMARKS,
 		InFile:        &inFile,
@@ -50,8 +50,8 @@ func RemoveWatermarksCommand(inFile, outFile string, pageSelection []string, con
 func listAnnotationsCommand(inFile string, pageSelection []string, json bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTANNOTATIONS
 	}
-	conf.Cmd = model.LISTANNOTATIONS
 	return &Command{
 		Mode:          model.LISTANNOTATIONS,
 		InFile:        &inFile,
@@ -74,8 +74,8 @@ func ListAnnotationsJSONCommand(inFile string, pageSelection []string, conf *mod
 func RemoveAnnotationsCommand(inFile, outFile string, pageSelection []string, idsAndTypes []string, objNrs []int, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVEANNOTATIONS
 	}
-	conf.Cmd = model.REMOVEANNOTATIONS
 	return &Command{
 		Mode:          model.REMOVEANNOTATIONS,
 		InFile:        &inFile,
@@ -90,8 +90,8 @@ func RemoveAnnotationsCommand(inFile, outFile string, pageSelection []string, id
 func ListBookmarksCommand(inFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTBOOKMARKS
 	}
-	conf.Cmd = model.LISTBOOKMARKS
 	return &Command{
 		Mode:   model.LISTBOOKMARKS,
 		InFile: &inFile,
@@ -102,8 +102,8 @@ func ListBookmarksCommand(inFile string, conf *model.Configuration) *Command {
 func ExportBookmarksCommand(inFile, outFileJSON string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.EXPORTBOOKMARKS
 	}
-	conf.Cmd = model.EXPORTBOOKMARKS
 	return &Command{
 		Mode:        model.EXPORTBOOKMARKS,
 		InFile:      &inFile,
@@ -115,8 +115,8 @@ func ExportBookmarksCommand(inFile, outFileJSON string, conf *model.Configuratio
 func ImportBookmarksCommand(inFile, inFileJSON, outFile string, replace bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.IMPORTBOOKMARKS
 	}
-	conf.Cmd = model.IMPORTBOOKMARKS
 	return &Command{
 		Mode:       model.IMPORTBOOKMARKS,
 		BoolVal1:   replace,
@@ -130,8 +130,8 @@ func ImportBookmarksCommand(inFile, inFileJSON, outFile string, replace bool, co
 func RemoveBookmarksCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVEBOOKMARKS
 	}
-	conf.Cmd = model.REMOVEBOOKMARKS
 	return &Command{
 		Mode:    model.REMOVEBOOKMARKS,
 		InFile:  &inFile,
@@ -143,8 +143,8 @@ func RemoveBookmarksCommand(inFile, outFile string, conf *model.Configuration) *
 func ListPageLayoutCommand(inFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTPAGELAYOUT
 	}
-	conf.Cmd = model.LISTPAGELAYOUT
 	return &Command{
 		Mode:   model.LISTPAGELAYOUT,
 		InFile: &inFile,
@@ -155,8 +155,8 @@ func ListPageLayoutCommand(inFile string, conf *model.Configuration) *Command {
 func SetPageLayoutCommand(inFile, outFile, value string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.SETPAGELAYOUT
 	}
-	conf.Cmd = model.SETPAGELAYOUT
 	return &Command{
 		Mode:      model.SETPAGELAYOUT,
 		InFile:    &inFile,
@@ -169,8 +169,8 @@ func SetPageLayoutCommand(inFile, outFile, value string, conf *model.Configurati
 func ResetPageLayoutCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.RESETPAGELAYOUT
 	}
-	conf.Cmd = model.RESETPAGELAYOUT
 	return &Command{
 		Mode:    model.RESETPAGELAYOUT,
 		InFile:  &inFile,
@@ -182,8 +182,8 @@ func ResetPageLayoutCommand(inFile, outFile string, conf *model.Configuration) *
 func ListPageModeCommand(inFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTPAGEMODE
 	}
-	conf.Cmd = model.LISTPAGEMODE
 	return &Command{
 		Mode:   model.LISTPAGEMODE,
 		InFile: &inFile,
@@ -194,8 +194,8 @@ func ListPageModeCommand(inFile string, conf *model.Configuration) *Command {
 func SetPageModeCommand(inFile, outFile, value string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.SETPAGEMODE
 	}
-	conf.Cmd = model.SETPAGEMODE
 	return &Command{
 		Mode:      model.SETPAGEMODE,
 		InFile:    &inFile,
@@ -208,8 +208,8 @@ func SetPageModeCommand(inFile, outFile, value string, conf *model.Configuration
 func ResetPageModeCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.RESETPAGEMODE
 	}
-	conf.Cmd = model.RESETPAGEMODE
 	return &Command{
 		Mode:    model.RESETPAGEMODE,
 		InFile:  &inFile,
@@ -221,8 +221,8 @@ func ResetPageModeCommand(inFile, outFile string, conf *model.Configuration) *Co
 func ListViewerPreferencesCommand(inFile string, all, json bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTVIEWERPREFERENCES
 	}
-	conf.Cmd = model.LISTVIEWERPREFERENCES
 	return &Command{
 		Mode:     model.LISTVIEWERPREFERENCES,
 		InFile:   &inFile,
@@ -235,8 +235,8 @@ func ListViewerPreferencesCommand(inFile string, all, json bool, conf *model.Con
 func SetViewerPreferencesCommand(inFilePDF, inFileJSON, outFilePDF, stringJSON string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.SETVIEWERPREFERENCES
 	}
-	conf.Cmd = model.SETVIEWERPREFERENCES
 	return &Command{
 		Mode:       model.SETVIEWERPREFERENCES,
 		InFile:     &inFilePDF,
@@ -250,8 +250,8 @@ func SetViewerPreferencesCommand(inFilePDF, inFileJSON, outFilePDF, stringJSON s
 func ResetViewerPreferencesCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.RESETVIEWERPREFERENCES
 	}
-	conf.Cmd = model.RESETVIEWERPREFERENCES
 	return &Command{
 		Mode:    model.RESETVIEWERPREFERENCES,
 		InFile:  &inFile,

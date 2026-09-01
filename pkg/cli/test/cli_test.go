@@ -257,9 +257,9 @@ func TestDispatchRejectsNilCommand(t *testing.T) {
 	}
 }
 
-// TestDispatchDefaultsNilConfig verifies manual commands get the same default config handling as command constructors.
-func TestDispatchDefaultsNilConfig(t *testing.T) {
-	msg := "TestDispatchDefaultsNilConfig"
+// TestDispatchPreservesNilConfig verifies dispatch does not attach operation state to a caller-owned command.
+func TestDispatchPreservesNilConfig(t *testing.T) {
+	msg := "TestDispatchPreservesNilConfig"
 	inFile := filepath.Join(outDir, "go.pdf")
 
 	cmd := &cli.Command{
@@ -270,11 +270,8 @@ func TestDispatchDefaultsNilConfig(t *testing.T) {
 	if _, err := cli.Dispatch(cmd); err == nil {
 		t.Fatalf("%s: expected unknown command error\n", msg)
 	}
-	if cmd.Conf == nil {
-		t.Fatalf("%s: expected default configuration\n", msg)
-	}
-	if cmd.Conf.Cmd != cmd.Mode {
-		t.Fatalf("%s: Cmd = %d, want %d\n", msg, cmd.Conf.Cmd, cmd.Mode)
+	if cmd.Conf != nil {
+		t.Fatalf("%s: dispatch attached configuration to caller command\n", msg)
 	}
 }
 

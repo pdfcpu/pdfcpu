@@ -60,10 +60,7 @@ func Annotations(rs io.ReadSeeker, selectedPages []string, conf *model.Configura
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.LISTANNOTATIONS
+	conf = operationConfiguration(conf, model.LISTANNOTATIONS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -94,10 +91,7 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann m
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.ADDANNOTATIONS
+	conf = operationConfiguration(conf, model.ADDANNOTATIONS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -135,10 +129,7 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.ADDANNOTATIONS
+	conf = operationConfiguration(conf, model.ADDANNOTATIONS)
 
 	ctx, err := ReadAndValidate(rws, conf)
 	if err != nil {
@@ -245,10 +236,7 @@ func AddAnnotationsMap(rs io.ReadSeeker, w io.Writer, m map[int][]model.Annotati
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.ADDANNOTATIONS
+	conf = operationConfiguration(conf, model.ADDANNOTATIONS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -281,10 +269,7 @@ func AddAnnotationsMapAsIncrement(rws io.ReadWriteSeeker, m map[int][]model.Anno
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.ADDANNOTATIONS
+	conf = operationConfiguration(conf, model.ADDANNOTATIONS)
 
 	ctx, err := ReadAndValidate(rws, conf)
 	if err != nil {
@@ -388,10 +373,7 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.REMOVEANNOTATIONS
+	conf = operationConfiguration(conf, model.REMOVEANNOTATIONS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -430,10 +412,7 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.REMOVEANNOTATIONS
+	conf = operationConfiguration(conf, model.REMOVEANNOTATIONS)
 
 	ctx, err := ReadAndValidate(rws, conf)
 	if err != nil {

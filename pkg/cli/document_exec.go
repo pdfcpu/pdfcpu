@@ -606,12 +606,25 @@ func listInfoReadSeeker(rs io.ReadSeeker, fn string, selectedPages []string, fon
 	return ss, nil, err
 }
 
+func reportRelaxedValidation(cmd *Command, operation string) error {
+	if cmd.ErrorOutput == nil {
+		return nil
+	}
+	if _, err := fmt.Fprintf(cmd.ErrorOutput, "%s: using relaxed validation\n", operation); err != nil {
+		return fmt.Errorf("%s: report validation mode: %w", operation, err)
+	}
+	return nil
+}
+
 // ListInfo gathers information about inFile and returns the result as []string.
 func ListInfo(cmd *Command) ([]string, error) {
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation:     "list info",
 		minInputFiles: 1,
 	}); err != nil {
+		return nil, err
+	}
+	if err := reportRelaxedValidation(cmd, "info"); err != nil {
 		return nil, err
 	}
 	if !slices.Contains(cmd.InFiles, "-") {
@@ -670,14 +683,18 @@ func Dump(cmd *Command) ([]string, error) {
 	}); err != nil {
 		return nil, err
 	}
+	if err := reportRelaxedValidation(cmd, "dump"); err != nil {
+		return nil, err
+	}
 	mode := cmd.IntVals[0]
 	objNr := cmd.IntVals[1]
 
-	conf := cmd.Conf
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
+	conf := model.NewDefaultConfiguration()
+	if cmd.Conf != nil {
+		conf = cmd.Conf.Clone()
 	}
 	conf.Cmd = model.DUMP
+	conf.ValidationMode = model.ValidationRelaxed
 
 	f, err := os.Open(*cmd.InFile)
 	if err != nil {
@@ -691,27 +708,20 @@ func Dump(cmd *Command) ([]string, error) {
 	}
 
 	if err = api.ValidateContext(ctx); err != nil {
-		return nil, dumpValidationError(conf, err)
+		return nil, dumpValidationError(err)
 	}
 
 	ctx.DumpObject(objNr, mode)
 	return nil, nil
 }
 
-func dumpValidationModeHint(mode int) string {
-	if mode != model.ValidationStrict {
-		return ""
-	}
-	return " (try --mode=relaxed)"
-}
-
-func dumpValidationError(conf *model.Configuration, err error) error {
+func dumpValidationError(err error) error {
 	prefix := "validation error"
 	var validationErr *model.ValidationError
 	if errors.As(err, &validationErr) {
 		prefix += fmt.Sprintf(" (obj#:%d)", validationErr.ObjectNumber())
 	}
-	return fmt.Errorf("%s%s: %w", prefix, dumpValidationModeHint(conf.ValidationMode), err)
+	return fmt.Errorf("%s: %w", prefix, err)
 }
 
 // Create renders page content corresponding to declarations found in inFileJSON and writes the result to outFile.

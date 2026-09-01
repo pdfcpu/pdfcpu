@@ -35,10 +35,7 @@ func Permissions(rs io.ReadSeeker, conf *model.Configuration) (p int, err error)
 		return 0, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.LISTPERMISSIONS
+	conf = operationConfiguration(conf, model.LISTPERMISSIONS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -78,7 +75,7 @@ func SetPermissions(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (e
 	if conf == nil {
 		return ErrMissingConfiguration
 	}
-	conf.Cmd = model.SETPERMISSIONS
+	conf = operationConfiguration(conf, model.SETPERMISSIONS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

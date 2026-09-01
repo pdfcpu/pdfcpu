@@ -64,10 +64,7 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err err
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.OPTIMIZE
+	conf = operationConfiguration(conf, model.OPTIMIZE)
 
 	if err := optimize(rs, w, conf); err != nil {
 		return fmt.Errorf("optimize: %w", err)
@@ -115,11 +112,6 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 		}
 		err = staged.commit()
 	}()
-
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.OPTIMIZE
 
 	if err = Optimize(f1, f2, conf); err != nil {
 		return err

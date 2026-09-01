@@ -22,8 +22,8 @@ import "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 func ExtractImagesCommand(inFile string, outDir string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.EXTRACTIMAGES
 	}
-	conf.Cmd = model.EXTRACTIMAGES
 	return &Command{
 		Mode:          model.EXTRACTIMAGES,
 		InFile:        &inFile,
@@ -37,8 +37,8 @@ func ExtractImagesCommand(inFile string, outDir string, pageSelection []string, 
 func ExtractFontsCommand(inFile string, outDir string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.EXTRACTFONTS
 	}
-	conf.Cmd = model.EXTRACTFONTS
 	return &Command{
 		Mode:          model.EXTRACTFONTS,
 		InFile:        &inFile,
@@ -51,8 +51,8 @@ func ExtractFontsCommand(inFile string, outDir string, pageSelection []string, c
 func ExtractPagesCommand(inFile string, outDir string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.EXTRACTPAGES
 	}
-	conf.Cmd = model.EXTRACTPAGES
 	return &Command{
 		Mode:          model.EXTRACTPAGES,
 		InFile:        &inFile,
@@ -65,8 +65,8 @@ func ExtractPagesCommand(inFile string, outDir string, pageSelection []string, c
 func ExtractContentCommand(inFile string, outDir string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.EXTRACTCONTENT
 	}
-	conf.Cmd = model.EXTRACTCONTENT
 	return &Command{
 		Mode:          model.EXTRACTCONTENT,
 		InFile:        &inFile,
@@ -79,8 +79,8 @@ func ExtractContentCommand(inFile string, outDir string, pageSelection []string,
 func ExtractMetadataCommand(inFile string, outDir string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.EXTRACTMETADATA
 	}
-	conf.Cmd = model.EXTRACTMETADATA
 	return &Command{
 		Mode:   model.EXTRACTMETADATA,
 		InFile: &inFile,

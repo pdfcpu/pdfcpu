@@ -328,6 +328,25 @@ type Configuration struct {
 	RemoveSignatures bool
 }
 
+// Clone returns an independent copy of c and preserves nil receiver semantics.
+func (c *Configuration) Clone() *Configuration {
+	if c == nil {
+		return nil
+	}
+
+	clone := *c
+	clone.AllowedRevocationHosts = slices.Clone(c.AllowedRevocationHosts)
+	if c.UserPWNew != nil {
+		userPWNew := *c.UserPWNew
+		clone.UserPWNew = &userPWNew
+	}
+	if c.OwnerPWNew != nil {
+		ownerPWNew := *c.OwnerPWNew
+		clone.OwnerPWNew = &ownerPWNew
+	}
+	return &clone
+}
+
 // ResourceLimits controls resource usage for input-driven allocation.
 type ResourceLimits struct {
 	// MaxStreamBytes limits encoded stream bytes read from a PDF.

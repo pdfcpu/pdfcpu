@@ -22,8 +22,8 @@ import "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 func ValidateCommand(inFiles []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.VALIDATE
 	}
-	conf.Cmd = model.VALIDATE
 	return &Command{
 		Mode:    model.VALIDATE,
 		InFiles: inFiles,
@@ -34,8 +34,8 @@ func ValidateCommand(inFiles []string, conf *model.Configuration) *Command {
 func OptimizeCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.OPTIMIZE
 	}
-	conf.Cmd = model.OPTIMIZE
 	return &Command{
 		Mode:    model.OPTIMIZE,
 		InFile:  &inFile,
@@ -47,8 +47,8 @@ func OptimizeCommand(inFile, outFile string, conf *model.Configuration) *Command
 func InfoCommand(inFiles []string, pageSelection []string, fonts, json bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTINFO
 	}
-	conf.Cmd = model.LISTINFO
 	return &Command{
 		Mode:          model.LISTINFO,
 		InFiles:       inFiles,
@@ -62,8 +62,8 @@ func InfoCommand(inFiles []string, pageSelection []string, fonts, json bool, con
 func DumpCommand(inFilePDF string, vals []int, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.DUMP
 	}
-	conf.Cmd = model.DUMP
 	return &Command{
 		Mode:    model.DUMP,
 		InFile:  &inFilePDF,
@@ -75,8 +75,8 @@ func DumpCommand(inFilePDF string, vals []int, conf *model.Configuration) *Comma
 func CreateCommand(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.CREATE
 	}
-	conf.Cmd = model.CREATE
 	return &Command{
 		Mode:       model.CREATE,
 		InFile:     &inFilePDF,
@@ -90,8 +90,8 @@ func CreateCommand(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configu
 func MergeCreateCommand(inFiles []string, outFile string, dividerPage bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.MERGECREATE
 	}
-	conf.Cmd = model.MERGECREATE
 	return &Command{
 		Mode:     model.MERGECREATE,
 		InFiles:  inFiles,
@@ -105,8 +105,8 @@ func MergeCreateCommand(inFiles []string, outFile string, dividerPage bool, conf
 func MergeCreateZipCommand(inFiles []string, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.MERGECREATEZIP
 	}
-	conf.Cmd = model.MERGECREATEZIP
 	return &Command{
 		Mode:    model.MERGECREATEZIP,
 		InFiles: inFiles,
@@ -119,8 +119,8 @@ func MergeCreateZipCommand(inFiles []string, outFile string, conf *model.Configu
 func MergeAppendCommand(inFiles []string, outFile string, dividerPage bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.MERGEAPPEND
 	}
-	conf.Cmd = model.MERGEAPPEND
 	return &Command{
 		Mode:     model.MERGEAPPEND,
 		InFiles:  inFiles,
@@ -133,8 +133,8 @@ func MergeAppendCommand(inFiles []string, outFile string, dividerPage bool, conf
 func SplitCommand(inFile, dirNameOut string, span int, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.SPLIT
 	}
-	conf.Cmd = model.SPLIT
 	return &Command{
 		Mode:   model.SPLIT,
 		InFile: &inFile,
@@ -147,8 +147,8 @@ func SplitCommand(inFile, dirNameOut string, span int, conf *model.Configuration
 func SplitByPageNrCommand(inFile, dirNameOut string, pageNrs []int, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.SPLITBYPAGENR
 	}
-	conf.Cmd = model.SPLITBYPAGENR
 	return &Command{
 		Mode:    model.SPLITBYPAGENR,
 		InFile:  &inFile,
@@ -161,8 +161,8 @@ func SplitByPageNrCommand(inFile, dirNameOut string, pageNrs []int, conf *model.
 func TrimCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.TRIM
 	}
-	conf.Cmd = model.TRIM
 	return &Command{
 		Mode:          model.TRIM,
 		InFile:        &inFile,
@@ -175,8 +175,8 @@ func TrimCommand(inFile, outFile string, pageSelection []string, conf *model.Con
 func CollectCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.COLLECT
 	}
-	conf.Cmd = model.COLLECT
 	return &Command{
 		Mode:          model.COLLECT,
 		InFile:        &inFile,

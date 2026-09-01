@@ -26,6 +26,8 @@ import (
 )
 
 // PDFInfo returns information about rs.
+//
+// PDFInfo always uses relaxed validation.
 func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, fonts bool, conf *model.Configuration) (info *pdfcpu.PDFInfo, err error) {
 	defer fault.Catch(&err)
 
@@ -33,12 +35,8 @@ func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, fonts bo
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.LISTINFO
+	conf = operationConfiguration(conf, model.LISTINFO)
+	conf.ValidationMode = model.ValidationRelaxed
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {

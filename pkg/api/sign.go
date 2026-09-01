@@ -208,10 +208,7 @@ func validateSignaturesRaw(
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.VALIDATESIGNATURES
+	conf = operationConfiguration(conf, model.VALIDATESIGNATURES)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -246,10 +243,6 @@ func validateSignaturesRaw(
 // all: processes all signatures meaning not only the authoritative/certified signature..
 // full: detailed output including certificate paths, observed evidence and problems encountered.
 func ValidateSignaturesFile(inFile string, all, full bool, conf *model.Configuration) ([]string, error) {
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-
 	signValidResults, err := ValidateSignatures(inFile, all, conf)
 	if err != nil {
 		return nil, err
@@ -269,10 +262,7 @@ func RemoveSignatures(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) 
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.REMOVESIGNATURES
+	conf = operationConfiguration(conf, model.REMOVESIGNATURES)
 
 	if err := optimize(rs, w, conf); err != nil {
 		return fmt.Errorf("remove signatures: %w", err)

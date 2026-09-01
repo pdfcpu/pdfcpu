@@ -25,8 +25,8 @@ import (
 func NUpCommand(inFiles []string, outFile string, pageSelection []string, nUp *model.NUp, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.NUP
 	}
-	conf.Cmd = model.NUP
 	return &Command{
 		Mode:          model.NUP,
 		InFiles:       inFiles,
@@ -40,8 +40,8 @@ func NUpCommand(inFiles []string, outFile string, pageSelection []string, nUp *m
 func GridCommand(inFiles []string, outFile string, pageSelection []string, nup *model.NUp, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.GRID
 	}
-	conf.Cmd = model.GRID
 	return &Command{
 		Mode:          model.GRID,
 		InFiles:       inFiles,
@@ -55,8 +55,8 @@ func GridCommand(inFiles []string, outFile string, pageSelection []string, nup *
 func BookletCommand(inFiles []string, outFile string, pageSelection []string, nup *model.NUp, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.BOOKLET
 	}
-	conf.Cmd = model.BOOKLET
 	return &Command{
 		Mode:          model.BOOKLET,
 		InFiles:       inFiles,
@@ -70,8 +70,8 @@ func BookletCommand(inFiles []string, outFile string, pageSelection []string, nu
 func ResizeCommand(inFile, outFile string, pageSelection []string, resize *model.Resize, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.RESIZE
 	}
-	conf.Cmd = model.RESIZE
 	return &Command{
 		Mode:          model.RESIZE,
 		InFile:        &inFile,
@@ -85,8 +85,8 @@ func ResizeCommand(inFile, outFile string, pageSelection []string, resize *model
 func PosterCommand(inFile, outDir, outFile string, pageSelection []string, cut *model.Cut, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.POSTER
 	}
-	conf.Cmd = model.POSTER
 	return &Command{
 		Mode:          model.POSTER,
 		InFile:        &inFile,
@@ -101,8 +101,8 @@ func PosterCommand(inFile, outDir, outFile string, pageSelection []string, cut *
 func NDownCommand(inFile, outDir, outFile string, pageSelection []string, n int, cut *model.Cut, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.NDOWN
 	}
-	conf.Cmd = model.NDOWN
 	return &Command{
 		Mode:          model.NDOWN,
 		InFile:        &inFile,
@@ -118,8 +118,8 @@ func NDownCommand(inFile, outDir, outFile string, pageSelection []string, n int,
 func CutCommand(inFile, outDir, outFile string, pageSelection []string, cut *model.Cut, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.CUT
 	}
-	conf.Cmd = model.CUT
 	return &Command{
 		Mode:          model.CUT,
 		InFile:        &inFile,
@@ -134,8 +134,8 @@ func CutCommand(inFile, outDir, outFile string, pageSelection []string, cut *mod
 func ZoomCommand(inFile, outFile string, pageSelection []string, zoom *model.Zoom, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ZOOM
 	}
-	conf.Cmd = model.ZOOM
 	return &Command{
 		Mode:          model.ZOOM,
 		InFile:        &inFile,
@@ -147,14 +147,14 @@ func ZoomCommand(inFile, outFile string, pageSelection []string, zoom *model.Zoo
 
 // InsertPagesCommand creates a new command to insert a blank page before or after selected pages.
 func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration, mode string, pageConf *pdfcpu.PageConfiguration) *Command {
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
 	cmdMode := model.INSERTPAGESBEFORE
 	if mode == "after" {
 		cmdMode = model.INSERTPAGESAFTER
 	}
-	conf.Cmd = cmdMode
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+		conf.Cmd = cmdMode
+	}
 	return &Command{
 		Mode:          cmdMode,
 		InFile:        &inFile,
@@ -168,8 +168,8 @@ func InsertPagesCommand(inFile, outFile string, pageSelection []string, conf *mo
 func RemovePagesCommand(inFile, outFile string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVEPAGES
 	}
-	conf.Cmd = model.REMOVEPAGES
 	return &Command{
 		Mode:          model.REMOVEPAGES,
 		InFile:        &inFile,
@@ -182,8 +182,8 @@ func RemovePagesCommand(inFile, outFile string, pageSelection []string, conf *mo
 func RotateCommand(inFile, outFile string, rotation int, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ROTATE
 	}
-	conf.Cmd = model.ROTATE
 	return &Command{
 		Mode:          model.ROTATE,
 		InFile:        &inFile,
@@ -197,8 +197,8 @@ func RotateCommand(inFile, outFile string, rotation int, pageSelection []string,
 func CropCommand(inFile, outFile string, pageSelection []string, box *model.Box, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.CROP
 	}
-	conf.Cmd = model.CROP
 	return &Command{
 		Mode:          model.CROP,
 		InFile:        &inFile,
@@ -212,8 +212,8 @@ func CropCommand(inFile, outFile string, pageSelection []string, box *model.Box,
 func ListBoxesCommand(inFile string, pageSelection []string, pb *model.PageBoundaries, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTBOXES
 	}
-	conf.Cmd = model.LISTBOXES
 	return &Command{
 		Mode:           model.LISTBOXES,
 		InFile:         &inFile,
@@ -226,8 +226,8 @@ func ListBoxesCommand(inFile string, pageSelection []string, pb *model.PageBound
 func AddBoxesCommand(inFile, outFile string, pageSelection []string, pb *model.PageBoundaries, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ADDBOXES
 	}
-	conf.Cmd = model.ADDBOXES
 	return &Command{
 		Mode:           model.ADDBOXES,
 		InFile:         &inFile,
@@ -241,8 +241,8 @@ func AddBoxesCommand(inFile, outFile string, pageSelection []string, pb *model.P
 func RemoveBoxesCommand(inFile, outFile string, pageSelection []string, pb *model.PageBoundaries, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVEBOXES
 	}
-	conf.Cmd = model.REMOVEBOXES
 	return &Command{
 		Mode:           model.REMOVEBOXES,
 		InFile:         &inFile,

@@ -43,7 +43,7 @@ func Encrypt(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err erro
 	if conf == nil {
 		return ErrMissingConfiguration
 	}
-	conf.Cmd = model.ENCRYPT
+	conf = operationConfiguration(conf, model.ENCRYPT)
 
 	if err := optimize(rs, w, conf); err != nil {
 		return fmt.Errorf("encrypt: %w", err)
@@ -60,7 +60,6 @@ func EncryptFile(inFile, outFile string, conf *model.Configuration) error {
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
-	conf.Cmd = model.ENCRYPT
 	return processSecurityFile(inFile, outFile, conf, "encrypt", Encrypt)
 }
 
@@ -80,7 +79,7 @@ func Decrypt(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err erro
 	if conf == nil {
 		return ErrMissingConfiguration
 	}
-	conf.Cmd = model.DECRYPT
+	conf = operationConfiguration(conf, model.DECRYPT)
 
 	if err := optimize(rs, w, conf); err != nil {
 		return fmt.Errorf("decrypt: %w", err)
@@ -97,7 +96,6 @@ func DecryptFile(inFile, outFile string, conf *model.Configuration) error {
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
-	conf.Cmd = model.DECRYPT
 	return processSecurityFile(inFile, outFile, conf, "decrypt", Decrypt)
 }
 
@@ -165,7 +163,7 @@ func ChangeUserPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, conf
 		return ErrMissingConfiguration
 	}
 
-	conf.Cmd = model.CHANGEUPW
+	conf = operationConfiguration(conf, model.CHANGEUPW)
 	conf.UserPW = pwOld
 	conf.UserPWNew = &pwNew
 
@@ -216,7 +214,7 @@ func ChangeOwnerPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, con
 		return fmt.Errorf("change owner password: new owner password must not be empty: %w", pdfcpu.ErrOwnerPasswordRequired)
 	}
 
-	conf.Cmd = model.CHANGEOPW
+	conf = operationConfiguration(conf, model.CHANGEOPW)
 	conf.OwnerPW = pwOld
 	conf.OwnerPWNew = &pwNew
 

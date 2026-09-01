@@ -60,11 +60,7 @@ func writeExtractedPageToStdout(ctx *model.Context, pageNr int, w io.Writer) err
 }
 
 func extractSelectedPageToStdout(rs io.ReadSeeker, w io.Writer, cmd *Command) error {
-	conf := cmd.Conf
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.EXTRACTPAGES
+	conf := configurationForMode(cmd.Conf, model.EXTRACTPAGES)
 
 	ctx, err := api.ReadValidateAndOptimize(rs, conf)
 	if err != nil {

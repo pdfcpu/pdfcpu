@@ -142,6 +142,19 @@ var dispatchTable = map[model.CommandMode]dispatchFunc{
 	model.REMOVESIGNATURES:    dispatchSignatures,
 }
 
+func configurationForMode(conf *model.Configuration, mode model.CommandMode) *model.Configuration {
+	if conf != nil && conf.Cmd == mode {
+		return conf
+	}
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	} else {
+		conf = conf.Clone()
+	}
+	conf.Cmd = mode
+	return conf
+}
+
 // Dispatch executes a pdfcpu command.
 func Dispatch(cmd *Command) (out []string, err error) {
 	defer func() {
@@ -160,16 +173,20 @@ func Dispatch(cmd *Command) (out []string, err error) {
 	if cmd == nil {
 		return nil, fmt.Errorf("pdfcpu: dispatch: %w", ErrMissingCommand)
 	}
+	f, ok := dispatchTable[cmd.Mode]
+	if !ok {
+		return nil, fmt.Errorf("pdfcpu: dispatch: mode %d: %w", cmd.Mode, ErrUnsupportedCommandMode)
+	}
+
+	execution := *cmd
 	if cmd.Conf == nil {
-		cmd.Conf = model.NewDefaultConfiguration()
+		execution.Conf = model.NewDefaultConfiguration()
+	} else {
+		execution.Conf = cmd.Conf.Clone()
 	}
-	cmd.Conf.Cmd = cmd.Mode
+	execution.Conf.Cmd = execution.Mode
 
-	if f, ok := dispatchTable[cmd.Mode]; ok {
-		return f(cmd)
-	}
-
-	return nil, fmt.Errorf("pdfcpu: dispatch: mode %d: %w", cmd.Mode, ErrUnsupportedCommandMode)
+	return f(&execution)
 }
 
 func dispatchAttachments(cmd *Command) (out []string, err error) {

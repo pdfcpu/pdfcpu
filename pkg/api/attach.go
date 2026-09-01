@@ -54,10 +54,7 @@ func Attachments(rs io.ReadSeeker, conf *model.Configuration) (aa []model.Attach
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.LISTATTACHMENTS
+	conf = operationConfiguration(conf, model.LISTATTACHMENTS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -126,10 +123,7 @@ func AddAttachments(rs io.ReadSeeker, w io.Writer, files []string, coll bool, co
 		return fmt.Errorf("%s: validate attachment filenames: %w", op, err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = addAttachmentsCommandMode(coll)
+	conf = operationConfiguration(conf, addAttachmentsCommandMode(coll))
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -220,10 +214,7 @@ func RemoveAttachments(rs io.ReadSeeker, w io.Writer, files []string, conf *mode
 		return fmt.Errorf("remove attachments: validate attachment filenames: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.REMOVEATTACHMENTS
+	conf = operationConfiguration(conf, model.REMOVEATTACHMENTS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -272,10 +263,7 @@ func ExtractAttachmentsRaw(rs io.ReadSeeker, outDir string, fileNames []string, 
 		return nil, fmt.Errorf("extract attachments: validate attachment filenames: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.EXTRACTATTACHMENTS
+	conf = operationConfiguration(conf, model.EXTRACTATTACHMENTS)
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {

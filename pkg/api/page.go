@@ -64,13 +64,11 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 		return fmt.Errorf("insert pages: validate page configuration: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.INSERTPAGESAFTER
+	cmd := model.INSERTPAGESAFTER
 	if before {
-		conf.Cmd = model.INSERTPAGESBEFORE
+		cmd = model.INSERTPAGESBEFORE
 	}
+	conf = operationConfiguration(conf, cmd)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -157,10 +155,7 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.REMOVEPAGES
+	conf = operationConfiguration(conf, model.REMOVEPAGES)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

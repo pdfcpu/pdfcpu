@@ -22,8 +22,8 @@ import "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 func ListCertificatesCommand(json bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTCERTIFICATES
 	}
-	conf.Cmd = model.LISTCERTIFICATES
 	return &Command{
 		Mode:     model.LISTCERTIFICATES,
 		BoolVal1: json,
@@ -34,8 +34,8 @@ func ListCertificatesCommand(json bool, conf *model.Configuration) *Command {
 func InspectCertificatesCommand(inFiles []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.INSPECTCERTIFICATES
 	}
-	conf.Cmd = model.INSPECTCERTIFICATES
 	return &Command{
 		Mode:    model.INSPECTCERTIFICATES,
 		InFiles: inFiles,
@@ -46,8 +46,8 @@ func InspectCertificatesCommand(inFiles []string, conf *model.Configuration) *Co
 func ImportCertificatesCommand(inFiles []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.IMPORTCERTIFICATES
 	}
-	conf.Cmd = model.IMPORTCERTIFICATES
 	return &Command{
 		Mode:    model.IMPORTCERTIFICATES,
 		InFiles: inFiles,
@@ -58,8 +58,8 @@ func ImportCertificatesCommand(inFiles []string, conf *model.Configuration) *Com
 func ValidateSignaturesCommand(inFile string, all, full bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.VALIDATESIGNATURES
 	}
-	conf.Cmd = model.VALIDATESIGNATURES
 	return &Command{
 		Mode:     model.VALIDATESIGNATURES,
 		InFile:   &inFile,
@@ -73,8 +73,8 @@ func ValidateSignaturesCommand(inFile string, all, full bool, conf *model.Config
 func RemoveSignaturesCommand(inFile, outFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVESIGNATURES
 	}
-	conf.Cmd = model.REMOVESIGNATURES
 	return &Command{
 		Mode:    model.REMOVESIGNATURES,
 		InFile:  &inFile,

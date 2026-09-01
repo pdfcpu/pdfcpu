@@ -35,10 +35,7 @@ func prepareImagesContext(rs io.ReadSeeker, selectedPages []string, conf *model.
 	if rs == nil {
 		return nil, nil, ErrMissingPDFReadSeeker
 	}
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.LISTIMAGES
+	conf = operationConfiguration(conf, model.LISTIMAGES)
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return nil, nil, fmt.Errorf("list images: %w", err)
@@ -114,10 +111,7 @@ func UpdateImages(rs io.ReadSeeker, rd io.Reader, w io.Writer, objNr, pageNr int
 	if err := validateImageSelection(objNr, pageNr, id); err != nil {
 		return fmt.Errorf("update images: validate selection: %w", err)
 	}
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.UPDATEIMAGES
+	conf = operationConfiguration(conf, model.UPDATEIMAGES)
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
 		return fmt.Errorf("update images: %w", err)

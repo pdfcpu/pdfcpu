@@ -67,26 +67,7 @@ func prepareGridConfigurationForAPI(nup *model.NUp, imageInput bool) error {
 	return nil
 }
 
-// GridFromImage creates a page grid context for one or more images.
-// On error, the returned context may be partially constructed and its PageCount remains at the pre-operation value.
-// Callers must discard a non-nil context returned together with an error.
-func GridFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
-	defer fault.Catch(&err)
-
-	if nup == nil {
-		return nil, ErrMissingGridConfiguration
-	}
-	if len(imageFileNames) == 0 {
-		return nil, ErrMissingImageInput
-	}
-	if err := prepareGridConfigurationForAPI(nup, true); err != nil {
-		return nil, err
-	}
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.GRID
-
+func gridFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
 	ctx, err = pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)
 	if err != nil {
 		return nil, fmt.Errorf("grid: create image context: %w", err)
@@ -113,6 +94,26 @@ func GridFromImage(conf *model.Configuration, imageFileNames []string, nup *mode
 	return ctx, nil
 }
 
+// GridFromImage creates a page grid context for one or more images.
+// On error, the returned context may be partially constructed and its PageCount remains at the pre-operation value.
+// Callers must discard a non-nil context returned together with an error.
+func GridFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+	defer fault.Catch(&err)
+
+	if nup == nil {
+		return nil, ErrMissingGridConfiguration
+	}
+	if len(imageFileNames) == 0 {
+		return nil, ErrMissingImageInput
+	}
+	if err := prepareGridConfigurationForAPI(nup, true); err != nil {
+		return nil, err
+	}
+	conf = operationConfiguration(conf, model.GRID)
+
+	return gridFromImage(conf, imageFileNames, nup)
+}
+
 // Grid rearranges PDF pages or images into page grids and writes the result to w.
 // Either rs or imgFiles will be used.
 func Grid(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
@@ -131,10 +132,7 @@ func Grid(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.GRID
+	conf = operationConfiguration(conf, model.GRID)
 
 	if log.InfoEnabled() {
 		log.Info.Printf("%s", nup)
@@ -142,7 +140,7 @@ func Grid(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *
 
 	var ctx *model.Context
 	if nup.ImgInputFile {
-		if ctx, err = GridFromImage(conf, imgFiles, nup); err != nil {
+		if ctx, err = gridFromImage(conf, imgFiles, nup); err != nil {
 			return err
 		}
 	} else {

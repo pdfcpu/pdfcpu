@@ -68,6 +68,16 @@ func logDisclaimerPDF20() {
 	}
 }
 
+func operationConfiguration(conf *model.Configuration, cmd model.CommandMode) *model.Configuration {
+	if conf == nil {
+		conf = model.NewDefaultConfiguration()
+	} else {
+		conf = conf.Clone()
+	}
+	conf.Cmd = cmd
+	return conf
+}
+
 // ReadContext uses an io.ReadSeeker to build an internal structure holding its cross reference table aka the Context.
 func ReadContext(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
 	defer fault.Catch(&err)

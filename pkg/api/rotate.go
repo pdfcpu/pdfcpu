@@ -49,10 +49,7 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.ROTATE
+	conf = operationConfiguration(conf, model.ROTATE)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

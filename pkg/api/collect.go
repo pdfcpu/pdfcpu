@@ -39,10 +39,7 @@ func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.COLLECT
+	conf = operationConfiguration(conf, model.COLLECT)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

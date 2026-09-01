@@ -72,10 +72,7 @@ func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model
 		return fmt.Errorf("resize: validate configuration: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.RESIZE
+	conf = operationConfiguration(conf, model.RESIZE)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

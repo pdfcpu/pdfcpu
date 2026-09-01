@@ -44,10 +44,7 @@ func FormFields(rs io.ReadSeeker, conf *model.Configuration) (fields []form.Fiel
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.LISTFORMFIELDS
+	conf = operationConfiguration(conf, model.LISTFORMFIELDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -69,10 +66,7 @@ func ListFormFields(rs io.ReadSeeker, conf *model.Configuration) (fields []strin
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.LISTFORMFIELDS
+	conf = operationConfiguration(conf, model.LISTFORMFIELDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -102,10 +96,7 @@ func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.REMOVEFORMFIELDS
+	conf = operationConfiguration(conf, model.REMOVEFORMFIELDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -195,10 +186,7 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, con
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.LOCKFORMFIELDS
+	conf = operationConfiguration(conf, model.LOCKFORMFIELDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -240,10 +228,7 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.UNLOCKFORMFIELDS
+	conf = operationConfiguration(conf, model.UNLOCKFORMFIELDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -285,10 +270,7 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, co
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.RESETFORMFIELDS
+	conf = operationConfiguration(conf, model.RESETFORMFIELDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -322,10 +304,7 @@ func ExportForm(rs io.ReadSeeker, source string, conf *model.Configuration) (for
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.EXPORTFORMFIELDS
+	conf = operationConfiguration(conf, model.EXPORTFORMFIELDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -376,10 +355,7 @@ func ExportFormJSON(rs io.ReadSeeker, w io.Writer, source string, conf *model.Co
 		return ErrMissingJSONWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.EXPORTFORMFIELDS
+	conf = operationConfiguration(conf, model.EXPORTFORMFIELDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -594,10 +570,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.FILLFORMFIELDS
+	conf = operationConfiguration(conf, model.FILLFORMFIELDS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -999,10 +972,7 @@ func MultiFillForm(inFilePDF string, rd io.Reader, outDir, fileName string, form
 		return fmt.Errorf("multi-fill form: %w: %d", ErrUnsupportedFormDataFormat, format)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.MULTIFILLFORMFIELDS
+	conf = operationConfiguration(conf, model.MULTIFILLFORMFIELDS)
 
 	fileName = strings.TrimSuffix(filepath.Base(fileName), ".pdf")
 	fileName = sanitizeFilenamePart(fileName, "form")

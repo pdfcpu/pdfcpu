@@ -56,12 +56,7 @@ func PageLayout(rs io.ReadSeeker, conf *model.Configuration) (pl *model.PageLayo
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.LISTPAGELAYOUT
+	conf = operationConfiguration(conf, model.LISTPAGELAYOUT)
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
@@ -96,12 +91,7 @@ func ListPageLayout(rs io.ReadSeeker, conf *model.Configuration) (ss []string, e
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.LISTPAGELAYOUT
+	conf = operationConfiguration(conf, model.LISTPAGELAYOUT)
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
@@ -148,12 +138,7 @@ func SetPageLayout(rs io.ReadSeeker, w io.Writer, val model.PageLayout, conf *mo
 		return invalidPageLayoutError(val)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.SETPAGELAYOUT
+	conf = operationConfiguration(conf, model.SETPAGELAYOUT)
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
@@ -228,12 +213,7 @@ func ResetPageLayout(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.RESETPAGELAYOUT
+	conf = operationConfiguration(conf, model.RESETPAGELAYOUT)
 
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {

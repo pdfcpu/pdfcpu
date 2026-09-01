@@ -236,10 +236,7 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.IMPORTIMAGES
+	conf = operationConfiguration(conf, model.IMPORTIMAGES)
 
 	ctx, err := importImagesContext(rs, imp, conf)
 	if err != nil {

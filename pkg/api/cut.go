@@ -303,10 +303,7 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 		return fmt.Errorf("poster: validate configuration: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.POSTER
+	conf = operationConfiguration(conf, model.POSTER)
 	fileName = sanitizeFilenamePart(fileName, "poster")
 
 	ctxSrc, pages, err := prepareForCut(rs, selectedPages, conf, "poster")
@@ -390,10 +387,7 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 		return fmt.Errorf("ndown: validate configuration: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.NDOWN
+	conf = operationConfiguration(conf, model.NDOWN)
 	fileName = sanitizeFilenamePart(fileName, "ndown")
 
 	ctxSrc, pages, err := prepareForCut(rs, selectedPages, conf, "ndown")
@@ -490,10 +484,7 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 	}
 	normalizeCut(cut)
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.CUT
+	conf = operationConfiguration(conf, model.CUT)
 	fileName = sanitizeFilenamePart(fileName, "cut")
 
 	ctxSrc, pages, err := prepareForCut(rs, selectedPages, conf, "cut")

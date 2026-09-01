@@ -101,11 +101,7 @@ func MergeRaw(rsc []io.ReadSeeker, w io.Writer, dividerPage bool, conf *model.Co
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.MERGECREATE
-	conf.ValidationMode = model.ValidationRelaxed
+	conf = operationConfiguration(conf, model.MERGECREATE)
 	conf.CreateBookmarks = false
 
 	ctxDest, err := ReadAndValidate(rsc[0], conf)
@@ -166,15 +162,11 @@ func mergeDestFile(destFile string, inFiles []string) (string, []string, error) 
 }
 
 func mergeConfiguration(destFile string, conf *model.Configuration) *model.Configuration {
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.MERGECREATE
-	conf.ValidationMode = model.ValidationRelaxed
+	cmd := model.MERGECREATE
 	if destFile != "" {
-		conf.Cmd = model.MERGEAPPEND
+		cmd = model.MERGEAPPEND
 	}
-	return conf
+	return operationConfiguration(conf, cmd)
 }
 
 // Merge concatenates inFiles.
@@ -314,11 +306,7 @@ func MergeCreateZip(rs1, rs2 io.ReadSeeker, w io.Writer, conf *model.Configurati
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.MERGECREATEZIP
-	conf.ValidationMode = model.ValidationRelaxed
+	conf = operationConfiguration(conf, model.MERGECREATEZIP)
 
 	ctxDest, err := ReadAndValidate(rs1, conf)
 	if err != nil {

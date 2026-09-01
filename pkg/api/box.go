@@ -56,10 +56,7 @@ func Box(s string, u types.DisplayUnit) (*model.Box, error) {
 }
 
 func prepareBoxListing(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration) (*model.Context, types.IntSet, error) {
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.LISTBOXES
+	conf = operationConfiguration(conf, model.LISTBOXES)
 	ctx, err := ReadAndValidate(rs, conf)
 	if err != nil {
 		return nil, nil, fmt.Errorf("list boxes: prepare PDF context: %w", err)
@@ -195,10 +192,7 @@ func AddBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *model.P
 		return fmt.Errorf("add boxes: validate page boundaries: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.ADDBOXES
+	conf = operationConfiguration(conf, model.ADDBOXES)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -253,10 +247,7 @@ func RemoveBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *mode
 		return fmt.Errorf("remove boxes: validate page boundaries: %w", err)
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.REMOVEBOXES
+	conf = operationConfiguration(conf, model.REMOVEBOXES)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -311,10 +302,7 @@ func Crop(rs io.ReadSeeker, w io.Writer, selectedPages []string, b *model.Box, c
 		return ErrMissingBoxConfiguration
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.CROP
+	conf = operationConfiguration(conf, model.CROP)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

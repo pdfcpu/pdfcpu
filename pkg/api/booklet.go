@@ -95,24 +95,7 @@ func prepareBookletConfigurationForAPI(nup *model.NUp) error {
 	return wrapBookletConfigurationError(prepareBookletConfiguration(nup))
 }
 
-// BookletFromImages creates a booklet from images.
-func BookletFromImages(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
-	defer fault.Catch(&err)
-
-	if nup == nil {
-		return nil, ErrMissingBookletConfiguration
-	}
-	if len(imageFileNames) == 0 {
-		return nil, ErrMissingImageInput
-	}
-	if err := prepareBookletConfigurationForAPI(nup); err != nil {
-		return nil, err
-	}
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.BOOKLET
-
+func bookletFromImages(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
 	ctx, err = pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)
 	if err != nil {
 		return nil, fmt.Errorf("booklet: create image context: %w", err)
@@ -135,6 +118,24 @@ func BookletFromImages(conf *model.Configuration, imageFileNames []string, nup *
 	return ctx, nil
 }
 
+// BookletFromImages creates a booklet from images.
+func BookletFromImages(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+	defer fault.Catch(&err)
+
+	if nup == nil {
+		return nil, ErrMissingBookletConfiguration
+	}
+	if len(imageFileNames) == 0 {
+		return nil, ErrMissingImageInput
+	}
+	if err := prepareBookletConfigurationForAPI(nup); err != nil {
+		return nil, err
+	}
+	conf = operationConfiguration(conf, model.BOOKLET)
+
+	return bookletFromImages(conf, imageFileNames, nup)
+}
+
 // Booklet arranges PDF pages on larger sheets of paper and writes the result to w.
 func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
@@ -153,10 +154,7 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.BOOKLET
+	conf = operationConfiguration(conf, model.BOOKLET)
 
 	if log.InfoEnabled() {
 		log.Info.Printf("%s", nup)
@@ -166,7 +164,7 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 
 	if nup.ImgInputFile {
 
-		if ctx, err = BookletFromImages(conf, imgFiles, nup); err != nil {
+		if ctx, err = bookletFromImages(conf, imgFiles, nup); err != nil {
 			return err
 		}
 

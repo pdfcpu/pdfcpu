@@ -131,27 +131,7 @@ func ImageBookletConfig(val int, desc string, conf *model.Configuration) (*model
 	return pdfcpu.ImageBookletConfig(val, desc, conf)
 }
 
-// NUpFromImage creates a single page n-up PDF for one image
-// or a sequence of n-up pages for more than one image.
-// On error, the returned context may be partially constructed and its PageCount remains at the pre-operation value.
-// Callers must discard a non-nil context returned together with an error.
-func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
-	defer fault.Catch(&err)
-
-	if nup == nil {
-		return nil, ErrMissingNUpConfiguration
-	}
-	if len(imageFileNames) == 0 {
-		return nil, ErrMissingImageInput
-	}
-	if err := prepareNUpConfigurationForAPI(nup, true); err != nil {
-		return nil, err
-	}
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.NUP
-
+func nUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
 	ctx, err = pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)
 	if err != nil {
 		return nil, fmt.Errorf("n-up: create image context: %w", err)
@@ -180,6 +160,27 @@ func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model
 	return ctx, nil
 }
 
+// NUpFromImage creates a single page n-up PDF for one image
+// or a sequence of n-up pages for more than one image.
+// On error, the returned context may be partially constructed and its PageCount remains at the pre-operation value.
+// Callers must discard a non-nil context returned together with an error.
+func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+	defer fault.Catch(&err)
+
+	if nup == nil {
+		return nil, ErrMissingNUpConfiguration
+	}
+	if len(imageFileNames) == 0 {
+		return nil, ErrMissingImageInput
+	}
+	if err := prepareNUpConfigurationForAPI(nup, true); err != nil {
+		return nil, err
+	}
+	conf = operationConfiguration(conf, model.NUP)
+
+	return nUpFromImage(conf, imageFileNames, nup)
+}
+
 // NUp rearranges PDF pages or images into page grids and writes the result to w.
 // Either rs or imgFiles will be used.
 func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
@@ -199,10 +200,7 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 		return err
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.NUP
+	conf = operationConfiguration(conf, model.NUP)
 
 	if log.InfoEnabled() {
 		log.Info.Printf("%s", nup)
@@ -212,7 +210,7 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 
 	if nup.ImgInputFile {
 
-		if ctx, err = NUpFromImage(conf, imgFiles, nup); err != nil {
+		if ctx, err = nUpFromImage(conf, imgFiles, nup); err != nil {
 			return err
 		}
 

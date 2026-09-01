@@ -42,10 +42,7 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Con
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.TRIM
+	conf = operationConfiguration(conf, model.TRIM)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

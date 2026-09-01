@@ -21,8 +21,8 @@ import "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 func listFormFieldsCommand(inFiles []string, json bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTFORMFIELDS
 	}
-	conf.Cmd = model.LISTFORMFIELDS
 	return &Command{
 		Mode:     model.LISTFORMFIELDS,
 		InFiles:  inFiles,
@@ -44,8 +44,8 @@ func ListFormFieldsJSONCommand(inFiles []string, conf *model.Configuration) *Com
 func RemoveFormFieldsCommand(inFile, outFile string, fieldIDs []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVEFORMFIELDS
 	}
-	conf.Cmd = model.REMOVEFORMFIELDS
 	return &Command{
 		Mode:       model.REMOVEFORMFIELDS,
 		InFile:     &inFile,
@@ -58,8 +58,8 @@ func RemoveFormFieldsCommand(inFile, outFile string, fieldIDs []string, conf *mo
 func LockFormCommand(inFile, outFile string, fieldIDs []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LOCKFORMFIELDS
 	}
-	conf.Cmd = model.LOCKFORMFIELDS
 	return &Command{
 		Mode:       model.LOCKFORMFIELDS,
 		InFile:     &inFile,
@@ -72,8 +72,8 @@ func LockFormCommand(inFile, outFile string, fieldIDs []string, conf *model.Conf
 func UnlockFormCommand(inFile, outFile string, fieldIDs []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.UNLOCKFORMFIELDS
 	}
-	conf.Cmd = model.UNLOCKFORMFIELDS
 	return &Command{
 		Mode:       model.UNLOCKFORMFIELDS,
 		InFile:     &inFile,
@@ -86,8 +86,8 @@ func UnlockFormCommand(inFile, outFile string, fieldIDs []string, conf *model.Co
 func ResetFormCommand(inFile, outFile string, fieldIDs []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.RESETFORMFIELDS
 	}
-	conf.Cmd = model.RESETFORMFIELDS
 	return &Command{
 		Mode:       model.RESETFORMFIELDS,
 		InFile:     &inFile,
@@ -100,8 +100,8 @@ func ResetFormCommand(inFile, outFile string, fieldIDs []string, conf *model.Con
 func ExportFormCommand(inFilePDF, outFileJSON string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.EXPORTFORMFIELDS
 	}
-	conf.Cmd = model.EXPORTFORMFIELDS
 	return &Command{
 		Mode:        model.EXPORTFORMFIELDS,
 		InFile:      &inFilePDF,
@@ -113,8 +113,8 @@ func ExportFormCommand(inFilePDF, outFileJSON string, conf *model.Configuration)
 func FillFormCommand(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.FILLFORMFIELDS
 	}
-	conf.Cmd = model.FILLFORMFIELDS
 	return &Command{
 		Mode:       model.FILLFORMFIELDS,
 		InFile:     &inFilePDF,
@@ -127,8 +127,8 @@ func FillFormCommand(inFilePDF, inFileJSON, outFilePDF string, conf *model.Confi
 func MultiFillFormCommand(inFilePDF, inFileData, outDir, outFilePDF string, merge bool, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.MULTIFILLFORMFIELDS
 	}
-	conf.Cmd = model.MULTIFILLFORMFIELDS
 	return &Command{
 		Mode:       model.MULTIFILLFORMFIELDS,
 		InFile:     &inFilePDF,

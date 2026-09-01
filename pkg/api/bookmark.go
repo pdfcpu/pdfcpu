@@ -56,12 +56,7 @@ func Bookmarks(rs io.ReadSeeker, conf *model.Configuration) (bms []pdfcpu.Bookma
 		return nil, ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.LISTBOOKMARKS
+	conf = operationConfiguration(conf, model.LISTBOOKMARKS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -78,12 +73,7 @@ func ListBookmarks(rs io.ReadSeeker, conf *model.Configuration) (ss []string, er
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.LISTBOOKMARKS
+	conf = operationConfiguration(conf, model.LISTBOOKMARKS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -120,10 +110,7 @@ func ExportBookmarksJSON(rs io.ReadSeeker, w io.Writer, source string, conf *mod
 		return ErrMissingJSONWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.EXPORTBOOKMARKS
+	conf = operationConfiguration(conf, model.EXPORTBOOKMARKS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -201,12 +188,7 @@ func ImportBookmarks(rs io.ReadSeeker, rd io.Reader, w io.Writer, replace bool, 
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.IMPORTBOOKMARKS
+	conf = operationConfiguration(conf, model.IMPORTBOOKMARKS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {
@@ -293,12 +275,7 @@ func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdfcpu.Bookmark, replace 
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.ADDBOOKMARKS
+	conf = operationConfiguration(conf, model.ADDBOOKMARKS)
 
 	if len(bms) == 0 {
 		return ErrMissingBookmarks
@@ -371,12 +348,7 @@ func RemoveBookmarks(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (
 		return ErrMissingPDFWriter
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	} else {
-		conf.ValidationMode = model.ValidationRelaxed
-	}
-	conf.Cmd = model.REMOVEBOOKMARKS
+	conf = operationConfiguration(conf, model.REMOVEBOOKMARKS)
 
 	ctx, err := ReadValidateAndOptimize(rs, conf)
 	if err != nil {

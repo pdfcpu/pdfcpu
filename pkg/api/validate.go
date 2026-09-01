@@ -53,10 +53,7 @@ func Validate(rs io.ReadSeeker, conf *model.Configuration) (err error) {
 		return ErrMissingPDFReadSeeker
 	}
 
-	if conf == nil {
-		conf = model.NewDefaultConfiguration()
-	}
-	conf.Cmd = model.VALIDATE
+	conf = operationConfiguration(conf, model.VALIDATE)
 
 	from1 := time.Now()
 

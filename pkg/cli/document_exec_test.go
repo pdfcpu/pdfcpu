@@ -18,6 +18,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -163,6 +164,47 @@ func TestDumpMissingFilePreservesNotExist(t *testing.T) {
 	_, err := Dump(cmd)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
+	}
+}
+
+func TestInfoReportsRelaxedValidationWithoutChangingJSON(t *testing.T) {
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = model.ValidationStrict
+	var notice bytes.Buffer
+	input := extractTestPDF(t)
+	cmd := InfoCommand([]string{input, input}, nil, false, true, conf)
+	cmd.ErrorOutput = &notice
+
+	out, err := ListInfo(cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := notice.String(), "info: using relaxed validation\n"; got != want {
+		t.Fatalf("validation notice: got %q, want %q", got, want)
+	}
+	if len(out) != 1 || !json.Valid([]byte(out[0])) {
+		t.Fatalf("expected pure JSON output, got %q", out)
+	}
+	if conf.ValidationMode != model.ValidationStrict {
+		t.Fatalf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
+	}
+}
+
+func TestDumpReportsRelaxedValidationWithoutChangingConfiguration(t *testing.T) {
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = model.ValidationStrict
+	var notice bytes.Buffer
+	cmd := DumpCommand("missing.pdf", []int{0, 0}, conf)
+	cmd.ErrorOutput = &notice
+
+	if _, err := Dump(cmd); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected not exist error, got %v", err)
+	}
+	if got, want := notice.String(), "dump: using relaxed validation\n"; got != want {
+		t.Fatalf("validation notice: got %q, want %q", got, want)
+	}
+	if conf.ValidationMode != model.ValidationStrict {
+		t.Fatalf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
 	}
 }
 

@@ -193,23 +193,25 @@ func TestGridEntryPointsRejectMissingOutput(t *testing.T) {
 	}
 }
 
-func TestGridEntryPointsSetCommandMode(t *testing.T) {
+func TestGridEntryPointsPreserveCallerCommandMode(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
+	want := conf.Cmd
 	err := Grid(bytes.NewReader(nil), io.Discard, nil, nil, gridTestConfiguration(t, false), conf)
 	if err == nil {
 		t.Fatal("expected invalid PDF error")
 	}
-	if conf.Cmd != model.GRID {
-		t.Fatalf("expected command %d, got %d", model.GRID, conf.Cmd)
+	if conf.Cmd != want {
+		t.Fatalf("expected caller command %d, got %d", want, conf.Cmd)
 	}
 
 	conf = model.NewDefaultConfiguration()
+	want = conf.Cmd
 	_, err = GridFromImage(conf, []string{filepath.Join(t.TempDir(), "missing.png")}, gridTestConfiguration(t, true))
 	if err == nil {
 		t.Fatal("expected missing image error")
 	}
-	if conf.Cmd != model.GRID {
-		t.Fatalf("expected command %d, got %d", model.GRID, conf.Cmd)
+	if conf.Cmd != want {
+		t.Fatalf("expected caller command %d, got %d", want, conf.Cmd)
 	}
 }
 

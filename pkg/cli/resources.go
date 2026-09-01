@@ -28,8 +28,8 @@ import (
 func ImportImagesCommand(imageFiles []string, outFile string, imp *pdfcpu.Import, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.IMPORTIMAGES
 	}
-	conf.Cmd = model.IMPORTIMAGES
 	return &Command{
 		Mode:    model.IMPORTIMAGES,
 		InFiles: imageFiles,
@@ -42,8 +42,8 @@ func ImportImagesCommand(imageFiles []string, outFile string, imp *pdfcpu.Import
 func ListFontsCommand(conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTFONTS
 	}
-	conf.Cmd = model.LISTFONTS
 	return &Command{
 		Mode: model.LISTFONTS,
 		Conf: conf}
@@ -53,8 +53,8 @@ func ListFontsCommand(conf *model.Configuration) *Command {
 func InstallFontsCommand(fontFiles []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.INSTALLFONTS
 	}
-	conf.Cmd = model.INSTALLFONTS
 	return &Command{
 		Mode:    model.INSTALLFONTS,
 		InFiles: fontFiles,
@@ -65,8 +65,8 @@ func InstallFontsCommand(fontFiles []string, conf *model.Configuration) *Command
 func CreateCheatSheetsFontsCommand(fontFiles []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.CHEATSHEETSFONTS
 	}
-	conf.Cmd = model.CHEATSHEETSFONTS
 	return &Command{
 		Mode:    model.CHEATSHEETSFONTS,
 		InFiles: fontFiles,
@@ -77,8 +77,8 @@ func CreateCheatSheetsFontsCommand(fontFiles []string, conf *model.Configuration
 func ListImagesCommand(inFiles []string, pageSelection []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTIMAGES
 	}
-	conf.Cmd = model.LISTIMAGES
 	return &Command{
 		Mode:          model.LISTIMAGES,
 		InFiles:       inFiles,
@@ -90,8 +90,8 @@ func ListImagesCommand(inFiles []string, pageSelection []string, conf *model.Con
 func UpdateImagesCommand(inFile, imageFile, outFile string, objNrOrPageNr int, id string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.UPDATEIMAGES
 	}
-	conf.Cmd = model.UPDATEIMAGES
 
 	return &Command{
 		Mode:      model.UPDATEIMAGES,
@@ -106,8 +106,8 @@ func UpdateImagesCommand(inFile, imageFile, outFile string, objNrOrPageNr int, i
 func ListAttachmentsCommand(inFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTATTACHMENTS
 	}
-	conf.Cmd = model.LISTATTACHMENTS
 	return &Command{
 		Mode:   model.LISTATTACHMENTS,
 		InFile: &inFile,
@@ -118,8 +118,8 @@ func ListAttachmentsCommand(inFile string, conf *model.Configuration) *Command {
 func AddAttachmentsCommand(inFile, outFile string, fileNames []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ADDATTACHMENTS
 	}
-	conf.Cmd = model.ADDATTACHMENTS
 	return &Command{
 		Mode:    model.ADDATTACHMENTS,
 		InFile:  &inFile,
@@ -132,8 +132,8 @@ func AddAttachmentsCommand(inFile, outFile string, fileNames []string, conf *mod
 func AddAttachmentsPortfolioCommand(inFile, outFile string, fileNames []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ADDATTACHMENTSPORTFOLIO
 	}
-	conf.Cmd = model.ADDATTACHMENTSPORTFOLIO
 	return &Command{
 		Mode:    model.ADDATTACHMENTSPORTFOLIO,
 		InFile:  &inFile,
@@ -146,8 +146,8 @@ func AddAttachmentsPortfolioCommand(inFile, outFile string, fileNames []string, 
 func RemoveAttachmentsCommand(inFile, outFile string, fileNames []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVEATTACHMENTS
 	}
-	conf.Cmd = model.REMOVEATTACHMENTS
 	return &Command{
 		Mode:    model.REMOVEATTACHMENTS,
 		InFile:  &inFile,
@@ -160,8 +160,8 @@ func RemoveAttachmentsCommand(inFile, outFile string, fileNames []string, conf *
 func ExtractAttachmentsCommand(inFile string, outDir string, fileNames []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.EXTRACTATTACHMENTS
 	}
-	conf.Cmd = model.EXTRACTATTACHMENTS
 	return &Command{
 		Mode:    model.EXTRACTATTACHMENTS,
 		InFile:  &inFile,
@@ -174,8 +174,8 @@ func ExtractAttachmentsCommand(inFile string, outDir string, fileNames []string,
 func ListKeywordsCommand(inFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTKEYWORDS
 	}
-	conf.Cmd = model.LISTKEYWORDS
 	return &Command{
 		Mode:   model.LISTKEYWORDS,
 		InFile: &inFile,
@@ -186,11 +186,11 @@ func ListKeywordsCommand(inFile string, conf *model.Configuration) *Command {
 func AddKeywordsCommand(inFile, outFile string, keywords []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ADDKEYWORDS
 	}
 	if outFile == "" {
 		outFile = inFile
 	}
-	conf.Cmd = model.ADDKEYWORDS
 	return &Command{
 		Mode:       model.ADDKEYWORDS,
 		InFile:     &inFile,
@@ -203,11 +203,11 @@ func AddKeywordsCommand(inFile, outFile string, keywords []string, conf *model.C
 func RemoveKeywordsCommand(inFile, outFile string, keywords []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVEKEYWORDS
 	}
 	if outFile == "" {
 		outFile = inFile
 	}
-	conf.Cmd = model.REMOVEKEYWORDS
 	return &Command{
 		Mode:       model.REMOVEKEYWORDS,
 		InFile:     &inFile,
@@ -220,8 +220,8 @@ func RemoveKeywordsCommand(inFile, outFile string, keywords []string, conf *mode
 func ListPropertiesCommand(inFile string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.LISTPROPERTIES
 	}
-	conf.Cmd = model.LISTPROPERTIES
 	return &Command{
 		Mode:   model.LISTPROPERTIES,
 		InFile: &inFile,
@@ -232,8 +232,8 @@ func ListPropertiesCommand(inFile string, conf *model.Configuration) *Command {
 func AddPropertiesCommand(inFile, outFile string, properties map[string]string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.ADDPROPERTIES
 	}
-	conf.Cmd = model.ADDPROPERTIES
 	return &Command{
 		Mode:      model.ADDPROPERTIES,
 		InFile:    &inFile,
@@ -246,8 +246,8 @@ func AddPropertiesCommand(inFile, outFile string, properties map[string]string, 
 func RemovePropertiesCommand(inFile, outFile string, propKeys []string, conf *model.Configuration) *Command {
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
+		conf.Cmd = model.REMOVEPROPERTIES
 	}
-	conf.Cmd = model.REMOVEPROPERTIES
 	return &Command{
 		Mode:       model.REMOVEPROPERTIES,
 		InFile:     &inFile,

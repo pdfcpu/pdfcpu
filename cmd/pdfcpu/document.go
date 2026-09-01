@@ -367,8 +367,6 @@ func handleDumpCommand(conf *model.Configuration, args []string) error {
 		return err
 	}
 
-	conf.ValidationMode = model.ValidationRelaxed
-
 	return runCommand(cli.DumpCommand(inFile, vals, conf))
 }
 
