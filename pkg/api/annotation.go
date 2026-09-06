@@ -178,14 +178,9 @@ func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model
 		tmpFile = outFile
 	} else {
 		if incr {
-			f, err := os.OpenFile(inFile, os.O_RDWR, 0644)
-			if err != nil {
-				return fmt.Errorf("add annotations: open input %s: %w", inFile, err)
-			}
-			defer func() {
-				err = errors.Join(err, closeFile(f, "add annotations: close input"))
-			}()
-			return AddAnnotationsAsIncrement(f, selectedPages, ar, conf)
+			return updateFileTransaction(inFile, "add annotations", func(f *os.File) error {
+				return AddAnnotationsAsIncrement(f, selectedPages, ar, conf)
+			})
 		}
 	}
 
@@ -312,14 +307,9 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationR
 		tmpFile = outFile
 	} else {
 		if incr {
-			f, err := os.OpenFile(inFile, os.O_RDWR, 0644)
-			if err != nil {
-				return fmt.Errorf("add annotations: open input %s: %w", inFile, err)
-			}
-			defer func() {
-				err = errors.Join(err, closeFile(f, "add annotations: close input"))
-			}()
-			return AddAnnotationsMapAsIncrement(f, m, conf)
+			return updateFileTransaction(inFile, "add annotations", func(f *os.File) error {
+				return AddAnnotationsMapAsIncrement(f, m, conf)
+			})
 		}
 	}
 
@@ -458,13 +448,9 @@ func RemoveAnnotationsFile(inFile, outFile string, selectedPages, idsAndTypes []
 		tmpFile = outFile
 	} else {
 		if incr {
-			if f1, err = os.OpenFile(inFile, os.O_RDWR, 0644); err != nil {
-				return fmt.Errorf("remove annotations: open input %s: %w", inFile, err)
-			}
-			defer func() {
-				err = errors.Join(err, closeFile(f1, "remove annotations: close input"))
-			}()
-			return RemoveAnnotationsAsIncrement(f1, selectedPages, idsAndTypes, objNrs, conf)
+			return updateFileTransaction(inFile, "remove annotations", func(f *os.File) error {
+				return RemoveAnnotationsAsIncrement(f, selectedPages, idsAndTypes, objNrs, conf)
+			})
 		}
 	}
 

@@ -168,9 +168,11 @@ func createStreamOutput(fileName string) (*os.File, string, string, error) {
 	}
 	if err := f.Chmod(fi.Mode().Perm()); err != nil {
 		name := f.Name()
-		_ = f.Close()
-		_ = os.Remove(name)
-		return nil, "", "", err
+		return nil, "", "", errors.Join(
+			err,
+			closeStreamFile(f, "close temporary output"),
+			removeStreamOutput(name, "remove temporary output"),
+		)
 	}
 	return f, f.Name(), fileName, nil
 }

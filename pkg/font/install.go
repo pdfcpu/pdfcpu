@@ -1405,6 +1405,9 @@ func commitCollectionFonts(fontDir, stagingDir string, results []InstallResult, 
 		file := &files[len(files)-1]
 		target := filepath.Join(fontDir, name)
 		if _, err := ops.lstat(target); err == nil {
+			if err := fileutil.PreserveGroup(filepath.Join(stagingDir, name), target); err != nil {
+				return rollback(err)
+			}
 			if err := ops.rename(target, filepath.Join(backupDir, name)); err != nil {
 				return rollback(fmt.Errorf("backup font %s: %w", name, err))
 			}

@@ -19,6 +19,7 @@ package api
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -207,10 +208,7 @@ func (s stagedOutput) commit() error {
 		return errors.Join(err, s.closeInputs(), s.operations.removeFile(s.temporaryFile, s.removeContext))
 	}
 	if err := s.closeInputs(); err != nil {
-		if s.destination != "" {
-			return errors.Join(err, s.operations.removeFile(s.temporaryFile, s.removeContext))
-		}
-		return err
+		return errors.Join(err, s.operations.removeFile(s.temporaryFile, s.removeContext))
 	}
 	if s.destination == "" {
 		return nil
@@ -256,4 +254,29 @@ func outputAliasesInputWith(
 		return false, fmt.Errorf("stat input: %w", err)
 	}
 	return os.SameFile(inInfo, outInfo), nil
+}
+
+// updateFileTransaction applies an update to a private copy before replacing the input file.
+func updateFileTransaction(fileName, operation string, update func(*os.File) error) error {
+	input, err := os.Open(fileName)
+	if err != nil {
+		return fmt.Errorf("%s: open input %s: %w", operation, fileName, err)
+	}
+	staged, err := openStagedOutput(input, fileName, "", operation)
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("%s: create output: %w", operation, err),
+			closeFile(input, operation+": close input"),
+		)
+	}
+	if _, err := io.Copy(staged.output.file, input); err != nil {
+		return staged.cleanup(fmt.Errorf("%s: copy input: %w", operation, err))
+	}
+	if _, err := staged.output.file.Seek(0, io.SeekStart); err != nil {
+		return staged.cleanup(fmt.Errorf("%s: rewind output: %w", operation, err))
+	}
+	if err := update(staged.output.file); err != nil {
+		return staged.cleanup(err)
+	}
+	return staged.commit()
 }

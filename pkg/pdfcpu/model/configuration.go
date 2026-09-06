@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/fileutil"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
@@ -562,7 +563,7 @@ created: %s
 }
 
 func initializeConfigurationFile(path string) error {
-	return os.WriteFile(path, defaultConfigurationFileBytes(), 0600)
+	return fileutil.WriteFile(path, defaultConfigurationFileBytes(), 0600)
 }
 
 func readOpenConfigurationFile(f *os.File, path string) (conf *Configuration, err error) {

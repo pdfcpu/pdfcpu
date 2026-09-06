@@ -1,3 +1,5 @@
+//go:build !aix && !darwin && !dragonfly && !freebsd && !linux && !netbsd && !openbsd && !solaris
+
 /*
 Copyright 2026 The pdfcpu Authors.
 
@@ -14,26 +16,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package fileutil provides internal cross-platform filesystem operations.
 package fileutil
 
-import (
-	"errors"
-	"os"
-)
-
-// ReplaceFile renames source over destination, preserving the destination's group where supported.
-func ReplaceFile(source, destination string) error {
-	if err := PreserveGroup(source, destination); err != nil {
-		return err
-	}
-	return os.Rename(source, destination)
-}
-
-// RemoveFile removes path and succeeds if path does not exist.
-func RemoveFile(path string) error {
-	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
+// PreserveGroup leaves source unchanged on platforms without Unix group ownership.
+func PreserveGroup(source, destination string) error {
 	return nil
 }

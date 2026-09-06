@@ -23,6 +23,8 @@ import (
 	"embed"
 	"os"
 	"path/filepath"
+
+	"github.com/pdfcpu/pdfcpu/internal/fileutil"
 )
 
 const bundledDefaultCertificates = true
@@ -56,5 +58,5 @@ func installDefaultCertificate(name, dir string) error {
 		return err
 	}
 
-	return os.WriteFile(filepath.Join(dir, name), content, 0644)
+	return fileutil.WriteFile(filepath.Join(dir, name), content, 0644)
 }

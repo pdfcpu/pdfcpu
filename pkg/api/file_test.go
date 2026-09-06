@@ -18,10 +18,13 @@ package api
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -484,5 +487,107 @@ func TestOpenStagedOutputExistingExplicitSurvivesProcessingFailure(t *testing.T)
 	requireFileContent(t, outFile, "previous", "output after rollback")
 	if _, err := os.Stat(temporaryFile); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("temporary output after rollback: got %v, want not exist", err)
+	}
+}
+
+// TestUpdateFileTransactionPreservesInput verifies that a failed partial update never reaches the original.
+func TestUpdateFileTransactionPreservesInput(t *testing.T) {
+	for _, fail := range []bool{false, true} {
+		t.Run(fmt.Sprint(fail), func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "input.pdf")
+			if err := os.WriteFile(path, []byte("original"), 0640); err != nil {
+				t.Fatal(err)
+			}
+			failure := errors.New("partial update failed")
+			err := updateFileTransaction(path, "test", func(f *os.File) error {
+				bb, err := io.ReadAll(f)
+				if err != nil || string(bb) != "original" {
+					t.Fatalf("staged input: %q, %v", bb, err)
+				}
+				if _, err := f.WriteString(" increment"); err != nil {
+					return err
+				}
+				requireFileContent(t, path, "original", "before commit")
+				if fail {
+					return failure
+				}
+				return nil
+			})
+			want := "original increment"
+			if fail {
+				want = "original"
+				if !errors.Is(err, failure) {
+					t.Fatalf("expected update failure, got %v", err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			requireFileContent(t, path, want, "after update")
+			entries, err := os.ReadDir(dir)
+			if err != nil || len(entries) != 1 {
+				t.Fatalf("staging cleanup: %v, %v", entries, err)
+			}
+		})
+	}
+}
+
+// TestStagedOutputInputCloseFailureRemovesNewOutput verifies cleanup before successful completion.
+func TestStagedOutputInputCloseFailureRemovesNewOutput(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "new.pdf")
+	staged, err := openStagedOutput(nil, "input.pdf", path, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	failure := errors.New("input close failed")
+	staged = staged.withCloser(func() error { return failure })
+	if err := staged.commit(); !errors.Is(err, failure) {
+		t.Fatalf("expected close failure, got %v", err)
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("failed output remains: %v", err)
+	}
+}
+
+// TestPatchFileTransaction verifies offset updates and preservation on invalid offsets.
+func TestPatchFileTransaction(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "input.pdf")
+	if err := os.WriteFile(path, []byte("original"), 0640); err != nil {
+		t.Fatal(err)
+	}
+	if err := PatchFile(path, []byte("XX"), 2); err != nil {
+		t.Fatal(err)
+	}
+	requireFileContent(t, path, "orXXinal", "patched")
+	if err := PatchFile(path, []byte("bad"), -1); err == nil {
+		t.Fatal("expected invalid offset error")
+	}
+	requireFileContent(t, path, "orXXinal", "failed patch")
+}
+
+// TestStagedOutputStorageCreationFailures verifies replacement staging never damages an existing destination.
+func TestStagedOutputStorageCreationFailures(t *testing.T) {
+	for _, cause := range []error{os.ErrPermission, syscall.ENOSPC} {
+		t.Run(cause.Error(), func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "output.pdf")
+			if err := os.WriteFile(path, []byte("original"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			ops := defaultFileOperations()
+			ops.createTempFn = func(string, string) (*os.File, error) {
+				return nil, &os.PathError{Op: "open", Path: path, Err: cause}
+			}
+			_, err := openStagedOutputWithOperations(nil, "input.pdf", path, "test", ops)
+			if !errors.Is(err, cause) {
+				t.Fatalf("expected storage error, got %v", err)
+			}
+			requireFileContent(t, path, "original", "staging failure")
+			entries, err := os.ReadDir(dir)
+			if err != nil || len(entries) != 1 {
+				t.Fatalf("staging debris: %v, %v", entries, err)
+			}
+		})
 	}
 }

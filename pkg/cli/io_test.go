@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -163,5 +164,30 @@ func TestStreamInOutFailurePreservesExistingOutput(t *testing.T) {
 	}
 	if !bytes.Equal(bb, original) {
 		t.Fatalf("existing output changed: got %q, want %q", bb, original)
+	}
+}
+
+// TestStdinStorageCreationFailures verifies storage errors survive CLI context wrapping without touching output.
+func TestStdinStorageCreationFailures(t *testing.T) {
+	for _, cause := range []error{os.ErrPermission, syscall.ENOSPC} {
+		t.Run(cause.Error(), func(t *testing.T) {
+			originalCreate := createTemporaryInputFile
+			t.Cleanup(func() { createTemporaryInputFile = originalCreate })
+			createTemporaryInputFile = func(string, string) (*os.File, error) {
+				return nil, &os.PathError{Op: "open", Path: "stdin-spool", Err: cause}
+			}
+			outFile := filepath.Join(t.TempDir(), "output.pdf")
+			if err := os.WriteFile(outFile, []byte("original"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			_, _, _, err := streamInOutForOperation("-", outFile, "test storage")
+			if !errors.Is(err, cause) || !strings.Contains(err.Error(), "create temporary input") {
+				t.Fatalf("expected contextual storage error, got %v", err)
+			}
+			bb, err := os.ReadFile(outFile)
+			if err != nil || string(bb) != "original" {
+				t.Fatalf("destination changed: %q, %v", bb, err)
+			}
+		})
 	}
 }

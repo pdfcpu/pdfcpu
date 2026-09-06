@@ -136,23 +136,12 @@ func OptimizeContext(ctx *model.Context) error {
 	return nil
 }
 
-// PatchFile writes bb at offset.
+// PatchFile writes bb at offset in a staged copy and replaces fileName after the update succeeds.
 func PatchFile(fileName string, bb []byte, offset int64) error {
-	f, err := os.OpenFile(fileName, os.O_RDWR, 0644)
-	if err != nil {
+	return updateFileTransaction(fileName, "patch", func(f *os.File) error {
+		_, err := f.WriteAt(bb, offset)
 		return err
-	}
-	defer f.Close()
-
-	if _, err := f.Seek(offset, io.SeekStart); err != nil {
-		return err
-	}
-
-	if _, err := f.WriteAt(bb, offset); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 // WriteContext writes ctx to w.

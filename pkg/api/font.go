@@ -325,6 +325,9 @@ func commitStagedFontsWithOperations(fontDir, stagingDir string, fs fontInstallF
 		file := &files[len(files)-1]
 		target := filepath.Join(fontDir, name)
 		if _, err := fs.lstat(target); err == nil {
+			if err := fileutil.PreserveGroup(filepath.Join(stagingDir, name), target); err != nil {
+				return fontInstallCommit{}, errors.Join(err, rollback())
+			}
 			if err := fs.rename(target, filepath.Join(backupDir, name)); err != nil {
 				return fontInstallCommit{}, errors.Join(fmt.Errorf("backup font %s: %w", name, err), rollback())
 			}
@@ -674,6 +677,9 @@ func publishCheatSheets(dir, stagingDir string, names []string, fs cheatSheetFil
 		file := &files[len(files)-1]
 		target := filepath.Join(dir, name)
 		if _, err := fs.lstat(target); err == nil {
+			if err := fileutil.PreserveGroup(filepath.Join(stagingDir, name), target); err != nil {
+				return false, rollback(err)
+			}
 			if err := fs.rename(target, filepath.Join(backupDir, name)); err != nil {
 				return false, rollback(fmt.Errorf("backup cheat sheet %s: %w", name, err))
 			}
