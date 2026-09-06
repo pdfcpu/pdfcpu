@@ -151,7 +151,7 @@ func Grid(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *
 			return fmt.Errorf("grid: %w", err)
 		}
 
-		pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+		pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 		if err != nil {
 			return fmt.Errorf("grid: parse page selection: %w", err)
 		}
@@ -220,7 +220,6 @@ func GridFile(inFiles []string, outFile string, selectedPages []string, nup *mod
 		)
 	}
 	f2 = staged.output.file
-	logWritingTo(outFile)
 
 	defer func() {
 		if !ok {

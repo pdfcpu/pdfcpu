@@ -22,7 +22,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -61,7 +60,7 @@ func prepareBoxListing(rs io.ReadSeeker, selectedPages []string, conf *model.Con
 	if err != nil {
 		return nil, nil, fmt.Errorf("list boxes: prepare PDF context: %w", err)
 	}
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return nil, nil, fmt.Errorf("list boxes: parse page selection: %w", err)
 	}
@@ -151,9 +150,6 @@ func ListBoxesFile(inFile string, selectedPages []string, pb *model.PageBoundari
 		pb = &model.PageBoundaries{}
 		pb.SelectAll()
 	}
-	if log.CLIEnabled() {
-		log.CLI.Printf("listing %s for %s\n", pb, inFile)
-	}
 	f, err := os.Open(inFile)
 	if err != nil {
 		return nil, fmt.Errorf("list boxes: open input %s: %w", inFile, err)
@@ -199,7 +195,7 @@ func AddBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *model.P
 		return fmt.Errorf("add boxes: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("add boxes: parse page selection: %w", err)
 	}
@@ -223,10 +219,6 @@ func AddBoxesFile(inFile, outFile string, selectedPages []string, pb *model.Page
 		return ErrMissingPDFInput
 	}
 
-	if log.CLIEnabled() {
-		log.CLI.Printf("adding %s for %s\n", pb, inFile)
-	}
-	logWritingTo(boxOutputFile(inFile, outFile))
 	return processBoxFile(inFile, outFile, "add boxes", func(rs io.ReadSeeker, w io.Writer) error {
 		return AddBoxes(rs, w, selectedPages, pb, conf)
 	})
@@ -254,7 +246,7 @@ func RemoveBoxes(rs io.ReadSeeker, w io.Writer, selectedPages []string, pb *mode
 		return fmt.Errorf("remove boxes: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("remove boxes: parse page selection: %w", err)
 	}
@@ -278,10 +270,6 @@ func RemoveBoxesFile(inFile, outFile string, selectedPages []string, pb *model.P
 		return ErrMissingPDFInput
 	}
 
-	if log.CLIEnabled() {
-		log.CLI.Printf("removing %s for %s\n", pb, inFile)
-	}
-	logWritingTo(boxOutputFile(inFile, outFile))
 	return processBoxFile(inFile, outFile, "remove boxes", func(rs io.ReadSeeker, w io.Writer) error {
 		return RemoveBoxes(rs, w, selectedPages, pb, conf)
 	})
@@ -309,7 +297,7 @@ func Crop(rs io.ReadSeeker, w io.Writer, selectedPages []string, b *model.Box, c
 		return fmt.Errorf("crop: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("crop: parse page selection: %w", err)
 	}
@@ -333,10 +321,6 @@ func CropFile(inFile, outFile string, selectedPages []string, b *model.Box, conf
 		return ErrMissingBoxConfiguration
 	}
 
-	if log.CLIEnabled() {
-		log.CLI.Printf("cropping %s\n", inFile)
-	}
-	logWritingTo(boxOutputFile(inFile, outFile))
 	return processBoxFile(inFile, outFile, "crop", func(rs io.ReadSeeker, w io.Writer) error {
 		return Crop(rs, w, selectedPages, b, conf)
 	})

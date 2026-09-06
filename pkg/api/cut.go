@@ -30,7 +30,6 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/internal/fileutil"
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -129,7 +128,7 @@ func validatePosterConfiguration(cut *model.Cut) error {
 }
 
 func selectedCutPages(pageCount int, selectedPages []string, operation string) ([]int, error) {
-	pages, err := PagesForPageSelection(pageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(pageCount, selectedPages, true)
 	if err != nil {
 		return nil, fmt.Errorf("%s: parse page selection: %w", operation, err)
 	}
@@ -222,7 +221,6 @@ func removeCutTemporaryOutput(tmpFile, operation, outFile string, ops cutOutputO
 }
 
 func writeCutOutputWith(ctx *model.Context, outFile, operation string, ops cutOutputOperations) (err error) {
-	logWritingTo(outFile)
 	destinationMode, destinationExists, err := cutDestinationMode(outFile, operation, ops)
 	if err != nil {
 		return err
@@ -312,9 +310,6 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 	}
 
 	if len(pages) == 0 {
-		if log.CLIEnabled() {
-			log.CLI.Println("aborted: nothing to cut!")
-		}
 		return nil
 	}
 
@@ -345,10 +340,6 @@ func PosterFile(inFile, outDir, outFile string, selectedPages []string, cut *mod
 	defer func() {
 		err = errors.Join(err, closeFile(f, "poster: close input"))
 	}()
-
-	if log.CLIEnabled() {
-		log.CLI.Printf("creating poster pages from %s into %s/ ...\n", inFile, outDir)
-	}
 
 	if outFile == "" {
 		outFile = strings.TrimSuffix(filepath.Base(inFile), ".pdf")
@@ -396,9 +387,6 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 	}
 
 	if len(pages) == 0 {
-		if log.CLIEnabled() {
-			log.CLI.Println("aborted: nothing to cut!")
-		}
 		return nil
 	}
 
@@ -429,10 +417,6 @@ func NDownFile(inFile, outDir, outFile string, selectedPages []string, n int, cu
 	defer func() {
 		err = errors.Join(err, closeFile(f, "ndown: close input"))
 	}()
-
-	if log.CLIEnabled() {
-		log.CLI.Printf("ndown %s into %s/ ...\n", inFile, outDir)
-	}
 
 	if outFile == "" {
 		outFile = strings.TrimSuffix(filepath.Base(inFile), ".pdf")
@@ -493,9 +477,6 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 	}
 
 	if len(pages) == 0 {
-		if log.CLIEnabled() {
-			log.CLI.Println("aborted: nothing to cut!")
-		}
 		return nil
 	}
 
@@ -526,10 +507,6 @@ func CutFile(inFile, outDir, outFile string, selectedPages []string, cut *model.
 	defer func() {
 		err = errors.Join(err, closeFile(f, "cut: close input"))
 	}()
-
-	if log.CLIEnabled() {
-		log.CLI.Printf("cutting %s into %s/ ...\n", inFile, outDir)
-	}
 
 	if outFile == "" {
 		outFile = strings.TrimSuffix(filepath.Base(inFile), ".pdf")

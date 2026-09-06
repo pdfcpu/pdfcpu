@@ -133,7 +133,7 @@ func ResetCertificates() error {
 		return err
 	}
 	MarkCertificateStoreChanged()
-	return installDefaultCertificates()
+	return installDefaultCertificates(TrustedCertDir)
 }
 
 func resetCertificatesDir() error {

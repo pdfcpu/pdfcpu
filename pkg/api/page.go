@@ -75,7 +75,7 @@ func InsertPages(rs io.ReadSeeker, w io.Writer, selectedPages []string, before b
 		return fmt.Errorf("insert pages: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("insert pages: parse page selection: %w", err)
 	}
@@ -113,9 +113,6 @@ func InsertPagesFile(inFile, outFile string, selectedPages []string, before bool
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "insert pages")
 	if err != nil {
@@ -162,7 +159,7 @@ func RemovePages(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *mo
 		return fmt.Errorf("remove pages: %w", err)
 	}
 
-	pages, err := RemainingPagesForPageRemoval(ctx.PageCount, selectedPages, true)
+	pages, err := RemainingPagesForRemoval(ctx.PageCount, selectedPages)
 	if err != nil {
 		return fmt.Errorf("remove pages: parse page selection: %w", err)
 	}
@@ -204,9 +201,6 @@ func RemovePagesFile(inFile, outFile string, selectedPages []string, conf *model
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "remove pages")
 	if err != nil {

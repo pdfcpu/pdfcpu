@@ -23,7 +23,6 @@ import (
 	"math"
 	"os"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -79,7 +78,7 @@ func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model
 		return fmt.Errorf("resize: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("resize: parse page selection: %w", err)
 	}
@@ -106,10 +105,6 @@ func ResizeFile(inFile, outFile string, selectedPages []string, resize *model.Re
 		return fmt.Errorf("resize: validate configuration: %w", err)
 	}
 
-	if log.CLIEnabled() {
-		log.CLI.Printf("resizing %s\n", inFile)
-	}
-
 	if f1, err = os.Open(inFile); err != nil {
 		return fmt.Errorf("resize: open input %s: %w", inFile, err)
 	}
@@ -117,9 +112,6 @@ func ResizeFile(inFile, outFile string, selectedPages []string, resize *model.Re
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "resize")
 	if err != nil {

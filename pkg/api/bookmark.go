@@ -153,7 +153,6 @@ func ExportBookmarksFile(inFilePDF, outFileJSON string, conf *model.Configuratio
 		)
 	}
 	f2 = staged.output.file
-	logWritingTo(outFileJSON)
 
 	defer func() {
 		if !ok {

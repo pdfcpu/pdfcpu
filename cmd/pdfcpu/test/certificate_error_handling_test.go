@@ -26,7 +26,7 @@ import (
 // TestListCertificatesPrintsPartialOutputOnError verifies mixed listings print and fail.
 func TestListCertificatesPrintsPartialOutputOnError(t *testing.T) {
 	configDir := t.TempDir()
-	if _, stderr, err := runPDFCPUWithConfig(t, configDir, "version"); err != nil {
+	if _, stderr, err := runPDFCPUWithConfig(t, configDir, "paper"); err != nil {
 		t.Fatalf("initialize config: %v\nstderr:\n%s", err, stderr)
 	}
 

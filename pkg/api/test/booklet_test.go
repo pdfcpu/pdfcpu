@@ -301,7 +301,7 @@ func TestBookletResize(t *testing.T) {
 	if err != nil {
 		log.Fatal(t, err)
 	}
-	selectedPages, err := api.PagesForPageSelection(ctx.PageCount, nil, true, true)
+	selectedPages, err := api.PagesForSelection(ctx.PageCount, nil, true)
 	if err != nil {
 		log.Fatal(t, err)
 	}

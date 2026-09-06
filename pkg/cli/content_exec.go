@@ -56,6 +56,7 @@ func AddWatermarks(cmd *Command) ([]string, error) {
 	if err := validateWatermarkCommand(cmd, "add watermarks", true); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.AddWatermarksFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Watermark, cmd.Conf)
 	}
@@ -72,6 +73,7 @@ func RemoveWatermarks(cmd *Command) ([]string, error) {
 	if err := validateWatermarkCommand(cmd, "remove watermarks", false); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.RemoveWatermarksFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
@@ -159,6 +161,7 @@ func RemoveAnnotations(cmd *Command) ([]string, error) {
 	if err := validateCommandRequirements(cmd, requirements); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		incr := false // No incremental writing on cli.
 		return nil, api.RemoveAnnotationsFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.StringVals, cmd.IntVals, cmd.Conf, incr)
@@ -204,6 +207,7 @@ func ExportBookmarks(cmd *Command) ([]string, error) {
 	}
 	inFile := *cmd.InFile
 	outFileJSON := *cmd.OutFileJSON
+	reportOutputPath(outFileJSON)
 	if inFile != "-" && outFileJSON != "-" {
 		return nil, api.ExportBookmarksFile(inFile, outFileJSON, cmd.Conf)
 	}
@@ -234,6 +238,7 @@ func ImportBookmarks(cmd *Command) ([]string, error) {
 	inFile := *cmd.InFile
 	inFileJSON := *cmd.InFileJSON
 	outFile := optionalCommandString(cmd.OutFile)
+	reportCommandOutputPath(cmd)
 	if inFile != "-" && outFile != "-" {
 		return nil, api.ImportBookmarksFile(inFile, inFileJSON, outFile, cmd.BoolVal1, cmd.Conf)
 	}
@@ -261,6 +266,7 @@ func RemoveBookmarks(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 	outFile := optionalCommandString(cmd.OutFile)
+	reportCommandOutputPath(cmd)
 	if inFile != "-" && outFile != "-" {
 		return nil, api.RemoveBookmarksFile(inFile, outFile, cmd.Conf)
 	}

@@ -24,7 +24,6 @@ import (
 	"math"
 	"os"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -282,22 +281,14 @@ func prepImgFiles(imgFiles []string) ([]importImageFileCloser, []io.Reader, erro
 	return rc, rr, nil
 }
 
-func logImportImages(s, outFile string) {
-	if log.CLIEnabled() {
-		log.CLI.Printf("%s to %s...\n", s, outFile)
-	}
-}
-
 func importImagesInputFile(outFile string) (io.ReadSeeker, *os.File, error) {
 	f, err := os.Open(outFile)
 	if err == nil {
-		logImportImages("appending", outFile)
 		return f, f, nil
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		return nil, nil, fmt.Errorf("import images: inspect output %s: %w", outFile, err)
 	}
-	logImportImages("writing", outFile)
 	return nil, nil, nil
 }
 

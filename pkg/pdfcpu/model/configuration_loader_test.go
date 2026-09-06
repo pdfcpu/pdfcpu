@@ -226,6 +226,96 @@ func TestReadConfigurationAtRequiresExistingExplicitRoot(t *testing.T) {
 	}
 }
 
+func TestLoadConfigurationInitializesSelectedRootWithoutChangingCompatibilityGlobals(t *testing.T) {
+	preserveConfigurationGlobals(t)
+
+	cached := &Configuration{Path: "cached.yml"}
+	loadedDefaultConfig = cached
+	ConfigPath = "cached-root"
+	font.UserFontDir = "cached-fonts"
+	TrustedCertDir = "cached-certs"
+
+	root := t.TempDir()
+	conf, err := LoadConfiguration(root)
+	if err != nil {
+		t.Fatalf("load configuration: %v", err)
+	}
+	configDir := filepath.Join(root, "pdfcpu")
+	if conf.Path != filepath.Join(configDir, "config.yml") {
+		t.Fatalf("configuration path: got %q, want root %q", conf.Path, configDir)
+	}
+	userFontDir, available := conf.UserFontStore()
+	if !available || userFontDir != filepath.Join(configDir, "fonts") {
+		t.Fatalf("user font store: got %q, available=%t", userFontDir, available)
+	}
+	trustedCertDir, available := conf.TrustedCertificateStore()
+	if !available || trustedCertDir != filepath.Join(configDir, "certs") {
+		t.Fatalf("trusted certificate store: got %q, available=%t", trustedCertDir, available)
+	}
+	requireUnchangedConfigurationGlobals(t, cached)
+}
+
+func requireUnchangedConfigurationFile(t *testing.T, path string, before os.FileInfo, want []byte) {
+	t.Helper()
+
+	after, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Mode() != before.Mode() || !after.ModTime().Equal(before.ModTime()) {
+		t.Fatal("configuration metadata changed during loading")
+	}
+	bb, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(bb, want) {
+		t.Fatal("configuration content changed during loading")
+	}
+}
+
+func TestConfigurationLoadRejectsLegacySchemaWithoutRewriting(t *testing.T) {
+	tests := []struct {
+		name string
+		load func(string) (*Configuration, error)
+	}{
+		{"automatic", LoadConfiguration},
+		{"read only", LoadConfigurationReadOnly},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			configDir := filepath.Join(root, "pdfcpu")
+			if err := os.MkdirAll(configDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(configDir, "config.yml")
+			legacy := configurationWithSchemaLine(t, "")
+			if err := os.WriteFile(path, legacy, 0600); err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.Stat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = tt.load(root)
+			if !errors.Is(err, ErrConfigurationResetRequired) {
+				t.Fatalf("load legacy configuration: got %v, want %v", err, ErrConfigurationResetRequired)
+			}
+			var schemaErr *ConfigurationSchemaCompatibilityError
+			if !errors.As(err, &schemaErr) {
+				t.Fatalf("legacy schema error type: %T", err)
+			}
+			if schemaErr.Path != path || schemaErr.Detected != 0 || schemaErr.Current != 1 {
+				t.Fatalf("legacy schema error: %+v", schemaErr)
+			}
+			requireUnchangedConfigurationFile(t, path, before, legacy)
+		})
+	}
+}
+
 func TestEnsureConfigFileAtDoesNotReplaceInvalidExistingFile(t *testing.T) {
 	preserveConfigurationGlobals(t)
 

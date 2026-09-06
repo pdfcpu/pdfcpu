@@ -1,3 +1,6 @@
+# configuration schema version, independent of the pdfcpu version.
+schemaVersion: 1
+
 # toggle for inFilename extension check (.pdf) 
 checkFileNameExt: true
 
@@ -86,7 +89,7 @@ preferredCertRevocationChecker: crl
 
 # limit form field content for display purposes when using pdfcpu form list.
 # if > 0 affects the columns AltName, Default and Value.
-FormFieldListMaxColWidth: 0
+formFieldListMaxColWidth: 0
 
 # encoded stream bytes read from a PDF.
 maxStreamBytes: 512 MB

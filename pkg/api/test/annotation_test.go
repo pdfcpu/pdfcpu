@@ -347,7 +347,7 @@ func TestAddRemoveAnnotationsByObjNr(t *testing.T) {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
-	allPages, err := api.PagesForPageSelection(ctx.PageCount, nil, true, true)
+	allPages, err := api.PagesForSelection(ctx.PageCount, nil, true)
 	if err != nil {
 		t.Fatalf("%s pagesForPageSelection: %v\n", msg, err)
 	}

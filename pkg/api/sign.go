@@ -267,7 +267,7 @@ func RemoveSignatures(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) 
 
 	conf = operationConfiguration(conf, model.REMOVESIGNATURES)
 
-	if err := optimize(rs, w, conf); err != nil {
+	if err := optimize(rs, w, conf, ProgressOptions{}); err != nil {
 		return fmt.Errorf("remove signatures: %w", err)
 	}
 	return nil
@@ -290,9 +290,6 @@ func RemoveSignaturesFile(inFile, outFile string, conf *model.Configuration) (er
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "remove signatures")
 	if err != nil {

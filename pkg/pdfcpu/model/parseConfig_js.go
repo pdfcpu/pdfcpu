@@ -38,6 +38,33 @@ func handleVersion(v string, c *Configuration) error {
 	return nil
 }
 
+func parseConfigurationSchemaVersion(v string) (int, error) {
+	version, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"%w: schemaVersion must be a positive integer, got %q",
+			ErrInvalidConfigurationSchema,
+			v,
+		)
+	}
+	if err := validateConfigurationSchemaVersionValue(version); err != nil {
+		return 0, err
+	}
+	return version, nil
+}
+
+func handleSchemaVersion(v string, c *Configuration) error {
+	version, err := parseConfigurationSchemaVersion(v)
+	if err != nil {
+		return err
+	}
+	if err := validateConfigurationSchemaVersion(version); err != nil {
+		return err
+	}
+	c.SchemaVersion = version
+	return nil
+}
+
 func handleCheckFileNameExt(k, v string, c *Configuration) error {
 	v = strings.ToLower(v)
 	if v != "true" && v != "false" {
@@ -254,7 +281,7 @@ func handleLimitInt(k, v string, dst *int) error {
 }
 
 func handleConfPermissions(v string, c *Configuration) error {
-	i, err := strconv.Atoi(v)
+	i, err := strconv.ParseInt(v, 0, 32)
 	if err != nil {
 		return fmt.Errorf("permissions is numeric, got: %s", v)
 	}
@@ -320,6 +347,9 @@ func parseKeysPart1(k, v string, c *Configuration) (bool, error) {
 
 	case "version":
 		return true, handleVersion(v, c)
+
+	case "schemaVersion":
+		return true, handleSchemaVersion(v, c)
 
 	case "checkFileNameExt":
 		return true, handleCheckFileNameExt(k, v, c)
@@ -429,6 +459,9 @@ func parseKeysPart4(k, v string, c *Configuration) (err error) {
 	case "optimize":
 		c.Optimize, err = boolean(k, v)
 
+	case "optimizeBeforeWriting":
+		c.OptimizeBeforeWriting, err = boolean(k, v)
+
 	case "optimizeResourceDicts":
 		c.OptimizeResourceDicts, err = boolean(k, v)
 
@@ -477,40 +510,123 @@ func parseKeyValue(k, v string, c *Configuration) error {
 	return parseKeysPart4(k, v, c)
 }
 
-func readConfiguration(r io.Reader, configPath string) (*Configuration, error) {
-	conf := *NewStatelessConfiguration()
-	conf.Path = configPath
+type configurationEntry struct {
+	key      string
+	value    string
+	line     string
+	hasValue bool
+}
 
+func configurationEntryFromLine(line string) (configurationEntry, bool, error) {
+	if len(line) == 0 || line[0] == '#' {
+		return configurationEntry{}, false, nil
+	}
+	if i := strings.Index(line, "#"); i >= 0 {
+		line = strings.TrimSpace(line[:i])
+		if line == "" {
+			return configurationEntry{}, false, nil
+		}
+	}
+	if strings.HasSuffix(line, ":") {
+		return configurationEntry{key: strings.TrimSpace(strings.TrimSuffix(line, ":")), line: line}, true, nil
+	}
+	parts := strings.Split(line, ": ")
+	if len(parts) != 2 {
+		return configurationEntry{}, false, fmt.Errorf("invalid entry: <%s>", line)
+	}
+	entry := configurationEntry{
+		key:      strings.TrimSpace(parts[0]),
+		value:    strings.TrimSpace(parts[1]),
+		line:     line,
+		hasValue: true,
+	}
+	if entry.key == "" || entry.value == "" {
+		return configurationEntry{}, false, fmt.Errorf("invalid entry: <%s>", line)
+	}
+	return entry, true, nil
+}
+
+func scanConfigurationEntries(r io.Reader) ([]configurationEntry, error) {
+	var entries []configurationEntry
 	s := bufio.NewScanner(r)
 	for s.Scan() {
-		t := s.Text()
-		if len(t) == 0 || t[0] == '#' {
-			continue
-		}
-		if i := strings.Index(t, "#"); i >= 0 {
-			t = strings.TrimSpace(t[:i])
-			if t == "" {
-				continue
-			}
-		}
-		if strings.HasSuffix(t, ":") {
-			continue
-		}
-		ss := strings.Split(t, ": ")
-		if len(ss) != 2 {
-			return nil, fmt.Errorf("invalid entry: <%s>", t)
-		}
-		k := strings.TrimSpace(ss[0])
-		v := strings.TrimSpace(ss[1])
-		if len(k) == 0 || len(v) == 0 {
-			return nil, fmt.Errorf("invalid entry: <%s>", t)
-		}
-		if err := parseKeyValue(k, v, &conf); err != nil {
+		entry, ok, err := configurationEntryFromLine(s.Text())
+		if err != nil {
 			return nil, err
+		}
+		if ok {
+			entries = append(entries, entry)
 		}
 	}
 	if err := s.Err(); err != nil {
 		return nil, err
+	}
+	return entries, nil
+}
+
+func configurationSchemaVersion(entries []configurationEntry) (int, error) {
+	for _, entry := range entries {
+		if entry.key != "schemaVersion" {
+			continue
+		}
+		conf := Configuration{}
+		if err := handleSchemaVersion(entry.value, &conf); err != nil {
+			return 0, err
+		}
+		return conf.SchemaVersion, nil
+	}
+	return ConfigurationSchemaVersionLegacy, nil
+}
+
+func readConfigurationSchemaVersion(r io.Reader) (int, error) {
+	entries, err := scanConfigurationEntries(r)
+	if err != nil {
+		return 0, err
+	}
+	for _, entry := range entries {
+		if entry.key == "schemaVersion" {
+			return parseConfigurationSchemaVersion(entry.value)
+		}
+	}
+	return ConfigurationSchemaVersionLegacy, nil
+}
+
+func configurationEntryKeys(entries []configurationEntry) []string {
+	keys := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		keys = append(keys, entry.key)
+	}
+	return keys
+}
+
+func readConfiguration(r io.Reader, configPath string) (*Configuration, error) {
+	entries, err := scanConfigurationEntries(r)
+	if err != nil {
+		return nil, err
+	}
+	schemaVersion, err := configurationSchemaVersion(entries)
+	if err != nil {
+		return nil, err
+	}
+	if schemaVersion == ConfigurationSchemaVersionCurrent {
+		if _, err := schema1ConfigurationKeySet(configurationEntryKeys(entries)); err != nil {
+			return nil, err
+		}
+	}
+
+	conf := *NewStatelessConfiguration()
+	conf.Path = configPath
+	conf.SchemaVersion = ConfigurationSchemaVersionLegacy
+	for _, entry := range entries {
+		if !entry.hasValue && schemaVersion == ConfigurationSchemaVersionLegacy {
+			continue
+		}
+		if !entry.hasValue {
+			return nil, fmt.Errorf("invalid entry: <%s>", entry.line)
+		}
+		if err := parseKeyValue(entry.key, entry.value, &conf); err != nil {
+			return nil, err
+		}
 	}
 
 	return &conf, nil

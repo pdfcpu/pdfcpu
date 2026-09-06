@@ -26,7 +26,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/sanitize"
@@ -76,9 +75,6 @@ func addAttachment(ctx *model.Context, spec string, coll bool, op string) (err e
 		desc = parts[1]
 	}
 
-	if log.CLIEnabled() {
-		log.CLI.Printf("adding %s\n", fileName)
-	}
 	f, err := os.Open(fileName)
 	if err != nil {
 		return fmt.Errorf("%s: open attachment %s: %w", op, fileName, err)
@@ -291,7 +287,6 @@ func writeAttachmentToPath(fileName string, a model.Attachment) error {
 		return fmt.Errorf("extract attachments: create output %s: %w", fileName, err)
 	}
 	f := staged.output.file
-	logWritingTo(fileName)
 
 	_, copyErr := io.Copy(f, a)
 	if copyErr != nil {

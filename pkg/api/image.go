@@ -40,7 +40,7 @@ func prepareImagesContext(rs io.ReadSeeker, selectedPages []string, conf *model.
 	if err != nil {
 		return nil, nil, fmt.Errorf("list images: %w", err)
 	}
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return nil, nil, fmt.Errorf("list images: parse page selection: %w", err)
 	}
@@ -211,9 +211,6 @@ func UpdateImagesFile(inFile, imageFile, outFile string, objNr, pageNr int, id s
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "update images")
 	if err != nil {

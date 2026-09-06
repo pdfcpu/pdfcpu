@@ -402,6 +402,7 @@ func TestHandleValidateCommandQuietProgressForValidInput(t *testing.T) {
 	tests := []struct {
 		name     string
 		progress bool
+		optimize bool
 		want     string
 	}{
 		{name: "quiet", progress: false},
@@ -409,6 +410,12 @@ func TestHandleValidateCommandQuietProgressForValidInput(t *testing.T) {
 			name:     "quiet progress",
 			progress: true,
 			want:     "validating(mode=relaxed) " + inFile + " ...\n",
+		},
+		{
+			name:     "quiet progress with optimization",
+			progress: true,
+			optimize: true,
+			want:     "validating(mode=relaxed) " + inFile + " ...\noptimizing...\n",
 		},
 	}
 
@@ -419,7 +426,7 @@ func TestHandleValidateCommandQuietProgressForValidInput(t *testing.T) {
 				validationErr = handleValidateCommand(
 					model.NewDefaultConfiguration(),
 					[]string{inFile},
-					&validateOptions{mode: "relaxed", progress: tt.progress},
+					&validateOptions{mode: "relaxed", progress: tt.progress, optimize: tt.optimize},
 				)
 			})
 			if validationErr != nil {
@@ -432,7 +439,7 @@ func TestHandleValidateCommandQuietProgressForValidInput(t *testing.T) {
 	}
 }
 
-func TestHandleValidateCommandDoesNotDuplicateNonQuietProgress(t *testing.T) {
+func TestHandleValidateCommandRoutesNonQuietProgressThroughCommandOutput(t *testing.T) {
 	quietSave := quiet
 	quiet = false
 	var cliOutput bytes.Buffer
@@ -443,16 +450,22 @@ func TestHandleValidateCommandDoesNotDuplicateNonQuietProgress(t *testing.T) {
 	}()
 
 	inFile := filepath.Join("..", "..", "pkg", "samples", "create", "primitives", "textAndAlignment.pdf")
-	err := handleValidateCommand(
-		model.NewDefaultConfiguration(),
-		[]string{inFile},
-		&validateOptions{mode: "relaxed", progress: true},
-	)
-	if err != nil {
-		t.Fatal(err)
+	var validationErr error
+	stderr := captureStderr(t, func() {
+		validationErr = handleValidateCommand(
+			model.NewDefaultConfiguration(),
+			[]string{inFile},
+			&validateOptions{mode: "relaxed", progress: true},
+		)
+	})
+	if validationErr != nil {
+		t.Fatal(validationErr)
 	}
-	if got := strings.Count(cliOutput.String(), "validating(mode=relaxed)"); got != 1 {
-		t.Fatalf("got %d progress lines, want 1: %q", got, cliOutput.String())
+	if got := strings.Count(stderr, "validating(mode=relaxed)"); got != 1 {
+		t.Fatalf("got %d progress lines, want 1: %q", got, stderr)
+	}
+	if strings.Contains(cliOutput.String(), "validating(mode=relaxed)") {
+		t.Fatalf("validation progress bypassed command output: %q", cliOutput.String())
 	}
 }
 

@@ -78,9 +78,6 @@ func CollectFile(inFile, outFile string, selectedPages []string, conf *model.Con
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "collect")
 	if err != nil {

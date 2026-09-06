@@ -55,6 +55,7 @@ func NUp(cmd *Command) ([]string, error) {
 	if err := validateNUpLikeCommand(cmd, "n-up", api.ErrMissingNUpConfiguration); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.OutFile != "-" && cmd.InFiles[0] != "-" {
 		return nil, api.NUpFile(cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.NUp, cmd.Conf)
 	}
@@ -75,6 +76,7 @@ func Grid(cmd *Command) ([]string, error) {
 	if err := validateNUpLikeCommand(cmd, "grid", api.ErrMissingGridConfiguration); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.OutFile != "-" && cmd.InFiles[0] != "-" {
 		return nil, api.GridFile(cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.NUp, cmd.Conf)
 	}
@@ -95,6 +97,7 @@ func Booklet(cmd *Command) ([]string, error) {
 	if err := validateNUpLikeCommand(cmd, "booklet", api.ErrMissingBookletConfiguration); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.OutFile != "-" && cmd.InFiles[0] != "-" {
 		return nil, api.BookletFile(cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.NUp, cmd.Conf)
 	}
@@ -118,6 +121,8 @@ func Resize(cmd *Command) ([]string, error) {
 	if cmd.Resize == nil {
 		return nil, commandValidationError("resize", api.ErrMissingResizeConfiguration)
 	}
+	reportCommandProgress(cmd, "resizing %s\n", *cmd.InFile)
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.ResizeFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Resize, cmd.Conf)
 	}
@@ -145,11 +150,19 @@ func validateCutCommand(cmd *Command, operation string) error {
 	return nil
 }
 
+func cutInputLabel(inFile string) string {
+	if inFile == "-" {
+		return "stdin"
+	}
+	return inFile
+}
+
 // Poster creates a poster for selected pages and writes result PDFs into outDir.
 func Poster(cmd *Command) ([]string, error) {
 	if err := validateCutCommand(cmd, "poster"); err != nil {
 		return nil, err
 	}
+	reportCommandProgress(cmd, "creating poster pages from %s into %s/ ...\n", cutInputLabel(*cmd.InFile), *cmd.OutDir)
 	if *cmd.InFile == "-" {
 		outFile := *cmd.OutFile
 		if outFile == "" {
@@ -168,6 +181,7 @@ func NDown(cmd *Command) ([]string, error) {
 	if err := validateCutCommand(cmd, "ndown"); err != nil {
 		return nil, err
 	}
+	reportCommandProgress(cmd, "ndown %s into %s/ ...\n", cutInputLabel(*cmd.InFile), *cmd.OutDir)
 	if *cmd.InFile == "-" {
 		outFile := *cmd.OutFile
 		if outFile == "" {
@@ -186,6 +200,7 @@ func Cut(cmd *Command) ([]string, error) {
 	if err := validateCutCommand(cmd, "cut"); err != nil {
 		return nil, err
 	}
+	reportCommandProgress(cmd, "cutting %s into %s/ ...\n", cutInputLabel(*cmd.InFile), *cmd.OutDir)
 	if *cmd.InFile == "-" {
 		outFile := *cmd.OutFile
 		if outFile == "" {
@@ -214,6 +229,8 @@ func Zoom(cmd *Command) ([]string, error) {
 	if err := validateZoomCommand(cmd); err != nil {
 		return nil, err
 	}
+	reportCommandProgress(cmd, "zooming %s\n", *cmd.InFile)
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.ZoomFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Zoom, cmd.Conf)
 	}
@@ -230,6 +247,7 @@ func Rotate(cmd *Command) ([]string, error) {
 	if err := validatePageInputOutputCommand(cmd, "rotate"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.RotateFile(*cmd.InFile, *cmd.OutFile, cmd.IntVal, cmd.PageSelection, cmd.Conf)
 	}
@@ -250,6 +268,7 @@ func InsertPages(cmd *Command) ([]string, error) {
 	if cmd.Mode == model.INSERTPAGESAFTER {
 		before = false
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.InsertPagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, before, cmd.PageConf, cmd.Conf)
 	}
@@ -266,6 +285,7 @@ func RemovePages(cmd *Command) ([]string, error) {
 	if err := validatePageInputOutputCommand(cmd, "remove pages"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.RemovePagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
@@ -285,6 +305,8 @@ func Crop(cmd *Command) ([]string, error) {
 	if cmd.Box == nil {
 		return nil, commandValidationError("crop", api.ErrMissingBoxConfiguration)
 	}
+	reportCommandProgress(cmd, "cropping %s\n", *cmd.InFile)
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.CropFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Box, cmd.Conf)
 	}
@@ -304,12 +326,22 @@ func ListBoxesFile(inFile string, selectedPages []string, pb *model.PageBoundari
 	return api.ListBoxesFile(inFile, selectedPages, pb, conf)
 }
 
+func pageBoundariesForPresentation(pb *model.PageBoundaries) *model.PageBoundaries {
+	if pb != nil {
+		return pb
+	}
+	pb = &model.PageBoundaries{}
+	pb.SelectAll()
+	return pb
+}
+
 // ListBoxes returns inFile's page boundaries.
 func ListBoxes(cmd *Command) ([]string, error) {
 	inFile, err := validatedCommandInFile(cmd, "list boxes")
 	if err != nil {
 		return nil, err
 	}
+	reportCommandProgress(cmd, "listing %s for %s\n", pageBoundariesForPresentation(cmd.PageBoundaries), inFile)
 	if inFile == "-" {
 		return withStdinReadSeeker("list boxes", func(rs io.ReadSeeker) ([]string, error) {
 			return api.ListBoxes(rs, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
@@ -327,6 +359,8 @@ func AddBoxes(cmd *Command) ([]string, error) {
 	if cmd.PageBoundaries == nil {
 		return nil, commandValidationError("add boxes", api.ErrMissingPageBoundaries)
 	}
+	reportCommandProgress(cmd, "adding %s for %s\n", cmd.PageBoundaries, *cmd.InFile)
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.AddBoxesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
 	}
@@ -346,6 +380,8 @@ func RemoveBoxes(cmd *Command) ([]string, error) {
 	if cmd.PageBoundaries == nil {
 		return nil, commandValidationError("remove boxes", api.ErrMissingPageBoundaries)
 	}
+	reportCommandProgress(cmd, "removing %s for %s\n", cmd.PageBoundaries, *cmd.InFile)
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.RemoveBoxesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
 	}

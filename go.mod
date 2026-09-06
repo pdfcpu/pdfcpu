@@ -3,6 +3,7 @@ module github.com/pdfcpu/pdfcpu
 go 1.25.0
 
 require (
+	github.com/google/jsonschema-go v0.4.3
 	github.com/hhrutter/tiff v1.0.6
 	github.com/mattn/go-runewidth v0.0.27
 	github.com/spf13/cobra v1.10.2

@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -66,8 +65,6 @@ func ParsePageSelection(s string) ([]string, error) {
 	if !selectedPagesRegExp.MatchString(s) {
 		return nil, fmt.Errorf("-pages \"%s\" => syntax error", s)
 	}
-
-	//log.CLI.Printf("pageSelection: %s\n", s)
 
 	return strings.Split(s, ","), nil
 }
@@ -265,24 +262,6 @@ func sortedPages(selectedPages types.IntSet) []int {
 	return p
 }
 
-func logSelPages(selectedPages types.IntSet) {
-	if !log.CLIEnabled() || len(selectedPages) == 0 {
-		return
-	}
-	var b strings.Builder
-	for _, i := range sortedPages(selectedPages) {
-		fmt.Fprintf(&b, "%d,", i)
-	}
-	s := b.String()
-	if len(s) > 1 {
-		s = s[:len(s)-1]
-	}
-	// TODO Suppress for multifile cmds
-	if log.CLIEnabled() {
-		log.CLI.Printf("pages: %s\n", s)
-	}
-}
-
 func handleNormalizedPageSelectionToken(pageCount, i int, token, v string, negated bool, selectedPages types.IntSet) error {
 	// -#
 	if v[0] == '-' {
@@ -360,43 +339,43 @@ func calcSelPages(pageCount int, pageSelection []string, selectedPages types.Int
 	return nil
 }
 
-// selectedPages returns a set of used page numbers.
-// key==page# => key 0 unused!
-func selectedPages(pageCount int, pageSelection []string, log bool) (types.IntSet, error) {
+// selectedPages returns a set of used page numbers. Key zero is unused.
+func selectedPages(pageCount int, pageSelection []string) (types.IntSet, error) {
 	selectedPages := types.IntSet{}
 
 	if err := calcSelPages(pageCount, pageSelection, selectedPages); err != nil {
 		return nil, err
 	}
 
-	if log {
-		logSelPages(selectedPages)
-	}
-
 	return selectedPages, nil
 }
 
-// PagesForPageSelection ensures a set of page numbers for an ascending page sequence
+// PagesForSelection returns a set of page numbers for an ascending page sequence
 // where each page number may appear only once.
-func PagesForPageSelection(pageCount int, pageSelection []string, ensureAllforNone bool, log bool) (types.IntSet, error) {
+func PagesForSelection(pageCount int, pageSelection []string, ensureAllForNone bool) (types.IntSet, error) {
 	if len(pageSelection) > 0 {
-		return selectedPages(pageCount, pageSelection, log)
+		return selectedPages(pageCount, pageSelection)
 	}
-	if !ensureAllforNone {
-		//log.CLI.Printf("pages: none\n")
+	if !ensureAllForNone {
 		return nil, nil
 	}
 	m := types.IntSet{}
 	for i := 1; i <= pageCount; i++ {
 		m[i] = true
 	}
-	//log.CLI.Printf("pages: all\n")
 	return m, nil
 }
 
-// RemainingPagesForPageRemoval remaining pages for page removal.
-func RemainingPagesForPageRemoval(pageCount int, pageSelection []string, log bool) (types.IntSet, error) {
-	pagesToRemove, err := selectedPages(pageCount, pageSelection, log)
+// PagesForPageSelection returns the selected page numbers.
+//
+// Deprecated: Use PagesForSelection. The log argument is ignored.
+func PagesForPageSelection(pageCount int, pageSelection []string, ensureAllForNone bool, _ bool) (types.IntSet, error) {
+	return PagesForSelection(pageCount, pageSelection, ensureAllForNone)
+}
+
+// RemainingPagesForRemoval returns the pages remaining after applying pageSelection.
+func RemainingPagesForRemoval(pageCount int, pageSelection []string) (types.IntSet, error) {
+	pagesToRemove, err := selectedPages(pageCount, pageSelection)
 	if err != nil {
 		return nil, err
 	}
@@ -413,6 +392,13 @@ func RemainingPagesForPageRemoval(pageCount int, pageSelection []string, log boo
 	}
 
 	return m, nil
+}
+
+// RemainingPagesForPageRemoval returns the pages remaining after applying pageSelection.
+//
+// Deprecated: Use RemainingPagesForRemoval. The log argument is ignored.
+func RemainingPagesForPageRemoval(pageCount int, pageSelection []string, _ bool) (types.IntSet, error) {
+	return RemainingPagesForRemoval(pageCount, pageSelection)
 }
 
 func deletePageFromCollection(cp *[]int, p int) {
@@ -638,7 +624,6 @@ func handlePageCollectionToken(pageCount, i int, token string, collectedPages *[
 	var negated bool
 	if negation(v[0]) {
 		negated = true
-		//logInfoAPI.Printf("is a negated exp\n")
 		v = v[1:]
 		if v == "" {
 			return pageSelectionEmptyTokenError(i, token)

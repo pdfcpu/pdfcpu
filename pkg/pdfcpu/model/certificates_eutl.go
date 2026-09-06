@@ -30,13 +30,13 @@ const bundledDefaultCertificates = true
 //go:embed resources/certs/*.p7c
 var certFilesEU embed.FS
 
-func installDefaultCertificates() error {
+func installDefaultCertificates(trustedCertDir string) error {
 	files, err := certFilesEU.ReadDir("resources/certs")
 	if err != nil {
 		return err
 	}
 
-	euDir := filepath.Join(TrustedCertDir, "eu")
+	euDir := filepath.Join(trustedCertDir, "eu")
 	if err := os.MkdirAll(euDir, 0755); err != nil {
 		return err
 	}

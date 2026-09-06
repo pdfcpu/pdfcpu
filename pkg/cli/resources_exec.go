@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -47,6 +48,7 @@ func ImportImages(cmd *Command) (result []string, err error) {
 	if err != nil {
 		return nil, err
 	}
+	reportImportImagesProgress(cmd)
 	conf := cmd.Conf
 	if conf == nil {
 		conf = model.NewDefaultConfiguration()
@@ -74,6 +76,19 @@ func ImportImages(cmd *Command) (result []string, err error) {
 	}
 
 	return nil, importImagesToFile(*cmd.OutFile, readers, closers, imp, conf)
+}
+
+func reportImportImagesProgress(cmd *Command) {
+	if commandWritesPDFToStdout(cmd) {
+		return
+	}
+	if _, err := os.Stat(*cmd.OutFile); err == nil {
+		reportCommandProgress(cmd, "appending to %s...\n", *cmd.OutFile)
+		return
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return
+	}
+	reportCommandOutputPath(cmd)
 }
 
 func validateImportImagesCommand(cmd *Command) error {
@@ -241,10 +256,21 @@ func importImagesToFile(
 
 // CreateCheatSheetsFonts creates single page PDF cheat sheets for user fonts in current dir.
 func CreateCheatSheetsFonts(cmd *Command) ([]string, error) {
+	return createCheatSheetsFontsCommand(cmd, api.CreateCheatSheetsUserFontsWithResult)
+}
+
+func createCheatSheetsFontsCommand(
+	cmd *Command,
+	create func([]string) (api.FontCheatSheetResult, error),
+) ([]string, error) {
 	if err := validateFontsCommand(cmd, model.CHEATSHEETSFONTS); err != nil {
 		return nil, err
 	}
-	return nil, api.CreateCheatSheetsUserFonts(cmd.InFiles)
+	result, err := create(cmd.InFiles)
+	for _, path := range result.Paths {
+		reportCommandProgress(cmd, "%s\n", path)
+	}
+	return nil, err
 }
 
 func validateFontsCommand(cmd *Command, expectedMode model.CommandMode) error {
@@ -272,13 +298,25 @@ func ListFonts(cmd *Command) ([]string, error) {
 
 // InstallFonts installs True Type fonts into the pdfcpu pconfig dir.
 func InstallFonts(cmd *Command) ([]string, error) {
+	return installFontsCommand(cmd, api.InstallFontsWithResult)
+}
+
+func installFontsCommand(
+	cmd *Command,
+	install func([]string) (api.FontInstallResult, error),
+) ([]string, error) {
 	if err := validateFontsCommand(cmd, model.INSTALLFONTS); err != nil {
 		return nil, err
 	}
 	if len(cmd.InFiles) == 0 {
 		return nil, fmt.Errorf("install fonts: %w", api.ErrMissingFontInput)
 	}
-	return nil, api.InstallFonts(cmd.InFiles)
+	reportCommandProgress(cmd, "installing to %s...\n", font.UserFontDir)
+	result, err := install(cmd.InFiles)
+	for _, warning := range result.Warnings {
+		reportCommandProgress(cmd, "warning: %v\n", warning)
+	}
+	return nil, err
 }
 
 var (
@@ -437,6 +475,11 @@ func UpdateImages(cmd *Command) ([]string, error) {
 	if err := validateUpdateImagesCommand(cmd); err != nil {
 		return nil, err
 	}
+	outFile := *cmd.OutFile
+	if outFile == "" {
+		outFile = cmd.InFiles[0]
+	}
+	reportOutputPath(outFile)
 	objNr, pageNr, id := updateImageParams(cmd)
 	return updateImagesInOut(cmd, objNr, pageNr, id)
 }
@@ -541,6 +584,10 @@ func AddAttachments(cmd *Command) ([]string, error) {
 	if err := validateMutateAttachmentsCommand(cmd, "add attachments"); err != nil {
 		return nil, err
 	}
+	for _, spec := range cmd.InFiles {
+		fileName := strings.SplitN(spec, ",", 2)[0]
+		reportCommandProgress(cmd, "adding %s\n", fileName)
+	}
 	op := "add attachments"
 	if cmd.Mode == model.ADDATTACHMENTSPORTFOLIO {
 		op = "add portfolio attachments"
@@ -579,6 +626,7 @@ func ExtractAttachments(cmd *Command) ([]string, error) {
 	if err := validateExtractAttachmentsCommand(cmd); err != nil {
 		return nil, err
 	}
+	reportExtractionProgress(cmd, "attachments")
 	if *cmd.InFile == "-" {
 		return withStdinReadSeeker("extract attachments", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.ExtractAttachments(rs, *cmd.OutDir, cmd.InFiles, cmd.Conf)

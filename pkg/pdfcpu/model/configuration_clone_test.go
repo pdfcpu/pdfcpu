@@ -45,6 +45,7 @@ type configurationScalarValues struct {
 	Path                            string
 	CreationDate                    string
 	Version                         string
+	SchemaVersion                   int
 	CheckFileNameExt                bool
 	Reader15                        bool
 	DecodeAllStreams                bool
@@ -91,6 +92,7 @@ func scalarValues(c *Configuration) configurationScalarValues {
 		Path:                            c.Path,
 		CreationDate:                    c.CreationDate,
 		Version:                         c.Version,
+		SchemaVersion:                   c.SchemaVersion,
 		CheckFileNameExt:                c.CheckFileNameExt,
 		Reader15:                        c.Reader15,
 		DecodeAllStreams:                c.DecodeAllStreams,
@@ -139,6 +141,7 @@ func configurationCloneFixture() *Configuration {
 		Path:                            "test/path",
 		CreationDate:                    "2026-08-31 12:34",
 		Version:                         "v0.16.0-test",
+		SchemaVersion:                   ConfigurationSchemaVersionCurrent,
 		CheckFileNameExt:                true,
 		Reader15:                        true,
 		DecodeAllStreams:                true,

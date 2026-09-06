@@ -47,6 +47,14 @@ func reportUnsupportedResourceSkips(err error) error {
 	return nil
 }
 
+func reportExtractionProgress(cmd *Command, resource string) {
+	inFile := *cmd.InFile
+	if inFile == "-" {
+		inFile = "stdin"
+	}
+	reportCommandProgress(cmd, "extracting %s from %s into %s/ ...\n", resource, inFile, *cmd.OutDir)
+}
+
 func writeExtractedPageToStdout(ctx *model.Context, pageNr int, w io.Writer) error {
 	r, err := api.ExtractPage(ctx, pageNr)
 	if err != nil {
@@ -67,7 +75,7 @@ func extractSelectedPageToStdout(rs io.ReadSeeker, w io.Writer, cmd *Command) er
 		return fmt.Errorf("%s: read: %w", extractPagesOperation, err)
 	}
 
-	pages, err := api.PagesForPageSelection(ctx.PageCount, cmd.PageSelection, true, true)
+	pages, err := api.PagesForSelection(ctx.PageCount, cmd.PageSelection, true)
 	if err != nil {
 		return fmt.Errorf("%s: selection: %w", extractPagesOperation, err)
 	}
@@ -99,6 +107,7 @@ func ExtractImages(cmd *Command) ([]string, error) {
 	if err := validateExtractionCommand(cmd, "extract images"); err != nil {
 		return nil, err
 	}
+	reportExtractionProgress(cmd, "images")
 	if *cmd.InFile == "-" {
 		return withStdinReadSeeker("extract images", func(rs io.ReadSeeker) ([]string, error) {
 			err := api.ExtractImages(rs, cmd.PageSelection, api.WriteImageToDisk(*cmd.OutDir, "stdin"), cmd.Conf)
@@ -113,6 +122,7 @@ func ExtractFonts(cmd *Command) ([]string, error) {
 	if err := validateExtractionCommand(cmd, "extract fonts"); err != nil {
 		return nil, err
 	}
+	reportExtractionProgress(cmd, "fonts")
 	if *cmd.InFile == "-" {
 		return withStdinReadSeeker("extract fonts", func(rs io.ReadSeeker) ([]string, error) {
 			err := api.ExtractFonts(rs, cmd.PageSelection, api.WriteFontToDisk(*cmd.OutDir, "stdin"), cmd.Conf)
@@ -127,6 +137,7 @@ func ExtractPages(cmd *Command) ([]string, error) {
 	if err := validateExtractionCommand(cmd, extractPagesOperation); err != nil {
 		return nil, err
 	}
+	reportExtractionProgress(cmd, "pages")
 	if *cmd.OutDir == "-" {
 		return nil, extractPageToStdout(cmd)
 	}
@@ -145,6 +156,7 @@ func ExtractContent(cmd *Command) ([]string, error) {
 	if err := validateExtractionCommand(cmd, "extract content"); err != nil {
 		return nil, err
 	}
+	reportExtractionProgress(cmd, "content")
 	if *cmd.InFile == "-" {
 		return withStdinReadSeeker("extract content", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.ExtractContent(rs, cmd.PageSelection, api.WriteContentToDisk(*cmd.OutDir, "stdin"), cmd.Conf)
@@ -158,6 +170,7 @@ func ExtractMetadata(cmd *Command) ([]string, error) {
 	if err := validateExtractionCommand(cmd, "extract metadata"); err != nil {
 		return nil, err
 	}
+	reportExtractionProgress(cmd, "metadata")
 	if *cmd.InFile == "-" {
 		return withStdinReadSeeker("extract metadata", func(rs io.ReadSeeker) ([]string, error) {
 			err := api.ExtractMetadata(rs, api.WriteMetadataToDisk(*cmd.OutDir, "stdin"), cmd.Conf)

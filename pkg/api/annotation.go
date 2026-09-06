@@ -67,7 +67,7 @@ func Annotations(rs io.ReadSeeker, selectedPages []string, conf *model.Configura
 		return nil, fmt.Errorf("list annotations: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return nil, fmt.Errorf("list annotations: parse page selection: %w", err)
 	}
@@ -98,7 +98,7 @@ func AddAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages []string, ann m
 		return fmt.Errorf("add annotations: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("add annotations: parse page selection: %w", err)
 	}
@@ -140,7 +140,7 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 		return errors.New("incremental writing not supported for PDF version < V1.4")
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("add annotations: parse page selection: %w", err)
 	}
@@ -159,7 +159,8 @@ func AddAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages []string, a
 	return nil
 }
 
-// AddAnnotationsFile adds annotations for selected pages to a PDF context read from inFile and writes the result to outFile.
+// AddAnnotationsFile adds annotations for selected pages to a PDF context read from inFile and writes the result to
+// outFile.
 func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model.AnnotationRenderer, conf *model.Configuration, incr bool) (err error) {
 	var f1, f2 *os.File
 	ok := false
@@ -175,9 +176,7 @@ func AddAnnotationsFile(inFile, outFile string, selectedPages []string, ar model
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
 	} else {
-		logWritingTo(inFile)
 		if incr {
 			f, err := os.OpenFile(inFile, os.O_RDWR, 0644)
 			if err != nil {
@@ -311,9 +310,7 @@ func AddAnnotationsMapFile(inFile, outFile string, m map[int][]model.AnnotationR
 
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
 	} else {
-		logWritingTo(inFile)
 		if incr {
 			f, err := os.OpenFile(inFile, os.O_RDWR, 0644)
 			if err != nil {
@@ -380,7 +377,7 @@ func RemoveAnnotations(rs io.ReadSeeker, w io.Writer, selectedPages, idsAndTypes
 		return fmt.Errorf("remove annotations: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("remove annotations: parse page selection: %w", err)
 	}
@@ -423,7 +420,7 @@ func RemoveAnnotationsAsIncrement(rws io.ReadWriteSeeker, selectedPages, idsAndT
 		return errors.New("incremental writing not supported for PDF version < V1.4")
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("remove annotations: parse page selection: %w", err)
 	}
@@ -459,9 +456,7 @@ func RemoveAnnotationsFile(inFile, outFile string, selectedPages, idsAndTypes []
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
 	} else {
-		logWritingTo(inFile)
 		if incr {
 			if f1, err = os.OpenFile(inFile, os.O_RDWR, 0644); err != nil {
 				return fmt.Errorf("remove annotations: open input %s: %w", inFile, err)

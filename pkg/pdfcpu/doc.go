@@ -14,7 +14,7 @@ The commands are:
 	changeupw     Change user password
 	collect       Create custom sequence of selected pages
 	completion    Generate shell completion script
-	config        List, reset configuration
+	config        Initialize, list, inspect, validate, reset configuration
 	create        Create PDF content including forms via JSON
 	crop          Set cropbox for selected pages
 	cut           Custom cut pages horizontally or vertically

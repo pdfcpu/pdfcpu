@@ -224,7 +224,7 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 			return fmt.Errorf("n-up: read and validate: %w", err)
 		}
 
-		pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+		pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 		if err != nil {
 			return fmt.Errorf("n-up: parse page selection: %w", err)
 		}
@@ -301,7 +301,6 @@ func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *mode
 		)
 	}
 	f2 = staged.output.file
-	logWritingTo(outFile)
 
 	defer func() {
 		if !ok {

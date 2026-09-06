@@ -23,6 +23,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -255,6 +256,7 @@ func RemoveFormFields(cmd *Command) ([]string, error) {
 	if err := validateFormPDFCommand(cmd, "remove form fields"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
 		*cmd.InFile,
 		*cmd.OutFile,
@@ -273,6 +275,7 @@ func LockFormFields(cmd *Command) ([]string, error) {
 	if err := validateFormPDFCommand(cmd, "lock form fields"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
 		*cmd.InFile,
 		*cmd.OutFile,
@@ -291,6 +294,7 @@ func UnlockFormFields(cmd *Command) ([]string, error) {
 	if err := validateFormPDFCommand(cmd, "unlock form fields"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
 		*cmd.InFile,
 		*cmd.OutFile,
@@ -309,6 +313,7 @@ func ResetFormFields(cmd *Command) ([]string, error) {
 	if err := validateFormPDFCommand(cmd, "reset form fields"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
 		*cmd.InFile,
 		*cmd.OutFile,
@@ -332,6 +337,7 @@ func ExportFormFields(cmd *Command) ([]string, error) {
 	if err := validateCommandRequirements(cmd, requirements); err != nil {
 		return nil, err
 	}
+	reportOutputPath(*cmd.OutFileJSON)
 	if *cmd.InFile == "-" {
 		rs, w, finalize, err := streamInOutForOperation("-", *cmd.OutFileJSON, "export form")
 		if err != nil {
@@ -355,6 +361,8 @@ func FillFormFields(cmd *Command) ([]string, error) {
 	if err := validateCommandRequirements(cmd, requirements); err != nil {
 		return nil, err
 	}
+	reportCommandProgress(cmd, "filling...\n")
+	reportCommandOutputPath(cmd)
 	return formPDFWithData(
 		cmd,
 		"fill form",
@@ -379,6 +387,27 @@ func multiFillFormOutputFile(cmd *Command) string {
 		return "stdin.pdf"
 	}
 	return *cmd.OutFile
+}
+
+func reportMultiFillFormProgress(cmd *Command) {
+	format := "JSON"
+	if strings.EqualFold(filepath.Ext(*cmd.InFileJSON), ".csv") {
+		format = "CSV"
+	}
+	inFile := *cmd.InFile
+	if inFile == "-" {
+		inFile = "stdin"
+	}
+	outDir := optionalCommandString(cmd.OutDir)
+	reportCommandProgress(
+		cmd,
+		"filling multiple forms via %s based on %s data from %s into %s/%s ...\n",
+		inFile,
+		format,
+		*cmd.InFileJSON,
+		outDir,
+		filepath.Base(multiFillFormOutputFile(cmd)),
+	)
 }
 
 func multiFillFormFieldsToStdout(cmd *Command, inFile string) ([]string, error) {
@@ -422,6 +451,7 @@ func MultiFillFormFields(cmd *Command) ([]string, error) {
 	if err := validateMultiFillFormCommand(cmd); err != nil {
 		return nil, err
 	}
+	reportMultiFillFormProgress(cmd)
 	inFile, finalize, err := multiFillFormInputFile(cmd)
 	if err != nil {
 		return nil, err

@@ -81,7 +81,7 @@ func testSelectedPages(s string, pageCount int, compareString string, t *testing
 		t.Fatalf("testSelectedPages(%s) %v\n", s, err)
 	}
 
-	selectedPages, err := api.PagesForPageSelection(pageCount, pageSelection, false, true)
+	selectedPages, err := api.PagesForSelection(pageCount, pageSelection, false)
 	if err != nil {
 		t.Fatalf("testSelectedPages(%s) %v\n", s, err)
 	}
@@ -270,7 +270,7 @@ func TestPagesForPageSelectionIncludesTokenContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := api.PagesForPageSelection(5, tt.selection, true, false)
+			_, err := api.PagesForSelection(5, tt.selection, true)
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("expected %q, got %v", tt.want, err)
 			}

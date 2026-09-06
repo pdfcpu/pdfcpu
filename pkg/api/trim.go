@@ -23,7 +23,6 @@ import (
 	"os"
 	"sort"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -49,15 +48,12 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Con
 		return fmt.Errorf("trim: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, false)
 	if err != nil {
 		return fmt.Errorf("trim: parse page selection: %w", err)
 	}
 
 	if len(pages) == 0 {
-		if log.CLIEnabled() {
-			log.CLI.Println("aborted: missing page numbers!")
-		}
 		return nil
 	}
 
@@ -103,9 +99,6 @@ func TrimFile(inFile, outFile string, selectedPages []string, conf *model.Config
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "trim")
 	if err != nil {

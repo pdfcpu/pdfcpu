@@ -57,8 +57,6 @@ func (f ascii85Decode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error
 		return nil, err
 	}
 
-	// fmt.Printf("dump:\n%s", hex.Dump(bb))
-
 	i := bytes.Index(bb, []byte(eodASCII85))
 	if i < 0 {
 		return nil, errors.New("ASCII85 decode: missing eod marker")

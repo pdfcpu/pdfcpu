@@ -49,7 +49,7 @@ func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, fonts bo
 		}
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, false, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, false)
 	if err != nil {
 		return nil, fmt.Errorf("info: parse page selection: %w", err)
 	}

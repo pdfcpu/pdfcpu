@@ -33,6 +33,69 @@ import (
 )
 
 const (
+	// ConfigurationSchemaVersionLegacy identifies configurations without explicit schema metadata.
+	ConfigurationSchemaVersionLegacy = 0
+
+	// ConfigurationSchemaVersionCurrent identifies the newest configuration schema supported by this build.
+	ConfigurationSchemaVersionCurrent = 1
+)
+
+var (
+	// ErrInvalidConfigurationSchema signals malformed or unsupported configuration schema metadata.
+	ErrInvalidConfigurationSchema = errors.New("invalid configuration schema")
+)
+
+var schema1ConfigurationKeys = map[string]struct{}{
+	"allowedRevocationHosts":          {},
+	"checkFileNameExt":                {},
+	"createBookmarks":                 {},
+	"created":                         {},
+	"dateFormat":                      {},
+	"decodeAllStreams":                {},
+	"encryptKeyLength":                {},
+	"encryptUsingAES":                 {},
+	"eol":                             {},
+	"formFieldListMaxColWidth":        {},
+	"maxDecodeBytes":                  {},
+	"maxImageBytes":                   {},
+	"maxImagePixels":                  {},
+	"maxStreamBytes":                  {},
+	"needAppearances":                 {},
+	"offline":                         {},
+	"optimize":                        {},
+	"optimizeBeforeWriting":           {},
+	"optimizeDuplicateContentStreams": {},
+	"optimizeResourceDicts":           {},
+	"permissions":                     {},
+	"postProcessValidate":             {},
+	"preferredCertRevocationChecker":  {},
+	"reader15":                        {},
+	"schemaVersion":                   {},
+	"timeout":                         {},
+	"timeoutCRL":                      {},
+	"timeoutOCSP":                     {},
+	"timestampFormat":                 {},
+	"unit":                            {},
+	"validationMode":                  {},
+	"writeObjectStream":               {},
+	"writeXRefStream":                 {},
+}
+
+func schema1ConfigurationKeySet(keys []string) (map[string]bool, error) {
+	seen := map[string]bool{}
+	for _, key := range keys {
+		if seen[key] {
+			return nil, fmt.Errorf("invalid schema 1 configuration: duplicate key %q", key)
+		}
+		if _, ok := schema1ConfigurationKeys[key]; !ok {
+			return nil, fmt.Errorf("invalid schema 1 configuration: unknown key %q", key)
+		}
+		seen[key] = true
+	}
+	return seen, nil
+}
+
+const (
 	// ValidationStrict ensures 100% compliance with the spec (PDF 32000-1:2008).
 	ValidationStrict int = iota
 
@@ -193,6 +256,7 @@ type configurationResourceMode uint8
 
 const (
 	configurationResourceModeAuto configurationResourceMode = iota
+	configurationResourceModeAutoIsolated
 	configurationResourceModeReadOnly
 	configurationResourceModeStateless
 )
@@ -220,7 +284,12 @@ type Configuration struct {
 
 	CreationDate string
 
+	// Version records legacy generator metadata and does not determine configuration compatibility.
+	// Deprecated: configuration compatibility is defined by SchemaVersion.
 	Version string
+
+	// SchemaVersion identifies the configuration file schema independently of the pdfcpu product version.
+	SchemaVersion int
 
 	// Ensure .pdf input file extension.
 	CheckFileNameExt bool
@@ -377,6 +446,10 @@ func (c *Configuration) Clone() *Configuration {
 func (c *Configuration) TrustedCertificateStore() (dir string, available bool) {
 	if c != nil {
 		switch c.resources.mode {
+		case configurationResourceModeAutoIsolated:
+			if c.resources.trustedCertDir != "" {
+				return c.resources.trustedCertDir, true
+			}
 		case configurationResourceModeReadOnly:
 			return c.resources.trustedCertDir, true
 		case configurationResourceModeStateless:
@@ -391,6 +464,10 @@ func (c *Configuration) TrustedCertificateStore() (dir string, available bool) {
 func (c *Configuration) UserFontStore() (dir string, available bool) {
 	if c != nil {
 		switch c.resources.mode {
+		case configurationResourceModeAutoIsolated:
+			if c.resources.userFontDir != "" {
+				return c.resources.userFontDir, true
+			}
 		case configurationResourceModeReadOnly:
 			return c.resources.userFontDir, true
 		case configurationResourceModeStateless:
@@ -434,7 +511,7 @@ type ResourceLimits struct {
 func DefaultResourceLimits() ResourceLimits {
 	const (
 		MB = 1 << 20
-		MP = 1 << 20
+		MP = 1_000_000
 	)
 
 	return ResourceLimits{
@@ -478,12 +555,8 @@ func defaultConfigurationFileBytes() []byte {
 # Creation date
 created: %s 
 
-# version (Do not edit!)
-version: %s 
-
 `,
-		time.Now().Format("2006-01-02 15:04"),
-		VersionStr)
+		time.Now().Format("2006-01-02 15:04"))
 
 	return append([]byte(header), configFileBytes...)
 }
@@ -514,12 +587,36 @@ func readConfigurationAt(root string) (*Configuration, error) {
 		return nil, errors.New("missing configuration root")
 	}
 	configDir := filepath.Join(root, "pdfcpu")
-	conf, err := readConfigurationFile(filepath.Join(configDir, "config.yml"))
+	path := filepath.Join(configDir, "config.yml")
+	if _, err := preflightConfigurationSchema(path, ConfigurationSchemaVersionCurrent); err != nil {
+		return nil, err
+	}
+	conf, err := readConfigurationFile(path)
 	if err != nil {
 		return nil, err
 	}
 	conf.resources = resourcesForConfigurationDir(configurationResourceModeReadOnly, configDir)
 	return conf, nil
+}
+
+// LoadConfigurationReadOnly loads an existing configuration tree rooted at root without modifying filesystem or package
+// loader state.
+func LoadConfigurationReadOnly(root string) (*Configuration, error) {
+	return readConfigurationAt(root)
+}
+
+func loadOrInitializeConfigurationFile(path string) (*Configuration, bool, error) {
+	if _, err := preflightConfigurationSchema(path, ConfigurationSchemaVersionCurrent); err == nil {
+		conf, err := readConfigurationFile(path)
+		return conf, false, err
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, false, err
+	}
+	if err := initializeConfigurationFile(path); err != nil {
+		return nil, false, err
+	}
+	conf, err := readConfigurationFile(path)
+	return conf, true, err
 }
 
 func ensureConfigFileAt(path string, override bool) error {
@@ -557,10 +654,10 @@ func onlyHidden(files []os.DirEntry) bool {
 	return true
 }
 
-// ensureFontDirInitialized sets up the font directory without loading fonts.
+// ensureFontDirInitializedAt sets up the font directory without loading fonts.
 // Font loading is deferred until fonts are actually needed.
-func ensureFontDirInitialized() error {
-	files, err := os.ReadDir(font.UserFontDir)
+func ensureFontDirInitializedAt(userFontDir string) error {
+	files, err := os.ReadDir(userFontDir)
 	if err != nil {
 		return err
 	}
@@ -570,7 +667,7 @@ func ensureFontDirInitialized() error {
 		if log.DebugEnabled() && log.CLIEnabled() {
 			log.CLI.Printf("installing user font: %s\n", fontname)
 		}
-		if err := font.InstallFontFromBytesQuiet(font.UserFontDir, fontname, robotoFontFileBytes); err != nil {
+		if err := font.InstallFontFromBytesQuiet(userFontDir, fontname, robotoFontFileBytes); err != nil {
 			return err
 		}
 	}
@@ -578,8 +675,12 @@ func ensureFontDirInitialized() error {
 	return nil
 }
 
-func initCertificates() error {
-	files, err := os.ReadDir(TrustedCertDir)
+func ensureFontDirInitialized() error {
+	return ensureFontDirInitializedAt(font.UserFontDir)
+}
+
+func initCertificatesAt(trustedCertDir string) error {
+	files, err := os.ReadDir(trustedCertDir)
 	if err != nil {
 		return err
 	}
@@ -591,7 +692,85 @@ func initCertificates() error {
 	}
 
 	MarkCertificateStoreChanged()
-	return installDefaultCertificates()
+	return installDefaultCertificates(trustedCertDir)
+}
+
+func initCertificates() error {
+	return initCertificatesAt(TrustedCertDir)
+}
+
+func initializeConfigurationResourcesAt(configDir string) error {
+	userFontDir := filepath.Join(configDir, "fonts")
+	if err := os.MkdirAll(userFontDir, 0755); err != nil {
+		return err
+	}
+	if err := ensureFontDirInitializedAt(userFontDir); err != nil {
+		return err
+	}
+
+	trustedCertDir := filepath.Join(configDir, "certs")
+	if err := os.MkdirAll(trustedCertDir, 0755); err != nil {
+		return err
+	}
+	return initCertificatesAt(trustedCertDir)
+}
+
+func loadConfiguration(root string) (*Configuration, bool, error) {
+	if root == "" {
+		return nil, false, errors.New("missing configuration root")
+	}
+
+	configDir := filepath.Join(root, "pdfcpu")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return nil, false, err
+	}
+	conf, created, err := loadOrInitializeConfigurationFile(filepath.Join(configDir, "config.yml"))
+	if err != nil {
+		return nil, false, err
+	}
+	conf.resources = resourcesForConfigurationDir(configurationResourceModeAutoIsolated, configDir)
+	if err := initializeConfigurationResourcesAt(configDir); err != nil {
+		return nil, false, err
+	}
+	return conf, created, nil
+}
+
+// InitializeConfiguration loads or initializes a configuration tree and reports whether config.yml was created.
+func InitializeConfiguration(root string) (*Configuration, bool, error) {
+	return loadConfiguration(root)
+}
+
+// LoadConfiguration loads or initializes a configuration tree rooted at root without changing compatibility loader
+// state.
+func LoadConfiguration(root string) (*Configuration, error) {
+	conf, _, err := loadConfiguration(root)
+	return conf, err
+}
+
+// ResetConfiguration replaces config.yml with the built-in configuration at root without changing compatibility loader
+// state. Existing font and certificate resources are preserved.
+func ResetConfiguration(root string) (*Configuration, error) {
+	if root == "" {
+		return nil, errors.New("missing configuration root")
+	}
+
+	configDir := filepath.Join(root, "pdfcpu")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return nil, err
+	}
+	path := filepath.Join(configDir, "config.yml")
+	if err := initializeConfigurationFile(path); err != nil {
+		return nil, err
+	}
+	conf, err := readConfigurationFile(path)
+	if err != nil {
+		return nil, err
+	}
+	conf.resources = resourcesForConfigurationDir(configurationResourceModeAutoIsolated, configDir)
+	if err := initializeConfigurationResourcesAt(configDir); err != nil {
+		return nil, err
+	}
+	return conf, nil
 }
 
 // EnsureDefaultConfigAt tries to load the default configuration from path.
@@ -605,7 +784,8 @@ func EnsureDefaultConfigAt(path string, override bool) error {
 		return err
 	}
 
-	// Initialize pdfcpu config/fonts dir for userfonts then extract and install Roboto as default Unicode font for form filling.
+	// Initialize pdfcpu config/fonts dir for userfonts then extract and install Roboto as default Unicode font for form
+	// filling.
 	// Other userfonts have to be installed via `pdfcpu font install` or copied over from another pdfcpu config dir.
 	// Userfonts are loaded into memory lazily.
 	font.UserFontDir = filepath.Join(configDir, "fonts")
@@ -643,7 +823,7 @@ func NewStatelessConfiguration() *Configuration {
 		resources: configurationResources{mode: configurationResourceModeStateless},
 
 		CreationDate:                    time.Now().Format("2006-01-02 15:04"),
-		Version:                         VersionStr,
+		SchemaVersion:                   ConfigurationSchemaVersionCurrent,
 		CheckFileNameExt:                true,
 		Reader15:                        true,
 		DecodeAllStreams:                false,
@@ -673,6 +853,28 @@ func NewStatelessConfiguration() *Configuration {
 		FormFieldListMaxColWidth:        0,
 		Limits:                          DefaultResourceLimits(),
 	}
+}
+
+func validateConfigurationSchemaVersion(version int) error {
+	if err := validateConfigurationSchemaVersionValue(version); err != nil {
+		return err
+	}
+	if version > ConfigurationSchemaVersionCurrent {
+		return fmt.Errorf(
+			"%w: schemaVersion %d exceeds supported version %d",
+			ErrInvalidConfigurationSchema,
+			version,
+			ConfigurationSchemaVersionCurrent,
+		)
+	}
+	return nil
+}
+
+func validateConfigurationSchemaVersionValue(version int) error {
+	if version <= ConfigurationSchemaVersionLegacy {
+		return fmt.Errorf("%w: schemaVersion must be a positive integer, got %d", ErrInvalidConfigurationSchema, version)
+	}
+	return nil
 }
 
 // ResetConfig resets the default configuration.

@@ -265,9 +265,6 @@ func applyHorDiff(row []byte, colors int) ([]byte, error) {
 }
 
 func processRow(pr, cr []byte, p, colors, bytesPerPixel int) ([]byte, error) {
-	//fmt.Printf("pr(%v) =\n%s\n", &pr, hex.Dump(pr))
-	//fmt.Printf("cr(%v) =\n%s\n", &cr, hex.Dump(cr))
-
 	if p == PredictorTIFF {
 		return applyHorDiff(cr, colors)
 	}

@@ -28,14 +28,18 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+func optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration, options ProgressOptions) error {
+	ctx, err := ReadValidateAndOptimizeWithOptions(rs, conf, options)
 	if err != nil {
 		return err
 	}
 
 	if log.StatsEnabled() {
 		log.Stats.Printf("XRefTable:\n%s\n", ctx)
+	}
+
+	if err := reportProgress(options, ProgressStageWriting); err != nil {
+		return err
 	}
 
 	if err := WriteContext(ctx, w); err != nil {
@@ -53,7 +57,17 @@ func optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
 
 // Optimize reads a PDF stream from rs and writes the optimized PDF stream to w.
 // noEncryption ensures w writes without encryption.
-func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err error) {
+func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
+	return OptimizeWithOptions(rs, w, conf, ProgressOptions{})
+}
+
+// OptimizeWithOptions reads and optimizes a PDF stream and reports optional semantic progress.
+func OptimizeWithOptions(
+	rs io.ReadSeeker,
+	w io.Writer,
+	conf *model.Configuration,
+	options ProgressOptions,
+) (err error) {
 	defer fault.Catch(&err)
 
 	if rs == nil {
@@ -66,7 +80,7 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err err
 
 	conf = operationConfiguration(conf, model.OPTIMIZE)
 
-	if err := optimize(rs, w, conf); err != nil {
+	if err := optimize(rs, w, conf, options); err != nil {
 		return fmt.Errorf("optimize: %w", err)
 	}
 	return nil
@@ -76,7 +90,16 @@ func Optimize(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err err
 // If outFile is not provided then inFile gets overwritten
 // which leads to the same result as when inFile equals outFile.
 // noEncryption ensures outFile is not encrypted.
-func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error) {
+func OptimizeFile(inFile, outFile string, conf *model.Configuration) error {
+	return OptimizeFileWithOptions(inFile, outFile, conf, ProgressOptions{})
+}
+
+// OptimizeFileWithOptions reads inFile, writes the optimized PDF to outFile and reports optional semantic progress.
+func OptimizeFileWithOptions(
+	inFile, outFile string,
+	conf *model.Configuration,
+	options ProgressOptions,
+) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
@@ -91,9 +114,6 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "optimize")
@@ -104,6 +124,7 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 		)
 	}
 	f2 = staged.output.file
+	options.Input = inFile
 
 	defer func() {
 		if !ok {
@@ -113,7 +134,11 @@ func OptimizeFile(inFile, outFile string, conf *model.Configuration) (err error)
 		err = staged.commit()
 	}()
 
-	if err = Optimize(f1, f2, conf); err != nil {
+	if err = OptimizeWithOptions(f1, f2, conf, options); err != nil {
+		return err
+	}
+
+	if err = reportProgress(options, ProgressStageCommitting); err != nil {
 		return err
 	}
 

@@ -22,7 +22,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
@@ -97,9 +96,6 @@ func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configurati
 func handleOutFilePDF(inFilePDF, outFilePDF string, tmpFile *string) {
 	if outFilePDF != "" && inFilePDF != outFilePDF {
 		*tmpFile = outFilePDF
-		logWritingTo(outFilePDF)
-	} else {
-		logWritingTo(inFilePDF)
 	}
 }
 
@@ -131,9 +127,6 @@ func CreateFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configurat
 				fmt.Errorf("create: open input %s: %w", inFilePDF, err),
 				closeFile(f0, "create: close JSON input"),
 			)
-		}
-		if log.CLIEnabled() {
-			log.CLI.Printf("reading %s...\n", inFilePDF)
 		}
 		rs = f1
 	}

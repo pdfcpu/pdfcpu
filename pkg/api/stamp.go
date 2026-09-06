@@ -148,9 +148,6 @@ func AddWatermarksMapFile(inFile, outFile string, m map[int]*model.Watermark, co
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "add watermarks")
 	if err != nil {
@@ -227,9 +224,6 @@ func AddWatermarksSliceMapFile(inFile, outFile string, m map[int][]*model.Waterm
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "add watermarks")
 	if err != nil {
@@ -282,7 +276,7 @@ func AddWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, wm *mo
 		return fmt.Errorf("%s: %w", operation, err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("%s: parse page selection: %w", operation, err)
 	}
@@ -314,9 +308,6 @@ func AddWatermarksFile(inFile, outFile string, selectedPages []string, wm *model
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, operation)
 	if err != nil {
@@ -363,7 +354,7 @@ func RemoveWatermarks(rs io.ReadSeeker, w io.Writer, selectedPages []string, con
 		return fmt.Errorf("remove watermarks: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("remove watermarks: parse page selection: %w", err)
 	}
@@ -394,9 +385,6 @@ func RemoveWatermarksFile(inFile, outFile string, selectedPages []string, conf *
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, "remove watermarks")
 	if err != nil {
@@ -618,7 +606,8 @@ func AddImageWatermarksFile(inFile, outFile string, selectedPages []string, onTo
 	return AddWatermarksFile(inFile, outFile, selectedPages, wm, conf)
 }
 
-// AddImageWatermarksForReaderFile adds image stamps/watermarks to all selected pages of inFile for r and writes the result to outFile.
+// AddImageWatermarksForReaderFile adds image stamps/watermarks to all selected pages of inFile for r and writes the
+// result to outFile.
 func AddImageWatermarksForReaderFile(inFile, outFile string, selectedPages []string, onTop bool, r io.Reader, desc string, conf *model.Configuration) error {
 	if inFile == "" {
 		return ErrMissingPDFInput
@@ -679,7 +668,8 @@ func AddPDFWatermarksForReadSeekerFile(inFile, outFile string, selectedPages []s
 	return AddWatermarksFile(inFile, outFile, selectedPages, wm, conf)
 }
 
-// UpdateTextWatermarksFile adds text stamps/watermarks to all selected pages of inFile and writes the result to outFile.
+// UpdateTextWatermarksFile adds text stamps/watermarks to all selected pages of inFile and writes the result to
+// outFile.
 func UpdateTextWatermarksFile(inFile, outFile string, selectedPages []string, onTop bool, text, desc string, conf *model.Configuration) error {
 	if inFile == "" {
 		return ErrMissingPDFInput
@@ -698,7 +688,8 @@ func UpdateTextWatermarksFile(inFile, outFile string, selectedPages []string, on
 	return AddWatermarksFile(inFile, outFile, selectedPages, wm, conf)
 }
 
-// UpdateImageWatermarksFile adds image stamps/watermarks to all selected pages of inFile and writes the result to outFile.
+// UpdateImageWatermarksFile adds image stamps/watermarks to all selected pages of inFile and writes the result to
+// outFile.
 func UpdateImageWatermarksFile(inFile, outFile string, selectedPages []string, onTop bool, fileName, desc string, conf *model.Configuration) error {
 	if inFile == "" {
 		return ErrMissingPDFInput

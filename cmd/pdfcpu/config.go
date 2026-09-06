@@ -19,13 +19,16 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/spf13/cobra"
 )
@@ -33,24 +36,281 @@ import (
 func configCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
-		Short: "List, reset configuration",
+		Short: "Initialize, list, inspect, validate, reset configuration",
 		Long:  usageLongConfig,
 	}
 
 	cmd.AddCommand(
 		&cobra.Command{
-			Use:   "list",
-			Short: "List configuration",
-			RunE:  wrapHandler(printConfiguration),
+			Use:   "init",
+			Short: "Create missing configuration resources",
+			Long:  usageLongConfigInit,
+			Args:  cobra.NoArgs,
+			RunE:  initializeConfiguration,
 		},
 		&cobra.Command{
-			Use:   "reset",
-			Short: "Reset configuration",
-			RunE:  wrapHandler(resetConfiguration),
+			Use:   "list",
+			Short: "Print the stored configuration",
+			Long:  usageLongConfigList,
+			RunE:  wrapHandler(printConfiguration),
 		},
+		configInspectCmd(),
+		&cobra.Command{
+			Use:   "validate",
+			Short: "Validate schema and values without modifying configuration",
+			Long:  usageLongConfigValidate,
+			Args:  cobra.NoArgs,
+			RunE:  validateConfiguration,
+		},
+		configResetCmd(),
 	)
 
 	return cmd
+}
+
+func initializeConfiguration(_ *cobra.Command, _ []string) error {
+	if conf == "disable" {
+		return fmt.Errorf("initialize configuration: --conf disable selects stateless mode")
+	}
+	result, err := api.InitializeConfigurationWithOptions(api.ConfigurationOptions{Root: conf})
+	if err != nil {
+		return commandError(fmt.Errorf("initialize configuration: %w", err))
+	}
+	loaded := result.Configuration
+	fontDir, _ := loaded.UserFontStore()
+	certificateDir, _ := loaded.TrustedCertificateStore()
+	root := filepath.Dir(filepath.Dir(loaded.Path))
+	var b strings.Builder
+	if result.Created {
+		fmt.Fprintln(&b, "configuration initialized")
+	} else {
+		fmt.Fprintln(&b, "configuration already initialized")
+	}
+	fmt.Fprintf(&b, "root: %s\n", root)
+	fmt.Fprintf(&b, "config: %s\n", loaded.Path)
+	fmt.Fprintf(&b, "fonts: %s\n", fontDir)
+	fmt.Fprintf(&b, "certificates: %s\n", certificateDir)
+	fmt.Fprintf(&b, "schema version: %d\n", loaded.SchemaVersion)
+	_, err = io.WriteString(os.Stdout, b.String())
+	if err != nil {
+		return fmt.Errorf("write configuration initialization result: %w", err)
+	}
+	return nil
+}
+
+func configResetCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "reset",
+		Short: "Replace configuration with built-in defaults",
+		Long:  usageLongConfigReset,
+		Args:  cobra.NoArgs,
+		RunE:  resetConfiguration,
+	}
+}
+
+func configurationResetOptions() api.ConfigurationOptions {
+	if conf == "disable" {
+		return api.ConfigurationOptions{Mode: api.ConfigurationModeStateless}
+	}
+	return api.ConfigurationOptions{Root: conf}
+}
+
+func confirmConfigurationReset(r io.Reader, w io.Writer) (bool, error) {
+	reader := bufio.NewReader(r)
+	for {
+		if _, err := io.WriteString(w, "Reset the selected configuration to built-in defaults? (yes/no): "); err != nil {
+			return false, err
+		}
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			return false, err
+		}
+		switch strings.TrimSpace(strings.ToLower(input)) {
+		case "yes":
+			return true, nil
+		case "no":
+			return false, nil
+		default:
+			if _, err := io.WriteString(w, "Please type yes or no.\n"); err != nil {
+				return false, err
+			}
+		}
+	}
+}
+
+func writeConfigurationResetResult(w io.Writer, loaded *model.Configuration) error {
+	var b strings.Builder
+	fmt.Fprintln(&b, "configuration reset")
+	fmt.Fprintf(&b, "config: %s\n", loaded.Path)
+	fmt.Fprintf(&b, "schema version: %d\n", loaded.SchemaVersion)
+	_, err := io.WriteString(w, b.String())
+	return err
+}
+
+func resetConfiguration(_ *cobra.Command, _ []string) error {
+	options := configurationResetOptions()
+	if options.Mode != api.ConfigurationModeAuto {
+		return fmt.Errorf("reset configuration: %w: mode %s", api.ErrConfigurationNotWritable, options.Mode)
+	}
+	if !force {
+		confirmed, err := confirmConfigurationReset(os.Stdin, os.Stdout)
+		if err != nil {
+			return fmt.Errorf("reset configuration: confirmation required; use --force: %w", err)
+		}
+		if !confirmed {
+			_, err := io.WriteString(os.Stdout, "configuration reset canceled\n")
+			return err
+		}
+	}
+	loaded, err := api.ResetConfigurationWithOptions(options)
+	if err != nil {
+		return fmt.Errorf("reset configuration: %w", err)
+	}
+	if err := writeConfigurationResetResult(os.Stdout, loaded); err != nil {
+		return fmt.Errorf("write configuration reset result: %w", err)
+	}
+	return nil
+}
+
+func configInspectCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "inspect",
+		Short: "Inspect selected paths and configured policy without modifying configuration",
+		Long:  usageLongConfigInspect,
+		Args:  cobra.NoArgs,
+		RunE:  inspectConfiguration,
+	}
+	cmd.Flags().Bool("json", false, "write JSON output")
+	return cmd
+}
+
+func configurationInspectionOptions() api.ConfigurationOptions {
+	if conf == "disable" {
+		return api.ConfigurationOptions{Mode: api.ConfigurationModeStateless}
+	}
+	return api.ConfigurationOptions{Root: conf}
+}
+
+func inspectionDisplayValue(value string) string {
+	if value == "" {
+		return "(none)"
+	}
+	return value
+}
+
+func formatByteLimit(value int64) string {
+	const (
+		kilobyte = int64(1 << 10)
+		megabyte = int64(1 << 20)
+		gigabyte = int64(1 << 30)
+	)
+
+	switch {
+	case value >= gigabyte && value%gigabyte == 0:
+		return fmt.Sprintf("%d GB", value/gigabyte)
+	case value >= megabyte && value%megabyte == 0:
+		return fmt.Sprintf("%d MB", value/megabyte)
+	case value >= kilobyte && value%kilobyte == 0:
+		return fmt.Sprintf("%d KB", value/kilobyte)
+	default:
+		return fmt.Sprintf("%d", value)
+	}
+}
+
+func formatPixelLimit(value int64) string {
+	const megapixel = int64(1_000_000)
+	if value >= megapixel && value%megapixel == 0 {
+		return fmt.Sprintf("%d MP", value/megapixel)
+	}
+	return fmt.Sprintf("%d", value)
+}
+
+func writeConfigurationPathInspection(
+	b *strings.Builder,
+	label string,
+	inspection api.ConfigurationPathInspection,
+) {
+	fmt.Fprintf(b, "  %s:\n", label)
+	fmt.Fprintf(b, "    path: %s\n", inspectionDisplayValue(inspection.Path))
+	fmt.Fprintf(b, "    available: %t\n", inspection.Available)
+	fmt.Fprintf(b, "    exists: %t\n", inspection.Exists)
+	fmt.Fprintf(b, "    writable: %t\n", inspection.Writable)
+}
+
+func writeConfigurationInspection(w io.Writer, inspection *api.ConfigurationInspection) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "mode: %s\n", inspection.Mode)
+	fmt.Fprintf(&b, "source: %s\n", inspection.Source)
+	fmt.Fprintf(&b, "default: %t\n", inspection.Default)
+	fmt.Fprintf(&b, "stateless: %t\n", inspection.Stateless)
+	fmt.Fprintf(&b, "write capable: %t\n", inspection.WriteCapable)
+	writeConfigurationPathInspection(&b, "root", inspection.Root)
+	writeConfigurationPathInspection(&b, "config", inspection.Paths.Config)
+	writeConfigurationPathInspection(&b, "fonts", inspection.Paths.Fonts)
+	writeConfigurationPathInspection(&b, "certificates", inspection.Paths.Certificates)
+	fmt.Fprintln(&b, "schema version:")
+	fmt.Fprintf(&b, "  detected: %d\n", inspection.Schema.Detected)
+	fmt.Fprintf(&b, "  minimum supported: %d\n", inspection.Schema.MinimumSupported)
+	fmt.Fprintf(&b, "  maximum supported: %d\n", inspection.Schema.MaximumSupported)
+	fmt.Fprintln(&b, "network:")
+	fmt.Fprintf(&b, "  offline: %t\n", inspection.Network.Offline)
+	fmt.Fprintf(&b, "  HTTP timeout seconds: %d\n", inspection.Network.HTTPTimeoutSeconds)
+	fmt.Fprintf(&b, "  CRL timeout seconds: %d\n", inspection.Network.CRLTimeoutSeconds)
+	fmt.Fprintf(&b, "  OCSP timeout seconds: %d\n", inspection.Network.OCSPTimeoutSeconds)
+	fmt.Fprintf(&b, "  preferred revocation checker: %s\n", inspection.Network.PreferredRevocationChecker)
+	hosts := strings.Join(inspection.Network.AllowedRevocationHosts, ", ")
+	fmt.Fprintf(&b, "  allowed revocation hosts: %s\n", inspectionDisplayValue(hosts))
+	fmt.Fprintln(&b, "limits:")
+	fmt.Fprintf(&b, "  max stream bytes: %s\n", formatByteLimit(inspection.Limits.MaxStreamBytes))
+	fmt.Fprintf(&b, "  max decode bytes: %s\n", formatByteLimit(inspection.Limits.MaxDecodeBytes))
+	fmt.Fprintf(&b, "  max image pixels: %s\n", formatPixelLimit(inspection.Limits.MaxImagePixels))
+	fmt.Fprintf(&b, "  max image bytes: %s\n", formatByteLimit(inspection.Limits.MaxImageBytes))
+	fmt.Fprintf(&b, "  max object count: %d\n", inspection.Limits.MaxObjectCount)
+	fmt.Fprintf(&b, "  max object stream count: %d\n", inspection.Limits.MaxObjectStreamCount)
+	fmt.Fprintf(&b, "  max object stream first: %s\n", formatByteLimit(inspection.Limits.MaxObjectStreamFirst))
+	fmt.Fprintf(&b, "  max xref entries: %d\n", inspection.Limits.MaxXRefEntries)
+	fmt.Fprintf(&b, "  max recursion depth: %d\n", inspection.Limits.MaxRecursionDepth)
+	_, err := io.WriteString(w, b.String())
+	return err
+}
+
+func writeConfigurationInspectionJSON(w io.Writer, inspection *api.ConfigurationInspection) error {
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "\t")
+	return encoder.Encode(inspection)
+}
+
+func inspectConfiguration(cmd *cobra.Command, _ []string) error {
+	inspection, err := api.InspectConfiguration(configurationInspectionOptions())
+	if err != nil {
+		return commandError(fmt.Errorf("inspect configuration: %w", err))
+	}
+	jsonOutput, err := cmd.Flags().GetBool("json")
+	if err != nil {
+		return fmt.Errorf("read JSON output flag: %w", err)
+	}
+	if jsonOutput {
+		return writeConfigurationInspectionJSON(os.Stdout, inspection)
+	}
+	return writeConfigurationInspection(os.Stdout, inspection)
+}
+
+func validateConfiguration(_ *cobra.Command, _ []string) error {
+	options := api.ConfigurationOptions{Root: conf, Mode: api.ConfigurationModeReadOnly}
+	if conf == "disable" {
+		options = api.ConfigurationOptions{Mode: api.ConfigurationModeStateless}
+	}
+	loaded, err := api.LoadConfigurationWithOptions(options)
+	if err != nil {
+		return commandError(fmt.Errorf("validate configuration: %w", err))
+	}
+	path := loaded.Path
+	if path == "" {
+		path = "built-in defaults"
+	}
+	fmt.Fprintf(os.Stdout, "configuration valid\nconfig: %s\nschema version: %d\n", path, loaded.SchemaVersion)
+	return nil
 }
 
 func completionCmd() *cobra.Command {
@@ -142,7 +402,7 @@ func versionCmd() *cobra.Command {
 		Short: "Print version",
 		Long:  usageLongVersion,
 		Args:  cobra.NoArgs,
-		RunE:  wrapHandler(printVersion),
+		RunE:  printVersion,
 	}
 }
 
@@ -186,25 +446,6 @@ func confirmed() bool {
 	}
 }
 
-func resetConfiguration(conf *model.Configuration, args []string) error {
-	fmt.Printf("Did you make a backup of %s ?\n", conf.Path)
-	if confirmed() {
-		fmt.Printf("Are you ready to reset your config.yml to %s ?\n", model.VersionStr)
-		if confirmed() {
-			fmt.Println("resetting..")
-			if err := model.ResetConfig(); err != nil {
-				return fmt.Errorf("config problem: %v", err)
-			}
-			fmt.Println("Finished - Don't forget to update config.yml with your modifications.")
-		} else {
-			fmt.Println("Operation canceled.")
-		}
-	} else {
-		fmt.Println("Operation canceled.")
-	}
-	return nil
-}
-
 func printPaperSizes(conf *model.Configuration, args []string) error {
 	fmt.Fprintln(os.Stdout, paperSizes)
 	return nil
@@ -215,15 +456,14 @@ func printSelectedPages(conf *model.Configuration, args []string) error {
 	return nil
 }
 
-func printVersion(conf *model.Configuration, args []string) error {
+func printVersion(_ *cobra.Command, _ []string) error {
 	updateVersionInfoFromBuildInfo()
-	writeVersionInfo(os.Stdout, conf.Path)
+	writeVersionInfo(os.Stdout)
 	return nil
 }
 
-func writeVersionInfo(w io.Writer, configPath string) {
+func writeVersionInfo(w io.Writer) {
 	fmt.Fprintf(w, "version: %s\n", version)
-	fmt.Fprintf(w, " config: %s\n", configPath)
 	fmt.Fprintf(w, " commit: %s\n", commit)
 	fmt.Fprintf(w, "   date: %s\n", formatVersionDate(date))
 	fmt.Fprintf(w, "     go: %s\n", runtime.Version())

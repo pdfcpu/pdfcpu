@@ -19,10 +19,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 	"github.com/spf13/cobra"
 )
 
@@ -61,7 +63,7 @@ func Execute() error {
 func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVarP(&conf, "conf", "c", "", "set or disable config dir: $path | disable")
-	rootCmd.PersistentFlags().BoolVar(&force, "force", false, "overwrite existing output files")
+	rootCmd.PersistentFlags().BoolVar(&force, "force", false, "allow overwriting files and other destructive operations")
 	rootCmd.PersistentFlags().BoolVarP(&offline, "offline", "o", false, "disable http traffic")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "disable output")
 	rootCmd.PersistentFlags().CountVarP(&verbose, "verbose", "v", "Increase verbosity. Use -v or -vv.")
@@ -170,29 +172,48 @@ func initConfig() {
 	}
 }
 
-func validateConfigDirFlag() error {
-	if len(conf) > 0 && conf != "disable" {
-		info, err := os.Stat(conf)
-		if err != nil {
-			if os.IsNotExist(err) {
-				return fmt.Errorf("conf: %s does not exist", conf)
-			}
-			return fmt.Errorf("conf: %s %v", conf, err)
-		}
-		if !info.IsDir() {
-			return fmt.Errorf("conf: %s not a directory", conf)
-		}
-		model.ConfigPath = conf
-		return nil
-	}
+func commandConfigurationOptions() (api.ConfigurationOptions, error) {
 	if conf == "disable" {
-		model.ConfigPath = "disable"
+		return api.ConfigurationOptions{Mode: api.ConfigurationModeStateless}, nil
 	}
-	return nil
+	options := api.ConfigurationOptions{Root: conf}
+	if conf == "" {
+		return options, nil
+	}
+
+	info, err := os.Stat(conf)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return api.ConfigurationOptions{}, fmt.Errorf("conf: %s does not exist", conf)
+		}
+		return api.ConfigurationOptions{}, fmt.Errorf("conf: %s %v", conf, err)
+	}
+	if !info.IsDir() {
+		return api.ConfigurationOptions{}, fmt.Errorf("conf: %s not a directory", conf)
+	}
+	return options, nil
 }
 
-func ensureDefaultConfig() (*model.Configuration, error) {
-	if err := validateConfigDirFlag(); err != nil {
+func activateCommandConfiguration(c *model.Configuration, options api.ConfigurationOptions) {
+	if options.Mode == api.ConfigurationModeStateless {
+		model.ConfigPath = "disable"
+		font.UserFontDir = ""
+		model.TrustedCertDir = ""
+		return
+	}
+
+	model.ConfigPath = filepath.Dir(filepath.Dir(c.Path))
+	if dir, ok := c.UserFontStore(); ok {
+		font.UserFontDir = dir
+	}
+	if dir, ok := c.TrustedCertificateStore(); ok {
+		model.TrustedCertDir = dir
+	}
+}
+
+func loadCommandConfiguration() (*model.Configuration, error) {
+	options, err := commandConfigurationOptions()
+	if err != nil {
 		return nil, err
 	}
 
@@ -203,18 +224,18 @@ func ensureDefaultConfig() (*model.Configuration, error) {
 		}
 	}
 
-	if !types.MemberOf(model.ConfigPath, []string{"default", "disable"}) {
-		if err := model.EnsureDefaultConfigAt(model.ConfigPath, false); err != nil {
-			return nil, err
-		}
+	c, err := api.LoadConfigurationWithOptions(options)
+	if err != nil {
+		return nil, err
 	}
-	return model.NewDefaultConfiguration(), nil
+	activateCommandConfiguration(c, options)
+	return c, nil
 }
 
 func getConfig() (*model.Configuration, error) {
-	conf, err := ensureDefaultConfig()
+	conf, err := loadCommandConfiguration()
 	if err != nil {
-		return nil, fmt.Errorf("pdfcpu: %v", err)
+		return nil, fmt.Errorf("pdfcpu: %w", err)
 	}
 
 	conf.OwnerPW = opw

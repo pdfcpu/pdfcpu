@@ -84,5 +84,130 @@ const (
 
 	usageLongSelectedPages = "Print definition of the -pages flag."
 
-	usageLongConfig = `Manage your pdfcpu configuration.`
+	usageLongConfig = `Manage pdfcpu configuration.
+
+Configuration modes control how pdfcpu obtains settings and resources:
+
+   auto
+      Normal CLI mode. Uses config.yml, user fonts and trusted certificates
+      from the selected configuration root. Missing resources may be created
+      when a command needs them.
+
+   stateless
+      Selected with --conf disable. Uses built-in settings and the 14 core PDF
+      fonts without accessing configuration files, user fonts or trusted
+      certificates.
+
+   read-only
+      Loads an existing file-backed configuration without creating or changing
+      anything. This mode is available to Go API applications. The CLI uses
+      read-only loading internally for config inspect and config validate.
+      There is no CLI flag that selects read-only mode for normal PDF commands.
+
+auto and read-only use the same configuration-root selection:
+--conf PATH, then PDFCPU_CONFIG_ROOT, then the operating system default.
+--conf PATH changes the location; it does not change the mode.
+
+config inspect reports the mode normal PDF commands would use for the selected
+configuration. It may therefore report "mode: auto" even though inspection
+itself is read-only and never writes configuration.
+
+Typical workflows:
+
+   Local CLI using automatic configuration at the default location:
+      pdfcpu validate document.pdf
+
+   Service or container using a managed configuration root:
+      pdfcpu --conf /srv/app-config config init
+      pdfcpu --conf /srv/app-config config validate
+      pdfcpu --conf /srv/app-config validate document.pdf
+
+   Diagnose a selected configuration without modifying it:
+      pdfcpu --conf /srv/app-config config inspect
+      pdfcpu --conf /srv/app-config config inspect --json
+
+   Immutable container using only built-in configuration:
+      pdfcpu --conf disable validate document.pdf`
+
+	usageLongConfigInit = `Create missing configuration resources without replacing existing files.
+
+The selected root contains a pdfcpu directory with config.yml, user fonts and trusted certificates.
+Existing compatible files are preserved while missing resources are created.
+If config.yml already exists but is incompatible or malformed, initialization stops and leaves it unchanged.
+config init never upgrades or repairs an existing config.yml.
+Stateless mode cannot be initialized.
+
+Typical examples:
+   Initialize the operating system default root:
+      pdfcpu config init
+
+   Initialize an explicit root:
+      pdfcpu --conf /srv/app-config config init`
+
+	usageLongConfigList = `Print the selected config.yml path followed by the file exactly as stored.
+
+The command loads and validates the selected configuration before printing it.
+Automatic mode may initialize a missing default tree; an existing compatible config.yml is not modified.
+An incompatible schema produces upgrade or reset guidance instead of file content.
+Command-line overrides are not reflected; use config inspect for selected paths and configured policy.
+
+Typical examples:
+   Print the default configuration:
+      pdfcpu config list
+
+   Print configuration from an explicit root:
+      pdfcpu --conf /srv/app-config config list`
+
+	usageLongConfigInspect = `Inspect selected configuration paths, schema, policy and limits without modifying configuration.
+
+            mode ... selected configuration mode: auto | stateless
+          source ... root selection source: flag | environment | os-default
+         default ... true when source is os-default
+       stateless ... true when built-in configuration is used without filesystem resources
+   write capable ... true when the selected mode permits configuration writes
+
+"write capable" does not mean every reported path is writable. See the writable field for each path.
+The reported mode describes how normal operations use the selected configuration; inspection itself never writes.
+The schema version section reports the detected and supported config.yml schema versions.
+Configured values do not include per-operation command-line overrides such as --offline.
+
+Typical examples:
+   Inspect the selected configuration:
+      pdfcpu config inspect
+
+   Emit formatted JSON for automation:
+      pdfcpu config inspect --json
+
+   Confirm stateless operation:
+      pdfcpu --conf disable config inspect`
+
+	usageLongConfigValidate = `Validate the complete selected configuration without modifying or initializing it.
+
+The command checks schema compatibility, unknown and duplicate keys, and configuration values.
+An older schema produces reset guidance; a newer schema requires a newer pdfcpu version.
+Stateless mode validates the built-in configuration without accessing filesystem resources.
+
+Typical examples:
+   Validate the default configuration:
+      pdfcpu config validate
+
+   Validate configuration from an explicit root:
+      pdfcpu --conf /srv/app-config config validate
+
+   Validate stateless defaults:
+      pdfcpu --conf disable config validate`
+
+	usageLongConfigReset = `Replace the selected config.yml with built-in defaults for the current configuration schema.
+
+The command preserves user fonts and trusted certificates stored beside config.yml.
+It can replace an incompatible or malformed config.yml because it does not load that file first.
+Back up custom settings before resetting. Without --force, pdfcpu asks for confirmation.
+Stateless mode cannot be reset.
+
+Typical examples:
+   Reset interactively:
+      pdfcpu config reset
+
+   Reset an explicit root without prompting:
+      pdfcpu --conf /srv/app-config config reset --force`
 )

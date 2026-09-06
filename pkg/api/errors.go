@@ -21,10 +21,14 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 // VersionRequirementError reports an element requiring a newer PDF version.
 type VersionRequirementError = pdfcpu.VersionRequirementError
+
+// ConfigurationSchemaCompatibilityError reports an incompatible persisted configuration schema.
+type ConfigurationSchemaCompatibilityError = model.ConfigurationSchemaCompatibilityError
 
 var (
 	// ErrAttachmentOutputCollision signals attachments resolving to the same output path.
@@ -35,6 +39,15 @@ var (
 
 	// ErrCircularBookmarks signals a circular bookmark tree.
 	ErrCircularBookmarks = pdfcpu.ErrCircularBookmarks
+
+	// ErrConfigurationNotWritable signals that the selected configuration mode forbids writes.
+	ErrConfigurationNotWritable = errors.New("configuration is not writable")
+
+	// ErrConfigurationResetRequired signals a configuration schema older than the schema required by this build.
+	ErrConfigurationResetRequired = model.ErrConfigurationResetRequired
+
+	// ErrConfigurationSchemaTooNew signals a configuration schema newer than the schemas supported by this build.
+	ErrConfigurationSchemaTooNew = model.ErrConfigurationSchemaTooNew
 
 	// ErrDuplicateCertificateDestination signals certificate inputs targeting the same installed file.
 	ErrDuplicateCertificateDestination = errors.New("duplicate certificate destination")
@@ -64,7 +77,7 @@ var (
 	ErrInvalidConfigurationMode = errors.New("invalid configuration mode")
 
 	// ErrInvalidConfigurationSchema signals malformed configuration schema metadata.
-	ErrInvalidConfigurationSchema = errors.New("invalid configuration schema")
+	ErrInvalidConfigurationSchema = model.ErrInvalidConfigurationSchema
 
 	// ErrInvalidCutConfiguration signals an invalid cut configuration.
 	ErrInvalidCutConfiguration = errors.New("invalid cut configuration")

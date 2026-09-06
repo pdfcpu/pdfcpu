@@ -110,6 +110,7 @@ func RemoveSignatures(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 	outFile := optionalCommandString(cmd.OutFile)
+	reportCommandOutputPath(cmd)
 
 	if inFile != "-" && outFile != "-" {
 		return nil, api.RemoveSignaturesFile(inFile, outFile, cmd.Conf)

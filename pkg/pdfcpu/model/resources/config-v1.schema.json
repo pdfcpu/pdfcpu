@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pdfcpu.io/schemas/config-v1.schema.json",
+  "title": "pdfcpu configuration schema 1",
+  "description": "Configuration values supported by pdfcpu schema 1.",
+  "type": "object",
+  "required": [
+    "schemaVersion"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "boolean": {
+      "type": "boolean"
+    },
+    "eol": {
+      "type": "string",
+      "enum": [
+        "EolLF",
+        "EolCR",
+        "EolCRLF"
+      ]
+    },
+    "permissionFlags": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535
+    },
+    "positiveInteger": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "positiveQuantity": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*([ \\t]+([Bb]|[Bb][Yy][Tt][Ee][Ss]?|[Kk][Ii]?[Bb]|[Mm][Ii]?[Bb]|[Gg][Ii]?[Bb]|[Mm][Pp]|[Mm][Pp][Ii][Xx][Ee][Ll][Ss]))?$"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "created": {
+      "type": "string",
+      "description": "Informational configuration creation timestamp."
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "default": 1
+    },
+    "checkFileNameExt": {
+      "$ref": "#/$defs/boolean",
+      "default": true
+    },
+    "reader15": {
+      "$ref": "#/$defs/boolean",
+      "default": true
+    },
+    "decodeAllStreams": {
+      "$ref": "#/$defs/boolean",
+      "default": false
+    },
+    "validationMode": {
+      "type": "string",
+      "enum": [
+        "ValidationStrict",
+        "ValidationRelaxed"
+      ],
+      "default": "ValidationRelaxed"
+    },
+    "postProcessValidate": {
+      "$ref": "#/$defs/boolean",
+      "default": false
+    },
+    "eol": {
+      "$ref": "#/$defs/eol",
+      "default": "EolLF"
+    },
+    "writeObjectStream": {
+      "$ref": "#/$defs/boolean",
+      "default": true
+    },
+    "writeXRefStream": {
+      "$ref": "#/$defs/boolean",
+      "default": true
+    },
+    "encryptUsingAES": {
+      "$ref": "#/$defs/boolean",
+      "default": true
+    },
+    "encryptKeyLength": {
+      "type": "integer",
+      "enum": [
+        40,
+        128,
+        256
+      ],
+      "default": 256
+    },
+    "permissions": {
+      "$ref": "#/$defs/permissionFlags",
+      "default": 63687
+    },
+    "unit": {
+      "type": "string",
+      "enum": [
+        "points",
+        "inches",
+        "cm",
+        "mm"
+      ],
+      "default": "points"
+    },
+    "timestampFormat": {
+      "type": "string",
+      "default": "2006-01-02 15:04"
+    },
+    "dateFormat": {
+      "type": "string",
+      "default": "2006-01-02"
+    },
+    "optimize": {
+      "$ref": "#/$defs/boolean",
+      "default": true
+    },
+    "optimizeBeforeWriting": {
+      "$ref": "#/$defs/boolean",
+      "default": true
+    },
+    "optimizeResourceDicts": {
+      "$ref": "#/$defs/boolean",
+      "default": true
+    },
+    "optimizeDuplicateContentStreams": {
+      "$ref": "#/$defs/boolean",
+      "default": false
+    },
+    "createBookmarks": {
+      "$ref": "#/$defs/boolean",
+      "default": true
+    },
+    "needAppearances": {
+      "$ref": "#/$defs/boolean",
+      "default": false
+    },
+    "offline": {
+      "$ref": "#/$defs/boolean",
+      "default": false
+    },
+    "timeout": {
+      "$ref": "#/$defs/positiveInteger",
+      "default": 5
+    },
+    "timeoutCRL": {
+      "$ref": "#/$defs/positiveInteger",
+      "default": 10
+    },
+    "timeoutOCSP": {
+      "$ref": "#/$defs/positiveInteger",
+      "default": 10
+    },
+    "allowedRevocationHosts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "preferredCertRevocationChecker": {
+      "type": "string",
+      "enum": [
+        "crl",
+        "ocsp"
+      ],
+      "default": "crl"
+    },
+    "formFieldListMaxColWidth": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "maxStreamBytes": {
+      "$ref": "#/$defs/positiveQuantity",
+      "default": 536870912
+    },
+    "maxDecodeBytes": {
+      "$ref": "#/$defs/positiveQuantity",
+      "default": 536870912
+    },
+    "maxImagePixels": {
+      "$ref": "#/$defs/positiveQuantity",
+      "default": 100000000
+    },
+    "maxImageBytes": {
+      "$ref": "#/$defs/positiveQuantity",
+      "default": 536870912
+    }
+  }
+}

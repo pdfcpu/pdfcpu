@@ -21,6 +21,6 @@ package model
 
 const bundledDefaultCertificates = false
 
-func installDefaultCertificates() error {
+func installDefaultCertificates(string) error {
 	return nil
 }

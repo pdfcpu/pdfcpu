@@ -177,7 +177,7 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 			return fmt.Errorf("booklet: read and validate: %w", err)
 		}
 
-		pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+		pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 		if err != nil {
 			return fmt.Errorf("booklet: parse page selection: %w", err)
 		}
@@ -258,7 +258,6 @@ func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *
 		)
 	}
 	f2 = staged.output.file
-	logWritingTo(outFile)
 
 	defer func() {
 		if !ok {

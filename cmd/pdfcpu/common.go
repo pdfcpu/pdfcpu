@@ -42,9 +42,6 @@ func wrapHandler(handler func(*model.Configuration, []string) error) func(*cobra
 		if err != nil {
 			return commandError(err)
 		}
-		if conf.Version != model.VersionStr {
-			model.CheckConfigVersion(conf.Version)
-		}
 		return commandError(handler(conf, args))
 	}
 }
@@ -52,6 +49,9 @@ func wrapHandler(handler func(*model.Configuration, []string) error) func(*cobra
 func commandError(err error) error {
 	if err == nil {
 		return nil
+	}
+	if schemaErr := newConfigurationSchemaCommandError(err); schemaErr != nil {
+		return schemaErr
 	}
 	if !strings.HasPrefix(err.Error(), pdfcpuErrPrefix) {
 		return err

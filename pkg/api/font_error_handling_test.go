@@ -44,9 +44,8 @@ func noOpFontAPIOperations() fontAPIOperations {
 		commitStagedFonts: func(string, string) (fontInstallCommit, error) {
 			return fontInstallCommit{rollback: func() error { return nil }, finalize: func() error { return nil }}, nil
 		},
-		removeAll:            func(string) error { return nil },
-		rename:               func(string, string) error { return nil },
-		reportCleanupWarning: func(error) {},
+		removeAll: func(string) error { return nil },
+		rename:    func(string, string) error { return nil },
 	}
 }
 
@@ -431,9 +430,8 @@ func TestInstallFontsJoinsReloadAndRollbackFailures(t *testing.T) {
 	}
 }
 
-func TestInstallFontsTreatsFinalizeFailureAsCleanupWarning(t *testing.T) {
+func TestInstallFontsResultIncludesFinalizeWarning(t *testing.T) {
 	finalizeErr := errors.New("remove backup failed")
-	var warning error
 	ops := noOpFontAPIOperations()
 	ops.commitStagedFonts = func(string, string) (fontInstallCommit, error) {
 		return fontInstallCommit{
@@ -441,10 +439,14 @@ func TestInstallFontsTreatsFinalizeFailureAsCleanupWarning(t *testing.T) {
 			finalize: func() error { return finalizeErr },
 		}, nil
 	}
-	ops.reportCleanupWarning = func(err error) { warning = err }
-	if err := installFonts([]string{"one.ttf"}, ops); err != nil {
+	result := FontInstallResult{}
+	if err := installFontsWithResult([]string{"one.ttf"}, ops, &result); err != nil {
 		t.Fatalf("installation succeeded and cleanup failure must be a warning, got %v", err)
 	}
+	if len(result.Warnings) != 1 {
+		t.Fatalf("expected one cleanup warning, got %d", len(result.Warnings))
+	}
+	warning := result.Warnings[0]
 	if !errors.Is(warning, finalizeErr) {
 		t.Fatalf("expected cleanup warning %v, got %v", finalizeErr, warning)
 	}
@@ -638,11 +640,22 @@ func TestCreateUserFontDemoFilesOrdersPlanesAndRejectsInvalidPlane(t *testing.T)
 			fileNames = append(fileNames, filepath.Base(fileName))
 			return nil
 		}
-		if err := createUserFontCheatSheets(t.TempDir(), "Demo", ops); err != nil {
+		dir := t.TempDir()
+		result, err := createUserFontCheatSheetsWithResult(dir, "Demo", ops)
+		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := strings.Join(fileNames, ","), "Demo_BMP.pdf,Demo_SMP.pdf,Demo_SIP.pdf"; got != want {
+		want := "Demo_BMP.pdf,Demo_SMP.pdf,Demo_SIP.pdf"
+		if got := strings.Join(fileNames, ","); got != want {
 			t.Fatalf("expected %q, got %q", want, got)
+		}
+		paths := []string{
+			filepath.Join(dir, "Demo_BMP.pdf"),
+			filepath.Join(dir, "Demo_SMP.pdf"),
+			filepath.Join(dir, "Demo_SIP.pdf"),
+		}
+		if got, want := strings.Join(result.Paths, ","), strings.Join(paths, ","); got != want {
+			t.Fatalf("expected published paths %q, got %q", want, got)
 		}
 	})
 
@@ -811,7 +824,8 @@ func TestCreateCheatSheetsUserFontsDoesNotMutateInputAndSortsWork(t *testing.T) 
 	}
 
 	fontNames := []string{"Zulu", "Alpha"}
-	if err := createCheatSheetsUserFonts(fontNames, ops); err != nil {
+	result, err := createCheatSheetsUserFontsWithResult(fontNames, ops)
+	if err != nil {
 		t.Fatal(err)
 	}
 	if got, want := strings.Join(fontNames, ","), "Zulu,Alpha"; got != want {
@@ -819,6 +833,9 @@ func TestCreateCheatSheetsUserFontsDoesNotMutateInputAndSortsWork(t *testing.T) 
 	}
 	if got, want := strings.Join(fileNames, ","), "Alpha_BMP.pdf,Zulu_BMP.pdf"; got != want {
 		t.Fatalf("expected deterministic work order %q, got %q", want, got)
+	}
+	if got, want := strings.Join(result.Paths, ","), "Alpha_BMP.pdf,Zulu_BMP.pdf"; got != want {
+		t.Fatalf("expected published paths %q, got %q", want, got)
 	}
 }
 
@@ -950,9 +967,12 @@ func TestCheatSheetCleanupFailureAfterPublicationReturnsError(t *testing.T) {
 		return os.WriteFile(fileName, []byte("published"), 0600)
 	}
 	fonts := map[string]font.TTFLight{"Demo": {Planes: map[int]bool{0: true}}}
-	err := createUserFontCheatSheetBatch(dir, []string{"Demo"}, fonts, ops)
+	paths, err := createUserFontCheatSheetBatchWithResult(dir, []string{"Demo"}, fonts, ops)
 	if !errors.Is(err, wantErr) || !strings.Contains(err.Error(), "published cheat sheets") {
 		t.Fatalf("expected published cleanup error, got %v", err)
+	}
+	if got, want := strings.Join(paths, ","), filepath.Join(dir, "Demo_BMP.pdf"); got != want {
+		t.Fatalf("expected published path %q, got %q", want, got)
 	}
 	bb, readErr := os.ReadFile(filepath.Join(dir, "Demo_BMP.pdf"))
 	if readErr != nil {

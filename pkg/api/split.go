@@ -25,7 +25,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -81,8 +80,6 @@ func writePageSpan(ctx *model.Context, from, thru int, outPath string) error {
 	if err != nil {
 		return err
 	}
-
-	logWritingTo(outPath)
 
 	if err := pdfcpu.WriteReader(outPath, ps.Reader); err != nil {
 		return fmt.Errorf("write %s: %w", outPath, err)
@@ -354,9 +351,6 @@ func SplitFile(inFile, outDir string, span int, conf *model.Configuration) (err 
 	if err != nil {
 		return fmt.Errorf("split: open %s: %w", inFile, err)
 	}
-	if log.CLIEnabled() {
-		log.CLI.Printf("splitting %s to %s/...\n", inFile, outDir)
-	}
 
 	defer func() {
 		closeErr := f.Close()
@@ -404,9 +398,6 @@ func SplitByPageNrFile(inFile, outDir string, pageNrs []int, conf *model.Configu
 	f, err := os.Open(inFile)
 	if err != nil {
 		return fmt.Errorf("split by page number: open %s: %w", inFile, err)
-	}
-	if log.CLIEnabled() {
-		log.CLI.Printf("splitting %s to %s/...\n", inFile, outDir)
 	}
 
 	defer func() {

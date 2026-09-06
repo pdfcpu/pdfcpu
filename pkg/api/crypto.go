@@ -45,7 +45,7 @@ func Encrypt(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err erro
 	}
 	conf = operationConfiguration(conf, model.ENCRYPT)
 
-	if err := optimize(rs, w, conf); err != nil {
+	if err := optimize(rs, w, conf, ProgressOptions{}); err != nil {
 		return fmt.Errorf("encrypt: %w", err)
 	}
 	return nil
@@ -81,7 +81,7 @@ func Decrypt(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err erro
 	}
 	conf = operationConfiguration(conf, model.DECRYPT)
 
-	if err := optimize(rs, w, conf); err != nil {
+	if err := optimize(rs, w, conf, ProgressOptions{}); err != nil {
 		return fmt.Errorf("decrypt: %w", err)
 	}
 	return nil
@@ -117,9 +117,6 @@ func processSecurityFile(
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 	staged, err := openStagedOutput(f1, inFile, tmpFile, op)
 	if err != nil {
@@ -167,7 +164,7 @@ func ChangeUserPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, conf
 	conf.UserPW = pwOld
 	conf.UserPWNew = &pwNew
 
-	if err := optimize(rs, w, conf); err != nil {
+	if err := optimize(rs, w, conf, ProgressOptions{}); err != nil {
 		return fmt.Errorf("change user password: %w", err)
 	}
 	return nil
@@ -218,7 +215,7 @@ func ChangeOwnerPassword(rs io.ReadSeeker, w io.Writer, pwOld, pwNew string, con
 	conf.OwnerPW = pwOld
 	conf.OwnerPWNew = &pwNew
 
-	if err := optimize(rs, w, conf); err != nil {
+	if err := optimize(rs, w, conf, ProgressOptions{}); err != nil {
 		return fmt.Errorf("change owner password: %w", err)
 	}
 	return nil

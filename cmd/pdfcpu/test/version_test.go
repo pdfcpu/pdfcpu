@@ -33,9 +33,12 @@ func TestVersionOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("version failed: %v\n%s", err, out)
 	}
-	for _, want := range []string{"version:", "config:", "commit:", "date:", "go:"} {
+	for _, want := range []string{"version:", "commit:", "date:", "go:"} {
 		if !strings.Contains(string(out), want) {
 			t.Fatalf("expected version output to contain %q, got:\n%s", want, out)
 		}
+	}
+	if strings.Contains(string(out), "config:") {
+		t.Fatalf("version output contains configuration state:\n%s", out)
 	}
 }

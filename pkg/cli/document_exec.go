@@ -47,25 +47,51 @@ func reportValidationProgress(w io.Writer, conf *model.Configuration, fn string)
 	return err
 }
 
-func validateInput(fn string, conf *model.Configuration, progressOutput io.Writer) error {
-	if progressOutput != nil {
-		if err := reportValidationProgress(progressOutput, conf, fn); err != nil {
-			return fmt.Errorf("write validation progress: %w", err)
+func validationProgressObserver(w io.Writer, conf *model.Configuration) api.ProgressObserver {
+	return func(event api.ProgressEvent) error {
+		switch event.Stage {
+		case api.ProgressStageReading:
+			if w == nil {
+				log.CLI.Printf("validating(mode=%s) %s ...\n", conf.ValidationModeString(), validationInputLabel(event.Input))
+				return nil
+			}
+			if err := reportValidationProgress(w, conf, event.Input); err != nil {
+				return fmt.Errorf("write validation progress: %w", err)
+			}
+		case api.ProgressStageOptimizing:
+			if w == nil {
+				log.CLI.Println("optimizing...")
+				return nil
+			}
+			if _, err := fmt.Fprintln(w, "optimizing..."); err != nil {
+				return fmt.Errorf("write validation progress: %w", err)
+			}
 		}
+		return nil
+	}
+}
+
+func validateInput(fn string, conf *model.Configuration, progressOutput io.Writer, item, total int) error {
+	options := api.ProgressOptions{
+		Observer: validationProgressObserver(progressOutput, conf),
+		Input:    fn,
+		Item:     item,
+		Total:    total,
 	}
 
+	var err error
 	if fn != "-" {
-		return api.ValidateFile(fn, conf)
+		err = api.ValidateFileWithOptions(fn, conf, options)
+	} else {
+		_, err = withStdinReadSeeker("validate", func(rs io.ReadSeeker) (struct{}, error) {
+			return struct{}{}, api.ValidateWithOptions(rs, conf, options)
+		})
 	}
-
-	log.CLI.Printf("validating(mode=%s) stdin ...\n", conf.ValidationModeString())
-	_, err := withStdinReadSeeker("validate", func(rs io.ReadSeeker) (struct{}, error) {
-		return struct{}{}, api.Validate(rs, conf)
-	})
-	if err == nil {
-		log.CLI.Println("validation ok")
+	if err != nil {
+		return err
 	}
-	return err
+	log.CLI.Println("validation ok")
+	return nil
 }
 
 func reportValidationError(w io.Writer, err error) error {
@@ -83,7 +109,7 @@ func validateInputs(inFiles []string, conf *model.Configuration, errorOutput, pr
 			log.CLI.Println()
 		}
 
-		err := validateInput(fn, conf, progressOutput)
+		err := validateInput(fn, conf, progressOutput, i+1, len(inFiles))
 		if err == nil {
 			continue
 		}
@@ -123,11 +149,7 @@ func Validate(cmd *Command) ([]string, error) {
 		if cmd.BoolVal1 {
 			progressOutput = cmd.ErrorOutput
 		}
-		return nil, validateInput(cmd.InFiles[0], conf, progressOutput)
-	}
-
-	if cmd.ErrorOutput == nil && !slices.Contains(cmd.InFiles, "-") {
-		return nil, api.ValidateFiles(cmd.InFiles, conf)
+		return nil, validateInput(cmd.InFiles[0], conf, progressOutput, 1, 1)
 	}
 
 	var progressOutput io.Writer
@@ -138,6 +160,21 @@ func Validate(cmd *Command) ([]string, error) {
 }
 
 // Optimize inFile and write result to outFile.
+func optimizationProgressObserver(cmd *Command) api.ProgressObserver {
+	if commandWritesPDFToStdout(cmd) {
+		return nil
+	}
+	return func(event api.ProgressEvent) error {
+		switch event.Stage {
+		case api.ProgressStageOptimizing:
+			reportCommandProgress(cmd, "optimizing...\n")
+		case api.ProgressStageWriting:
+			reportCommandOutputPath(cmd)
+		}
+		return nil
+	}
+}
+
 func Optimize(cmd *Command) ([]string, error) {
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation: "optimize",
@@ -146,15 +183,21 @@ func Optimize(cmd *Command) ([]string, error) {
 	}); err != nil {
 		return nil, err
 	}
+	options := api.ProgressOptions{
+		Observer: optimizationProgressObserver(cmd),
+		Input:    *cmd.InFile,
+		Item:     1,
+		Total:    1,
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.OptimizeFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
+		return nil, api.OptimizeFileWithOptions(*cmd.InFile, *cmd.OutFile, cmd.Conf, options)
 	}
 
 	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "optimize")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.Optimize(rs, w, cmd.Conf))
+	return nil, finalize(api.OptimizeWithOptions(rs, w, cmd.Conf, options))
 }
 
 func mergeStdinCount(inFiles []string) int {
@@ -238,6 +281,19 @@ func mergeCreateRaw(cmd *Command) ([]string, error) {
 	return nil, finalize(err)
 }
 
+func reportMergeProgress(cmd *Command) {
+	if commandWritesPDFToStdout(cmd) {
+		return
+	}
+	reportCommandOutputPath(cmd)
+	if cmd.Conf != nil && cmd.Conf.CreateBookmarks {
+		reportCommandProgress(cmd, "creating bookmarks...\n")
+	}
+	for _, inFile := range cmd.InFiles {
+		reportCommandProgress(cmd, "%s\n", inFile)
+	}
+}
+
 // MergeCreate merges inFiles in the order specified and writes the result to outFile.
 func MergeCreate(cmd *Command) ([]string, error) {
 	if err := validateCommandRequirements(cmd, commandRequirements{
@@ -251,6 +307,7 @@ func MergeCreate(cmd *Command) ([]string, error) {
 	if stdinCount > 1 {
 		return nil, fmt.Errorf("pdfcpu: merge: only one stdin input supported")
 	}
+	reportMergeProgress(cmd)
 	if stdinCount == 1 {
 		return mergeCreateRaw(cmd)
 	}
@@ -271,6 +328,7 @@ func MergeCreateZip(cmd *Command) ([]string, error) {
 	}); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.OutFile != "-" {
 		return nil, api.MergeCreateZipFile(cmd.InFiles[0], cmd.InFiles[1], *cmd.OutFile, cmd.Conf)
 	}
@@ -302,7 +360,22 @@ func MergeAppend(cmd *Command) ([]string, error) {
 	if *cmd.OutFile == "-" {
 		return nil, fmt.Errorf("pdfcpu: merge append: stdout not supported")
 	}
+	if _, err := os.Stat(*cmd.OutFile); err == nil {
+		reportCommandProgress(cmd, "appending to %s...\n", *cmd.OutFile)
+	} else {
+		reportCommandOutputPath(cmd)
+	}
+	if cmd.Conf != nil && cmd.Conf.CreateBookmarks {
+		reportCommandProgress(cmd, "creating bookmarks...\n")
+	}
+	for _, inFile := range cmd.InFiles {
+		reportCommandProgress(cmd, "%s\n", inFile)
+	}
 	return nil, api.MergeAppendFile(cmd.InFiles, *cmd.OutFile, cmd.BoolVal1, cmd.Conf)
+}
+
+func reportSplitProgress(cmd *Command, inFile string) {
+	reportCommandProgress(cmd, "splitting %s to %s/...\n", inFile, *cmd.OutDir)
 }
 
 // Split inFile into single page PDFs and write result files to outDir.
@@ -315,10 +388,12 @@ func Split(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 	if *cmd.InFile == "-" {
+		reportSplitProgress(cmd, "stdin.pdf")
 		return withStdinReadSeeker("split", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.Split(rs, *cmd.OutDir, "stdin.pdf", cmd.IntVal, cmd.Conf)
 		})
 	}
+	reportSplitProgress(cmd, *cmd.InFile)
 	return nil, api.SplitFile(*cmd.InFile, *cmd.OutDir, cmd.IntVal, cmd.Conf)
 }
 
@@ -334,10 +409,12 @@ func SplitByPageNr(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 	if *cmd.InFile == "-" {
+		reportSplitProgress(cmd, "stdin.pdf")
 		return withStdinReadSeeker("split by page number", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.SplitByPageNr(rs, *cmd.OutDir, "stdin.pdf", cmd.IntVals, cmd.Conf)
 		})
 	}
+	reportSplitProgress(cmd, *cmd.InFile)
 	return nil, api.SplitByPageNrFile(*cmd.InFile, *cmd.OutDir, cmd.IntVals, cmd.Conf)
 }
 
@@ -350,6 +427,7 @@ func Trim(cmd *Command) ([]string, error) {
 	}); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.TrimFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
@@ -370,6 +448,7 @@ func Collect(cmd *Command) ([]string, error) {
 	}); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.CollectFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
@@ -387,7 +466,7 @@ func listInfo(rs io.ReadSeeker, inFile string, selectedPages []string, fonts boo
 		return nil, err
 	}
 
-	pages, err := api.PagesForPageSelection(info.PageCount, selectedPages, false, false)
+	pages, err := api.PagesForSelection(info.PageCount, selectedPages, false)
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +566,7 @@ func listInfoJSON(rs io.ReadSeeker, inFile string, selectedPages []string, fonts
 		return nil, err
 	}
 
-	pages, err := api.PagesForPageSelection(info.PageCount, selectedPages, false, false)
+	pages, err := api.PagesForSelection(info.PageCount, selectedPages, false)
 	if err != nil {
 		return nil, err
 	}
@@ -738,6 +817,10 @@ func Create(cmd *Command) ([]string, error) {
 	if *cmd.InFile == "" && *cmd.OutFile == "" {
 		return nil, commandValidationError("create", api.ErrMissingPDFInput)
 	}
+	if *cmd.InFile != "" && *cmd.InFile != "-" {
+		reportCommandProgress(cmd, "reading %s...\n", *cmd.InFile)
+	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.CreateFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutFile, cmd.Conf)
 	}

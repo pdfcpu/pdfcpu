@@ -27,7 +27,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -134,7 +133,6 @@ func WriteImageToDisk(outDir, fileName string) func(model.Image, bool, int) erro
 		fileType := sanitizeFilenamePart(img.FileType, "img")
 		f := fmt.Sprintf(s+"_%s.%s", fileName, img.PageNr, qual, fileType)
 		outFile := filepath.Join(outDir, f)
-		logWritingTo(outFile)
 		if err := pdfcpu.WriteReader(outFile, img.Reader); err != nil {
 			if errors.Is(err, pdfcpu.ErrMissingReader) {
 				return fmt.Errorf("image obj#%d: %w", img.ObjNr, ErrMissingImageReader)
@@ -153,7 +151,6 @@ func WriteFontToDisk(outDir, fnBase string) func(pdfcpu.Font) error {
 		fontName := sanitizeFilenamePart(font.Name, "fontName")
 		fontType := sanitizeFilenamePart(font.Type, "fontType")
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_%s.%s", fnBase, fontName, fontType))
-		logWritingTo(outFile)
 		return pdfcpu.WriteReader(outFile, font.Reader)
 	}
 }
@@ -164,7 +161,6 @@ func WritePageToDisk(outDir, fnBase string) func(io.Reader, int) error {
 
 	return func(rd io.Reader, pageNr int) error {
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fnBase, pageNr))
-		logWritingTo(outFile)
 		return pdfcpu.WriteReader(outFile, rd)
 	}
 }
@@ -175,7 +171,6 @@ func WriteContentToDisk(outDir, fnBase string) func(io.Reader, int) error {
 
 	return func(rd io.Reader, pageNr int) error {
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_Content_page_%d.txt", fnBase, pageNr))
-		logWritingTo(outFile)
 		return pdfcpu.WriteReader(outFile, rd)
 	}
 }
@@ -187,7 +182,6 @@ func WriteMetadataToDisk(outDir, fnBase string) func(pdfcpu.Metadata) error {
 	return func(md pdfcpu.Metadata) error {
 		parentType := sanitizeFilenamePart(md.ParentType, "metadata")
 		outFile := filepath.Join(outDir, fmt.Sprintf("%s_Metadata_%s_%d_%d.txt", fnBase, parentType, md.ParentObjNr, md.ObjNr))
-		logWritingTo(outFile)
 		return pdfcpu.WriteReader(outFile, md.Reader)
 	}
 }
@@ -211,7 +205,7 @@ func ExtractImagesRaw(rs io.ReadSeeker, selectedPages []string, conf *model.Conf
 		return nil, fmt.Errorf("extract images: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return nil, fmt.Errorf("extract images: parse page selection: %w", err)
 	}
@@ -252,16 +246,13 @@ func ExtractImages(rs io.ReadSeeker, selectedPages []string, digestImage func(mo
 		return fmt.Errorf("extract images: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("extract images: parse page selection: %w", err)
 	}
 
 	sp := sortedPages(pages)
 	if len(sp) == 0 {
-		if log.CLIEnabled() {
-			log.CLI.Println("aborted: missing page numbers!")
-		}
 		return nil
 	}
 
@@ -304,9 +295,6 @@ func ExtractImagesFile(inFile, outDir string, selectedPages []string, conf *mode
 		err = joinExtractionCleanupError(err, closeFile(f, "extract images: close input"))
 	}()
 
-	if log.CLIEnabled() {
-		log.CLI.Printf("extracting images from %s into %s/ ...\n", inFile, outDir)
-	}
 	fileName := strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 
 	if err := ExtractImages(f, selectedPages, WriteImageToDisk(outDir, fileName), conf); err != nil {
@@ -345,7 +333,7 @@ func ExtractFonts(rs io.ReadSeeker, selectedPages []string, digestFont func(pdfc
 		return fmt.Errorf("extract fonts: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("extract fonts: parse page selection: %w", err)
 	}
@@ -398,10 +386,6 @@ func ExtractFontsFile(inFile, outDir string, selectedPages []string, conf *model
 		err = joinExtractionCleanupError(err, closeFile(f, "extract fonts: close input"))
 	}()
 
-	if log.CLIEnabled() {
-		log.CLI.Printf("extracting fonts from %s into %s/ ...\n", inFile, outDir)
-	}
-
 	fnBase := strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 	if err := ExtractFonts(f, selectedPages, WriteFontToDisk(outDir, fnBase), conf); err != nil {
 		return fmt.Errorf("extract fonts %s: %w", inFile, err)
@@ -446,15 +430,12 @@ func ExtractPages(rs io.ReadSeeker, selectedPages []string, digestPage func(io.R
 		return fmt.Errorf("extract pages: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("extract pages: parse page selection: %w", err)
 	}
 
 	if len(pages) == 0 {
-		if log.CLIEnabled() {
-			log.CLI.Println("aborted: missing page numbers!")
-		}
 		return nil
 	}
 
@@ -492,10 +473,6 @@ func ExtractPagesFile(inFile, outDir string, selectedPages []string, conf *model
 		err = errors.Join(err, closeFile(f, "extract pages: close input"))
 	}()
 
-	if log.CLIEnabled() {
-		log.CLI.Printf("extracting pages from %s into %s/ ...\n", inFile, outDir)
-	}
-
 	fnBase := strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 	if err := ExtractPages(f, selectedPages, WritePageToDisk(outDir, fnBase), conf); err != nil {
 		return fmt.Errorf("extract pages %s: %w", inFile, err)
@@ -521,7 +498,7 @@ func ExtractContent(rs io.ReadSeeker, selectedPages []string, digestContent func
 		return fmt.Errorf("extract content: %w", err)
 	}
 
-	pages, err := PagesForPageSelection(ctx.PageCount, selectedPages, true, true)
+	pages, err := PagesForSelection(ctx.PageCount, selectedPages, true)
 	if err != nil {
 		return fmt.Errorf("extract content: parse page selection: %w", err)
 	}
@@ -556,10 +533,6 @@ func ExtractContentFile(inFile, outDir string, selectedPages []string, conf *mod
 	defer func() {
 		err = errors.Join(err, closeFile(f, "extract content: close input"))
 	}()
-
-	if log.CLIEnabled() {
-		log.CLI.Printf("extracting content from %s into %s/ ...\n", inFile, outDir)
-	}
 
 	fnBase := strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 	if err := ExtractContent(f, selectedPages, WriteContentToDisk(outDir, fnBase), conf); err != nil {
@@ -624,10 +597,6 @@ func ExtractMetadataFile(inFile, outDir string, conf *model.Configuration) (err 
 	defer func() {
 		err = joinExtractionCleanupError(err, closeFile(f, "extract metadata: close input"))
 	}()
-
-	if log.CLIEnabled() {
-		log.CLI.Printf("extracting metadata from %s into %s/ ...\n", inFile, outDir)
-	}
 
 	fileNameBase := strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 	if err := ExtractMetadata(f, WriteMetadataToDisk(outDir, fileNameBase), conf); err != nil {

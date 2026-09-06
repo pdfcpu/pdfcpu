@@ -22,7 +22,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -83,9 +82,6 @@ func appendFile(fName string, ctxDest *model.Context, dividerPage bool) (err err
 		err = wrapMergeCleanupError("merge source: close input", closeErr)
 	}()
 
-	if log.CLIEnabled() {
-		log.CLI.Println(fName)
-	}
 	return appendTo(f, filepath.Base(fName), ctxDest, dividerPage)
 }
 
@@ -183,10 +179,6 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 		return err
 	}
 
-	if conf.CreateBookmarks && log.CLIEnabled() {
-		log.CLI.Println("creating bookmarks...")
-	}
-
 	f, err := os.Open(destFile)
 	if err != nil {
 		return fmt.Errorf("merge destination: open %s: %w", destFile, err)
@@ -200,9 +192,6 @@ func Merge(destFile string, inFiles []string, w io.Writer, conf *model.Configura
 	}()
 
 	if conf.Cmd == model.MERGECREATE {
-		if log.CLIEnabled() {
-			log.CLI.Println(destFile)
-		}
 	}
 
 	ctxDest, err := prepDestContext(destFile, f, conf)
@@ -244,8 +233,6 @@ func MergeCreateFile(inFiles []string, outFile string, dividerPage bool, conf *m
 		err = staged.commit()
 	}()
 
-	logWritingTo(outFile)
-
 	if err = Merge("", inFiles, f, conf, dividerPage); err != nil {
 		return err
 	}
@@ -262,11 +249,6 @@ func MergeAppendFile(inFiles []string, outFile string, dividerPage bool, conf *m
 
 	if mergeFileExists(outFile) {
 		destFile = outFile
-		if log.CLIEnabled() {
-			log.CLI.Printf("appending to %s...\n", outFile)
-		}
-	} else {
-		logWritingTo(outFile)
 	}
 	staged, err := openStagedOutput(nil, "", tmpFile, "merge")
 	if err != nil {
@@ -375,8 +357,6 @@ func MergeCreateZipFile(inFile1, inFile2, outFile string, conf *model.Configurat
 		}
 		err = staged.commit()
 	}()
-
-	logWritingTo(outFile)
 
 	if err = MergeCreateZip(f1, f2, f, conf); err != nil {
 		return err

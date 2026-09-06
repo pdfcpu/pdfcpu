@@ -63,9 +63,6 @@ func logDisclaimerPDF20() {
 	if log.ValidateEnabled() {
 		log.Validate.Println(disclaimer)
 	}
-	if log.CLIEnabled() {
-		log.CLI.Println(disclaimer)
-	}
 }
 
 func operationConfiguration(conf *model.Configuration, cmd model.CommandMode) *model.Configuration {
@@ -98,10 +95,6 @@ func ReadContextFile(inFile string) (*model.Context, error) {
 	ctx, err := ReadContext(f, model.NewDefaultConfiguration())
 	if err != nil {
 		return nil, err
-	}
-
-	if ctx.Conf.Version != model.VersionStr {
-		model.CheckConfigVersion(ctx.Conf.Version)
 	}
 
 	if ctx.XRefTable.Version() == model.V20 {
@@ -137,9 +130,6 @@ func OptimizeContext(ctx *model.Context) error {
 		return ErrMissingPDFContext
 	}
 
-	if log.CLIEnabled() {
-		log.CLI.Println("optimizing...")
-	}
 	if err := pdfcpu.OptimizeXRefTable(ctx); err != nil {
 		return fmt.Errorf("optimize context: %w", err)
 	}
@@ -216,12 +206,19 @@ func WriteContextFile(ctx *model.Context, outFile string) (err error) {
 	return staged.commit()
 }
 
-// ReadAndValidate returns a model.Context of rs ready for processing.
-func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
+func readAndValidateWithOptions(
+	rs io.ReadSeeker,
+	conf *model.Configuration,
+	options ProgressOptions,
+) (ctx *model.Context, err error) {
 	defer fault.Catch(&err)
 
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
+	}
+
+	if err := reportProgress(options, ProgressStageReading); err != nil {
+		return nil, err
 	}
 
 	if ctx, err = ReadContext(rs, conf); err != nil {
@@ -229,6 +226,10 @@ func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Co
 	}
 	if conf == nil {
 		conf = ctx.Configuration
+	}
+
+	if err := reportProgress(options, ProgressStageValidating); err != nil {
+		return nil, err
 	}
 
 	if err := ValidateContext(ctx); err != nil {
@@ -241,21 +242,20 @@ func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Co
 			if conf.Cmd == model.REMOVESIGNATURES {
 				return nil, ErrNoSignatures
 			}
-			if log.CLIEnabled() {
-				log.CLI.Println("no signatures to remove...")
-			}
 			return ctx, nil
 		}
 
-		if log.CLIEnabled() {
-			log.CLI.Println("removing signatures...")
-		}
 		if err := ctx.RemoveAllSignatures(); err != nil {
 			return nil, fmt.Errorf("remove signatures: %w", err)
 		}
 	}
 
 	return ctx, nil
+}
+
+// ReadAndValidate returns a model.Context of rs ready for processing.
+func ReadAndValidate(rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
+	return readAndValidateWithOptions(rs, conf, ProgressOptions{})
 }
 
 func cmdAssumingOptimization(cmd model.CommandMode) bool {
@@ -271,7 +271,17 @@ func cmdAssumingOptimization(cmd model.CommandMode) bool {
 
 // ReadValidateAndOptimize returns an optimized model.Context of rs ready for processing a specific command.
 // conf.Cmd is expected to be configured properly.
-func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *model.Context, err error) {
+func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
+	return ReadValidateAndOptimizeWithOptions(rs, conf, ProgressOptions{})
+}
+
+// ReadValidateAndOptimizeWithOptions returns an optimized model.Context and reports optional semantic progress.
+// conf.Cmd is expected to be configured properly.
+func ReadValidateAndOptimizeWithOptions(
+	rs io.ReadSeeker,
+	conf *model.Configuration,
+	options ProgressOptions,
+) (ctx *model.Context, err error) {
 	defer fault.Catch(&err)
 
 	if rs == nil {
@@ -282,7 +292,7 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *
 		return nil, ErrMissingConfiguration
 	}
 
-	ctx, err = ReadAndValidate(rs, conf)
+	ctx, err = readAndValidateWithOptions(rs, conf, options)
 	if err != nil {
 		return nil, fmt.Errorf("prepare PDF context: %w", err)
 	}
@@ -291,6 +301,9 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *
 	// command optimization of the cross reference table is optional but usually recommended.
 	// For large or complex files it may make sense to skip optimization and set conf.Optimize = false.
 	if cmdAssumingOptimization(conf.Cmd) || conf.Optimize {
+		if err := reportProgress(options, ProgressStageOptimizing); err != nil {
+			return nil, err
+		}
 		if err = OptimizeContext(ctx); err != nil {
 			return nil, err
 		}
@@ -302,12 +315,6 @@ func ReadValidateAndOptimize(rs io.ReadSeeker, conf *model.Configuration) (ctx *
 	}
 
 	return ctx, nil
-}
-
-func logWritingTo(s string) {
-	if log.CLIEnabled() {
-		log.CLI.Printf("writing %s...\n", s)
-	}
 }
 
 // Write writes ctx using w.
@@ -360,6 +367,8 @@ func WriteIncr(ctx *model.Context, rws io.ReadWriteSeeker, conf *model.Configura
 
 // EnsureDefaultConfigAt switches to the pdfcpu config dir located at path.
 // If path/pdfcpu is not existent, it will be created including config.yml
+//
+// Deprecated: use LoadConfigurationWithOptions with ConfigurationOptions.Root.
 func EnsureDefaultConfigAt(path string) error {
 	// Call if you have specific requirements regarding the location of the pdfcpu config dir.
 	return model.EnsureDefaultConfigAt(path, false)
@@ -375,6 +384,8 @@ var (
 // Any needed default configuration will be loaded from configuration.go
 // Since the config dir also contains the user font dir, this also limits font usage to the default core font set
 // No user fonts will be available.
+//
+// Deprecated: use LoadConfigurationWithOptions with ConfigurationModeStateless.
 func DisableConfigDir() {
 	mutexDisableConfigDir.Lock()
 	defer mutexDisableConfigDir.Unlock()
@@ -385,6 +396,8 @@ func DisableConfigDir() {
 
 // LoadConfiguration locates and loads the default configuration
 // and also loads installed user fonts.
+//
+// Deprecated: use LoadConfigurationWithOptions and handle the returned error.
 func LoadConfiguration() *model.Configuration {
 	// Call if you don't have a specific config dir location
 	// and need to use user fonts for stamping or watermarking.

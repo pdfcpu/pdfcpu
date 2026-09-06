@@ -259,7 +259,7 @@ func handleValidateCommand(conf *model.Configuration, args []string, opts *valid
 	conf.Optimize = opts.optimize
 
 	cmd := cli.ValidateCommand(inFiles, conf)
-	cmd.BoolVal1 = opts.progress && quiet
+	cmd.BoolVal1 = opts.progress
 	return runCommand(cmd)
 }
 

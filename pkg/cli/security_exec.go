@@ -70,6 +70,7 @@ func Encrypt(cmd *Command) ([]string, error) {
 	if err := validateCryptoCommand(cmd, "encrypt"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.EncryptFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
 	}
@@ -83,6 +84,7 @@ func Decrypt(cmd *Command) ([]string, error) {
 	if err := validateCryptoCommand(cmd, "decrypt"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.DecryptFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
 	}
@@ -97,6 +99,7 @@ func ChangeUserPassword(cmd *Command) ([]string, error) {
 	if err := validatePasswordChangeCommand(cmd, "change user password"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.ChangeUserPasswordFile(*cmd.InFile, *cmd.OutFile, *cmd.PWOld, *cmd.PWNew, cmd.Conf)
 	}
@@ -116,6 +119,7 @@ func ChangeOwnerPassword(cmd *Command) ([]string, error) {
 	if err := validatePasswordChangeCommand(cmd, "change owner password"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.ChangeOwnerPasswordFile(*cmd.InFile, *cmd.OutFile, *cmd.PWOld, *cmd.PWNew, cmd.Conf)
 	}
@@ -239,6 +243,7 @@ func SetPermissions(cmd *Command) ([]string, error) {
 	if err := validateCryptoCommand(cmd, "set permissions"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		return nil, api.SetPermissionsFile(*cmd.InFile, *cmd.OutFile, cmd.Conf)
 	}

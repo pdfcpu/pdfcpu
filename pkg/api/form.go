@@ -27,7 +27,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/form"
@@ -135,9 +134,6 @@ func mutateFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
-		logWritingTo(outFile)
-	} else {
-		logWritingTo(inFile)
 	}
 
 	staged, err := openStagedOutput(f1, inFile, tmpFile, operation)
@@ -388,7 +384,6 @@ func ExportFormFile(inFilePDF, outFileJSON string, conf *model.Configuration) (e
 		)
 	}
 	f2 := staged.output.file
-	logWritingTo(outFileJSON)
 
 	ok := false
 	defer func() {
@@ -595,14 +590,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return fmt.Errorf("fill form: fill fields: %w", err)
 	}
 	if !ok {
-		if log.CLIEnabled() {
-			log.CLI.Println("nothing written")
-		}
 		return fmt.Errorf("fill form: %w", ErrNoFormFieldsAffected)
-	}
-
-	if log.CLIEnabled() {
-		log.CLI.Println("filling...")
 	}
 
 	if err := fillPostProc(ctx, pp); err != nil {
@@ -641,9 +629,6 @@ func FillFormFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configur
 	tmpFile := ""
 	if outFilePDF != "" && inFilePDF != outFilePDF {
 		tmpFile = outFilePDF
-		logWritingTo(outFilePDF)
-	} else {
-		logWritingTo(inFilePDF)
 	}
 	staged, err := openStagedOutput(f1, inFilePDF, tmpFile, "fill form")
 	if err != nil {
@@ -755,7 +740,6 @@ func writeMultiFillOutput(ctx *model.Context, outFile, context string) error {
 }
 
 func writeMultiFillOutputWith(ctx *model.Context, outFile, context string, writeContext func(*model.Context, io.Writer) error) error {
-	logWritingTo(outFile)
 	staged, err := openStagedOutput(nil, "", outFile, context)
 	if err != nil {
 		return fmt.Errorf("%s: create output %s: %w", context, outFile, err)
@@ -824,9 +808,6 @@ func multiFillFormJSONWith(inFilePDF string, rd io.Reader, outDir, fileName stri
 	var outFiles []string
 	if merge {
 		defer func() {
-			if log.CLIEnabled() {
-				log.CLI.Println("cleaning up...")
-			}
 			err = errors.Join(err, rollbackMultiFillOutputs(outFiles))
 		}()
 	}
@@ -851,7 +832,8 @@ func parseCSVLines(rd io.Reader) ([][]string, error) {
 	// Does NOT do any fieldtype checking!
 	// Don't use unless you know your form anatomy inside out!
 
-	// The first row is expected to hold the fieldIDs/fieldNames of the fields to be filled - the only form metadata needed for this usecase.
+	// The first row is expected to hold the fieldIDs/fieldNames of the fields to be filled - the only form metadata needed
+	// for this usecase.
 	// The remaining rows are the corresponding data tuples.
 	// Each row results in one separate PDF form written to outDir.
 
@@ -935,9 +917,6 @@ func multiFillFormCSVWith(inFilePDF string, rd io.Reader, outDir, fileName strin
 	var outFiles []string
 	if merge {
 		defer func() {
-			if log.CLIEnabled() {
-				log.CLI.Println("cleaning up...")
-			}
 			err = errors.Join(err, rollbackMultiFillOutputs(outFiles))
 		}()
 	}
@@ -984,7 +963,8 @@ func MultiFillForm(inFilePDF string, rd io.Reader, outDir, fileName string, form
 	return multiFillFormCSV(inFilePDF, rd, outDir, fileName, merge, conf)
 }
 
-// MultiFillFormFile populates multiple instances of inFilePDF's form with data from inFileData and writes the result to outDir.
+// MultiFillFormFile populates multiple instances of inFilePDF's form with data from inFileData and writes the result to
+// outDir.
 // The output file will be written to outFilePDF with incrementing numerical suffix unless
 // the input JSON uses "filename" or the input CSV contains a @filename field.
 func MultiFillFormFile(inFilePDF, inFileData, outDir, outFilePDF string, merge bool, conf *model.Configuration) (err error) {
@@ -1010,16 +990,7 @@ func MultiFillFormFile(inFilePDF, inFileData, outDir, outFilePDF string, merge b
 		err = errors.Join(err, closeFile(f, "multi-fill form: close data"))
 	}()
 
-	s := "JSON"
-	if format == form.CSV {
-		s = "CSV"
-	}
-
 	outFileBase := filepath.Base(outFilePDF)
-
-	if log.CLIEnabled() {
-		log.CLI.Printf("filling multiple forms via %s based on %s data from %s into %s/%s ...\n", inFilePDF, s, inFileData, outDir, outFileBase)
-	}
 
 	err = MultiFillForm(inFilePDF, f, outDir, outFileBase, format, merge, conf)
 	return err

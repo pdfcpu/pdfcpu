@@ -675,8 +675,10 @@ func TestKeywordsPreservesCallerConfiguration(t *testing.T) {
 	}
 }
 
-func TestBookmarkOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range bookmarkConfigurationOperations() {
+func testConfigurationOperationsPreserveCaller(t *testing.T, operations []configurationOperation) {
+	t.Helper()
+
+	for _, tt := range operations {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := &model.Configuration{
 				Cmd:            callerMode,
@@ -696,107 +698,33 @@ func TestBookmarkOperationsPreserveCallerConfiguration(t *testing.T) {
 	}
 }
 
-func TestDocumentDisplayOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range documentDisplayConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected malformed PDF error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
+func TestOperationsPreserveCallerConfiguration(t *testing.T) {
+	tests := []struct {
+		name       string
+		operations []configurationOperation
+	}{
+		{"bookmarks", bookmarkConfigurationOperations()},
+		{"document display", documentDisplayConfigurationOperations()},
+		{"info properties and merge", infoPropertyMergeConfigurationOperations()},
+		{"page transformations", pageTransformationConfigurationOperations()},
+		{"boxes and images", boxImageConfigurationOperations()},
+		{"attachments and permissions", attachmentPermissionConfigurationOperations()},
+		{"core document", coreDocumentConfigurationOperations()},
+		{"extraction and import", extractionImportConfigurationOperations()},
+		{"security and signatures", securitySignatureConfigurationOperations()},
+		{"cut", cutConfigurationOperations()},
+		{"n-up", nUpConfigurationOperations()},
+		{"grid", gridConfigurationOperations()},
+		{"booklet", bookletConfigurationOperations()},
+		{"watermarks", watermarkConfigurationOperations()},
+		{"annotations", annotationConfigurationOperations()},
+		{"basic forms", basicFormConfigurationOperations()},
+		{"form export", exportFormConfigurationOperations()},
 	}
-}
 
-func TestInfoPropertyAndMergeOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range infoPropertyMergeConfigurationOperations() {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected operation error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
-	}
-}
-
-func TestPageTransformationOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range pageTransformationConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected malformed PDF error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
-	}
-}
-
-func TestBoxImageOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range boxImageConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected malformed PDF error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
-	}
-}
-
-func TestAttachmentPermissionOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range attachmentPermissionConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected malformed PDF error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
+			testConfigurationOperationsPreserveCaller(t, tt.operations)
 		})
 	}
 }
@@ -809,69 +737,6 @@ func TestSetPermissionsPreservesCallerConfiguration(t *testing.T) {
 	}
 	if conf.Cmd != callerMode {
 		t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-	}
-}
-
-func TestCoreDocumentOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range coreDocumentConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected malformed PDF error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
-	}
-}
-
-func TestExtractionImportOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range extractionImportConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected operation error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
-	}
-}
-
-func TestSecuritySignatureOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range securitySignatureConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected operation error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
 	}
 }
 
@@ -915,48 +780,6 @@ func TestSecuritySignatureFileOperationsPreserveCallerConfiguration(t *testing.T
 	}
 }
 
-func TestCutOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range cutConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected malformed PDF error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
-	}
-}
-
-func TestNUpOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range nUpConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected operation error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
-	}
-}
-
 func TestNUpFilePreservesCallerConfiguration(t *testing.T) {
 	dir := t.TempDir()
 	inFile := filepath.Join(dir, "in.pdf")
@@ -974,27 +797,6 @@ func TestNUpFilePreservesCallerConfiguration(t *testing.T) {
 	}
 	if conf.Cmd != callerMode {
 		t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-	}
-}
-
-func TestGridOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range gridConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected operation error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
 	}
 }
 
@@ -1018,27 +820,6 @@ func TestGridFilePreservesCallerConfiguration(t *testing.T) {
 	}
 }
 
-func TestBookletOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range bookletConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected operation error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
-	}
-}
-
 func TestBookletFilePreservesCallerConfiguration(t *testing.T) {
 	dir := t.TempDir()
 	inFile := filepath.Join(dir, "in.pdf")
@@ -1056,90 +837,6 @@ func TestBookletFilePreservesCallerConfiguration(t *testing.T) {
 	}
 	if conf.Cmd != callerMode {
 		t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-	}
-}
-
-func TestWatermarkOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range watermarkConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected malformed PDF error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
-	}
-}
-
-func TestAnnotationOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range annotationConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected malformed PDF error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
-	}
-}
-
-func TestBasicFormOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range basicFormConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected malformed PDF error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
-	}
-}
-
-func TestExportFormOperationsPreserveCallerConfiguration(t *testing.T) {
-	for _, tt := range exportFormConfigurationOperations() {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &model.Configuration{
-				Cmd:            callerMode,
-				ValidationMode: model.ValidationStrict,
-			}
-
-			if err := tt.run(conf); err == nil {
-				t.Fatal("expected malformed PDF error")
-			}
-			if conf.Cmd != callerMode {
-				t.Errorf("caller command mode: got %d, want %d", conf.Cmd, callerMode)
-			}
-			if conf.ValidationMode != model.ValidationStrict {
-				t.Errorf("caller validation mode: got %d, want %d", conf.ValidationMode, model.ValidationStrict)
-			}
-		})
 	}
 }
 
