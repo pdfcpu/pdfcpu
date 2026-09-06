@@ -32,6 +32,17 @@ For commands with non-PDF arguments, `-` support applies to PDF input and output
 
 Avoid adding a separate `optimize` step after commands that already write an optimized PDF. For example, `merge`, `stamp`, `watermark`, `trim` and `rotate` produce processed PDF output directly. Use `optimize` as its own pipeline step when optimization is the operation you want to perform.
 
+## Temporary storage and output replacement
+
+PDF input from `stdin` is stored in a temporary file. Merged form multi-fill output to `stdout` also uses temporary
+storage. See [Environment Variables](/getting_started/environment_variables#temporary-storage) to choose its location.
+
+When replacing a file, pdfcpu writes a temporary copy beside the destination first. If writing fails, the original
+remains intact. Allow space for the full input when piping and the full resulting output when replacing a file,
+including incremental updates.
+
+Output sent to `stdout`, including shell redirection with `>` is outside this replacement handling.
+
 ## Support Matrix
 
 The matrix describes PDF piping support for command input and output positions.
@@ -131,7 +142,7 @@ Auxiliary files such as JSON, CSV, images, fonts and stamp source PDFs are regul
 | `form export` | yes | no | Writes JSON to `outFileJSON`, not stdout. |
 | `form fill` | yes | yes | JSON data file remains a regular file argument. |
 | `form lock/unlock/reset/remove` | yes | yes | Writes a processed PDF. |
-| `form multifill` | yes | partial | stdout requires `--mode merge`; `outDir` is still used for generated instances. |
+| `form multifill` | yes | partial | stdout requires `--mode merge`; generated instances and merged output use an OS temporary directory. |
 | `attachments list` | yes | no | Output is text. |
 | `attachments add/remove` | yes | yes | Added/removed files remain regular file arguments. |
 | `attachments extract` | yes | no | Writes extracted files into `outDir`. |

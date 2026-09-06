@@ -14,8 +14,10 @@ older installation.
 The generated file records a configuration `schemaVersion`, not the pdfcpu version. A release upgrade therefore
 requires a reset only when its required configuration schema changes.
 
-See [Configuration Modes](/config/config_modes) for automatic, stateless and read-only access, and
-[Configuration Workflows](/config/config_workflows) for common command sequences.
+See [Configuration Modes](/config/config_modes) for automatic, stateless and read-only access.
+<br>See [Configuration Workflows](/config/config_workflows) for common command sequences.
+<br>See [Environment Variables](/getting_started/environment_variables#configuration-location) for configuration-root
+precedence and platform defaults.
 
 
 ## Config Dir

@@ -28,6 +28,8 @@
       url: /getting_started/color
     - title: Configuration
       url: /getting_started/config_dir
+    - title: Environment Variables
+      url: /getting_started/environment_variables
 - title: Document
   url: /core/document
   pages:
