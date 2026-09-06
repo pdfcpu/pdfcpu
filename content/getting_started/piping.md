@@ -13,6 +13,9 @@ Use `-` in an output PDF position to write a PDF to `stdout`.
 
 This makes pdfcpu fit naturally into shell pipelines, object storage workflows and container jobs.
 
+When PDF output is written to `stdout`, pdfcpu keeps that stream data-only. Routine progress and diagnostics are routed to
+`stderr`; use `--quiet` to suppress routine progress without mixing text into the PDF stream.
+
 ## Notes
 
 The two `-` arguments in a command like this have different meanings:

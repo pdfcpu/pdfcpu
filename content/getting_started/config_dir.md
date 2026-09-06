@@ -9,20 +9,34 @@ Generally pdfcpu does not have to be configured.
 
 There is a configuration directory for certificate and user font management and storing the default configuration in effect.
 
+See [Configuration Reset Required in v0.16](/getting_started/configuration_v016) when upgrading an existing v0.15 or
+older installation.
+The generated file records a configuration `schemaVersion`, not the pdfcpu version. A release upgrade therefore
+requires a reset only when its required configuration schema changes.
+
+See [Configuration Modes](/config/config_modes) for automatic, stateless and read-only access, and
+[Configuration Workflows](/config/config_workflows) for common command sequences.
+
 
 ## Config Dir
 
-pdfcpu will create this directory at the default [user's config directory](https://golang.org/pkg/os/#UserConfigDir) on the very first execution of a pdfcpu command.
+In automatic mode, a configuration-dependent command initializes this directory below the default
+[user configuration directory](https://pkg.go.dev/os#UserConfigDir) when required.
 
-You can look up its location either like so:
+Inspect the selected location without modifying it. The relevant path portion of the output is shown here; see
+[config inspect](/config/config_inspect) for the complete text and JSON output contracts:
 
 ```
-$ pdfcpu version
-version: v0.14.0-rc.1 dev
- config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
- commit: f08edb2c
-   date: 2026-07-27 20:44:48 UTC
-     go: go1.26.5
+$ pdfcpu config inspect
+mode: auto
+source: os-default
+...
+  config:
+    path: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
+    available: true
+    exists: true
+    writable: true
+...
 ```
 
 `pdfcpu config list` will also print the config file path followed by its content.
@@ -76,8 +90,12 @@ $ tree
     └── UnifontUpperMedium.gob
 ```
 
-Use the [--conf](/getting_started/common_flags) flag to set a custom config dir path.
+Use the [--conf](/getting_started/common_flags) flag to select a custom configuration root. The configuration tree is
+stored in the `pdfcpu` directory below that root.
 
-You can also use this flag to disable the usage of a config dir.
+Use `--conf disable` to select stateless mode. This is useful when the default
+[user configuration directory](https://pkg.go.dev/os#UserConfigDir) is unavailable or the process must not access
+filesystem configuration. Stateless mode cannot use user fonts or the trusted certificate store.
 
-This comes in handy in (serverless) environments where the default [user's config directory](https://golang.org/pkg/os/#UserConfigDir) is not defined - as long as you are not using user fonts or the certificate store.
+Read-only is not selected with a CLI flag. The CLI uses read-only loading internally for `config inspect` and
+`config validate`; Go API applications may select it explicitly for externally provisioned configuration.

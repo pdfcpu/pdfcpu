@@ -39,15 +39,14 @@ Entries link to GitHub releases or commits where available.
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.0">v0.16.0</a>
   </div>
   <p>
-  Reduce the published Go module archive from 280,914,373 to 16,694,815 bytes (94.06%) and its extracted footprint from
-  341,264 to 26,660 KiB by excluding repository samples and test fixtures.<br>
-  Git checkouts remain self-contained for <code>go test ./...</code>. Module-cache copies support building and consuming
-  pdfcpu but omit the large integration fixtures required by the complete test suite.<br>
-  Add the runtime-only API option <code>Configuration.PreserveInfoDict</code> for preserving existing
-  <code>Producer</code>, <code>CreationDate</code> and <code>ModDate</code> entry values and encodings after validation.<br>
-  This preserves the entry payloads and PDF object types, not the complete serialized Info dictionary byte sequence.<br>
-  Support direct trailer Info dictionaries in PDF 2.0.<br>
-  Preserve AcroForm field hierarchies when extracting pages and reject terminal fields without an effective field type.<br>
+  Reduce the published Go module archive by 94% while keeping module-cache builds supported; the complete test suite remains
+  checkout-only.<br>
+  Add <code>Configuration.PreserveInfoDict</code>, support direct trailer Info dictionaries in PDF 2.0, preserve AcroForm
+  field hierarchies during page extraction and tighten terminal-field validation.<br>
+  Introduce schema-versioned configuration with automatic, read-only and stateless modes, typed compatibility errors and
+  <a href="/getting_started/configuration_v016">guided legacy reset handling</a>.<br>
+  Keep reusable APIs and filters silent while exposing structured progress and result metadata for validation, optimization
+  and font tooling.<br>
   Fix #1449, #1457, #1460, #1461.
   </p>
 </article>

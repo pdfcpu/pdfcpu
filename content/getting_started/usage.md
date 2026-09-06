@@ -175,8 +175,11 @@ pdfcpu signatures validate inFile [flags]
 Manage the pdfcpu configuration.
 
 ```
-pdfcpu config list  [flags]
-pdfcpu config reset [flags]
+pdfcpu config init     [flags]
+pdfcpu config list     [flags]
+pdfcpu config inspect  [flags]
+pdfcpu config validate [flags]
+pdfcpu config reset    [flags]
 ```
 
 ## [Paper](/paper)
@@ -205,7 +208,8 @@ pdfcpu completion [bash|zsh|fish|powershell] [flags]
 
 ## Version
 
-Print the installed pdfcpu version.
+Print the installed pdfcpu version and build identity without loading configuration. Use `pdfcpu config inspect` to report
+the selected configuration path.
 
 ```
 pdfcpu version [flags]

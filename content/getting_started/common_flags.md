@@ -16,21 +16,24 @@ Enables verbose logging on the standard output.<br>
 Please use this flag to [report a bug](https://github.com/pdfcpu/pdfcpu/issues).
 
 ## --quiet, -q
-Disables all output to stdOut.
+Suppresses routine command progress and caller-controlled text output. Errors still use `stderr`; PDF output requested with
+`-` remains data-only on `stdout`.
 
 ## --force
-Overwrite existing output files and write to non-empty output directories where supported.
+Allow overwriting existing output files, writing to non-empty output directories and resetting configuration without an
+interactive confirmation where supported.
 
 ## --offline, -o
 Disable outgoing HTTP traffic.<br>
 For validating links or filling image boxes.<br>
 
 ## --conf, -c
-Set or disable [config dir](/getting_started/config_dir):
+Select or disable the [configuration root](/getting_started/config_dir). The configuration tree is stored in the
+`pdfcpu` directory below the selected root:
 
 | command    | value
 |:-----------|:-----------
-| Set        | path
+| Select     | path
 | Disable    | disable
 
 ## --unit, -u

@@ -7,11 +7,18 @@ title: "List Configuration"
 
 The configuration file (config.yml) holds carefully selected default values for various aspects of pdfcpu's operations.
 
-pdfcpu will create the config file together with the config directory on the very first execution of a pdfcpu command.
+In automatic mode, pdfcpu creates the config file and configuration directory when a configuration-dependent command
+requires them. Configuration-free commands such as `version` do not initialize configuration.
 
-This command prints the configuration file location followed by its content.
+This command prints the configuration file location followed by its content exactly as stored. Command-line overrides are
+not reflected. Use [config inspect](/config/config_inspect) for selected paths and configured policy.
 
-Please also check out the [configuration](/getting_started/config_dir) docs.
+Before printing, it verifies that the selected file uses the schema required by this pdfcpu build. An older schema produces
+the standard `configuration reset required` message and a reset command; a newer schema asks for a newer pdfcpu version.
+The command does not modify an incompatible file.
+
+See also [inspect configuration](/config/config_inspect), [validate configuration](/config/config_validate) and the
+[configuration directory](/getting_started/config_dir) documentation.
 
 
 ## Usage
@@ -26,15 +33,8 @@ pdfcpu config list
 $ pdfcpu config list
 config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
 
-#############################
-#   Default configuration   #
-#############################
-
-# Creation date
-created: YYYY-MM-DD HH:MM
-
-# version (Do not edit!)
-version: v0.14.0-rc.1 dev
+# configuration schema version, independent of the pdfcpu version.
+schemaVersion: 1
 
 # toggle for inFilename extension check (.pdf)
 checkFileNameExt: true
@@ -124,7 +124,7 @@ preferredCertRevocationChecker: crl
 
 # limit form field content for display purposes when using pdfcpu form list.
 # if > 0 affects the columns AltName, Default and Value.
-FormFieldListMaxColWidth: 0
+formFieldListMaxColWidth: 0
 
 # encoded stream bytes read from a PDF.
 maxStreamBytes: 512 MB

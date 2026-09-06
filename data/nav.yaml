@@ -315,8 +315,18 @@
   url: /config/config
   section: config
   pages:
+    - title: Modes
+      url: /config/config_modes
+    - title: Workflows
+      url: /config/config_workflows
+    - title: Initialize
+      url: /config/config_init
     - title: List
       url: /config/config_list
+    - title: Inspect
+      url: /config/config_inspect
+    - title: Validate
+      url: /config/config_validate
     - title: Reset
       url: /config/config_reset
 - title: Paper

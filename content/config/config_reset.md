@@ -7,73 +7,42 @@ title: "Reset Configuration"
 
 The configuration file (config.yml) holds carefully selected default values for various aspects of pdfcpu's operations.
 
-This command resets the configuration file to the current major version.
+This command replaces the selected configuration file with the built-in defaults and current configuration schema.
 
-Please also check out the [config dir](/getting_started/config_dir) docs.
+See also [initialize configuration](/config/config_init), [inspect configuration](/config/config_inspect) and the
+[configuration directory](/getting_started/config_dir) documentation.
 
 
 ## Usage
 
 ```
 pdfcpu config reset
+pdfcpu config reset --force
 ```
 
-Warning: Do not forget to backup your config.yml before you execute this command in case you have some customization going on.
+Without `--force`, pdfcpu asks for confirmation. Use `--force` for non-interactive execution.
+
+Warning: Back up `config.yml` before executing this command if you have custom settings.
 
 ## Background
 
-Sometimes a new pdfcpu version introduces a new command that also extends the configuration eg. by a new parameter. 
+Configuration schema versions are independent of pdfcpu release versions. A configuration-dependent command reports when
+the selected schema is older than the one required by the running build and prints the applicable reset command. A newer
+schema requires upgrading pdfcpu instead. Users upgrading an existing v0.15 or older configuration should follow
+[Configuration Reset Required in v0.16](/getting_started/configuration_v016).
 
-Upgrading to a new version without upgrading the pdfcpu config file is not recommended.
-It may or may not lead to side effects and in worse case to a hard landing.
-
-Although the release notes will always include a reminder whenever a config file upgrade is necessary 
-pdfcpu will output a warning whenever the config file version does not match the version of the current release.
-
-Consider this config file version:
-```
-# version (Do not edit!)
-version: v0.9.0 dev
-```
-
-and the current pdfcpu version:
-```
-$ pdfcpu version
-pdfcpu: v0.9.1 dev
-commit: 22ebeff8 (2024-10-18T19:51:48Z)
-config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
-base  : go1.23.0
-```
-
-The major version of both is 9 and match, so no upgrade is needed.
-
-In contrast the config file version:
-```
-# version (Do not edit!)
-version: v0.9.1 dev
-```
-
-and the pdfcpu version:
-```
-$ pdfcpu version
-pdfcpu: v0.10.0 dev
-commit: 22ebeff8 (2024-10-18T19:51:48Z)
-config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
-base  : go1.23.0
-```
-
-have different major versions 9 and 10 respectively making a config file upgrade necessary.
+The command follows the normal root precedence and resets only the selected `config.yml`. It does not reset a stateless
+configuration. It can replace an older, newer or malformed configuration because it does not load that file first. Fonts
+and certificates stored beside it are preserved.
 
 ## Output
 
-The following is the output from upgrading v0.9.x to v0.10.0:
+Interactive reset:
 
 ```
 $ pdfcpu config reset
-Did you make a backup of /Users/horstrutter/Library/Application Support/pdfcpu/config.yml ?
-(yes/no): yes
-Are you ready to reset your config.yml to v0.10.0 dev ?
-(yes/no): yes
-resetting..
-Ready - Don't forget to update config.yml with your modifications.
+Reset the selected configuration to built-in defaults? (yes/no): yes
+configuration reset
+config: /Users/horstrutter/Library/Application Support/pdfcpu/config.yml
+schema version: 1
 ```
