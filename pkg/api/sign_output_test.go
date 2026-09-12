@@ -112,7 +112,7 @@ func TestValidateSignaturesFileOutput(t *testing.T) {
 		t,
 		signatureOutputTestCases(),
 		func(tt signatureOutputTestCase, conf *model.Configuration) ([]string, error) {
-			return ValidateSignaturesFile(tt.file, false, false, conf)
+			return ValidateSignaturesFile(t.Context(), tt.file, false, false, conf)
 		},
 	)
 }
@@ -130,11 +130,11 @@ func TestValidateSignaturesRawMatchesFileBehavior(t *testing.T) {
 			if err != nil {
 				return nil, err
 			}
-			results, err := ValidateSignaturesRaw(bytes.NewReader(bb), false, conf)
+			results, err := ValidateSignaturesRaw(t.Context(), bytes.NewReader(bb), false, conf)
 			if err != nil {
 				return nil, err
 			}
-			return digest(results, false), nil
+			return digest(t.Context(), results, false)
 		},
 	)
 }

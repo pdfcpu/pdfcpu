@@ -17,6 +17,7 @@ limitations under the License.
 package form
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -840,8 +842,11 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 	return nil
 }
 
-// ExportForm extracts form data originating from source from xRefTable.
-func ExportForm(xRefTable *model.XRefTable, source string) (*FormGroup, bool, error) {
+// ExportForm extracts form data originating from source from xRefTable and supports cancellation.
+func ExportForm(c context.Context, xRefTable *model.XRefTable, source string) (*FormGroup, bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, false, err
+	}
 	fields, err := Fields(xRefTable)
 	if err != nil {
 		return nil, false, fmt.Errorf("AcroForm Fields: %w", err)
@@ -855,6 +860,9 @@ func ExportForm(xRefTable *model.XRefTable, source string) (*FormGroup, bool, er
 	var ok bool
 
 	for i := 1; i <= xRefTable.PageCount; i++ {
+		if err := contextutil.Check(c); err != nil {
+			return nil, false, err
+		}
 
 		d, _, _, err := xRefTable.PageDict(i, false)
 		if err != nil {
@@ -883,18 +891,28 @@ func ExportForm(xRefTable *model.XRefTable, source string) (*FormGroup, bool, er
 
 	formGroup.Forms = []Form{form}
 
-	return &formGroup, ok, nil
+	return &formGroup, ok, contextutil.Check(c)
 }
 
-type exportFormFunc func(*model.XRefTable, string) (*FormGroup, bool, error)
+type exportFormFunc func(context.Context, *model.XRefTable, string) (*FormGroup, bool, error)
 
 type marshalFormJSONFunc func(any, string, string) ([]byte, error)
 
-func exportFormJSON(xRefTable *model.XRefTable, source string, w io.Writer, export exportFormFunc, marshal marshalFormJSONFunc) (bool, error) {
+func exportFormJSON(
+	c context.Context,
+	xRefTable *model.XRefTable,
+	source string,
+	w io.Writer,
+	export exportFormFunc,
+	marshal marshalFormJSONFunc,
+) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	if w == nil {
 		return false, ErrMissingJSONWriter
 	}
-	formGroup, ok, err := export(xRefTable, source)
+	formGroup, ok, err := export(c, xRefTable, source)
 	if err != nil {
 		return false, fmt.Errorf("collect data: %w", err)
 	}
@@ -906,6 +924,9 @@ func exportFormJSON(xRefTable *model.XRefTable, source string, w io.Writer, expo
 	if err != nil {
 		return false, fmt.Errorf("encode JSON: %w", err)
 	}
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 
 	n, err := w.Write(bb)
 	if err != nil {
@@ -914,12 +935,12 @@ func exportFormJSON(xRefTable *model.XRefTable, source string, w io.Writer, expo
 	if n != len(bb) {
 		return false, fmt.Errorf("write JSON: %w", io.ErrShortWrite)
 	}
-	return true, nil
+	return true, contextutil.Check(c)
 }
 
 // ExportFormJSON extracts form data originating from source from xRefTable and writes a JSON representation to w.
 // It returns true when form fields were exported and written. It returns false with a nil error when no exportable
-// form fields were found.
-func ExportFormJSON(xRefTable *model.XRefTable, source string, w io.Writer) (bool, error) {
-	return exportFormJSON(xRefTable, source, w, ExportForm, json.MarshalIndent)
+// form fields were found. It supports cancellation.
+func ExportFormJSON(c context.Context, xRefTable *model.XRefTable, source string, w io.Writer) (bool, error) {
+	return exportFormJSON(c, xRefTable, source, w, ExportForm, json.MarshalIndent)
 }

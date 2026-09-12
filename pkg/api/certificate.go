@@ -17,6 +17,7 @@
 package api
 
 import (
+	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
@@ -28,6 +29,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -75,7 +77,7 @@ type stagedCertificateImport struct {
 
 type certificateImportOperations struct {
 	files            fileOperations
-	saveCertificates func([]*x509.Certificate, string) error
+	saveCertificates func(context.Context, []*x509.Certificate, string) error
 }
 
 func defaultCertificateImportOperations() certificateImportOperations {
@@ -97,46 +99,64 @@ func validateCertificateFiles(inFiles []string) error {
 	return nil
 }
 
-func ensureTrustedCertificateDir() error {
+func ensureTrustedCertificateDir(c context.Context) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(model.TrustedCertDir, 0755); err != nil {
 		return fmt.Errorf("create trusted certificate directory: %w", err)
 	}
-	return nil
+	return contextutil.Check(c)
 }
 
-func certificateStrings(certs []*x509.Certificate) []string {
+func certificateStrings(c context.Context, certs []*x509.Certificate) ([]string, error) {
 	ss := make([]string, 0, len(certs))
 	for _, cert := range certs {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		ss = append(ss, model.CertString(cert))
 	}
 	sort.Strings(ss)
-	return ss
+	return ss, contextutil.Check(c)
 }
 
-func appendCertificateFile(path string, ss *[]string) (int, error) {
-	certs, err := pdfcpu.LoadCertificatesFile(path)
+func appendCertificateFile(c context.Context, path string, ss *[]string) (int, error) {
+	certs, err := pdfcpu.LoadCertificatesFile(c, path)
 	if err != nil {
 		*ss = append(*ss, fmt.Sprintf("%v\n", err))
 		return 0, err
 	}
 	if model.IsPEM(path) {
 		for _, cert := range certs {
+			if err := contextutil.Check(c); err != nil {
+				return 0, err
+			}
 			*ss = append(*ss, model.CertString(cert))
 		}
 		return len(certs), nil
 	}
-	certStrings := certificateStrings(certs)
+	certStrings, err := certificateStrings(c, certs)
+	if err != nil {
+		return 0, err
+	}
 	for i, s := range certStrings {
+		if err := contextutil.Check(c); err != nil {
+			return 0, err
+		}
 		*ss = append(*ss, fmt.Sprintf("%03d:\n%s", i+1, s))
 	}
 	return len(certStrings), nil
 }
 
-func listCertificatesText() ([]string, error) {
+func listCertificatesText(c context.Context) ([]string, error) {
 	count := 0
 	var ss []string
 	var listErr error
 	err := filepath.WalkDir(model.TrustedCertDir, func(path string, d os.DirEntry, err error) error {
+		if contextErr := contextutil.Check(c); contextErr != nil {
+			return contextErr
+		}
 		if err != nil {
 			listErr = errors.Join(listErr, fmt.Errorf("access %q: %w", path, err))
 			return nil
@@ -145,9 +165,12 @@ func listCertificatesText() ([]string, error) {
 			return nil
 		}
 		ss = append(ss, fmt.Sprintf("%s:\n", strings.TrimPrefix(path, model.TrustedCertDir)))
-		n, err := appendCertificateFile(path, &ss)
+		n, err := appendCertificateFile(c, path, &ss)
 		count += n
 		if err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return err
+			}
 			listErr = errors.Join(listErr, fmt.Errorf("certificate file %q: %w", path, err))
 		}
 		return nil
@@ -160,8 +183,11 @@ func listCertificatesText() ([]string, error) {
 	return ss, listErr
 }
 
-func listCertificatesJSON() ([]string, error) {
-	files, count, listErr := certificateFilesJSON(model.TrustedCertDir)
+func listCertificatesJSON(c context.Context) ([]string, error) {
+	files, count, listErr := certificateFilesJSON(c, model.TrustedCertDir)
+	if err := contextutil.Check(c); err != nil {
+		return nil, errors.Join(listErr, err)
+	}
 
 	s := struct {
 		Header              pdfcpu.Header          `json:"header"`
@@ -169,7 +195,10 @@ func listCertificatesJSON() ([]string, error) {
 		TotalInstalledCerts int                    `json:"totalInstalledCerts"`
 		Files               []certificateFileEntry `json:"files"`
 	}{
-		Header:              pdfcpu.Header{Version: "pdfcpu " + model.VersionStr, Creation: time.Now().Format("2006-01-02 15:04:05 MST")},
+		Header: pdfcpu.Header{
+			Version:  "pdfcpu " + model.VersionStr,
+			Creation: time.Now().Format("2006-01-02 15:04:05 MST"),
+		},
 		TrustedCertDir:      model.TrustedCertDir,
 		TotalInstalledCerts: count,
 		Files:               files,
@@ -182,11 +211,14 @@ func listCertificatesJSON() ([]string, error) {
 	return []string{string(bb)}, listErr
 }
 
-func certificateFilesJSON(dir string) ([]certificateFileEntry, int, error) {
+func certificateFilesJSON(c context.Context, dir string) ([]certificateFileEntry, int, error) {
 	count := 0
 	var files []certificateFileEntry
 	var listErr error
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if contextErr := contextutil.Check(c); contextErr != nil {
+			return contextErr
+		}
 		if err != nil {
 			listErr = errors.Join(listErr, fmt.Errorf("access %q: %w", path, err))
 			return nil
@@ -194,10 +226,13 @@ func certificateFilesJSON(dir string) ([]certificateFileEntry, int, error) {
 		if skipCertificateFile(path, d) {
 			return nil
 		}
-		entry, err := certificateFileJSON(dir, path)
+		entry, err := certificateFileJSON(c, dir, path)
 		count += len(entry.Certificates)
 		files = append(files, entry)
 		if err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return err
+			}
 			listErr = errors.Join(listErr, fmt.Errorf("certificate file %q: %w", path, err))
 		}
 		return nil
@@ -212,9 +247,9 @@ func skipCertificateFile(path string, d os.DirEntry) bool {
 	return d.IsDir() || (!model.IsPEM(path) && !model.IsP7C(path))
 }
 
-func certificateFileJSON(dir, path string) (certificateFileEntry, error) {
+func certificateFileJSON(c context.Context, dir, path string) (certificateFileEntry, error) {
 	entry := certificateFileEntry{Name: strings.TrimPrefix(path, dir)}
-	certs, err := pdfcpu.LoadCertificatesFile(path)
+	certs, err := pdfcpu.LoadCertificatesFile(c, path)
 	if err != nil {
 		entry.Error = err.Error()
 		return entry, err
@@ -222,13 +257,20 @@ func certificateFileJSON(dir, path string) (certificateFileEntry, error) {
 	sort.Slice(certs, func(i, j int) bool {
 		return model.CertString(certs[i]) < model.CertString(certs[j])
 	})
-	entry.Certificates = certificateListEntries(certs)
+	entry.Certificates, err = certificateListEntries(c, certs)
+	if err != nil {
+		entry.Error = err.Error()
+		return entry, err
+	}
 	return entry, nil
 }
 
-func certificateListEntries(certs []*x509.Certificate) []certificateListEntry {
+func certificateListEntries(c context.Context, certs []*x509.Certificate) ([]certificateListEntry, error) {
 	entries := make([]certificateListEntry, 0, len(certs))
 	for _, cert := range certs {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		entries = append(entries, certificateListEntry{
 			Subject:      newCertificateName(cert.Subject),
 			Issuer:       newCertificateName(cert.Issuer),
@@ -238,7 +280,7 @@ func certificateListEntries(certs []*x509.Certificate) []certificateListEntry {
 			IsCA:         cert.IsCA,
 		})
 	}
-	return entries
+	return entries, contextutil.Check(c)
 }
 
 func newCertificateName(name pkix.Name) certificateName {
@@ -254,16 +296,19 @@ func newCertificateName(name pkix.Name) certificateName {
 	}
 }
 
-// ListCertificates returns installed certificates.
-func ListCertificates(json bool) (ss []string, err error) {
+// ListCertificates returns installed certificates and supports cancellation.
+func ListCertificates(c context.Context, json bool) (ss []string, err error) {
 	defer fault.Catch(&err)
-	if err := ensureTrustedCertificateDir(); err != nil {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	if err := ensureTrustedCertificateDir(c); err != nil {
 		return nil, fmt.Errorf("list certificates: %w", err)
 	}
 	if json {
-		ss, err = listCertificatesJSON()
+		ss, err = listCertificatesJSON(c)
 	} else {
-		ss, err = listCertificatesText()
+		ss, err = listCertificatesText(c)
 	}
 	if err != nil {
 		return ss, fmt.Errorf("list certificates: %w", err)
@@ -271,30 +316,32 @@ func ListCertificates(json bool) (ss []string, err error) {
 	return ss, nil
 }
 
-// ImportCertificates validates and installs certificate files into the pdfcpu configuration directory.
+// ImportCertificates validates and installs certificate files into the pdfcpu configuration directory while supporting cancellation.
 // Existing destinations with the same derived name are replaced transactionally.
-func ImportCertificates(inFiles []string) (ss []string, err error) {
+func ImportCertificates(c context.Context, inFiles []string) (ss []string, err error) {
 	defer fault.Catch(&err)
-	return importCertificates(inFiles, defaultCertificateImportOperations())
-}
-
-func importCertificates(inFiles []string, ops certificateImportOperations) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCertificateFiles(inFiles); err != nil {
 		return nil, fmt.Errorf("import certificates: %w", err)
 	}
 
-	imports, err := prepareCertificateImports(inFiles)
+	imports, err := prepareCertificateImports(c, inFiles)
 	if err != nil {
 		return nil, fmt.Errorf("import certificates: %w", err)
 	}
-	if err := ensureTrustedCertificateDir(); err != nil {
+	if err := ensureTrustedCertificateDir(c); err != nil {
 		return nil, fmt.Errorf("import certificates: %w", err)
 	}
-	if err := publishCertificateImports(imports, ops); err != nil {
+	ss, err = certificateImportSummary(c, imports)
+	if err != nil {
+		return nil, fmt.Errorf("import certificates: %w", err)
+	}
+	if err := publishCertificateImports(c, imports, defaultCertificateImportOperations()); err != nil {
 		return nil, fmt.Errorf("import certificates: publish batch: %w", err)
 	}
-	model.MarkCertificateStoreChanged()
-	return certificateImportSummary(imports), nil
+	return ss, nil
 }
 
 func certificateImportDestination(inFile string) string {
@@ -303,11 +350,14 @@ func certificateImportDestination(inFile string) string {
 	return filepath.Join(model.TrustedCertDir, strings.TrimSuffix(base, ext)+".p7c")
 }
 
-func prepareCertificateImports(inFiles []string) ([]certificateImport, error) {
+func prepareCertificateImports(c context.Context, inFiles []string) ([]certificateImport, error) {
 	imports := make([]certificateImport, 0, len(inFiles))
 	destinations := map[string]int{}
 	var preflightErr error
 	for i, inFile := range inFiles {
+		if err := contextutil.Check(c); err != nil {
+			return nil, errors.Join(preflightErr, err)
+		}
 		outFile := certificateImportDestination(inFile)
 		key := strings.ToLower(filepath.Clean(outFile))
 		if previous, found := destinations[key]; found {
@@ -327,7 +377,7 @@ func prepareCertificateImports(inFiles []string) ([]certificateImport, error) {
 			destinations[key] = i
 		}
 
-		certs, err := pdfcpu.LoadCertificatesFile(inFile)
+		certs, err := pdfcpu.LoadCertificatesFile(c, inFile)
 		if err != nil {
 			preflightErr = errors.Join(
 				preflightErr,
@@ -368,9 +418,12 @@ func cleanupCertificateImports(staged []stagedCertificateImport, removeBackups b
 	return err
 }
 
-func stageCertificateImports(imports []certificateImport, ops certificateImportOperations) ([]stagedCertificateImport, error) {
+func stageCertificateImports(c context.Context, imports []certificateImport, ops certificateImportOperations) ([]stagedCertificateImport, error) {
 	staged := make([]stagedCertificateImport, 0, len(imports))
 	for i, imp := range imports {
+		if err := contextutil.Check(c); err != nil {
+			return nil, errors.Join(err, cleanupCertificateImports(staged, true, ops))
+		}
 		stageFile, err := createCertificateTransactionFile(imp.outFile, "stage", ops)
 		if err != nil {
 			return nil, errors.Join(
@@ -379,7 +432,7 @@ func stageCertificateImports(imports []certificateImport, ops certificateImportO
 			)
 		}
 		staged = append(staged, stagedCertificateImport{certificateImport: imp, stageFile: stageFile})
-		if err := ops.saveCertificates(imp.certificates, stageFile); err != nil {
+		if err := ops.saveCertificates(c, imp.certificates, stageFile); err != nil {
 			return nil, errors.Join(
 				fmt.Errorf("input %d %q: encode staging file: %w", i+1, imp.inFile, err),
 				cleanupCertificateImports(staged, true, ops),
@@ -389,8 +442,11 @@ func stageCertificateImports(imports []certificateImport, ops certificateImportO
 	return staged, nil
 }
 
-func backupCertificateDestinations(staged []stagedCertificateImport, ops certificateImportOperations) error {
+func backupCertificateDestinations(c context.Context, staged []stagedCertificateImport, ops certificateImportOperations) error {
 	for i := range staged {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		file := &staged[i]
 		if _, err := ops.files.statFn(file.outFile); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
@@ -410,6 +466,9 @@ func backupCertificateDestinations(staged []stagedCertificateImport, ops certifi
 			return fmt.Errorf("input %d %q: %w", i+1, file.inFile, err)
 		}
 		file.hadOriginal = true
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -423,7 +482,8 @@ func rollbackCertificateImports(staged []stagedCertificateImport, ops certificat
 			file.published = false
 		}
 		if file.hadOriginal {
-			if restoreErr := ops.files.replaceFile(file.backupFile, file.outFile, "restore certificate destination"); restoreErr != nil {
+			restoreErr := ops.files.replaceFile(file.backupFile, file.outFile, "restore certificate destination")
+			if restoreErr != nil {
 				err = errors.Join(err, restoreErr, fmt.Errorf("certificate backup retained at %s", file.backupFile))
 			} else {
 				file.hadOriginal = false
@@ -433,15 +493,18 @@ func rollbackCertificateImports(staged []stagedCertificateImport, ops certificat
 	return errors.Join(err, cleanupCertificateImports(staged, false, ops))
 }
 
-func publishCertificateImports(imports []certificateImport, ops certificateImportOperations) error {
-	staged, err := stageCertificateImports(imports, ops)
+func publishCertificateImports(c context.Context, imports []certificateImport, ops certificateImportOperations) error {
+	staged, err := stageCertificateImports(c, imports, ops)
 	if err != nil {
 		return err
 	}
-	if err := backupCertificateDestinations(staged, ops); err != nil {
+	if err := backupCertificateDestinations(c, staged, ops); err != nil {
 		return errors.Join(err, rollbackCertificateImports(staged, ops))
 	}
 	for i := range staged {
+		if err := contextutil.Check(c); err != nil {
+			return errors.Join(err, rollbackCertificateImports(staged, ops))
+		}
 		file := &staged[i]
 		if err := ops.files.replaceFile(file.stageFile, file.outFile, "publish certificate"); err != nil {
 			return errors.Join(
@@ -450,19 +513,29 @@ func publishCertificateImports(imports []certificateImport, ops certificateImpor
 			)
 		}
 		file.published = true
+		if err := contextutil.Check(c); err != nil {
+			return errors.Join(err, rollbackCertificateImports(staged, ops))
+		}
 	}
-	return cleanupCertificateImports(staged, true, ops)
+	if err := cleanupCertificateImports(staged, true, ops); err != nil {
+		return err
+	}
+	model.MarkCertificateStoreChanged()
+	return nil
 }
 
-func certificateImportSummary(imports []certificateImport) []string {
+func certificateImportSummary(c context.Context, imports []certificateImport) ([]string, error) {
 	ss := make([]string, 0, len(imports)+1)
 	count := 0
 	for _, imp := range imports {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		n := len(imp.certificates)
 		ss = append(ss, fmt.Sprintf("%s: %d certificates", imp.inFile, n))
 		count += n
 	}
-	return append(ss, fmt.Sprintf("imported %d certificates", count))
+	return append(ss, fmt.Sprintf("imported %d certificates", count)), contextutil.Check(c)
 }
 
 func inspectCertificate(inFile string, inputIndex, certificateIndex int, cert *x509.Certificate) (string, error) {
@@ -479,22 +552,31 @@ func inspectCertificate(inFile string, inputIndex, certificateIndex int, cert *x
 	return s, nil
 }
 
-// InspectCertificates loads and inspects certificates from inFiles.
-func InspectCertificates(inFiles []string) (ss []string, err error) {
+// InspectCertificates loads and inspects certificates from inFiles and supports cancellation.
+func InspectCertificates(c context.Context, inFiles []string) (ss []string, err error) {
 	defer fault.Catch(&err)
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCertificateFiles(inFiles); err != nil {
 		return nil, fmt.Errorf("inspect certificates: %w", err)
 	}
 
 	count := 0
 	for inputIndex, inFile := range inFiles {
-		certs, err := pdfcpu.LoadCertificatesFile(inFile)
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
+		certs, err := pdfcpu.LoadCertificatesFile(c, inFile)
 		if err != nil {
 			return nil, fmt.Errorf("inspect certificates: input %d %q: load certificates: %w", inputIndex+1, inFile, err)
 		}
 
 		ss = append(ss, fmt.Sprintf("%s: %d certificates\n", inFile, len(certs)))
 		for certificateIndex, cert := range certs {
+			if err := contextutil.Check(c); err != nil {
+				return nil, err
+			}
 			s, err := inspectCertificate(inFile, inputIndex, certificateIndex, cert)
 			if err != nil {
 				return nil, err

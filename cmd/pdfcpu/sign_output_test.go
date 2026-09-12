@@ -85,7 +85,7 @@ func TestValidateSignaturesCLIOutput(t *testing.T) {
 			conf.Offline = true
 			cmd := cli.ValidateSignaturesCommand(tt.file, false, false, conf)
 			var out bytes.Buffer
-			if err := runCommandWithOutput(cmd, &out, cli.Dispatch, false); err != nil {
+			if err := runCommandWithOutput(t.Context(), cmd, &out, cli.Dispatch, false); err != nil {
 				t.Fatal(err)
 			}
 			if got := out.String(); got != tt.want {

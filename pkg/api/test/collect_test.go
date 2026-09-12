@@ -32,11 +32,11 @@ func TestCollect(t *testing.T) {
 	outFile := filepath.Join(outDir, "myPageSequence.pdf")
 
 	// Start with all odd pages but page 1, then append pages 8-11 and the last page.
-	if err := api.CollectFile(inFile, outFile, []string{"odd", "!1", "8-11", "l"}, nil); err != nil {
+	if err := api.CollectFile(t.Context(), inFile, outFile, []string{"odd", "!1", "8-11", "l"}, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	if err := api.ValidateFile(outFile, nil); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, nil, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -48,7 +48,7 @@ func TestCollectLowLevel(t *testing.T) {
 	outFile := filepath.Join(outDir, "MyCollectedPages.pdf")
 
 	// Create a context.
-	ctx, err := api.ReadContextFile(inFile)
+	ctx, err := api.ReadContextFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
@@ -60,7 +60,7 @@ func TestCollectLowLevel(t *testing.T) {
 	}
 
 	usePgCache := true
-	ctxNew, err := pdfcpu.ExtractPages(ctx, selectedPages, usePgCache)
+	ctxNew, err := pdfcpu.ExtractPages(t.Context(), ctx, selectedPages, usePgCache)
 	if err != nil {
 		t.Fatalf("%s ExtractPages: %v\n", msg, err)
 	}
@@ -68,7 +68,7 @@ func TestCollectLowLevel(t *testing.T) {
 	// Here you can process this single page PDF context.
 
 	// Write context to file.
-	if err := api.WriteContextFile(ctxNew, outFile); err != nil {
+	if err := api.WriteContextFile(t.Context(), ctxNew, outFile); err != nil {
 		t.Fatalf("%s write: %v\n", msg, err)
 	}
 }

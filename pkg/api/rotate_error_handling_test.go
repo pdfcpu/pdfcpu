@@ -35,11 +35,11 @@ func TestRotateArgumentValidation(t *testing.T) {
 		err  error
 		want error
 	}{
-		{name: "reader", err: Rotate(nil, io.Discard, 90, nil, nil), want: ErrMissingPDFReadSeeker},
-		{name: "writer", err: Rotate(bytes.NewReader(nil), nil, 90, nil, nil), want: ErrMissingPDFWriter},
-		{name: "rotation", err: Rotate(bytes.NewReader(nil), io.Discard, 45, nil, nil), want: ErrInvalidRotation},
-		{name: "input", err: RotateFile("", "", 90, nil, nil), want: ErrMissingPDFInput},
-		{name: "file rotation", err: RotateFile("missing.pdf", "", -45, nil, nil), want: ErrInvalidRotation},
+		{name: "reader", err: Rotate(t.Context(), nil, io.Discard, 90, nil, nil), want: ErrMissingPDFReadSeeker},
+		{name: "writer", err: Rotate(t.Context(), bytes.NewReader(nil), nil, 90, nil, nil), want: ErrMissingPDFWriter},
+		{name: "rotation", err: Rotate(t.Context(), bytes.NewReader(nil), io.Discard, 45, nil, nil), want: ErrInvalidRotation},
+		{name: "input", err: RotateFile(t.Context(), "", "", 90, nil, nil), want: ErrMissingPDFInput},
+		{name: "file rotation", err: RotateFile(t.Context(), "missing.pdf", "", -45, nil, nil), want: ErrInvalidRotation},
 	}
 
 	for _, tt := range tests {
@@ -70,7 +70,7 @@ func TestValidateRotation(t *testing.T) {
 
 // TestRotateReadErrorIncludesPhaseContext verifies preparation error context.
 func TestRotateReadErrorIncludesPhaseContext(t *testing.T) {
-	err := Rotate(bytes.NewReader(nil), io.Discard, 90, nil, nil)
+	err := Rotate(t.Context(), bytes.NewReader(nil), io.Discard, 90, nil, nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -82,7 +82,7 @@ func TestRotateReadErrorIncludesPhaseContext(t *testing.T) {
 // TestRotatePageSelectionErrorIncludesPhaseContext verifies page-selection error context.
 func TestRotatePageSelectionErrorIncludesPhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	err := Rotate(openAPITestPDF(t, inFile), io.Discard, 90, []string{"foo"}, nil)
+	err := Rotate(t.Context(), openAPITestPDF(t, inFile), io.Discard, 90, []string{"foo"}, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -95,7 +95,7 @@ func TestRotatePageSelectionErrorIncludesPhaseContext(t *testing.T) {
 func TestRotateWriteErrorIncludesPhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	wantErr := errors.New("rotate write failed")
-	err := Rotate(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, 90, []string{"1"}, nil)
+	err := Rotate(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, 90, []string{"1"}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -107,7 +107,7 @@ func TestRotateWriteErrorIncludesPhaseContext(t *testing.T) {
 // TestRotateFileOpenErrorIncludesInputContext verifies input-opening error context.
 func TestRotateFileOpenErrorIncludesInputContext(t *testing.T) {
 	inFile := filepath.Join(t.TempDir(), "missing.pdf")
-	err := RotateFile(inFile, "", 90, nil, nil)
+	err := RotateFile(t.Context(), inFile, "", 90, nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -120,7 +120,7 @@ func TestRotateFileOpenErrorIncludesInputContext(t *testing.T) {
 func TestRotateFileCreateOutputErrorIncludesPhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	outFile := filepath.Join(t.TempDir(), "missing", "out.pdf")
-	err := RotateFile(inFile, outFile, 90, nil, nil)
+	err := RotateFile(t.Context(), inFile, outFile, 90, nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -166,7 +166,7 @@ func newRotateTestFile(t *testing.T, pattern string) *os.File {
 func TestRotateFileOperationFailureRemovesOutput(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	err := RotateFile(inFile, outFile, 90, []string{"foo"}, nil)
+	err := RotateFile(t.Context(), inFile, outFile, 90, []string{"foo"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "rotate: parse page selection") {
 		t.Fatalf("expected page selection error, got %v", err)
 	}
@@ -184,7 +184,7 @@ func TestRotateFileFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := RotateFile(inFile, outFile, 90, []string{"foo"}, nil)
+	err := RotateFile(t.Context(), inFile, outFile, 90, []string{"foo"}, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -205,7 +205,7 @@ func TestRotateFileSuccessReplacesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := RotateFile(inFile, outFile, 90, []string{"1"}, nil); err != nil {
+	if err := RotateFile(t.Context(), inFile, outFile, 90, []string{"1"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	got, err := os.ReadFile(outFile)
@@ -249,7 +249,7 @@ func TestRotateFileFailurePreservesInputAliases(t *testing.T) {
 				t.Skipf("create %s: %v", tt.name, err)
 			}
 
-			err := RotateFile(inFile, outFile, 90, []string{"foo"}, nil)
+			err := RotateFile(t.Context(), inFile, outFile, 90, []string{"foo"}, nil)
 			if err == nil {
 				t.Fatal("expected error")
 			}
@@ -288,7 +288,7 @@ func TestRotateFileSuccessReplacesInputAliases(t *testing.T) {
 				t.Skipf("create %s: %v", tt.name, err)
 			}
 
-			if err := RotateFile(inFile, outFile, 90, []string{"1"}, nil); err != nil {
+			if err := RotateFile(t.Context(), inFile, outFile, 90, []string{"1"}, nil); err != nil {
 				t.Fatal(err)
 			}
 			gotInput, err := os.ReadFile(inFile)

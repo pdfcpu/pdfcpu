@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -46,7 +47,7 @@ func TestHandleInstallFontsCommandPreservesAPIInputErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := handleInstallFontsCommand(nil, tt.args)
+			err := handleInstallFontsCommand(t.Context(), nil, tt.args)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
@@ -54,6 +55,30 @@ func TestHandleInstallFontsCommandPreservesAPIInputErrors(t *testing.T) {
 				t.Fatalf("expected context %q, got %q", tt.wantText, err)
 			}
 		})
+	}
+}
+
+func TestHandleInstallFontsCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleInstallFontsCommand(c, nil, []string{"ignored.ttf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestFontsInstallCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd, _, err := fontsCmd().Find([]string{"install"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"ignored.ttf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
 	}
 }
 

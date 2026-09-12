@@ -130,11 +130,11 @@ func TestDirectModeSettingHandlersPreserveSuppliedConfiguration(t *testing.T) {
 		run  func(*model.Configuration) error
 	}{
 		{"dump", func(conf *model.Configuration) error {
-			_, err := Dump(DumpCommand("missing.pdf", []int{0, 0}, conf))
+			_, err := dump(t.Context(), DumpCommand("missing.pdf", []int{0, 0}, conf))
 			return err
 		}},
 		{"stdout page extraction", func(conf *model.Configuration) error {
-			_, err := ExtractPages(ExtractPagesCommand(invalidPDF, "-", []string{"1"}, conf))
+			_, err := extractPages(t.Context(), ExtractPagesCommand(invalidPDF, "-", []string{"1"}, conf))
 			return err
 		}},
 	}

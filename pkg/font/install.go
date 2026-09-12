@@ -19,6 +19,7 @@ package font
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"encoding/gob"
 	"errors"
@@ -32,6 +33,7 @@ import (
 	"strings"
 	"unicode/utf16"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/internal/fileutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/sanitize"
@@ -52,6 +54,9 @@ const (
 )
 
 var (
+	// ErrMissingContext signals a missing required Go context.
+	ErrMissingContext = contextutil.ErrMissingContext
+
 	// ErrMissingFontDir signals a missing destination font directory.
 	ErrMissingFontDir = errors.New("missing font directory")
 
@@ -1159,7 +1164,7 @@ func readGob(fileName string, fd *ttf) (err error) {
 	if err := dec.Decode(fd); err != nil {
 		return fmt.Errorf("decode %s: %w: %w", fileName, ErrInvalidFontData, err)
 	}
-	if err := validateDecodedTTF(*fd); err != nil {
+	if err := validateDecodedTTF(*fd, func() error { return nil }); err != nil {
 		return fmt.Errorf("validate %s: %w", fileName, err)
 	}
 	return nil
@@ -1211,14 +1216,17 @@ func validateDecodedFontFile(bb []byte) error {
 	return nil
 }
 
-func validateDecodedTTF(fd ttf) error {
-	if err := ValidateTTFLight(fd.light()); err != nil {
+func validateDecodedTTF(fd ttf, checkCanceled func() error) error {
+	if err := validateTTFLight(fd.light(), checkCanceled); err != nil {
 		return fmt.Errorf("font metrics: %w", err)
+	}
+	if err := checkCanceled(); err != nil {
+		return err
 	}
 	if err := validateDecodedFontFile(fd.FontFile); err != nil {
 		return fmt.Errorf("embedded font file: %w", err)
 	}
-	return nil
+	return checkCanceled()
 }
 
 func validateInstallTarget(fontDir, fontName string) error {
@@ -2230,7 +2238,10 @@ func createTTF(header []byte, tables map[string]*table) ([]byte, error) {
 	return bb, nil
 }
 
-func subsetWithReader(fontName string, usedGIDs map[uint16]bool, readFont func(string) ([]byte, error)) ([]byte, error) {
+func subsetWithReader(fontName string, usedGIDs map[uint16]bool, readFont func(string) ([]byte, error), checkCanceled func() error) ([]byte, error) {
+	if err := checkCanceled(); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(fontName) == "" {
 		return nil, fmt.Errorf("subset font: %w", ErrMissingFontName)
 	}
@@ -2247,6 +2258,9 @@ func subsetWithReader(fontName string, usedGIDs map[uint16]bool, readFont func(s
 		return nil, fmt.Errorf("subset font %s: parse header: %w", fontName, invalidFontData("expected at least 12 bytes, got %d", len(bb)))
 	}
 	header := bb[:12]
+	if err := checkCanceled(); err != nil {
+		return nil, err
+	}
 	if err := validateSFNTHeader(header); err != nil {
 		return nil, fmt.Errorf("subset font %s: parse header: %w", fontName, err)
 	}
@@ -2255,17 +2269,29 @@ func subsetWithReader(fontName string, usedGIDs map[uint16]bool, readFont func(s
 	if err != nil {
 		return nil, fmt.Errorf("subset font %s: parse tables: %w", fontName, err)
 	}
+	if err := checkCanceled(); err != nil {
+		return nil, err
+	}
 	if err := glyfAndLoca(tables, usedGIDs); err != nil {
 		return nil, fmt.Errorf("subset font %s: subset glyphs: %w", fontName, err)
+	}
+	if err := checkCanceled(); err != nil {
+		return nil, err
 	}
 	bb, err = createTTF(header, tables)
 	if err != nil {
 		return nil, fmt.Errorf("subset font %s: rebuild font: %w", fontName, err)
 	}
-	return bb, nil
+	return bb, checkCanceled()
 }
 
-// Subset creates a new font file based on usedGIDs.
-func Subset(fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
-	return subsetWithReader(fontName, usedGIDs, Read)
+// Subset creates a new font file based on usedGIDs and supports cancellation.
+func Subset(c context.Context, fontName string, usedGIDs map[uint16]bool) ([]byte, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	readFont := func(fontName string) ([]byte, error) {
+		return Read(c, fontName)
+	}
+	return subsetWithReader(fontName, usedGIDs, readFont, c.Err)
 }

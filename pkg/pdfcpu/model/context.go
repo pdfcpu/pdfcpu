@@ -26,9 +26,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+// ErrMissingContext signals a missing required Go context.
+var ErrMissingContext = contextutil.ErrMissingContext
 
 // ErrMissingPDFContext signals a missing required PDF context.
 var ErrMissingPDFContext = errors.New("missing PDF context")

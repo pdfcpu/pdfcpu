@@ -17,6 +17,7 @@ limitations under the License.
 package sign_test
 
 import (
+	"context"
 	"crypto/x509"
 	"go/ast"
 	"go/parser"
@@ -36,6 +37,7 @@ import (
 )
 
 type exportedValidationFunc func(
+	context.Context,
 	io.ReaderAt,
 	types.Dict,
 	bool,
@@ -48,12 +50,14 @@ type exportedValidationFunc func(
 ) error
 
 type domainValidationFunc func(
+	context.Context,
 	io.ReaderAt,
 	*model.Context,
 	bool,
 ) ([]*model.SignatureValidationResult, error)
 
 type domainValidationWithPoolFunc func(
+	context.Context,
 	io.ReaderAt,
 	*model.Context,
 	bool,
@@ -61,18 +65,21 @@ type domainValidationWithPoolFunc func(
 ) ([]*model.SignatureValidationResult, error)
 
 type apiFileValidationFunc func(
+	context.Context,
 	string,
 	bool,
 	*model.Configuration,
 ) ([]*model.SignatureValidationResult, error)
 
 type apiRawValidationFunc func(
+	context.Context,
 	api.ReadSeekerAt,
 	bool,
 	*model.Configuration,
 ) ([]*model.SignatureValidationResult, error)
 
 type apiPresentationFunc func(
+	context.Context,
 	string,
 	bool,
 	bool,

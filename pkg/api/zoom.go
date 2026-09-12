@@ -17,12 +17,14 @@ limitations under the License.
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"math"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -59,9 +61,12 @@ func finiteZoomValue(v float64) bool {
 	return !math.IsNaN(v) && !math.IsInf(v, 0)
 }
 
-// Zoom applies zoom for selected pages of rs and writes the result to w.
-func Zoom(rs io.ReadSeeker, w io.Writer, selectedPages []string, zoom *model.Zoom, conf *model.Configuration) (err error) {
+// Zoom applies zoom for selected pages of rs, writes the result to w and supports cancellation.
+func Zoom(c context.Context, rs io.ReadSeeker, w io.Writer, selectedPages []string, zoom *model.Zoom, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -74,7 +79,7 @@ func Zoom(rs io.ReadSeeker, w io.Writer, selectedPages []string, zoom *model.Zoo
 
 	conf = operationConfiguration(conf, model.ZOOM)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("zoom: %w", err)
 	}
@@ -84,21 +89,24 @@ func Zoom(rs io.ReadSeeker, w io.Writer, selectedPages []string, zoom *model.Zoo
 		return fmt.Errorf("zoom: parse page selection: %w", err)
 	}
 
-	if err = pdfcpu.Zoom(ctx, pages, zoom); err != nil {
+	if err = pdfcpu.Zoom(c, ctx, pages, zoom); err != nil {
 		return fmt.Errorf("zoom: apply pages: %w", err)
 	}
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("zoom: write output: %w", err)
 	}
 	return nil
 }
 
-// ZoomFile applies zoom for selected pages of inFile and writes the result to outFile.
-func ZoomFile(inFile, outFile string, selectedPages []string, zoom *model.Zoom, conf *model.Configuration) (err error) {
+// ZoomFile applies zoom for selected pages of inFile, writes the result to outFile and supports cancellation.
+func ZoomFile(c context.Context, inFile, outFile string, selectedPages []string, zoom *model.Zoom, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -132,7 +140,10 @@ func ZoomFile(inFile, outFile string, selectedPages []string, zoom *model.Zoom, 
 		err = staged.commit()
 	}()
 
-	if err = Zoom(f1, f2, selectedPages, zoom, conf); err != nil {
+	if err = Zoom(c, f1, f2, selectedPages, zoom, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 

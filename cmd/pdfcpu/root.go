@@ -17,11 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -32,7 +34,7 @@ var (
 	conf             string
 	force            bool
 	kpw              string
-	needStackTrace   bool //= true
+	needStackTrace   bool
 	offline          bool
 	offlineSet       bool
 	opw              string
@@ -55,9 +57,11 @@ It is built on a Go API for direct PDF control.`,
 	SilenceErrors: true,
 }
 
-// Execute runs the root command.
-func Execute() error {
-	return rootCmd.Execute()
+func execute(c context.Context) error {
+	if c == nil {
+		return cli.ErrMissingContext
+	}
+	return rootCmd.ExecuteContext(c)
 }
 
 func init() {
@@ -224,7 +228,7 @@ func loadCommandConfiguration() (*model.Configuration, error) {
 		}
 	}
 
-	c, err := api.LoadConfigurationWithOptions(options)
+	c, err := api.LoadConfiguration(options)
 	if err != nil {
 		return nil, err
 	}

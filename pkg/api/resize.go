@@ -17,12 +17,14 @@ limitations under the License.
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"math"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -56,10 +58,13 @@ func invalidResizeDimension(v float64) bool {
 	return math.IsNaN(v) || math.IsInf(v, 0) || v < 0
 }
 
-// Resize applies resizeConf for selected pages of rs and writes result to w.
-func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model.Resize, conf *model.Configuration) (err error) {
+// Resize applies resizeConf for selected pages of rs, writes the result to w and supports cancellation.
+func Resize(c context.Context, rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model.Resize, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -73,7 +78,7 @@ func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model
 
 	conf = operationConfiguration(conf, model.RESIZE)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("resize: %w", err)
 	}
@@ -83,21 +88,24 @@ func Resize(rs io.ReadSeeker, w io.Writer, selectedPages []string, resize *model
 		return fmt.Errorf("resize: parse page selection: %w", err)
 	}
 
-	if err = pdfcpu.Resize(ctx, pages, resize); err != nil {
+	if err = pdfcpu.Resize(c, ctx, pages, resize); err != nil {
 		return fmt.Errorf("resize: apply pages: %w", err)
 	}
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("resize: write output: %w", err)
 	}
 	return nil
 }
 
-// ResizeFile applies resizeConf for selected pages of inFile and writes result to outFile.
-func ResizeFile(inFile, outFile string, selectedPages []string, resize *model.Resize, conf *model.Configuration) (err error) {
+// ResizeFile applies resizeConf for selected pages of inFile, writes the result to outFile and supports cancellation.
+func ResizeFile(c context.Context, inFile, outFile string, selectedPages []string, resize *model.Resize, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -130,7 +138,10 @@ func ResizeFile(inFile, outFile string, selectedPages []string, resize *model.Re
 		err = staged.commit()
 	}()
 
-	if err = Resize(f1, f2, selectedPages, resize, conf); err != nil {
+	if err = Resize(c, f1, f2, selectedPages, resize, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 

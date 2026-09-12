@@ -17,24 +17,21 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func imageBooleanEntry(
-	xRefTable *model.XRefTable,
-	sd *types.StreamDict,
-	key string,
-	objNr int,
-) (bool, error) {
+func imageBooleanEntry(xRefTable *model.XRefTable, sd *types.StreamDict, key string, objNr int) (bool, error) {
 	b, _, err := xRefTable.DereferenceBooleanEntry(sd.Dict, key)
 	if err != nil {
 		return false, fmt.Errorf("image obj#%d entry %q: %w", objNr, key, err)
@@ -42,8 +39,11 @@ func imageBooleanEntry(
 	return b != nil && b.Value(), nil
 }
 
-// Images returns all embedded images of ctx.
-func Images(ctx *model.Context, selectedPages types.IntSet) ([]map[int]model.Image, *ImageListMaxLengths, error) {
+// Images returns all embedded images of ctx and supports cancellation.
+func Images(c context.Context, ctx *model.Context, selectedPages types.IntSet) ([]map[int]model.Image, *ImageListMaxLengths, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	pageNrs := []int{}
 	for k, v := range selectedPages {
 		if !v {
@@ -61,12 +61,15 @@ func Images(ctx *model.Context, selectedPages types.IntSet) ([]map[int]model.Ima
 	maxPageNr := 0
 
 	for _, i := range pageNrs {
+		if err := contextutil.Check(c); err != nil {
+			return nil, nil, err
+		}
 
 		if i > maxPageNr {
 			maxPageNr = i
 		}
 
-		m, err := ExtractPageImages(ctx, i, true)
+		m, err := ExtractPageImages(c, ctx, i, true)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -74,6 +77,9 @@ func Images(ctx *model.Context, selectedPages types.IntSet) ([]map[int]model.Ima
 			continue
 		}
 		for _, i := range m {
+			if err := contextutil.Check(c); err != nil {
+				return nil, nil, err
+			}
 			s := strconv.Itoa(i.ObjNr)
 			if len(s) > maxLenObjNr {
 				maxLenObjNr = len(s)
@@ -96,7 +102,7 @@ func Images(ctx *model.Context, selectedPages types.IntSet) ([]map[int]model.Ima
 
 	maxLen := &ImageListMaxLengths{PageNr: maxLenPageNr, ObjNr: maxLenObjNr, ID: maxLenID, Size: maxLenSize, Filters: maxLenFilters}
 
-	return mm, maxLen, nil
+	return mm, maxLen, contextutil.Check(c)
 }
 
 func prepHorSep(horSep *[]int, maxLen *ImageListMaxLengths) string {
@@ -188,13 +194,16 @@ func attrs(img model.Image) (string, string, string, string, string) {
 	return t, sm, im, bpc, interp
 }
 
-func listImages(mm []map[int]model.Image, maxLen *ImageListMaxLengths) ([]string, int, int64) {
+func listImages(c context.Context, mm []map[int]model.Image, maxLen *ImageListMaxLengths) ([]string, int, int64, error) {
 	ss := []string{}
 	first := true
 	j, size := 0, int64(0)
 	m := map[int]bool{}
 	horSep := []int{}
 	for _, ii := range mm {
+		if err := contextutil.Check(c); err != nil {
+			return nil, 0, 0, err
+		}
 		if first {
 			s := prepHorSep(&horSep, maxLen)
 			ss = append(ss, s)
@@ -205,6 +214,9 @@ func listImages(mm []map[int]model.Image, maxLen *ImageListMaxLengths) ([]string
 		newPage := true
 
 		for _, objNr := range sortedObjNrs(ii) {
+			if err := contextutil.Check(c); err != nil {
+				return nil, 0, 0, err
+			}
 			img := ii[objNr]
 			pageNr := strconv.Itoa(img.PageNr)
 			if !newPage {
@@ -255,7 +267,7 @@ func listImages(mm []map[int]model.Image, maxLen *ImageListMaxLengths) ([]string
 			}
 		}
 	}
-	return ss, j, size
+	return ss, j, size, contextutil.Check(c)
 }
 
 // ImageListMaxLengths contains the column widths for a formatted image list.
@@ -263,14 +275,20 @@ type ImageListMaxLengths struct {
 	PageNr, ObjNr, ID, Size, Filters int
 }
 
-// ListImages returns a formatted list of embedded images.
-func ListImages(ctx *model.Context, selectedPages types.IntSet) ([]string, error) {
-	mm, maxLen, err := Images(ctx, selectedPages)
+// ListImages returns a formatted list of embedded images and supports cancellation.
+func ListImages(c context.Context, ctx *model.Context, selectedPages types.IntSet) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	mm, maxLen, err := Images(c, ctx, selectedPages)
 	if err != nil {
 		return nil, err
 	}
 
-	ss, j, size := listImages(mm, maxLen)
+	ss, j, size, err := listImages(c, mm, maxLen)
+	if err != nil {
+		return nil, err
+	}
 
 	s := fmt.Sprintf("%d images available", j)
 
@@ -278,15 +296,10 @@ func ListImages(ctx *model.Context, selectedPages types.IntSet) ([]string, error
 		s += fmt.Sprintf(" (%s)", types.ByteSize(size))
 	}
 
-	return append([]string{s}, ss...), nil
+	return append([]string{s}, ss...), contextutil.Check(c)
 }
 
-func integerEntryValue(
-	xRefTable *model.XRefTable,
-	d types.Dict,
-	key, context string,
-	required bool,
-) (*int, error) {
+func integerEntryValue(xRefTable *model.XRefTable, d types.Dict, key, context string, required bool) (*int, error) {
 	i, _, err := xRefTable.DereferenceIntegerEntry(d, key)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", context, err)
@@ -302,12 +315,7 @@ func integerEntryValue(
 	return &v, nil
 }
 
-func resolvedCCITTDecodeParms(
-	xRefTable *model.XRefTable,
-	sd *types.StreamDict,
-	parms types.Dict,
-	context string,
-) (types.Dict, error) {
+func resolvedCCITTDecodeParms(xRefTable *model.XRefTable, sd *types.StreamDict, parms types.Dict, context string) (types.Dict, error) {
 	resolved := types.NewDict()
 	if parms != nil {
 		resolved = parms.Clone().(types.Dict)
@@ -381,9 +389,12 @@ func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
 	return nil
 }
 
-// UpdateImagesByObjNr replaces an XObject.
-func UpdateImagesByObjNr(ctx *model.Context, rd io.Reader, objNr int) error {
-	sd, w, h, err := model.CreateImageStreamDict(ctx.XRefTable, rd)
+// UpdateImagesByObjNr replaces an XObject and supports cancellation.
+func UpdateImagesByObjNr(c context.Context, ctx *model.Context, rd io.Reader, objNr int) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	sd, w, h, err := model.CreateImageStreamDict(ctx.XRefTable, contextReader{ctx: c, r: rd})
 	if err != nil {
 		return fmt.Errorf("image obj#%d: create replacement: %w", objNr, err)
 	}
@@ -396,7 +407,7 @@ func UpdateImagesByObjNr(ctx *model.Context, rd io.Reader, objNr int) error {
 		return fmt.Errorf("image obj#%d: missing xref entry", objNr)
 	}
 	entry.Object = *sd
-	return nil
+	return contextutil.Check(c)
 }
 
 func imageResourceRef(d types.Dict, id, context string) (*types.IndirectRef, error) {
@@ -433,12 +444,7 @@ func unknownImageResource(pageNr int, id string) error {
 	return fmt.Errorf("page %d resource %s: unknown image resource", pageNr, id)
 }
 
-func requiredInheritedImageResourceRef(
-	ctx *model.Context,
-	resources types.Dict,
-	pageNr int,
-	id string,
-) (*types.IndirectRef, error) {
+func requiredInheritedImageResourceRef(ctx *model.Context, resources types.Dict, pageNr int, id string) (*types.IndirectRef, error) {
 	ref, err := inheritedImageResourceRef(ctx, resources, pageNr, id)
 	if err != nil {
 		return nil, err
@@ -449,13 +455,7 @@ func requiredInheritedImageResourceRef(
 	return ref, nil
 }
 
-func pageImageResource(
-	ctx *model.Context,
-	pageDict types.Dict,
-	inheritedResources types.Dict,
-	pageNr int,
-	id string,
-) (types.Dict, *types.IndirectRef, error) {
+func pageImageResource(ctx *model.Context, pageDict types.Dict, inheritedResources types.Dict, pageNr int, id string) (types.Dict, *types.IndirectRef, error) {
 	o, found := pageDict.Find("Resources")
 	if !found {
 		inheritedRef, err := requiredInheritedImageResourceRef(ctx, inheritedResources, pageNr, id)
@@ -511,8 +511,11 @@ func pageImageResource(
 	return xObjects, ref, nil
 }
 
-// UpdateImagesByPageNrAndId replaces the XObject referenced by pageNr and id.
-func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id string) error {
+// UpdateImagesByPageNrAndId replaces the XObject referenced by pageNr and id and supports cancellation.
+func UpdateImagesByPageNrAndId(c context.Context, ctx *model.Context, rd io.Reader, pageNr int, id string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
 	if err != nil {
 		return fmt.Errorf("page %d resource %s: resolve page dictionary: %w", pageNr, id, err)
@@ -521,7 +524,7 @@ func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id 
 	if err != nil {
 		return err
 	}
-	imgIndRef, w, h, err := model.CreateImageResource(ctx.XRefTable, rd)
+	imgIndRef, w, h, err := model.CreateImageResource(ctx.XRefTable, contextReader{ctx: c, r: rd})
 	if err != nil {
 		return fmt.Errorf("page %d resource %s: create replacement: %w", pageNr, id, err)
 	}
@@ -529,5 +532,5 @@ func UpdateImagesByPageNrAndId(ctx *model.Context, rd io.Reader, pageNr int, id 
 		return fmt.Errorf("page %d resource %s: %w", pageNr, id, err)
 	}
 	xObjects[id] = *imgIndRef
-	return nil
+	return contextutil.Check(c)
 }

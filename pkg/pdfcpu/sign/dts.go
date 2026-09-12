@@ -18,6 +18,7 @@ package sign
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/subtle"
 	"crypto/x509"
@@ -30,6 +31,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -89,9 +91,10 @@ type rawSigningCertificateV2 struct {
 	Policies asn1.RawValue `asn1:"optional"`
 }
 
-// ValidateDTS validates signature integrity, reports available trust evidence and performs a best-effort local
-// assessment for an ETSI.RFC3161 document timestamp.
+// ValidateDTS validates signature integrity, reports available trust evidence, performs a best-effort local assessment
+// for an ETSI.RFC3161 document timestamp and supports cancellation.
 func ValidateDTS(
+	c context.Context,
 	ra io.ReaderAt,
 	sigDict types.Dict,
 	certified bool,
@@ -103,19 +106,12 @@ func ValidateDTS(
 	ctx *model.Context,
 ) error {
 	return validateDTS(
-		ra,
-		sigDict,
-		certified,
-		authoritative,
-		validateAll,
-		perms,
-		rootCerts,
-		result,
-		ctx,
+		c, ra, sigDict, certified, authoritative, validateAll, perms, rootCerts, result, ctx,
 	)
 }
 
 func validateDTS(
+	c context.Context,
 	ra io.ReaderAt,
 	sigDict types.Dict,
 	certified bool,
@@ -126,6 +122,9 @@ func validateDTS(
 	result *model.SignatureValidationResult,
 	ctx *model.Context,
 ) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	localAssessment := localSignatureAssessment{}
 	ctx.DTS = time.Time{}
 
@@ -197,8 +196,12 @@ func validateDTS(
 	localAssessment.SignatureAuthenticated = true
 	localAssessment.DigestVerified = true
 	localAssessment.ProfileValidated = true
+	if err := c.Err(); err != nil {
+		return err
+	}
 
 	return evaluateDTSTimestamp(
+		c,
 		sigDict,
 		tstInfo,
 		p7,
@@ -241,6 +244,7 @@ func authenticateDTSEvidence(
 }
 
 func evaluateDTSTimestamp(
+	c context.Context,
 	sigDict types.Dict,
 	tstInfo *TSTInfo,
 	p7 *pkcs7.PKCS7,
@@ -255,6 +259,9 @@ func evaluateDTSTimestamp(
 	ctx *model.Context,
 	localAssessment localSignatureAssessment,
 ) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	rawToken, err := signatureContents(sigDict)
 	if err != nil {
 		return fmt.Errorf("SubFilter ETSI.RFC3161: read timestamp token: %w", err)
@@ -272,6 +279,7 @@ func evaluateDTSTimestamp(
 
 	// Assess the TSA certificate using the configured local certificate sources.
 	pathValidated, err := validateDTSCert(
+		c,
 		signerCert,
 		certs,
 		rootCerts,
@@ -695,6 +703,7 @@ func parseTSTInfo(bb []byte) (*TSTInfo, error) {
 }
 
 func validateDTSCert(
+	c context.Context,
 	signerCert *x509.Certificate,
 	certs []*x509.Certificate,
 	rootCerts *x509.CertPool,
@@ -703,6 +712,9 @@ func validateDTSCert(
 	result *model.SignatureValidationResult,
 	ctx *model.Context,
 ) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	// Collect certificate-path evidence using the configured local certificate sources.
 	chains := buildP7CertChains(true, signerCert, certs, rootCerts, signer, result)
 	pathResolved := len(chains) > 0
@@ -711,6 +723,7 @@ func validateDTSCert(
 	}
 
 	assessment, err := assessCertificateEvidence(
+		c,
 		chains,
 		pathResolved,
 		rootCerts,

@@ -18,6 +18,7 @@ package model
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"errors"
 	"io"
@@ -31,17 +32,44 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+func textContextCalls(c context.Context) []func() error {
+	return []func() error{
+		func() error {
+			_, err := PrepBytes(c, nil, "text", "Helvetica", false, false, false)
+			return err
+		},
+		func() error { _, err := CalcBoundingBox(c, "text", 0, 0, "Helvetica", 12); return err },
+		func() error { _, err := WordWrap(c, "text", "Helvetica", 12, 100); return err },
+		func() error { _, err := WriteColumn(c, nil, nil, nil, nil, TextDescriptor{}, 0); return err },
+	}
+}
+
+func TestTextContextAPIsRejectNilAndCanceledContext(t *testing.T) {
+	for _, call := range textContextCalls(nil) {
+		if err := call(); !errors.Is(err, ErrMissingContext) {
+			t.Fatalf("nil context: got %v, want ErrMissingContext", err)
+		}
+	}
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	for _, call := range textContextCalls(c) {
+		if err := call(); !errors.Is(err, context.Canceled) {
+			t.Fatalf("canceled context: got %v, want context.Canceled", err)
+		}
+	}
+}
+
 func installTextRenderingMetrics(t *testing.T) {
 	t.Helper()
 	originalDir := font.UserFontDir
 	font.UserFontDir = t.TempDir()
 	writeTextRenderingMetrics(t, font.UserFontDir, "RenderTest", 600)
-	if err := font.ReloadUserFonts(); err != nil {
+	if err := font.ReloadUserFonts(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
 		font.UserFontDir = originalDir
-		if err := font.ReloadUserFonts(); err != nil {
+		if err := font.ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore user fonts: %v", err)
 		}
 	})
@@ -82,19 +110,19 @@ func writeTextRenderingMetrics(t *testing.T, dir, name string, glyphWidth int) {
 }
 
 func TestPrepBytesPropagatesFontErrors(t *testing.T) {
-	if _, err := PrepBytes(nil, "text", "", false, false, false); !errors.Is(err, font.ErrMissingFontName) {
+	if _, err := PrepBytes(t.Context(), nil, "text", "", false, false, false); !errors.Is(err, font.ErrMissingFontName) {
 		t.Fatalf("expected %v, got %v", font.ErrMissingFontName, err)
 	}
-	if _, err := PrepBytes(nil, "text", "Missing", false, false, false); !errors.Is(err, font.ErrUnknownFont) {
+	if _, err := PrepBytes(t.Context(), nil, "text", "Missing", false, false, false); !errors.Is(err, font.ErrUnknownFont) {
 		t.Fatalf("expected %v, got %v", font.ErrUnknownFont, err)
 	}
 
 	installTextRenderingMetrics(t)
-	if _, err := PrepBytes(nil, "A", "RenderTest", true, false, false); !errors.Is(err, ErrMissingXRefTable) {
+	if _, err := PrepBytes(t.Context(), nil, "A", "RenderTest", true, false, false); !errors.Is(err, ErrMissingXRefTable) {
 		t.Fatalf("expected %v, got %v", ErrMissingXRefTable, err)
 	}
 	xRefTable := &XRefTable{}
-	if _, err := PrepBytes(xRefTable, "A", "RenderTest", true, false, false); err != nil {
+	if _, err := PrepBytes(t.Context(), xRefTable, "A", "RenderTest", true, false, false); err != nil {
 		t.Fatalf("prepare embedded text: %v", err)
 	}
 	if !xRefTable.UsedGIDs["RenderTest"][1] {
@@ -106,12 +134,12 @@ func TestTextRenderingUsesConfigurationFontRepository(t *testing.T) {
 	originalDir := font.UserFontDir
 	font.UserFontDir = t.TempDir()
 	writeTextRenderingMetrics(t, font.UserFontDir, "GlobalOnly", 500)
-	if err := font.ReloadUserFonts(); err != nil {
+	if err := font.ReloadUserFonts(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
 		font.UserFontDir = originalDir
-		if err := font.ReloadUserFonts(); err != nil {
+		if err := font.ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore user fonts: %v", err)
 		}
 	})
@@ -123,10 +151,10 @@ func TestTextRenderingUsesConfigurationFontRepository(t *testing.T) {
 	}
 	xRefTable := &XRefTable{Conf: conf}
 
-	if _, err := PrepBytes(xRefTable, "A", "Scoped", true, false, false); err != nil {
+	if _, err := PrepBytes(t.Context(), xRefTable, "A", "Scoped", true, false, false); err != nil {
 		t.Fatalf("prepare scoped font: %v", err)
 	}
-	if _, err := PrepBytes(xRefTable, "A", "GlobalOnly", false, false, false); !errors.Is(err, font.ErrUnknownFont) {
+	if _, err := PrepBytes(t.Context(), xRefTable, "A", "GlobalOnly", false, false, false); !errors.Is(err, font.ErrUnknownFont) {
 		t.Fatalf("prepare global-only font: got %v, want %v", err, font.ErrUnknownFont)
 	}
 
@@ -140,12 +168,12 @@ func TestTextRenderingUsesConfigurationFontRepository(t *testing.T) {
 		FillCol:   color.Black,
 		StrokeCol: color.Black,
 	}
-	if _, err := WriteColumn(xRefTable, io.Discard, types.RectForFormat("A4"), nil, td, 100); err != nil {
+	if _, err := WriteColumn(t.Context(), xRefTable, io.Discard, types.RectForFormat("A4"), nil, td, 100); err != nil {
 		t.Fatalf("render scoped font: %v", err)
 	}
 
 	stateless := &XRefTable{Conf: NewStatelessConfiguration()}
-	if _, err := PrepBytes(stateless, "A", "GlobalOnly", false, false, false); !errors.Is(err, font.ErrUnknownFont) {
+	if _, err := PrepBytes(t.Context(), stateless, "A", "GlobalOnly", false, false, false); !errors.Is(err, font.ErrUnknownFont) {
 		t.Fatalf("prepare stateless global font: got %v, want %v", err, font.ErrUnknownFont)
 	}
 }
@@ -159,7 +187,7 @@ func TestWriteColumnPropagatesBoundingBoxErrors(t *testing.T) {
 		Scale:    1,
 		ScaleAbs: true,
 	}
-	_, err := WriteColumn(&XRefTable{}, io.Discard, types.RectForFormat("A4"), nil, td, 100)
+	_, err := WriteColumn(t.Context(), &XRefTable{}, io.Discard, types.RectForFormat("A4"), nil, td, 100)
 	if !errors.Is(err, font.ErrUnknownFont) {
 		t.Fatalf("expected %v, got %v", font.ErrUnknownFont, err)
 	}
@@ -170,7 +198,7 @@ func TestWriteColumnPropagatesBoundingBoxErrors(t *testing.T) {
 	}
 
 	td.Text, td.FontName = "", "Helvetica"
-	_, err = WriteColumn(&XRefTable{}, io.Discard, types.RectForFormat("A4"), nil, td, 100)
+	_, err = WriteColumn(t.Context(), &XRefTable{}, io.Discard, types.RectForFormat("A4"), nil, td, 100)
 	if err == nil || !strings.Contains(err.Error(), "no text lines") {
 		t.Fatalf("expected empty-line error, got %v", err)
 	}
@@ -186,7 +214,7 @@ func TestWriteColumnPreservesFractionalFontSize(t *testing.T) {
 		ScaleAbs: true,
 	}
 	var buf bytes.Buffer
-	if _, err := WriteColumn(&XRefTable{}, &buf, types.RectForFormat("A4"), nil, td, 100); err != nil {
+	if _, err := WriteColumn(t.Context(), &XRefTable{}, &buf, types.RectForFormat("A4"), nil, td, 100); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(buf.String(), "/F1 10.125 Tf") {
@@ -202,11 +230,11 @@ func TestWordWrapCoreFontUsesWinAnsiWidths(t *testing.T) {
 		text     = "Schöne Grüße"
 	)
 
-	winAnsiWidth, err := font.TextWidthFloat(DecodeUTF8ToByte(text), fontName, fontSize)
+	winAnsiWidth, err := font.TextWidthFloat(t.Context(), DecodeUTF8ToByte(text), fontName, fontSize)
 	if err != nil {
 		t.Fatal(err)
 	}
-	utf8Width, err := font.TextWidthFloat(text, fontName, fontSize)
+	utf8Width, err := font.TextWidthFloat(t.Context(), text, fontName, fontSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +242,7 @@ func TestWordWrapCoreFontUsesWinAnsiWidths(t *testing.T) {
 		t.Fatalf("invalid test widths: WinAnsi=%.2f UTF-8=%.2f", winAnsiWidth, utf8Width)
 	}
 
-	lines, err := WordWrapFloat(text, fontName, fontSize, (winAnsiWidth+utf8Width)/2)
+	lines, err := WordWrapFloat(t.Context(), text, fontName, fontSize, (winAnsiWidth+utf8Width)/2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +264,7 @@ func TestWriteColumnPreservesWrappedCoreFontEncoding(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if _, err := WriteColumn(&XRefTable{}, &buf, types.RectForFormat("A4"), nil, td, 150); err != nil {
+	if _, err := WriteColumn(t.Context(), &XRefTable{}, &buf, types.RectForFormat("A4"), nil, td, 150); err != nil {
 		t.Fatal(err)
 	}
 
@@ -254,7 +282,7 @@ func TestWriteColumnPreservesWrappedCoreFontEncoding(t *testing.T) {
 
 func TestWordWrapPropagatesCandidateMeasurementError(t *testing.T) {
 	installTextRenderingMetrics(t)
-	_, err := WordWrap("word", "Missing", 12, 10)
+	_, err := WordWrap(t.Context(), "word", "Missing", 12, 10)
 	if !errors.Is(err, font.ErrUnknownFont) {
 		t.Fatalf("expected %v, got %v", font.ErrUnknownFont, err)
 	}
@@ -265,7 +293,7 @@ func TestWordWrapPropagatesCandidateMeasurementError(t *testing.T) {
 
 func TestWordWrapPropagatesCJKMeasurementError(t *testing.T) {
 	installTextRenderingMetrics(t)
-	_, err := WordWrap("天地", "Missing", 12, 10)
+	_, err := WordWrap(t.Context(), "天地", "Missing", 12, 10)
 	if !errors.Is(err, font.ErrUnknownFont) {
 		t.Fatalf("expected %v, got %v", font.ErrUnknownFont, err)
 	}
@@ -278,7 +306,7 @@ func TestWordWrapPropagatesCJKMeasurementError(t *testing.T) {
 
 func TestJustifiedTextWrappingDoesNotInsertLinefeeds(t *testing.T) {
 	fontSize := 12.
-	preparer, err := newJustifiedTextPreparer(&XRefTable{}, "Helvetica", fontSize)
+	preparer, err := newJustifiedTextPreparer(t.Context(), &XRefTable{}, "Helvetica", fontSize)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +347,7 @@ func TestWriteColumnPropagatesWriterError(t *testing.T) {
 		Scale:    1,
 		ScaleAbs: true,
 	}
-	_, err := WriteColumn(&XRefTable{}, failingTextWriter{err: wantErr}, types.RectForFormat("A4"), nil, td, 100)
+	_, err := WriteColumn(t.Context(), &XRefTable{}, failingTextWriter{err: wantErr}, types.RectForFormat("A4"), nil, td, 100)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -327,13 +355,13 @@ func TestWriteColumnPropagatesWriterError(t *testing.T) {
 		t.Fatalf("expected rendering context, got %q", err)
 	}
 
-	_, err = WriteColumn(&XRefTable{}, shortTextWriter{}, types.RectForFormat("A4"), nil, td, 100)
+	_, err = WriteColumn(t.Context(), &XRefTable{}, shortTextWriter{}, types.RectForFormat("A4"), nil, td, 100)
 	if !errors.Is(err, io.ErrShortWrite) {
 		t.Fatalf("expected %v, got %v", io.ErrShortWrite, err)
 	}
 
 	td.HAlign = types.AlignJustify
-	_, err = WriteColumn(&XRefTable{}, failingTextWriter{err: wantErr}, types.RectForFormat("A4"), nil, td, 100)
+	_, err = WriteColumn(t.Context(), &XRefTable{}, failingTextWriter{err: wantErr}, types.RectForFormat("A4"), nil, td, 100)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected justified rendering error %v, got %v", wantErr, err)
 	}
@@ -345,7 +373,7 @@ func TestWriteColumnPropagatesWriterError(t *testing.T) {
 func TestWriteColumnRejectsMissingOutputBoundaries(t *testing.T) {
 	td := TextDescriptor{FontName: "Helvetica"}
 	buf := new(bytes.Buffer)
-	_, err := WriteColumn(nil, buf, types.RectForFormat("A4"), nil, td, 100)
+	_, err := WriteColumn(t.Context(), nil, buf, types.RectForFormat("A4"), nil, td, 100)
 	if !errors.Is(err, ErrMissingXRefTable) {
 		t.Fatalf("expected %v, got %v", ErrMissingXRefTable, err)
 	}
@@ -353,11 +381,11 @@ func TestWriteColumnRejectsMissingOutputBoundaries(t *testing.T) {
 		t.Fatalf("expected no rendering, got %q", buf.String())
 	}
 	xRefTable := &XRefTable{}
-	_, err = WriteColumn(xRefTable, nil, types.RectForFormat("A4"), nil, td, 100)
+	_, err = WriteColumn(t.Context(), xRefTable, nil, types.RectForFormat("A4"), nil, td, 100)
 	if err == nil || !strings.Contains(err.Error(), "missing writer") {
 		t.Fatalf("expected missing writer, got %v", err)
 	}
-	_, err = WriteColumn(xRefTable, io.Discard, nil, nil, td, 100)
+	_, err = WriteColumn(t.Context(), xRefTable, io.Discard, nil, nil, td, 100)
 	if err == nil || !strings.Contains(err.Error(), "missing media box") {
 		t.Fatalf("expected missing media box, got %v", err)
 	}
@@ -459,7 +487,7 @@ func TestWordWrap(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		gotLines, err := WordWrapFloat(tc.Text, tc.FontName, tc.FontSize, tc.MaxWidthPoints)
+		gotLines, err := WordWrapFloat(t.Context(), tc.Text, tc.FontName, tc.FontSize, tc.MaxWidthPoints)
 		if err != nil {
 			t.Fatal(err)
 		}

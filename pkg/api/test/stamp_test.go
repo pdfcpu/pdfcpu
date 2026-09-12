@@ -38,16 +38,16 @@ func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages 
 	var err error
 	switch mode {
 	case "text":
-		err = api.AddTextWatermarksFile(inFile, outFile, selectedPages, onTop, modeParam, desc, nil)
+		err = api.AddTextWatermarksFile(t.Context(), inFile, outFile, selectedPages, onTop, modeParam, desc, nil)
 	case "image":
-		err = api.AddImageWatermarksFile(inFile, outFile, selectedPages, onTop, modeParam, desc, nil)
+		err = api.AddImageWatermarksFile(t.Context(), inFile, outFile, selectedPages, onTop, modeParam, desc, nil)
 	case "pdf":
-		err = api.AddPDFWatermarksFile(inFile, outFile, selectedPages, onTop, modeParam, desc, nil)
+		err = api.AddPDFWatermarksFile(t.Context(), inFile, outFile, selectedPages, onTop, modeParam, desc, nil)
 	}
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := api.ValidateFile(outFile, nil); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, nil, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -509,34 +509,42 @@ func TestCropBox(t *testing.T) {
 	pdfFile := filepath.Join(inDir, "grid_example.pdf")
 
 	// Create a context.
-	ctx, err := api.ReadContextFile(inFile)
+	ctx, err := api.ReadContextFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
 	for _, pos := range []string{"tl", "tc", "tr", "l", "c", "r", "bl", "bc", "br"} {
-		wm, err := api.PDFWatermark(pdfFile+":1", fmt.Sprintf("scale:.25 rel, pos:%s, rot:0", pos), true, false, types.POINTS)
+		wm, err := api.PDFWatermark(
+			t.Context(),
+			pdfFile+":1",
+			fmt.Sprintf("scale:.25 rel, pos:%s, rot:0", pos),
+			true,
+			false,
+			types.POINTS,
+			nil,
+		)
 		if err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
-		if err := pdfcpu.AddWatermarks(ctx, nil, wm); err != nil {
+		if err := pdfcpu.AddWatermarks(t.Context(), ctx, nil, wm); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
 
 	// Write context to file.
-	if err := api.WriteContextFile(ctx, outFile); err != nil {
+	if err := api.WriteContextFile(t.Context(), ctx, outFile); err != nil {
 		t.Fatalf("%s write: %v\n", msg, err)
 	}
 
-	if err := api.ValidateFile(outFile, nil); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, nil, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
 
 func hasWatermarks(inFile string, t *testing.T) bool {
 	t.Helper()
-	ok, err := api.HasWatermarksFile(inFile, nil)
+	ok, err := api.HasWatermarksFile(t.Context(), inFile, nil)
 	if err != nil {
 		t.Fatalf("Checking for watermarks: %s: %v\n", inFile, err)
 	}
@@ -558,11 +566,11 @@ func TestStampingLifecycle(t *testing.T) {
 	unit := types.POINTS
 
 	// Stamp all pages.
-	wm, err := api.TextWatermark("Demo", "", onTop, false, unit)
+	wm, err := api.TextWatermark(t.Context(), "Demo", "", onTop, false, unit, nil)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := api.AddWatermarksFile(inFile, outFile, nil, wm, nil); err != nil {
+	if err := api.AddWatermarksFile(t.Context(), inFile, outFile, nil, wm, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -572,26 +580,26 @@ func TestStampingLifecycle(t *testing.T) {
 	}
 
 	// // Update stamp on page 1.
-	wm, err = api.TextWatermark("Confidential", "", onTop, true, unit)
+	wm, err = api.TextWatermark(t.Context(), "Confidential", "", onTop, true, unit, nil)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := api.AddWatermarksFile(outFile, "", []string{"1"}, wm, nil); err != nil {
+	if err := api.AddWatermarksFile(t.Context(), outFile, "", []string{"1"}, wm, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Add another stamp on top for all pages.
 	// This is a redish transparent footer.
-	wm, err = api.TextWatermark("Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop, false, unit)
+	wm, err = api.TextWatermark(t.Context(), "Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop, false, unit, nil)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := api.AddWatermarksFile(outFile, "", nil, wm, nil); err != nil {
+	if err := api.AddWatermarksFile(t.Context(), outFile, "", nil, wm, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Remove stamp on page 1.
-	if err := api.RemoveWatermarksFile(outFile, "", []string{"1"}, nil); err != nil {
+	if err := api.RemoveWatermarksFile(t.Context(), outFile, "", []string{"1"}, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -601,12 +609,12 @@ func TestStampingLifecycle(t *testing.T) {
 	}
 
 	// Remove all stamps.
-	if err := api.RemoveWatermarksFile(outFile, "", nil, nil); err != nil {
+	if err := api.RemoveWatermarksFile(t.Context(), outFile, "", nil, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Validate the result.
-	if err := api.ValidateFile(outFile, nil); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, nil, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -624,12 +632,12 @@ func TestRecycleWM(t *testing.T) {
 	onTop := false // we are testing watermarks
 
 	desc := "pos:tl, points:22, rot:0, scale:1 abs, off:0 -5, opacity:0.3"
-	wm, err := api.TextWatermark("This is a watermark", desc, onTop, false, types.POINTS)
+	wm, err := api.TextWatermark(t.Context(), "This is a watermark", desc, onTop, false, types.POINTS, nil)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
-	if err = api.AddWatermarksFile(inFile, outFile, nil, wm, nil); err != nil {
+	if err = api.AddWatermarksFile(t.Context(), inFile, outFile, nil, wm, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -638,7 +646,7 @@ func TestRecycleWM(t *testing.T) {
 	// Shift down watermark.
 	wm.Dy = -55
 
-	if err = api.AddWatermarksFile(outFile, outFile, nil, wm, nil); err != nil {
+	if err = api.AddWatermarksFile(t.Context(), outFile, outFile, nil, wm, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }

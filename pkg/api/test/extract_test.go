@@ -37,13 +37,13 @@ func TestExtractImages(t *testing.T) {
 	for _, fn := range []string{"5116.DCT_Filter.pdf", "testImage.pdf", "go.pdf"} {
 		// Test writing files
 		fn = filepath.Join(inDir, fn)
-		if err := api.ExtractImagesFile(fn, outDir, nil, nil); err != nil {
+		if err := api.ExtractImagesFile(t.Context(), fn, outDir, nil, nil); err != nil {
 			t.Fatalf("%s %s: %v\n", msg, fn, err)
 		}
 	}
 	// Extract images for inFile starting with page 1 into outDir.
 	inFile := filepath.Join(inDir, "testImage.pdf")
-	if err := api.ExtractImagesFile(inFile, outDir, []string{"1-"}, nil); err != nil {
+	if err := api.ExtractImagesFile(t.Context(), inFile, outDir, []string{"1-"}, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }
@@ -93,7 +93,7 @@ func compare(t *testing.T, fn1, fn2 string) {
 // TestExtractImagesSoftMasks verifies extraction of images with soft masks.
 func TestExtractImagesSoftMasks(t *testing.T) {
 	inFile := filepath.Join(inDir, "VectorApple.pdf")
-	ctx, err := api.ReadContextFile(inFile)
+	ctx, err := api.ReadContextFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,19 +144,19 @@ func TestExtractImagesLowLevel(t *testing.T) {
 	inFile := filepath.Join(inDir, fileName)
 
 	// Create a context.
-	ctx, err := api.ReadContextFile(inFile)
+	ctx, err := api.ReadContextFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
 	// Optimize resource usage of this context.
-	if err := api.OptimizeContext(ctx); err != nil {
+	if err := api.OptimizeContext(t.Context(), ctx); err != nil {
 		t.Fatalf("%s optimizeContext: %v\n", msg, err)
 	}
 
 	// Extract images for page 1.
 	i := 1
-	ii, err := pdfcpu.ExtractPageImages(ctx, i, false)
+	ii, err := pdfcpu.ExtractPageImages(t.Context(), ctx, i, false)
 	if err != nil {
 		t.Fatalf("%s extractPageFonts(%d): %v\n", msg, i, err)
 	}
@@ -166,7 +166,7 @@ func TestExtractImagesLowLevel(t *testing.T) {
 	// Process extracted images.
 	for _, img := range ii {
 		fn := filepath.Join(outDir, fmt.Sprintf("%s_%d_%s.%s", baseFileName, i, img.Name, img.FileType))
-		if err := pdfcpu.WriteReader(fn, img); err != nil {
+		if err := pdfcpu.WriteReader(t.Context(), fn, img); err != nil {
 			t.Fatalf("%s write: %s", msg, fn)
 		}
 	}
@@ -178,13 +178,13 @@ func TestExtractFonts(t *testing.T) {
 	// Extract fonts for all pages into outDir.
 	for _, fn := range []string{"5116.DCT_Filter.pdf", "testImage.pdf", "go.pdf"} {
 		fn = filepath.Join(inDir, fn)
-		if err := api.ExtractFontsFile(fn, outDir, nil, nil); err != nil && !errors.Is(err, pdfcpu.ErrUnsupportedResource) {
+		if err := api.ExtractFontsFile(t.Context(), fn, outDir, nil, nil); err != nil && !errors.Is(err, pdfcpu.ErrUnsupportedResource) {
 			t.Fatalf("%s %s: %v\n", msg, fn, err)
 		}
 	}
 	// Extract fonts for inFile for pages 1-3 into outDir.
 	inFile := filepath.Join(inDir, "go.pdf")
-	if err := api.ExtractFontsFile(inFile, outDir, []string{"1-3"}, nil); err != nil && !errors.Is(err, pdfcpu.ErrUnsupportedResource) {
+	if err := api.ExtractFontsFile(t.Context(), inFile, outDir, []string{"1-3"}, nil); err != nil && !errors.Is(err, pdfcpu.ErrUnsupportedResource) {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }
@@ -195,19 +195,19 @@ func TestExtractFontsLowLevel(t *testing.T) {
 	inFile := filepath.Join(inDir, "go.pdf")
 
 	// Create a context.
-	ctx, err := api.ReadContextFile(inFile)
+	ctx, err := api.ReadContextFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
 	// Optimize resource usage of this context.
-	if err := api.OptimizeContext(ctx); err != nil {
+	if err := api.OptimizeContext(t.Context(), ctx); err != nil {
 		t.Fatalf("%s optimizeContext: %v\n", msg, err)
 	}
 
 	// Extract fonts for page 1.
 	i := 1
-	ff, err := pdfcpu.ExtractPageFonts(ctx, 1, types.IntSet{}, types.IntSet{})
+	ff, err := pdfcpu.ExtractPageFonts(t.Context(), ctx, 1, types.IntSet{}, types.IntSet{})
 	if err != nil {
 		t.Fatalf("%s extractPageFonts(%d): %v\n", msg, i, err)
 	}
@@ -215,7 +215,7 @@ func TestExtractFontsLowLevel(t *testing.T) {
 	// Process extracted fonts.
 	for _, f := range ff {
 		fn := filepath.Join(outDir, fmt.Sprintf("%s.%s", f.Name, f.Type))
-		if err := pdfcpu.WriteReader(fn, f); err != nil {
+		if err := pdfcpu.WriteReader(t.Context(), fn, f); err != nil {
 			t.Fatalf("%s write: %s", msg, fn)
 		}
 	}
@@ -226,7 +226,7 @@ func TestExtractPages(t *testing.T) {
 	msg := "TestExtractPages"
 	// Extract page #1 into outDir.
 	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
-	if err := api.ExtractPagesFile(inFile, outDir, []string{"1"}, nil); err != nil {
+	if err := api.ExtractPagesFile(t.Context(), inFile, outDir, []string{"1"}, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }
@@ -238,7 +238,7 @@ func TestExtractPagesLowLevel(t *testing.T) {
 	outFile := "MyExtractedAndProcessedSinglePage.pdf"
 
 	// Create a context.
-	ctx, err := api.ReadContextFile(inFile)
+	ctx, err := api.ReadContextFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
@@ -246,7 +246,7 @@ func TestExtractPagesLowLevel(t *testing.T) {
 	// Extract page 1.
 	i := 1
 
-	rd, err := api.ExtractPage(ctx, i)
+	rd, err := api.ExtractPage(t.Context(), ctx, i)
 	if err != nil {
 		t.Fatalf("%s extractPage(%d): %v\n", msg, i, err)
 	}
@@ -255,7 +255,7 @@ func TestExtractPagesLowLevel(t *testing.T) {
 	}
 
 	fnBase := strings.TrimSuffix(filepath.Base(outFile), ".pdf")
-	f := api.WritePageToDisk(outDir, fnBase)
+	f := api.WritePageToDisk(t.Context(), outDir, fnBase)
 
 	if err := f(rd, i); err != nil {
 		t.Fatalf("%s writePage(%d): %v\n", msg, i, err)
@@ -267,7 +267,7 @@ func TestExtractContent(t *testing.T) {
 	msg := "TestExtractContent"
 	// Extract content of all pages into outDir.
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
-	if err := api.ExtractContentFile(inFile, outDir, nil, nil); err != nil {
+	if err := api.ExtractContentFile(t.Context(), inFile, outDir, nil, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }
@@ -278,14 +278,14 @@ func TestExtractContentLowLevel(t *testing.T) {
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
 
 	// Create a context.
-	ctx, err := api.ReadContextFile(inFile)
+	ctx, err := api.ReadContextFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatalf("%s read context: %v\n", msg, err)
 	}
 
 	// Extract page content for page 2.
 	i := 2
-	r, err := pdfcpu.ExtractPageContent(ctx, i)
+	r, err := pdfcpu.ExtractPageContent(t.Context(), ctx, i)
 	if err != nil {
 		t.Fatalf("%s extractPageContent(%d): %v\n", msg, i, err)
 	}
@@ -303,7 +303,7 @@ func TestExtractMetadata(t *testing.T) {
 	msg := "TestExtractMetadata"
 	// Extract all metadata into outDir.
 	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
-	if err := api.ExtractMetadataFile(inFile, outDir, nil); err != nil {
+	if err := api.ExtractMetadataFile(t.Context(), inFile, outDir, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }
@@ -314,13 +314,13 @@ func TestExtractMetadataLowLevel(t *testing.T) {
 	inFile := filepath.Join(inDir, "TheGoProgrammingLanguageCh1.pdf")
 
 	// Create a context.
-	ctx, err := api.ReadContextFile(inFile)
+	ctx, err := api.ReadContextFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
 	// Extract all metadata.
-	mm, err := pdfcpu.ExtractMetadata(ctx)
+	mm, err := pdfcpu.ExtractMetadata(t.Context(), ctx)
 	if err != nil {
 		t.Fatalf("%s ExtractMetadata: %v\n", msg, err)
 	}

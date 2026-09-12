@@ -17,11 +17,13 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -166,7 +168,10 @@ func ensureInfoDict(ctx *model.Context) error {
 }
 
 // Write the document info object for this PDF file.
-func writeDocumentInfoDict(ctx *model.Context) error {
+func writeDocumentInfoDict(c context.Context, ctx *model.Context) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if log.WriteEnabled() {
 		log.Write.Printf("*** writeDocumentInfoDict begin: offset=%d ***\n", ctx.Write.Offset)
 	}
@@ -191,7 +196,7 @@ func writeDocumentInfoDict(ctx *model.Context) error {
 		return err
 	}
 
-	if _, _, err = writeDeepObject(ctx, o); err != nil {
+	if _, _, err = writeDeepObject(c, ctx, o); err != nil {
 		return err
 	}
 
@@ -299,11 +304,17 @@ func appendPageBoxesInfo(ss *[]string, pb model.PageBoundaries, unit string, cur
 	appendNotEqualMediaAndCropBoxInfo(ss, pb, unit, currUnit)
 }
 
-func pageInfo(info *PDFInfo, selectedPages types.IntSet) ([]string, error) {
+func pageInfo(c context.Context, info *PDFInfo, selectedPages types.IntSet) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	ss := []string{}
 
 	if len(selectedPages) > 0 {
 		for i, pb := range info.PageBoundaries {
+			if err := contextutil.Check(c); err != nil {
+				return nil, err
+			}
 			if _, found := selectedPages[i+1]; !found {
 				continue
 			}
@@ -314,11 +325,14 @@ func pageInfo(info *PDFInfo, selectedPages types.IntSet) ([]string, error) {
 
 	s := "Page sizes:"
 	for d := range info.PageDimensions {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		dc := d.ConvertToUnit(info.Unit)
 		ss = append(ss, fmt.Sprintf("%21s %.2f x %.2f %s", s, dc.Width, dc.Height, info.UnitString))
 		s = ""
 	}
-	return ss, nil
+	return ss, contextutil.Check(c)
 }
 
 // PDFInfo contains document properties and structural information for a PDF file.
@@ -529,15 +543,21 @@ func (info *PDFInfo) renderFonts(ss *[]string) {
 	}
 }
 
-func setupFontInfos(ctx *model.Context, fontInfos *[]model.FontInfo) {
+func setupFontInfos(c context.Context, ctx *model.Context, fontInfos *[]model.FontInfo) error {
 	var fontNames []string
 	for k := range ctx.Optimize.Fonts {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		fontNames = append(fontNames, k)
 	}
 	sort.Strings(fontNames)
 
 	for _, fontName := range fontNames {
 		for _, objNr := range ctx.Optimize.Fonts[fontName] {
+			if err := contextutil.Check(c); err != nil {
+				return err
+			}
 			fontObj := ctx.Optimize.FontObjects[objNr]
 			fontInfo := model.FontInfo{
 				Prefix:   fontObj.Prefix,
@@ -549,10 +569,62 @@ func setupFontInfos(ctx *model.Context, fontInfos *[]model.FontInfo) {
 			*fontInfos = append(*fontInfos, fontInfo)
 		}
 	}
+	return contextutil.Check(c)
 }
 
-// Info returns info about ctx.
-func Info(ctx *model.Context, fileName string, selectedPages types.IntSet, fonts bool) (*PDFInfo, error) {
+func newPDFInfo(ctx *model.Context, fileName string) *PDFInfo {
+	v := ctx.HeaderVersion
+	if ctx.RootVersion != nil {
+		v = ctx.RootVersion
+	}
+	info := &PDFInfo{
+		FileName:         fileName,
+		Unit:             ctx.Unit,
+		UnitString:       ctx.UnitString(),
+		Version:          (*v).String(),
+		PageCount:        ctx.PageCount,
+		Title:            ctx.Title,
+		Author:           ctx.Author,
+		Subject:          ctx.Subject,
+		Producer:         ctx.Producer,
+		Creator:          ctx.Creator,
+		CreationDate:     ctx.XRefTable.CreationDate,
+		ModificationDate: ctx.ModDate,
+		ViewerPref:       ctx.ViewerPref,
+		Properties:       ctx.Properties,
+		Tagged:           ctx.Tagged,
+		Watermarked:      ctx.Watermarked,
+		Thumbnails:       len(ctx.PageThumbs) > 0,
+		Form:             ctx.Form != nil,
+		Outlines:         len(ctx.Outlines) > 0,
+		Names:            len(ctx.Names) > 0,
+		Signatures:       ctx.SignatureExist || ctx.AppendOnly || len(ctx.Signatures) > 0,
+		AppendOnly:       ctx.AppendOnly,
+		Encrypted:        ctx.Encrypt != nil,
+	}
+	if ctx.Read != nil {
+		info.Hybrid = ctx.Read.Hybrid
+		info.Linearized = ctx.Read.Linearized
+		info.UsingXRefStreams = ctx.Read.UsingXRefStreams
+		info.UsingObjectStreams = ctx.Read.UsingObjectStreams
+	}
+	if ctx.PageMode != nil {
+		info.PageMode = ctx.PageMode.String()
+	}
+	if ctx.PageLayout != nil {
+		info.PageLayout = ctx.PageLayout.String()
+	}
+	if ctx.E != nil {
+		info.Permissions = ctx.E.P
+	}
+	return info
+}
+
+// Info returns info about ctx and supports cancellation.
+func Info(c context.Context, ctx *model.Context, fileName string, selectedPages types.IntSet, fonts bool) (*PDFInfo, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if ctx == nil {
 		return nil, ErrMissingPDFContext
 	}
@@ -560,81 +632,36 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet, fonts
 		return nil, ErrMissingXRefTable
 	}
 
-	info := &PDFInfo{FileName: fileName, Unit: ctx.Unit, UnitString: ctx.UnitString()}
-
-	v := ctx.HeaderVersion
-	if ctx.RootVersion != nil {
-		v = ctx.RootVersion
-	}
-	info.Version = (*v).String()
-
-	info.PageCount = ctx.PageCount
+	info := newPDFInfo(ctx, fileName)
 
 	// PageBoundaries for selected pages.
-	pbs, err := ctx.PageBoundaries(selectedPages)
+	pbs, err := ctx.PageBoundaries(c, selectedPages)
 	if err != nil {
 		return nil, fmt.Errorf("page boundaries: %w", err)
 	}
 	info.PageBoundaries = pbs
 
 	// Media box dimensions for all pages.
-	pd, err := ctx.PageDims()
+	pd, err := ctx.PageDims(c)
 	if err != nil {
 		return nil, fmt.Errorf("page dimensions: %w", err)
 	}
 	m := map[types.Dim]bool{}
 	for _, d := range pd {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		m[d] = true
 	}
 	info.PageDimensions = m
 
-	info.Title = ctx.Title
-	info.Author = ctx.Author
-	info.Subject = ctx.Subject
-	info.Producer = ctx.Producer
-	info.Creator = ctx.Creator
-	info.CreationDate = ctx.XRefTable.CreationDate
-	info.ModificationDate = ctx.ModDate
-
-	info.PageMode = ""
-	if ctx.PageMode != nil {
-		info.PageMode = ctx.PageMode.String()
-	}
-
-	info.PageLayout = ""
-	if ctx.PageLayout != nil {
-		info.PageLayout = ctx.PageLayout.String()
-	}
-
-	info.ViewerPref = ctx.ViewerPref
-
-	kwl, err := KeywordsList(ctx)
+	kwl, err := KeywordsList(c, ctx)
 	if err != nil {
 		return nil, fmt.Errorf("keywords: %w", err)
 	}
 	info.Keywords = kwl
 
-	info.Properties = ctx.Properties
-	info.Tagged = ctx.Tagged
-	info.Hybrid = ctx.Read.Hybrid
-	info.Linearized = ctx.Read.Linearized
-	info.UsingXRefStreams = ctx.Read.UsingXRefStreams
-	info.UsingObjectStreams = ctx.Read.UsingObjectStreams
-	info.Watermarked = ctx.Watermarked
-	info.Thumbnails = len(ctx.PageThumbs) > 0
-	info.Form = ctx.Form != nil
-	info.Outlines = len(ctx.Outlines) > 0
-	info.Names = len(ctx.Names) > 0
-
-	info.Signatures = ctx.SignatureExist || ctx.AppendOnly || len(ctx.Signatures) > 0
-	info.AppendOnly = ctx.AppendOnly
-	info.Encrypted = ctx.Encrypt != nil
-
-	if ctx.E != nil {
-		info.Permissions = ctx.E.P
-	}
-
-	aa, err := ctx.ListAttachments()
+	aa, err := ctx.ListAttachments(c)
 	if err != nil {
 		return nil, fmt.Errorf("attachments: %w", err)
 	}
@@ -643,16 +670,21 @@ func Info(ctx *model.Context, fileName string, selectedPages types.IntSet, fonts
 	fontInfos := []model.FontInfo{}
 
 	if fonts {
-		setupFontInfos(ctx, &fontInfos)
+		if err := setupFontInfos(c, ctx, &fontInfos); err != nil {
+			return nil, err
+		}
 	}
 
 	info.Fonts = fontInfos
 
-	return info, nil
+	return info, contextutil.Check(c)
 }
 
-// ListInfo returns formatted info about ctx.
-func ListInfo(info *PDFInfo, selectedPages types.IntSet, fonts bool) ([]string, error) {
+// ListInfo returns formatted info about ctx and supports cancellation.
+func ListInfo(c context.Context, info *PDFInfo, selectedPages types.IntSet, fonts bool) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if info == nil {
 		return nil, ErrMissingPDFInfo
 	}
@@ -667,7 +699,7 @@ func ListInfo(info *PDFInfo, selectedPages types.IntSet, fonts bool) ([]string, 
 	ss = append(ss, fmt.Sprintf("%20s: %s", "PDF version", info.Version))
 	ss = append(ss, fmt.Sprintf("%20s: %d", "Page count", info.PageCount))
 
-	pi, err := pageInfo(info, selectedPages)
+	pi, err := pageInfo(c, info, selectedPages)
 	if err != nil {
 		return nil, err
 	}
@@ -701,5 +733,5 @@ func ListInfo(info *PDFInfo, selectedPages types.IntSet, fonts bool) ([]string, 
 		info.renderFonts(&ss)
 	}
 
-	return ss, nil
+	return ss, contextutil.Check(c)
 }

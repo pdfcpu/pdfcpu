@@ -31,7 +31,7 @@ import (
 
 // TestPermissionsListRejectsMissingReader verifies the formatted permissions API preserves its input sentinel.
 func TestPermissionsListRejectsMissingReader(t *testing.T) {
-	if _, err := PermissionsList(nil, nil); !errors.Is(err, ErrMissingPDFReadSeeker) {
+	if _, err := PermissionsList(t.Context(), nil, nil); !errors.Is(err, ErrMissingPDFReadSeeker) {
 		t.Fatalf("got %v, want %v", err, ErrMissingPDFReadSeeker)
 	}
 }
@@ -47,7 +47,7 @@ func TestPermissionArgumentErrors(t *testing.T) {
 		{
 			name: "permissions missing reader",
 			run: func() error {
-				_, err := Permissions(nil, conf)
+				_, err := Permissions(t.Context(), nil, conf)
 				return err
 			},
 			want: ErrMissingPDFReadSeeker,
@@ -55,42 +55,42 @@ func TestPermissionArgumentErrors(t *testing.T) {
 		{
 			name: "set missing reader",
 			run: func() error {
-				return SetPermissions(nil, io.Discard, conf)
+				return SetPermissions(t.Context(), nil, io.Discard, conf)
 			},
 			want: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "set missing writer",
 			run: func() error {
-				return SetPermissions(bytes.NewReader(nil), nil, conf)
+				return SetPermissions(t.Context(), bytes.NewReader(nil), nil, conf)
 			},
 			want: ErrMissingPDFWriter,
 		},
 		{
 			name: "set missing configuration",
 			run: func() error {
-				return SetPermissions(bytes.NewReader(nil), io.Discard, nil)
+				return SetPermissions(t.Context(), bytes.NewReader(nil), io.Discard, nil)
 			},
 			want: ErrMissingConfiguration,
 		},
 		{
 			name: "set file missing configuration",
 			run: func() error {
-				return SetPermissionsFile("in.pdf", "", nil)
+				return SetPermissionsFile(t.Context(), "in.pdf", "", nil)
 			},
 			want: ErrMissingConfiguration,
 		},
 		{
 			name: "set file missing input",
 			run: func() error {
-				return SetPermissionsFile("", "", conf)
+				return SetPermissionsFile(t.Context(), "", "", conf)
 			},
 			want: ErrMissingPDFInput,
 		},
 		{
 			name: "get missing reader",
 			run: func() error {
-				_, err := GetPermissions(nil, conf)
+				_, err := GetPermissions(t.Context(), nil, conf)
 				return err
 			},
 			want: ErrMissingPDFReadSeeker,
@@ -98,7 +98,7 @@ func TestPermissionArgumentErrors(t *testing.T) {
 		{
 			name: "get file missing input",
 			run: func() error {
-				_, err := GetPermissionsFile("", conf)
+				_, err := GetPermissionsFile(t.Context(), "", conf)
 				return err
 			},
 			want: ErrMissingPDFInput,
@@ -125,7 +125,7 @@ func TestPermissionReadErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "permissions",
 			run: func(rs io.ReadSeeker) error {
-				_, err := Permissions(rs, model.NewDefaultConfiguration())
+				_, err := Permissions(t.Context(), rs, model.NewDefaultConfiguration())
 				return err
 			},
 			want: "list permissions: prepare PDF context: read context:",
@@ -133,7 +133,7 @@ func TestPermissionReadErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "permissions list",
 			run: func(rs io.ReadSeeker) error {
-				_, err := PermissionsList(rs, model.NewDefaultConfiguration())
+				_, err := PermissionsList(t.Context(), rs, model.NewDefaultConfiguration())
 				return err
 			},
 			want: "list permissions: prepare PDF context: read context:",
@@ -141,14 +141,14 @@ func TestPermissionReadErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "set permissions",
 			run: func(rs io.ReadSeeker) error {
-				return SetPermissions(rs, io.Discard, model.NewDefaultConfiguration())
+				return SetPermissions(t.Context(), rs, io.Discard, model.NewDefaultConfiguration())
 			},
 			want: "set permissions: prepare PDF context: read context:",
 		},
 		{
 			name: "get permissions",
 			run: func(rs io.ReadSeeker) error {
-				_, err := GetPermissions(rs, model.NewDefaultConfiguration())
+				_, err := GetPermissions(t.Context(), rs, model.NewDefaultConfiguration())
 				return err
 			},
 			want: "get permissions: read context:",
@@ -183,7 +183,7 @@ func TestSetPermissionsPreservesSentinelAndWriteError(t *testing.T) {
 		}
 		defer f.Close()
 
-		err = SetPermissions(f, io.Discard, model.NewDefaultConfiguration())
+		err = SetPermissions(t.Context(), f, io.Discard, model.NewDefaultConfiguration())
 		if !errors.Is(err, pdfcpu.ErrNotEncrypted) ||
 			!strings.Contains(err.Error(), "set permissions: prepare PDF context") {
 			t.Fatalf("unexpected error: %v", err)
@@ -202,7 +202,7 @@ func TestSetPermissionsPreservesSentinelAndWriteError(t *testing.T) {
 		conf.OwnerPW = "owner"
 		conf.Permissions = model.PermissionsAll
 		writeErr := errors.New("write failed")
-		err = SetPermissions(f, securityErrorWriter{err: writeErr}, conf)
+		err = SetPermissions(t.Context(), f, securityErrorWriter{err: writeErr}, conf)
 		if !errors.Is(err, writeErr) ||
 			!strings.Contains(err.Error(), "set permissions: write output") {
 			t.Fatalf("unexpected error: %v", err)
@@ -219,7 +219,7 @@ func TestSetPermissionsPreservesSentinelAndWriteError(t *testing.T) {
 		conf := model.NewDefaultConfiguration()
 		conf.UserPW = "user"
 		conf.OwnerPW = "wrong"
-		err = SetPermissions(f, io.Discard, conf)
+		err = SetPermissions(t.Context(), f, io.Discard, conf)
 		if !errors.Is(err, pdfcpu.ErrOwnerPasswordRequired) ||
 			!strings.Contains(err.Error(), "set permissions: prepare PDF context") {
 			t.Fatalf("unexpected error: %v", err)
@@ -230,7 +230,7 @@ func TestSetPermissionsPreservesSentinelAndWriteError(t *testing.T) {
 // TestSetPermissionsFilePreservesExistingOutputOnFailure verifies protected output handling for permission updates.
 func TestSetPermissionsFilePreservesExistingOutputOnFailure(t *testing.T) {
 	requireExistingSecurityOutputPreserved(t, "set permissions", func(inFile, outFile string) error {
-		return SetPermissionsFile(inFile, outFile, model.NewDefaultConfiguration())
+		return SetPermissionsFile(t.Context(), inFile, outFile, model.NewDefaultConfiguration())
 	})
 }
 
@@ -243,19 +243,19 @@ func TestPermissionFileIOErrorsIncludeOperationContext(t *testing.T) {
 	}
 	missingOutput := filepath.Join(t.TempDir(), "missing", "out.pdf")
 
-	err := SetPermissionsFile(missingInput, "", model.NewDefaultConfiguration())
+	err := SetPermissionsFile(t.Context(), missingInput, "", model.NewDefaultConfiguration())
 	if !errors.Is(err, os.ErrNotExist) ||
 		!strings.Contains(err.Error(), "set permissions: open input "+missingInput) {
 		t.Fatalf("unexpected set open error: %v", err)
 	}
 
-	err = SetPermissionsFile(inFile, missingOutput, model.NewDefaultConfiguration())
+	err = SetPermissionsFile(t.Context(), inFile, missingOutput, model.NewDefaultConfiguration())
 	if !errors.Is(err, os.ErrNotExist) ||
 		!strings.Contains(err.Error(), "set permissions: create output") {
 		t.Fatalf("unexpected set create error: %v", err)
 	}
 
-	_, err = GetPermissionsFile(missingInput, model.NewDefaultConfiguration())
+	_, err = GetPermissionsFile(t.Context(), missingInput, model.NewDefaultConfiguration())
 	if !errors.Is(err, os.ErrNotExist) ||
 		!strings.Contains(err.Error(), "get permissions: open input "+missingInput) {
 		t.Fatalf("unexpected get open error: %v", err)

@@ -25,7 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-type pageCommandExecutor func(*Command) ([]string, error)
+type pageCommandExecutor = dispatchFunc
 
 // TestPageExecutorsRejectNilCommand verifies every public page executor has a safe nil boundary.
 func TestPageExecutorsRejectNilCommand(t *testing.T) {
@@ -33,26 +33,26 @@ func TestPageExecutorsRejectNilCommand(t *testing.T) {
 		name string
 		run  pageCommandExecutor
 	}{
-		{"NUp", NUp},
-		{"Grid", Grid},
-		{"Booklet", Booklet},
-		{"Resize", Resize},
-		{"Poster", Poster},
-		{"NDown", NDown},
-		{"Cut", Cut},
-		{"Zoom", Zoom},
-		{"Rotate", Rotate},
-		{"InsertPages", InsertPages},
-		{"RemovePages", RemovePages},
-		{"Crop", Crop},
-		{"ListBoxes", ListBoxes},
-		{"AddBoxes", AddBoxes},
-		{"RemoveBoxes", RemoveBoxes},
+		{"NUp", nUp},
+		{"Grid", grid},
+		{"Booklet", booklet},
+		{"Resize", resize},
+		{"Poster", poster},
+		{"NDown", nDown},
+		{"Cut", cut},
+		{"Zoom", zoom},
+		{"Rotate", rotate},
+		{"InsertPages", insertPages},
+		{"RemovePages", removePages},
+		{"Crop", crop},
+		{"ListBoxes", listBoxes},
+		{"AddBoxes", addBoxes},
+		{"RemoveBoxes", removeBoxes},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(nil)
+			_, err := tt.run(t.Context(), nil)
 			if !errors.Is(err, ErrMissingCommand) {
 				t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 			}
@@ -71,32 +71,32 @@ func TestPageExecutorsRejectIncompleteCommand(t *testing.T) {
 		cmd  *Command
 		want error
 	}{
-		{"NUpConfig", NUp, &Command{OutFile: &outFile}, api.ErrMissingNUpConfiguration},
-		{"GridConfig", Grid, &Command{OutFile: &outFile}, api.ErrMissingGridConfiguration},
-		{"BookletConfig", Booklet, &Command{OutFile: &outFile}, api.ErrMissingBookletConfiguration},
-		{"ResizeConfig", Resize, &Command{InFile: &inFile, OutFile: &outFile},
+		{"NUpConfig", nUp, &Command{OutFile: &outFile}, api.ErrMissingNUpConfiguration},
+		{"GridConfig", grid, &Command{OutFile: &outFile}, api.ErrMissingGridConfiguration},
+		{"BookletConfig", booklet, &Command{OutFile: &outFile}, api.ErrMissingBookletConfiguration},
+		{"ResizeConfig", resize, &Command{InFile: &inFile, OutFile: &outFile},
 			api.ErrMissingResizeConfiguration},
-		{"PosterConfig", Poster, &Command{InFile: &inFile, OutFile: &outFile, OutDir: &outDir},
+		{"PosterConfig", poster, &Command{InFile: &inFile, OutFile: &outFile, OutDir: &outDir},
 			api.ErrMissingCutConfiguration},
-		{"NDownConfig", NDown, &Command{InFile: &inFile, OutFile: &outFile, OutDir: &outDir},
+		{"NDownConfig", nDown, &Command{InFile: &inFile, OutFile: &outFile, OutDir: &outDir},
 			api.ErrMissingCutConfiguration},
-		{"CutConfig", Cut, &Command{InFile: &inFile, OutFile: &outFile, OutDir: &outDir},
+		{"CutConfig", cut, &Command{InFile: &inFile, OutFile: &outFile, OutDir: &outDir},
 			api.ErrMissingCutConfiguration},
-		{"ZoomConfig", Zoom, &Command{InFile: &inFile, OutFile: &outFile}, api.ErrMissingZoomConfiguration},
-		{"RotateInput", Rotate, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"InsertPagesInput", InsertPages, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"RemovePagesInput", RemovePages, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"CropConfig", Crop, &Command{InFile: &inFile, OutFile: &outFile}, api.ErrMissingBoxConfiguration},
-		{"ListBoxesInput", ListBoxes, &Command{}, api.ErrMissingPDFInput},
-		{"AddBoxesConfig", AddBoxes, &Command{InFile: &inFile, OutFile: &outFile},
+		{"ZoomConfig", zoom, &Command{InFile: &inFile, OutFile: &outFile}, api.ErrMissingZoomConfiguration},
+		{"RotateInput", rotate, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"InsertPagesInput", insertPages, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"RemovePagesInput", removePages, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"CropConfig", crop, &Command{InFile: &inFile, OutFile: &outFile}, api.ErrMissingBoxConfiguration},
+		{"ListBoxesInput", listBoxes, &Command{}, api.ErrMissingPDFInput},
+		{"AddBoxesConfig", addBoxes, &Command{InFile: &inFile, OutFile: &outFile},
 			api.ErrMissingPageBoundaries},
-		{"RemoveBoxesConfig", RemoveBoxes, &Command{InFile: &inFile, OutFile: &outFile},
+		{"RemoveBoxesConfig", removeBoxes, &Command{InFile: &inFile, OutFile: &outFile},
 			api.ErrMissingPageBoundaries},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(tt.cmd)
+			_, err := tt.run(t.Context(), tt.cmd)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
@@ -106,7 +106,7 @@ func TestPageExecutorsRejectIncompleteCommand(t *testing.T) {
 
 // TestListBoxesFileRejectsMissingInput verifies the exported file helper rejects an empty path.
 func TestListBoxesFileRejectsMissingInput(t *testing.T) {
-	if _, err := ListBoxesFile("", nil, nil, nil); !errors.Is(err, api.ErrMissingPDFInput) {
+	if _, err := listBoxesFile(t.Context(), "", nil, nil, nil); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
 }
@@ -137,7 +137,7 @@ func TestDispatchRejectsIncompletePageCommandsWithoutPanic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Dispatch(&Command{Mode: tt.mode})
+			_, err := Dispatch(t.Context(), &Command{Mode: tt.mode})
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}

@@ -34,7 +34,7 @@ func TestPageLayout(t *testing.T) {
 	outFile := filepath.Join(outDir, "test.pdf")
 
 	cmd := cli.ListPageLayoutCommand(inFile, conf)
-	ss, err := cli.Dispatch(cmd)
+	ss, err := cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s %s: list pageLayout: %v\n", msg, inFile, err)
 	}
@@ -43,12 +43,12 @@ func TestPageLayout(t *testing.T) {
 	}
 
 	cmd = cli.SetPageLayoutCommand(inFile, outFile, pageLayout, nil)
-	if _, err = cli.Dispatch(cmd); err != nil {
+	if _, err = cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: set pageLayout: %v\n", msg, outFile, err)
 	}
 
 	cmd = cli.ListPageLayoutCommand(outFile, conf)
-	ss, err = cli.Dispatch(cmd)
+	ss, err = cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s %s: list pageLayout: %v\n", msg, outFile, err)
 	}
@@ -60,12 +60,12 @@ func TestPageLayout(t *testing.T) {
 	}
 
 	cmd = cli.ResetPageLayoutCommand(outFile, "", nil)
-	if _, err = cli.Dispatch(cmd); err != nil {
+	if _, err = cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: reset pageLayout: %v\n", msg, outFile, err)
 	}
 
 	cmd = cli.ListPageLayoutCommand(outFile, conf)
-	ss, err = cli.Dispatch(cmd)
+	ss, err = cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s %s: list pageLayout: %v\n", msg, outFile, err)
 	}

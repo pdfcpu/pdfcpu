@@ -18,7 +18,6 @@ package pdfcpu
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"log"
 	"strings"
@@ -62,7 +61,7 @@ func TestDereferenceObjectsAscendingSelectsLowestDenseObjectError(t *testing.T) 
 		if !denseXRefTable(ctx.Table, maxObjNr) {
 			t.Fatal("expected dense xref traversal")
 		}
-		err := dereferenceObjectsAscending(context.Background(), ctx)
+		err := dereferenceObjectsAscending(t.Context(), ctx)
 		if err == nil || !strings.Contains(err.Error(), "object stream 30") {
 			t.Fatalf("expected lowest object error for obj #3, got %v", err)
 		}
@@ -79,7 +78,7 @@ func TestDereferenceObjectsAscendingSelectsLowestSparseObjectError(t *testing.T)
 		if denseXRefTable(ctx.Table, maxObjNr) {
 			t.Fatal("expected sparse xref traversal")
 		}
-		err := dereferenceObjectsAscending(context.Background(), ctx)
+		err := dereferenceObjectsAscending(t.Context(), ctx)
 		if err == nil || !strings.Contains(err.Error(), "object stream 30") {
 			t.Fatalf("expected lowest object error for obj #3, got %v", err)
 		}
@@ -95,7 +94,7 @@ func dereferenceObjectsErrorWithStats(t *testing.T, statsEnabled bool) error {
 	if statsEnabled {
 		pdfcpuLog.SetStatsLogger(log.New(&bytes.Buffer{}, "", 0))
 	}
-	return dereferenceObjects(context.Background(), denseDereferenceTestContext())
+	return dereferenceObjects(t.Context(), denseDereferenceTestContext())
 }
 
 func TestDereferenceObjectsErrorIndependentOfStatsLogging(t *testing.T) {
@@ -169,7 +168,7 @@ func dereferenceObjectsAfterReconstructionError(t *testing.T, statsEnabled bool)
 		pdfcpuLog.SetStatsLogger(log.New(&bytes.Buffer{}, "", 0))
 	}
 	ctx := reconstructionRetryTestContext(t)
-	return dereferenceObjects(context.Background(), ctx), ctx
+	return dereferenceObjects(t.Context(), ctx), ctx
 }
 
 // TestDereferenceObjectsReconstructionRetryIsDeterministic verifies that xref reconstruction preserves the same
@@ -217,7 +216,7 @@ func TestMaterializeEncryptionIntegersSelectsLowestCryptFilter(t *testing.T) {
 			"Alpha": types.Dict{"Length": *types.NewIndirectRef(3, 0)},
 		}}
 
-		err = materializeEncryptionIntegers(context.Background(), ctx, d)
+		err = materializeEncryptionIntegers(t.Context(), ctx, d)
 		if err == nil || !strings.Contains(err.Error(), "crypt filter Alpha") {
 			t.Fatalf("expected Alpha crypt filter error, got %v", err)
 		}

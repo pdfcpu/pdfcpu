@@ -78,7 +78,7 @@ func TestBoxParserErrorContext(t *testing.T) {
 
 func TestPrepareBoxListing(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	ctx, pages, err := prepareBoxListing(openAPITestPDF(t, inFile), []string{"1"}, nil)
+	ctx, pages, err := prepareBoxListing(t.Context(), openAPITestPDF(t, inFile), []string{"1"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,12 +101,12 @@ func TestBoxAPIMissingConfiguration(t *testing.T) {
 		err  error
 		want error
 	}{
-		{name: "add boxes", err: AddBoxes(rs, w, nil, nil, nil), want: ErrMissingPageBoundaries},
-		{name: "remove boxes", err: RemoveBoxes(rs, w, nil, nil, nil), want: ErrMissingPageBoundaries},
-		{name: "crop", err: Crop(rs, w, nil, nil, nil), want: ErrMissingBoxConfiguration},
-		{name: "add boxes file", err: AddBoxesFile("missing.pdf", "", nil, nil, nil), want: ErrMissingPageBoundaries},
-		{name: "remove boxes file", err: RemoveBoxesFile("missing.pdf", "", nil, nil, nil), want: ErrMissingPageBoundaries},
-		{name: "crop file", err: CropFile("missing.pdf", "", nil, nil, nil), want: ErrMissingBoxConfiguration},
+		{name: "add boxes", err: AddBoxes(t.Context(), rs, w, nil, nil, nil), want: ErrMissingPageBoundaries},
+		{name: "remove boxes", err: RemoveBoxes(t.Context(), rs, w, nil, nil, nil), want: ErrMissingPageBoundaries},
+		{name: "crop", err: Crop(t.Context(), rs, w, nil, nil, nil), want: ErrMissingBoxConfiguration},
+		{name: "add boxes file", err: AddBoxesFile(t.Context(), "missing.pdf", "", nil, nil, nil), want: ErrMissingPageBoundaries},
+		{name: "remove boxes file", err: RemoveBoxesFile(t.Context(), "missing.pdf", "", nil, nil, nil), want: ErrMissingPageBoundaries},
+		{name: "crop file", err: CropFile(t.Context(), "missing.pdf", "", nil, nil, nil), want: ErrMissingBoxConfiguration},
 	}
 
 	for _, tt := range tests {
@@ -125,13 +125,13 @@ func TestBoxAPIRejectsInvalidPageBoundaryRequests(t *testing.T) {
 		want string
 	}{
 		{name: "empty add", run: func(rs io.ReadSeeker, w io.Writer) error {
-			return AddBoxes(rs, w, nil, &model.PageBoundaries{}, nil)
+			return AddBoxes(t.Context(), rs, w, nil, &model.PageBoundaries{}, nil)
 		}, want: "add boxes: validate page boundaries: empty request"},
 		{name: "empty remove", run: func(rs io.ReadSeeker, w io.Writer) error {
-			return RemoveBoxes(rs, w, nil, &model.PageBoundaries{}, nil)
+			return RemoveBoxes(t.Context(), rs, w, nil, &model.PageBoundaries{}, nil)
 		}, want: "remove boxes: validate page boundaries: empty request"},
 		{name: "remove MediaBox", run: func(rs io.ReadSeeker, w io.Writer) error {
-			return RemoveBoxes(rs, w, nil, &model.PageBoundaries{Media: &model.Box{}}, nil)
+			return RemoveBoxes(t.Context(), rs, w, nil, &model.PageBoundaries{Media: &model.Box{}}, nil)
 		}, want: "remove boxes: validate page boundaries: MediaBox removal"},
 	}
 
@@ -159,13 +159,13 @@ func TestBoxFileAPIRejectsInvalidPageBoundaryRequests(t *testing.T) {
 		want string
 	}{
 		{name: "empty add", run: func(outFile string) error {
-			return AddBoxesFile(inFile, outFile, nil, &model.PageBoundaries{}, nil)
+			return AddBoxesFile(t.Context(), inFile, outFile, nil, &model.PageBoundaries{}, nil)
 		}, want: "add boxes: validate page boundaries: empty request"},
 		{name: "empty remove", run: func(outFile string) error {
-			return RemoveBoxesFile(inFile, outFile, nil, &model.PageBoundaries{}, nil)
+			return RemoveBoxesFile(t.Context(), inFile, outFile, nil, &model.PageBoundaries{}, nil)
 		}, want: "remove boxes: validate page boundaries: empty request"},
 		{name: "remove MediaBox", run: func(outFile string) error {
-			return RemoveBoxesFile(inFile, outFile, nil, &model.PageBoundaries{Media: &model.Box{}}, nil)
+			return RemoveBoxesFile(t.Context(), inFile, outFile, nil, &model.PageBoundaries{Media: &model.Box{}}, nil)
 		}, want: "remove boxes: validate page boundaries: MediaBox removal"},
 	}
 
@@ -193,13 +193,13 @@ func TestBoxFileAPIValidatesRequestsBeforeFileIO(t *testing.T) {
 		want string
 	}{
 		{name: "empty add", run: func(inFile, outFile string) error {
-			return AddBoxesFile(inFile, outFile, nil, &model.PageBoundaries{}, nil)
+			return AddBoxesFile(t.Context(), inFile, outFile, nil, &model.PageBoundaries{}, nil)
 		}, want: "add boxes: validate page boundaries: empty request"},
 		{name: "empty remove", run: func(inFile, outFile string) error {
-			return RemoveBoxesFile(inFile, outFile, nil, &model.PageBoundaries{}, nil)
+			return RemoveBoxesFile(t.Context(), inFile, outFile, nil, &model.PageBoundaries{}, nil)
 		}, want: "remove boxes: validate page boundaries: empty request"},
 		{name: "remove MediaBox", run: func(inFile, outFile string) error {
-			return RemoveBoxesFile(inFile, outFile, nil, &model.PageBoundaries{Media: &model.Box{}}, nil)
+			return RemoveBoxesFile(t.Context(), inFile, outFile, nil, &model.PageBoundaries{Media: &model.Box{}}, nil)
 		}, want: "remove boxes: validate page boundaries: MediaBox removal"},
 	}
 
@@ -234,19 +234,19 @@ func TestBoxAPIMissingIO(t *testing.T) {
 		want error
 	}{
 		{name: "boxes reader", err: func() error {
-			_, err := Boxes(nil, nil, nil)
+			_, err := Boxes(t.Context(), nil, nil, nil)
 			return err
 		}(), want: ErrMissingPDFReadSeeker},
 		{name: "list reader", err: func() error {
-			_, err := ListBoxes(nil, nil, nil, nil)
+			_, err := ListBoxes(t.Context(), nil, nil, nil, nil)
 			return err
 		}(), want: ErrMissingPDFReadSeeker},
-		{name: "add reader", err: AddBoxes(nil, io.Discard, nil, pb, nil), want: ErrMissingPDFReadSeeker},
-		{name: "add writer", err: AddBoxes(bytes.NewReader(nil), nil, nil, pb, nil), want: ErrMissingPDFWriter},
-		{name: "remove reader", err: RemoveBoxes(nil, io.Discard, nil, pb, nil), want: ErrMissingPDFReadSeeker},
-		{name: "remove writer", err: RemoveBoxes(bytes.NewReader(nil), nil, nil, pb, nil), want: ErrMissingPDFWriter},
-		{name: "crop reader", err: Crop(nil, io.Discard, nil, b, nil), want: ErrMissingPDFReadSeeker},
-		{name: "crop writer", err: Crop(bytes.NewReader(nil), nil, nil, b, nil), want: ErrMissingPDFWriter},
+		{name: "add reader", err: AddBoxes(t.Context(), nil, io.Discard, nil, pb, nil), want: ErrMissingPDFReadSeeker},
+		{name: "add writer", err: AddBoxes(t.Context(), bytes.NewReader(nil), nil, nil, pb, nil), want: ErrMissingPDFWriter},
+		{name: "remove reader", err: RemoveBoxes(t.Context(), nil, io.Discard, nil, pb, nil), want: ErrMissingPDFReadSeeker},
+		{name: "remove writer", err: RemoveBoxes(t.Context(), bytes.NewReader(nil), nil, nil, pb, nil), want: ErrMissingPDFWriter},
+		{name: "crop reader", err: Crop(t.Context(), nil, io.Discard, nil, b, nil), want: ErrMissingPDFReadSeeker},
+		{name: "crop writer", err: Crop(t.Context(), bytes.NewReader(nil), nil, nil, b, nil), want: ErrMissingPDFWriter},
 	}
 
 	for _, tt := range tests {
@@ -264,12 +264,12 @@ func TestBoxFileAPIMissingInput(t *testing.T) {
 		err  error
 	}{
 		{name: "list boxes", err: func() error {
-			_, err := ListBoxesFile("", nil, nil, nil)
+			_, err := ListBoxesFile(t.Context(), "", nil, nil, nil)
 			return err
 		}()},
-		{name: "add boxes", err: AddBoxesFile("", "", nil, boxTestPageBoundaries(), nil)},
-		{name: "remove boxes", err: RemoveBoxesFile("", "", nil, boxTestPageBoundaries(), nil)},
-		{name: "crop", err: CropFile("", "", nil, nil, nil)},
+		{name: "add boxes", err: AddBoxesFile(t.Context(), "", "", nil, boxTestPageBoundaries(), nil)},
+		{name: "remove boxes", err: RemoveBoxesFile(t.Context(), "", "", nil, boxTestPageBoundaries(), nil)},
+		{name: "crop", err: CropFile(t.Context(), "", "", nil, nil, nil)},
 	}
 
 	for _, tt := range tests {
@@ -291,9 +291,9 @@ func TestBoxFileCreateOutputErrorContext(t *testing.T) {
 		err  error
 		want string
 	}{
-		{name: "add", err: AddBoxesFile(inFile, outFile, nil, pb, nil), want: "add boxes: create output"},
-		{name: "remove", err: RemoveBoxesFile(inFile, outFile, nil, pb, nil), want: "remove boxes: create output"},
-		{name: "crop", err: CropFile(inFile, outFile, nil, b, nil), want: "crop: create output"},
+		{name: "add", err: AddBoxesFile(t.Context(), inFile, outFile, nil, pb, nil), want: "add boxes: create output"},
+		{name: "remove", err: RemoveBoxesFile(t.Context(), inFile, outFile, nil, pb, nil), want: "remove boxes: create output"},
+		{name: "crop", err: CropFile(t.Context(), inFile, outFile, nil, b, nil), want: "crop: create output"},
 	}
 
 	for _, tt := range tests {
@@ -315,12 +315,12 @@ func TestBoxAPIAvoidsDuplicateOperationContext(t *testing.T) {
 		op   string
 	}{
 		{name: "list", err: func() error {
-			_, err := ListBoxes(bytes.NewReader(nil), nil, nil, nil)
+			_, err := ListBoxes(t.Context(), bytes.NewReader(nil), nil, nil, nil)
 			return err
 		}(), op: "list boxes:"},
-		{name: "add", err: AddBoxes(bytes.NewReader(nil), io.Discard, nil, boxTestPageBoundaries(), nil), op: "add boxes:"},
-		{name: "remove", err: RemoveBoxes(bytes.NewReader(nil), io.Discard, nil, boxTestPageBoundaries(), nil), op: "remove boxes:"},
-		{name: "crop", err: Crop(bytes.NewReader(nil), io.Discard, nil, &model.Box{}, nil), op: "crop:"},
+		{name: "add", err: AddBoxes(t.Context(), bytes.NewReader(nil), io.Discard, nil, boxTestPageBoundaries(), nil), op: "add boxes:"},
+		{name: "remove", err: RemoveBoxes(t.Context(), bytes.NewReader(nil), io.Discard, nil, boxTestPageBoundaries(), nil), op: "remove boxes:"},
+		{name: "crop", err: Crop(t.Context(), bytes.NewReader(nil), io.Discard, nil, &model.Box{}, nil), op: "crop:"},
 	}
 
 	for _, tt := range tests {
@@ -344,21 +344,21 @@ func TestBoxAPIReadErrorContext(t *testing.T) {
 		want string
 	}{
 		{name: "list", run: func(rs io.ReadSeeker) error {
-			_, err := Boxes(rs, nil, nil)
+			_, err := Boxes(t.Context(), rs, nil, nil)
 			return err
 		}, want: "list boxes: prepare PDF context: read context"},
 		{name: "formatted list", run: func(rs io.ReadSeeker) error {
-			_, err := ListBoxes(rs, nil, nil, nil)
+			_, err := ListBoxes(t.Context(), rs, nil, nil, nil)
 			return err
 		}, want: "list boxes: prepare PDF context: read context"},
 		{name: "add", run: func(rs io.ReadSeeker) error {
-			return AddBoxes(rs, io.Discard, nil, pb, nil)
+			return AddBoxes(t.Context(), rs, io.Discard, nil, pb, nil)
 		}, want: "add boxes: prepare PDF context: read context"},
 		{name: "remove", run: func(rs io.ReadSeeker) error {
-			return RemoveBoxes(rs, io.Discard, nil, pb, nil)
+			return RemoveBoxes(t.Context(), rs, io.Discard, nil, pb, nil)
 		}, want: "remove boxes: prepare PDF context: read context"},
 		{name: "crop", run: func(rs io.ReadSeeker) error {
-			return Crop(rs, io.Discard, nil, b, nil)
+			return Crop(t.Context(), rs, io.Discard, nil, b, nil)
 		}, want: "crop: prepare PDF context: read context"},
 	}
 
@@ -385,21 +385,21 @@ func TestBoxAPIPageSelectionErrorContext(t *testing.T) {
 		want string
 	}{
 		{name: "list", run: func(rs io.ReadSeeker) error {
-			_, err := Boxes(rs, []string{"bogus"}, nil)
+			_, err := Boxes(t.Context(), rs, []string{"bogus"}, nil)
 			return err
 		}, want: "list boxes: parse page selection"},
 		{name: "formatted list", run: func(rs io.ReadSeeker) error {
-			_, err := ListBoxes(rs, []string{"bogus"}, nil, nil)
+			_, err := ListBoxes(t.Context(), rs, []string{"bogus"}, nil, nil)
 			return err
 		}, want: "list boxes: parse page selection"},
 		{name: "add", run: func(rs io.ReadSeeker) error {
-			return AddBoxes(rs, io.Discard, []string{"bogus"}, pb, nil)
+			return AddBoxes(t.Context(), rs, io.Discard, []string{"bogus"}, pb, nil)
 		}, want: "add boxes: parse page selection"},
 		{name: "remove", run: func(rs io.ReadSeeker) error {
-			return RemoveBoxes(rs, io.Discard, []string{"bogus"}, pb, nil)
+			return RemoveBoxes(t.Context(), rs, io.Discard, []string{"bogus"}, pb, nil)
 		}, want: "remove boxes: parse page selection"},
 		{name: "crop", run: func(rs io.ReadSeeker) error {
-			return Crop(rs, io.Discard, []string{"bogus"}, b, nil)
+			return Crop(t.Context(), rs, io.Discard, []string{"bogus"}, b, nil)
 		}, want: "crop: parse page selection"},
 	}
 
@@ -427,13 +427,13 @@ func TestBoxAPIWriteErrorContext(t *testing.T) {
 		want string
 	}{
 		{name: "add", run: func(rs io.ReadSeeker) error {
-			return AddBoxes(rs, failingWriter{err: wantErr}, nil, pb, nil)
+			return AddBoxes(t.Context(), rs, failingWriter{err: wantErr}, nil, pb, nil)
 		}, want: "add boxes: write output"},
 		{name: "remove", run: func(rs io.ReadSeeker) error {
-			return RemoveBoxes(rs, failingWriter{err: wantErr}, nil, pb, nil)
+			return RemoveBoxes(t.Context(), rs, failingWriter{err: wantErr}, nil, pb, nil)
 		}, want: "remove boxes: write output"},
 		{name: "crop", run: func(rs io.ReadSeeker) error {
-			return Crop(rs, failingWriter{err: wantErr}, nil, b, nil)
+			return Crop(t.Context(), rs, failingWriter{err: wantErr}, nil, b, nil)
 		}, want: "crop: write output"},
 	}
 
@@ -459,17 +459,17 @@ func TestBoxFileOpenErrorContext(t *testing.T) {
 		want string
 	}{
 		{name: "list", run: func() error {
-			_, err := ListBoxesFile("missing.pdf", nil, nil, nil)
+			_, err := ListBoxesFile(t.Context(), "missing.pdf", nil, nil, nil)
 			return err
 		}, want: "list boxes: open input missing.pdf"},
 		{name: "add", run: func() error {
-			return AddBoxesFile("missing.pdf", "", nil, pb, nil)
+			return AddBoxesFile(t.Context(), "missing.pdf", "", nil, pb, nil)
 		}, want: "add boxes: open input missing.pdf"},
 		{name: "remove", run: func() error {
-			return RemoveBoxesFile("missing.pdf", "", nil, pb, nil)
+			return RemoveBoxesFile(t.Context(), "missing.pdf", "", nil, pb, nil)
 		}, want: "remove boxes: open input missing.pdf"},
 		{name: "crop", run: func() error {
-			return CropFile("missing.pdf", "", nil, b, nil)
+			return CropFile(t.Context(), "missing.pdf", "", nil, b, nil)
 		}, want: "crop: open input missing.pdf"},
 	}
 
@@ -494,13 +494,13 @@ func TestBoxFilePreservesExistingOutputOnFailure(t *testing.T) {
 		run  func(string, string) error
 	}{
 		{name: "add", run: func(inFile, outFile string) error {
-			return AddBoxesFile(inFile, outFile, nil, pb, nil)
+			return AddBoxesFile(t.Context(), inFile, outFile, nil, pb, nil)
 		}},
 		{name: "remove", run: func(inFile, outFile string) error {
-			return RemoveBoxesFile(inFile, outFile, nil, pb, nil)
+			return RemoveBoxesFile(t.Context(), inFile, outFile, nil, pb, nil)
 		}},
 		{name: "crop", run: func(inFile, outFile string) error {
-			return CropFile(inFile, outFile, nil, b, nil)
+			return CropFile(t.Context(), inFile, outFile, nil, b, nil)
 		}},
 	}
 

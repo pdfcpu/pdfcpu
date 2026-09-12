@@ -49,7 +49,7 @@ func listAttachments(t *testing.T, msg, fileName string, want int) {
 	}
 	defer f.Close()
 
-	aa, err := api.Attachments(f, nil)
+	aa, err := api.Attachments(t.Context(), f, nil)
 	if err != nil {
 		t.Fatalf("%s list attachments: %v\n", msg, err)
 	}
@@ -80,36 +80,36 @@ func TestAttachments(t *testing.T) {
 		filepath.Join(outDir, "go-lecture.pdf"),
 		filepath.Join(outDir, "test.wav")}
 
-	if err := api.AddAttachmentsFile(fileName, "", files, false, nil); err != nil {
+	if err := api.AddAttachmentsFile(t.Context(), fileName, "", files, false, nil); err != nil {
 		t.Fatalf("%s add attachments: %v\n", msg, err)
 	}
 
 	listAttachments(t, msg, fileName, 4)
 
 	// Extract all attachments.
-	if err := api.ExtractAttachmentsFile(fileName, outDir, nil, nil); err != nil {
+	if err := api.ExtractAttachmentsFile(t.Context(), fileName, outDir, nil, nil); err != nil {
 		t.Fatalf("%s extract all attachments: %v\n", msg, err)
 	}
 
 	// Extract 1 attachment.
-	if err := api.ExtractAttachmentsFile(fileName, outDir, []string{"golang.pdf"}, nil); err != nil {
+	if err := api.ExtractAttachmentsFile(t.Context(), fileName, outDir, []string{"golang.pdf"}, nil); err != nil {
 		t.Fatalf("%s extract one attachment: %v\n", msg, err)
 	}
 
 	// Remove 1 attachment.
-	if err := api.RemoveAttachmentsFile(fileName, "", []string{"golang.pdf"}, nil); err != nil {
+	if err := api.RemoveAttachmentsFile(t.Context(), fileName, "", []string{"golang.pdf"}, nil); err != nil {
 		t.Fatalf("%s remove one attachment: %v\n", msg, err)
 	}
 	listAttachments(t, msg, fileName, 3)
 
 	// Remove all attachments.
-	if err := api.RemoveAttachmentsFile(fileName, "", nil, nil); err != nil {
+	if err := api.RemoveAttachmentsFile(t.Context(), fileName, "", nil, nil); err != nil {
 		t.Fatalf("%s remove all attachments: %v\n", msg, err)
 	}
 	listAttachments(t, msg, fileName, 0)
 
 	// Validate the processed file.
-	if err := api.ValidateFile(fileName, nil); err != nil {
+	if err := api.ValidateFile(t.Context(), fileName, nil, nil); err != nil {
 		t.Fatalf("%s: validate: %v\n", msg, err)
 	}
 }
@@ -140,12 +140,12 @@ func addAttachment(t *testing.T, msg, outFile, id, desc, want string, modTime ti
 
 	var err error
 	useCollection := false
-	if err = ctx.AddAttachment(a, useCollection); err != nil {
+	if err = ctx.AddAttachment(t.Context(), a, useCollection); err != nil {
 		t.Fatalf("%s addAttachment: %v\n", msg, err)
 	}
 
 	// Write context to outFile after adding attachment.
-	if err = api.WriteContextFile(ctx, outFile); err != nil {
+	if err = api.WriteContextFile(t.Context(), ctx, outFile); err != nil {
 		t.Fatalf("%s writeContext: %v\n", msg, err)
 	}
 }
@@ -153,7 +153,7 @@ func addAttachment(t *testing.T, msg, outFile, id, desc, want string, modTime ti
 func extractAttachment(t *testing.T, msg string, a model.Attachment, ctx *model.Context) model.Attachment {
 	t.Helper()
 
-	a1, err := ctx.ExtractAttachment(a)
+	a1, err := ctx.ExtractAttachment(t.Context(), a)
 	if err != nil {
 		t.Fatalf("%s extractAttachment: %v\n", msg, err)
 	}
@@ -168,7 +168,7 @@ func extractAttachment(t *testing.T, msg string, a model.Attachment, ctx *model.
 
 func removeAttachment(t *testing.T, msg, outFile string, a model.Attachment, ctx *model.Context) {
 	t.Helper()
-	ok, err := ctx.RemoveAttachment(a)
+	ok, err := ctx.RemoveAttachment(t.Context(), a)
 	if err != nil {
 		t.Fatalf("%s removeAttachment: %v\n", msg, err)
 	}
@@ -177,18 +177,18 @@ func removeAttachment(t *testing.T, msg, outFile string, a model.Attachment, ctx
 	}
 
 	// Write context to outFile after removing attachment.
-	if err := api.WriteContextFile(ctx, outFile); err != nil {
+	if err := api.WriteContextFile(t.Context(), ctx, outFile); err != nil {
 		t.Fatalf("%s writeContext: %v\n", msg, err)
 	}
 
 	// Read outfile once again into a PDFContext.
-	ctx, err = api.ReadContextFile(outFile)
+	ctx, err = api.ReadContextFile(t.Context(), outFile)
 	if err != nil {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
 	// List attachment.
-	aa, err := ctx.ListAttachments()
+	aa, err := ctx.ListAttachments(t.Context())
 	if err != nil {
 		t.Fatalf("%s listAttachments: %v\n", msg, err)
 	}
@@ -209,13 +209,13 @@ func TestAttachmentsLowLevel(t *testing.T) {
 	}
 
 	// Create a context.
-	ctx, err := api.ReadContextFile(outFile)
+	ctx, err := api.ReadContextFile(t.Context(), outFile)
 	if err != nil {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
 	// Ensure zero attachments.
-	if aa, err := ctx.ListAttachments(); err != nil || len(aa) > 0 {
+	if aa, err := ctx.ListAttachments(t.Context()); err != nil || len(aa) > 0 {
 		t.Fatalf("%s listAttachments: %v\n", msg, err)
 	}
 
@@ -226,13 +226,13 @@ func TestAttachmentsLowLevel(t *testing.T) {
 	addAttachment(t, msg, outFile, id, desc, want, modTime, ctx)
 
 	// Read outfile again into a PDFContext.
-	ctx, err = api.ReadContextFile(outFile)
+	ctx, err = api.ReadContextFile(t.Context(), outFile)
 	if err != nil {
 		t.Fatalf("%s readContext: %v\n", msg, err)
 	}
 
 	// List attachments.
-	aa, err := ctx.ListAttachments()
+	aa, err := ctx.ListAttachments(t.Context())
 	if err != nil {
 		t.Fatalf("%s listAttachments: %v\n", msg, err)
 	}

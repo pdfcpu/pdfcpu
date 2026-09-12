@@ -18,6 +18,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -62,7 +63,7 @@ func TestSignatureCLICommandBoundaryGuards(t *testing.T) {
 		{
 			name: "validate nil command",
 			call: func() error {
-				_, err := ValidateSignatures(nil)
+				_, err := validateSignaturesCommand(t.Context(), nil)
 				return err
 			},
 			want: ErrMissingCommand,
@@ -70,7 +71,7 @@ func TestSignatureCLICommandBoundaryGuards(t *testing.T) {
 		{
 			name: "validate missing input",
 			call: func() error {
-				_, err := ValidateSignatures(&Command{})
+				_, err := validateSignaturesCommand(t.Context(), &Command{})
 				return err
 			},
 			want: api.ErrMissingPDFInput,
@@ -78,7 +79,7 @@ func TestSignatureCLICommandBoundaryGuards(t *testing.T) {
 		{
 			name: "validate empty input",
 			call: func() error {
-				_, err := ValidateSignatures(&Command{InFile: &empty})
+				_, err := validateSignaturesCommand(t.Context(), &Command{InFile: &empty})
 				return err
 			},
 			want: api.ErrMissingPDFInput,
@@ -86,7 +87,7 @@ func TestSignatureCLICommandBoundaryGuards(t *testing.T) {
 		{
 			name: "remove nil command",
 			call: func() error {
-				_, err := RemoveSignatures(nil)
+				_, err := removeSignatures(t.Context(), nil)
 				return err
 			},
 			want: ErrMissingCommand,
@@ -94,7 +95,7 @@ func TestSignatureCLICommandBoundaryGuards(t *testing.T) {
 		{
 			name: "remove missing input",
 			call: func() error {
-				_, err := RemoveSignatures(&Command{})
+				_, err := removeSignatures(t.Context(), &Command{})
 				return err
 			},
 			want: api.ErrMissingPDFInput,
@@ -102,7 +103,7 @@ func TestSignatureCLICommandBoundaryGuards(t *testing.T) {
 		{
 			name: "remove empty input",
 			call: func() error {
-				_, err := RemoveSignatures(&Command{InFile: &empty})
+				_, err := removeSignatures(t.Context(), &Command{InFile: &empty})
 				return err
 			},
 			want: api.ErrMissingPDFInput,
@@ -116,7 +117,7 @@ func TestSignatureCLICommandBoundaryGuards(t *testing.T) {
 	}
 
 	missing := filepath.Join(t.TempDir(), "missing.pdf")
-	if _, err := RemoveSignatures(&Command{InFile: &missing}); !errors.Is(err, os.ErrNotExist) {
+	if _, err := removeSignatures(t.Context(), &Command{InFile: &missing}); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("remove optional output: expected %v, got %v", os.ErrNotExist, err)
 	}
 }
@@ -146,7 +147,7 @@ func TestSignatureCLIFileErrorsRetainOperationAndReadContext(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		_, err := Dispatch(tt.command)
+		_, err := Dispatch(t.Context(), tt.command)
 		if err == nil {
 			t.Errorf("%s: expected malformed PDF failure", tt.name)
 			continue
@@ -172,6 +173,7 @@ func TestSignatureCLIPreservesPositionalReadCause(t *testing.T) {
 	}
 	cause := errors.New("storage unavailable")
 	operation := func(
+		_ context.Context,
 		_ string,
 		all, _ bool,
 		conf *model.Configuration,
@@ -180,11 +182,12 @@ func TestSignatureCLIPreservesPositionalReadCause(t *testing.T) {
 			Reader: bytes.NewReader(bb),
 			err:    cause,
 		}
-		_, err := api.ValidateSignaturesRaw(rs, all, conf)
+		_, err := api.ValidateSignaturesRaw(t.Context(), rs, all, conf)
 		return nil, err
 	}
 
 	_, err = validateSignatures(
+		t.Context(),
 		ValidateSignaturesCommand("signed.pdf", false, false, nil),
 		operation,
 	)
@@ -228,7 +231,7 @@ func TestSignatureCLIStdinErrorsRetainOperationAndCleanup(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			useStdin(t, "not a PDF")
 			outFile := filepath.Join(t.TempDir(), "out.pdf")
-			_, err := Dispatch(tt.command(outFile))
+			_, err := Dispatch(t.Context(), tt.command(outFile))
 			if err == nil {
 				t.Fatal("expected malformed stdin failure")
 			}
@@ -253,7 +256,7 @@ func TestSignatureCLIStagesSignedStdin(t *testing.T) {
 	}
 	useStdinBytes(t, bb)
 
-	out, err := Dispatch(ValidateSignaturesCommand("-", false, false, nil))
+	out, err := Dispatch(t.Context(), ValidateSignaturesCommand("-", false, false, nil))
 	if err != nil {
 		t.Fatalf("validate staged stdin: %v", err)
 	}
@@ -283,7 +286,7 @@ func TestSignatureCLINoSignaturesPreservesSentinel(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		_, err := Dispatch(tt.command)
+		_, err := Dispatch(t.Context(), tt.command)
 		if !errors.Is(err, api.ErrNoSignatures) {
 			t.Errorf("%s: expected %v, got %v", tt.name, api.ErrNoSignatures, err)
 			continue

@@ -17,11 +17,13 @@ limitations under the License.
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
@@ -67,7 +69,10 @@ func prepareGridConfigurationForAPI(nup *model.NUp, imageInput bool) error {
 	return nil
 }
 
-func gridFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+func gridFromImage(c context.Context, conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	ctx, err = pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)
 	if err != nil {
 		return nil, fmt.Errorf("grid: create image context: %w", err)
@@ -84,9 +89,9 @@ func gridFromImage(conf *model.Configuration, imageFileNames []string, nup *mode
 	}
 
 	if len(imageFileNames) == 1 {
-		err = pdfcpu.GridFromOneImage(ctx, imageFileNames[0], nup, pagesDict, pagesIndRef)
+		err = pdfcpu.GridFromOneImage(c, ctx, imageFileNames[0], nup, pagesDict, pagesIndRef)
 	} else {
-		err = pdfcpu.GridFromMultipleImages(ctx, imageFileNames, nup, pagesDict, pagesIndRef)
+		err = pdfcpu.GridFromMultipleImages(c, ctx, imageFileNames, nup, pagesDict, pagesIndRef)
 	}
 	if err != nil {
 		return ctx, fmt.Errorf("grid: impose images: %w", err)
@@ -94,12 +99,14 @@ func gridFromImage(conf *model.Configuration, imageFileNames []string, nup *mode
 	return ctx, nil
 }
 
-// GridFromImage creates a page grid context for one or more images.
-// On error, the returned context may be partially constructed and its PageCount remains at the pre-operation value.
-// Callers must discard a non-nil context returned together with an error.
-func GridFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+// GridFromImage creates a page grid context for one or more images and supports cancellation.
+// On error, callers must discard any non-nil context returned with the error.
+func GridFromImage(c context.Context, conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if nup == nil {
 		return nil, ErrMissingGridConfiguration
 	}
@@ -111,14 +118,17 @@ func GridFromImage(conf *model.Configuration, imageFileNames []string, nup *mode
 	}
 	conf = operationConfiguration(conf, model.GRID)
 
-	return gridFromImage(conf, imageFileNames, nup)
+	return gridFromImage(c, conf, imageFileNames, nup)
 }
 
-// Grid rearranges PDF pages or images into page grids and writes the result to w.
+// Grid rearranges PDF pages or images into page grids, writes the result to w and supports cancellation.
 // Either rs or imgFiles will be used.
-func Grid(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
+func Grid(c context.Context, rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if w == nil {
 		return ErrMissingPDFWriter
 	}
@@ -140,14 +150,14 @@ func Grid(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *
 
 	var ctx *model.Context
 	if nup.ImgInputFile {
-		if ctx, err = gridFromImage(conf, imgFiles, nup); err != nil {
+		if ctx, err = gridFromImage(c, conf, imgFiles, nup); err != nil {
 			return err
 		}
 	} else {
 		if rs == nil {
 			return ErrMissingPDFReadSeeker
 		}
-		if ctx, err = ReadValidateAndOptimize(rs, conf); err != nil {
+		if ctx, err = ReadValidateAndOptimize(c, rs, conf, nil); err != nil {
 			return fmt.Errorf("grid: %w", err)
 		}
 
@@ -155,19 +165,22 @@ func Grid(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *
 		if err != nil {
 			return fmt.Errorf("grid: parse page selection: %w", err)
 		}
-		if err = pdfcpu.GridFromPDF(ctx, pages, nup); err != nil {
+		if err = pdfcpu.GridFromPDF(c, ctx, pages, nup); err != nil {
 			return fmt.Errorf("grid: impose pages: %w", err)
 		}
 	}
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("grid: write output: %w", err)
 	}
 	return nil
 }
 
-func rejectGridImageOutputAlias(inFiles []string, outFile string) error {
+func rejectGridImageOutputAlias(c context.Context, inFiles []string, outFile string) error {
 	for i, inFile := range inFiles {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		aliases, err := outputAliasesInput(inFile, outFile)
 		if err != nil {
 			return fmt.Errorf("grid image %d %q: check output alias: %w", i+1, inFile, err)
@@ -176,13 +189,16 @@ func rejectGridImageOutputAlias(inFiles []string, outFile string) error {
 			return fmt.Errorf("grid image %d %q: output aliases input: %w", i+1, inFile, ErrGridImageOutputConflict)
 		}
 	}
-	return nil
+	return contextutil.Check(c)
 }
 
-// GridFile rearranges PDF pages or images into page grids and writes the result to outFile.
-func GridFile(inFiles []string, outFile string, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
+// GridFile rearranges PDF pages or images into page grids, writes the result to outFile and supports cancellation.
+func GridFile(c context.Context, inFiles []string, outFile string, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if nup == nil {
 		return ErrMissingGridConfiguration
 	}
@@ -199,19 +215,17 @@ func GridFile(inFiles []string, outFile string, selectedPages []string, nup *mod
 		return err
 	}
 	if nup.ImgInputFile {
-		if err := rejectGridImageOutputAlias(inFiles, outFile); err != nil {
+		if err := rejectGridImageOutputAlias(c, inFiles, outFile); err != nil {
 			return err
 		}
 	}
 
-	var f1, f2 *os.File
-	ok := false
+	var f1 *os.File
 	if !nup.ImgInputFile {
 		if f1, err = os.Open(inFiles[0]); err != nil {
 			return fmt.Errorf("grid: open input %s: %w", inFiles[0], err)
 		}
 	}
-
 	staged, err := openStagedOutput(f1, inFiles[0], outFile, "grid")
 	if err != nil {
 		return errors.Join(
@@ -219,8 +233,7 @@ func GridFile(inFiles []string, outFile string, selectedPages []string, nup *mod
 			closeFile(f1, "grid: close input"),
 		)
 	}
-	f2 = staged.output.file
-
+	ok := false
 	defer func() {
 		if !ok {
 			err = staged.cleanup(err)
@@ -229,7 +242,10 @@ func GridFile(inFiles []string, outFile string, selectedPages []string, nup *mod
 		err = staged.commit()
 	}()
 
-	if err = Grid(f1, f2, inFiles, selectedPages, nup, conf); err != nil {
+	if err = Grid(c, f1, staged.output.file, inFiles, selectedPages, nup, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 	ok = true

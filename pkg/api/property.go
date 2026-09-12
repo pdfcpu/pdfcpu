@@ -17,38 +17,46 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// Properties returns rs's properties as recorded in infoDict.
-func Properties(rs io.ReadSeeker, conf *model.Configuration) (m map[string]string, err error) {
+// Properties returns rs's properties as recorded in infoDict and supports cancellation.
+func Properties(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (m map[string]string, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
 
 	conf = operationConfiguration(conf, model.LISTPROPERTIES)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return nil, fmt.Errorf("list properties: %w", err)
 	}
 
-	return ctx.Properties, nil
+	return ctx.Properties, contextutil.Check(c)
 }
 
-// AddProperties adds properties to rs's infodict and writes the result to w.
-func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, conf *model.Configuration) (err error) {
+// AddProperties adds properties to rs's infodict, writes the result to w and supports cancellation.
+func AddProperties(c context.Context, rs io.ReadSeeker, w io.Writer, properties map[string]string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -63,49 +71,48 @@ func AddProperties(rs io.ReadSeeker, w io.Writer, properties map[string]string, 
 
 	conf = operationConfiguration(conf, model.ADDPROPERTIES)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("add properties: %w", err)
 	}
 
-	if err = pdfcpu.PropertiesAdd(ctx, properties); err != nil {
+	if err = pdfcpu.PropertiesAdd(c, ctx, properties); err != nil {
 		return fmt.Errorf("add properties: update document properties: %w", err)
 	}
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("add properties: write output: %w", err)
 	}
 	return nil
 }
 
-type propertyMutation func(io.ReadSeeker, io.Writer, *model.Configuration) error
-
-func mutatePropertiesFile(
-	inFile, outFile string,
-	conf *model.Configuration,
-	op string,
-	mutate propertyMutation,
-) (err error) {
-	var f1, f2 *os.File
-	ok := false
-
-	if f1, err = os.Open(inFile); err != nil {
-		return fmt.Errorf("%s: open input %s: %w", op, inFile, err)
+// AddPropertiesFile adds properties to inFile's infodict, writes the result to outFile and supports cancellation.
+func AddPropertiesFile(c context.Context, inFile, outFile string, properties map[string]string, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
 	}
-
+	if inFile == "" {
+		return ErrMissingPDFInput
+	}
+	if err := validateProperties(properties); err != nil {
+		return fmt.Errorf("add properties: validate properties: %w", err)
+	}
+	f1, err := os.Open(inFile)
+	if err != nil {
+		return fmt.Errorf("add properties: open input %s: %w", inFile, err)
+	}
 	tmpFile := ""
 	if outFile != "" && inFile != outFile {
 		tmpFile = outFile
 	}
-	staged, err := openStagedOutput(f1, inFile, tmpFile, op)
+	staged, err := openStagedOutput(f1, inFile, tmpFile, "add properties")
 	if err != nil {
 		return errors.Join(
-			fmt.Errorf("%s: create output: %w", op, err),
-			closeFile(f1, op+": close input"),
+			fmt.Errorf("add properties: create output: %w", err),
+			closeFile(f1, "add properties: close input"),
 		)
 	}
-	f2 = staged.output.file
-
+	ok := false
 	defer func() {
 		if !ok {
 			err = staged.cleanup(err)
@@ -114,31 +121,23 @@ func mutatePropertiesFile(
 		err = staged.commit()
 	}()
 
-	if err = mutate(f1, f2, conf); err != nil {
+	if err = AddProperties(c, f1, staged.output.file, properties, conf); err != nil {
 		return err
 	}
-
+	if err = contextutil.Check(c); err != nil {
+		return err
+	}
 	ok = true
 	return nil
 }
 
-// AddPropertiesFile adds properties to inFile's infodict and writes the result to outFile.
-func AddPropertiesFile(inFile, outFile string, properties map[string]string, conf *model.Configuration) error {
-	if inFile == "" {
-		return ErrMissingPDFInput
-	}
-	if err := validateProperties(properties); err != nil {
-		return fmt.Errorf("add properties: validate properties: %w", err)
-	}
-	return mutatePropertiesFile(inFile, outFile, conf, "add properties", func(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
-		return AddProperties(rs, w, properties, conf)
-	})
-}
-
-// RemoveProperties deletes properties from rs's infodict and writes the result to w.
-func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *model.Configuration) (err error) {
+// RemoveProperties deletes properties from rs's infodict, writes the result to w and supports cancellation.
+func RemoveProperties(c context.Context, rs io.ReadSeeker, w io.Writer, properties []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -156,27 +155,30 @@ func RemoveProperties(rs io.ReadSeeker, w io.Writer, properties []string, conf *
 
 	conf = operationConfiguration(conf, model.REMOVEPROPERTIES)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("remove properties: %w", err)
 	}
 
 	var ok bool
-	if ok, err = pdfcpu.PropertiesRemove(ctx, properties); err != nil {
+	if ok, err = pdfcpu.PropertiesRemove(c, ctx, properties); err != nil {
 		return fmt.Errorf("remove properties: update document properties: %w", err)
 	}
 	if !ok {
 		return fmt.Errorf("remove properties: %w", ErrNoPropertyRemoved)
 	}
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("remove properties: write output: %w", err)
 	}
 	return nil
 }
 
-// RemovePropertiesFile deletes properties from inFile's infodict and writes the result to outFile.
-func RemovePropertiesFile(inFile, outFile string, properties []string, conf *model.Configuration) error {
+// RemovePropertiesFile deletes properties from inFile's infodict, writes the result to outFile and supports cancellation.
+func RemovePropertiesFile(c context.Context, inFile, outFile string, properties []string, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -186,7 +188,36 @@ func RemovePropertiesFile(inFile, outFile string, properties []string, conf *mod
 	if err := validatePropertyNames(properties); err != nil {
 		return fmt.Errorf("remove properties: validate properties: %w", err)
 	}
-	return mutatePropertiesFile(inFile, outFile, conf, "remove properties", func(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) error {
-		return RemoveProperties(rs, w, properties, conf)
-	})
+	f1, err := os.Open(inFile)
+	if err != nil {
+		return fmt.Errorf("remove properties: open input %s: %w", inFile, err)
+	}
+	tmpFile := ""
+	if outFile != "" && inFile != outFile {
+		tmpFile = outFile
+	}
+	staged, err := openStagedOutput(f1, inFile, tmpFile, "remove properties")
+	if err != nil {
+		return errors.Join(
+			fmt.Errorf("remove properties: create output: %w", err),
+			closeFile(f1, "remove properties: close input"),
+		)
+	}
+	ok := false
+	defer func() {
+		if !ok {
+			err = staged.cleanup(err)
+			return
+		}
+		err = staged.commit()
+	}()
+
+	if err = RemoveProperties(c, f1, staged.output.file, properties, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
+		return err
+	}
+	ok = true
+	return nil
 }

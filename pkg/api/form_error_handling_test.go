@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -43,7 +44,7 @@ func formMutationTestInputFile() string {
 
 func changedFormTestJSON(t *testing.T) []byte {
 	t.Helper()
-	formGroup, err := ExportForm(openAPITestPDF(t, formMutationTestInputFile()), "textfield.pdf", nil)
+	formGroup, err := ExportForm(t.Context(), openAPITestPDF(t, formMutationTestInputFile()), "textfield.pdf", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,7 +61,7 @@ func changedFormTestJSON(t *testing.T) []byte {
 
 func changedFormTestCSV(t *testing.T) string {
 	t.Helper()
-	formGroup, err := ExportForm(openAPITestPDF(t, formMutationTestInputFile()), "textfield.pdf", nil)
+	formGroup, err := ExportForm(t.Context(), openAPITestPDF(t, formMutationTestInputFile()), "textfield.pdf", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,18 +83,18 @@ func changedFormTestCSV(t *testing.T) string {
 	return b.String()
 }
 
-func multiFillFormWithWriteContext(inFilePDF string, rd io.Reader, outDir, fileName string, format form.DataFormat, merge bool, writeContext func(*model.Context, io.Writer) error) error {
+func multiFillFormWithWriteContext(testContext context.Context, inFilePDF string, rd io.Reader, outDir, fileName string, format form.DataFormat, merge bool, writeContext formContextWriter) error {
 	conf := model.NewDefaultConfiguration()
 	conf.Cmd = model.MULTIFILLFORMFIELDS
 	fileName = strings.TrimSuffix(filepath.Base(fileName), ".pdf")
 	fileName = sanitizeFilenamePart(fileName, "form")
 	if format == form.JSON {
-		return multiFillFormJSONWith(inFilePDF, rd, outDir, fileName, merge, conf, writeContext)
+		return multiFillFormJSONUsing(testContext, inFilePDF, rd, outDir, fileName, merge, conf, writeContext)
 	}
-	return multiFillFormCSVWith(inFilePDF, rd, outDir, fileName, merge, conf, writeContext)
+	return multiFillFormCSVUsing(testContext, inFilePDF, rd, outDir, fileName, merge, conf, writeContext)
 }
 
-func formMutationFileFunctions() []struct {
+func formMutationFileFunctions(testContext context.Context) []struct {
 	name string
 	fn   func(string, string) error
 } {
@@ -102,16 +103,16 @@ func formMutationFileFunctions() []struct {
 		fn   func(string, string) error
 	}{
 		{name: "remove form fields", fn: func(inFile, outFile string) error {
-			return RemoveFormFieldsFile(inFile, outFile, nil, nil)
+			return RemoveFormFieldsFile(testContext, inFile, outFile, nil, nil)
 		}},
 		{name: "lock form fields", fn: func(inFile, outFile string) error {
-			return LockFormFieldsFile(inFile, outFile, nil, nil)
+			return LockFormFieldsFile(testContext, inFile, outFile, nil, nil)
 		}},
 		{name: "unlock form fields", fn: func(inFile, outFile string) error {
-			return UnlockFormFieldsFile(inFile, outFile, nil, nil)
+			return UnlockFormFieldsFile(testContext, inFile, outFile, nil, nil)
 		}},
 		{name: "reset form fields", fn: func(inFile, outFile string) error {
-			return ResetFormFieldsFile(inFile, outFile, nil, nil)
+			return ResetFormFieldsFile(testContext, inFile, outFile, nil, nil)
 		}},
 	}
 }
@@ -125,7 +126,7 @@ func callFormAPI(fn func() error) (err error, panicValue any) {
 }
 
 func TestListFormFieldsRejectsNilReader(t *testing.T) {
-	_, err := ListFormFields(nil, nil)
+	_, err := ListFormFields(t.Context(), nil, nil)
 	if !errors.Is(err, ErrMissingPDFReadSeeker) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFReadSeeker, err)
 	}
@@ -142,14 +143,14 @@ func TestFormFileAPIsRejectMissingPDFInput(t *testing.T) {
 		name string
 		fn   func() error
 	}{
-		{name: "remove", fn: func() error { return RemoveFormFieldsFile("", filepath.Join(dir, "remove.pdf"), nil, nil) }},
-		{name: "lock", fn: func() error { return LockFormFieldsFile("", filepath.Join(dir, "lock.pdf"), nil, nil) }},
-		{name: "unlock", fn: func() error { return UnlockFormFieldsFile("", filepath.Join(dir, "unlock.pdf"), nil, nil) }},
-		{name: "reset", fn: func() error { return ResetFormFieldsFile("", filepath.Join(dir, "reset.pdf"), nil, nil) }},
-		{name: "export", fn: func() error { return ExportFormFile("", filepath.Join(dir, "form-out.json"), nil) }},
-		{name: "fill", fn: func() error { return FillFormFile("", dataFile, filepath.Join(dir, "fill.pdf"), nil) }},
+		{name: "remove", fn: func() error { return RemoveFormFieldsFile(t.Context(), "", filepath.Join(dir, "remove.pdf"), nil, nil) }},
+		{name: "lock", fn: func() error { return LockFormFieldsFile(t.Context(), "", filepath.Join(dir, "lock.pdf"), nil, nil) }},
+		{name: "unlock", fn: func() error { return UnlockFormFieldsFile(t.Context(), "", filepath.Join(dir, "unlock.pdf"), nil, nil) }},
+		{name: "reset", fn: func() error { return ResetFormFieldsFile(t.Context(), "", filepath.Join(dir, "reset.pdf"), nil, nil) }},
+		{name: "export", fn: func() error { return ExportFormFile(t.Context(), "", filepath.Join(dir, "form-out.json"), nil) }},
+		{name: "fill", fn: func() error { return FillFormFile(t.Context(), "", dataFile, filepath.Join(dir, "fill.pdf"), nil) }},
 		{name: "multi-fill", fn: func() error {
-			return MultiFillFormFile("", dataFile, dir, "multi.pdf", false, nil)
+			return MultiFillFormFile(t.Context(), "", dataFile, dir, "multi.pdf", false, nil)
 		}},
 	}
 
@@ -172,7 +173,7 @@ func TestMultiFillFormRejectsInvalidInputWithoutPanic(t *testing.T) {
 		{
 			name: "missing form reader",
 			fn: func() error {
-				return MultiFillForm("unused.pdf", nil, t.TempDir(), "out.pdf", form.JSON, false, nil)
+				return MultiFillForm(t.Context(), "unused.pdf", nil, t.TempDir(), "out.pdf", form.JSON, false, nil)
 			},
 			wantErr: ErrMissingFormInput,
 			want:    "multi-fill form: missing form input",
@@ -180,7 +181,7 @@ func TestMultiFillFormRejectsInvalidInputWithoutPanic(t *testing.T) {
 		{
 			name: "unsupported format",
 			fn: func() error {
-				return MultiFillForm("unused.pdf", strings.NewReader("a,b\n1,2\n"), t.TempDir(), "out.pdf", form.DataFormat(99), false, nil)
+				return MultiFillForm(t.Context(), "unused.pdf", strings.NewReader("a,b\n1,2\n"), t.TempDir(), "out.pdf", form.DataFormat(99), false, nil)
 			},
 			wantErr: ErrUnsupportedFormDataFormat,
 			want:    "multi-fill form: unsupported data format",
@@ -213,21 +214,21 @@ func TestFormAdditionalBoundaryErrors(t *testing.T) {
 		{
 			name: "export missing JSON writer",
 			fn: func() error {
-				return ExportFormJSON(bytes.NewReader(nil), nil, "source.pdf", nil)
+				return ExportFormJSON(t.Context(), bytes.NewReader(nil), nil, "source.pdf", nil)
 			},
 			wantErr: ErrMissingJSONWriter,
 		},
 		{
 			name: "export missing JSON output",
 			fn: func() error {
-				return ExportFormFile("unused.pdf", "", nil)
+				return ExportFormFile(t.Context(), "unused.pdf", "", nil)
 			},
 			wantErr: ErrMissingJSONOutput,
 		},
 		{
 			name: "fill missing form reader",
 			fn: func() error {
-				return FillForm(bytes.NewReader(nil), nil, io.Discard, nil)
+				return FillForm(t.Context(), bytes.NewReader(nil), nil, io.Discard, nil)
 			},
 			wantErr:     ErrMissingFormInput,
 			wantContext: "fill form",
@@ -235,21 +236,21 @@ func TestFormAdditionalBoundaryErrors(t *testing.T) {
 		{
 			name: "fill file missing JSON input",
 			fn: func() error {
-				return FillFormFile("unused.pdf", "", "out.pdf", nil)
+				return FillFormFile(t.Context(), "unused.pdf", "", "out.pdf", nil)
 			},
 			wantErr: ErrMissingJSONInput,
 		},
 		{
 			name: "multi-fill missing PDF input",
 			fn: func() error {
-				return MultiFillForm("", strings.NewReader(`{"forms":[{}]}`), t.TempDir(), "out.pdf", form.JSON, false, nil)
+				return MultiFillForm(t.Context(), "", strings.NewReader(`{"forms":[{}]}`), t.TempDir(), "out.pdf", form.JSON, false, nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "multi-fill file missing form input",
 			fn: func() error {
-				return MultiFillFormFile("unused.pdf", "", t.TempDir(), "out.pdf", false, nil)
+				return MultiFillFormFile(t.Context(), "unused.pdf", "", t.TempDir(), "out.pdf", false, nil)
 			},
 			wantErr: ErrMissingFormInput,
 		},
@@ -275,34 +276,34 @@ func TestFormReadErrorsIncludePhaseContext(t *testing.T) {
 		want string
 	}{
 		{name: "list", fn: func() error {
-			_, err := FormFields(bytes.NewReader(nil), nil)
+			_, err := FormFields(t.Context(), bytes.NewReader(nil), nil)
 			return err
 		}, want: "list form fields: prepare PDF context"},
 		{name: "rendered list", fn: func() error {
-			_, err := ListFormFields(bytes.NewReader(nil), nil)
+			_, err := ListFormFields(t.Context(), bytes.NewReader(nil), nil)
 			return err
 		}, want: "list form fields: prepare PDF context"},
 		{name: "remove", fn: func() error {
-			return RemoveFormFields(bytes.NewReader(nil), io.Discard, nil, nil)
+			return RemoveFormFields(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 		}, want: "remove form fields: prepare PDF context"},
 		{name: "lock", fn: func() error {
-			return LockFormFields(bytes.NewReader(nil), io.Discard, nil, nil)
+			return LockFormFields(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 		}, want: "lock form fields: prepare PDF context"},
 		{name: "unlock", fn: func() error {
-			return UnlockFormFields(bytes.NewReader(nil), io.Discard, nil, nil)
+			return UnlockFormFields(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 		}, want: "unlock form fields: prepare PDF context"},
 		{name: "reset", fn: func() error {
-			return ResetFormFields(bytes.NewReader(nil), io.Discard, nil, nil)
+			return ResetFormFields(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 		}, want: "reset form fields: prepare PDF context"},
 		{name: "export", fn: func() error {
-			_, err := ExportForm(bytes.NewReader(nil), "source.pdf", nil)
+			_, err := ExportForm(t.Context(), bytes.NewReader(nil), "source.pdf", nil)
 			return err
 		}, want: "export form: prepare PDF context"},
 		{name: "export JSON", fn: func() error {
-			return ExportFormJSON(bytes.NewReader(nil), io.Discard, "source.pdf", nil)
+			return ExportFormJSON(t.Context(), bytes.NewReader(nil), io.Discard, "source.pdf", nil)
 		}, want: "export form: prepare PDF context"},
 		{name: "fill", fn: func() error {
-			return FillForm(bytes.NewReader(nil), strings.NewReader(`{"forms":[{}]}`), io.Discard, nil)
+			return FillForm(t.Context(), bytes.NewReader(nil), strings.NewReader(`{"forms":[{}]}`), io.Discard, nil)
 		}, want: "fill form: prepare PDF context"},
 	}
 
@@ -336,16 +337,16 @@ func TestFormMutationOperationErrorsIncludePhaseContext(t *testing.T) {
 		want string
 	}{
 		{name: "remove", fn: func() error {
-			return RemoveFormFields(openAPITestPDF(t, inFile), io.Discard, nil, nil)
+			return RemoveFormFields(t.Context(), openAPITestPDF(t, inFile), io.Discard, nil, nil)
 		}, want: "remove form fields: update fields"},
 		{name: "lock", fn: func() error {
-			return LockFormFields(openAPITestPDF(t, inFile), io.Discard, nil, nil)
+			return LockFormFields(t.Context(), openAPITestPDF(t, inFile), io.Discard, nil, nil)
 		}, want: "lock form fields: update fields"},
 		{name: "unlock", fn: func() error {
-			return UnlockFormFields(openAPITestPDF(t, inFile), io.Discard, nil, nil)
+			return UnlockFormFields(t.Context(), openAPITestPDF(t, inFile), io.Discard, nil, nil)
 		}, want: "unlock form fields: update fields"},
 		{name: "reset", fn: func() error {
-			return ResetFormFields(openAPITestPDF(t, inFile), io.Discard, nil, nil)
+			return ResetFormFields(t.Context(), openAPITestPDF(t, inFile), io.Discard, nil, nil)
 		}, want: "reset form fields: update fields"},
 	}
 
@@ -366,16 +367,16 @@ func TestFormMutationNoFieldsAffectedPreservesSentinel(t *testing.T) {
 		want string
 	}{
 		{name: "remove", fn: func() error {
-			return RemoveFormFields(openAPITestPDF(t, formTestInputFile()), io.Discard, []string{"missing"}, nil)
+			return RemoveFormFields(t.Context(), openAPITestPDF(t, formTestInputFile()), io.Discard, []string{"missing"}, nil)
 		}, want: "remove form fields"},
 		{name: "lock", fn: func() error {
-			return LockFormFields(openAPITestPDF(t, formTestInputFile()), io.Discard, []string{"missing"}, nil)
+			return LockFormFields(t.Context(), openAPITestPDF(t, formTestInputFile()), io.Discard, []string{"missing"}, nil)
 		}, want: "lock form fields"},
 		{name: "unlock", fn: func() error {
-			return UnlockFormFields(openAPITestPDF(t, formTestInputFile()), io.Discard, []string{"missing"}, nil)
+			return UnlockFormFields(t.Context(), openAPITestPDF(t, formTestInputFile()), io.Discard, []string{"missing"}, nil)
 		}, want: "unlock form fields"},
 		{name: "reset", fn: func() error {
-			return ResetFormFields(openAPITestPDF(t, formTestInputFile()), io.Discard, []string{"missing"}, nil)
+			return ResetFormFields(t.Context(), openAPITestPDF(t, formTestInputFile()), io.Discard, []string{"missing"}, nil)
 		}, want: "reset form fields"},
 	}
 
@@ -400,16 +401,16 @@ func TestFormMutationWriteErrorsPreserveCauseAndContext(t *testing.T) {
 		want string
 	}{
 		{name: "remove", fn: func() error {
-			return RemoveFormFields(openAPITestPDF(t, formMutationTestInputFile()), failingWriter{err: wantErr}, nil, nil)
+			return RemoveFormFields(t.Context(), openAPITestPDF(t, formMutationTestInputFile()), failingWriter{err: wantErr}, nil, nil)
 		}, want: "remove form fields: write output"},
 		{name: "lock", fn: func() error {
-			return LockFormFields(openAPITestPDF(t, formMutationTestInputFile()), failingWriter{err: wantErr}, nil, nil)
+			return LockFormFields(t.Context(), openAPITestPDF(t, formMutationTestInputFile()), failingWriter{err: wantErr}, nil, nil)
 		}, want: "lock form fields: write output"},
 		{name: "unlock", fn: func() error {
-			return UnlockFormFields(openAPITestPDF(t, formMutationTestInputFile()), failingWriter{err: wantErr}, nil, nil)
+			return UnlockFormFields(t.Context(), openAPITestPDF(t, formMutationTestInputFile()), failingWriter{err: wantErr}, nil, nil)
 		}, want: "unlock form fields: write output"},
 		{name: "reset", fn: func() error {
-			return ResetFormFields(openAPITestPDF(t, formMutationTestInputFile()), failingWriter{err: wantErr}, nil, nil)
+			return ResetFormFields(t.Context(), openAPITestPDF(t, formMutationTestInputFile()), failingWriter{err: wantErr}, nil, nil)
 		}, want: "reset form fields: write output"},
 	}
 
@@ -437,7 +438,7 @@ func TestFormListAndExportOperationErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "list fields",
 			fn: func() error {
-				_, err := FormFields(openAPITestPDF(t, inFile), nil)
+				_, err := FormFields(t.Context(), openAPITestPDF(t, inFile), nil)
 				return err
 			},
 			want:  "list form fields: collect fields",
@@ -446,7 +447,7 @@ func TestFormListAndExportOperationErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "rendered list fields",
 			fn: func() error {
-				_, err := ListFormFields(openAPITestPDF(t, inFile), nil)
+				_, err := ListFormFields(t.Context(), openAPITestPDF(t, inFile), nil)
 				return err
 			},
 			want:  "list form fields: collect fields",
@@ -455,7 +456,7 @@ func TestFormListAndExportOperationErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "export",
 			fn: func() error {
-				_, err := ExportForm(openAPITestPDF(t, inFile), "source.pdf", nil)
+				_, err := ExportForm(t.Context(), openAPITestPDF(t, inFile), "source.pdf", nil)
 				return err
 			},
 			want:  "export form: collect data",
@@ -464,7 +465,7 @@ func TestFormListAndExportOperationErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "export JSON",
 			fn: func() error {
-				return ExportFormJSON(openAPITestPDF(t, inFile), io.Discard, "source.pdf", nil)
+				return ExportFormJSON(t.Context(), openAPITestPDF(t, inFile), io.Discard, "source.pdf", nil)
 			},
 			want:  "export form: collect data",
 			phase: "collect data",
@@ -497,7 +498,7 @@ func TestExportFormJSONWriteErrorsPreserveCauseAndContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ExportFormJSON(openAPITestPDF(t, formTestInputFile()), tt.w, "source.pdf", nil)
+			err := ExportFormJSON(t.Context(), openAPITestPDF(t, formTestInputFile()), tt.w, "source.pdf", nil)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
@@ -516,13 +517,13 @@ func TestExportFormJSONTranslatesOperationResults(t *testing.T) {
 	wantEncodeErr := errors.New("encode form data")
 	tests := []struct {
 		name        string
-		export      func(*model.XRefTable, string, io.Writer) (bool, error)
+		export      formJSONExporter
 		wantErr     error
 		wantContext string
 	}{
 		{
 			name: "collection failure",
-			export: func(*model.XRefTable, string, io.Writer) (bool, error) {
+			export: func(context.Context, *model.XRefTable, string, io.Writer) (bool, error) {
 				return false, fmt.Errorf("collect data: %w", wantCollectErr)
 			},
 			wantErr:     wantCollectErr,
@@ -530,7 +531,7 @@ func TestExportFormJSONTranslatesOperationResults(t *testing.T) {
 		},
 		{
 			name: "encoding failure",
-			export: func(*model.XRefTable, string, io.Writer) (bool, error) {
+			export: func(context.Context, *model.XRefTable, string, io.Writer) (bool, error) {
 				return false, fmt.Errorf("encode JSON: %w", wantEncodeErr)
 			},
 			wantErr:     wantEncodeErr,
@@ -538,7 +539,7 @@ func TestExportFormJSONTranslatesOperationResults(t *testing.T) {
 		},
 		{
 			name: "nothing exported",
-			export: func(*model.XRefTable, string, io.Writer) (bool, error) {
+			export: func(context.Context, *model.XRefTable, string, io.Writer) (bool, error) {
 				return false, nil
 			},
 			wantErr:     ErrNoFormFieldsAffected,
@@ -548,7 +549,7 @@ func TestExportFormJSONTranslatesOperationResults(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := exportFormJSONResult(nil, "source.pdf", io.Discard, tt.export)
+			err := exportFormJSONResultUsing(t.Context(), nil, "source.pdf", io.Discard, tt.export)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
@@ -579,9 +580,9 @@ func TestFormJSONErrorsPreserveSentinelAndCause(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var err error
 			if strings.HasPrefix(tt.name, "fill ") {
-				err = FillForm(openAPITestPDF(t, formTestInputFile()), strings.NewReader(tt.data), io.Discard, nil)
+				err = FillForm(t.Context(), openAPITestPDF(t, formTestInputFile()), strings.NewReader(tt.data), io.Discard, nil)
 			} else {
-				err = MultiFillForm("unused.pdf", strings.NewReader(tt.data), t.TempDir(), "out.pdf", form.JSON, false, nil)
+				err = MultiFillForm(t.Context(), "unused.pdf", strings.NewReader(tt.data), t.TempDir(), "out.pdf", form.JSON, false, nil)
 			}
 			if !errors.Is(err, ErrInvalidJSON) {
 				t.Fatalf("expected %v, got %v", ErrInvalidJSON, err)
@@ -608,7 +609,7 @@ func TestFillFormDataErrorsPreserveSentinelsAndContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := FillForm(openAPITestPDF(t, formMutationTestInputFile()), strings.NewReader(tt.data), io.Discard, nil)
+			err := FillForm(t.Context(), openAPITestPDF(t, formMutationTestInputFile()), strings.NewReader(tt.data), io.Discard, nil)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
@@ -621,7 +622,7 @@ func TestFillFormDataErrorsPreserveSentinelsAndContext(t *testing.T) {
 
 func TestFillFormOptionErrorsIncludePhaseContext(t *testing.T) {
 	data := `{"forms":[{"combobox":[{"name":"choice","options":["one"],"value":"invalid"}]}]}`
-	err := FillForm(openAPITestPDF(t, formMutationTestInputFile()), strings.NewReader(data), io.Discard, nil)
+	err := FillForm(t.Context(), openAPITestPDF(t, formMutationTestInputFile()), strings.NewReader(data), io.Discard, nil)
 	if !errors.Is(err, ErrInvalidFormData) {
 		t.Fatalf("expected %v, got %v", ErrInvalidFormData, err)
 	}
@@ -632,7 +633,7 @@ func TestFillFormOptionErrorsIncludePhaseContext(t *testing.T) {
 
 func TestFillFormOperationErrorsIncludePhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	err := FillForm(openAPITestPDF(t, inFile), strings.NewReader(`{"forms":[{}]}`), io.Discard, nil)
+	err := FillForm(t.Context(), openAPITestPDF(t, inFile), strings.NewReader(`{"forms":[{}]}`), io.Discard, nil)
 	if err == nil || !strings.Contains(err.Error(), "fill form: fill fields") {
 		t.Fatalf("expected fill fields context, got %v", err)
 	}
@@ -643,7 +644,7 @@ func TestFillFormOperationErrorsIncludePhaseContext(t *testing.T) {
 
 func TestFillFormWriteErrorPreservesCauseAndContext(t *testing.T) {
 	wantErr := errors.New("write filled form")
-	err := FillForm(openAPITestPDF(t, formMutationTestInputFile()), bytes.NewReader(changedFormTestJSON(t)), failingWriter{err: wantErr}, nil)
+	err := FillForm(t.Context(), openAPITestPDF(t, formMutationTestInputFile()), bytes.NewReader(changedFormTestJSON(t)), failingWriter{err: wantErr}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -665,7 +666,7 @@ func TestMultiFillFormJSONErrorsIncludeFormIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = MultiFillForm(formMutationTestInputFile(), bytes.NewReader(bb), t.TempDir(), "batch.pdf", form.JSON, false, nil)
+	err = MultiFillForm(t.Context(), formMutationTestInputFile(), bytes.NewReader(bb), t.TempDir(), "batch.pdf", form.JSON, false, nil)
 	if !errors.Is(err, ErrInvalidFormData) {
 		t.Fatalf("expected %v, got %v", ErrInvalidFormData, err)
 	}
@@ -687,7 +688,7 @@ func TestMultiFillFormJSONOptionErrorsIncludeFormIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = MultiFillForm(formMutationTestInputFile(), bytes.NewReader(bb), t.TempDir(), "batch.pdf", form.JSON, false, nil)
+	err = MultiFillForm(t.Context(), formMutationTestInputFile(), bytes.NewReader(bb), t.TempDir(), "batch.pdf", form.JSON, false, nil)
 	if !errors.Is(err, ErrInvalidFormData) {
 		t.Fatalf("expected %v, got %v", ErrInvalidFormData, err)
 	}
@@ -697,7 +698,7 @@ func TestMultiFillFormJSONOptionErrorsIncludeFormIndex(t *testing.T) {
 }
 
 func TestMultiFillFormCSVParseErrorsPreserveSentinelAndCause(t *testing.T) {
-	err := MultiFillForm("unused.pdf", strings.NewReader("field\none,two\n"), t.TempDir(), "batch.pdf", form.CSV, false, nil)
+	err := MultiFillForm(t.Context(), "unused.pdf", strings.NewReader("field\none,two\n"), t.TempDir(), "batch.pdf", form.CSV, false, nil)
 	if !errors.Is(err, ErrInvalidCSV) {
 		t.Fatalf("expected %v, got %v", ErrInvalidCSV, err)
 	}
@@ -735,7 +736,7 @@ func TestMultiFillFormCSVErrorsIncludeRowContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := MultiFillForm(tt.inFile, strings.NewReader(tt.data), t.TempDir(), "batch.pdf", form.CSV, false, nil)
+			err := MultiFillForm(t.Context(), tt.inFile, strings.NewReader(tt.data), t.TempDir(), "batch.pdf", form.CSV, false, nil)
 			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
@@ -748,7 +749,7 @@ func TestMultiFillFormCSVErrorsIncludeRowContext(t *testing.T) {
 
 func TestMultiFillFormWriteErrorsIncludeFormAndPathContext(t *testing.T) {
 	outDir := filepath.Join(t.TempDir(), "missing")
-	err := MultiFillForm(formMutationTestInputFile(), bytes.NewReader(changedFormTestJSON(t)), outDir, "batch.pdf", form.JSON, false, nil)
+	err := MultiFillForm(t.Context(), formMutationTestInputFile(), bytes.NewReader(changedFormTestJSON(t)), outDir, "batch.pdf", form.JSON, false, nil)
 	var pathErr *os.PathError
 	if !errors.As(err, &pathErr) {
 		t.Fatalf("expected path error, got %v", err)
@@ -760,7 +761,7 @@ func TestMultiFillFormWriteErrorsIncludeFormAndPathContext(t *testing.T) {
 
 func TestMultiFillFormRemovesPartialOutputs(t *testing.T) {
 	wantErr := errors.New("write multifill output")
-	writeContext := func(_ *model.Context, w io.Writer) error {
+	writeContext := func(_ context.Context, _ *model.Context, w io.Writer) error {
 		if _, err := w.Write([]byte("partial PDF")); err != nil {
 			return err
 		}
@@ -782,7 +783,7 @@ func TestMultiFillFormRemovesPartialOutputs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			outDir := t.TempDir()
-			err := multiFillFormWithWriteContext(formMutationTestInputFile(), tt.data(t), outDir, "batch.pdf", tt.format, tt.merge, writeContext)
+			err := multiFillFormWithWriteContext(t.Context(), formMutationTestInputFile(), tt.data(t), outDir, "batch.pdf", tt.format, tt.merge, writeContext)
 			if !errors.Is(err, wantErr) {
 				t.Fatalf("expected %v, got %v", wantErr, err)
 			}
@@ -806,7 +807,7 @@ func TestMultiFillFormRemovesPartialOutputs(t *testing.T) {
 }
 
 func TestWriteMultiFillOutputRemovesPartialOutputAfterCloseFailure(t *testing.T) {
-	writeContext := func(_ *model.Context, w io.Writer) error {
+	writeContext := func(_ context.Context, _ *model.Context, w io.Writer) error {
 		f := w.(*os.File)
 		if _, err := f.Write([]byte("partial PDF")); err != nil {
 			return err
@@ -816,7 +817,7 @@ func TestWriteMultiFillOutputRemovesPartialOutputAfterCloseFailure(t *testing.T)
 
 	outDir := t.TempDir()
 	outFile := filepath.Join(outDir, "batch_01.pdf")
-	err := writeMultiFillOutputWith(nil, outFile, "multi-fill form 1", writeContext)
+	err := writeMultiFillOutputUsing(t.Context(), nil, outFile, "multi-fill form 1", writeContext)
 	if err == nil || !strings.Contains(err.Error(), "multi-fill form 1: close output") {
 		t.Fatalf("expected close output error, got %v", err)
 	}
@@ -834,7 +835,7 @@ func TestWriteMultiFillOutputRemovesPartialOutputAfterCloseFailure(t *testing.T)
 
 func TestMultiFillFormWriteFailurePreservesExistingOutput(t *testing.T) {
 	wantErr := errors.New("write multifill output")
-	writeContext := func(_ *model.Context, w io.Writer) error {
+	writeContext := func(_ context.Context, _ *model.Context, w io.Writer) error {
 		if _, err := w.Write([]byte("partial PDF")); err != nil {
 			return err
 		}
@@ -862,7 +863,7 @@ func TestMultiFillFormWriteFailurePreservesExistingOutput(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err := multiFillFormWithWriteContext(formMutationTestInputFile(), tt.data(t), outDir, "batch.pdf", tt.format, tt.merge, writeContext)
+			err := multiFillFormWithWriteContext(t.Context(), formMutationTestInputFile(), tt.data(t), outDir, "batch.pdf", tt.format, tt.merge, writeContext)
 			if !errors.Is(err, wantErr) {
 				t.Fatalf("expected %v, got %v", wantErr, err)
 			}
@@ -890,7 +891,7 @@ func TestMultiFillFormMergeErrorsCleanIntermediateOutputs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := MultiFillForm(formMutationTestInputFile(), bytes.NewReader(changedFormTestJSON(t)), outDir, "batch.pdf", form.JSON, true, nil)
+	err := MultiFillForm(t.Context(), formMutationTestInputFile(), bytes.NewReader(changedFormTestJSON(t)), outDir, "batch.pdf", form.JSON, true, nil)
 	if err == nil || !strings.Contains(err.Error(), "multi-fill form: merge outputs") {
 		t.Fatalf("expected merge context, got %v", err)
 	}
@@ -901,7 +902,7 @@ func TestMultiFillFormMergeErrorsCleanIntermediateOutputs(t *testing.T) {
 
 func TestMultiFillFormFileOpenDataErrorsIncludeContext(t *testing.T) {
 	inFileData := filepath.Join(t.TempDir(), "missing.json")
-	err := MultiFillFormFile("unused.pdf", inFileData, t.TempDir(), "batch.pdf", false, nil)
+	err := MultiFillFormFile(t.Context(), "unused.pdf", inFileData, t.TempDir(), "batch.pdf", false, nil)
 	var pathErr *os.PathError
 	if !errors.As(err, &pathErr) {
 		t.Fatalf("expected path error, got %v", err)
@@ -1031,7 +1032,7 @@ func TestFillFormRejectsNilFieldsWithoutPanic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err, panicValue := callFormAPI(func() error {
-				return FillForm(openAPITestPDF(t, formMutationTestInputFile()), strings.NewReader(tt.data), io.Discard, nil)
+				return FillForm(t.Context(), openAPITestPDF(t, formMutationTestInputFile()), strings.NewReader(tt.data), io.Discard, nil)
 			})
 			if panicValue != nil {
 				t.Fatalf("unexpected panic: %v", panicValue)
@@ -1049,7 +1050,7 @@ func TestFillFormRejectsNilFieldsWithoutPanic(t *testing.T) {
 
 func TestFormMutationFileOpenErrorsIncludeContext(t *testing.T) {
 	inFile := filepath.Join(t.TempDir(), "missing.pdf")
-	for _, tt := range formMutationFileFunctions() {
+	for _, tt := range formMutationFileFunctions(t.Context()) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.fn(inFile, filepath.Join(t.TempDir(), "out.pdf"))
 			var pathErr *os.PathError
@@ -1065,7 +1066,7 @@ func TestFormMutationFileOpenErrorsIncludeContext(t *testing.T) {
 }
 
 func TestFormMutationFileCreateErrorsIncludeContext(t *testing.T) {
-	for _, tt := range formMutationFileFunctions() {
+	for _, tt := range formMutationFileFunctions(t.Context()) {
 		t.Run(tt.name, func(t *testing.T) {
 			outFile := filepath.Join(t.TempDir(), "missing", "out.pdf")
 			err := tt.fn(formMutationTestInputFile(), outFile)
@@ -1097,17 +1098,21 @@ func TestExportAndFillFormFileOpenErrorsIncludeContext(t *testing.T) {
 	}{
 		{
 			name: "export PDF input",
-			fn:   func() error { return ExportFormFile(missingPDF, filepath.Join(dir, "form-out.json"), nil) },
+			fn:   func() error { return ExportFormFile(t.Context(), missingPDF, filepath.Join(dir, "form-out.json"), nil) },
 			want: "export form: open input " + missingPDF,
 		},
 		{
 			name: "fill form data",
-			fn:   func() error { return FillFormFile("unused.pdf", missingJSON, filepath.Join(dir, "out.pdf"), nil) },
+			fn: func() error {
+				return FillFormFile(t.Context(), "unused.pdf", missingJSON, filepath.Join(dir, "out.pdf"), nil)
+			},
 			want: "fill form: open form data " + missingJSON,
 		},
 		{
 			name: "fill PDF input",
-			fn:   func() error { return FillFormFile(missingPDF, dataFile, filepath.Join(dir, "out.pdf"), nil) },
+			fn: func() error {
+				return FillFormFile(t.Context(), missingPDF, dataFile, filepath.Join(dir, "out.pdf"), nil)
+			},
 			want: "fill form: open input " + missingPDF,
 		},
 	}
@@ -1144,12 +1149,12 @@ func TestExportAndFillFormFileCreateErrorsIncludeContext(t *testing.T) {
 	}{
 		{
 			name: "export",
-			fn:   func() error { return ExportFormFile(inFilePDF, outFile+".json", nil) },
+			fn:   func() error { return ExportFormFile(t.Context(), inFilePDF, outFile+".json", nil) },
 			want: "export form: create output " + outFile + ".json",
 		},
 		{
 			name: "fill",
-			fn:   func() error { return FillFormFile(inFilePDF, inFileJSON, outFile+".pdf", nil) },
+			fn:   func() error { return FillFormFile(t.Context(), inFilePDF, inFileJSON, outFile+".pdf", nil) },
 			want: "fill form: create output",
 		},
 	}
@@ -1186,12 +1191,12 @@ func TestExportAndFillFormFilesRemoveOutputAfterFailure(t *testing.T) {
 		{
 			name:    "export",
 			outFile: filepath.Join(dir, "form-out.json"),
-			fn:      func(outFile string) error { return ExportFormFile(brokenPDF, outFile, nil) },
+			fn:      func(outFile string) error { return ExportFormFile(t.Context(), brokenPDF, outFile, nil) },
 		},
 		{
 			name:    "fill",
 			outFile: filepath.Join(dir, "filled.pdf"),
-			fn:      func(outFile string) error { return FillFormFile(brokenPDF, dataFile, outFile, nil) },
+			fn:      func(outFile string) error { return FillFormFile(t.Context(), brokenPDF, dataFile, outFile, nil) },
 		},
 	}
 
@@ -1209,7 +1214,7 @@ func TestExportAndFillFormFilesRemoveOutputAfterFailure(t *testing.T) {
 }
 
 func TestFormMutationFilesRemoveOutputAfterFailure(t *testing.T) {
-	for _, tt := range formMutationFileFunctions() {
+	for _, tt := range formMutationFileFunctions(t.Context()) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
 			inFile := filepath.Join(dir, "broken.pdf")
@@ -1272,7 +1277,7 @@ func TestFormDataReadErrorPreservesCause(t *testing.T) {
 	wantErr := errors.New("read form data")
 	rd := errorReader{err: wantErr}
 
-	_, err := formGroupFromReader(rd)
+	_, err := formGroupFromReader(t.Context(), rd)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}

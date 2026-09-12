@@ -17,11 +17,13 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -34,10 +36,13 @@ func validateRotation(rotation int) error {
 	return nil
 }
 
-// Rotate rotates selected pages of rs clockwise by rotation degrees and writes the result to w.
-func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string, conf *model.Configuration) (err error) {
+// Rotate rotates selected pages of rs clockwise, writes the result to w and supports cancellation.
+func Rotate(c context.Context, rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -51,7 +56,7 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 
 	conf = operationConfiguration(conf, model.ROTATE)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("rotate: %w", err)
 	}
@@ -61,21 +66,28 @@ func Rotate(rs io.ReadSeeker, w io.Writer, rotation int, selectedPages []string,
 		return fmt.Errorf("rotate: parse page selection: %w", err)
 	}
 
-	if err = pdfcpu.RotatePages(ctx, pages, rotation); err != nil {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+
+	if err = pdfcpu.RotatePages(c, ctx, pages, rotation); err != nil {
 		return fmt.Errorf("rotate: apply rotation: %w", err)
 	}
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("rotate: write output: %w", err)
 	}
 	return nil
 }
 
-// RotateFile rotates selected pages of inFile clockwise by rotation degrees and writes the result to outFile.
-func RotateFile(inFile, outFile string, rotation int, selectedPages []string, conf *model.Configuration) (err error) {
+// RotateFile rotates selected pages of inFile clockwise, writes the result to outFile and supports cancellation.
+func RotateFile(c context.Context, inFile, outFile string, rotation int, selectedPages []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -108,7 +120,10 @@ func RotateFile(inFile, outFile string, rotation int, selectedPages []string, co
 		err = staged.commit()
 	}()
 
-	if err = Rotate(f1, f2, rotation, selectedPages, conf); err != nil {
+	if err = Rotate(c, f1, f2, rotation, selectedPages, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 

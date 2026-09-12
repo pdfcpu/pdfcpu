@@ -17,8 +17,10 @@ limitations under the License.
 package cli
 
 import (
+	"context"
 	"io"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
@@ -34,7 +36,7 @@ func validateNUpLikeCommand(cmd *Command, operation string, missingConfiguration
 	if cmd.NUp == nil {
 		return commandValidationError(operation, missingConfiguration)
 	}
-	var missingInput error = api.ErrMissingPDFInput
+	missingInput := api.ErrMissingPDFInput
 	if cmd.NUp.ImgInputFile {
 		missingInput = api.ErrMissingImageInput
 	}
@@ -50,71 +52,79 @@ func validatePageInputOutputCommand(cmd *Command, operation string) error {
 	})
 }
 
-// NUp renders selected PDF pages or image files to outFile in n-up fashion.
-func NUp(cmd *Command) ([]string, error) {
+func nUp(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateNUpLikeCommand(cmd, "n-up", api.ErrMissingNUpConfiguration); err != nil {
 		return nil, err
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.OutFile != "-" && cmd.InFiles[0] != "-" {
-		return nil, api.NUpFile(cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.NUp, cmd.Conf)
+		return nil, api.NUpFile(c, cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.NUp, cmd.Conf)
 	}
 	inFile := ""
 	if !cmd.NUp.ImgInputFile {
 		inFile = cmd.InFiles[0]
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(inFile, *cmd.OutFile, "n-up")
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, *cmd.OutFile, "n-up")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.NUp(rs, w, cmd.InFiles, cmd.PageSelection, cmd.NUp, cmd.Conf))
+	return nil, finalize(api.NUp(c, rs, w, cmd.InFiles, cmd.PageSelection, cmd.NUp, cmd.Conf))
 }
 
-// Grid renders selected PDF pages or image files to outFile in a grid.
-func Grid(cmd *Command) ([]string, error) {
+func grid(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateNUpLikeCommand(cmd, "grid", api.ErrMissingGridConfiguration); err != nil {
 		return nil, err
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.OutFile != "-" && cmd.InFiles[0] != "-" {
-		return nil, api.GridFile(cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.NUp, cmd.Conf)
+		return nil, api.GridFile(c, cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.NUp, cmd.Conf)
 	}
 
 	inFile := ""
 	if !cmd.NUp.ImgInputFile {
 		inFile = cmd.InFiles[0]
 	}
-	rs, w, finalize, err := streamInOutForOperation(inFile, *cmd.OutFile, "grid")
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, *cmd.OutFile, "grid")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.Grid(rs, w, cmd.InFiles, cmd.PageSelection, cmd.NUp, cmd.Conf))
+	return nil, finalize(api.Grid(c, rs, w, cmd.InFiles, cmd.PageSelection, cmd.NUp, cmd.Conf))
 }
 
-// Booklet arranges selected PDF pages to outFile in an order and arrangement that form a small book.
-func Booklet(cmd *Command) ([]string, error) {
+func booklet(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateNUpLikeCommand(cmd, "booklet", api.ErrMissingBookletConfiguration); err != nil {
 		return nil, err
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.OutFile != "-" && cmd.InFiles[0] != "-" {
-		return nil, api.BookletFile(cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.NUp, cmd.Conf)
+		return nil, api.BookletFile(c, cmd.InFiles, *cmd.OutFile, cmd.PageSelection, cmd.NUp, cmd.Conf)
 	}
 	inFile := ""
 	if !cmd.NUp.ImgInputFile {
 		inFile = cmd.InFiles[0]
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(inFile, *cmd.OutFile, "booklet")
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, *cmd.OutFile, "booklet")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.Booklet(rs, w, cmd.InFiles, cmd.PageSelection, cmd.NUp, cmd.Conf))
+	return nil, finalize(api.Booklet(c, rs, w, cmd.InFiles, cmd.PageSelection, cmd.NUp, cmd.Conf))
 }
 
-// Resize selected pages and write result to outFile.
-func Resize(cmd *Command) ([]string, error) {
+func resize(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validatePageInputOutputCommand(cmd, "resize"); err != nil {
 		return nil, err
 	}
@@ -124,14 +134,14 @@ func Resize(cmd *Command) ([]string, error) {
 	reportCommandProgress(cmd, "resizing %s\n", *cmd.InFile)
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.ResizeFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Resize, cmd.Conf)
+		return nil, api.ResizeFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Resize, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "resize")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "resize")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.Resize(rs, w, cmd.PageSelection, cmd.Resize, cmd.Conf))
+	return nil, finalize(api.Resize(c, rs, w, cmd.PageSelection, cmd.Resize, cmd.Conf))
 }
 
 func validateCutCommand(cmd *Command, operation string) error {
@@ -157,8 +167,10 @@ func cutInputLabel(inFile string) string {
 	return inFile
 }
 
-// Poster creates a poster for selected pages and writes result PDFs into outDir.
-func Poster(cmd *Command) ([]string, error) {
+func poster(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCutCommand(cmd, "poster"); err != nil {
 		return nil, err
 	}
@@ -168,16 +180,20 @@ func Poster(cmd *Command) ([]string, error) {
 		if outFile == "" {
 			outFile = "stdin"
 		}
-		return withStdinReadSeeker("poster", func(rs io.ReadSeeker) ([]string, error) {
-			return nil, api.Poster(rs, *cmd.OutDir, outFile, cmd.PageSelection, cmd.Cut, cmd.Conf)
+		return withStdinReadSeeker(c, "poster", func(rs io.ReadSeeker) ([]string, error) {
+			return nil, api.Poster(c, rs, *cmd.OutDir, outFile, cmd.PageSelection, cmd.Cut, cmd.Conf)
 		})
 	}
 
-	return nil, api.PosterFile(*cmd.InFile, *cmd.OutDir, *cmd.OutFile, cmd.PageSelection, cmd.Cut, cmd.Conf)
+	return nil, api.PosterFile(
+		c, *cmd.InFile, *cmd.OutDir, *cmd.OutFile, cmd.PageSelection, cmd.Cut, cmd.Conf,
+	)
 }
 
-// NDown selected pages and write result PDFs into outDir.
-func NDown(cmd *Command) ([]string, error) {
+func nDown(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCutCommand(cmd, "ndown"); err != nil {
 		return nil, err
 	}
@@ -187,16 +203,20 @@ func NDown(cmd *Command) ([]string, error) {
 		if outFile == "" {
 			outFile = "stdin"
 		}
-		return withStdinReadSeeker("ndown", func(rs io.ReadSeeker) ([]string, error) {
-			return nil, api.NDown(rs, *cmd.OutDir, outFile, cmd.PageSelection, cmd.IntVal, cmd.Cut, cmd.Conf)
+		return withStdinReadSeeker(c, "ndown", func(rs io.ReadSeeker) ([]string, error) {
+			return nil, api.NDown(c, rs, *cmd.OutDir, outFile, cmd.PageSelection, cmd.IntVal, cmd.Cut, cmd.Conf)
 		})
 	}
 
-	return nil, api.NDownFile(*cmd.InFile, *cmd.OutDir, *cmd.OutFile, cmd.PageSelection, cmd.IntVal, cmd.Cut, cmd.Conf)
+	return nil, api.NDownFile(
+		c, *cmd.InFile, *cmd.OutDir, *cmd.OutFile, cmd.PageSelection, cmd.IntVal, cmd.Cut, cmd.Conf,
+	)
 }
 
-// Cut selected pages and write result PDFs into outDir.
-func Cut(cmd *Command) ([]string, error) {
+func cut(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCutCommand(cmd, "cut"); err != nil {
 		return nil, err
 	}
@@ -206,12 +226,12 @@ func Cut(cmd *Command) ([]string, error) {
 		if outFile == "" {
 			outFile = "stdin"
 		}
-		return withStdinReadSeeker("cut", func(rs io.ReadSeeker) ([]string, error) {
-			return nil, api.Cut(rs, *cmd.OutDir, outFile, cmd.PageSelection, cmd.Cut, cmd.Conf)
+		return withStdinReadSeeker(c, "cut", func(rs io.ReadSeeker) ([]string, error) {
+			return nil, api.Cut(c, rs, *cmd.OutDir, outFile, cmd.PageSelection, cmd.Cut, cmd.Conf)
 		})
 	}
 
-	return nil, api.CutFile(*cmd.InFile, *cmd.OutDir, *cmd.OutFile, cmd.PageSelection, cmd.Cut, cmd.Conf)
+	return nil, api.CutFile(c, *cmd.InFile, *cmd.OutDir, *cmd.OutFile, cmd.PageSelection, cmd.Cut, cmd.Conf)
 }
 
 func validateZoomCommand(cmd *Command) error {
@@ -224,43 +244,49 @@ func validateZoomCommand(cmd *Command) error {
 	return nil
 }
 
-// Zoom zooms selected pages either by factor or corresponding margin.
-func Zoom(cmd *Command) ([]string, error) {
+func zoom(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateZoomCommand(cmd); err != nil {
 		return nil, err
 	}
 	reportCommandProgress(cmd, "zooming %s\n", *cmd.InFile)
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.ZoomFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Zoom, cmd.Conf)
+		return nil, api.ZoomFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Zoom, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "zoom")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "zoom")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.Zoom(rs, w, cmd.PageSelection, cmd.Zoom, cmd.Conf))
+	return nil, finalize(api.Zoom(c, rs, w, cmd.PageSelection, cmd.Zoom, cmd.Conf))
 }
 
-// Rotate selected pages of inFile and write result to outFile.
-func Rotate(cmd *Command) ([]string, error) {
+func rotate(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validatePageInputOutputCommand(cmd, "rotate"); err != nil {
 		return nil, err
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.RotateFile(*cmd.InFile, *cmd.OutFile, cmd.IntVal, cmd.PageSelection, cmd.Conf)
+		return nil, api.RotateFile(c, *cmd.InFile, *cmd.OutFile, cmd.IntVal, cmd.PageSelection, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "rotate")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "rotate")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.Rotate(rs, w, cmd.IntVal, cmd.PageSelection, cmd.Conf))
+	return nil, finalize(api.Rotate(c, rs, w, cmd.IntVal, cmd.PageSelection, cmd.Conf))
 }
 
-// InsertPages inserts a blank page before or after each selected page.
-func InsertPages(cmd *Command) ([]string, error) {
+func insertPages(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validatePageInputOutputCommand(cmd, "insert pages"); err != nil {
 		return nil, err
 	}
@@ -270,35 +296,41 @@ func InsertPages(cmd *Command) ([]string, error) {
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.InsertPagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, before, cmd.PageConf, cmd.Conf)
+		return nil, api.InsertPagesFile(
+			c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, before, cmd.PageConf, cmd.Conf,
+		)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "insert pages")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "insert pages")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.InsertPages(rs, w, cmd.PageSelection, before, cmd.PageConf, cmd.Conf))
+	return nil, finalize(api.InsertPages(c, rs, w, cmd.PageSelection, before, cmd.PageConf, cmd.Conf))
 }
 
-// RemovePages removes selected pages.
-func RemovePages(cmd *Command) ([]string, error) {
+func removePages(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validatePageInputOutputCommand(cmd, "remove pages"); err != nil {
 		return nil, err
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.RemovePagesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
+		return nil, api.RemovePagesFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "remove pages")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "remove pages")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.RemovePages(rs, w, cmd.PageSelection, cmd.Conf))
+	return nil, finalize(api.RemovePages(c, rs, w, cmd.PageSelection, cmd.Conf))
 }
 
-// Crop adds crop boxes for selected pages of inFile and writes result to outFile.
-func Crop(cmd *Command) ([]string, error) {
+func crop(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validatePageInputOutputCommand(cmd, "crop"); err != nil {
 		return nil, err
 	}
@@ -308,22 +340,24 @@ func Crop(cmd *Command) ([]string, error) {
 	reportCommandProgress(cmd, "cropping %s\n", *cmd.InFile)
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.CropFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Box, cmd.Conf)
+		return nil, api.CropFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Box, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "crop")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "crop")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.Crop(rs, w, cmd.PageSelection, cmd.Box, cmd.Conf))
+	return nil, finalize(api.Crop(c, rs, w, cmd.PageSelection, cmd.Box, cmd.Conf))
 }
 
-// ListBoxesFile returns a list of page boundaries for selected pages of inFile.
-func ListBoxesFile(inFile string, selectedPages []string, pb *model.PageBoundaries, conf *model.Configuration) ([]string, error) {
+func listBoxesFile(c context.Context, inFile string, selectedPages []string, pb *model.PageBoundaries, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, commandValidationError("list boxes", api.ErrMissingPDFInput)
 	}
-	return api.ListBoxesFile(inFile, selectedPages, pb, conf)
+	return api.ListBoxesFile(c, inFile, selectedPages, pb, conf)
 }
 
 func pageBoundariesForPresentation(pb *model.PageBoundaries) *model.PageBoundaries {
@@ -335,24 +369,28 @@ func pageBoundariesForPresentation(pb *model.PageBoundaries) *model.PageBoundari
 	return pb
 }
 
-// ListBoxes returns inFile's page boundaries.
-func ListBoxes(cmd *Command) ([]string, error) {
+func listBoxes(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "list boxes")
 	if err != nil {
 		return nil, err
 	}
 	reportCommandProgress(cmd, "listing %s for %s\n", pageBoundariesForPresentation(cmd.PageBoundaries), inFile)
 	if inFile == "-" {
-		return withStdinReadSeeker("list boxes", func(rs io.ReadSeeker) ([]string, error) {
-			return api.ListBoxes(rs, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
+		return withStdinReadSeeker(c, "list boxes", func(rs io.ReadSeeker) ([]string, error) {
+			return api.ListBoxes(c, rs, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
 		})
 	}
 
-	return ListBoxesFile(inFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
+	return listBoxesFile(c, inFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
 }
 
-// AddBoxes adds page boundaries to inFile's page tree and writes the result to outFile.
-func AddBoxes(cmd *Command) ([]string, error) {
+func addBoxes(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validatePageInputOutputCommand(cmd, "add boxes"); err != nil {
 		return nil, err
 	}
@@ -362,18 +400,22 @@ func AddBoxes(cmd *Command) ([]string, error) {
 	reportCommandProgress(cmd, "adding %s for %s\n", cmd.PageBoundaries, *cmd.InFile)
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.AddBoxesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
+		return nil, api.AddBoxesFile(
+			c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf,
+		)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "add boxes")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "add boxes")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.AddBoxes(rs, w, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf))
+	return nil, finalize(api.AddBoxes(c, rs, w, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf))
 }
 
-// RemoveBoxes deletes page boundaries from inFile's page tree and writes the result to outFile.
-func RemoveBoxes(cmd *Command) ([]string, error) {
+func removeBoxes(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validatePageInputOutputCommand(cmd, "remove boxes"); err != nil {
 		return nil, err
 	}
@@ -383,12 +425,14 @@ func RemoveBoxes(cmd *Command) ([]string, error) {
 	reportCommandProgress(cmd, "removing %s for %s\n", cmd.PageBoundaries, *cmd.InFile)
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.RemoveBoxesFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
+		return nil, api.RemoveBoxesFile(
+			c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf,
+		)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "remove boxes")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "remove boxes")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.RemoveBoxes(rs, w, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf))
+	return nil, finalize(api.RemoveBoxes(c, rs, w, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf))
 }

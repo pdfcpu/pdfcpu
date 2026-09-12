@@ -18,12 +18,14 @@ package pdfcpu
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"sort"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
@@ -505,8 +507,11 @@ func img(
 	return img, nil
 }
 
-// ExtractImage extracts an image from sd.
-func ExtractImage(ctx *model.Context, sd *types.StreamDict, thumb bool, resourceID string, objNr int, stub bool) (*model.Image, error) {
+// ExtractImage extracts an image from sd and supports cancellation.
+func ExtractImage(c context.Context, ctx *model.Context, sd *types.StreamDict, thumb bool, resourceID string, objNr int, stub bool) (*model.Image, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := requireStreamDict(sd); err != nil {
 		return nil, err
 	}
@@ -522,10 +527,18 @@ func ExtractImage(ctx *model.Context, sd *types.StreamDict, thumb bool, resource
 	filters, lastFilter, decodeParms := prepareExtractImage(sd)
 
 	if stub {
-		return imageStub(ctx, sd, resourceID, filters, lastFilter, decodeParms, thumb, imgMask, objNr)
+		img, err := imageStub(ctx, sd, resourceID, filters, lastFilter, decodeParms, thumb, imgMask, objNr)
+		if err != nil {
+			return nil, err
+		}
+		return img, contextutil.Check(c)
 	}
 
-	return img(ctx, sd, thumb, resourceID, filters, lastFilter, objNr)
+	img, err := img(ctx, sd, thumb, resourceID, filters, lastFilter, objNr)
+	if err != nil {
+		return nil, err
+	}
+	return img, contextutil.Check(c)
 }
 
 func validatePageNumber(ctx *model.Context, pageNr int) error {
@@ -550,10 +563,21 @@ func skipUnsupportedResource(ctx *model.Context, err error) bool {
 	return errors.Is(err, ErrUnsupportedResource) && !failOnUnsupportedResource(ctx)
 }
 
-// ExtractPageImages extracts all images used by pageNr.
-// Optionally return stubs only.
-// Unsupported resources are handled according to ctx.UnsupportedResourcePolicy.
-func ExtractPageImages(ctx *model.Context, pageNr int, stub bool) (map[int]model.Image, error) {
+// ExtractPageImages extracts all images used by pageNr and supports cancellation.
+// Optionally return stubs only. Unsupported resources are handled according to ctx.UnsupportedResourcePolicy.
+func ExtractPageImages(c context.Context, ctx *model.Context, pageNr int, stub bool) (map[int]model.Image, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	return extractPageImages(c, ctx, pageNr, stub)
+}
+
+func extractPageImages(
+	c context.Context,
+	ctx *model.Context,
+	pageNr int,
+	stub bool,
+) (map[int]model.Image, error) {
 	if err := requireOptimizedContext(ctx); err != nil {
 		return nil, err
 	}
@@ -564,6 +588,9 @@ func ExtractPageImages(ctx *model.Context, pageNr int, stub bool) (map[int]model
 	m := map[int]model.Image{}
 	var skipErr error
 	for _, objNr := range ImageObjNrs(ctx, pageNr) {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		imageObj := ctx.Optimize.ImageObjects[objNr]
 		if imageObj == nil {
 			return nil, fmt.Errorf("page %d image obj#%d: missing optimized image object", pageNr, objNr)
@@ -574,7 +601,7 @@ func ExtractPageImages(ctx *model.Context, pageNr int, stub bool) (map[int]model
 			return nil, fmt.Errorf("page %d image obj#%d: missing resource name", pageNr, objNr)
 		}
 
-		img, err := ExtractImage(ctx, imageObj.ImageDict, false, resourceName, objNr, stub)
+		img, err := ExtractImage(c, ctx, imageObj.ImageDict, false, resourceName, objNr, stub)
 		if err != nil {
 			if skipUnsupportedResource(ctx, err) {
 				skipErr = errors.Join(skipErr, fmt.Errorf("page %d: %w", pageNr, err))
@@ -594,7 +621,7 @@ func ExtractPageImages(ctx *model.Context, pageNr int, stub bool) (map[int]model
 		if err != nil {
 			return nil, fmt.Errorf("page %d: %w", pageNr, err)
 		}
-		img, err := ExtractImage(ctx, sd, true, "", objNr, stub)
+		img, err := ExtractImage(c, ctx, sd, true, "", objNr, stub)
 		if err != nil {
 			if skipUnsupportedResource(ctx, err) {
 				skipErr = errors.Join(skipErr, fmt.Errorf("page %d thumbnail obj#%d: %w", pageNr, objNr, err))
@@ -607,7 +634,7 @@ func ExtractPageImages(ctx *model.Context, pageNr int, stub bool) (map[int]model
 			m[objNr] = *img
 		}
 	}
-	return m, skipErr
+	return m, errors.Join(skipErr, contextutil.Check(c))
 }
 
 // Font is a Reader representing an embedded font.
@@ -618,35 +645,44 @@ type Font struct {
 	ObjNr int
 }
 
-// FontObjNrs returns all font dict objNrs for pageNr.
+// FontObjNrs returns all font dictionary object numbers for pageNr and supports cancellation.
 // Requires an optimized context.
-func FontObjNrs(ctx *model.Context, pageNr int) []int {
+func FontObjNrs(c context.Context, ctx *model.Context, pageNr int) ([]int, error) {
 	objNrs := []int{}
 
+	if err := contextutil.Check(c); err != nil {
+		return objNrs, err
+	}
 	if err := requireOptimizedContext(ctx); err != nil || pageNr < 1 {
-		return objNrs
+		return objNrs, nil
 	}
 
 	fontObjNrs := ctx.Optimize.PageFonts
 	if len(fontObjNrs) < pageNr {
-		return objNrs
+		return objNrs, nil
 	}
 
 	pageFontObjNrs := fontObjNrs[pageNr-1]
 	if pageFontObjNrs == nil {
-		return objNrs
+		return objNrs, nil
 	}
 
 	for _, objNr := range sortedObjectNumbers(pageFontObjNrs) {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		if pageFontObjNrs[objNr] {
 			objNrs = append(objNrs, objNr)
 		}
 	}
-	return objNrs
+	return objNrs, contextutil.Check(c)
 }
 
-// ExtractFont extracts a font from fontObject.
-func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*Font, error) {
+// ExtractFont extracts a font from fontObject and supports cancellation.
+func ExtractFont(c context.Context, ctx *model.Context, fontObject model.FontObject, objNr int) (*Font, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := requireContextWithXRefTable(ctx); err != nil {
 		return nil, err
 	}
@@ -686,7 +722,11 @@ func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*F
 		}
 
 		// Decode streamDict if used filter is supported only.
-		if err = sd.Decode(); errors.Is(err, filter.ErrUnsupportedFilter) {
+		err = sd.Decode()
+		if ctxErr := contextutil.Check(c); ctxErr != nil {
+			return nil, ctxErr
+		}
+		if errors.Is(err, filter.ErrUnsupportedFilter) {
 			return nil, fmt.Errorf("font %q obj#%d: %w (%w)", fontObject.FontName, objNr, ErrUnsupportedResource, err)
 		} else if err != nil {
 			return nil, fmt.Errorf("font obj#%d decode: %w", objNr, err)
@@ -701,9 +741,12 @@ func ExtractFont(ctx *model.Context, fontObject model.FontObject, objNr int) (*F
 	return f, nil
 }
 
-// ExtractPageFonts extracts all fonts used by pageNr.
+// ExtractPageFonts extracts all fonts used by pageNr and supports cancellation.
 // Unsupported resources are handled according to ctx.UnsupportedResourcePolicy.
-func ExtractPageFonts(ctx *model.Context, pageNr int, objNrs, skipped types.IntSet) ([]Font, error) {
+func ExtractPageFonts(c context.Context, ctx *model.Context, pageNr int, objNrs, skipped types.IntSet) ([]Font, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if objNrs == nil {
 		objNrs = types.IntSet{}
 	}
@@ -719,7 +762,14 @@ func ExtractPageFonts(ctx *model.Context, pageNr int, objNrs, skipped types.IntS
 
 	ff := []Font{}
 	var skipErr error
-	for _, i := range FontObjNrs(ctx, pageNr) {
+	fontObjNrs, err := FontObjNrs(c, ctx, pageNr)
+	if err != nil {
+		return nil, err
+	}
+	for _, i := range fontObjNrs {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		if objNrs[i] || skipped[i] {
 			continue
 		}
@@ -727,7 +777,7 @@ func ExtractPageFonts(ctx *model.Context, pageNr int, objNrs, skipped types.IntS
 		if fontObject == nil {
 			return nil, fmt.Errorf("page %d font obj#%d: missing optimized font object", pageNr, i)
 		}
-		f, err := ExtractFont(ctx, *fontObject, i)
+		f, err := ExtractFont(c, ctx, *fontObject, i)
 		if err != nil {
 			if skipUnsupportedResource(ctx, err) {
 				skipped[i] = true
@@ -743,12 +793,15 @@ func ExtractPageFonts(ctx *model.Context, pageNr int, objNrs, skipped types.IntS
 			skipped[i] = true
 		}
 	}
-	return ff, skipErr
+	return ff, errors.Join(skipErr, contextutil.Check(c))
 }
 
-// ExtractFormFonts extracts all form fonts.
+// ExtractFormFonts extracts all form fonts and supports cancellation.
 // Unsupported resources are handled according to ctx.UnsupportedResourcePolicy.
-func ExtractFormFonts(ctx *model.Context) ([]Font, error) {
+func ExtractFormFonts(c context.Context, ctx *model.Context) ([]Font, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := requireOptimizedContext(ctx); err != nil {
 		return nil, err
 	}
@@ -756,11 +809,14 @@ func ExtractFormFonts(ctx *model.Context) ([]Font, error) {
 	ff := []Font{}
 	var skipErr error
 	for _, i := range sortedObjectNumbers(ctx.Optimize.FormFontObjects) {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		fontObject := ctx.Optimize.FormFontObjects[i]
 		if fontObject == nil {
 			return nil, fmt.Errorf("form font obj#%d: missing optimized font object", i)
 		}
-		f, err := ExtractFont(ctx, *fontObject, i)
+		f, err := ExtractFont(c, ctx, *fontObject, i)
 		if err != nil {
 			if skipUnsupportedResource(ctx, err) {
 				skipErr = errors.Join(skipErr, fmt.Errorf("form: %w", err))
@@ -772,11 +828,14 @@ func ExtractFormFonts(ctx *model.Context) ([]Font, error) {
 			ff = append(ff, *f)
 		}
 	}
-	return ff, skipErr
+	return ff, errors.Join(skipErr, contextutil.Check(c))
 }
 
-// ExtractPages extracts pageNrs into a new single page context.
-func ExtractPages(ctx *model.Context, pageNrs []int, usePgCache bool) (*model.Context, error) {
+// ExtractPages extracts pageNrs into a new context and supports cancellation.
+func ExtractPages(c context.Context, ctx *model.Context, pageNrs []int, usePgCache bool) (*model.Context, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := requireContextWithXRefTable(ctx); err != nil {
 		return nil, fmt.Errorf("extract pages: source context: %w", err)
 	}
@@ -796,15 +855,18 @@ func ExtractPages(ctx *model.Context, pageNrs []int, usePgCache bool) (*model.Co
 		return nil, fmt.Errorf("extract pages: create destination context: %w", err)
 	}
 
-	if err := AddPages(ctx, ctxDest, pageNrs, usePgCache); err != nil {
+	if err := AddPages(c, ctx, ctxDest, pageNrs, usePgCache); err != nil {
 		return nil, fmt.Errorf("extract pages %v: %w", pageNrs, err)
 	}
 
 	return ctxDest, nil
 }
 
-// ExtractPageContent extracts the consolidated page content stream for pageNr.
-func ExtractPageContent(ctx *model.Context, pageNr int) (io.Reader, error) {
+// ExtractPageContent extracts the consolidated page content stream for pageNr and supports cancellation.
+func ExtractPageContent(c context.Context, ctx *model.Context, pageNr int) (io.Reader, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := requireContextWithXRefTable(ctx); err != nil {
 		return nil, err
 	}
@@ -821,6 +883,9 @@ func ExtractPageContent(ctx *model.Context, pageNr int) (io.Reader, error) {
 	if err != nil && err != model.ErrNoContent {
 		return nil, fmt.Errorf("page %d: page content: %w", pageNr, err)
 	}
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	return bytes.NewReader(bb), nil
 }
 
@@ -832,7 +897,15 @@ type Metadata struct {
 	ParentType  string // container dict type
 }
 
-func extractMetadataFromDict(ctx *model.Context, d types.Dict, parentObjNr int) (*Metadata, error) {
+func extractMetadataFromDict(
+	c context.Context,
+	ctx *model.Context,
+	d types.Dict,
+	parentObjNr int,
+) (*Metadata, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	o, found := d.Find("Metadata")
 	if !found || o == nil {
 		return nil, nil
@@ -857,7 +930,11 @@ func extractMetadataFromDict(ctx *model.Context, d types.Dict, parentObjNr int) 
 		dt = t.Value()
 	}
 	// Decode streamDict for supported filters only.
-	if err = sd.Decode(); errors.Is(err, filter.ErrUnsupportedFilter) {
+	err = sd.Decode()
+	if ctxErr := contextutil.Check(c); ctxErr != nil {
+		return nil, ctxErr
+	}
+	if errors.Is(err, filter.ErrUnsupportedFilter) {
 		return nil, fmt.Errorf("metadata obj#%d: %w (%w)", objNr, ErrUnsupportedResource, err)
 	} else if err != nil {
 		return nil, fmt.Errorf("metadata obj#%d decode: %w", objNr, err)
@@ -865,9 +942,34 @@ func extractMetadataFromDict(ctx *model.Context, d types.Dict, parentObjNr int) 
 	return &Metadata{bytes.NewReader(sd.Content), objNr, parentObjNr, dt}, nil
 }
 
-// ExtractMetadata returns all metadata of ctx.
+func appendMetadataFromDict(
+	c context.Context,
+	ctx *model.Context,
+	d types.Dict,
+	parentObjNr int,
+	mm *[]Metadata,
+	skipErr *error,
+) error {
+	md, err := extractMetadataFromDict(c, ctx, d, parentObjNr)
+	if err != nil {
+		if skipUnsupportedResource(ctx, err) {
+			*skipErr = errors.Join(*skipErr, fmt.Errorf("metadata parent obj#%d: %w", parentObjNr, err))
+			return nil
+		}
+		return fmt.Errorf("metadata parent obj#%d: %w", parentObjNr, err)
+	}
+	if md != nil {
+		*mm = append(*mm, *md)
+	}
+	return nil
+}
+
+// ExtractMetadata returns all metadata of ctx and supports cancellation.
 // Unsupported resources are handled according to ctx.UnsupportedResourcePolicy.
-func ExtractMetadata(ctx *model.Context) ([]Metadata, error) {
+func ExtractMetadata(c context.Context, ctx *model.Context) ([]Metadata, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := requireContextWithXRefTable(ctx); err != nil {
 		return nil, err
 	}
@@ -875,39 +977,25 @@ func ExtractMetadata(ctx *model.Context) ([]Metadata, error) {
 	mm := []Metadata{}
 	var skipErr error
 	for _, k := range sortedObjectNumbers(ctx.Table) {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		v := ctx.Table[k]
 		if v == nil || v.Free || v.Compressed {
 			continue
 		}
-		switch d := v.Object.(type) {
+		var d types.Dict
+		switch o := v.Object.(type) {
 		case types.Dict:
-			md, err := extractMetadataFromDict(ctx, d, k)
-			if err != nil {
-				if skipUnsupportedResource(ctx, err) {
-					skipErr = errors.Join(skipErr, fmt.Errorf("metadata parent obj#%d: %w", k, err))
-					continue
-				}
-				return nil, fmt.Errorf("metadata parent obj#%d: %w", k, err)
-			}
-			if md == nil {
-				continue
-			}
-			mm = append(mm, *md)
-
+			d = o
 		case types.StreamDict:
-			md, err := extractMetadataFromDict(ctx, d.Dict, k)
-			if err != nil {
-				if skipUnsupportedResource(ctx, err) {
-					skipErr = errors.Join(skipErr, fmt.Errorf("metadata parent obj#%d: %w", k, err))
-					continue
-				}
-				return nil, fmt.Errorf("metadata parent obj#%d: %w", k, err)
-			}
-			if md == nil {
-				continue
-			}
-			mm = append(mm, *md)
+			d = o.Dict
+		default:
+			continue
+		}
+		if err := appendMetadataFromDict(c, ctx, d, k, &mm, &skipErr); err != nil {
+			return nil, err
 		}
 	}
-	return mm, skipErr
+	return mm, errors.Join(skipErr, contextutil.Check(c))
 }

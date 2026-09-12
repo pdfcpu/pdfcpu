@@ -32,6 +32,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -129,14 +130,13 @@ func hasPostScriptHeader(buf []byte) bool {
 	return bytes.Contains(buf[:i], []byte("PS-Adobe"))
 }
 
-// ReadFile reads in a PDF file and builds an internal structure holding its cross reference table aka the PDF model context.
-func ReadFile(inFile string, conf *model.Configuration) (*model.Context, error) {
-	return ReadFileWithContext(context.Background(), inFile, conf)
-}
-
-// ReadFileWithContext reads in a PDF file and builds an internal structure holding its cross reference table aka the PDF model context.
+// ReadFile reads a PDF file and builds the internal model context holding its cross reference table.
 // If the passed Go context is cancelled, reading will be interrupted.
-func ReadFileWithContext(c context.Context, inFile string, conf *model.Configuration) (*model.Context, error) {
+func ReadFile(c context.Context, inFile string, conf *model.Configuration) (*model.Context, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+
 	if log.InfoEnabled() {
 		log.Info.Printf("reading %s..\n", inFile)
 	}
@@ -150,19 +150,17 @@ func ReadFileWithContext(c context.Context, inFile string, conf *model.Configura
 		f.Close()
 	}()
 
-	return ReadWithContext(c, f, conf)
+	return Read(c, f, conf)
 }
 
 // Read takes a readSeeker and generates a PDF model context,
 // an in-memory representation containing a cross reference table.
-func Read(rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
-	return ReadWithContext(context.Background(), rs, conf)
-}
-
-// ReadWithContext takes a readSeeker and generates a PDF model context,
-// an in-memory representation containing a cross reference table.
 // If the passed Go context is cancelled, reading will be interrupted.
-func ReadWithContext(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
+func Read(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (*model.Context, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+
 	if log.ReadEnabled() {
 		log.Read.Println("Read: begin")
 	}
@@ -203,7 +201,6 @@ func ReadWithContext(c context.Context, rs io.ReadSeeker, conf *model.Configurat
 	if ctx.XRefTable.Size == nil || *ctx.XRefTable.Size != ctx.MaxObjNr+1 {
 		maxObjNr := ctx.MaxObjNr + 1
 		ctx.XRefTable.Size = &maxObjNr
-		model.ShowRepaired("trailer size")
 	}
 
 	if log.ReadEnabled() {
@@ -503,7 +500,7 @@ func compressedObject(c context.Context, s string) (types.Object, error) {
 		log.Read.Println("compressedObject: begin")
 	}
 
-	o, err := model.ParseObjectContext(c, &s, 0)
+	o, err := model.ParseObject(c, &s, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -711,7 +708,8 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, offExtra int64, xsd *type
 	}
 
 	// Note:
-	// A value of zero for an element in the W array indicates that the corresponding field shall not be present in the stream,
+	// A value of zero for an element in the W array indicates that the corresponding field shall not be present in the
+	// stream,
 	// and the default value shall be used, if there is one.
 	// If the first element is zero, the type field shall not be present, and shall default to type 1.
 
@@ -924,7 +922,7 @@ func parseXRefStream(c context.Context, ctx *model.Context, rd io.Reader, offset
 		log.Read.Printf("parseXRefStream: dereferencing object %d\n", *objNr)
 	}
 
-	o, err := model.ParseObjectContext(c, &l, 0, recursionLimit(ctx))
+	o, err := model.ParseObject(c, &l, 0, recursionLimit(ctx))
 	if err != nil {
 		return nil, fmt.Errorf("parseXRefStream: no object: %w", err)
 	}
@@ -1415,7 +1413,7 @@ func processTrailer(c context.Context, ctx *model.Context, s *bufio.Scanner, lin
 		log.Read.Printf("processTrailer: trailerString: (len:%d) <%s>\n", len(trailerString), trailerString)
 	}
 
-	o, err := model.ParseObjectContext(c, &trailerString, 0, recursionLimit(ctx))
+	o, err := model.ParseObject(c, &trailerString, 0, recursionLimit(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -2278,7 +2276,7 @@ func buffer(c context.Context, rd io.Reader, maxObjectBytes int64) (buf []byte, 
 		growSize = min(growSize*2, maxBufSize)
 		line := string(buf)
 
-		endInd, streamInd, err = model.DetectKeywordsWithContext(c, line)
+		endInd, streamInd, err = model.DetectKeywords(c, line)
 		if err != nil {
 			return nil, 0, 0, 0, err
 		}
@@ -2621,7 +2619,6 @@ func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr in
 		return nil, 0, 0, 0, err
 	}
 
-	//log.Read.Printf("streamInd:%d(#%x) streamOffset:%d(#%x) endInd:%d(#%x)\n", streamInd, streamInd, streamOffset, streamOffset, endInd, endInd)
 	//log.Read.Printf("buflen=%d\n%s", len(buf), hex.Dump(buf))
 
 	line := string(buf)
@@ -2684,7 +2681,7 @@ func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr in
 		return nil, endInd, streamInd, streamOffset, err
 	}
 
-	o, err = model.ParseObjectContext(c, &l, 0, recursionLimit(ctx))
+	o, err = model.ParseObject(c, &l, 0, recursionLimit(ctx))
 
 	return o, endInd, streamInd, streamOffset, err
 }
@@ -2734,8 +2731,8 @@ func resolveObject(c context.Context, ctx *model.Context, obj types.Object, offs
 	}
 }
 
-// ParseObjectWithContext parses an object at offset using c for cancellation.
-func ParseObjectWithContext(c context.Context, ctx *model.Context, offset int64, objNr, genNr int) (types.Object, error) {
+// ParseObject parses an object at offset using c for cancellation.
+func ParseObject(c context.Context, ctx *model.Context, offset int64, objNr, genNr int) (types.Object, error) {
 	if log.ReadEnabled() {
 		log.Read.Printf("ParseObject: begin, obj#%d, offset:%d\n", objNr, offset)
 	}
@@ -2775,7 +2772,7 @@ func dereferencedObject(c context.Context, ctx *model.Context, objNr int) (types
 			return nil, ErrReferenceDoesNotExist
 		}
 
-		o, err := ParseObjectWithContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
+		o, err := ParseObject(c, ctx, *entry.Offset, objNr, *entry.Generation)
 		if err != nil {
 			return nil, fmt.Errorf("problem dereferencing object %d: %w", objNr, err)
 		}
@@ -3392,7 +3389,7 @@ func decodeObjectStream(c context.Context, ctx *model.Context, objNr int) error 
 	}
 
 	// Parse object stream from file.
-	o, err := ParseObjectWithContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
+	o, err := ParseObject(c, ctx, *entry.Offset, objNr, *entry.Generation)
 	if err != nil {
 		return fmt.Errorf("object stream obj#%d: parse object: %w", objNr, err)
 	}
@@ -3629,13 +3626,13 @@ func dereferenceAndLoad(c context.Context, ctx *model.Context, objNr int, entry 
 	}
 
 	// Parse object from ctx: anything goes dict, array, integer, float, streamdict...
-	o, err := ParseObjectWithContext(c, ctx, *entry.Offset, objNr, *entry.Generation)
+	o, err := ParseObject(c, ctx, *entry.Offset, objNr, *entry.Generation)
 	if err != nil {
 		if ctx.XRefTable.ValidationMode == model.ValidationStrict {
 			return fmt.Errorf("dereferenceAndLoad: problem dereferencing object %d: %w", objNr, err)
 		}
 		if ctx.Read.RepairOffset > 0 {
-			o, err = ParseObjectWithContext(c, ctx, *entry.Offset+ctx.Read.RepairOffset, objNr, *entry.Generation)
+			o, err = ParseObject(c, ctx, *entry.Offset+ctx.Read.RepairOffset, objNr, *entry.Generation)
 		}
 		if err != nil {
 			model.ShowSkipped(fmt.Sprintf("obj #%d reason: %v", objNr, err))

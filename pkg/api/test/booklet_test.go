@@ -45,10 +45,10 @@ func testBooklet(t *testing.T, msg string, inFiles []string, outFile string, sel
 		}
 	}
 
-	if err := api.BookletFile(inFiles, outFile, selectedPages, booklet, conf); err != nil {
+	if err := api.BookletFile(t.Context(), inFiles, outFile, selectedPages, booklet, conf); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -293,7 +293,7 @@ func TestBooklet(t *testing.T) {
 
 // TestBookletResize verifies booklet resizing.
 func TestBookletResize(t *testing.T) {
-	ctx, err := api.ReadContextFile(filepath.Join(inDir, "zineTest.pdf"))
+	ctx, err := api.ReadContextFile(t.Context(), filepath.Join(inDir, "zineTest.pdf"))
 	if err != nil {
 		log.Fatal(t, err)
 	}
@@ -305,27 +305,27 @@ func TestBookletResize(t *testing.T) {
 	if err != nil {
 		log.Fatal(t, err)
 	}
-	if err = pdfcpu.BookletFromPDF(ctx, selectedPages, nup); err != nil {
+	if err = pdfcpu.BookletFromPDF(t.Context(), ctx, selectedPages, nup); err != nil {
 		log.Fatal(t, err)
 	}
 
-	// if err = api.WriteContextFile(ctx, filepath.Join(samplesDir, "booklet", "bookletResized.before.pdf")); err != nil {
+	// if err = api.WriteContextFile(t.Context(), ctx, filepath.Join(samplesDir, "booklet", "bookletResized.before.pdf")); err != nil {
 	// 	log.Fatal(t, err)
 	// }
 
 	// ctx.ResetWriteContext()
 
-	if err = pdfcpu.Resize(ctx, nil, &model.Resize{PageDim: types.PaperSize["A5"]}); err != nil {
+	if err = pdfcpu.Resize(t.Context(), ctx, nil, &model.Resize{PageDim: types.PaperSize["A5"]}); err != nil {
 		log.Fatal(t, err)
 	}
 
 	outFile := filepath.Join(samplesDir, "booklet", "bookletResized.pdf")
 
-	if err = api.WriteContextFile(ctx, outFile); err != nil {
+	if err = api.WriteContextFile(t.Context(), ctx, outFile); err != nil {
 		log.Fatal(t, err)
 	}
 
-	if err = api.ValidateFile(outFile, nil); err != nil {
+	if err = api.ValidateFile(t.Context(), outFile, nil, nil); err != nil {
 		log.Fatal(t, err)
 	}
 }

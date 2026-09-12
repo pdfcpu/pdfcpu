@@ -98,7 +98,7 @@ func TestWriteImageToDiskRejectsNilReader(t *testing.T) {
 	for _, img := range tests {
 		t.Run(fmt.Sprintf("object %d", img.ObjNr), func(t *testing.T) {
 			outDir := t.TempDir()
-			err := WriteImageToDisk(outDir, "input")(img, false, 1)
+			err := WriteImageToDisk(t.Context(), outDir, "input")(img, false, 1)
 			if !errors.Is(err, ErrMissingImageReader) {
 				t.Fatalf("expected %v, got %v", ErrMissingImageReader, err)
 			}
@@ -139,7 +139,7 @@ func TestWriteFontToDiskRejectsNilReader(t *testing.T) {
 	for _, font := range tests {
 		t.Run(font.Name, func(t *testing.T) {
 			outDir := t.TempDir()
-			err := WriteFontToDisk(outDir, "input")(font)
+			err := WriteFontToDisk(t.Context(), outDir, "input")(font)
 			if !errors.Is(err, ErrMissingReader) {
 				t.Fatalf("expected %v, got %v", ErrMissingReader, err)
 			}
@@ -159,7 +159,7 @@ func TestWriteMetadataToDiskRejectsNilReader(t *testing.T) {
 	for _, md := range tests {
 		t.Run(fmt.Sprintf("object %d", md.ObjNr), func(t *testing.T) {
 			outDir := t.TempDir()
-			err := WriteMetadataToDisk(outDir, "input")(md)
+			err := WriteMetadataToDisk(t.Context(), outDir, "input")(md)
 			if !errors.Is(err, ErrMissingReader) {
 				t.Fatalf("expected %v, got %v", ErrMissingReader, err)
 			}
@@ -176,7 +176,7 @@ func TestDigestImagesUsesObjectNumberOrder(t *testing.T) {
 		5: {ObjNr: 5},
 	}
 	var got []int
-	objNr, err := digestImages(images, false, 1, func(img model.Image, _ bool, _ int) error {
+	objNr, err := digestImages(t.Context(), images, false, 1, func(img model.Image, _ bool, _ int) error {
 		got = append(got, img.ObjNr)
 		return nil
 	})
@@ -191,7 +191,7 @@ func TestDigestImagesUsesObjectNumberOrder(t *testing.T) {
 	}
 
 	wantErr := errors.New("digest failed")
-	objNr, err = digestImages(images, false, 1, func(model.Image, bool, int) error { return wantErr })
+	objNr, err = digestImages(t.Context(), images, false, 1, func(model.Image, bool, int) error { return wantErr })
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}

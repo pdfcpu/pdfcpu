@@ -35,7 +35,7 @@ func TestWriteAttachmentsUsesDarwinFilesystemCaseSensitivity(t *testing.T) {
 		{Reader: strings.NewReader("second"), ID: "attachment-2", FileName: "SHARED.TXT"},
 	}
 
-	err := writeAttachments(outDir, aa)
+	err := writeAttachments(t.Context(), outDir, aa)
 
 	if errors.Is(err, ErrAttachmentOutputCollision) {
 		if _, statErr := os.Stat(filepath.Join(outDir, "shared.txt")); !errors.Is(statErr, os.ErrNotExist) {
@@ -63,7 +63,7 @@ func TestWriteAttachmentsUsesDarwinUnicodeNormalization(t *testing.T) {
 		{Reader: strings.NewReader("second"), ID: "attachment-2", FileName: names[1]},
 	}
 
-	err := writeAttachments(outDir, aa)
+	err := writeAttachments(t.Context(), outDir, aa)
 
 	if errors.Is(err, ErrAttachmentOutputCollision) {
 		for _, name := range names {

@@ -66,10 +66,10 @@ func (r *wrappedEOFReader) Read(p []byte) (int, error) {
 func TestReadFileContext(t *testing.T) {
 	inFile := filepath.Join("..", "testdata", "test.pdf")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 0)
+	ctx, cancel := context.WithTimeout(t.Context(), 0)
 	defer cancel()
 
-	if doc, err := ReadFileWithContext(ctx, inFile, nil); err == nil {
+	if doc, err := ReadFile(ctx, inFile, nil); err == nil {
 		t.Errorf("reading should have failed, got %v", doc)
 	} else if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("should have failed with timeout, got %s", err)
@@ -86,10 +86,10 @@ func TestReadContext(t *testing.T) {
 	}
 	defer fp.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 0)
+	ctx, cancel := context.WithTimeout(t.Context(), 0)
 	defer cancel()
 
-	if doc, err := ReadWithContext(ctx, fp, nil); err == nil {
+	if doc, err := Read(ctx, fp, nil); err == nil {
 		t.Errorf("reading should have failed, got %v", doc)
 	} else if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("should have failed with timeout, got %s", err)
@@ -97,7 +97,7 @@ func TestReadContext(t *testing.T) {
 }
 
 func TestReadClassifiesEmptyInput(t *testing.T) {
-	_, err := Read(bytes.NewReader(nil), nil)
+	_, err := Read(t.Context(), bytes.NewReader(nil), nil)
 	if !errors.Is(err, ErrEmptyInput) {
 		t.Fatalf("got %v, want ErrEmptyInput", err)
 	}
@@ -106,7 +106,7 @@ func TestReadClassifiesEmptyInput(t *testing.T) {
 func TestReadClassifiesTruncatedStartXRef(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationStrict
-	_, err := Read(bytes.NewReader([]byte("%PDF-1.7\nstartxref")), conf)
+	_, err := Read(t.Context(), bytes.NewReader([]byte("%PDF-1.7\nstartxref")), conf)
 	if !errors.Is(err, errMissingXRefEOF) {
 		t.Fatalf("got %v, want errMissingXRefEOF", err)
 	}
@@ -124,19 +124,19 @@ func TestReadRepairsTruncatedStartXRefInRelaxedMode(t *testing.T) {
 	}
 	bb = bb[:i+len("startxref")]
 
-	if _, err := Read(bytes.NewReader(bb), nil); err != nil {
+	if _, err := Read(t.Context(), bytes.NewReader(bb), nil); err != nil {
 		t.Fatalf("relaxed read: %v", err)
 	}
 
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationStrict
-	if _, err := Read(bytes.NewReader(bb), conf); !errors.Is(err, errMissingXRefEOF) {
+	if _, err := Read(t.Context(), bytes.NewReader(bb), conf); !errors.Is(err, errMissingXRefEOF) {
 		t.Fatalf("strict read: got %v, want errMissingXRefEOF", err)
 	}
 }
 
 func TestReadMissingReaderReturnsError(t *testing.T) {
-	_, err := Read(nil, nil)
+	_, err := Read(t.Context(), nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -350,7 +350,7 @@ func TestXRefStreamDictErrorsIncludeObjectContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = xRefStreamDict(context.Background(), ctx, types.Integer(1), 7, 0)
+	_, err = xRefStreamDict(t.Context(), ctx, types.Integer(1), 7, 0)
 	if !errors.Is(err, errMissingXRefStreamDict) {
 		t.Fatalf("got %v, want %v", err, errMissingXRefStreamDict)
 	}
@@ -358,7 +358,7 @@ func TestXRefStreamDictErrorsIncludeObjectContext(t *testing.T) {
 		t.Fatalf("expected object context, got %q", err.Error())
 	}
 
-	_, err = xRefStreamDict(context.Background(), ctx, types.Dict{}, 8, 0)
+	_, err = xRefStreamDict(t.Context(), ctx, types.Dict{}, 8, 0)
 	if !errors.Is(err, errMissingXRefStreamLength) {
 		t.Fatalf("got %v, want %v", err, errMissingXRefStreamLength)
 	}
@@ -374,7 +374,7 @@ func TestParseXRefStreamClassifiesCorruptStreamObject(t *testing.T) {
 	}
 	offset := int64(0)
 
-	_, err = parseXRefStream(context.Background(), ctx, strings.NewReader("1 0 obj\n<<>>\nendobj\n"), &offset, 0, 0)
+	_, err = parseXRefStream(t.Context(), ctx, strings.NewReader("1 0 obj\n<<>>\nendobj\n"), &offset, 0, 0)
 	if !errors.Is(err, errCorruptXRefStream) {
 		t.Fatalf("got %v, want %v", err, errCorruptXRefStream)
 	}
@@ -389,7 +389,7 @@ func TestDereferencedObjectClassifiesUnregisteredObject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = dereferencedObject(context.Background(), ctx, 7)
+	_, err = dereferencedObject(t.Context(), ctx, 7)
 	if !errors.Is(err, errUnregisteredObject) {
 		t.Fatalf("got %v, want %v", err, errUnregisteredObject)
 	}
@@ -425,7 +425,7 @@ func TestDereferencedTypedObjectClassification(t *testing.T) {
 	ctx.Table[7] = model.NewXRefTableEntryGen0(types.Name("NotInteger"))
 	ctx.Table[8] = model.NewXRefTableEntryGen0(types.Integer(1))
 
-	_, err = dereferencedInteger(context.Background(), ctx, 7)
+	_, err = dereferencedInteger(t.Context(), ctx, 7)
 	if !errors.Is(err, errCorruptIntegerObject) {
 		t.Fatalf("got %v, want %v", err, errCorruptIntegerObject)
 	}
@@ -433,7 +433,7 @@ func TestDereferencedTypedObjectClassification(t *testing.T) {
 		t.Fatalf("expected object context, got %q", err.Error())
 	}
 
-	_, err = dereferencedDict(context.Background(), ctx, 8)
+	_, err = dereferencedDict(t.Context(), ctx, 8)
 	if !errors.Is(err, errCorruptDictObject) {
 		t.Fatalf("got %v, want %v", err, errCorruptDictObject)
 	}
@@ -467,7 +467,7 @@ func TestBootstrapIntegerEntry(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := types.Dict{"Value": tt.value}
-			got, found, err := bootstrapIntegerEntry(context.Background(), ctx, d, "Value")
+			got, found, err := bootstrapIntegerEntry(t.Context(), ctx, d, "Value")
 			if tt.wantText != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.wantText) {
 					t.Fatalf("got %v, want error containing %q", err, tt.wantText)
@@ -494,7 +494,7 @@ func TestBootstrapIntegerEntryMaterializesUncompressedTarget(t *testing.T) {
 	ctx.XRefTable.Table[7] = &model.XRefTableEntry{Offset: &offset, Generation: &generation}
 	d := types.Dict{"Value": *types.NewIndirectRef(7, 0)}
 
-	i, _, err := bootstrapIntegerEntry(context.Background(), ctx, d, "Value")
+	i, _, err := bootstrapIntegerEntry(t.Context(), ctx, d, "Value")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -513,7 +513,7 @@ func TestXRefStreamOffsetResolvesIndirectValue(t *testing.T) {
 	indRef := *types.NewIndirectRef(7, 0)
 	d := types.Dict{"XRefStm": indRef}
 
-	offset, err := xrefStreamOffset(context.Background(), ctx, d, false)
+	offset, err := xrefStreamOffset(t.Context(), ctx, d, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -535,11 +535,11 @@ func TestObjectStreamBootstrapIntegers(t *testing.T) {
 		"N":     *types.NewIndirectRef(7, 0),
 		"First": *types.NewIndirectRef(8, 0),
 	}}
-	n, _, err := bootstrapIntegerEntry(context.Background(), ctx, sd.Dict, "N")
+	n, _, err := bootstrapIntegerEntry(t.Context(), ctx, sd.Dict, "N")
 	if err != nil {
 		t.Fatal(err)
 	}
-	first, _, err := bootstrapIntegerEntry(context.Background(), ctx, sd.Dict, "First")
+	first, _, err := bootstrapIntegerEntry(t.Context(), ctx, sd.Dict, "First")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -595,7 +595,7 @@ func TestDecompressXRefTableEntryClassifiesObjectStreamErrors(t *testing.T) {
 }
 
 func TestCompressedObjectRejectsStreamObjects(t *testing.T) {
-	_, err := compressedObject(context.Background(), "<< /Length 1 >>")
+	_, err := compressedObject(t.Context(), "<< /Length 1 >>")
 	if !errors.Is(err, errObjectStreamContainsStream) {
 		t.Fatalf("got %v, want %v", err, errObjectStreamContainsStream)
 	}
@@ -607,7 +607,7 @@ func TestParseObjectStreamClassifiesCorruptDict(t *testing.T) {
 		FirstObjOffset: 1,
 	}
 
-	err := parseObjectStream(context.Background(), osd, model.DefaultResourceLimits())
+	err := parseObjectStream(t.Context(), osd, model.DefaultResourceLimits())
 	if !errors.Is(err, errCorruptObjectStreamDict) {
 		t.Fatalf("got %v, want %v", err, errCorruptObjectStreamDict)
 	}
@@ -622,7 +622,7 @@ func TestParseObjectStreamClassifiesObjectCountLimit(t *testing.T) {
 	limits := model.DefaultResourceLimits()
 	limits.MaxObjectStreamCount = 1
 
-	err := parseObjectStream(context.Background(), osd, limits)
+	err := parseObjectStream(t.Context(), osd, limits)
 	if !errors.Is(err, errObjectStreamObjectCountLimit) {
 		t.Fatalf("got %v, want %v", err, errObjectStreamObjectCountLimit)
 	}
@@ -634,7 +634,7 @@ func TestDecodeObjectStreamClassifiesMissingEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = decodeObjectStream(context.Background(), ctx, 7)
+	err = decodeObjectStream(t.Context(), ctx, 7)
 	if !errors.Is(err, errMissingObjectStreamEntry) {
 		t.Fatalf("got %v, want %v", err, errMissingObjectStreamEntry)
 	}
@@ -655,7 +655,7 @@ func TestDecodeObjectStreamClassifiesCorruptObjectStream(t *testing.T) {
 		Generation: &zeroGen,
 	}
 
-	err = decodeObjectStream(context.Background(), ctx, 7)
+	err = decodeObjectStream(t.Context(), ctx, 7)
 	if !errors.Is(err, errCorruptObjectStream) {
 		t.Fatalf("got %v, want %v", err, errCorruptObjectStream)
 	}
@@ -761,7 +761,7 @@ func TestCheckForEncryptionClassifiesEncryptedError(t *testing.T) {
 	ctx.Cmd = model.ENCRYPT
 	ctx.Encrypt = types.NewIndirectRef(1, 0)
 
-	if err := checkForEncryption(context.Background(), ctx); !errors.Is(err, ErrEncrypted) {
+	if err := checkForEncryption(t.Context(), ctx); !errors.Is(err, ErrEncrypted) {
 		t.Fatalf("got %v, want ErrEncrypted", err)
 	} else if !strings.Contains(err.Error(), "encryption status") {
 		t.Fatalf("expected encryption status context, got %q", err)
@@ -775,7 +775,7 @@ func TestCheckForEncryptionClassifiesUnencryptedError(t *testing.T) {
 	}
 	ctx.Cmd = model.DECRYPT
 
-	err = checkForEncryption(context.Background(), ctx)
+	err = checkForEncryption(t.Context(), ctx)
 	if !errors.Is(err, ErrNotEncrypted) {
 		t.Fatalf("got %v, want ErrNotEncrypted", err)
 	}
@@ -800,7 +800,7 @@ func TestCheckForEncryptionRejectsIncompleteContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := checkForEncryption(context.Background(), tt.ctx); !errors.Is(err, tt.want) {
+			if err := checkForEncryption(t.Context(), tt.ctx); !errors.Is(err, tt.want) {
 				t.Fatalf("got %v, want %v", err, tt.want)
 			}
 		})
@@ -814,7 +814,7 @@ func TestCheckForEncryptionWrapsEncryptionDictionaryError(t *testing.T) {
 	}
 	ctx.Encrypt = types.NewIndirectRef(7, 0)
 
-	err = checkForEncryption(context.Background(), ctx)
+	err = checkForEncryption(t.Context(), ctx)
 	if !errors.Is(err, errUnregisteredObject) {
 		t.Fatalf("got %v, want %v", err, errUnregisteredObject)
 	}
@@ -835,7 +835,7 @@ func TestCheckForEncryptionClassifiesWrongTypeDictionary(t *testing.T) {
 	ctx.Encrypt = types.NewIndirectRef(7, 0)
 	ctx.Table[7] = model.NewXRefTableEntryGen0(types.Integer(1))
 
-	err = checkForEncryption(context.Background(), ctx)
+	err = checkForEncryption(t.Context(), ctx)
 	if !errors.Is(err, errCorruptDictObject) {
 		t.Fatalf("got %v, want %v", err, errCorruptDictObject)
 	}
@@ -858,7 +858,7 @@ func TestCheckForEncryptionPreservesDictionaryReadError(t *testing.T) {
 	entry.Offset = &offset
 	ctx.Table[7] = entry
 
-	err = checkForEncryption(context.Background(), ctx)
+	err = checkForEncryption(t.Context(), ctx)
 	if !errors.Is(err, readErr) {
 		t.Fatalf("got %v, want %v", err, readErr)
 	}
@@ -884,7 +884,7 @@ func TestCheckForEncryptionClassifiesUnterminatedDictionary(t *testing.T) {
 	entry.Offset = &offset
 	ctx.Table[7] = entry
 
-	err = checkForEncryption(context.Background(), ctx)
+	err = checkForEncryption(t.Context(), ctx)
 	if !errors.Is(err, model.ErrDictionaryCorrupt) {
 		t.Fatalf("got %v, want %v", err, model.ErrDictionaryCorrupt)
 	}
@@ -1062,7 +1062,7 @@ func TestReadLargeDictObject(t *testing.T) {
 	fp.WriteString("endstream\n")
 	fp.WriteString("endobj\n")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
 	// Dummy pdfcpu context to be used for parsing a single object.
@@ -1072,7 +1072,7 @@ func TestReadLargeDictObject(t *testing.T) {
 		},
 		XRefTable: &model.XRefTable{},
 	}
-	o, err := ParseObjectWithContext(ctx, c, 0, 123, 0)
+	o, err := ParseObject(ctx, c, 0, 123, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1153,7 +1153,7 @@ func TestEnsureIndirectStreamLengthClassifiesMissingLength(t *testing.T) {
 	ctx.XRefTable.ValidationMode = model.ValidationStrict
 	sd := &types.StreamDict{}
 
-	err = loadEncodedStreamContent(context.Background(), ctx, sd, false)
+	err = loadEncodedStreamContent(t.Context(), ctx, sd, false)
 	if !errors.Is(err, errMissingStreamLength) {
 		t.Fatalf("got %v, want %v", err, errMissingStreamLength)
 	}
@@ -1170,7 +1170,7 @@ func TestEnsureIndirectStreamLengthIgnoresMissingReference(t *testing.T) {
 	ctx.Table[7] = &model.XRefTableEntry{Free: true}
 	sd := &types.StreamDict{StreamLengthObjNr: intPtr(7)}
 
-	if err := ensureIndirectStreamLength(context.Background(), ctx, sd, false); err != nil {
+	if err := ensureIndirectStreamLength(t.Context(), ctx, sd, false); err != nil {
 		t.Fatalf("expected missing stream length reference to be ignored, got %v", err)
 	}
 	if sd.StreamLength != nil {
@@ -1184,7 +1184,7 @@ func TestStreamDictForObjectClassifiesMissingStreamOffset(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = streamDictForObject(context.Background(), ctx, types.Dict{}, 7, 0, 0, 0)
+	_, err = streamDictForObject(t.Context(), ctx, types.Dict{}, 7, 0, 0, 0)
 	if !errors.Is(err, errMissingStreamOffset) {
 		t.Fatalf("got %v, want %v", err, errMissingStreamOffset)
 	}
@@ -1199,7 +1199,7 @@ func TestFilterPipelineClassifiesCorruptFilterArray(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = pdfFilterPipeline(context.Background(), ctx, types.Dict{"Filter": types.Integer(1)})
+	_, err = pdfFilterPipeline(t.Context(), ctx, types.Dict{"Filter": types.Integer(1)})
 	if !errors.Is(err, errCorruptFilterArray) {
 		t.Fatalf("got %v, want %v", err, errCorruptFilterArray)
 	}
@@ -1207,7 +1207,7 @@ func TestFilterPipelineClassifiesCorruptFilterArray(t *testing.T) {
 		t.Fatalf("expected filter pipeline context, got %q", err.Error())
 	}
 
-	_, err = filterNames(context.Background(), ctx, types.Array{types.Integer(1)})
+	_, err = filterNames(t.Context(), ctx, types.Array{types.Integer(1)})
 	if !errors.Is(err, errCorruptFilterArray) {
 		t.Fatalf("got %v, want %v", err, errCorruptFilterArray)
 	}
@@ -1222,7 +1222,7 @@ func TestFilterPipelineClassifiesCorruptDecodeParms(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = singleFilter(context.Background(), ctx, filter.Flate, types.Dict{
+	_, err = singleFilter(t.Context(), ctx, filter.Flate, types.Dict{
 		"DecodeParms": types.Array{types.Dict{}, types.Dict{}},
 	})
 	if !errors.Is(err, errCorruptDecodeParms) {
@@ -1233,7 +1233,7 @@ func TestFilterPipelineClassifiesCorruptDecodeParms(t *testing.T) {
 	}
 
 	_, err = buildFilterPipeline(
-		context.Background(),
+		t.Context(),
 		ctx,
 		[]string{filter.Flate},
 		types.Array{types.Integer(1)},
@@ -1253,7 +1253,7 @@ func TestFilterPipelineNormalizesAliasesInRelaxedMode(t *testing.T) {
 	}
 
 	d := types.Dict{"Filter": types.Name("A85")}
-	pipeline, err := pdfFilterPipeline(context.Background(), ctx, d)
+	pipeline, err := pdfFilterPipeline(t.Context(), ctx, d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1283,7 +1283,7 @@ func TestFilterPipelineNormalizesAliasesInRelaxedMode(t *testing.T) {
 		filter.DCT,
 	}
 	d = types.Dict{"Filter": aliases}
-	pipeline, err = pdfFilterPipeline(context.Background(), ctx, d)
+	pipeline, err = pdfFilterPipeline(t.Context(), ctx, d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1309,7 +1309,7 @@ func TestFilterPipelinePreservesAliasesInStrictMode(t *testing.T) {
 	}
 
 	d := types.Dict{"Filter": types.Name("A85")}
-	pipeline, err := pdfFilterPipeline(context.Background(), ctx, d)
+	pipeline, err := pdfFilterPipeline(t.Context(), ctx, d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1353,7 +1353,7 @@ func TestReadLargeDictObjectStream(t *testing.T) {
 	fp.WriteString("endstream\n")
 	fp.WriteString("endobj\n")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
 	// Dummy pdfcpu context to be used for parsing a single object.
@@ -1363,7 +1363,7 @@ func TestReadLargeDictObjectStream(t *testing.T) {
 		},
 		XRefTable: &model.XRefTable{},
 	}
-	o, err := ParseObjectWithContext(ctx, c, 0, 123, 0)
+	o, err := ParseObject(ctx, c, 0, 123, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

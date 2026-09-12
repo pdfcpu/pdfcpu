@@ -36,7 +36,7 @@ func nestedBookmarks(depth int) []Bookmark {
 
 // TestBookmarkListRejectsRecursionDepth verifies bookmark listing respects recursion limits.
 func TestBookmarkListRejectsRecursionDepth(t *testing.T) {
-	_, err := bookmarkList(nestedBookmarks(2), 0, 1)
+	_, err := bookmarkList(t.Context(), nestedBookmarks(2), 0, 1)
 	if !errors.Is(err, model.ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
@@ -44,7 +44,7 @@ func TestBookmarkListRejectsRecursionDepth(t *testing.T) {
 
 // TestCreateOutlineItemDictRejectsRecursionDepth verifies outline creation respects recursion limits.
 func TestCreateOutlineItemDictRejectsRecursionDepth(t *testing.T) {
-	_, _, _, _, err := createOutlineItemDictDepth(nil, nestedBookmarks(0), nil, nil, model.DefaultResourceLimits().MaxRecursionDepth+1)
+	_, _, _, _, err := createOutlineItemDictDepth(t.Context(), nil, nestedBookmarks(0), nil, nil, model.DefaultResourceLimits().MaxRecursionDepth+1)
 	if !errors.Is(err, model.ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
@@ -55,7 +55,7 @@ func TestCreateOutlineItemDictRejectsInvalidBookmark(t *testing.T) {
 	parentPageNr := 2
 	bms := []Bookmark{{Title: "bookmark", PageFrom: 1}}
 
-	_, _, _, _, err := createOutlineItemDictDepth(nil, bms, nil, &parentPageNr, 0)
+	_, _, _, _, err := createOutlineItemDictDepth(t.Context(), nil, bms, nil, &parentPageNr, 0)
 	if !errors.Is(err, ErrInvalidBookmark) {
 		t.Fatalf("got %v, want ErrInvalidBookmark", err)
 	}
@@ -164,7 +164,7 @@ func TestAddBookmarksRejectsExistingBookmarks(t *testing.T) {
 	}
 	ctx.RootDict = types.Dict{"Outlines": *types.NewIndirectRef(1, 0)}
 
-	err = AddBookmarks(ctx, nestedBookmarks(0), false)
+	err = AddBookmarks(t.Context(), ctx, nestedBookmarks(0), false)
 	if !errors.Is(err, ErrExistingBookmarks) {
 		t.Fatalf("got %v, want ErrExistingBookmarks", err)
 	}
@@ -184,7 +184,7 @@ func TestBookmarkOperationsRejectInvalidBoundaryInput(t *testing.T) {
 		{
 			name: "bookmarks missing context",
 			fn: func() error {
-				_, err := Bookmarks(nil)
+				_, err := Bookmarks(t.Context(), nil)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -192,7 +192,7 @@ func TestBookmarkOperationsRejectInvalidBoundaryInput(t *testing.T) {
 		{
 			name: "bookmarks missing xref table",
 			fn: func() error {
-				_, err := Bookmarks(&model.Context{})
+				_, err := Bookmarks(t.Context(), &model.Context{})
 				return err
 			},
 			wantErr: ErrMissingXRefTable,
@@ -200,7 +200,7 @@ func TestBookmarkOperationsRejectInvalidBoundaryInput(t *testing.T) {
 		{
 			name: "bookmark list missing context",
 			fn: func() error {
-				_, err := BookmarkList(nil)
+				_, err := BookmarkList(t.Context(), nil)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -208,7 +208,7 @@ func TestBookmarkOperationsRejectInvalidBoundaryInput(t *testing.T) {
 		{
 			name: "export bookmarks missing context",
 			fn: func() error {
-				_, err := ExportBookmarks(nil, "")
+				_, err := ExportBookmarks(t.Context(), nil, "")
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -216,7 +216,7 @@ func TestBookmarkOperationsRejectInvalidBoundaryInput(t *testing.T) {
 		{
 			name: "export bookmarks JSON missing context",
 			fn: func() error {
-				_, err := ExportBookmarksJSON(nil, "", nil)
+				_, err := ExportBookmarksJSON(t.Context(), nil, "", nil)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -224,7 +224,7 @@ func TestBookmarkOperationsRejectInvalidBoundaryInput(t *testing.T) {
 		{
 			name: "remove bookmarks missing context",
 			fn: func() error {
-				_, err := RemoveBookmarks(nil)
+				_, err := RemoveBookmarks(t.Context(), nil)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -232,21 +232,21 @@ func TestBookmarkOperationsRejectInvalidBoundaryInput(t *testing.T) {
 		{
 			name: "add bookmarks missing context",
 			fn: func() error {
-				return AddBookmarks(nil, nestedBookmarks(0), false)
+				return AddBookmarks(t.Context(), nil, nestedBookmarks(0), false)
 			},
 			wantErr: ErrMissingPDFContext,
 		},
 		{
 			name: "add bookmarks empty input",
 			fn: func() error {
-				return AddBookmarks(ctx, nil, false)
+				return AddBookmarks(t.Context(), ctx, nil, false)
 			},
 			wantErr: ErrInvalidBookmark,
 		},
 		{
 			name: "import bookmarks missing context",
 			fn: func() error {
-				_, err := ImportBookmarks(nil, strings.NewReader("{}"), false)
+				_, err := ImportBookmarks(t.Context(), nil, strings.NewReader("{}"), false)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -269,11 +269,11 @@ func TestImportBookmarksRejectsMissingAndEmptyJSONInput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := ImportBookmarks(ctx, nil, false); err == nil || !strings.Contains(err.Error(), "missing bookmark JSON reader") {
+	if _, err := ImportBookmarks(t.Context(), ctx, nil, false); err == nil || !strings.Contains(err.Error(), "missing bookmark JSON reader") {
 		t.Fatalf("got %v, want missing bookmark JSON reader", err)
 	}
 
-	_, err = ImportBookmarks(ctx, strings.NewReader(`{"bookmarks":[]}`), false)
+	_, err = ImportBookmarks(t.Context(), ctx, strings.NewReader(`{"bookmarks":[]}`), false)
 	if !errors.Is(err, ErrInvalidBookmark) {
 		t.Fatalf("got %v, want ErrInvalidBookmark", err)
 	}
@@ -336,7 +336,7 @@ func cyclicBookmarkContext(t *testing.T) *model.Context {
 func TestBookmarksForOutlineItemRejectsCycle(t *testing.T) {
 	ctx := cyclicBookmarkContext(t)
 
-	_, err := BookmarksForOutlineItem(ctx, types.NewIndirectRef(1, 0), nil)
+	_, err := BookmarksForOutlineItem(t.Context(), ctx, types.NewIndirectRef(1, 0), nil)
 	if !errors.Is(err, ErrCircularBookmarks) {
 		t.Fatalf("got %v, want ErrCircularBookmarks", err)
 	}
@@ -346,7 +346,7 @@ func TestBookmarksForOutlineItemRejectsCycle(t *testing.T) {
 func TestRemoveNamedDestsRejectsCycle(t *testing.T) {
 	ctx := cyclicBookmarkContext(t)
 
-	err := removeNamedDests(ctx, types.NewIndirectRef(1, 0), 0, map[int]bool{})
+	err := removeNamedDests(t.Context(), ctx, types.NewIndirectRef(1, 0), 0, map[int]bool{})
 	if !errors.Is(err, ErrCircularBookmarks) {
 		t.Fatalf("got %v, want ErrCircularBookmarks", err)
 	}

@@ -17,20 +17,24 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"io"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// PDFInfo returns information about rs.
-//
+// PDFInfo returns information about rs and supports cancellation.
 // PDFInfo always uses relaxed validation.
-func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, fonts bool, conf *model.Configuration) (info *pdfcpu.PDFInfo, err error) {
+func PDFInfo(c context.Context, rs io.ReadSeeker, fileName string, selectedPages []string, fonts bool, conf *model.Configuration) (info *pdfcpu.PDFInfo, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
@@ -38,13 +42,13 @@ func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, fonts bo
 	conf = operationConfiguration(conf, model.LISTINFO)
 	conf.ValidationMode = model.ValidationRelaxed
 
-	ctx, err := ReadAndValidate(rs, conf)
+	ctx, err := ReadAndValidate(c, rs, conf)
 	if err != nil {
 		return nil, fmt.Errorf("info: prepare PDF context: %w", err)
 	}
 
 	if fonts {
-		if err = OptimizeContext(ctx); err != nil {
+		if err = OptimizeContext(c, ctx); err != nil {
 			return nil, fmt.Errorf("info: optimize context: %w", err)
 		}
 	}
@@ -54,13 +58,13 @@ func PDFInfo(rs io.ReadSeeker, fileName string, selectedPages []string, fonts bo
 		return nil, fmt.Errorf("info: parse page selection: %w", err)
 	}
 
-	if err := pdfcpu.DetectWatermarks(ctx); err != nil {
+	if err := pdfcpu.DetectWatermarks(c, ctx); err != nil {
 		return nil, fmt.Errorf("info: detect watermarks: %w", err)
 	}
 
-	info, err = pdfcpu.Info(ctx, fileName, pages, fonts)
+	info, err = pdfcpu.Info(c, ctx, fileName, pages, fonts)
 	if err != nil {
 		return nil, fmt.Errorf("info: collect document info: %w", err)
 	}
-	return info, nil
+	return info, contextutil.Check(c)
 }

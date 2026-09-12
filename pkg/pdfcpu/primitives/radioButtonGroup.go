@@ -165,7 +165,6 @@ func (rbg *RadioButtonGroup) validateTab() error {
 }
 
 func (rbg *RadioButtonGroup) validate() error {
-
 	if err := rbg.validateID(); err != nil {
 		return err
 	}
@@ -332,7 +331,7 @@ func (rbg *RadioButtonGroup) renderButtonLabels(p *model.Page, pageNr int, fonts
 		if rbg.hor {
 			td.VAlign = types.AlignMiddle
 		}
-		if _, err := model.WriteColumn(rbg.pdf.XRefTable, p.Buf, p.MediaBox, nil, td, 0); err != nil {
+		if _, err := model.WriteColumn(rbg.pdf.ctx, rbg.pdf.XRefTable, p.Buf, p.MediaBox, nil, td, 0); err != nil {
 			return fmt.Errorf("radio button label %d: %w", i+1, err)
 		}
 	}
@@ -464,7 +463,6 @@ func (rbg *RadioButtonGroup) rect(i int) *types.Rectangle {
 }
 
 func (rbg *RadioButtonGroup) irDOff(asWidth float64, flip bool) (*types.IndirectRef, error) {
-
 	w := rbg.Width
 
 	ap, found := rbg.pdf.RadioBtnAPs[asWidth]
@@ -534,7 +532,6 @@ func (rbg *RadioButtonGroup) irDOff(asWidth float64, flip bool) (*types.Indirect
 }
 
 func (rbg *RadioButtonGroup) irDYes(asWidth float64, flip bool) (*types.IndirectRef, error) {
-
 	w := rbg.Width
 
 	ap, found := rbg.pdf.RadioBtnAPs[asWidth]
@@ -610,7 +607,6 @@ func (rbg *RadioButtonGroup) irDYes(asWidth float64, flip bool) (*types.Indirect
 }
 
 func (rbg *RadioButtonGroup) irNOff(asWidth float64, flip bool, bgCol *color.SimpleColor) (*types.IndirectRef, error) {
-
 	w := rbg.Width
 
 	ap, found := rbg.pdf.RadioBtnAPs[asWidth]
@@ -687,7 +683,6 @@ func (rbg *RadioButtonGroup) irNOff(asWidth float64, flip bool, bgCol *color.Sim
 }
 
 func (rbg *RadioButtonGroup) irNYes(asWidth float64, flip bool, bgCol *color.SimpleColor) (*types.IndirectRef, error) {
-
 	w := rbg.Width
 
 	ap, found := rbg.pdf.RadioBtnAPs[asWidth]
@@ -915,7 +910,6 @@ func (rbg *RadioButtonGroup) prepareRectLL(mTop, mRight, mBottom, mLeft float64)
 }
 
 func (rbg *RadioButtonGroup) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	if rbg.Label == nil {
 		return nil
 	}
@@ -954,7 +948,9 @@ func (rbg *RadioButtonGroup) prepLabel(p *model.Page, pageNr int, fonts model.Fo
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb, err := model.WriteMultiLine(rbg.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(
+		rbg.pdf.ctx, rbg.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td,
+	)
 	if err != nil {
 		return fmt.Errorf("radio button group label: %w", err)
 	}
@@ -976,7 +972,6 @@ func (rbg *RadioButtonGroup) prepLabel(p *model.Page, pageNr int, fonts model.Fo
 }
 
 func (rbg *RadioButtonGroup) prepForRender(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	if err := rbg.calcFont(); err != nil {
 		return err
 	}
@@ -1000,7 +995,6 @@ func (rbg *RadioButtonGroup) prepForRender(p *model.Page, pageNr int, fonts mode
 }
 
 func (rbg *RadioButtonGroup) prepareDict(p *model.Page, pageNr int, fonts model.FontMap) (*types.IndirectRef, types.Array, error) {
-
 	if err := rbg.renderButtonLabels(p, pageNr, fonts); err != nil {
 		return nil, nil, err
 	}
@@ -1064,7 +1058,6 @@ func (rbg *RadioButtonGroup) prepareDict(p *model.Page, pageNr int, fonts model.
 }
 
 func (rbg *RadioButtonGroup) doRender(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	ir, kids, err := rbg.prepareDict(p, pageNr, fonts)
 	if err != nil {
 		return err
@@ -1078,7 +1071,7 @@ func (rbg *RadioButtonGroup) doRender(p *model.Page, pageNr int, fonts model.Fon
 	}
 
 	if rbg.Label != nil {
-		if _, err := model.WriteColumn(rbg.pdf.XRefTable, p.Buf, p.MediaBox, nil, *rbg.Label.td, 0); err != nil {
+		if _, err := model.WriteColumn(rbg.pdf.ctx, rbg.pdf.XRefTable, p.Buf, p.MediaBox, nil, *rbg.Label.td, 0); err != nil {
 			return fmt.Errorf("radio button group label: %w", err)
 		}
 	}
@@ -1091,7 +1084,6 @@ func (rbg *RadioButtonGroup) doRender(p *model.Page, pageNr int, fonts model.Fon
 }
 
 func (rbg *RadioButtonGroup) render(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	if err := rbg.prepForRender(p, pageNr, fonts); err != nil {
 		return err
 	}

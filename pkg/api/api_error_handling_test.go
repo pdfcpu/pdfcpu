@@ -121,84 +121,84 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "optimize missing reader",
 			fn: func() error {
-				return Optimize(nil, io.Discard, nil)
+				return Optimize(t.Context(), nil, io.Discard, nil, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "optimize missing writer",
 			fn: func() error {
-				return Optimize(bytes.NewReader(nil), nil, nil)
+				return Optimize(t.Context(), bytes.NewReader(nil), nil, nil, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "optimize file missing input",
 			fn: func() error {
-				return OptimizeFile("", filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return OptimizeFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "collect missing reader",
 			fn: func() error {
-				return Collect(nil, io.Discard, nil, nil)
+				return Collect(t.Context(), nil, io.Discard, nil, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "collect missing writer",
 			fn: func() error {
-				return Collect(bytes.NewReader(nil), nil, nil, nil)
+				return Collect(t.Context(), bytes.NewReader(nil), nil, nil, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "collect file missing input",
 			fn: func() error {
-				return CollectFile("", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
+				return CollectFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "trim missing reader",
 			fn: func() error {
-				return Trim(nil, io.Discard, nil, nil)
+				return Trim(t.Context(), nil, io.Discard, nil, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "trim missing writer",
 			fn: func() error {
-				return Trim(bytes.NewReader(nil), nil, nil, nil)
+				return Trim(t.Context(), bytes.NewReader(nil), nil, nil, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "trim file missing input",
 			fn: func() error {
-				return TrimFile("", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
+				return TrimFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "add annotations missing annotation",
 			fn: func() error {
-				return AddAnnotations(bytes.NewReader(nil), io.Discard, nil, nil, nil)
+				return AddAnnotations(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nil)
 			},
 			wantErr: ErrMissingAnnotation,
 		},
 		{
 			name: "add annotations increment missing annotation",
 			fn: func() error {
-				return AddAnnotationsAsIncrement(nopReadWriteSeeker{bytes.NewReader(nil)}, nil, nil, nil)
+				return AddAnnotationsAsIncrement(t.Context(), nopReadWriteSeeker{bytes.NewReader(nil)}, nil, nil, nil)
 			},
 			wantErr: ErrMissingAnnotation,
 		},
 		{
 			name: "add annotations file missing input",
 			fn: func() error {
-				return AddAnnotationsFile("", filepath.Join(t.TempDir(), "out.pdf"), nil, nil, nil, false)
+				return AddAnnotationsFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), nil, nil, nil, false)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
@@ -206,7 +206,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 			name: "add annotations map missing annotation",
 			fn: func() error {
 				m := map[int][]model.AnnotationRenderer{1: {nil}}
-				return AddAnnotationsMap(bytes.NewReader(nil), io.Discard, m, nil)
+				return AddAnnotationsMap(t.Context(), bytes.NewReader(nil), io.Discard, m, nil)
 			},
 			wantErr:     ErrMissingAnnotation,
 			wantContext: "page 1 annotation 1",
@@ -215,7 +215,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 			name: "add annotations map increment missing annotation",
 			fn: func() error {
 				m := map[int][]model.AnnotationRenderer{1: {nil}}
-				return AddAnnotationsMapAsIncrement(nopReadWriteSeeker{bytes.NewReader(nil)}, m, nil)
+				return AddAnnotationsMapAsIncrement(t.Context(), nopReadWriteSeeker{bytes.NewReader(nil)}, m, nil)
 			},
 			wantErr:     ErrMissingAnnotation,
 			wantContext: "page 1 annotation 1",
@@ -223,119 +223,119 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "add annotations map file missing input",
 			fn: func() error {
-				return AddAnnotationsMapFile("", filepath.Join(t.TempDir(), "out.pdf"), nil, nil, false)
+				return AddAnnotationsMapFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), nil, nil, false)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "remove annotations file missing input",
 			fn: func() error {
-				return RemoveAnnotationsFile("", filepath.Join(t.TempDir(), "out.pdf"), nil, nil, nil, nil, false)
+				return RemoveAnnotationsFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), nil, nil, nil, nil, false)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "encrypt missing configuration",
 			fn: func() error {
-				return Encrypt(bytes.NewReader(nil), io.Discard, nil)
+				return Encrypt(t.Context(), bytes.NewReader(nil), io.Discard, nil)
 			},
 			wantErr: ErrMissingConfiguration,
 		},
 		{
 			name: "merge raw missing inputs",
 			fn: func() error {
-				return MergeRaw(nil, io.Discard, false, nil)
+				return MergeRaw(t.Context(), nil, io.Discard, false, nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "merge raw missing writer",
 			fn: func() error {
-				return MergeRaw([]io.ReadSeeker{bytes.NewReader(nil)}, nil, false, nil)
+				return MergeRaw(t.Context(), []io.ReadSeeker{bytes.NewReader(nil)}, nil, false, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "merge raw missing first reader",
 			fn: func() error {
-				return MergeRaw([]io.ReadSeeker{nil}, io.Discard, false, nil)
+				return MergeRaw(t.Context(), []io.ReadSeeker{nil}, io.Discard, false, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "merge missing writer",
 			fn: func() error {
-				return Merge("", []string{"in.pdf"}, nil, nil, false)
+				return Merge(t.Context(), "", []string{"in.pdf"}, nil, nil, false)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "merge missing input",
 			fn: func() error {
-				return Merge("", nil, io.Discard, nil, false)
+				return Merge(t.Context(), "", nil, io.Discard, nil, false)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "merge zip missing first reader",
 			fn: func() error {
-				return MergeCreateZip(nil, bytes.NewReader(nil), io.Discard, nil)
+				return MergeCreateZip(t.Context(), nil, bytes.NewReader(nil), io.Discard, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "merge zip missing second reader",
 			fn: func() error {
-				return MergeCreateZip(bytes.NewReader(nil), nil, io.Discard, nil)
+				return MergeCreateZip(t.Context(), bytes.NewReader(nil), nil, io.Discard, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "merge zip missing writer",
 			fn: func() error {
-				return MergeCreateZip(bytes.NewReader(nil), bytes.NewReader(nil), nil, nil)
+				return MergeCreateZip(t.Context(), bytes.NewReader(nil), bytes.NewReader(nil), nil, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "n-up missing configuration",
 			fn: func() error {
-				return NUp(bytes.NewReader(nil), io.Discard, nil, nil, nil, nil)
+				return NUp(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nil, nil)
 			},
 			wantErr: ErrMissingNUpConfiguration,
 		},
 		{
 			name: "booklet missing reader",
 			fn: func() error {
-				return Booklet(nil, io.Discard, nil, nil, bookletTestConfiguration(t, false), nil)
+				return Booklet(t.Context(), nil, io.Discard, nil, nil, bookletTestConfiguration(t, false), nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "booklet missing writer",
 			fn: func() error {
-				return Booklet(bytes.NewReader(nil), nil, nil, nil, DefaultBookletConfig(), nil)
+				return Booklet(t.Context(), bytes.NewReader(nil), nil, nil, nil, DefaultBookletConfig(), nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "booklet missing configuration",
 			fn: func() error {
-				return Booklet(bytes.NewReader(nil), io.Discard, nil, nil, nil, nil)
+				return Booklet(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nil, nil)
 			},
 			wantErr: ErrMissingBookletConfiguration,
 		},
 		{
 			name: "booklet file missing input",
 			fn: func() error {
-				return BookletFile(nil, "out.pdf", nil, nil, nil)
+				return BookletFile(t.Context(), nil, "out.pdf", nil, nil, nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "booklet file missing image input",
 			fn: func() error {
-				return BookletFile(nil, "out.pdf", nil, bookletTestConfiguration(t, true), nil)
+				return BookletFile(t.Context(), nil, "out.pdf", nil, bookletTestConfiguration(t, true), nil)
 			},
 			wantErr: ErrMissingImageInput,
 		},
@@ -344,14 +344,14 @@ func TestAPIArgumentErrors(t *testing.T) {
 			fn: func() error {
 				nup := DefaultBookletConfig()
 				nup.ImgInputFile = true
-				return Booklet(bytes.NewReader(nil), io.Discard, nil, nil, nup, nil)
+				return Booklet(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nup, nil)
 			},
 			wantErr: ErrMissingImageInput,
 		},
 		{
 			name: "booklet image context missing input",
 			fn: func() error {
-				_, err := BookletFromImages(nil, nil, DefaultBookletConfig())
+				_, err := BookletFromImages(t.Context(), nil, nil, DefaultBookletConfig())
 				return err
 			},
 			wantErr: ErrMissingImageInput,
@@ -359,7 +359,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "booklet image context missing configuration",
 			fn: func() error {
-				_, err := BookletFromImages(nil, nil, nil)
+				_, err := BookletFromImages(t.Context(), nil, nil, nil)
 				return err
 			},
 			wantErr: ErrMissingBookletConfiguration,
@@ -367,42 +367,42 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "update images missing image input",
 			fn: func() error {
-				return UpdateImages(bytes.NewReader(nil), nil, io.Discard, 1, 0, "", nil)
+				return UpdateImages(t.Context(), bytes.NewReader(nil), nil, io.Discard, 1, 0, "", nil)
 			},
 			wantErr: ErrMissingImageInput,
 		},
 		{
 			name: "update images missing writer",
 			fn: func() error {
-				return UpdateImages(bytes.NewReader(nil), bytes.NewReader(nil), nil, 1, 0, "", nil)
+				return UpdateImages(t.Context(), bytes.NewReader(nil), bytes.NewReader(nil), nil, 1, 0, "", nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "create missing JSON reader",
 			fn: func() error {
-				return Create(nil, nil, io.Discard, nil)
+				return Create(t.Context(), nil, nil, io.Discard, nil)
 			},
 			wantErr: ErrMissingJSONInput,
 		},
 		{
 			name: "create missing writer",
 			fn: func() error {
-				return Create(nil, strings.NewReader("{}"), nil, nil)
+				return Create(t.Context(), nil, strings.NewReader("{}"), nil, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "create PDF file missing xref table",
 			fn: func() error {
-				return CreatePDFFile(nil, filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return CreatePDFFile(t.Context(), nil, filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			wantErr: ErrMissingXRefTable,
 		},
 		{
 			name: "create file missing JSON input",
 			fn: func() error {
-				return CreateFile("", "", filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return CreateFile(t.Context(), "", "", filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			wantErr: ErrMissingJSONInput,
 		},
@@ -413,14 +413,14 @@ func TestAPIArgumentErrors(t *testing.T) {
 				if err := os.WriteFile(jsonFile, []byte("{}"), 0600); err != nil {
 					t.Fatal(err)
 				}
-				return CreateFile("", jsonFile, "", nil)
+				return CreateFile(t.Context(), "", jsonFile, "", nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "page layout missing reader",
 			fn: func() error {
-				_, err := PageLayout(nil, nil)
+				_, err := PageLayout(t.Context(), nil, nil)
 				return err
 			},
 			wantErr: ErrMissingPDFReadSeeker,
@@ -428,7 +428,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "page layout file missing input",
 			fn: func() error {
-				_, err := PageLayoutFile("", nil)
+				_, err := PageLayoutFile(t.Context(), "", nil)
 				return err
 			},
 			wantErr: ErrMissingPDFInput,
@@ -436,7 +436,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "list page layout missing reader",
 			fn: func() error {
-				_, err := ListPageLayout(nil, nil)
+				_, err := ListPageLayout(t.Context(), nil, nil)
 				return err
 			},
 			wantErr: ErrMissingPDFReadSeeker,
@@ -444,7 +444,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "list page layout file missing input",
 			fn: func() error {
-				_, err := ListPageLayoutFile("", nil)
+				_, err := ListPageLayoutFile(t.Context(), "", nil)
 				return err
 			},
 			wantErr: ErrMissingPDFInput,
@@ -452,21 +452,21 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "set page layout missing reader",
 			fn: func() error {
-				return SetPageLayout(nil, io.Discard, model.PageLayoutSinglePage, nil)
+				return SetPageLayout(t.Context(), nil, io.Discard, model.PageLayoutSinglePage, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "set page layout missing writer",
 			fn: func() error {
-				return SetPageLayout(bytes.NewReader(nil), nil, model.PageLayoutSinglePage, nil)
+				return SetPageLayout(t.Context(), bytes.NewReader(nil), nil, model.PageLayoutSinglePage, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "set page layout invalid layout",
 			fn: func() error {
-				return SetPageLayout(bytes.NewReader(nil), io.Discard, model.PageLayout(-1), nil)
+				return SetPageLayout(t.Context(), bytes.NewReader(nil), io.Discard, model.PageLayout(-1), nil)
 			},
 			wantErr:     ErrInvalidPageLayout,
 			wantContext: "set page layout: invalid value -1",
@@ -474,14 +474,14 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "set page layout file missing input",
 			fn: func() error {
-				return SetPageLayoutFile("", filepath.Join(t.TempDir(), "out.pdf"), model.PageLayoutSinglePage, nil)
+				return SetPageLayoutFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), model.PageLayoutSinglePage, nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "set page layout file invalid layout",
 			fn: func() error {
-				return SetPageLayoutFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), model.PageLayout(99), nil)
+				return SetPageLayoutFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), model.PageLayout(99), nil)
 			},
 			wantErr:     ErrInvalidPageLayout,
 			wantContext: "set page layout: invalid value 99",
@@ -489,28 +489,28 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "reset page layout missing reader",
 			fn: func() error {
-				return ResetPageLayout(nil, io.Discard, nil)
+				return ResetPageLayout(t.Context(), nil, io.Discard, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "reset page layout missing writer",
 			fn: func() error {
-				return ResetPageLayout(bytes.NewReader(nil), nil, nil)
+				return ResetPageLayout(t.Context(), bytes.NewReader(nil), nil, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "reset page layout file missing input",
 			fn: func() error {
-				return ResetPageLayoutFile("", filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return ResetPageLayoutFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "page mode missing reader",
 			fn: func() error {
-				_, err := PageMode(nil, nil)
+				_, err := PageMode(t.Context(), nil, nil)
 				return err
 			},
 			wantErr: ErrMissingPDFReadSeeker,
@@ -518,7 +518,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "page mode file missing input",
 			fn: func() error {
-				_, err := PageModeFile("", nil)
+				_, err := PageModeFile(t.Context(), "", nil)
 				return err
 			},
 			wantErr: ErrMissingPDFInput,
@@ -526,7 +526,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "list page mode missing reader",
 			fn: func() error {
-				_, err := ListPageMode(nil, nil)
+				_, err := ListPageMode(t.Context(), nil, nil)
 				return err
 			},
 			wantErr: ErrMissingPDFReadSeeker,
@@ -534,7 +534,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "list page mode file missing input",
 			fn: func() error {
-				_, err := ListPageModeFile("", nil)
+				_, err := ListPageModeFile(t.Context(), "", nil)
 				return err
 			},
 			wantErr: ErrMissingPDFInput,
@@ -542,21 +542,21 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "set page mode missing reader",
 			fn: func() error {
-				return SetPageMode(nil, io.Discard, model.PageModeUseNone, nil)
+				return SetPageMode(t.Context(), nil, io.Discard, model.PageModeUseNone, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "set page mode missing writer",
 			fn: func() error {
-				return SetPageMode(bytes.NewReader(nil), nil, model.PageModeUseNone, nil)
+				return SetPageMode(t.Context(), bytes.NewReader(nil), nil, model.PageModeUseNone, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "set page mode invalid mode",
 			fn: func() error {
-				return SetPageMode(bytes.NewReader(nil), io.Discard, model.PageMode(-1), nil)
+				return SetPageMode(t.Context(), bytes.NewReader(nil), io.Discard, model.PageMode(-1), nil)
 			},
 			wantErr:     ErrInvalidPageMode,
 			wantContext: "set page mode: invalid value -1",
@@ -564,14 +564,14 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "set page mode file missing input",
 			fn: func() error {
-				return SetPageModeFile("", filepath.Join(t.TempDir(), "out.pdf"), model.PageModeUseNone, nil)
+				return SetPageModeFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), model.PageModeUseNone, nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "set page mode file invalid mode",
 			fn: func() error {
-				return SetPageModeFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), model.PageMode(99), nil)
+				return SetPageModeFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), model.PageMode(99), nil)
 			},
 			wantErr:     ErrInvalidPageMode,
 			wantContext: "set page mode: invalid value 99",
@@ -579,28 +579,28 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "reset page mode missing reader",
 			fn: func() error {
-				return ResetPageMode(nil, io.Discard, nil)
+				return ResetPageMode(t.Context(), nil, io.Discard, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "reset page mode missing writer",
 			fn: func() error {
-				return ResetPageMode(bytes.NewReader(nil), nil, nil)
+				return ResetPageMode(t.Context(), bytes.NewReader(nil), nil, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "reset page mode file missing input",
 			fn: func() error {
-				return ResetPageModeFile("", filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return ResetPageModeFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "viewer preferences missing reader",
 			fn: func() error {
-				_, _, err := ViewerPreferences(nil, nil)
+				_, _, err := ViewerPreferences(t.Context(), nil, nil)
 				return err
 			},
 			wantErr: ErrMissingPDFReadSeeker,
@@ -608,7 +608,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "viewer preferences file missing input",
 			fn: func() error {
-				_, err := ViewerPreferencesFile("", false, nil)
+				_, err := ViewerPreferencesFile(t.Context(), "", false, nil)
 				return err
 			},
 			wantErr: ErrMissingPDFInput,
@@ -616,7 +616,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "list viewer preferences missing reader",
 			fn: func() error {
-				_, err := ListViewerPreferences(nil, false, nil)
+				_, err := ListViewerPreferences(t.Context(), nil, false, nil)
 				return err
 			},
 			wantErr: ErrMissingPDFReadSeeker,
@@ -624,7 +624,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "list viewer preferences JSON missing reader",
 			fn: func() error {
-				_, err := ListViewerPreferencesJSON(nil, false, nil)
+				_, err := ListViewerPreferencesJSON(t.Context(), nil, false, nil)
 				return err
 			},
 			wantErr: ErrMissingPDFReadSeeker,
@@ -632,7 +632,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "list viewer preferences file missing input",
 			fn: func() error {
-				_, err := ListViewerPreferencesFile("", false, false, nil)
+				_, err := ListViewerPreferencesFile(t.Context(), "", false, false, nil)
 				return err
 			},
 			wantErr: ErrMissingPDFInput,
@@ -640,140 +640,140 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "set viewer preferences missing reader",
 			fn: func() error {
-				return SetViewerPreferences(nil, io.Discard, model.ViewerPreferences{}, nil)
+				return SetViewerPreferences(t.Context(), nil, io.Discard, model.ViewerPreferences{}, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "set viewer preferences missing writer",
 			fn: func() error {
-				return SetViewerPreferences(bytes.NewReader(nil), nil, model.ViewerPreferences{}, nil)
+				return SetViewerPreferences(t.Context(), bytes.NewReader(nil), nil, model.ViewerPreferences{}, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "set viewer preferences invalid JSON",
 			fn: func() error {
-				return SetViewerPreferencesFromJSONBytes(bytes.NewReader(nil), io.Discard, []byte("{"), nil)
+				return SetViewerPreferencesFromJSONBytes(t.Context(), bytes.NewReader(nil), io.Discard, []byte("{"), nil)
 			},
 			wantErr: ErrInvalidJSON,
 		},
 		{
 			name: "set viewer preferences missing JSON reader",
 			fn: func() error {
-				return SetViewerPreferencesFromJSONReader(bytes.NewReader(nil), io.Discard, nil, nil)
+				return SetViewerPreferencesFromJSONReader(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 			},
 			wantErr: ErrMissingJSONReader,
 		},
 		{
 			name: "set viewer preferences file missing input",
 			fn: func() error {
-				return SetViewerPreferencesFile("", filepath.Join(t.TempDir(), "out.pdf"), model.ViewerPreferences{}, nil)
+				return SetViewerPreferencesFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), model.ViewerPreferences{}, nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "set viewer preferences JSON file missing JSON input",
 			fn: func() error {
-				return SetViewerPreferencesFileFromJSONFile("in.pdf", "", "", nil)
+				return SetViewerPreferencesFileFromJSONFile(t.Context(), "in.pdf", "", "", nil)
 			},
 			wantErr: ErrMissingJSONInput,
 		},
 		{
 			name: "reset viewer preferences missing reader",
 			fn: func() error {
-				return ResetViewerPreferences(nil, io.Discard, nil)
+				return ResetViewerPreferences(t.Context(), nil, io.Discard, nil)
 			},
 			wantErr: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "reset viewer preferences missing writer",
 			fn: func() error {
-				return ResetViewerPreferences(bytes.NewReader(nil), nil, nil)
+				return ResetViewerPreferences(t.Context(), bytes.NewReader(nil), nil, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "reset viewer preferences file missing input",
 			fn: func() error {
-				return ResetViewerPreferencesFile("", filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return ResetViewerPreferencesFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			wantErr: ErrMissingPDFInput,
 		},
 		{
 			name: "validate context missing context",
 			fn: func() error {
-				return ValidateContext(nil)
+				return ValidateContext(t.Context(), nil)
 			},
 			wantErr: ErrMissingPDFContext,
 		},
 		{
 			name: "validate context missing xref table",
 			fn: func() error {
-				return ValidateContext(&model.Context{})
+				return ValidateContext(t.Context(), &model.Context{})
 			},
 			wantErr: ErrMissingXRefTable,
 		},
 		{
 			name: "optimize context missing context",
 			fn: func() error {
-				return OptimizeContext(nil)
+				return OptimizeContext(t.Context(), nil)
 			},
 			wantErr: ErrMissingPDFContext,
 		},
 		{
 			name: "write context missing context",
 			fn: func() error {
-				return WriteContext(nil, io.Discard)
+				return WriteContext(t.Context(), nil, io.Discard)
 			},
 			wantErr: ErrMissingPDFContext,
 		},
 		{
 			name: "write context missing writer",
 			fn: func() error {
-				return WriteContext(&model.Context{}, nil)
+				return WriteContext(t.Context(), &model.Context{}, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "write increment missing context",
 			fn: func() error {
-				return WriteIncrement(nil, io.Discard)
+				return WriteIncrement(t.Context(), nil, io.Discard)
 			},
 			wantErr: ErrMissingPDFContext,
 		},
 		{
 			name: "write increment missing writer",
 			fn: func() error {
-				return WriteIncrement(&model.Context{}, nil)
+				return WriteIncrement(t.Context(), &model.Context{}, nil)
 			},
 			wantErr: ErrMissingPDFWriter,
 		},
 		{
 			name: "write missing context",
 			fn: func() error {
-				return Write(nil, io.Discard, nil)
+				return Write(t.Context(), nil, io.Discard, nil)
 			},
 			wantErr: ErrMissingPDFContext,
 		},
 		{
 			name: "write incr missing read write seeker",
 			fn: func() error {
-				return WriteIncr(&model.Context{}, nil, model.NewDefaultConfiguration())
+				return WriteIncr(t.Context(), &model.Context{}, nil, model.NewDefaultConfiguration())
 			},
 			wantErr: ErrMissingPDFReadWriteSeeker,
 		},
 		{
 			name: "write incr missing configuration",
 			fn: func() error {
-				return WriteIncr(&model.Context{}, nopReadWriteSeeker{bytes.NewReader(nil)}, nil)
+				return WriteIncr(t.Context(), &model.Context{}, nopReadWriteSeeker{bytes.NewReader(nil)}, nil)
 			},
 			wantErr: ErrMissingConfiguration,
 		},
 		{
 			name: "extract page missing context",
 			fn: func() error {
-				_, err := ExtractPage(nil, 1)
+				_, err := ExtractPage(t.Context(), nil, 1)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -781,7 +781,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 		{
 			name: "watermark context missing context",
 			fn: func() error {
-				return WatermarkContext(nil, nil, nil)
+				return WatermarkContext(t.Context(), nil, nil, nil)
 			},
 			wantErr: ErrMissingPDFContext,
 		},
@@ -806,7 +806,7 @@ func TestAPIArgumentErrors(t *testing.T) {
 // TestBookletFileRejectsMissingOutput verifies the corresponding behavior.
 func TestBookletFileRejectsMissingOutput(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	err := BookletFile([]string{inFile}, "", nil, DefaultBookletConfig(), nil)
+	err := BookletFile(t.Context(), []string{inFile}, "", nil, DefaultBookletConfig(), nil)
 	if !errors.Is(err, ErrMissingPDFOutput) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFOutput, err)
 	}
@@ -824,7 +824,7 @@ func TestWriteIncrementReturnsFlushError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = WriteIncrement(ctx, failingWriter{err: wantErr})
+	err = WriteIncrement(t.Context(), ctx, failingWriter{err: wantErr})
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -834,7 +834,7 @@ func TestWriteIncrementReturnsFlushError(t *testing.T) {
 func TestExtractPageErrorsIncludePhaseContext(t *testing.T) {
 	ctx := &model.Context{XRefTable: &model.XRefTable{PageCount: 1}}
 
-	_, err := ExtractPage(ctx, 1)
+	_, err := ExtractPage(t.Context(), ctx, 1)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -848,14 +848,14 @@ func TestExtractPageErrorsIncludePhaseContext(t *testing.T) {
 
 // TestValidateAPIMissingReaderError verifies the corresponding behavior.
 func TestValidateAPIMissingReaderError(t *testing.T) {
-	if err := Validate(nil, nil); !errors.Is(err, ErrMissingPDFReadSeeker) {
+	if err := Validate(t.Context(), nil, nil, nil); !errors.Is(err, ErrMissingPDFReadSeeker) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFReadSeeker, err)
 	}
 }
 
 // TestReadContextMissingReaderError verifies the corresponding behavior.
 func TestReadContextMissingReaderError(t *testing.T) {
-	_, err := ReadContext(nil, nil)
+	_, err := ReadContext(t.Context(), nil, nil)
 	if !errors.Is(err, ErrMissingPDFReadSeeker) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFReadSeeker, err)
 	}
@@ -863,7 +863,7 @@ func TestReadContextMissingReaderError(t *testing.T) {
 
 // TestReadAndValidateMissingReaderError verifies the corresponding behavior.
 func TestReadAndValidateMissingReaderError(t *testing.T) {
-	_, err := ReadAndValidate(nil, nil)
+	_, err := ReadAndValidate(t.Context(), nil, nil)
 	if !errors.Is(err, ErrMissingPDFReadSeeker) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFReadSeeker, err)
 	}
@@ -871,7 +871,7 @@ func TestReadAndValidateMissingReaderError(t *testing.T) {
 
 // TestValidateAPIReadErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestValidateAPIReadErrorsIncludePhaseContext(t *testing.T) {
-	err := Validate(bytes.NewReader(nil), nil)
+	err := Validate(t.Context(), bytes.NewReader(nil), nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -885,7 +885,7 @@ func TestValidateAPIReadErrorsIncludePhaseContext(t *testing.T) {
 
 // TestReadAndValidateReadErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestReadAndValidateReadErrorsIncludePhaseContext(t *testing.T) {
-	_, err := ReadAndValidate(bytes.NewReader(nil), nil)
+	_, err := ReadAndValidate(t.Context(), bytes.NewReader(nil), nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -913,7 +913,7 @@ func TestReadAndValidateValidationErrorsMatchValidateAPIContext(t *testing.T) {
 			conf := model.NewDefaultConfiguration()
 			conf.ValidationMode = tt.mode
 
-			_, err := ReadAndValidate(bytes.NewReader(invalidValidationTestPDF()), conf)
+			_, err := ReadAndValidate(t.Context(), bytes.NewReader(invalidValidationTestPDF()), conf)
 			if err == nil {
 				t.Fatal("expected validation error")
 			}
@@ -941,7 +941,7 @@ func TestReadAndValidateValidationErrorsMatchValidateAPIContext(t *testing.T) {
 }
 
 func TestValidateUsesTypedValidationObjectAttribution(t *testing.T) {
-	err := Validate(bytes.NewReader(attributedValidationTestPDF()), nil)
+	err := Validate(t.Context(), bytes.NewReader(attributedValidationTestPDF()), nil, nil)
 	if err == nil {
 		t.Fatal("expected validation error")
 	}
@@ -963,7 +963,7 @@ func TestValidateUsesTypedValidationObjectAttribution(t *testing.T) {
 
 // TestReadContextEmptyInputPreservesPdfcpuSentinel verifies the corresponding behavior.
 func TestReadContextEmptyInputPreservesPdfcpuSentinel(t *testing.T) {
-	_, err := ReadContext(bytes.NewReader(nil), nil)
+	_, err := ReadContext(t.Context(), bytes.NewReader(nil), nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -971,7 +971,7 @@ func TestReadContextEmptyInputPreservesPdfcpuSentinel(t *testing.T) {
 
 // TestCreateImportJSONErrorIncludesPhaseContext verifies the corresponding behavior.
 func TestCreateImportJSONErrorIncludesPhaseContext(t *testing.T) {
-	err := Create(nil, strings.NewReader("{"), io.Discard, nil)
+	err := Create(t.Context(), nil, strings.NewReader("{"), io.Discard, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -994,7 +994,7 @@ func TestCreateRenderErrorShowsWrappedUserChain(t *testing.T) {
 		}
 	}`
 
-	err := Create(nil, strings.NewReader(input), io.Discard, nil)
+	err := Create(t.Context(), nil, strings.NewReader(input), io.Discard, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -1018,7 +1018,7 @@ func TestCreateRenderErrorShowsWrappedUserChain(t *testing.T) {
 
 // TestCreateFileMissingJSONPreservesNotExist verifies the corresponding behavior.
 func TestCreateFileMissingJSONPreservesNotExist(t *testing.T) {
-	err := CreateFile("", "missing.json", filepath.Join(t.TempDir(), "out.pdf"), nil)
+	err := CreateFile(t.Context(), "", "missing.json", filepath.Join(t.TempDir(), "out.pdf"), nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -1036,7 +1036,7 @@ func TestCreateFileMissingSourceWithoutOutputReportsInput(t *testing.T) {
 	}
 	inFile := filepath.Join(dir, "missing.pdf")
 
-	err := CreateFile(inFile, jsonFile, "", nil)
+	err := CreateFile(t.Context(), inFile, jsonFile, "", nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -1058,7 +1058,7 @@ func TestCreateFileMissingSourceWithOutputDoesNotCreateOutput(t *testing.T) {
 	inFile := filepath.Join(dir, "missing.pdf")
 	outFile := filepath.Join(dir, "out.pdf")
 
-	err := CreateFile(inFile, jsonFile, outFile, nil)
+	err := CreateFile(t.Context(), inFile, jsonFile, outFile, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -1078,7 +1078,7 @@ func TestCreateFileRemovesOutputOnFailure(t *testing.T) {
 	}
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	err := CreateFile("", jsonFile, outFile, nil)
+	err := CreateFile(t.Context(), "", jsonFile, outFile, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -1117,46 +1117,49 @@ func TestReadValidateAndOptimizeCallersAddPrepareContextOnce(t *testing.T) {
 		op   string
 	}{
 		{name: "optimize", fn: func() error {
-			return Optimize(bytes.NewReader(nil), io.Discard, nil)
+			return Optimize(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 		}, op: "optimize"},
 		{name: "trim", fn: func() error {
-			return Trim(bytes.NewReader(nil), io.Discard, nil, nil)
+			return Trim(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 		}, op: "trim"},
 		{name: "create", fn: func() error {
-			return Create(bytes.NewReader(nil), strings.NewReader(`{}`), io.Discard, nil)
+			return Create(t.Context(), bytes.NewReader(nil), strings.NewReader(`{}`), io.Discard, nil)
 		}, op: "create"},
 		{name: "list annotations", fn: func() error {
-			_, err := Annotations(bytes.NewReader(nil), nil, nil)
+			_, err := Annotations(t.Context(), bytes.NewReader(nil), nil, nil)
 			return err
 		}, op: "list annotations"},
 		{name: "add annotations", fn: func() error {
-			return AddAnnotations(bytes.NewReader(nil), io.Discard, nil, ann, nil)
+			return AddAnnotations(t.Context(), bytes.NewReader(nil), io.Discard, nil, ann, nil)
 		}, op: "add annotations"},
 		{name: "add annotation map", fn: func() error {
-			return AddAnnotationsMap(bytes.NewReader(nil), io.Discard, map[int][]model.AnnotationRenderer{1: {ann}}, nil)
+			return AddAnnotationsMap(t.Context(), bytes.NewReader(nil), io.Discard, map[int][]model.AnnotationRenderer{1: {ann}}, nil)
 		}, op: "add annotations"},
 		{name: "remove annotations", fn: func() error {
-			return RemoveAnnotations(bytes.NewReader(nil), io.Discard, nil, nil, nil, nil)
+			return RemoveAnnotations(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nil, nil)
 		}, op: "remove annotations"},
 		{name: "bookmarks", fn: func() error {
-			_, err := Bookmarks(bytes.NewReader(nil), nil)
+			_, err := Bookmarks(t.Context(), bytes.NewReader(nil), nil)
 			return err
 		}, op: "list bookmarks"},
 		{name: "list bookmarks", fn: func() error {
-			_, err := ListBookmarks(bytes.NewReader(nil), nil)
+			_, err := ListBookmarks(t.Context(), bytes.NewReader(nil), nil)
 			return err
 		}, op: "list bookmarks"},
 		{name: "export bookmarks", fn: func() error {
-			return ExportBookmarksJSON(bytes.NewReader(nil), io.Discard, "source.pdf", nil)
+			return ExportBookmarksJSON(t.Context(), bytes.NewReader(nil), io.Discard, "source.pdf", nil)
 		}, op: "export bookmarks"},
 		{name: "import bookmarks", fn: func() error {
-			return ImportBookmarks(bytes.NewReader(nil), strings.NewReader(`{}`), io.Discard, false, nil)
+			return ImportBookmarks(t.Context(), bytes.NewReader(nil), strings.NewReader(`{}`), io.Discard, false, nil)
 		}, op: "import bookmarks"},
 		{name: "add bookmarks", fn: func() error {
-			return AddBookmarks(bytes.NewReader(nil), io.Discard, []pdfcpu.Bookmark{{Title: "test", PageFrom: 1}}, false, nil)
+			return AddBookmarks(
+				t.Context(), bytes.NewReader(nil), io.Discard,
+				[]pdfcpu.Bookmark{{Title: "test", PageFrom: 1}}, false, nil,
+			)
 		}, op: "add bookmarks"},
 		{name: "remove bookmarks", fn: func() error {
-			return RemoveBookmarks(bytes.NewReader(nil), io.Discard, nil)
+			return RemoveBookmarks(t.Context(), bytes.NewReader(nil), io.Discard, nil)
 		}, op: "remove bookmarks"},
 	}
 
@@ -1223,7 +1226,7 @@ func TestAnnotationReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "list",
 			fn: func() error {
-				_, err := Annotations(bytes.NewReader(nil), nil, nil)
+				_, err := Annotations(t.Context(), bytes.NewReader(nil), nil, nil)
 				return err
 			},
 			want: "list annotations: prepare PDF context",
@@ -1231,42 +1234,42 @@ func TestAnnotationReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "add",
 			fn: func() error {
-				return AddAnnotations(bytes.NewReader(nil), io.Discard, nil, ann, nil)
+				return AddAnnotations(t.Context(), bytes.NewReader(nil), io.Discard, nil, ann, nil)
 			},
 			want: "add annotations: prepare PDF context",
 		},
 		{
 			name: "add map",
 			fn: func() error {
-				return AddAnnotationsMap(bytes.NewReader(nil), io.Discard, annMap, nil)
+				return AddAnnotationsMap(t.Context(), bytes.NewReader(nil), io.Discard, annMap, nil)
 			},
 			want: "add annotations: prepare PDF context",
 		},
 		{
 			name: "remove",
 			fn: func() error {
-				return RemoveAnnotations(bytes.NewReader(nil), io.Discard, nil, nil, nil, nil)
+				return RemoveAnnotations(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nil, nil)
 			},
 			want: "remove annotations: prepare PDF context",
 		},
 		{
 			name: "add increment",
 			fn: func() error {
-				return AddAnnotationsAsIncrement(nopReadWriteSeeker{bytes.NewReader(nil)}, nil, ann, nil)
+				return AddAnnotationsAsIncrement(t.Context(), nopReadWriteSeeker{bytes.NewReader(nil)}, nil, ann, nil)
 			},
 			want: "add annotations: prepare PDF context",
 		},
 		{
 			name: "add map increment",
 			fn: func() error {
-				return AddAnnotationsMapAsIncrement(nopReadWriteSeeker{bytes.NewReader(nil)}, annMap, nil)
+				return AddAnnotationsMapAsIncrement(t.Context(), nopReadWriteSeeker{bytes.NewReader(nil)}, annMap, nil)
 			},
 			want: "add annotations: prepare PDF context",
 		},
 		{
 			name: "remove increment",
 			fn: func() error {
-				return RemoveAnnotationsAsIncrement(nopReadWriteSeeker{bytes.NewReader(nil)}, nil, nil, nil, nil)
+				return RemoveAnnotationsAsIncrement(t.Context(), nopReadWriteSeeker{bytes.NewReader(nil)}, nil, nil, nil, nil)
 			},
 			want: "remove annotations: prepare PDF context",
 		},
@@ -1301,7 +1304,7 @@ func TestAnnotationPageSelectionErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "list",
 			fn: func() error {
-				_, err := Annotations(openAPITestPDF(t, inFile), []string{"foo"}, nil)
+				_, err := Annotations(t.Context(), openAPITestPDF(t, inFile), []string{"foo"}, nil)
 				return err
 			},
 			want: "list annotations: parse page selection",
@@ -1309,28 +1312,28 @@ func TestAnnotationPageSelectionErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "add",
 			fn: func() error {
-				return AddAnnotations(openAPITestPDF(t, inFile), io.Discard, []string{"foo"}, ann, nil)
+				return AddAnnotations(t.Context(), openAPITestPDF(t, inFile), io.Discard, []string{"foo"}, ann, nil)
 			},
 			want: "add annotations: parse page selection",
 		},
 		{
 			name: "remove",
 			fn: func() error {
-				return RemoveAnnotations(openAPITestPDF(t, inFile), io.Discard, []string{"foo"}, nil, nil, nil)
+				return RemoveAnnotations(t.Context(), openAPITestPDF(t, inFile), io.Discard, []string{"foo"}, nil, nil, nil)
 			},
 			want: "remove annotations: parse page selection",
 		},
 		{
 			name: "add increment",
 			fn: func() error {
-				return AddAnnotationsAsIncrement(nopWriteAPITestPDF(t, inFile), []string{"foo"}, ann, nil)
+				return AddAnnotationsAsIncrement(t.Context(), nopWriteAPITestPDF(t, inFile), []string{"foo"}, ann, nil)
 			},
 			want: "add annotations: parse page selection",
 		},
 		{
 			name: "remove increment",
 			fn: func() error {
-				return RemoveAnnotationsAsIncrement(nopWriteAPITestPDF(t, inFile), []string{"foo"}, nil, nil, nil)
+				return RemoveAnnotationsAsIncrement(t.Context(), nopWriteAPITestPDF(t, inFile), []string{"foo"}, nil, nil, nil)
 			},
 			want: "remove annotations: parse page selection",
 		},
@@ -1366,7 +1369,7 @@ func TestAnnotationWriteErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "add",
 			fn: func(wantErr error) error {
-				return AddAnnotations(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, []string{"1"}, ann, nil)
+				return AddAnnotations(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, []string{"1"}, ann, nil)
 			},
 			want: "add annotations: write output",
 		},
@@ -1374,14 +1377,14 @@ func TestAnnotationWriteErrorsIncludePhaseContext(t *testing.T) {
 			name: "add map",
 			fn: func(wantErr error) error {
 				m := map[int][]model.AnnotationRenderer{1: {ann}}
-				return AddAnnotationsMap(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, m, nil)
+				return AddAnnotationsMap(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, m, nil)
 			},
 			want: "add annotations: write output",
 		},
 		{
 			name: "remove",
 			fn: func(wantErr error) error {
-				return RemoveAnnotations(openAPITestPDF(t, annotatedFile), failingWriter{err: wantErr}, nil, nil, nil, nil)
+				return RemoveAnnotations(t.Context(), openAPITestPDF(t, annotatedFile), failingWriter{err: wantErr}, nil, nil, nil, nil)
 			},
 			want: "remove annotations: write output",
 		},
@@ -1417,7 +1420,7 @@ func TestAnnotationIncrementWriteErrorsIncludePhaseContext(t *testing.T) {
 			name:  "add",
 			input: inFile,
 			fn: func(rws io.ReadWriteSeeker) error {
-				return AddAnnotationsAsIncrement(rws, []string{"1"}, ann, nil)
+				return AddAnnotationsAsIncrement(t.Context(), rws, []string{"1"}, ann, nil)
 			},
 			want: "add annotations: write increment",
 		},
@@ -1426,7 +1429,7 @@ func TestAnnotationIncrementWriteErrorsIncludePhaseContext(t *testing.T) {
 			input: inFile,
 			fn: func(rws io.ReadWriteSeeker) error {
 				m := map[int][]model.AnnotationRenderer{1: {ann}}
-				return AddAnnotationsMapAsIncrement(rws, m, nil)
+				return AddAnnotationsMapAsIncrement(t.Context(), rws, m, nil)
 			},
 			want: "add annotations: write increment",
 		},
@@ -1434,7 +1437,7 @@ func TestAnnotationIncrementWriteErrorsIncludePhaseContext(t *testing.T) {
 			name:  "remove",
 			input: annotatedFile,
 			fn: func(rws io.ReadWriteSeeker) error {
-				return RemoveAnnotationsAsIncrement(rws, nil, nil, nil, nil)
+				return RemoveAnnotationsAsIncrement(t.Context(), rws, nil, nil, nil, nil)
 			},
 			want: "remove annotations: write increment",
 		},
@@ -1468,42 +1471,42 @@ func TestAnnotationFileErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "add open input",
 			fn: func() error {
-				return AddAnnotationsFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil, ann, nil, false)
+				return AddAnnotationsFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil, ann, nil, false)
 			},
 			want: "add annotations: open input missing.pdf",
 		},
 		{
 			name: "add create output",
 			fn: func() error {
-				return AddAnnotationsFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil, ann, nil, false)
+				return AddAnnotationsFile(t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil, ann, nil, false)
 			},
 			want: "add annotations: create output",
 		},
 		{
 			name: "add map open input",
 			fn: func() error {
-				return AddAnnotationsMapFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), annMap, nil, false)
+				return AddAnnotationsMapFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), annMap, nil, false)
 			},
 			want: "add annotations: open input missing.pdf",
 		},
 		{
 			name: "add map create output",
 			fn: func() error {
-				return AddAnnotationsMapFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), annMap, nil, false)
+				return AddAnnotationsMapFile(t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), annMap, nil, false)
 			},
 			want: "add annotations: create output",
 		},
 		{
 			name: "remove open input",
 			fn: func() error {
-				return RemoveAnnotationsFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil, nil, nil, nil, false)
+				return RemoveAnnotationsFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil, nil, nil, nil, false)
 			},
 			want: "remove annotations: open input missing.pdf",
 		},
 		{
 			name: "remove create output",
 			fn: func() error {
-				return RemoveAnnotationsFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil, nil, nil, nil, false)
+				return RemoveAnnotationsFile(t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil, nil, nil, nil, false)
 			},
 			want: "remove annotations: create output",
 		},
@@ -1616,7 +1619,7 @@ func TestPageLayoutFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "page layout open input",
 			fn: func() error {
-				_, err := PageLayoutFile("missing.pdf", nil)
+				_, err := PageLayoutFile(t.Context(), "missing.pdf", nil)
 				return err
 			},
 			want: "list page layout: open input missing.pdf",
@@ -1624,7 +1627,7 @@ func TestPageLayoutFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "list page layout open input",
 			fn: func() error {
-				_, err := ListPageLayoutFile("missing.pdf", nil)
+				_, err := ListPageLayoutFile(t.Context(), "missing.pdf", nil)
 				return err
 			},
 			want: "list page layout: open input missing.pdf",
@@ -1632,28 +1635,28 @@ func TestPageLayoutFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "set page layout open input",
 			fn: func() error {
-				return SetPageLayoutFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), model.PageLayoutSinglePage, nil)
+				return SetPageLayoutFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), model.PageLayoutSinglePage, nil)
 			},
 			want: "set page layout: open input missing.pdf",
 		},
 		{
 			name: "set page layout create output",
 			fn: func() error {
-				return SetPageLayoutFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), model.PageLayoutSinglePage, nil)
+				return SetPageLayoutFile(t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), model.PageLayoutSinglePage, nil)
 			},
 			want: "set page layout: create output",
 		},
 		{
 			name: "reset page layout open input",
 			fn: func() error {
-				return ResetPageLayoutFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return ResetPageLayoutFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			want: "reset page layout: open input missing.pdf",
 		},
 		{
 			name: "reset page layout create output",
 			fn: func() error {
-				return ResetPageLayoutFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil)
+				return ResetPageLayoutFile(t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil)
 			},
 			want: "reset page layout: create output",
 		},
@@ -1765,7 +1768,7 @@ func TestPageLayoutReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "page layout",
 			fn: func() error {
-				_, err := PageLayout(bytes.NewReader(nil), nil)
+				_, err := PageLayout(t.Context(), bytes.NewReader(nil), nil)
 				return err
 			},
 			want: "list page layout: prepare PDF context",
@@ -1773,7 +1776,7 @@ func TestPageLayoutReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "list page layout",
 			fn: func() error {
-				_, err := ListPageLayout(bytes.NewReader(nil), nil)
+				_, err := ListPageLayout(t.Context(), bytes.NewReader(nil), nil)
 				return err
 			},
 			want: "list page layout: prepare PDF context",
@@ -1781,14 +1784,14 @@ func TestPageLayoutReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "set page layout",
 			fn: func() error {
-				return SetPageLayout(bytes.NewReader(nil), io.Discard, model.PageLayoutSinglePage, nil)
+				return SetPageLayout(t.Context(), bytes.NewReader(nil), io.Discard, model.PageLayoutSinglePage, nil)
 			},
 			want: "set page layout: prepare PDF context",
 		},
 		{
 			name: "reset page layout",
 			fn: func() error {
-				return ResetPageLayout(bytes.NewReader(nil), io.Discard, nil)
+				return ResetPageLayout(t.Context(), bytes.NewReader(nil), io.Discard, nil)
 			},
 			want: "reset page layout: prepare PDF context",
 		},
@@ -1821,14 +1824,14 @@ func TestPageLayoutWriteErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "set page layout",
 			fn: func(wantErr error) error {
-				return SetPageLayout(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, model.PageLayoutTwoColumnLeft, nil)
+				return SetPageLayout(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, model.PageLayoutTwoColumnLeft, nil)
 			},
 			want: "set page layout: write output",
 		},
 		{
 			name: "reset page layout",
 			fn: func(wantErr error) error {
-				return ResetPageLayout(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
+				return ResetPageLayout(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
 			},
 			want: "reset page layout: write output",
 		},
@@ -1851,7 +1854,7 @@ func TestPageLayoutWriteErrorsIncludePhaseContext(t *testing.T) {
 // TestResetPageLayoutWithoutPageLayoutStillWrites verifies the corresponding behavior.
 func TestResetPageLayoutWithoutPageLayoutStillWrites(t *testing.T) {
 	inFile := filepath.Join("..", "testdata", "test.pdf")
-	pl, err := PageLayout(openAPITestPDF(t, inFile), nil)
+	pl, err := PageLayout(t.Context(), openAPITestPDF(t, inFile), nil)
 	if err != nil {
 		t.Fatalf("read page layout: %v", err)
 	}
@@ -1860,7 +1863,7 @@ func TestResetPageLayoutWithoutPageLayoutStillWrites(t *testing.T) {
 	}
 
 	wantErr := errors.New("write attempted")
-	err = ResetPageLayout(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
+	err = ResetPageLayout(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected write error %v, got %v", wantErr, err)
 	}
@@ -1881,7 +1884,7 @@ func TestResetPageLayoutFileWithoutPageLayoutStillWrites(t *testing.T) {
 	if err := os.WriteFile(inFile, bb, 0600); err != nil {
 		t.Fatal(err)
 	}
-	pl, err := PageLayoutFile(inFile, nil)
+	pl, err := PageLayoutFile(t.Context(), inFile, nil)
 	if err != nil {
 		t.Fatalf("read page layout: %v", err)
 	}
@@ -1890,7 +1893,7 @@ func TestResetPageLayoutFileWithoutPageLayoutStillWrites(t *testing.T) {
 	}
 
 	outFile := filepath.Join(dir, "out.pdf")
-	if err := ResetPageLayoutFile(inFile, outFile, nil); err != nil {
+	if err := ResetPageLayoutFile(t.Context(), inFile, outFile, nil); err != nil {
 		t.Fatalf("reset page layout: %v", err)
 	}
 	info, err := os.Stat(outFile)
@@ -1900,7 +1903,7 @@ func TestResetPageLayoutFileWithoutPageLayoutStillWrites(t *testing.T) {
 	if info.Size() == 0 {
 		t.Fatal("expected non-empty reset output")
 	}
-	pl, err = PageLayoutFile(outFile, nil)
+	pl, err = PageLayoutFile(t.Context(), outFile, nil)
 	if err != nil {
 		t.Fatalf("read reset output page layout: %v", err)
 	}
@@ -1917,7 +1920,7 @@ func TestPageLayoutFileRemovesOutputOnFailure(t *testing.T) {
 	}
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	err := SetPageLayoutFile(inFile, outFile, model.PageLayoutSinglePage, nil)
+	err := SetPageLayoutFile(t.Context(), inFile, outFile, model.PageLayoutSinglePage, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -1939,13 +1942,13 @@ func TestContentFileFailuresPreserveExistingOutput(t *testing.T) {
 		run     func(string) error
 	}{
 		{name: "page layout", wantErr: pdfcpu.ErrEmptyInput, run: func(outFile string) error {
-			return SetPageLayoutFile(badInput, outFile, model.PageLayoutSinglePage, nil)
+			return SetPageLayoutFile(t.Context(), badInput, outFile, model.PageLayoutSinglePage, nil)
 		}},
 		{name: "page mode", wantErr: pdfcpu.ErrEmptyInput, run: func(outFile string) error {
-			return SetPageModeFile(badInput, outFile, model.PageModeUseNone, nil)
+			return SetPageModeFile(t.Context(), badInput, outFile, model.PageModeUseNone, nil)
 		}},
 		{name: "viewer preferences", wantErr: ErrInvalidJSON, run: func(outFile string) error {
-			return SetViewerPreferencesFileFromJSONBytes(validInput, outFile, []byte("{"), nil)
+			return SetViewerPreferencesFileFromJSONBytes(t.Context(), validInput, outFile, []byte("{"), nil)
 		}},
 	}
 
@@ -1981,7 +1984,7 @@ func TestPageModeFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "page mode open input",
 			fn: func() error {
-				_, err := PageModeFile("missing.pdf", nil)
+				_, err := PageModeFile(t.Context(), "missing.pdf", nil)
 				return err
 			},
 			want: "list page mode: open input missing.pdf",
@@ -1989,7 +1992,7 @@ func TestPageModeFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "list page mode open input",
 			fn: func() error {
-				_, err := ListPageModeFile("missing.pdf", nil)
+				_, err := ListPageModeFile(t.Context(), "missing.pdf", nil)
 				return err
 			},
 			want: "list page mode: open input missing.pdf",
@@ -1997,28 +2000,28 @@ func TestPageModeFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "set page mode open input",
 			fn: func() error {
-				return SetPageModeFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), model.PageModeUseNone, nil)
+				return SetPageModeFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), model.PageModeUseNone, nil)
 			},
 			want: "set page mode: open input missing.pdf",
 		},
 		{
 			name: "set page mode create output",
 			fn: func() error {
-				return SetPageModeFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), model.PageModeUseNone, nil)
+				return SetPageModeFile(t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), model.PageModeUseNone, nil)
 			},
 			want: "set page mode: create output",
 		},
 		{
 			name: "reset page mode open input",
 			fn: func() error {
-				return ResetPageModeFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return ResetPageModeFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			want: "reset page mode: open input missing.pdf",
 		},
 		{
 			name: "reset page mode create output",
 			fn: func() error {
-				return ResetPageModeFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil)
+				return ResetPageModeFile(t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil)
 			},
 			want: "reset page mode: create output",
 		},
@@ -2130,7 +2133,7 @@ func TestPageModeReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "page mode",
 			fn: func() error {
-				_, err := PageMode(bytes.NewReader(nil), nil)
+				_, err := PageMode(t.Context(), bytes.NewReader(nil), nil)
 				return err
 			},
 			want: "list page mode: prepare PDF context",
@@ -2138,7 +2141,7 @@ func TestPageModeReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "list page mode",
 			fn: func() error {
-				_, err := ListPageMode(bytes.NewReader(nil), nil)
+				_, err := ListPageMode(t.Context(), bytes.NewReader(nil), nil)
 				return err
 			},
 			want: "list page mode: prepare PDF context",
@@ -2146,14 +2149,14 @@ func TestPageModeReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "set page mode",
 			fn: func() error {
-				return SetPageMode(bytes.NewReader(nil), io.Discard, model.PageModeUseNone, nil)
+				return SetPageMode(t.Context(), bytes.NewReader(nil), io.Discard, model.PageModeUseNone, nil)
 			},
 			want: "set page mode: prepare PDF context",
 		},
 		{
 			name: "reset page mode",
 			fn: func() error {
-				return ResetPageMode(bytes.NewReader(nil), io.Discard, nil)
+				return ResetPageMode(t.Context(), bytes.NewReader(nil), io.Discard, nil)
 			},
 			want: "reset page mode: prepare PDF context",
 		},
@@ -2186,14 +2189,14 @@ func TestPageModeWriteErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "set page mode",
 			fn: func(wantErr error) error {
-				return SetPageMode(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, model.PageModeUseOutlines, nil)
+				return SetPageMode(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, model.PageModeUseOutlines, nil)
 			},
 			want: "set page mode: write output",
 		},
 		{
 			name: "reset page mode",
 			fn: func(wantErr error) error {
-				return ResetPageMode(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
+				return ResetPageMode(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
 			},
 			want: "reset page mode: write output",
 		},
@@ -2216,7 +2219,7 @@ func TestPageModeWriteErrorsIncludePhaseContext(t *testing.T) {
 // TestResetPageModeWithoutPageModeStillWrites verifies the corresponding behavior.
 func TestResetPageModeWithoutPageModeStillWrites(t *testing.T) {
 	inFile := filepath.Join("..", "testdata", "test.pdf")
-	pm, err := PageMode(openAPITestPDF(t, inFile), nil)
+	pm, err := PageMode(t.Context(), openAPITestPDF(t, inFile), nil)
 	if err != nil {
 		t.Fatalf("read page mode: %v", err)
 	}
@@ -2225,7 +2228,7 @@ func TestResetPageModeWithoutPageModeStillWrites(t *testing.T) {
 	}
 
 	wantErr := errors.New("write attempted")
-	err = ResetPageMode(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
+	err = ResetPageMode(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected write error %v, got %v", wantErr, err)
 	}
@@ -2246,7 +2249,7 @@ func TestResetPageModeFileWithoutPageModeStillWrites(t *testing.T) {
 	if err := os.WriteFile(inFile, bb, 0600); err != nil {
 		t.Fatal(err)
 	}
-	pm, err := PageModeFile(inFile, nil)
+	pm, err := PageModeFile(t.Context(), inFile, nil)
 	if err != nil {
 		t.Fatalf("read page mode: %v", err)
 	}
@@ -2255,7 +2258,7 @@ func TestResetPageModeFileWithoutPageModeStillWrites(t *testing.T) {
 	}
 
 	outFile := filepath.Join(dir, "out.pdf")
-	if err := ResetPageModeFile(inFile, outFile, nil); err != nil {
+	if err := ResetPageModeFile(t.Context(), inFile, outFile, nil); err != nil {
 		t.Fatalf("reset page mode: %v", err)
 	}
 	info, err := os.Stat(outFile)
@@ -2265,7 +2268,7 @@ func TestResetPageModeFileWithoutPageModeStillWrites(t *testing.T) {
 	if info.Size() == 0 {
 		t.Fatal("expected non-empty reset output")
 	}
-	pm, err = PageModeFile(outFile, nil)
+	pm, err = PageModeFile(t.Context(), outFile, nil)
 	if err != nil {
 		t.Fatalf("read reset output page mode: %v", err)
 	}
@@ -2282,7 +2285,7 @@ func TestPageModeFileRemovesOutputOnFailure(t *testing.T) {
 	}
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	err := SetPageModeFile(inFile, outFile, model.PageModeUseNone, nil)
+	err := SetPageModeFile(t.Context(), inFile, outFile, model.PageModeUseNone, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -2302,7 +2305,7 @@ func TestViewerPreferencesFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "viewer preferences open PDF",
 			fn: func() error {
-				_, err := ViewerPreferencesFile("missing.pdf", false, nil)
+				_, err := ViewerPreferencesFile(t.Context(), "missing.pdf", false, nil)
 				return err
 			},
 			want: "list viewer preferences: open input missing.pdf",
@@ -2310,7 +2313,7 @@ func TestViewerPreferencesFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "list open PDF",
 			fn: func() error {
-				_, err := ListViewerPreferencesFile("missing.pdf", false, false, nil)
+				_, err := ListViewerPreferencesFile(t.Context(), "missing.pdf", false, false, nil)
 				return err
 			},
 			want: "list viewer preferences: open input missing.pdf",
@@ -2318,7 +2321,7 @@ func TestViewerPreferencesFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "list JSON open PDF",
 			fn: func() error {
-				_, err := ListViewerPreferencesFile("missing.pdf", false, true, nil)
+				_, err := ListViewerPreferencesFile(t.Context(), "missing.pdf", false, true, nil)
 				return err
 			},
 			want: "list viewer preferences: open input missing.pdf",
@@ -2326,35 +2329,35 @@ func TestViewerPreferencesFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "set open PDF",
 			fn: func() error {
-				return SetViewerPreferencesFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), model.ViewerPreferences{}, nil)
+				return SetViewerPreferencesFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), model.ViewerPreferences{}, nil)
 			},
 			want: "set viewer preferences: open input missing.pdf",
 		},
 		{
 			name: "set create output",
 			fn: func() error {
-				return SetViewerPreferencesFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), model.ViewerPreferences{}, nil)
+				return SetViewerPreferencesFile(t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), model.ViewerPreferences{}, nil)
 			},
 			want: "set viewer preferences: create output",
 		},
 		{
 			name: "set read JSON",
 			fn: func() error {
-				return SetViewerPreferencesFileFromJSONFile(inFile, filepath.Join(t.TempDir(), "out.pdf"), "missing.json", nil)
+				return SetViewerPreferencesFileFromJSONFile(t.Context(), inFile, filepath.Join(t.TempDir(), "out.pdf"), "missing.json", nil)
 			},
 			want: "set viewer preferences: read JSON missing.json",
 		},
 		{
 			name: "reset open PDF",
 			fn: func() error {
-				return ResetViewerPreferencesFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return ResetViewerPreferencesFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			want: "reset viewer preferences: open input missing.pdf",
 		},
 		{
 			name: "reset create output",
 			fn: func() error {
-				return ResetViewerPreferencesFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil)
+				return ResetViewerPreferencesFile(t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil)
 			},
 			want: "reset viewer preferences: create output",
 		},
@@ -2466,7 +2469,7 @@ func TestViewerPreferencesReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "viewer preferences",
 			fn: func() error {
-				_, _, err := ViewerPreferences(bytes.NewReader(nil), nil)
+				_, _, err := ViewerPreferences(t.Context(), bytes.NewReader(nil), nil)
 				return err
 			},
 			want: "list viewer preferences: prepare PDF context",
@@ -2474,7 +2477,7 @@ func TestViewerPreferencesReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "list viewer preferences",
 			fn: func() error {
-				_, err := ListViewerPreferences(bytes.NewReader(nil), false, nil)
+				_, err := ListViewerPreferences(t.Context(), bytes.NewReader(nil), false, nil)
 				return err
 			},
 			want: "list viewer preferences: prepare PDF context",
@@ -2482,7 +2485,7 @@ func TestViewerPreferencesReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "list viewer preferences JSON",
 			fn: func() error {
-				_, err := ListViewerPreferencesJSON(bytes.NewReader(nil), false, nil)
+				_, err := ListViewerPreferencesJSON(t.Context(), bytes.NewReader(nil), false, nil)
 				return err
 			},
 			want: "list viewer preferences: prepare PDF context",
@@ -2490,14 +2493,14 @@ func TestViewerPreferencesReadErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "set viewer preferences",
 			fn: func() error {
-				return SetViewerPreferences(bytes.NewReader(nil), io.Discard, model.ViewerPreferences{}, nil)
+				return SetViewerPreferences(t.Context(), bytes.NewReader(nil), io.Discard, model.ViewerPreferences{}, nil)
 			},
 			want: "set viewer preferences: prepare PDF context",
 		},
 		{
 			name: "reset viewer preferences",
 			fn: func() error {
-				return ResetViewerPreferences(bytes.NewReader(nil), io.Discard, nil)
+				return ResetViewerPreferences(t.Context(), bytes.NewReader(nil), io.Discard, nil)
 			},
 			want: "reset viewer preferences: prepare PDF context",
 		},
@@ -2521,7 +2524,7 @@ func TestViewerPreferencesReadErrorsIncludePhaseContext(t *testing.T) {
 
 // TestViewerPreferencesJSONErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestViewerPreferencesJSONErrorsIncludePhaseContext(t *testing.T) {
-	err := SetViewerPreferencesFromJSONBytes(bytes.NewReader(nil), io.Discard, []byte("{"), nil)
+	err := SetViewerPreferencesFromJSONBytes(t.Context(), bytes.NewReader(nil), io.Discard, []byte("{"), nil)
 	if !errors.Is(err, ErrInvalidJSON) {
 		t.Fatalf("expected %v, got %v", ErrInvalidJSON, err)
 	}
@@ -2533,7 +2536,7 @@ func TestViewerPreferencesJSONErrorsIncludePhaseContext(t *testing.T) {
 		t.Fatalf("expected decode JSON context, got %q", err.Error())
 	}
 
-	err = SetViewerPreferencesFromJSONBytes(bytes.NewReader(nil), io.Discard, []byte(`{"HideMenubar":"yes"}`), nil)
+	err = SetViewerPreferencesFromJSONBytes(t.Context(), bytes.NewReader(nil), io.Discard, []byte(`{"HideMenubar":"yes"}`), nil)
 	if !errors.Is(err, ErrInvalidJSON) {
 		t.Fatalf("expected %v, got %v", ErrInvalidJSON, err)
 	}
@@ -2545,7 +2548,7 @@ func TestViewerPreferencesJSONErrorsIncludePhaseContext(t *testing.T) {
 		t.Fatalf("expected decode JSON context, got %q", err.Error())
 	}
 
-	err = SetViewerPreferencesFromJSONReader(bytes.NewReader(nil), io.Discard, nil, nil)
+	err = SetViewerPreferencesFromJSONReader(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 	if !errors.Is(err, ErrMissingJSONReader) {
 		t.Fatalf("expected %v, got %v", ErrMissingJSONReader, err)
 	}
@@ -2557,7 +2560,7 @@ func TestViewerPreferencesJSONErrorsIncludePhaseContext(t *testing.T) {
 // TestListViewerPreferencesJSONWithoutPreferencesReturnsValidJSON verifies the corresponding behavior.
 func TestListViewerPreferencesJSONWithoutPreferencesReturnsValidJSON(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	ss, err := ListViewerPreferencesJSON(openAPITestPDF(t, inFile), false, nil)
+	ss, err := ListViewerPreferencesJSON(t.Context(), openAPITestPDF(t, inFile), false, nil)
 	if err != nil {
 		t.Fatalf("list viewer preferences JSON: %v", err)
 	}
@@ -2587,7 +2590,7 @@ func TestViewerPreferencesWriteErrorsIncludePhaseContext(t *testing.T) {
 				inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 				vp := model.ViewerPreferences{}
 				vp.SetCenterWindow(true)
-				return SetViewerPreferences(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, vp, nil)
+				return SetViewerPreferences(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, vp, nil)
 			},
 			want: "set viewer preferences: write output",
 		},
@@ -2595,7 +2598,7 @@ func TestViewerPreferencesWriteErrorsIncludePhaseContext(t *testing.T) {
 			name: "reset viewer preferences",
 			fn: func(wantErr error) error {
 				inFile := filepath.Join("..", "testdata", "Hybrid-PDF.pdf")
-				return ResetViewerPreferences(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
+				return ResetViewerPreferences(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
 			},
 			want: "reset viewer preferences: write output",
 		},
@@ -2620,13 +2623,13 @@ func TestResetViewerPreferencesAbsentWritesPDF(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	var out bytes.Buffer
 
-	if err := ResetViewerPreferences(openAPITestPDF(t, inFile), &out, nil); err != nil {
+	if err := ResetViewerPreferences(t.Context(), openAPITestPDF(t, inFile), &out, nil); err != nil {
 		t.Fatalf("reset absent viewer preferences: %v", err)
 	}
 	if out.Len() == 0 {
 		t.Fatal("expected reset to write a PDF")
 	}
-	vp, _, err := ViewerPreferences(bytes.NewReader(out.Bytes()), nil)
+	vp, _, err := ViewerPreferences(t.Context(), bytes.NewReader(out.Bytes()), nil)
 	if err != nil {
 		t.Fatalf("read reset output: %v", err)
 	}
@@ -2648,15 +2651,15 @@ func TestResetViewerPreferencesFileAbsentWritesPDF(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := ResetViewerPreferencesFile(inFile, "", nil); err != nil {
+	if err := ResetViewerPreferencesFile(t.Context(), inFile, "", nil); err != nil {
 		t.Fatalf("reset viewer preferences: %v", err)
 	}
 
 	outFile := filepath.Join(dir, "out.pdf")
-	if err := ResetViewerPreferencesFile(inFile, outFile, nil); err != nil {
+	if err := ResetViewerPreferencesFile(t.Context(), inFile, outFile, nil); err != nil {
 		t.Fatalf("reset absent viewer preferences: %v", err)
 	}
-	vp, err := ViewerPreferencesFile(outFile, false, nil)
+	vp, err := ViewerPreferencesFile(t.Context(), outFile, false, nil)
 	if err != nil {
 		t.Fatalf("read reset output: %v", err)
 	}
@@ -2667,7 +2670,7 @@ func TestResetViewerPreferencesFileAbsentWritesPDF(t *testing.T) {
 
 // TestPDFInfoMissingReaderError verifies the corresponding behavior.
 func TestPDFInfoMissingReaderError(t *testing.T) {
-	_, err := PDFInfo(nil, "", nil, false, nil)
+	_, err := PDFInfo(t.Context(), nil, "", nil, false, nil)
 	if !errors.Is(err, ErrMissingPDFReadSeeker) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFReadSeeker, err)
 	}
@@ -2675,7 +2678,7 @@ func TestPDFInfoMissingReaderError(t *testing.T) {
 
 // TestPDFInfoReadErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestPDFInfoReadErrorsIncludePhaseContext(t *testing.T) {
-	_, err := PDFInfo(bytes.NewReader(nil), "", nil, false, nil)
+	_, err := PDFInfo(t.Context(), bytes.NewReader(nil), "", nil, false, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -2694,7 +2697,7 @@ func TestPDFInfoReadErrorsIncludePhaseContext(t *testing.T) {
 func TestPDFInfoPageSelectionErrorsIncludePhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 
-	_, err := PDFInfo(openAPITestPDF(t, inFile), inFile, []string{"foo"}, false, nil)
+	_, err := PDFInfo(t.Context(), openAPITestPDF(t, inFile), inFile, []string{"foo"}, false, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -2707,7 +2710,7 @@ func TestPDFInfoPageSelectionErrorsIncludePhaseContext(t *testing.T) {
 func TestPDFInfoSuccess(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 
-	info, err := PDFInfo(openAPITestPDF(t, inFile), inFile, nil, false, nil)
+	info, err := PDFInfo(t.Context(), openAPITestPDF(t, inFile), inFile, nil, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2718,7 +2721,7 @@ func TestPDFInfoSuccess(t *testing.T) {
 
 // TestCollectReadErrorsLetLowerPhaseContextSpeak verifies the corresponding behavior.
 func TestCollectReadErrorsLetLowerPhaseContextSpeak(t *testing.T) {
-	err := Collect(bytes.NewReader(nil), io.Discard, nil, nil)
+	err := Collect(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -2754,7 +2757,7 @@ func TestCollectPageSelectionErrorsIncludePhaseContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := Collect(openAPITestPDF(t, inFile), io.Discard, tt.selectedPages, nil)
+			err := Collect(t.Context(), openAPITestPDF(t, inFile), io.Discard, tt.selectedPages, nil)
 			if err == nil {
 				t.Fatal("expected error")
 			}
@@ -2778,7 +2781,7 @@ func TestCollectRejectsEmptyPageSelectionWithoutPanic(t *testing.T) {
 		}
 	}()
 
-	err := Collect(openAPITestPDF(t, inFile), io.Discard, []string{""}, nil)
+	err := Collect(t.Context(), openAPITestPDF(t, inFile), io.Discard, []string{""}, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -2792,7 +2795,7 @@ func TestCollectRejectsEmptyPageSelectionWithoutPanic(t *testing.T) {
 
 // TestCollectFileErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestCollectFileErrorsIncludePhaseContext(t *testing.T) {
-	err := CollectFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
+	err := CollectFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -2803,7 +2806,7 @@ func TestCollectFileErrorsIncludePhaseContext(t *testing.T) {
 
 // TestTrimReadErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestTrimReadErrorsIncludePhaseContext(t *testing.T) {
-	err := Trim(bytes.NewReader(nil), io.Discard, nil, nil)
+	err := Trim(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -2822,7 +2825,7 @@ func TestTrimReadErrorsIncludePhaseContext(t *testing.T) {
 func TestTrimPageSelectionErrorsIncludePhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 
-	err := Trim(openAPITestPDF(t, inFile), io.Discard, []string{"foo"}, nil)
+	err := Trim(t.Context(), openAPITestPDF(t, inFile), io.Discard, []string{"foo"}, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -2839,7 +2842,7 @@ func TestTrimWriteErrorIncludesPhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	wantErr := errors.New("trim write failed")
 
-	err := Trim(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, []string{"1"}, nil)
+	err := Trim(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, []string{"1"}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -2850,7 +2853,7 @@ func TestTrimWriteErrorIncludesPhaseContext(t *testing.T) {
 
 // TestTrimFileErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestTrimFileErrorsIncludePhaseContext(t *testing.T) {
-	err := TrimFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
+	err := TrimFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -2859,7 +2862,7 @@ func TestTrimFileErrorsIncludePhaseContext(t *testing.T) {
 	}
 
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	err = TrimFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil, nil)
+	err = TrimFile(t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -2933,7 +2936,7 @@ func TestOptimizeWriteErrorIncludesPhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	wantErr := errors.New("optimize write failed")
 
-	err := Optimize(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
+	err := Optimize(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -2944,7 +2947,7 @@ func TestOptimizeWriteErrorIncludesPhaseContext(t *testing.T) {
 
 // TestOptimizeReadErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestOptimizeReadErrorsIncludePhaseContext(t *testing.T) {
-	err := Optimize(bytes.NewReader(nil), io.Discard, nil)
+	err := Optimize(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -2978,7 +2981,7 @@ func TestPublicOptimizeContextErrorsIncludeLowerPhaseContext(t *testing.T) {
 	}
 	ctx.Conf.OptimizeResourceDicts = false
 
-	err = OptimizeContext(ctx)
+	err = OptimizeContext(t.Context(), ctx)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -2992,7 +2995,7 @@ func TestPublicOptimizeContextErrorsIncludeLowerPhaseContext(t *testing.T) {
 
 // TestOptimizeFileErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestOptimizeFileErrorsIncludePhaseContext(t *testing.T) {
-	err := OptimizeFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
+	err := OptimizeFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -3001,7 +3004,7 @@ func TestOptimizeFileErrorsIncludePhaseContext(t *testing.T) {
 	}
 
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	err = OptimizeFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil)
+	err = OptimizeFile(t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "out.pdf"), nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -3138,7 +3141,7 @@ func pdf20Reader(t *testing.T, elems ...string) io.ReadSeeker {
 
 // TestMergeErrorsIncludeSourceContext verifies the corresponding behavior.
 func TestMergeErrorsIncludeSourceContext(t *testing.T) {
-	err := appendTo(nil, "1", nil, false)
+	err := appendTo(t.Context(), nil, "1", nil, false)
 	if !errors.Is(err, ErrMissingPDFReadSeeker) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFReadSeeker, err)
 	}
@@ -3146,7 +3149,7 @@ func TestMergeErrorsIncludeSourceContext(t *testing.T) {
 		t.Fatalf("expected source context, got %q", err.Error())
 	}
 
-	err = MergeRaw([]io.ReadSeeker{bytes.NewReader(nil)}, io.Discard, false, nil)
+	err = MergeRaw(t.Context(), []io.ReadSeeker{bytes.NewReader(nil)}, io.Discard, false, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -3155,7 +3158,7 @@ func TestMergeErrorsIncludeSourceContext(t *testing.T) {
 	}
 
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	err = MergeRaw([]io.ReadSeeker{openAPITestPDF(t, inFile), bytes.NewReader(nil)}, io.Discard, false, nil)
+	err = MergeRaw(t.Context(), []io.ReadSeeker{openAPITestPDF(t, inFile), bytes.NewReader(nil)}, io.Discard, false, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -3167,7 +3170,7 @@ func TestMergeErrorsIncludeSourceContext(t *testing.T) {
 	if err := os.WriteFile(badSource, nil, 0600); err != nil {
 		t.Fatal(err)
 	}
-	err = Merge("", []string{inFile, badSource}, io.Discard, nil, false)
+	err = Merge(t.Context(), "", []string{inFile, badSource}, io.Discard, nil, false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -3181,7 +3184,7 @@ func TestMergeUnsupportedVersionPreservesSentinel(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 
 	f := openAPITestPDF(t, inFile)
-	err := MergeRaw([]io.ReadSeeker{f, pdf20Reader(t, inFile)}, io.Discard, false, nil)
+	err := MergeRaw(t.Context(), []io.ReadSeeker{f, pdf20Reader(t, inFile)}, io.Discard, false, nil)
 	if !errors.Is(err, pdfcpu.ErrUnsupportedVersion) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrUnsupportedVersion, err)
 	}
@@ -3216,7 +3219,7 @@ func TestMergeZipUnsupportedVersionPreservesSentinel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := MergeCreateZip(tt.rs1, tt.rs2, io.Discard, nil)
+			err := MergeCreateZip(t.Context(), tt.rs1, tt.rs2, io.Discard, nil)
 			if !errors.Is(err, pdfcpu.ErrUnsupportedVersion) {
 				t.Fatalf("expected %v, got %v", pdfcpu.ErrUnsupportedVersion, err)
 			}
@@ -3229,7 +3232,7 @@ func TestMergeZipUnsupportedVersionPreservesSentinel(t *testing.T) {
 
 // TestMergeFileErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestMergeFileErrorsIncludePhaseContext(t *testing.T) {
-	err := Merge("missing.pdf", nil, io.Discard, nil, false)
+	err := Merge(t.Context(), "missing.pdf", nil, io.Discard, nil, false)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -3238,7 +3241,7 @@ func TestMergeFileErrorsIncludePhaseContext(t *testing.T) {
 	}
 
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	err = Merge("", []string{inFile, "missing.pdf"}, io.Discard, nil, false)
+	err = Merge(t.Context(), "", []string{inFile, "missing.pdf"}, io.Discard, nil, false)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -3249,7 +3252,7 @@ func TestMergeFileErrorsIncludePhaseContext(t *testing.T) {
 
 // TestMergeZipFileErrorsIncludePhaseContext verifies the corresponding behavior.
 func TestMergeZipFileErrorsIncludePhaseContext(t *testing.T) {
-	err := MergeCreateZipFile("missing.pdf", "also-missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
+	err := MergeCreateZipFile(t.Context(), "missing.pdf", "also-missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -3258,7 +3261,7 @@ func TestMergeZipFileErrorsIncludePhaseContext(t *testing.T) {
 	}
 
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	err = MergeCreateZipFile(inFile, "also-missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
+	err = MergeCreateZipFile(t.Context(), inFile, "also-missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -3267,7 +3270,7 @@ func TestMergeZipFileErrorsIncludePhaseContext(t *testing.T) {
 	}
 
 	outFile := filepath.Join(t.TempDir(), "missing-dir", "out.pdf")
-	err = MergeCreateZipFile(inFile, inFile, outFile, nil)
+	err = MergeCreateZipFile(t.Context(), inFile, inFile, outFile, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -3281,7 +3284,7 @@ func TestMergeZipWriteErrorIncludesPhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	wantErr := errors.New("zip write failed")
 
-	err := MergeCreateZip(openAPITestPDF(t, inFile), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
+	err := MergeCreateZip(t.Context(), openAPITestPDF(t, inFile), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -3301,35 +3304,42 @@ func TestBookmarkFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "export open PDF",
 			fn: func() error {
-				return ExportBookmarksFile("missing.pdf", filepath.Join(t.TempDir(), "bookmarks.json"), nil)
+				return ExportBookmarksFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "bookmarks.json"), nil)
 			},
 			want: "export bookmarks: open missing.pdf",
 		},
 		{
 			name: "export create JSON",
 			fn: func() error {
-				return ExportBookmarksFile(inFile, filepath.Join(t.TempDir(), "missing-dir", "bookmarks.json"), nil)
+				return ExportBookmarksFile(
+					t.Context(), inFile, filepath.Join(t.TempDir(), "missing-dir", "bookmarks.json"), nil,
+				)
 			},
 			want: "export bookmarks: create output",
 		},
 		{
 			name: "import open JSON",
 			fn: func() error {
-				return ImportBookmarksFile(inFile, "missing.json", filepath.Join(t.TempDir(), "out.pdf"), false, nil)
+				return ImportBookmarksFile(
+					t.Context(), inFile, "missing.json", filepath.Join(t.TempDir(), "out.pdf"), false, nil,
+				)
 			},
 			want: "import bookmarks: open JSON missing.json",
 		},
 		{
 			name: "add open PDF",
 			fn: func() error {
-				return AddBookmarksFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), []pdfcpu.Bookmark{{Title: "Root", PageFrom: 1}}, false, nil)
+				return AddBookmarksFile(
+					t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"),
+					[]pdfcpu.Bookmark{{Title: "Root", PageFrom: 1}}, false, nil,
+				)
 			},
 			want: "add bookmarks: open missing.pdf",
 		},
 		{
 			name: "remove open PDF",
 			fn: func() error {
-				return RemoveBookmarksFile("missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return RemoveBookmarksFile(t.Context(), "missing.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			want: "remove bookmarks: open missing.pdf",
 		},
@@ -3350,11 +3360,11 @@ func TestBookmarkFileWrapperErrorsIncludePhaseContext(t *testing.T) {
 
 // TestListBookmarksErrorsAndAbsentResult verifies the corresponding behavior.
 func TestListBookmarksErrorsAndAbsentResult(t *testing.T) {
-	if _, err := ListBookmarks(nil, nil); !errors.Is(err, ErrMissingPDFReadSeeker) {
+	if _, err := ListBookmarks(t.Context(), nil, nil); !errors.Is(err, ErrMissingPDFReadSeeker) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFReadSeeker, err)
 	}
 
-	_, err := ListBookmarks(bytes.NewReader(nil), nil)
+	_, err := ListBookmarks(t.Context(), bytes.NewReader(nil), nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -3363,7 +3373,7 @@ func TestListBookmarksErrorsAndAbsentResult(t *testing.T) {
 	}
 
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	ss, err := ListBookmarksFile(inFile, nil)
+	ss, err := ListBookmarksFile(t.Context(), inFile, nil)
 	if err != nil {
 		t.Fatalf("list absent bookmarks: %v", err)
 	}
@@ -3374,10 +3384,10 @@ func TestListBookmarksErrorsAndAbsentResult(t *testing.T) {
 
 // TestListBookmarksFileArgumentAndOpenErrors verifies the corresponding behavior.
 func TestListBookmarksFileArgumentAndOpenErrors(t *testing.T) {
-	if _, err := ListBookmarksFile("", nil); !errors.Is(err, ErrMissingPDFInput) {
+	if _, err := ListBookmarksFile(t.Context(), "", nil); !errors.Is(err, ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFInput, err)
 	}
-	_, err := ListBookmarksFile("missing.pdf", nil)
+	_, err := ListBookmarksFile(t.Context(), "missing.pdf", nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -3408,7 +3418,7 @@ func TestExportBookmarksFileRemovesOutputOnFailure(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "bookmarks", "bookmarkTreeNoBookmarks.pdf")
 	outFile := filepath.Join(t.TempDir(), "bookmarks.json")
 
-	err := ExportBookmarksFile(inFile, outFile, nil)
+	err := ExportBookmarksFile(t.Context(), inFile, outFile, nil)
 	if !errors.Is(err, ErrNoBookmarks) {
 		t.Fatalf("expected %v, got %v", ErrNoBookmarks, err)
 	}
@@ -3429,7 +3439,7 @@ func TestExportBookmarksFileFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := ExportBookmarksFile(inFile, outFile, nil)
+	err := ExportBookmarksFile(t.Context(), inFile, outFile, nil)
 	if !errors.Is(err, ErrNoBookmarks) {
 		t.Fatalf("expected %v, got %v", ErrNoBookmarks, err)
 	}
@@ -3446,7 +3456,7 @@ func TestExportBookmarksFileFailurePreservesExistingOutput(t *testing.T) {
 func TestMergeFileCleanupPreservesPrimaryError(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	err := MergeCreateFile(nil, outFile, false, nil)
+	err := MergeCreateFile(t.Context(), nil, outFile, false, nil)
 	if !errors.Is(err, ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFInput, err)
 	}
@@ -3455,7 +3465,7 @@ func TestMergeFileCleanupPreservesPrimaryError(t *testing.T) {
 	}
 
 	appendFile := filepath.Join(t.TempDir(), "append.pdf")
-	err = MergeAppendFile(nil, appendFile, false, nil)
+	err = MergeAppendFile(t.Context(), nil, appendFile, false, nil)
 	if !errors.Is(err, ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFInput, err)
 	}
@@ -3472,7 +3482,7 @@ func TestWriteContextFileFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := WriteContextFile(nil, outFile)
+	err := WriteContextFile(t.Context(), nil, outFile)
 	if !errors.Is(err, ErrMissingPDFContext) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFContext, err)
 	}
@@ -3493,7 +3503,7 @@ func TestMergeCreateFileFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := MergeCreateFile(nil, outFile, false, nil)
+	err := MergeCreateFile(t.Context(), nil, outFile, false, nil)
 	if !errors.Is(err, ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFInput, err)
 	}
@@ -3515,7 +3525,7 @@ func TestMergeZipFileRemovesOutputOnFailure(t *testing.T) {
 	}
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	err := MergeCreateZipFile(inFile, badFile, outFile, nil)
+	err := MergeCreateZipFile(t.Context(), inFile, badFile, outFile, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -3548,20 +3558,20 @@ func TestSplitArgumentErrors(t *testing.T) {
 		{
 			name: "split raw missing reader",
 			fn: func() error {
-				_, err := SplitRaw(nil, 1, nil)
+				_, err := SplitRaw(t.Context(), nil, 1, nil)
 				return err
 			},
 		},
 		{
 			name: "split missing reader",
 			fn: func() error {
-				return Split(nil, t.TempDir(), "textAndAlignment.pdf", 1, nil)
+				return Split(t.Context(), nil, t.TempDir(), "textAndAlignment.pdf", 1, nil)
 			},
 		},
 		{
 			name: "split by page number missing reader",
 			fn: func() error {
-				return SplitByPageNr(nil, t.TempDir(), "textAndAlignment.pdf", []int{2}, nil)
+				return SplitByPageNr(t.Context(), nil, t.TempDir(), "textAndAlignment.pdf", []int{2}, nil)
 			},
 		},
 	}
@@ -3582,13 +3592,13 @@ func TestSplitArgumentErrors(t *testing.T) {
 		{
 			name: "split file missing input",
 			fn: func() error {
-				return SplitFile("", t.TempDir(), 1, nil)
+				return SplitFile(t.Context(), "", t.TempDir(), 1, nil)
 			},
 		},
 		{
 			name: "split by page number file missing input",
 			fn: func() error {
-				return SplitByPageNrFile("", t.TempDir(), []int{2}, nil)
+				return SplitByPageNrFile(t.Context(), "", t.TempDir(), []int{2}, nil)
 			},
 		},
 	}
@@ -3610,42 +3620,42 @@ func TestSplitArgumentErrors(t *testing.T) {
 		{
 			name: "negative span",
 			fn: func(f *os.File) error {
-				return Split(f, t.TempDir(), "textAndAlignment.pdf", -1, nil)
+				return Split(t.Context(), f, t.TempDir(), "textAndAlignment.pdf", -1, nil)
 			},
 			wantErr: ErrInvalidSplitSpan,
 		},
 		{
 			name: "missing page numbers",
 			fn: func(f *os.File) error {
-				return SplitByPageNr(f, t.TempDir(), "textAndAlignment.pdf", nil, nil)
+				return SplitByPageNr(t.Context(), f, t.TempDir(), "textAndAlignment.pdf", nil, nil)
 			},
 			wantErr: ErrMissingSplitPageNumbers,
 		},
 		{
 			name: "invalid page number sequence",
 			fn: func(f *os.File) error {
-				return SplitByPageNr(f, t.TempDir(), "textAndAlignment.pdf", []int{9999}, nil)
+				return SplitByPageNr(t.Context(), f, t.TempDir(), "textAndAlignment.pdf", []int{9999}, nil)
 			},
 			wantErr: ErrInvalidSplitPageNumberSequence,
 		},
 		{
 			name: "split page number below lower bound",
 			fn: func(f *os.File) error {
-				return SplitByPageNr(f, t.TempDir(), "textAndAlignment.pdf", []int{1}, nil)
+				return SplitByPageNr(t.Context(), f, t.TempDir(), "textAndAlignment.pdf", []int{1}, nil)
 			},
 			wantErr: ErrInvalidSplitPageNumberSequence,
 		},
 		{
 			name: "duplicate split page numbers",
 			fn: func(f *os.File) error {
-				return SplitByPageNr(f, t.TempDir(), "textAndAlignment.pdf", []int{2, 2}, nil)
+				return SplitByPageNr(t.Context(), f, t.TempDir(), "textAndAlignment.pdf", []int{2, 2}, nil)
 			},
 			wantErr: ErrInvalidSplitPageNumberSequence,
 		},
 		{
 			name: "descending split page numbers",
 			fn: func(f *os.File) error {
-				return SplitByPageNr(f, t.TempDir(), "textAndAlignment.pdf", []int{3, 2}, nil)
+				return SplitByPageNr(t.Context(), f, t.TempDir(), "textAndAlignment.pdf", []int{3, 2}, nil)
 			},
 			wantErr: ErrInvalidSplitPageNumberSequence,
 		},
@@ -3672,7 +3682,7 @@ func TestSplitReadErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "split raw",
 			fn: func() error {
-				_, err := SplitRaw(bytes.NewReader(nil), 1, nil)
+				_, err := SplitRaw(t.Context(), bytes.NewReader(nil), 1, nil)
 				return err
 			},
 			want: "split: prepare PDF context",
@@ -3680,14 +3690,14 @@ func TestSplitReadErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "split",
 			fn: func() error {
-				return Split(bytes.NewReader(nil), t.TempDir(), "out.pdf", 1, nil)
+				return Split(t.Context(), bytes.NewReader(nil), t.TempDir(), "out.pdf", 1, nil)
 			},
 			want: "split: prepare PDF context",
 		},
 		{
 			name: "split by page number",
 			fn: func() error {
-				return SplitByPageNr(bytes.NewReader(nil), t.TempDir(), "out.pdf", []int{2}, nil)
+				return SplitByPageNr(t.Context(), bytes.NewReader(nil), t.TempDir(), "out.pdf", []int{2}, nil)
 			},
 			want: "split by page number: prepare PDF context",
 		},
@@ -3713,7 +3723,7 @@ func TestSplitReadErrorsIncludeOperationContext(t *testing.T) {
 func TestSplitByBookmarkNoBookmarksError(t *testing.T) {
 	f := openAPITestPDF(t, "..", "samples", "create", "primitives", "textAndAlignment.pdf")
 
-	_, err := SplitRaw(f, 0, nil)
+	_, err := SplitRaw(t.Context(), f, 0, nil)
 	if !errors.Is(err, ErrNoBookmarks) {
 		t.Fatalf("expected %v, got %v", ErrNoBookmarks, err)
 	}
@@ -3727,7 +3737,7 @@ func TestAddBookmarksMapsExistingBookmarksError(t *testing.T) {
 	f := openAPITestPDF(t, "..", "testdata", "bookmarks", "bookmarkTree.pdf")
 
 	bms := []pdfcpu.Bookmark{{Title: "new bookmark", PageFrom: 1}}
-	err := AddBookmarks(f, io.Discard, bms, false, nil)
+	err := AddBookmarks(t.Context(), f, io.Discard, bms, false, nil)
 	if !errors.Is(err, ErrExistingBookmarks) {
 		t.Fatalf("expected %v, got %v", ErrExistingBookmarks, err)
 	}
@@ -3780,7 +3790,7 @@ func TestExportBookmarksNoBookmarksErrorIncludesSource(t *testing.T) {
 	}
 	defer f.Close()
 
-	err = ExportBookmarksJSON(f, io.Discard, "textAndAlignment.pdf", nil)
+	err = ExportBookmarksJSON(t.Context(), f, io.Discard, "textAndAlignment.pdf", nil)
 	if !errors.Is(err, ErrNoBookmarks) {
 		t.Fatalf("expected %v, got %v", ErrNoBookmarks, err)
 	}
@@ -3800,35 +3810,35 @@ func TestExtractMissingDigestFunctions(t *testing.T) {
 			name: "images",
 			op:   "extract images",
 			fn: func() error {
-				return ExtractImages(bytes.NewReader(nil), nil, nil, nil)
+				return ExtractImages(t.Context(), bytes.NewReader(nil), nil, nil, nil)
 			},
 		},
 		{
 			name: "fonts",
 			op:   "extract fonts",
 			fn: func() error {
-				return ExtractFonts(bytes.NewReader(nil), nil, nil, nil)
+				return ExtractFonts(t.Context(), bytes.NewReader(nil), nil, nil, nil)
 			},
 		},
 		{
 			name: "pages",
 			op:   "extract pages",
 			fn: func() error {
-				return ExtractPages(bytes.NewReader(nil), nil, nil, nil)
+				return ExtractPages(t.Context(), bytes.NewReader(nil), nil, nil, nil)
 			},
 		},
 		{
 			name: "content",
 			op:   "extract content",
 			fn: func() error {
-				return ExtractContent(bytes.NewReader(nil), nil, nil, nil)
+				return ExtractContent(t.Context(), bytes.NewReader(nil), nil, nil, nil)
 			},
 		},
 		{
 			name: "metadata",
 			op:   "extract metadata",
 			fn: func() error {
-				return ExtractMetadata(bytes.NewReader(nil), nil, nil)
+				return ExtractMetadata(t.Context(), bytes.NewReader(nil), nil, nil)
 			},
 		},
 	}
@@ -3857,7 +3867,7 @@ func TestExtractReadErrorsIncludePhaseContext(t *testing.T) {
 			name: "images raw",
 			op:   "extract images",
 			fn: func() error {
-				_, err := ExtractImagesRaw(bytes.NewReader(nil), nil, nil)
+				_, err := ExtractImagesRaw(t.Context(), bytes.NewReader(nil), nil, nil)
 				return err
 			},
 		},
@@ -3865,35 +3875,35 @@ func TestExtractReadErrorsIncludePhaseContext(t *testing.T) {
 			name: "images",
 			op:   "extract images",
 			fn: func() error {
-				return ExtractImages(bytes.NewReader(nil), nil, func(model.Image, bool, int) error { return nil }, nil)
+				return ExtractImages(t.Context(), bytes.NewReader(nil), nil, func(model.Image, bool, int) error { return nil }, nil)
 			},
 		},
 		{
 			name: "fonts",
 			op:   "extract fonts",
 			fn: func() error {
-				return ExtractFonts(bytes.NewReader(nil), nil, func(pdfcpu.Font) error { return nil }, nil)
+				return ExtractFonts(t.Context(), bytes.NewReader(nil), nil, func(pdfcpu.Font) error { return nil }, nil)
 			},
 		},
 		{
 			name: "pages",
 			op:   "extract pages",
 			fn: func() error {
-				return ExtractPages(bytes.NewReader(nil), nil, func(io.Reader, int) error { return nil }, nil)
+				return ExtractPages(t.Context(), bytes.NewReader(nil), nil, func(io.Reader, int) error { return nil }, nil)
 			},
 		},
 		{
 			name: "content",
 			op:   "extract content",
 			fn: func() error {
-				return ExtractContent(bytes.NewReader(nil), nil, func(io.Reader, int) error { return nil }, nil)
+				return ExtractContent(t.Context(), bytes.NewReader(nil), nil, func(io.Reader, int) error { return nil }, nil)
 			},
 		},
 		{
 			name: "metadata",
 			op:   "extract metadata",
 			fn: func() error {
-				return ExtractMetadata(bytes.NewReader(nil), func(pdfcpu.Metadata) error { return nil }, nil)
+				return ExtractMetadata(t.Context(), bytes.NewReader(nil), func(pdfcpu.Metadata) error { return nil }, nil)
 			},
 		},
 	}
@@ -3929,7 +3939,7 @@ func TestExtractPageSelectionErrorsIncludePhaseContext(t *testing.T) {
 			name: "images raw",
 			op:   "extract images",
 			fn: func(rs io.ReadSeeker) error {
-				_, err := ExtractImagesRaw(rs, []string{"foo"}, nil)
+				_, err := ExtractImagesRaw(t.Context(), rs, []string{"foo"}, nil)
 				return err
 			},
 		},
@@ -3937,28 +3947,28 @@ func TestExtractPageSelectionErrorsIncludePhaseContext(t *testing.T) {
 			name: "images",
 			op:   "extract images",
 			fn: func(rs io.ReadSeeker) error {
-				return ExtractImages(rs, []string{"foo"}, func(model.Image, bool, int) error { return nil }, nil)
+				return ExtractImages(t.Context(), rs, []string{"foo"}, func(model.Image, bool, int) error { return nil }, nil)
 			},
 		},
 		{
 			name: "fonts",
 			op:   "extract fonts",
 			fn: func(rs io.ReadSeeker) error {
-				return ExtractFonts(rs, []string{"foo"}, func(pdfcpu.Font) error { return nil }, nil)
+				return ExtractFonts(t.Context(), rs, []string{"foo"}, func(pdfcpu.Font) error { return nil }, nil)
 			},
 		},
 		{
 			name: "pages",
 			op:   "extract pages",
 			fn: func(rs io.ReadSeeker) error {
-				return ExtractPages(rs, []string{"foo"}, func(io.Reader, int) error { return nil }, nil)
+				return ExtractPages(t.Context(), rs, []string{"foo"}, func(io.Reader, int) error { return nil }, nil)
 			},
 		},
 		{
 			name: "content",
 			op:   "extract content",
 			fn: func(rs io.ReadSeeker) error {
-				return ExtractContent(rs, []string{"foo"}, func(io.Reader, int) error { return nil }, nil)
+				return ExtractContent(t.Context(), rs, []string{"foo"}, func(io.Reader, int) error { return nil }, nil)
 			},
 		},
 	}
@@ -3995,7 +4005,7 @@ func TestExtractDigestErrorsIncludePhaseContext(t *testing.T) {
 			},
 			fn: func() error {
 				inFile := filepath.Join("..", "testdata", "testImage.pdf")
-				return ExtractImages(openAPITestPDF(t, inFile), []string{"1"}, func(model.Image, bool, int) error { return wantErr }, nil)
+				return ExtractImages(t.Context(), openAPITestPDF(t, inFile), []string{"1"}, func(model.Image, bool, int) error { return wantErr }, nil)
 			},
 		},
 		{
@@ -4008,7 +4018,7 @@ func TestExtractDigestErrorsIncludePhaseContext(t *testing.T) {
 			},
 			fn: func() error {
 				inFile := filepath.Join("..", "testdata", "TheGoProgrammingLanguageCh1.pdf")
-				return ExtractFonts(openAPITestPDF(t, inFile), nil, func(pdfcpu.Font) error { return wantErr }, nil)
+				return ExtractFonts(t.Context(), openAPITestPDF(t, inFile), nil, func(pdfcpu.Font) error { return wantErr }, nil)
 			},
 		},
 		{
@@ -4018,7 +4028,7 @@ func TestExtractDigestErrorsIncludePhaseContext(t *testing.T) {
 			},
 			fn: func() error {
 				inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-				return ExtractPages(openAPITestPDF(t, inFile), []string{"1"}, func(io.Reader, int) error { return wantErr }, nil)
+				return ExtractPages(t.Context(), openAPITestPDF(t, inFile), []string{"1"}, func(io.Reader, int) error { return wantErr }, nil)
 			},
 		},
 		{
@@ -4028,7 +4038,7 @@ func TestExtractDigestErrorsIncludePhaseContext(t *testing.T) {
 			},
 			fn: func() error {
 				inFile := filepath.Join("..", "testdata", "5116.DCT_Filter.pdf")
-				return ExtractContent(openAPITestPDF(t, inFile), []string{"1"}, func(io.Reader, int) error { return wantErr }, nil)
+				return ExtractContent(t.Context(), openAPITestPDF(t, inFile), []string{"1"}, func(io.Reader, int) error { return wantErr }, nil)
 			},
 		},
 		{
@@ -4040,7 +4050,7 @@ func TestExtractDigestErrorsIncludePhaseContext(t *testing.T) {
 			},
 			fn: func() error {
 				inFile := filepath.Join("..", "testdata", "TheGoProgrammingLanguageCh1.pdf")
-				return ExtractMetadata(openAPITestPDF(t, inFile), func(pdfcpu.Metadata) error { return wantErr }, nil)
+				return ExtractMetadata(t.Context(), openAPITestPDF(t, inFile), func(pdfcpu.Metadata) error { return wantErr }, nil)
 			},
 		},
 	}
@@ -4063,7 +4073,7 @@ func TestExtractDigestErrorsIncludePhaseContext(t *testing.T) {
 // TestExtractImagesAllPagesExcludedDoesNotPanic verifies the corresponding behavior.
 func TestExtractImagesAllPagesExcludedDoesNotPanic(t *testing.T) {
 	inFile := filepath.Join("..", "testdata", "testImage.pdf")
-	err := ExtractImages(
+	err := ExtractImages(t.Context(),
 		openAPITestPDF(t, inFile),
 		[]string{"!1-"},
 		func(model.Image, bool, int) error { return nil },
@@ -4081,11 +4091,11 @@ func TestExtractFileInputErrorsIncludePhaseContext(t *testing.T) {
 		op   string
 		fn   func(string) error
 	}{
-		{name: "images", op: "extract images", fn: func(inFile string) error { return ExtractImagesFile(inFile, t.TempDir(), nil, nil) }},
-		{name: "fonts", op: "extract fonts", fn: func(inFile string) error { return ExtractFontsFile(inFile, t.TempDir(), nil, nil) }},
-		{name: "pages", op: "extract pages", fn: func(inFile string) error { return ExtractPagesFile(inFile, t.TempDir(), nil, nil) }},
-		{name: "content", op: "extract content", fn: func(inFile string) error { return ExtractContentFile(inFile, t.TempDir(), nil, nil) }},
-		{name: "metadata", op: "extract metadata", fn: func(inFile string) error { return ExtractMetadataFile(inFile, t.TempDir(), nil) }},
+		{name: "images", op: "extract images", fn: func(inFile string) error { return ExtractImagesFile(t.Context(), inFile, t.TempDir(), nil, nil) }},
+		{name: "fonts", op: "extract fonts", fn: func(inFile string) error { return ExtractFontsFile(t.Context(), inFile, t.TempDir(), nil, nil) }},
+		{name: "pages", op: "extract pages", fn: func(inFile string) error { return ExtractPagesFile(t.Context(), inFile, t.TempDir(), nil, nil) }},
+		{name: "content", op: "extract content", fn: func(inFile string) error { return ExtractContentFile(t.Context(), inFile, t.TempDir(), nil, nil) }},
+		{name: "metadata", op: "extract metadata", fn: func(inFile string) error { return ExtractMetadataFile(t.Context(), inFile, t.TempDir(), nil) }},
 	}
 
 	for _, tt := range tests {
@@ -4121,7 +4131,7 @@ func TestExtractFileWriteErrorsIncludePhaseContext(t *testing.T) {
 			},
 			fn: func(outDir string) error {
 				inFile := filepath.Join("..", "testdata", "testImage.pdf")
-				return ExtractImagesFile(inFile, outDir, []string{"1"}, nil)
+				return ExtractImagesFile(t.Context(), inFile, outDir, []string{"1"}, nil)
 			},
 		},
 		{
@@ -4133,7 +4143,7 @@ func TestExtractFileWriteErrorsIncludePhaseContext(t *testing.T) {
 			},
 			fn: func(outDir string) error {
 				inFile := filepath.Join("..", "testdata", "TheGoProgrammingLanguageCh1.pdf")
-				return ExtractFontsFile(inFile, outDir, nil, nil)
+				return ExtractFontsFile(t.Context(), inFile, outDir, nil, nil)
 			},
 		},
 		{
@@ -4143,7 +4153,7 @@ func TestExtractFileWriteErrorsIncludePhaseContext(t *testing.T) {
 			},
 			fn: func(outDir string) error {
 				inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-				return ExtractPagesFile(inFile, outDir, []string{"1"}, nil)
+				return ExtractPagesFile(t.Context(), inFile, outDir, []string{"1"}, nil)
 			},
 		},
 		{
@@ -4153,7 +4163,7 @@ func TestExtractFileWriteErrorsIncludePhaseContext(t *testing.T) {
 			},
 			fn: func(outDir string) error {
 				inFile := filepath.Join("..", "testdata", "5116.DCT_Filter.pdf")
-				return ExtractContentFile(inFile, outDir, []string{"1"}, nil)
+				return ExtractContentFile(t.Context(), inFile, outDir, []string{"1"}, nil)
 			},
 		},
 		{
@@ -4165,7 +4175,7 @@ func TestExtractFileWriteErrorsIncludePhaseContext(t *testing.T) {
 			},
 			fn: func(outDir string) error {
 				inFile := filepath.Join("..", "testdata", "TheGoProgrammingLanguageCh1.pdf")
-				return ExtractMetadataFile(inFile, outDir, nil)
+				return ExtractMetadataFile(t.Context(), inFile, outDir, nil)
 			},
 		},
 	}
@@ -4219,7 +4229,7 @@ func TestValidateFilesReturnsJoinedErrors(t *testing.T) {
 	}()
 
 	inFiles := []string{"missing1.pdf", "missing2.pdf"}
-	err = ValidateFiles(inFiles, nil)
+	err = ValidateFiles(t.Context(), inFiles, nil, nil)
 	w.Close()
 
 	if err == nil {
@@ -4245,7 +4255,7 @@ func TestValidateFilesReturnsJoinedErrors(t *testing.T) {
 
 // TestValidateFileMissingFilePreservesNotExist verifies the corresponding behavior.
 func TestValidateFileMissingFilePreservesNotExist(t *testing.T) {
-	err := ValidateFile("missing.pdf", nil)
+	err := ValidateFile(t.Context(), "missing.pdf", nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -4256,7 +4266,7 @@ func TestValidateFileMissingFilePreservesNotExist(t *testing.T) {
 
 // TestValidateFileEmptyInputPreservesSentinel verifies the corresponding behavior.
 func TestValidateFileEmptyInputPreservesSentinel(t *testing.T) {
-	err := ValidateFile("", nil)
+	err := ValidateFile(t.Context(), "", nil, nil)
 	if !errors.Is(err, ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFInput, err)
 	}
@@ -4264,10 +4274,10 @@ func TestValidateFileEmptyInputPreservesSentinel(t *testing.T) {
 
 // TestValidateFilesEmptyInputIsNoop verifies the corresponding behavior.
 func TestValidateFilesEmptyInputIsNoop(t *testing.T) {
-	if err := ValidateFiles(nil, nil); err != nil {
+	if err := ValidateFiles(t.Context(), nil, nil, nil); err != nil {
 		t.Fatalf("expected nil error for nil input list, got %v", err)
 	}
-	if err := ValidateFiles([]string{}, nil); err != nil {
+	if err := ValidateFiles(t.Context(), []string{}, nil, nil); err != nil {
 		t.Fatalf("expected nil error for empty input list, got %v", err)
 	}
 }

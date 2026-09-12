@@ -17,6 +17,7 @@
 package create
 
 import (
+	"context"
 	"errors"
 	"io"
 	"path/filepath"
@@ -34,12 +35,12 @@ func useMissingGlobalFontDirectory(t *testing.T) {
 	t.Helper()
 	originalDir := font.UserFontDir
 	font.UserFontDir = filepath.Join(t.TempDir(), "missing")
-	if err := font.ReloadUserFonts(); err == nil {
+	if err := font.ReloadUserFonts(t.Context()); err == nil {
 		t.Fatal("expected missing global font directory error")
 	}
 	t.Cleanup(func() {
 		font.UserFontDir = originalDir
-		if err := font.ReloadUserFonts(); err != nil {
+		if err := font.ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore global font directory: %v", err)
 		}
 	})
@@ -72,7 +73,7 @@ func TestEnsureFontIndRefUsesStatelessRepository(t *testing.T) {
 		FontFile: indRef,
 	}
 
-	got, err := ensureFontIndRef(xRefTable, "Demo", fontResource, model.FontMap{"Demo": fontResource})
+	got, err := ensureFontIndRef(t.Context(), xRefTable, "Demo", fontResource, model.FontMap{"Demo": fontResource})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +115,7 @@ func TestFromJSONBoundaryErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := FromJSON(tt.ctx, tt.rd)
+			err := FromJSON(t.Context(), tt.ctx, tt.rd)
 			if err == nil {
 				t.Fatal("expected error")
 			}
@@ -128,7 +129,7 @@ func TestFromJSONBoundaryErrors(t *testing.T) {
 func TestFromJSONReadErrorIncludesPhaseContext(t *testing.T) {
 	wantErr := errors.New("read failed")
 
-	err := FromJSON(newCreateTestContext(t), failingJSONReader{err: wantErr})
+	err := FromJSON(t.Context(), newCreateTestContext(t), failingJSONReader{err: wantErr})
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -157,7 +158,7 @@ func TestFromJSONParseErrorsIncludePhaseContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := FromJSON(newCreateTestContext(t), strings.NewReader(tt.in))
+			err := FromJSON(t.Context(), newCreateTestContext(t), strings.NewReader(tt.in))
 			if err == nil {
 				t.Fatal("expected error")
 			}
@@ -181,7 +182,7 @@ func TestFromJSONRenderPagesErrorIncludesPrimitiveContext(t *testing.T) {
 		}
 	}`
 
-	err := FromJSON(newCreateTestContext(t), strings.NewReader(input))
+	err := FromJSON(t.Context(), newCreateTestContext(t), strings.NewReader(input))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -202,7 +203,7 @@ func TestFromJSONRenderPagesErrorIncludesPrimitiveContext(t *testing.T) {
 
 func TestFromJSONUpdatePageTreeErrorIncludesPageContext(t *testing.T) {
 	ctx := newCreateTestContext(t)
-	if err := FromJSON(ctx, strings.NewReader(createTestBlankPageJSON)); err != nil {
+	if err := FromJSON(t.Context(), ctx, strings.NewReader(createTestBlankPageJSON)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -212,7 +213,7 @@ func TestFromJSONUpdatePageTreeErrorIncludesPageContext(t *testing.T) {
 	}
 	pageDict["Contents"] = types.Name("broken")
 
-	err = FromJSON(ctx, strings.NewReader(createTestBlankPageJSON))
+	err = FromJSON(t.Context(), ctx, strings.NewReader(createTestBlankPageJSON))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -252,7 +253,7 @@ func TestFromJSONUpdateFormErrorIncludesDefaultResourceContext(t *testing.T) {
 		XRefTable: ctx.XRefTable,
 	}
 
-	err := handleForm(ctx, pdf, types.Array{}, model.FontMap{})
+	err := handleForm(t.Context(), ctx, pdf, types.Array{}, model.FontMap{})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -279,7 +280,7 @@ func TestFromJSONContentValidateErrorIncludesPhaseContext(t *testing.T) {
 		}
 	}`
 
-	err := FromJSON(newCreateTestContext(t), strings.NewReader(input))
+	err := FromJSON(t.Context(), newCreateTestContext(t), strings.NewReader(input))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -355,7 +356,7 @@ func TestFromJSONValidationContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := FromJSON(newCreateTestContext(t), strings.NewReader(tt.in))
+			err := FromJSON(t.Context(), newCreateTestContext(t), strings.NewReader(tt.in))
 			if err == nil {
 				t.Fatal("expected error")
 			}

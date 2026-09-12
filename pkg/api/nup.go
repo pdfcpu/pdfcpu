@@ -1,28 +1,30 @@
 /*
-	Copyright 2020 The model Authors.
+Copyright 2020 The pdfcpu Authors.
 
-	Licensed under the Apache License, Version 2.0 (the "License");
-	you may not use this file except in compliance with the License.
-	You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-		http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
-	Unless required by applicable law or agreed to in writing, software
-	distributed under the License is distributed on an "AS IS" BASIS,
-	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	See the License for the specific language governing permissions and
-	limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"math"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
@@ -131,7 +133,10 @@ func ImageBookletConfig(val int, desc string, conf *model.Configuration) (*model
 	return pdfcpu.ImageBookletConfig(val, desc, conf)
 }
 
-func nUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+func nUpFromImage(c context.Context, conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	ctx, err = pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)
 	if err != nil {
 		return nil, fmt.Errorf("n-up: create image context: %w", err)
@@ -149,9 +154,9 @@ func nUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model
 	}
 
 	if len(imageFileNames) == 1 {
-		err = pdfcpu.NUpFromOneImage(ctx, imageFileNames[0], nup, pagesDict, pagesIndRef)
+		err = pdfcpu.NUpFromOneImage(c, ctx, imageFileNames[0], nup, pagesDict, pagesIndRef)
 	} else {
-		err = pdfcpu.NUpFromMultipleImages(ctx, imageFileNames, nup, pagesDict, pagesIndRef)
+		err = pdfcpu.NUpFromMultipleImages(c, ctx, imageFileNames, nup, pagesDict, pagesIndRef)
 	}
 
 	if err != nil {
@@ -160,13 +165,14 @@ func nUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model
 	return ctx, nil
 }
 
-// NUpFromImage creates a single page n-up PDF for one image
-// or a sequence of n-up pages for more than one image.
-// On error, the returned context may be partially constructed and its PageCount remains at the pre-operation value.
-// Callers must discard a non-nil context returned together with an error.
-func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+// NUpFromImage creates n-up pages from images and supports cancellation.
+// On error, callers must discard any non-nil context returned with the error.
+func NUpFromImage(c context.Context, conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if nup == nil {
 		return nil, ErrMissingNUpConfiguration
 	}
@@ -178,14 +184,17 @@ func NUpFromImage(conf *model.Configuration, imageFileNames []string, nup *model
 	}
 	conf = operationConfiguration(conf, model.NUP)
 
-	return nUpFromImage(conf, imageFileNames, nup)
+	return nUpFromImage(c, conf, imageFileNames, nup)
 }
 
-// NUp rearranges PDF pages or images into page grids and writes the result to w.
+// NUp rearranges PDF pages or images into page grids, writes the result to w and supports cancellation.
 // Either rs or imgFiles will be used.
-func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
+func NUp(c context.Context, rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if w == nil {
 		return ErrMissingPDFWriter
 	}
@@ -210,7 +219,7 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 
 	if nup.ImgInputFile {
 
-		if ctx, err = nUpFromImage(conf, imgFiles, nup); err != nil {
+		if ctx, err = nUpFromImage(c, conf, imgFiles, nup); err != nil {
 			return err
 		}
 
@@ -220,7 +229,7 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 			return ErrMissingPDFReadSeeker
 		}
 
-		if ctx, err = ReadAndValidate(rs, conf); err != nil {
+		if ctx, err = ReadAndValidate(c, rs, conf); err != nil {
 			return fmt.Errorf("n-up: read and validate: %w", err)
 		}
 
@@ -231,25 +240,24 @@ func NUp(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *m
 
 		// New pages get added to ctx while old pages get deleted.
 		// This way we avoid migrating objects between contexts.
-		if err = pdfcpu.NUpFromPDF(ctx, pages, nup); err != nil {
+		if err = pdfcpu.NUpFromPDF(c, ctx, pages, nup); err != nil {
 			return fmt.Errorf("n-up: impose pages: %w", err)
 		}
 
 	}
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("n-up: write output: %w", err)
 	}
 	return nil
 }
 
-func nUpImageOutputAliasesInput(inFile, outFile string) (bool, error) {
-	return outputAliasesInput(inFile, outFile)
-}
-
-func rejectNUpImageOutputAlias(inFiles []string, outFile string) error {
+func rejectNUpImageOutputAlias(c context.Context, inFiles []string, outFile string) error {
 	for i, inFile := range inFiles {
-		aliases, err := nUpImageOutputAliasesInput(inFile, outFile)
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		aliases, err := outputAliasesInput(inFile, outFile)
 		if err != nil {
 			return fmt.Errorf("n-up image %d %q: check output alias: %w", i+1, inFile, err)
 		}
@@ -257,11 +265,14 @@ func rejectNUpImageOutputAlias(inFiles []string, outFile string) error {
 			return fmt.Errorf("n-up image %d %q: output aliases input: %w", i+1, inFile, ErrNUpImageOutputConflict)
 		}
 	}
-	return nil
+	return contextutil.Check(c)
 }
 
-// NUpFile rearranges PDF pages or images into page grids and writes the result to outFile.
-func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
+// NUpFile rearranges PDF pages or images into page grids, writes the result to outFile and supports cancellation.
+func NUpFile(c context.Context, inFiles []string, outFile string, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if nup == nil {
 		return ErrMissingNUpConfiguration
 	}
@@ -278,16 +289,13 @@ func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *mode
 		return err
 	}
 	if nup.ImgInputFile {
-		if err := rejectNUpImageOutputAlias(inFiles, outFile); err != nil {
+		if err := rejectNUpImageOutputAlias(c, inFiles, outFile); err != nil {
 			return err
 		}
 	}
 
-	var f1, f2 *os.File
-	ok := false
-
+	var f1 *os.File
 	if !nup.ImgInputFile {
-		// Nup from a PDF page.
 		if f1, err = os.Open(inFiles[0]); err != nil {
 			return fmt.Errorf("n-up: open input %s: %w", inFiles[0], err)
 		}
@@ -300,8 +308,7 @@ func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *mode
 			closeFile(f1, "n-up: close input"),
 		)
 	}
-	f2 = staged.output.file
-
+	ok := false
 	defer func() {
 		if !ok {
 			err = staged.cleanup(err)
@@ -310,11 +317,12 @@ func NUpFile(inFiles []string, outFile string, selectedPages []string, nup *mode
 		err = staged.commit()
 	}()
 
-	if err = NUp(f1, f2, inFiles, selectedPages, nup, conf); err != nil {
+	if err = NUp(c, f1, staged.output.file, inFiles, selectedPages, nup, conf); err != nil {
 		return err
 	}
-
+	if err = contextutil.Check(c); err != nil {
+		return err
+	}
 	ok = true
-
 	return nil
 }

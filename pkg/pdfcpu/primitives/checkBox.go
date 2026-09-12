@@ -123,7 +123,6 @@ func (cb *CheckBox) validateTab() error {
 }
 
 func (cb *CheckBox) validate() error {
-
 	if err := cb.validateID(); err != nil {
 		return err
 	}
@@ -181,7 +180,6 @@ func (cb *CheckBox) calcMargin() (float64, float64, float64, float64, error) {
 }
 
 func (cb *CheckBox) labelPos(labelHeight, w, g float64) (float64, float64) {
-
 	var x, y float64
 	bb, horAlign := cb.boundingBox, cb.Label.HorAlign
 
@@ -235,7 +233,7 @@ func (cb *CheckBox) ensureZapfDingbats(fonts model.FontMap) (*types.IndirectRef,
 		if font.Res.IndRef != nil {
 			return font.Res.IndRef, nil
 		}
-		ir, err := pdffont.EnsureFontDict(pdf.XRefTable, fontName, "", "", false, nil)
+		ir, err := pdffont.EnsureFontDict(pdf.ctx, pdf.XRefTable, fontName, "", "", false, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -271,7 +269,7 @@ func (cb *CheckBox) ensureZapfDingbats(fonts model.FontMap) (*types.IndirectRef,
 	}
 
 	if indRef == nil {
-		indRef, err = pdffont.EnsureFontDict(pdf.XRefTable, fontName, "", "", false, nil)
+		indRef, err = pdffont.EnsureFontDict(pdf.ctx, pdf.XRefTable, fontName, "", "", false, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -285,7 +283,6 @@ func (cb *CheckBox) ensureZapfDingbats(fonts model.FontMap) (*types.IndirectRef,
 }
 
 func (cb *CheckBox) calcFont() error {
-
 	if cb.Label != nil {
 		f, err := cb.content.calcLabelFont(cb.Label.Font)
 		if err != nil {
@@ -298,7 +295,6 @@ func (cb *CheckBox) calcFont() error {
 }
 
 func (cb *CheckBox) irNOff(bgCol *color.SimpleColor) (*types.IndirectRef, error) {
-
 	pdf := cb.pdf
 
 	ap, found := pdf.CheckBoxAPs[cb.Width]
@@ -347,7 +343,6 @@ func (cb *CheckBox) irNOff(bgCol *color.SimpleColor) (*types.IndirectRef, error)
 }
 
 func (cb *CheckBox) irNYes(fonts model.FontMap, bgCol *color.SimpleColor) (*types.IndirectRef, error) {
-
 	pdf := cb.pdf
 
 	ap, found := pdf.CheckBoxAPs[cb.Width]
@@ -414,7 +409,6 @@ func (cb *CheckBox) irNYes(fonts model.FontMap, bgCol *color.SimpleColor) (*type
 }
 
 func (cb *CheckBox) irDOff(bgCol *color.SimpleColor) (*types.IndirectRef, error) {
-
 	pdf := cb.pdf
 
 	ap, found := cb.pdf.CheckBoxAPs[cb.Width]
@@ -453,7 +447,6 @@ func (cb *CheckBox) irDOff(bgCol *color.SimpleColor) (*types.IndirectRef, error)
 }
 
 func (cb *CheckBox) irDYes(fonts model.FontMap, bgCol *color.SimpleColor) (*types.IndirectRef, error) {
-
 	pdf := cb.pdf
 
 	ap, found := pdf.CheckBoxAPs[cb.Width]
@@ -533,7 +526,6 @@ func (cb *CheckBox) appearanceIndRefs(fonts model.FontMap, bgCol *color.SimpleCo
 }
 
 func (cb *CheckBox) prepareDict(fonts model.FontMap) (types.Dict, error) {
-
 	id, err := types.EscapedUTF16String(cb.ID)
 	if err != nil {
 		return nil, err
@@ -648,7 +640,6 @@ func (cb *CheckBox) prepareRectLL(mTop, mRight, mBottom, mLeft float64) (float64
 }
 
 func (cb *CheckBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	if cb.Label == nil {
 		return nil
 	}
@@ -690,7 +681,9 @@ func (cb *CheckBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) er
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb, err := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(
+		cb.pdf.ctx, cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td,
+	)
 	if err != nil {
 		return fmt.Errorf("check box label: %w", err)
 	}
@@ -714,7 +707,6 @@ func (cb *CheckBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) er
 }
 
 func (cb *CheckBox) prepForRender(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	mTop, mRight, mBottom, mLeft, err := cb.calcMargin()
 	if err != nil {
 		return err
@@ -732,7 +724,6 @@ func (cb *CheckBox) prepForRender(p *model.Page, pageNr int, fonts model.FontMap
 }
 
 func (cb *CheckBox) doRender(p *model.Page, fonts model.FontMap) error {
-
 	d, err := cb.prepareDict(fonts)
 	if err != nil {
 		return err
@@ -746,7 +737,7 @@ func (cb *CheckBox) doRender(p *model.Page, fonts model.FontMap) error {
 	}
 
 	if cb.Label != nil {
-		if _, err := model.WriteColumn(cb.pdf.XRefTable, p.Buf, p.MediaBox, nil, *cb.Label.td, 0); err != nil {
+		if _, err := model.WriteColumn(cb.pdf.ctx, cb.pdf.XRefTable, p.Buf, p.MediaBox, nil, *cb.Label.td, 0); err != nil {
 			return fmt.Errorf("check box label: %w", err)
 		}
 	}
@@ -759,7 +750,6 @@ func (cb *CheckBox) doRender(p *model.Page, fonts model.FontMap) error {
 }
 
 func (cb *CheckBox) render(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	if err := cb.prepForRender(p, pageNr, fonts); err != nil {
 		return err
 	}

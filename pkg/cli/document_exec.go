@@ -17,6 +17,7 @@ limitations under the License.
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -28,6 +29,7 @@ import (
 
 	"encoding/json"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -71,7 +73,7 @@ func validationProgressObserver(w io.Writer, conf *model.Configuration) api.Prog
 	}
 }
 
-func validateInput(fn string, conf *model.Configuration, progressOutput io.Writer, item, total int) error {
+func validateInput(c context.Context, fn string, conf *model.Configuration, progressOutput io.Writer, item, total int) error {
 	options := api.ProgressOptions{
 		Observer: validationProgressObserver(progressOutput, conf),
 		Input:    fn,
@@ -81,10 +83,10 @@ func validateInput(fn string, conf *model.Configuration, progressOutput io.Write
 
 	var err error
 	if fn != "-" {
-		err = api.ValidateFileWithOptions(fn, conf, options)
+		err = api.ValidateFile(c, fn, conf, &options)
 	} else {
-		_, err = withStdinReadSeeker("validate", func(rs io.ReadSeeker) (struct{}, error) {
-			return struct{}{}, api.ValidateWithOptions(rs, conf, options)
+		_, err = withStdinReadSeeker(c, "validate", func(rs io.ReadSeeker) (struct{}, error) {
+			return struct{}{}, api.Validate(c, rs, conf, &options)
 		})
 	}
 	if err != nil {
@@ -101,7 +103,7 @@ func reportValidationError(w io.Writer, err error) error {
 	return nil
 }
 
-func validateInputs(inFiles []string, conf *model.Configuration, errorOutput, progressOutput io.Writer) error {
+func validateInputs(c context.Context, inFiles []string, conf *model.Configuration, errorOutput, progressOutput io.Writer) error {
 	var errs []error
 	failures := 0
 	for i, fn := range inFiles {
@@ -109,9 +111,12 @@ func validateInputs(inFiles []string, conf *model.Configuration, errorOutput, pr
 			log.CLI.Println()
 		}
 
-		err := validateInput(fn, conf, progressOutput, i+1, len(inFiles))
+		err := validateInput(c, fn, conf, progressOutput, i+1, len(inFiles))
 		if err == nil {
 			continue
+		}
+		if cancelErr := c.Err(); cancelErr != nil {
+			return cancelErr
 		}
 
 		if errorOutput == nil {
@@ -131,8 +136,7 @@ func validateInputs(inFiles []string, conf *model.Configuration, errorOutput, pr
 	return errors.Join(errs...)
 }
 
-// Validate inFile against ISO-32000-1:2008.
-func Validate(cmd *Command) ([]string, error) {
+func validateCommand(c context.Context, cmd *Command) ([]string, error) {
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation:     "validate",
 		minInputFiles: 1,
@@ -149,17 +153,16 @@ func Validate(cmd *Command) ([]string, error) {
 		if cmd.BoolVal1 {
 			progressOutput = cmd.ErrorOutput
 		}
-		return nil, validateInput(cmd.InFiles[0], conf, progressOutput, 1, 1)
+		return nil, validateInput(c, cmd.InFiles[0], conf, progressOutput, 1, 1)
 	}
 
 	var progressOutput io.Writer
 	if cmd.BoolVal1 {
 		progressOutput = cmd.ErrorOutput
 	}
-	return nil, validateInputs(cmd.InFiles, conf, cmd.ErrorOutput, progressOutput)
+	return nil, validateInputs(c, cmd.InFiles, conf, cmd.ErrorOutput, progressOutput)
 }
 
-// Optimize inFile and write result to outFile.
 func optimizationProgressObserver(cmd *Command) api.ProgressObserver {
 	if commandWritesPDFToStdout(cmd) {
 		return nil
@@ -175,7 +178,7 @@ func optimizationProgressObserver(cmd *Command) api.ProgressObserver {
 	}
 }
 
-func Optimize(cmd *Command) ([]string, error) {
+func optimize(c context.Context, cmd *Command) ([]string, error) {
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation: "optimize",
 		inFile:    commandStringRequiredNonEmpty,
@@ -190,14 +193,14 @@ func Optimize(cmd *Command) ([]string, error) {
 		Total:    1,
 	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.OptimizeFileWithOptions(*cmd.InFile, *cmd.OutFile, cmd.Conf, options)
+		return nil, api.OptimizeFile(c, *cmd.InFile, *cmd.OutFile, cmd.Conf, &options)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "optimize")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "optimize")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.OptimizeWithOptions(rs, w, cmd.Conf, options))
+	return nil, finalize(api.Optimize(c, rs, w, cmd.Conf, &options))
 }
 
 func mergeStdinCount(inFiles []string) int {
@@ -210,9 +213,9 @@ func mergeStdinCount(inFiles []string) int {
 	return count
 }
 
-func mergeReader(fn string, source int) (io.ReadSeeker, *os.File, *temporaryInput, error) {
+func mergeReader(c context.Context, fn string, source int) (io.ReadSeeker, *os.File, *temporaryInput, error) {
 	if fn == "-" {
-		in, err := readSeekerFromStdin(fmt.Sprintf("merge source %d", source))
+		in, err := readSeekerFromStdin(c, fmt.Sprintf("merge source %d", source))
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("merge source %d: read source: %w", source, err)
 		}
@@ -235,12 +238,22 @@ func closeMergeInputs(files []*os.File) error {
 	return errors.Join(errs...)
 }
 
-func mergeReaders(inFiles []string) ([]io.ReadSeeker, []*os.File, *temporaryInput, error) {
+func mergeReaders(c context.Context, inFiles []string) ([]io.ReadSeeker, []*os.File, *temporaryInput, error) {
+	if c == nil {
+		return nil, nil, nil, ErrMissingContext
+	}
 	readers := make([]io.ReadSeeker, 0, len(inFiles))
 	files := make([]*os.File, 0, len(inFiles))
 	var temporaryIn *temporaryInput
 	for i, fn := range inFiles {
-		rs, f, in, err := mergeReader(fn, i)
+		if err := c.Err(); err != nil {
+			err = errors.Join(err, closeMergeInputs(files))
+			if temporaryIn != nil {
+				err = temporaryIn.finalize("merge", err)
+			}
+			return nil, nil, nil, err
+		}
+		rs, f, in, err := mergeReader(c, fn, i)
 		if err != nil {
 			err = errors.Join(err, closeMergeInputs(files))
 			if temporaryIn != nil {
@@ -259,13 +272,13 @@ func mergeReaders(inFiles []string) ([]io.ReadSeeker, []*os.File, *temporaryInpu
 	return readers, files, temporaryIn, nil
 }
 
-func mergeCreateRaw(cmd *Command) ([]string, error) {
-	readers, files, temporaryIn, err := mergeReaders(cmd.InFiles)
+func mergeCreateRaw(c context.Context, cmd *Command) ([]string, error) {
+	readers, files, temporaryIn, err := mergeReaders(c, cmd.InFiles)
 	if err != nil {
 		return nil, err
 	}
 
-	_, w, finalize, err := streamInOutForOperation("", *cmd.OutFile, "merge")
+	_, w, finalize, err := streamInOutForOperation(c, "", *cmd.OutFile, "merge")
 	if err != nil {
 		err = errors.Join(err, closeMergeInputs(files))
 		if temporaryIn != nil {
@@ -274,7 +287,7 @@ func mergeCreateRaw(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	err = errors.Join(api.MergeRaw(readers, w, cmd.BoolVal1, cmd.Conf), closeMergeInputs(files))
+	err = errors.Join(api.MergeRaw(c, readers, w, cmd.BoolVal1, cmd.Conf), closeMergeInputs(files))
 	if temporaryIn != nil {
 		err = temporaryIn.finalize("merge", err)
 	}
@@ -294,8 +307,10 @@ func reportMergeProgress(cmd *Command) {
 	}
 }
 
-// MergeCreate merges inFiles in the order specified and writes the result to outFile.
-func MergeCreate(cmd *Command) ([]string, error) {
+func mergeCreate(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation:     "merge",
 		outFile:       commandStringRequiredNonEmpty,
@@ -309,17 +324,19 @@ func MergeCreate(cmd *Command) ([]string, error) {
 	}
 	reportMergeProgress(cmd)
 	if stdinCount == 1 {
-		return mergeCreateRaw(cmd)
+		return mergeCreateRaw(c, cmd)
 	}
 	if *cmd.OutFile == "-" {
 		log.SetCLILogger(nil)
-		return nil, api.Merge("", cmd.InFiles, os.Stdout, cmd.Conf, cmd.BoolVal1)
+		return nil, api.Merge(c, "", cmd.InFiles, os.Stdout, cmd.Conf, cmd.BoolVal1)
 	}
-	return nil, api.MergeCreateFile(cmd.InFiles, *cmd.OutFile, cmd.BoolVal1, cmd.Conf)
+	return nil, api.MergeCreateFile(c, cmd.InFiles, *cmd.OutFile, cmd.BoolVal1, cmd.Conf)
 }
 
-// MergeCreateZip zips two inFiles in the order specified and writes the result to outFile.
-func MergeCreateZip(cmd *Command) ([]string, error) {
+func mergeCreateZip(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation:     "merge zip",
 		outFile:       commandStringRequiredNonEmpty,
@@ -330,7 +347,7 @@ func MergeCreateZip(cmd *Command) ([]string, error) {
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.OutFile != "-" {
-		return nil, api.MergeCreateZipFile(cmd.InFiles[0], cmd.InFiles[1], *cmd.OutFile, cmd.Conf)
+		return nil, api.MergeCreateZipFile(c, cmd.InFiles[0], cmd.InFiles[1], *cmd.OutFile, cmd.Conf)
 	}
 	log.SetCLILogger(nil)
 	f1, err := os.Open(cmd.InFiles[0])
@@ -345,11 +362,13 @@ func MergeCreateZip(cmd *Command) ([]string, error) {
 	}
 	defer f2.Close()
 
-	return nil, api.MergeCreateZip(f1, f2, os.Stdout, cmd.Conf)
+	return nil, api.MergeCreateZip(c, f1, f2, os.Stdout, cmd.Conf)
 }
 
-// MergeAppend merges inFiles in the order specified and writes the result to outFile.
-func MergeAppend(cmd *Command) ([]string, error) {
+func mergeAppend(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation:     "merge append",
 		outFile:       commandStringRequiredNonEmpty,
@@ -371,15 +390,17 @@ func MergeAppend(cmd *Command) ([]string, error) {
 	for _, inFile := range cmd.InFiles {
 		reportCommandProgress(cmd, "%s\n", inFile)
 	}
-	return nil, api.MergeAppendFile(cmd.InFiles, *cmd.OutFile, cmd.BoolVal1, cmd.Conf)
+	return nil, api.MergeAppendFile(c, cmd.InFiles, *cmd.OutFile, cmd.BoolVal1, cmd.Conf)
 }
 
 func reportSplitProgress(cmd *Command, inFile string) {
 	reportCommandProgress(cmd, "splitting %s to %s/...\n", inFile, *cmd.OutDir)
 }
 
-// Split inFile into single page PDFs and write result files to outDir.
-func Split(cmd *Command) ([]string, error) {
+func split(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation: "split",
 		inFile:    commandStringRequiredNonEmpty,
@@ -389,16 +410,18 @@ func Split(cmd *Command) ([]string, error) {
 	}
 	if *cmd.InFile == "-" {
 		reportSplitProgress(cmd, "stdin.pdf")
-		return withStdinReadSeeker("split", func(rs io.ReadSeeker) ([]string, error) {
-			return nil, api.Split(rs, *cmd.OutDir, "stdin.pdf", cmd.IntVal, cmd.Conf)
+		return withStdinReadSeeker(c, "split", func(rs io.ReadSeeker) ([]string, error) {
+			return nil, api.Split(c, rs, *cmd.OutDir, "stdin.pdf", cmd.IntVal, cmd.Conf)
 		})
 	}
 	reportSplitProgress(cmd, *cmd.InFile)
-	return nil, api.SplitFile(*cmd.InFile, *cmd.OutDir, cmd.IntVal, cmd.Conf)
+	return nil, api.SplitFile(c, *cmd.InFile, *cmd.OutDir, cmd.IntVal, cmd.Conf)
 }
 
-// SplitByPageNr splits inFile along pages and writes result files to outDir.
-func SplitByPageNr(cmd *Command) ([]string, error) {
+func splitByPageNr(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation:        "split by page number",
 		inFile:           commandStringRequiredNonEmpty,
@@ -410,16 +433,18 @@ func SplitByPageNr(cmd *Command) ([]string, error) {
 	}
 	if *cmd.InFile == "-" {
 		reportSplitProgress(cmd, "stdin.pdf")
-		return withStdinReadSeeker("split by page number", func(rs io.ReadSeeker) ([]string, error) {
-			return nil, api.SplitByPageNr(rs, *cmd.OutDir, "stdin.pdf", cmd.IntVals, cmd.Conf)
+		return withStdinReadSeeker(c, "split by page number", func(rs io.ReadSeeker) ([]string, error) {
+			return nil, api.SplitByPageNr(c, rs, *cmd.OutDir, "stdin.pdf", cmd.IntVals, cmd.Conf)
 		})
 	}
 	reportSplitProgress(cmd, *cmd.InFile)
-	return nil, api.SplitByPageNrFile(*cmd.InFile, *cmd.OutDir, cmd.IntVals, cmd.Conf)
+	return nil, api.SplitByPageNrFile(c, *cmd.InFile, *cmd.OutDir, cmd.IntVals, cmd.Conf)
 }
 
-// Trim inFile and write result to outFile.
-func Trim(cmd *Command) ([]string, error) {
+func trim(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation: "trim",
 		inFile:    commandStringRequiredNonEmpty,
@@ -429,18 +454,20 @@ func Trim(cmd *Command) ([]string, error) {
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.TrimFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
+		return nil, api.TrimFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "trim")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "trim")
 	if err != nil {
 		return nil, fmt.Errorf("trim: prepare input/output: %w", err)
 	}
-	return nil, finalize(api.Trim(rs, w, cmd.PageSelection, cmd.Conf))
+	return nil, finalize(api.Trim(c, rs, w, cmd.PageSelection, cmd.Conf))
 }
 
-// Collect creates a custom page sequence for selected pages of inFile and writes result to outFile.
-func Collect(cmd *Command) ([]string, error) {
+func collect(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation: "collect",
 		inFile:    commandStringRequiredNonEmpty,
@@ -450,18 +477,21 @@ func Collect(cmd *Command) ([]string, error) {
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.CollectFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
+		return nil, api.CollectFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "collect")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "collect")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.Collect(rs, w, cmd.PageSelection, cmd.Conf))
+	return nil, finalize(api.Collect(c, rs, w, cmd.PageSelection, cmd.Conf))
 }
 
-func listInfo(rs io.ReadSeeker, inFile string, selectedPages []string, fonts bool, conf *model.Configuration) ([]string, error) {
-	info, err := api.PDFInfo(rs, inFile, selectedPages, fonts, conf)
+func listInfo(c context.Context, rs io.ReadSeeker, inFile string, selectedPages []string, fonts bool, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	info, err := api.PDFInfo(c, rs, inFile, selectedPages, fonts, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -471,7 +501,7 @@ func listInfo(rs io.ReadSeeker, inFile string, selectedPages []string, fonts boo
 		return nil, err
 	}
 
-	ss, err := pdfcpu.ListInfo(info, pages, fonts)
+	ss, err := pdfcpu.ListInfo(c, info, pages, fonts)
 	if err != nil {
 		return nil, fmt.Errorf("list info: render output: %w", err)
 	}
@@ -479,8 +509,11 @@ func listInfo(rs io.ReadSeeker, inFile string, selectedPages []string, fonts boo
 	return append([]string{inFile + ":"}, ss...), err
 }
 
-// ListInfoFile returns formatted information about inFile.
-func ListInfoFile(inFile string, selectedPages []string, fonts bool, conf *model.Configuration) ([]string, error) {
+// ListInfoFile returns formatted information about inFile and supports cancellation.
+func ListInfoFile(c context.Context, inFile string, selectedPages []string, fonts bool, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, commandValidationError("list info", api.ErrMissingPDFInput)
 	}
@@ -490,66 +523,60 @@ func ListInfoFile(inFile string, selectedPages []string, fonts bool, conf *model
 	}
 	defer f.Close()
 
-	return listInfo(f, inFile, selectedPages, fonts, conf)
+	return listInfo(c, f, inFile, selectedPages, fonts, conf)
 }
 
-func jsonInfo(info *pdfcpu.PDFInfo, pages types.IntSet) (map[string]model.PageBoundaries, []types.Dim) {
+func normalizeInfoBox(box *model.Box, unit types.DisplayUnit) {
+	if box == nil {
+		return
+	}
+	box.Rect = box.Rect.ConvertToUnit(unit)
+	box.Rect.LL.X = math.Round(box.Rect.LL.X*100) / 100
+	box.Rect.LL.Y = math.Round(box.Rect.LL.Y*100) / 100
+	box.Rect.UR.X = math.Round(box.Rect.UR.X*100) / 100
+	box.Rect.UR.Y = math.Round(box.Rect.UR.Y*100) / 100
+}
+
+func normalizeInfoPageBoundaries(pb *model.PageBoundaries, unit types.DisplayUnit) {
+	d := pb.CropBox().Dimensions()
+	if pb.Rot%180 != 0 {
+		d.Width, d.Height = d.Height, d.Width
+	}
+	pb.Orientation = "portrait"
+	if d.Landscape() {
+		pb.Orientation = "landscape"
+	}
+	normalizeInfoBox(pb.Media, unit)
+	normalizeInfoBox(pb.Crop, unit)
+	normalizeInfoBox(pb.Trim, unit)
+	normalizeInfoBox(pb.Bleed, unit)
+	normalizeInfoBox(pb.Art, unit)
+}
+
+func jsonInfo(c context.Context, info *pdfcpu.PDFInfo, pages types.IntSet) (map[string]model.PageBoundaries, []types.Dim, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	if len(pages) > 0 {
 		pbs := map[string]model.PageBoundaries{}
 		for i, pb := range info.PageBoundaries {
+			if err := c.Err(); err != nil {
+				return nil, nil, err
+			}
 			if _, found := pages[i+1]; !found {
 				continue
 			}
-			d := pb.CropBox().Dimensions()
-			if pb.Rot%180 != 0 {
-				d.Width, d.Height = d.Height, d.Width
-			}
-			pb.Orientation = "portrait"
-			if d.Landscape() {
-				pb.Orientation = "landscape"
-			}
-			if pb.Media != nil {
-				pb.Media.Rect = pb.Media.Rect.ConvertToUnit(info.Unit)
-				pb.Media.Rect.LL.X = math.Round(pb.Media.Rect.LL.X*100) / 100
-				pb.Media.Rect.LL.Y = math.Round(pb.Media.Rect.LL.Y*100) / 100
-				pb.Media.Rect.UR.X = math.Round(pb.Media.Rect.UR.X*100) / 100
-				pb.Media.Rect.UR.Y = math.Round(pb.Media.Rect.UR.Y*100) / 100
-			}
-			if pb.Crop != nil {
-				pb.Crop.Rect = pb.Crop.Rect.ConvertToUnit(info.Unit)
-				pb.Crop.Rect.LL.X = math.Round(pb.Crop.Rect.LL.X*100) / 100
-				pb.Crop.Rect.LL.Y = math.Round(pb.Crop.Rect.LL.Y*100) / 100
-				pb.Crop.Rect.UR.X = math.Round(pb.Crop.Rect.UR.X*100) / 100
-				pb.Crop.Rect.UR.Y = math.Round(pb.Crop.Rect.UR.Y*100) / 100
-			}
-			if pb.Trim != nil {
-				pb.Trim.Rect = pb.Trim.Rect.ConvertToUnit(info.Unit)
-				pb.Trim.Rect.LL.X = math.Round(pb.Trim.Rect.LL.X*100) / 100
-				pb.Trim.Rect.LL.Y = math.Round(pb.Trim.Rect.LL.Y*100) / 100
-				pb.Trim.Rect.UR.X = math.Round(pb.Trim.Rect.UR.X*100) / 100
-				pb.Trim.Rect.UR.Y = math.Round(pb.Trim.Rect.UR.Y*100) / 100
-			}
-			if pb.Bleed != nil {
-				pb.Bleed.Rect = pb.Bleed.Rect.ConvertToUnit(info.Unit)
-				pb.Bleed.Rect.LL.X = math.Round(pb.Bleed.Rect.LL.X*100) / 100
-				pb.Bleed.Rect.LL.Y = math.Round(pb.Bleed.Rect.LL.Y*100) / 100
-				pb.Bleed.Rect.UR.X = math.Round(pb.Bleed.Rect.UR.X*100) / 100
-				pb.Bleed.Rect.UR.Y = math.Round(pb.Bleed.Rect.UR.Y*100) / 100
-			}
-			if pb.Art != nil {
-				pb.Art.Rect = pb.Art.Rect.ConvertToUnit(info.Unit)
-				pb.Art.Rect.LL.X = math.Round(pb.Art.Rect.LL.X*100) / 100
-				pb.Art.Rect.LL.Y = math.Round(pb.Art.Rect.LL.Y*100) / 100
-				pb.Art.Rect.UR.X = math.Round(pb.Art.Rect.UR.X*100) / 100
-				pb.Art.Rect.UR.Y = math.Round(pb.Art.Rect.UR.Y*100) / 100
-			}
+			normalizeInfoPageBoundaries(&pb, info.Unit)
 			pbs[strconv.Itoa(i+1)] = pb
 		}
-		return pbs, nil
+		return pbs, nil, c.Err()
 	}
 
 	var dims []types.Dim
 	for k, v := range info.PageDimensions {
+		if err := c.Err(); err != nil {
+			return nil, nil, err
+		}
 		if v {
 			dc := k.ConvertToUnit(info.Unit)
 			dc.Width = math.Round(dc.Width*100) / 100
@@ -557,11 +584,11 @@ func jsonInfo(info *pdfcpu.PDFInfo, pages types.IntSet) (map[string]model.PageBo
 			dims = append(dims, dc)
 		}
 	}
-	return nil, dims
+	return nil, dims, c.Err()
 }
 
-func listInfoJSON(rs io.ReadSeeker, inFile string, selectedPages []string, fonts bool, conf *model.Configuration) (*pdfcpu.PDFInfo, error) {
-	info, err := api.PDFInfo(rs, inFile, selectedPages, fonts, conf)
+func listInfoJSON(c context.Context, rs io.ReadSeeker, inFile string, selectedPages []string, fonts bool, conf *model.Configuration) (*pdfcpu.PDFInfo, error) {
+	info, err := api.PDFInfo(c, rs, inFile, selectedPages, fonts, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -571,44 +598,57 @@ func listInfoJSON(rs io.ReadSeeker, inFile string, selectedPages []string, fonts
 		return nil, err
 	}
 
-	info.Boundaries, info.Dimensions = jsonInfo(info, pages)
+	info.Boundaries, info.Dimensions, err = jsonInfo(c, info, pages)
+	if err != nil {
+		return nil, err
+	}
 
-	return info, nil
+	return info, c.Err()
 }
 
-type infoJSONProcessor func(io.ReadSeeker, string, []string, bool, *model.Configuration) (*pdfcpu.PDFInfo, error)
+type infoJSONContextProcessor func(
+	context.Context,
+	io.ReadSeeker,
+	string,
+	[]string,
+	bool,
+	*model.Configuration,
+) (*pdfcpu.PDFInfo, error)
 
-func listInfoFileJSON(
-	fn string,
-	selectedPages []string,
-	fonts bool,
-	conf *model.Configuration,
-	process infoJSONProcessor,
-) (*pdfcpu.PDFInfo, error) {
+func listInfoFileJSON(c context.Context, fn string, selectedPages []string, fonts bool, conf *model.Configuration, process infoJSONContextProcessor) (*pdfcpu.PDFInfo, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	f, err := os.Open(fn)
 	if err != nil {
 		return nil, fmt.Errorf("list info: open %s: %w", fn, err)
 	}
 
-	info, processErr := process(f, fn, selectedPages, fonts, conf)
+	info, processErr := process(c, f, fn, selectedPages, fonts, conf)
 	return info, errors.Join(processErr, f.Close())
 }
 
-func listInfoFilesJSON(inFiles []string, selectedPages []string, fonts bool, conf *model.Configuration) ([]string, error) {
+func listInfoFilesJSON(c context.Context, inFiles []string, selectedPages []string, fonts bool, conf *model.Configuration) ([]string, error) {
 	var infos []*pdfcpu.PDFInfo
 
 	for _, fn := range inFiles {
-		info, err := listInfoFileJSON(fn, selectedPages, fonts, conf, listInfoJSON)
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
+		info, err := listInfoFileJSON(c, fn, selectedPages, fonts, conf, listInfoJSON)
 		if err != nil {
 			return nil, err
 		}
 		infos = append(infos, info)
 	}
 
-	return jsonInfoOutput(infos)
+	return jsonInfoOutput(c, infos)
 }
 
-func jsonInfoOutput(infos []*pdfcpu.PDFInfo) ([]string, error) {
+func jsonInfoOutput(c context.Context, infos []*pdfcpu.PDFInfo) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	s := struct {
 		Header pdfcpu.Header     `json:"header"`
 		Infos  []*pdfcpu.PDFInfo `json:"infos"`
@@ -622,26 +662,32 @@ func jsonInfoOutput(infos []*pdfcpu.PDFInfo) ([]string, error) {
 		return nil, fmt.Errorf("list info: encode JSON: %w", err)
 	}
 
-	return []string{string(bb)}, nil
+	return []string{string(bb)}, c.Err()
 }
 
-// ListInfoFiles returns formatted information about inFiles.
-func ListInfoFiles(inFiles []string, selectedPages []string, fonts, json bool, conf *model.Configuration) ([]string, error) {
+// ListInfoFiles returns formatted information about inFiles and supports cancellation.
+func ListInfoFiles(c context.Context, inFiles []string, selectedPages []string, fonts, json bool, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandInputFiles(inFiles, 1, 0, nil); err != nil {
 		return nil, commandValidationError("list info", err)
 	}
 	if json {
-		return listInfoFilesJSON(inFiles, selectedPages, fonts, conf)
+		return listInfoFilesJSON(c, inFiles, selectedPages, fonts, conf)
 	}
 
 	var ss []string
 	var errs []error
 
 	for i, fn := range inFiles {
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
 		if i > 0 {
 			ss = append(ss, "")
 		}
-		ssx, err := ListInfoFile(fn, selectedPages, fonts, conf)
+		ssx, err := ListInfoFile(c, fn, selectedPages, fonts, conf)
 		if err != nil {
 			if len(inFiles) == 1 {
 				return nil, err
@@ -652,17 +698,20 @@ func ListInfoFiles(inFiles []string, selectedPages []string, fonts, json bool, c
 		ss = append(ss, ssx...)
 	}
 
-	return ss, errors.Join(errs...)
+	return ss, errors.Join(errors.Join(errs...), c.Err())
 }
 
-func listInfoInput(fn string, selectedPages []string, fonts, json bool, conf *model.Configuration) ([]string, *pdfcpu.PDFInfo, error) {
+func listInfoInput(c context.Context, fn string, selectedPages []string, fonts, json bool, conf *model.Configuration) ([]string, *pdfcpu.PDFInfo, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	if fn == "-" {
 		type result struct {
 			ss   []string
 			info *pdfcpu.PDFInfo
 		}
-		r, err := withStdinReadSeeker("list info", func(rs io.ReadSeeker) (result, error) {
-			ss, info, err := listInfoReadSeeker(rs, fn, selectedPages, fonts, json, conf)
+		r, err := withStdinReadSeeker(c, "list info", func(rs io.ReadSeeker) (result, error) {
+			ss, info, err := listInfoReadSeeker(c, rs, fn, selectedPages, fonts, json, conf)
 			return result{ss: ss, info: info}, err
 		})
 		return r.ss, r.info, err
@@ -673,15 +722,15 @@ func listInfoInput(fn string, selectedPages []string, fonts, json bool, conf *mo
 	}
 	defer rs.Close()
 
-	return listInfoReadSeeker(rs, fn, selectedPages, fonts, json, conf)
+	return listInfoReadSeeker(c, rs, fn, selectedPages, fonts, json, conf)
 }
 
-func listInfoReadSeeker(rs io.ReadSeeker, fn string, selectedPages []string, fonts, json bool, conf *model.Configuration) ([]string, *pdfcpu.PDFInfo, error) {
+func listInfoReadSeeker(c context.Context, rs io.ReadSeeker, fn string, selectedPages []string, fonts, json bool, conf *model.Configuration) ([]string, *pdfcpu.PDFInfo, error) {
 	if json {
-		info, err := listInfoJSON(rs, fn, selectedPages, fonts, conf)
+		info, err := listInfoJSON(c, rs, fn, selectedPages, fonts, conf)
 		return nil, info, err
 	}
-	ss, err := listInfo(rs, fn, selectedPages, fonts, conf)
+	ss, err := listInfo(c, rs, fn, selectedPages, fonts, conf)
 	return ss, nil, err
 }
 
@@ -695,8 +744,46 @@ func reportRelaxedValidation(cmd *Command, operation string) error {
 	return nil
 }
 
-// ListInfo gathers information about inFile and returns the result as []string.
-func ListInfo(cmd *Command) ([]string, error) {
+func listInfoInputs(c context.Context, cmd *Command) ([]string, error) {
+	var ss []string
+	var infos []*pdfcpu.PDFInfo
+	var errs []error
+	for i, fn := range cmd.InFiles {
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
+		if i > 0 && !cmd.BoolVal2 {
+			ss = append(ss, "")
+		}
+
+		ssx, info, err := listInfoInput(c, fn, cmd.PageSelection, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
+		if err != nil {
+			if len(cmd.InFiles) == 1 {
+				return nil, err
+			}
+			errs = append(errs, err)
+			continue
+		}
+		if cmd.BoolVal2 {
+			infos = append(infos, info)
+			continue
+		}
+		ss = append(ss, ssx...)
+	}
+
+	if err := errors.Join(errs...); err != nil {
+		return ss, err
+	}
+	if cmd.BoolVal2 {
+		return jsonInfoOutput(c, infos)
+	}
+	return ss, c.Err()
+}
+
+func listInfoCommand(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation:     "list info",
 		minInputFiles: 1,
@@ -707,53 +794,15 @@ func ListInfo(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 	if !slices.Contains(cmd.InFiles, "-") {
-		return ListInfoFiles(cmd.InFiles, cmd.PageSelection, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
+		return ListInfoFiles(c, cmd.InFiles, cmd.PageSelection, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
 	}
-
-	var ss []string
-	var infos []*pdfcpu.PDFInfo
-	var errs []error
-	for i, fn := range cmd.InFiles {
-		if i > 0 && !cmd.BoolVal2 {
-			ss = append(ss, "")
-		}
-
-		ssx, info, err := listInfoInput(fn, cmd.PageSelection, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
-		if cmd.BoolVal2 {
-			if err != nil {
-				if len(cmd.InFiles) == 1 {
-					return nil, err
-				}
-				errs = append(errs, err)
-				continue
-			}
-			infos = append(infos, info)
-			continue
-		}
-
-		if err != nil {
-			if len(cmd.InFiles) == 1 {
-				return nil, err
-			}
-			errs = append(errs, err)
-			continue
-		}
-		ss = append(ss, ssx...)
-	}
-
-	err := errors.Join(errs...)
-	if err != nil {
-		return ss, err
-	}
-	if cmd.BoolVal2 {
-		return jsonInfoOutput(infos)
-	}
-
-	return ss, nil
+	return listInfoInputs(c, cmd)
 }
 
-// Dump known object to stdout.
-func Dump(cmd *Command) ([]string, error) {
+func dump(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation:        "dump",
 		inFile:           commandStringRequiredNonEmpty,
@@ -781,17 +830,19 @@ func Dump(cmd *Command) ([]string, error) {
 	}
 	defer f.Close()
 
-	ctx, err := api.ReadContext(f, conf)
+	ctx, err := api.ReadContext(c, f, conf)
 	if err != nil {
 		return nil, fmt.Errorf("read context: %w", err)
 	}
 
-	if err = api.ValidateContext(ctx); err != nil {
+	if err = api.ValidateContext(c, ctx); err != nil {
 		return nil, dumpValidationError(err)
 	}
 
-	ctx.DumpObject(objNr, mode)
-	return nil, nil
+	if err := ctx.DumpObject(c, objNr, mode); err != nil {
+		return nil, fmt.Errorf("dump object %d: %w", objNr, err)
+	}
+	return nil, c.Err()
 }
 
 func dumpValidationError(err error) error {
@@ -803,9 +854,10 @@ func dumpValidationError(err error) error {
 	return fmt.Errorf("%s: %w", prefix, err)
 }
 
-// Create renders page content corresponding to declarations found in inFileJSON and writes the result to outFile.
-// If inFile is present, page content will be appended,
-func Create(cmd *Command) ([]string, error) {
+func create(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandRequirements(cmd, commandRequirements{
 		operation:  "create",
 		inFile:     commandStringRequired,
@@ -822,19 +874,19 @@ func Create(cmd *Command) ([]string, error) {
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.CreateFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutFile, cmd.Conf)
+		return nil, api.CreateFile(c, *cmd.InFile, *cmd.InFileJSON, *cmd.OutFile, cmd.Conf)
 	}
 
 	rd, err := os.Open(*cmd.InFileJSON)
 	if err != nil {
 		return nil, err
 	}
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "create")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "create")
 	if err != nil {
 		_ = rd.Close()
 		return nil, err
 	}
-	opErr := api.Create(rs, rd, w, cmd.Conf)
+	opErr := api.Create(c, rs, rd, w, cmd.Conf)
 	opErr = errors.Join(opErr, closeStreamFile(rd, "create: close JSON input"))
 	return nil, finalize(opErr)
 }

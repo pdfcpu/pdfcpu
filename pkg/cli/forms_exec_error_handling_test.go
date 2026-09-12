@@ -36,7 +36,7 @@ func TestExportFormFieldsFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := ExportFormFields(ExportFormCommand("-", outFile, nil))
+	_, err := exportFormFields(t.Context(), ExportFormCommand("-", outFile, nil))
 	if err == nil {
 		t.Fatal("expected export failure")
 	}
@@ -50,7 +50,7 @@ func TestExportFormFieldsFailurePreservesExistingOutput(t *testing.T) {
 }
 
 func TestListFormFieldsCLIUsesPreparedContextErrorChain(t *testing.T) {
-	_, err := listFormFields(strings.NewReader("not a PDF"), nil)
+	_, err := listFormFields(t.Context(), strings.NewReader("not a PDF"), nil)
 	if err == nil || !strings.Contains(err.Error(), "list form fields: prepare PDF context") {
 		t.Fatalf("expected prepared context error, got %v", err)
 	}
@@ -60,7 +60,7 @@ func TestListFormFieldsCLIUsesPreparedContextErrorChain(t *testing.T) {
 }
 
 func TestListFormFieldsJSONErrorsNameInvokedCommand(t *testing.T) {
-	_, err := exportFormGroup(strings.NewReader("not a PDF"), "source.pdf", nil)
+	_, err := exportFormGroup(t.Context(), strings.NewReader("not a PDF"), "source.pdf", nil)
 	want := "list form fields: export data: export form: prepare PDF context"
 	if err == nil || !strings.HasPrefix(err.Error(), want) {
 		t.Fatalf("expected %q prefix, got %v", want, err)
@@ -72,7 +72,7 @@ func TestListFormFieldsJSONErrorsNameInvokedCommand(t *testing.T) {
 
 func TestListFormFieldsFileErrorIncludesInputPath(t *testing.T) {
 	inFile := filepath.Join(t.TempDir(), "missing.pdf")
-	_, err := ListFormFieldsFile([]string{inFile}, nil)
+	_, err := ListFormFieldsFile(t.Context(), []string{inFile}, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -84,7 +84,7 @@ func TestListFormFieldsFileErrorIncludesInputPath(t *testing.T) {
 func TestFillFormCLIDataOpenErrorIncludesPath(t *testing.T) {
 	inFileData := filepath.Join(t.TempDir(), "missing.json")
 	cmd := FillFormCommand("-", inFileData, "-", model.NewDefaultConfiguration())
-	_, err := FillFormFields(cmd)
+	_, err := fillFormFields(t.Context(), cmd)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -95,7 +95,7 @@ func TestFillFormCLIDataOpenErrorIncludesPath(t *testing.T) {
 
 func TestMultiFillFormCLIRejectsUnmergedStdout(t *testing.T) {
 	cmd := MultiFillFormCommand("unused.pdf", "unused.json", "", "-", false, nil)
-	_, err := multiFillFormFieldsToStdout(cmd, "unused.pdf")
+	_, err := multiFillFormFieldsToStdout(t.Context(), cmd, "unused.pdf")
 	if err == nil || !strings.Contains(err.Error(), "multi-fill form: stdout requires merge mode") {
 		t.Fatalf("expected merge mode error, got %v", err)
 	}

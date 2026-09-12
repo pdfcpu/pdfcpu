@@ -49,7 +49,7 @@ func TestZoomCLIHandlerRejectsMissingConfigurationAndArguments(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := handleZoomCommand(tt.conf, tt.args); !errors.Is(err, tt.want) {
+			if err := handleZoomCommand(t.Context(), tt.conf, tt.args); !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
 		})
@@ -82,7 +82,7 @@ func TestZoomCLICommandAcceptsOnlyDocumentedArgumentRange(t *testing.T) {
 // TestZoomCLIConfigurationErrorIncludesContext verifies malformed configuration context.
 func TestZoomCLIConfigurationErrorIncludesContext(t *testing.T) {
 	preserveZoomCLIFlags(t)
-	err := handleZoomCommand(model.NewDefaultConfiguration(), []string{"bad", "in.pdf"})
+	err := handleZoomCommand(t.Context(), model.NewDefaultConfiguration(), []string{"bad", "in.pdf"})
 	if err == nil || !strings.Contains(err.Error(), "zoom: parse configuration") {
 		t.Fatalf("expected configuration context, got %v", err)
 	}
@@ -92,7 +92,9 @@ func TestZoomCLIConfigurationErrorIncludesContext(t *testing.T) {
 func TestZoomCLIUnitErrorIncludesContext(t *testing.T) {
 	preserveZoomCLIFlags(t)
 	unit = "bad"
-	err := handleZoomCommand(model.NewDefaultConfiguration(), []string{"factor:.5", "in.pdf"})
+	err := handleZoomCommand(
+		t.Context(), model.NewDefaultConfiguration(), []string{"factor:.5", "in.pdf"},
+	)
 	if err == nil || !strings.Contains(err.Error(), "zoom: configure display unit") {
 		t.Fatalf("expected display-unit context, got %v", err)
 	}
@@ -110,7 +112,7 @@ func TestZoomCLIPDFArgumentErrorsIncludeContext(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := handleZoomCommand(model.NewDefaultConfiguration(), tt.args)
+			err := handleZoomCommand(t.Context(), model.NewDefaultConfiguration(), tt.args)
 			if err == nil || !strings.Contains(err.Error(), "zoom: parse arguments") {
 				t.Fatalf("expected PDF argument context, got %v", err)
 			}
@@ -122,7 +124,9 @@ func TestZoomCLIPDFArgumentErrorsIncludeContext(t *testing.T) {
 func TestZoomCLIPageSelectionErrorIncludesContext(t *testing.T) {
 	preserveZoomCLIFlags(t)
 	selectedPages = "foo"
-	err := handleZoomCommand(model.NewDefaultConfiguration(), []string{"factor:.5", "in.pdf"})
+	err := handleZoomCommand(
+		t.Context(), model.NewDefaultConfiguration(), []string{"factor:.5", "in.pdf"},
+	)
 	if err == nil || !strings.Contains(err.Error(), "zoom: parse page selection") {
 		t.Fatalf("expected page-selection context, got %v", err)
 	}

@@ -18,11 +18,13 @@ package pdfcpu
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
@@ -194,16 +196,32 @@ func zoomPageNumbers(pageCount int, selectedPages types.IntSet) []int {
 	return pageNrs
 }
 
-// Zoom applies zoom to selected pages in ctx.
-func Zoom(ctx *model.Context, selectedPages types.IntSet, zoom *model.Zoom) error {
+// Zoom applies zoom to selected pages in ctx and supports cancellation.
+func Zoom(c context.Context, ctx *model.Context, selectedPages types.IntSet, zoom *model.Zoom) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if err := requireContextWithXRefTable(ctx); err != nil {
+		return fmt.Errorf("zoom: source context: %w", err)
+	}
+	return zoomUsing(c, ctx, selectedPages, zoom, zoomPage)
+}
+
+func zoomUsing(c context.Context, ctx *model.Context, selectedPages types.IntSet, zoom *model.Zoom, apply func(*model.Context, int, *model.Zoom) error) error {
 	if log.DebugEnabled() {
 		log.Debug.Printf("Zoom:\n%s\n", zoom)
 	}
 
 	for _, pageNr := range zoomPageNumbers(ctx.PageCount, selectedPages) {
-		if err := zoomPage(ctx, pageNr, zoom); err != nil {
+		if err := c.Err(); err != nil {
+			return err
+		}
+		if err := apply(ctx, pageNr, zoom); err != nil {
 			return fmt.Errorf("page %d: %w", pageNr, err)
 		}
+	}
+	if err := c.Err(); err != nil {
+		return err
 	}
 
 	ctx.EnsureVersionForWriting()

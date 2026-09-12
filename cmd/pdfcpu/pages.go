@@ -17,11 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -40,7 +42,7 @@ func bookletCmd() *cobra.Command {
 		Short: "Arrange pages onto larger sheets of paper to make a booklet or zine",
 		Long:  usageLongBooklet,
 		Args:  cobra.MinimumNArgs(3),
-		RunE:  wrapHandler(handleBookletCommand),
+		RunE:  wrapContextHandler(handleBookletCommand),
 	}
 	addSelectedPagesUnitPasswordFlags(cmd)
 
@@ -53,7 +55,7 @@ func cutCmd() *cobra.Command {
 		Short: "Custom cut pages horizontally or vertically",
 		Long:  usageLongCut,
 		Args:  cobra.RangeArgs(3, 4),
-		RunE:  wrapHandler(handleCutCommand),
+		RunE:  wrapContextHandler(handleCutCommand),
 	}
 	addSelectedPagesUnitPasswordFlags(cmd)
 
@@ -66,7 +68,7 @@ func gridCmd() *cobra.Command {
 		Short: "Rearrange pages or images for enhanced browsing experience",
 		Long:  usageLongGrid,
 		Args:  cobra.MinimumNArgs(4),
-		RunE:  wrapHandler(handleGridCommand),
+		RunE:  wrapContextHandler(handleGridCommand),
 	}
 	addSelectedPagesUnitPasswordFlags(cmd)
 
@@ -79,7 +81,7 @@ func ndownCmd() *cobra.Command {
 		Short: "Cut selected page into n pages symmetrically",
 		Long:  usageLongNDown,
 		Args:  cobra.RangeArgs(3, 5),
-		RunE:  wrapHandler(handleNDownCommand),
+		RunE:  wrapContextHandler(handleNDownCommand),
 	}
 	addSelectedPagesUnitPasswordFlags(cmd)
 
@@ -92,7 +94,7 @@ func nupCmd() *cobra.Command {
 		Short: "Rearrange pages or images for reduced number of pages",
 		Long:  usageLongNUp,
 		Args:  cobra.MinimumNArgs(3),
-		RunE:  wrapHandler(handleNUpCommand),
+		RunE:  wrapContextHandler(handleNUpCommand),
 	}
 	addSelectedPagesUnitPasswordFlags(cmd)
 
@@ -105,7 +107,7 @@ func posterCmd() *cobra.Command {
 		Short: "Create poster using paper size",
 		Long:  usageLongPoster,
 		Args:  cobra.RangeArgs(3, 4),
-		RunE:  wrapHandler(handlePosterCommand),
+		RunE:  wrapContextHandler(handlePosterCommand),
 	}
 	addSelectedPagesUnitPasswordFlags(cmd)
 
@@ -118,7 +120,7 @@ func resizeCmd() *cobra.Command {
 		Short: "Scale selected pages",
 		Long:  usageLongResize,
 		Args:  cobra.RangeArgs(2, 3),
-		RunE:  wrapHandler(handleResizeCommand),
+		RunE:  wrapContextHandler(handleResizeCommand),
 	}
 	addSelectedPagesUnitPasswordFlags(cmd)
 
@@ -131,7 +133,7 @@ func zoomCmd() *cobra.Command {
 		Short: "Zoom in/out of selected pages",
 		Long:  usageLongZoom,
 		Args:  cobra.RangeArgs(2, 3),
-		RunE:  wrapHandler(handleZoomCommand),
+		RunE:  wrapContextHandler(handleZoomCommand),
 	}
 	addSelectedPagesUnitPasswordFlags(cmd)
 
@@ -151,7 +153,7 @@ func boxesCmd() *cobra.Command {
 		Use:   "list [ boxTypes ] inFile",
 		Short: "List boxes",
 		Args:  cobra.RangeArgs(1, 2),
-		RunE:  wrapHandler(handleListBoxesCommand),
+		RunE:  wrapContextHandler(handleListBoxesCommand),
 	}
 	addUnitFlag(listCmd)
 
@@ -159,7 +161,7 @@ func boxesCmd() *cobra.Command {
 		Use:   "add description inFile [ outFile ]",
 		Short: "Add boxes",
 		Args:  cobra.RangeArgs(2, 3),
-		RunE:  wrapHandler(handleAddBoxesCommand),
+		RunE:  wrapContextHandler(handleAddBoxesCommand),
 	}
 	addUnitFlag(addCmd)
 
@@ -167,7 +169,7 @@ func boxesCmd() *cobra.Command {
 		Use:   "remove boxTypes inFile [ outFile ]",
 		Short: "Remove boxes",
 		Args:  cobra.RangeArgs(2, 3),
-		RunE:  wrapHandler(handleRemoveBoxesCommand),
+		RunE:  wrapContextHandler(handleRemoveBoxesCommand),
 	}
 
 	cmd.AddCommand(listCmd, addCmd, removeCmd)
@@ -307,7 +309,10 @@ func nupFilesAndConfig(args []string, nup *model.NUp, nUpValues []int) ([]string
 	return inFiles, outFile, nil
 }
 
-func handleNUpCommand(conf *model.Configuration, args []string) error {
+func handleNUpCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := configureDisplayUnit(conf); err != nil {
 		return err
 	}
@@ -324,10 +329,13 @@ func handleNUpCommand(conf *model.Configuration, args []string) error {
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.NUpCommand(inFiles, outFile, pages, nup, conf))
+	return runCommand(c, cli.NUpCommand(inFiles, outFile, pages, nup, conf))
 }
 
-func handleGridCommand(conf *model.Configuration, args []string) error {
+func handleGridCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := configureDisplayUnit(conf); err != nil {
 		return fmt.Errorf("grid: configure display unit: %w", err)
 	}
@@ -345,17 +353,20 @@ func handleGridCommand(conf *model.Configuration, args []string) error {
 	if err != nil {
 		return fmt.Errorf("grid: parse arguments: %w", err)
 	}
-	return runCommand(cli.GridCommand(inFiles, outFile, pages, nup, conf))
+	return runCommand(c, cli.GridCommand(inFiles, outFile, pages, nup, conf))
 }
 
-func handleBookletCommand(conf *model.Configuration, args []string) error {
-	if err := configureDisplayUnit(conf); err != nil {
+func handleBookletCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
 		return err
+	}
+	if err := configureDisplayUnit(conf); err != nil {
+		return fmt.Errorf("booklet: configure display unit: %w", err)
 	}
 
 	pages, err := parseSelectedPages()
 	if err != nil {
-		return err
+		return fmt.Errorf("booklet: parse page selection: %w", err)
 	}
 
 	nup := api.DefaultBookletConfig()
@@ -363,12 +374,15 @@ func handleBookletCommand(conf *model.Configuration, args []string) error {
 
 	inFiles, outFile, err := nupFilesAndConfig(args, nup, api.NUpValuesForBooklets())
 	if err != nil {
-		return err
+		return fmt.Errorf("booklet: parse arguments: %w", err)
 	}
-	return runCommand(cli.BookletCommand(inFiles, outFile, pages, nup, conf))
+	return runCommand(c, cli.BookletCommand(inFiles, outFile, pages, nup, conf))
 }
 
-func handleResizeCommand(conf *model.Configuration, args []string) error {
+func handleResizeCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -396,10 +410,13 @@ func handleResizeCommand(conf *model.Configuration, args []string) error {
 		return fmt.Errorf("resize: parse page selection: %w", err)
 	}
 
-	return runCommand(cli.ResizeCommand(inFile, outFile, selectedPages, rc, conf))
+	return runCommand(c, cli.ResizeCommand(inFile, outFile, selectedPages, rc, conf))
 }
 
-func handlePosterCommand(conf *model.Configuration, args []string) error {
+func handlePosterCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -441,7 +458,7 @@ func handlePosterCommand(conf *model.Configuration, args []string) error {
 		return fmt.Errorf("poster: check output: %w", err)
 	}
 
-	return runCommand(cli.PosterCommand(inFile, outDir, outFile, selectedPages, cut, conf))
+	return runCommand(c, cli.PosterCommand(inFile, outDir, outFile, selectedPages, cut, conf))
 }
 
 func ndownArgs(args []string, unit types.DisplayUnit) (int, *model.Cut, string, string, string, error) {
@@ -482,7 +499,10 @@ func ndownArgs(args []string, unit types.DisplayUnit) (int, *model.Cut, string, 
 	return n, cut, args[2], args[3], outFile, nil
 }
 
-func handleNDownCommand(conf *model.Configuration, args []string) error {
+func handleNDownCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -515,10 +535,13 @@ func handleNDownCommand(conf *model.Configuration, args []string) error {
 		return fmt.Errorf("ndown: check output: %w", err)
 	}
 
-	return runCommand(cli.NDownCommand(inFile, outDir, outFile, selectedPages, n, cut, conf))
+	return runCommand(c, cli.NDownCommand(inFile, outDir, outFile, selectedPages, n, cut, conf))
 }
 
-func handleCutCommand(conf *model.Configuration, args []string) error {
+func handleCutCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -561,10 +584,13 @@ func handleCutCommand(conf *model.Configuration, args []string) error {
 		return fmt.Errorf("cut: check output: %w", err)
 	}
 
-	return runCommand(cli.CutCommand(inFile, outDir, outFile, selectedPages, cut, conf))
+	return runCommand(c, cli.CutCommand(inFile, outDir, outFile, selectedPages, cut, conf))
 }
 
-func handleZoomCommand(conf *model.Configuration, args []string) error {
+func handleZoomCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -592,7 +618,7 @@ func handleZoomCommand(conf *model.Configuration, args []string) error {
 		return fmt.Errorf("zoom: parse page selection: %w", err)
 	}
 
-	return runCommand(cli.ZoomCommand(inFile, outFile, selectedPages, zc, conf))
+	return runCommand(c, cli.ZoomCommand(inFile, outFile, selectedPages, zc, conf))
 }
 
 func addSelectedPagesUnitPasswordFlags(cmd *cobra.Command) {
@@ -607,7 +633,7 @@ func cropCmd() *cobra.Command {
 		Short: "Set cropbox for selected pages",
 		Long:  usageLongCrop,
 		Args:  cobra.RangeArgs(2, 3),
-		RunE:  wrapHandler(handleCropCommand),
+		RunE:  wrapContextHandler(handleCropCommand),
 	}
 	addSelectedPagesFlag(cmd)
 	addUnitFlag(cmd)
@@ -629,8 +655,8 @@ func pagesCmd() *cobra.Command {
 		Use:   "insert [ description ] inFile [ outFile ]",
 		Short: "Insert pages",
 		Args:  cobra.RangeArgs(1, 3),
-		RunE: wrapHandler(func(conf *model.Configuration, args []string) error {
-			return handleInsertPagesCommand(conf, args, insertOpts)
+		RunE: wrapContextHandler(func(c context.Context, conf *model.Configuration, args []string) error {
+			return handleInsertPagesCommand(c, conf, args, insertOpts)
 		}),
 	}
 	addRequiredSelectedPagesFlag(insertCmd)
@@ -641,7 +667,7 @@ func pagesCmd() *cobra.Command {
 		Use:   "remove inFile [ outFile ]",
 		Short: "Remove pages",
 		Args:  cobra.RangeArgs(1, 2),
-		RunE:  wrapHandler(handleRemovePagesCommand),
+		RunE:  wrapContextHandler(handleRemovePagesCommand),
 	}
 	addRequiredSelectedPagesFlag(removeCmd)
 
@@ -656,14 +682,14 @@ func rotateCmd() *cobra.Command {
 		Short: "Rotate selected pages",
 		Long:  usageLongRotate,
 		Args:  cobra.RangeArgs(2, 3),
-		RunE:  wrapHandler(handleRotateCommand),
+		RunE:  wrapContextHandler(handleRotateCommand),
 	}
 	addSelectedPagesFlag(cmd)
 	addPasswordFlags(cmd)
 	return cmd
 }
 
-func insertPagesWithoutDesc(inFile string, conf *model.Configuration, pages []string, args []string, opts *pagesInsertOptions) error {
+func insertPagesWithoutDesc(c context.Context, inFile string, conf *model.Configuration, pages []string, args []string, opts *pagesInsertOptions) error {
 	outFile := ""
 	if inFile == "-" {
 		outFile = "-"
@@ -680,7 +706,7 @@ func insertPagesWithoutDesc(inFile string, conf *model.Configuration, pages []st
 		}
 	}
 
-	return runCommand(cli.InsertPagesCommand(inFile, outFile, pages, conf, opts.mode, nil))
+	return runCommand(c, cli.InsertPagesCommand(inFile, outFile, pages, conf, opts.mode, nil))
 }
 
 func selectedPagesRequired() ([]string, error) {
@@ -701,7 +727,7 @@ func validatePagesInsertMode(opts *pagesInsertOptions) error {
 	return nil
 }
 
-func pagesInsertWithDesc(conf *model.Configuration, args []string, pages []string, opts *pagesInsertOptions) error {
+func pagesInsertWithDesc(c context.Context, conf *model.Configuration, args []string, pages []string, opts *pagesInsertOptions) error {
 	pageConf, err := pdfcpu.ParsePageConfiguration(args[0], conf.Unit)
 	if err != nil {
 		return err
@@ -715,10 +741,13 @@ func pagesInsertWithDesc(conf *model.Configuration, args []string, pages []strin
 		return err
 	}
 
-	return runCommand(cli.InsertPagesCommand(inFile, outFile, pages, conf, opts.mode, pageConf))
+	return runCommand(c, cli.InsertPagesCommand(inFile, outFile, pages, conf, opts.mode, pageConf))
 }
 
-func handleInsertPagesCommand(conf *model.Configuration, args []string, opts *pagesInsertOptions) error {
+func handleInsertPagesCommand(c context.Context, conf *model.Configuration, args []string, opts *pagesInsertOptions) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	pages, err := selectedPagesRequired()
 	if err != nil {
 		return err
@@ -729,13 +758,16 @@ func handleInsertPagesCommand(conf *model.Configuration, args []string, opts *pa
 
 	inFile := args[0]
 	if hasPDFExtension(inFile) || inFile == "-" {
-		return insertPagesWithoutDesc(inFile, conf, pages, args, opts)
+		return insertPagesWithoutDesc(c, inFile, conf, pages, args, opts)
 	}
 
-	return pagesInsertWithDesc(conf, args, pages, opts)
+	return pagesInsertWithDesc(c, conf, args, pages, opts)
 }
 
-func handleRemovePagesCommand(conf *model.Configuration, args []string) error {
+func handleRemovePagesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile, outFile, err := optionalOutputPDFArgs(conf, args)
 	if err != nil {
 		return err
@@ -746,7 +778,7 @@ func handleRemovePagesCommand(conf *model.Configuration, args []string) error {
 		return err
 	}
 
-	return runCommand(cli.RemovePagesCommand(inFile, outFile, pages, conf))
+	return runCommand(c, cli.RemovePagesCommand(inFile, outFile, pages, conf))
 }
 
 func rotation(s string) (int, error) {
@@ -757,7 +789,10 @@ func rotation(s string) (int, error) {
 	return rotation, nil
 }
 
-func handleRotateCommand(conf *model.Configuration, args []string) error {
+func handleRotateCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	rotation, err := rotation(args[1])
 	if err != nil {
 		return err
@@ -766,10 +801,13 @@ func handleRotateCommand(conf *model.Configuration, args []string) error {
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.RotateCommand(inFile, outFile, rotation, pages, conf))
+	return runCommand(c, cli.RotateCommand(inFile, outFile, rotation, pages, conf))
 }
 
-func handleCropCommand(conf *model.Configuration, args []string) error {
+func handleCropCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := configureDisplayUnit(conf); err != nil {
 		return err
 	}
@@ -781,10 +819,13 @@ func handleCropCommand(conf *model.Configuration, args []string) error {
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.CropCommand(inFile, outFile, pages, box, conf))
+	return runCommand(c, cli.CropCommand(inFile, outFile, pages, box, conf))
 }
 
-func handleListBoxesCommand(conf *model.Configuration, args []string) error {
+func handleListBoxesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := configureDisplayUnit(conf); err != nil {
 		return err
 	}
@@ -797,7 +838,7 @@ func handleListBoxesCommand(conf *model.Configuration, args []string) error {
 		if err := inputPDFArg(conf, inFile); err != nil {
 			return err
 		}
-		return runCommand(cli.ListBoxesCommand(inFile, selectedPages, nil, conf))
+		return runCommand(c, cli.ListBoxesCommand(inFile, selectedPages, nil, conf))
 	}
 
 	pb, err := api.PageBoundariesFromBoxList(args[0])
@@ -810,10 +851,13 @@ func handleListBoxesCommand(conf *model.Configuration, args []string) error {
 		return err
 	}
 
-	return runCommand(cli.ListBoxesCommand(inFile, selectedPages, pb, conf))
+	return runCommand(c, cli.ListBoxesCommand(inFile, selectedPages, pb, conf))
 }
 
-func handleAddBoxesCommand(conf *model.Configuration, args []string) error {
+func handleAddBoxesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := configureDisplayUnit(conf); err != nil {
 		return err
 	}
@@ -832,7 +876,7 @@ func handleAddBoxesCommand(conf *model.Configuration, args []string) error {
 		return err
 	}
 
-	return runCommand(cli.AddBoxesCommand(inFile, outFile, selectedPages, pb, conf))
+	return runCommand(c, cli.AddBoxesCommand(inFile, outFile, selectedPages, pb, conf))
 }
 
 func removeBoxBoundaries(s string) (*model.PageBoundaries, error) {
@@ -846,7 +890,10 @@ func removeBoxBoundaries(s string) (*model.PageBoundaries, error) {
 	return pb, nil
 }
 
-func handleRemoveBoxesCommand(conf *model.Configuration, args []string) error {
+func handleRemoveBoxesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	pb, err := removeBoxBoundaries(args[0])
 	if err != nil {
 		return err
@@ -860,5 +907,5 @@ func handleRemoveBoxesCommand(conf *model.Configuration, args []string) error {
 		return err
 	}
 
-	return runCommand(cli.RemoveBoxesCommand(inFile, outFile, selectedPages, pb, conf))
+	return runCommand(c, cli.RemoveBoxesCommand(inFile, outFile, selectedPages, pb, conf))
 }

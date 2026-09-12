@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -27,6 +28,91 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func TestWriteContextRejectsNilContext(t *testing.T) {
+	if err := WriteContext(nil, nil); !errors.Is(err, ErrMissingContext) {
+		t.Fatalf("got %v, want ErrMissingContext", err)
+	}
+}
+
+func TestWriteContextReturnsCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if err := WriteContext(c, nil); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestWriteIncrementRejectsNilContext(t *testing.T) {
+	if err := WriteIncrement(nil, nil); !errors.Is(err, ErrMissingContext) {
+		t.Fatalf("got %v, want ErrMissingContext", err)
+	}
+}
+
+func TestWriteIncrementReturnsCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if err := WriteIncrement(c, nil); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestWriteFlatObjectReturnsCancellationBeforeObjectProcessing(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if err := writeFlatObject(c, nil, 1); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestWriteKidsReturnsCancellationBeforeKidProcessing(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	_, _, err := writeKids(
+		c,
+		&model.Context{},
+		types.Array{types.Integer(1)},
+		new(int),
+		0,
+		model.NewPageTreeVisit(),
+	)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestWriteXRefSubsectionReturnsCancellationBeforeEntryProcessing(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if err := writeXRefSubsection(c, nil, 0, 1); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestCreateXRefStreamReturnsCancellationBeforeEntryProcessing(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	_, _, err := createXRefStream(c, &model.Context{}, 1, 1, 1, []int{0})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestWriteDeepObjectReturnsCancellationBeforeObjectProcessing(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	_, _, err := writeDeepObject(c, &model.Context{}, types.IndirectRef{})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
 
 // TestWriteContextReplacesExistingDestination verifies direct filename publication.
 func TestWriteContextReplacesExistingDestination(t *testing.T) {
@@ -43,7 +129,7 @@ func TestWriteContextReplacesExistingDestination(t *testing.T) {
 	ctx.Write.DirName = dir
 	ctx.Write.FileName = filepath.Base(outFile)
 
-	if err := WriteContext(ctx); err != nil {
+	if err := WriteContext(t.Context(), ctx); err != nil {
 		t.Fatal(err)
 	}
 	got, readErr := os.ReadFile(outFile)
@@ -89,7 +175,7 @@ func TestWriteContextRejectsInvalidInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := WriteContext(tt.ctx)
+			err := WriteContext(t.Context(), tt.ctx)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
@@ -122,7 +208,7 @@ func TestWriteIncrementRejectsInvalidInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := WriteIncrement(tt.ctx)
+			err := WriteIncrement(t.Context(), tt.ctx)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}

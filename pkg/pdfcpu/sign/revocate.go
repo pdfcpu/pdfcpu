@@ -18,6 +18,7 @@ package sign
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/asn1"
 	"errors"
@@ -27,6 +28,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"golang.org/x/crypto/ocsp"
 )
@@ -70,6 +72,7 @@ type RevocationInfoArchival struct {
 }
 
 func checkRevocation(
+	c context.Context,
 	cert, issuer *x509.Certificate,
 	rootCerts *x509.CertPool,
 	signer *model.Signer,
@@ -77,10 +80,19 @@ func checkRevocation(
 	crls [][]byte,
 	ocsps [][]byte,
 	result *model.SignatureValidationResult,
-	conf *model.Configuration) {
-	revocationDetails, err := checkCertificateRevocation(cert, issuer, rootCerts, signer, crls, ocsps, conf)
+	conf *model.Configuration,
+) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	revocationDetails, err := checkCertificateRevocation(
+		c, cert, issuer, rootCerts, signer, crls, ocsps, conf,
+	)
 	if revocationDetails != nil {
 		certDetails.Revocation = *revocationDetails
+	}
+	if contextErr := c.Err(); contextErr != nil {
+		return contextErr
 	}
 	if err != nil {
 		signer.AddProblem(fmt.Sprintf("certificate revocation check for %s: %v", certInfo(cert), err))
@@ -88,7 +100,7 @@ func checkRevocation(
 		if result.Reason == model.SignatureReasonUnknown {
 			result.Reason = model.SignatureReasonCertRevocationUnknown
 		}
-		return
+		return nil
 	}
 
 	// The assessed signing certificate is revoked and considered invalid.
@@ -96,7 +108,7 @@ func checkRevocation(
 		if result.Reason == model.SignatureReasonUnknown {
 			result.Reason = model.SignatureReasonCertRevoked
 		}
-		return
+		return nil
 	}
 
 	// The certificate revocation status is unknown.
@@ -105,18 +117,25 @@ func checkRevocation(
 			result.Reason = model.SignatureReasonCertRevocationUnknown
 		}
 	}
+	return nil
 }
 
 func checkCertificateRevocation(
+	c context.Context,
 	cert, issuer *x509.Certificate,
 	rootCerts *x509.CertPool,
 	signer *model.Signer,
 	crls [][]byte,
 	ocsps [][]byte,
-	conf *model.Configuration) (*model.RevocationDetails, error) {
+	conf *model.Configuration,
+) (*model.RevocationDetails, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	// Hybrid Approach - configure your preferredCertRevocationChecker in config.yml
 
 	var f1, f2 func(
+		c context.Context,
 		cert, issuer *x509.Certificate,
 		rootCerts *x509.CertPool,
 		bbb [][]byte, // crls or ocsps
@@ -138,7 +157,10 @@ func checkCertificateRevocation(
 		f1bbb, f2bbb = f2bbb, f1bbb
 	}
 
-	firstDetails, firstErr := f1(cert, issuer, rootCerts, f1bbb, conf)
+	firstDetails, firstErr := f1(c, cert, issuer, rootCerts, f1bbb, conf)
+	if err := c.Err(); err != nil {
+		return firstDetails, err
+	}
 	if firstErr == nil && revocationConcluded(firstDetails) {
 		return firstDetails, nil
 	}
@@ -157,7 +179,10 @@ func checkCertificateRevocation(
 	}
 
 	// Fall back revocation checker.
-	secondDetails, secondErr := f2(cert, issuer, rootCerts, f2bbb, conf)
+	secondDetails, secondErr := f2(c, cert, issuer, rootCerts, f2bbb, conf)
+	if err := c.Err(); err != nil {
+		return mergeRevocationDetails(secondDetails, firstDetails), err
+	}
 	details := mergeRevocationDetails(secondDetails, firstDetails)
 	if secondErr != nil {
 		return details, errors.Join(secondErr, firstErr)
@@ -166,14 +191,22 @@ func checkCertificateRevocation(
 }
 
 func checkCertAgainstCRL(
+	c context.Context,
 	cert, issuer *x509.Certificate,
 	rootCerts *x509.CertPool,
 	crls [][]byte,
-	conf *model.Configuration) (*model.RevocationDetails, error) {
+	conf *model.Configuration,
+) (*model.RevocationDetails, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	var archivedDetails *model.RevocationDetails
 	var archivedErr error
 	if len(crls) > 0 {
 		archivedDetails, archivedErr = processArchivedCRLs(cert, issuer, crls)
+	}
+	if err := c.Err(); err != nil {
+		return archivedDetails, err
 	}
 
 	if conf.Offline {
@@ -185,7 +218,7 @@ func checkCertAgainstCRL(
 	}
 
 	client := revocationHTTPClient(time.Duration(conf.TimeoutCRL)*time.Second, conf.AllowedRevocationHosts)
-	currentDetails, err := processCurrentCRLs(cert, issuer, client)
+	currentDetails, err := processCurrentCRLs(c, cert, issuer, client)
 	details := mergeRevocationDetails(currentDetails, archivedDetails)
 	if revocationConcluded(currentDetails) {
 		return details, nil
@@ -232,9 +265,13 @@ func processArchivedCRLs(
 }
 
 func processCurrentCRLs(
+	c context.Context,
 	cert, issuer *x509.Certificate,
 	client *http.Client,
 ) (*model.RevocationDetails, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	now := time.Now()
 	var (
 		observations          []*model.CRLEvidence
@@ -243,43 +280,15 @@ func processCurrentCRLs(
 	)
 
 	for i, url := range cert.CRLDistributionPoints {
-		if err := validateRevocationURLString(url); err != nil {
-			failures = append(failures, fmt.Errorf("CRL: fetch %s: %w", url, err))
-			observations = append(observations, failedCRLEvidence(
-				model.RevocationEvidenceSourceOnline,
-				i+1,
-				url,
-				err,
-			))
-			continue
+		if err := c.Err(); err != nil {
+			return nil, err
 		}
-		resp, err := client.Get(url)
+		crl, err := fetchCurrentCRL(c, client, url)
 		if err != nil {
-			failures = append(failures, fmt.Errorf("CRL: fetch %s: %w", url, err))
-			observations = append(observations, failedCRLEvidence(
-				model.RevocationEvidenceSourceOnline,
-				i+1,
-				url,
-				err,
-			))
-			continue
-		}
-
-		crlData, err := readAndCloseResponse(resp)
-		if err != nil {
-			failures = append(failures, fmt.Errorf("CRL: responder %s: %w", url, err))
-			observations = append(observations, failedCRLEvidence(
-				model.RevocationEvidenceSourceOnline,
-				i+1,
-				url,
-				err,
-			))
-			continue
-		}
-
-		crl, err := x509.ParseRevocationList(crlData)
-		if err != nil {
-			failures = append(failures, fmt.Errorf("CRL: parse response from %s: %w", url, err))
+			if contextErr := c.Err(); contextErr != nil {
+				return nil, contextErr
+			}
+			failures = append(failures, err)
 			observations = append(observations, failedCRLEvidence(
 				model.RevocationEvidenceSourceOnline,
 				i+1,
@@ -326,6 +335,33 @@ func processCurrentCRLs(
 		observations,
 	)
 	return details, errors.Join(failures...)
+}
+
+func fetchCurrentCRL(
+	c context.Context,
+	client *http.Client,
+	url string,
+) (*x509.RevocationList, error) {
+	if err := validateRevocationURLString(url); err != nil {
+		return nil, fmt.Errorf("CRL: fetch %s: %w", url, err)
+	}
+	req, err := http.NewRequestWithContext(c, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("CRL: create request for %s: %w", url, err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("CRL: fetch %s: %w", url, err)
+	}
+	crlData, err := readAndCloseResponse(resp)
+	if err != nil {
+		return nil, fmt.Errorf("CRL: responder %s: %w", url, err)
+	}
+	crl, err := x509.ParseRevocationList(crlData)
+	if err != nil {
+		return nil, fmt.Errorf("CRL: parse response from %s: %w", url, err)
+	}
+	return crl, nil
 }
 
 func assessCRL(
@@ -509,10 +545,15 @@ func readAndCloseResponse(resp *http.Response) ([]byte, error) {
 }
 
 func checkCertViaOCSP(
+	c context.Context,
 	cert, issuer *x509.Certificate,
 	_ *x509.CertPool,
 	ocsps [][]byte,
-	conf *model.Configuration) (*model.RevocationDetails, error) {
+	conf *model.Configuration,
+) (*model.RevocationDetails, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if issuer == nil {
 		return nil, errors.New("OCSP: certificate issuer unavailable")
 	}
@@ -521,6 +562,9 @@ func checkCertViaOCSP(
 	var archivedErr error
 	if len(ocsps) > 0 {
 		archivedDetails, archivedErr = processArchivedOCSPResponses(cert, issuer, ocsps)
+	}
+	if err := c.Err(); err != nil {
+		return archivedDetails, err
 	}
 
 	if conf.Offline {
@@ -532,7 +576,7 @@ func checkCertViaOCSP(
 	}
 
 	client := revocationHTTPClient(time.Duration(conf.TimeoutOCSP)*time.Second, conf.AllowedRevocationHosts)
-	rd, err := processCurrentOCSPResponses(cert, issuer, client)
+	rd, err := processCurrentOCSPResponses(c, cert, issuer, client)
 	details := mergeRevocationDetails(rd, archivedDetails)
 	if revocationConcluded(rd) {
 		return details, nil
@@ -841,8 +885,13 @@ func inconclusiveOCSPReason(candidates []*ocspCandidate, defaultReason string) s
 }
 
 func processCurrentOCSPResponses(
+	c context.Context,
 	cert, issuer *x509.Certificate,
-	client *http.Client) (*model.RevocationDetails, error) {
+	client *http.Client,
+) (*model.RevocationDetails, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	ocspRequest, err := ocsp.CreateRequest(cert, issuer, nil)
 	if err != nil {
 		return nil, fmt.Errorf("OCSP: create request: %w", err)
@@ -855,7 +904,12 @@ func processCurrentOCSPResponses(
 		candidates   []*ocspCandidate
 	)
 	for i, ocspURL := range cert.OCSPServer {
-		candidate, err := processCurrentOCSPResponse(cert, issuer, client, ocspRequest, ocspURL, now)
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
+		candidate, err := processCurrentOCSPResponse(
+			c, cert, issuer, client, ocspRequest, ocspURL, now,
+		)
 		if err != nil {
 			location := fmt.Sprintf("responder %d (%s)", i+1, ocspURL)
 			failures = appendIndexedFailure(failures, location, err)
@@ -890,21 +944,36 @@ func processCurrentOCSPResponses(
 }
 
 func processCurrentOCSPResponse(
+	c context.Context,
 	cert, issuer *x509.Certificate,
 	client *http.Client,
 	request []byte,
 	ocspURL string,
 	now time.Time,
 ) (*ocspCandidate, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateRevocationURLString(ocspURL); err != nil {
 		return nil, err
 	}
-	resp, err := client.Post(ocspURL, "application/ocsp-request", io.NopCloser(bytes.NewReader(request)))
+	req, err := http.NewRequestWithContext(c, http.MethodPost, ocspURL, bytes.NewReader(request))
 	if err != nil {
+		return nil, fmt.Errorf("OCSP: create request for %s: %w", ocspURL, err)
+	}
+	req.Header.Set("Content-Type", "application/ocsp-request")
+	resp, err := client.Do(req)
+	if err != nil {
+		if contextErr := c.Err(); contextErr != nil {
+			return nil, contextErr
+		}
 		return nil, fmt.Errorf("OCSP: send request to %s: %w", ocspURL, err)
 	}
 
 	ocspResponseData, err := readAndCloseResponse(resp)
+	if contextErr := c.Err(); contextErr != nil {
+		return nil, contextErr
+	}
 	if err != nil {
 		return nil, fmt.Errorf("OCSP: responder %s: %w", ocspURL, err)
 	}

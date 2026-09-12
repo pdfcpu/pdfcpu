@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -72,7 +74,7 @@ func createCmd() *cobra.Command {
 		Short: "Create PDF content including forms via JSON",
 		Long:  usageLongCreate,
 		Args:  cobra.RangeArgs(2, 3),
-		RunE:  wrapHandler(handleCreateCommand),
+		RunE:  wrapContextHandler(handleCreateCommand),
 	}
 }
 
@@ -82,7 +84,7 @@ func dumpCmd() *cobra.Command {
 		Short:  "Dump object",
 		Args:   cobra.ExactArgs(3),
 		Hidden: true,
-		RunE:   wrapHandler(handleDumpCommand),
+		RunE:   wrapContextHandler(handleDumpCommand),
 	}
 }
 
@@ -93,8 +95,8 @@ func infoCmd() *cobra.Command {
 		Short: "Print file info",
 		Long:  usageLongInfo,
 		Args:  cobra.MinimumNArgs(1),
-		RunE: wrapHandler(func(conf *model.Configuration, args []string) error {
-			return handleInfoCommand(conf, args, opts)
+		RunE: wrapContextHandler(func(c context.Context, conf *model.Configuration, args []string) error {
+			return handleInfoCommand(c, conf, args, opts)
 		}),
 	}
 	addSelectedPagesFlag(cmd)
@@ -112,7 +114,7 @@ func collectCmd() *cobra.Command {
 		Short: "Create custom sequence of selected pages",
 		Long:  usageLongCollect,
 		Args:  cobra.RangeArgs(1, 2),
-		RunE:  wrapHandler(handleCollectCommand),
+		RunE:  wrapContextHandler(handleCollectCommand),
 	}
 	addRequiredSelectedPagesFlag(cmd)
 	addPasswordFlags(cmd)
@@ -140,7 +142,7 @@ func mergeCmd() *cobra.Command {
 			opts.bookmarkModeSet = cmd.Flags().Changed("bookmark-mode")
 			opts.optimizeSet = cmd.Flags().Changed("optimize")
 			return wrapHandler(func(conf *model.Configuration, args []string) error {
-				return handleMergeCommand(conf, args, opts)
+				return handleMergeCommand(cmd.Context(), conf, args, opts)
 			})(cmd, args)
 		},
 	}
@@ -166,8 +168,8 @@ func splitCmd() *cobra.Command {
 		Short: "Split up inFile by span or bookmark",
 		Long:  usageLongSplit,
 		Args:  cobra.MinimumNArgs(2),
-		RunE: wrapHandler(func(conf *model.Configuration, args []string) error {
-			return handleSplitCommand(conf, args, opts)
+		RunE: wrapContextHandler(func(c context.Context, conf *model.Configuration, args []string) error {
+			return handleSplitCommand(c, conf, args, opts)
 		}),
 	}
 	cmd.Flags().StringVarP(&opts.mode, "mode", "m", opts.mode, "split mode: span | bookmark | page")
@@ -181,7 +183,7 @@ func trimCmd() *cobra.Command {
 		Short: "Create trimmed version of selected pages",
 		Long:  usageLongTrim,
 		Args:  cobra.RangeArgs(1, 2),
-		RunE:  wrapHandler(handleTrimCommand),
+		RunE:  wrapContextHandler(handleTrimCommand),
 	}
 	addPasswordFlags(cmd)
 	addRequiredSelectedPagesFlag(cmd)
@@ -195,8 +197,8 @@ func optimizeCmd() *cobra.Command {
 		Short: "Optimize a PDF by getting rid of redundant page resources",
 		Long:  usageLongOptimize,
 		Args:  cobra.RangeArgs(1, 2),
-		RunE: wrapHandler(func(conf *model.Configuration, args []string) error {
-			return handleOptimizeCommand(conf, args, opts)
+		RunE: wrapContextHandler(func(c context.Context, conf *model.Configuration, args []string) error {
+			return handleOptimizeCommand(c, conf, args, opts)
 		}),
 	}
 	addPasswordFlags(cmd)
@@ -219,8 +221,8 @@ func validateCmd() *cobra.Command {
 		Short: "Validate PDF against PDF 32000-1:2008 (PDF 1.7) + basic PDF 2.0 validation",
 		Long:  usageLongValidate,
 		Args:  cobra.MinimumNArgs(1),
-		RunE: wrapHandler(func(conf *model.Configuration, args []string) error {
-			return handleValidateCommand(conf, args, opts)
+		RunE: wrapContextHandler(func(c context.Context, conf *model.Configuration, args []string) error {
+			return handleValidateCommand(c, conf, args, opts)
 		}),
 	}
 	addPasswordFlags(cmd)
@@ -232,7 +234,7 @@ func validateCmd() *cobra.Command {
 	return cmd
 }
 
-func handleValidateCommand(conf *model.Configuration, args []string, opts *validateOptions) error {
+func handleValidateCommand(c context.Context, conf *model.Configuration, args []string, opts *validateOptions) error {
 	inFiles, err := collectInFiles(conf, args)
 	if err != nil {
 		return fmt.Errorf("validate: %w", err)
@@ -260,10 +262,10 @@ func handleValidateCommand(conf *model.Configuration, args []string, opts *valid
 
 	cmd := cli.ValidateCommand(inFiles, conf)
 	cmd.BoolVal1 = opts.progress
-	return runCommand(cmd)
+	return runCommand(c, cmd)
 }
 
-func handleOptimizeCommand(conf *model.Configuration, args []string, opts *optimizeCommandOptions) error {
+func handleOptimizeCommand(c context.Context, conf *model.Configuration, args []string, opts *optimizeCommandOptions) error {
 	inFile := args[0]
 	if conf.CheckFileNameExt && inFile != "-" {
 		if err := ensurePDFExtension(inFile); err != nil {
@@ -292,12 +294,18 @@ func handleOptimizeCommand(conf *model.Configuration, args []string, opts *optim
 		fmt.Fprintf(os.Stderr, "stats will be appended to %s\n", opts.fileStats)
 	}
 
-	return runCommand(cli.OptimizeCommand(inFile, outFile, conf))
+	return runCommand(c, cli.OptimizeCommand(inFile, outFile, conf))
 }
 
-func infoInputFiles(conf *model.Configuration, args []string) ([]string, error) {
+func infoInputFiles(c context.Context, conf *model.Configuration, args []string) ([]string, error) {
+	if c == nil {
+		return nil, cli.ErrMissingContext
+	}
 	var inFiles []string
 	for _, arg := range args {
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
 		files, err := infoInputFile(conf, arg)
 		if err != nil {
 			return nil, err
@@ -322,12 +330,15 @@ func infoInputFile(conf *model.Configuration, arg string) ([]string, error) {
 	return []string{arg}, nil
 }
 
-func handleInfoCommand(conf *model.Configuration, args []string, opts *infoOptions) error {
+func handleInfoCommand(c context.Context, conf *model.Configuration, args []string, opts *infoOptions) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := configureDisplayUnit(conf); err != nil {
 		return err
 	}
 
-	inFiles, err := infoInputFiles(conf, args)
+	inFiles, err := infoInputFiles(c, conf, args)
 	if err != nil {
 		return err
 	}
@@ -340,7 +351,7 @@ func handleInfoCommand(conf *model.Configuration, args []string, opts *infoOptio
 		log.SetCLILogger(nil)
 	}
 
-	return runCommand(cli.InfoCommand(inFiles, selectedPages, opts.fonts, opts.json, conf))
+	return runCommand(c, cli.InfoCommand(inFiles, selectedPages, opts.fonts, opts.json, conf))
 }
 
 func dumpMode(mode string) []int {
@@ -354,7 +365,10 @@ func dumpMode(mode string) []int {
 	return vals
 }
 
-func handleDumpCommand(conf *model.Configuration, args []string) error {
+func handleDumpCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	vals := dumpMode(args[0])
 	objNr, err := strconv.Atoi(args[1])
 	if err != nil {
@@ -367,7 +381,7 @@ func handleDumpCommand(conf *model.Configuration, args []string) error {
 		return err
 	}
 
-	return runCommand(cli.DumpCommand(inFile, vals, conf))
+	return runCommand(c, cli.DumpCommand(inFile, vals, conf))
 }
 
 func sortFiles(inFiles []string) {
@@ -506,7 +520,7 @@ func applyMergeOptions(opts *mergeOptions, conf *model.Configuration) (*model.Co
 	return conf, nil
 }
 
-func handleMergeCommand(conf *model.Configuration, args []string, opts *mergeOptions) error {
+func handleMergeCommand(c context.Context, conf *model.Configuration, args []string, opts *mergeOptions) error {
 	mode, err := mergeMode(opts.mode)
 	if err != nil {
 		return err
@@ -535,7 +549,7 @@ func handleMergeCommand(conf *model.Configuration, args []string, opts *mergeOpt
 	if cmd == nil {
 		return errors.New("missing merge mode")
 	}
-	return runCommand(cmd)
+	return runCommand(c, cmd)
 }
 
 func splitPageNumbers(args []string) ([]int, error) {
@@ -561,12 +575,12 @@ func splitPageNumbers(args []string) ([]int, error) {
 	return pageNrs, nil
 }
 
-func handleSplitByPageNumberCommand(inFile, outDir string, args []string, conf *model.Configuration) error {
+func handleSplitByPageNumberCommand(c context.Context, inFile, outDir string, args []string, conf *model.Configuration) error {
 	pageNrs, err := splitPageNumbers(args)
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.SplitByPageNrCommand(inFile, outDir, pageNrs, conf))
+	return runCommand(c, cli.SplitByPageNrCommand(inFile, outDir, pageNrs, conf))
 }
 
 func splitMode(opts *splitOptions) error {
@@ -616,7 +630,7 @@ func validateSplitModeArgs(mode string, args []string) error {
 	return nil
 }
 
-func handleSplitCommand(conf *model.Configuration, args []string, opts *splitOptions) error {
+func handleSplitCommand(c context.Context, conf *model.Configuration, args []string, opts *splitOptions) error {
 	if err := splitMode(opts); err != nil {
 		return err
 	}
@@ -629,7 +643,7 @@ func handleSplitCommand(conf *model.Configuration, args []string, opts *splitOpt
 	}
 
 	if opts.mode == "page" {
-		return handleSplitByPageNumberCommand(inFile, outDir, args, conf)
+		return handleSplitByPageNumberCommand(c, inFile, outDir, args, conf)
 	}
 
 	span := 0
@@ -641,7 +655,7 @@ func handleSplitCommand(conf *model.Configuration, args []string, opts *splitOpt
 		}
 	}
 
-	return runCommand(cli.SplitCommand(inFile, outDir, span, conf))
+	return runCommand(c, cli.SplitCommand(inFile, outDir, span, conf))
 }
 
 func selectedPagesPDFArgs(conf *model.Configuration, args []string) (string, string, []string, error) {
@@ -656,20 +670,26 @@ func selectedPagesPDFArgs(conf *model.Configuration, args []string) (string, str
 	return inFile, outFile, pages, nil
 }
 
-func handleTrimCommand(conf *model.Configuration, args []string) error {
+func handleTrimCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile, outFile, pages, err := selectedPagesPDFArgs(conf, args)
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.TrimCommand(inFile, outFile, pages, conf))
+	return runCommand(c, cli.TrimCommand(inFile, outFile, pages, conf))
 }
 
-func handleCollectCommand(conf *model.Configuration, args []string) error {
+func handleCollectCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile, outFile, pages, err := selectedPagesPDFArgs(conf, args)
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.CollectCommand(inFile, outFile, pages, conf))
+	return runCommand(c, cli.CollectCommand(inFile, outFile, pages, conf))
 }
 
 func createArgs(args []string) (string, string, string, error) {
@@ -698,7 +718,10 @@ func createArgs(args []string) (string, string, string, error) {
 	return inFile, inFileJSON, outFile, nil
 }
 
-func handleCreateCommand(conf *model.Configuration, args []string) error {
+func handleCreateCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile, inFileJSON, outFile, err := createArgs(args)
 	if err != nil {
 		return err
@@ -706,5 +729,5 @@ func handleCreateCommand(conf *model.Configuration, args []string) error {
 	if err := ensureOutputFileAvailable(outFile); err != nil {
 		return err
 	}
-	return runCommand(cli.CreateCommand(inFile, inFileJSON, outFile, conf))
+	return runCommand(c, cli.CreateCommand(inFile, inFileJSON, outFile, conf))
 }

@@ -37,7 +37,7 @@ func TestWriteRootAddsBindNameTreesContext(t *testing.T) {
 		D: types.NewDict(),
 	}
 
-	err = writeRootObject(ctx)
+	err = writeRootObject(t.Context(), ctx)
 
 	if err == nil {
 		t.Fatal("expected error")

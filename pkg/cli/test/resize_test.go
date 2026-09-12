@@ -38,7 +38,7 @@ func TestResizeByScaleFactor(t *testing.T) {
 
 	outFile := filepath.Join(outDir, "enlargeByScaleFactor.pdf")
 	cmd := cli.ResizeCommand(inFile, outFile, nil, res, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -50,7 +50,7 @@ func TestResizeByScaleFactor(t *testing.T) {
 
 	outFile = filepath.Join(outDir, "shrinkByScaleFactor.pdf")
 	cmd = cli.ResizeCommand(inFile, outFile, nil, res, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }
@@ -69,7 +69,7 @@ func TestResizeByWidthOrHeight(t *testing.T) {
 
 	outFile := filepath.Join(outDir, "resizeByWidth.pdf")
 	cmd := cli.ResizeCommand(inFile, outFile, nil, res, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -81,7 +81,7 @@ func TestResizeByWidthOrHeight(t *testing.T) {
 
 	outFile = filepath.Join(outDir, "resizeByHeight.pdf")
 	cmd = cli.ResizeCommand(inFile, outFile, nil, res, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }
@@ -100,7 +100,7 @@ func TestResizeToFormSize(t *testing.T) {
 
 	outFile := filepath.Join(outDir, "resizeToA3.pdf")
 	cmd := cli.ResizeCommand(inFile, outFile, nil, res, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -112,7 +112,7 @@ func TestResizeToFormSize(t *testing.T) {
 
 	outFile = filepath.Join(outDir, "resizeToA4L.pdf")
 	cmd = cli.ResizeCommand(inFile, outFile, nil, res, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }
@@ -132,7 +132,7 @@ func TestResizeToDimensions(t *testing.T) {
 
 	outFile := filepath.Join(outDir, "resizeToDimensionsKeep.pdf")
 	cmd := cli.ResizeCommand(inFile, outFile, nil, res, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -145,7 +145,7 @@ func TestResizeToDimensions(t *testing.T) {
 
 	outFile = filepath.Join(outDir, "resizeToDimensionsEnforce.pdf")
 	cmd = cli.ResizeCommand(inFile, outFile, nil, res, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }

@@ -31,7 +31,7 @@ import (
 
 func TestListAnnotationsFileOpenErrorHasPhaseContext(t *testing.T) {
 	inFile := filepath.Join(t.TempDir(), "missing.pdf")
-	_, _, err := ListAnnotationsFile(inFile, nil, nil)
+	_, _, err := ListAnnotationsFile(t.Context(), inFile, nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not-exist error, got %v", err)
 	}
@@ -71,7 +71,7 @@ func TestListViewerPreferencesJSONFromStdin(t *testing.T) {
 		_ = f.Close()
 	})
 
-	ss, err := ListViewerPreferences(ListViewerPreferencesCommand("-", false, true, nil))
+	ss, err := listViewerPreferences(t.Context(), ListViewerPreferencesCommand("-", false, true, nil))
 	if err != nil {
 		t.Fatalf("list viewer preferences JSON from stdin: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestSetViewerPreferencesStreamingMissingJSONIncludesPhaseContext(t *testing
 	inFile := filepath.Join("..", "testdata", "Hybrid-PDF.pdf")
 	jsonFile := filepath.Join(t.TempDir(), "missing.json")
 
-	_, err := SetViewerPreferences(SetViewerPreferencesCommand(inFile, jsonFile, "-", "", nil))
+	_, err := setViewerPreferences(t.Context(), SetViewerPreferencesCommand(inFile, jsonFile, "-", "", nil))
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -113,7 +113,7 @@ func TestViewerPreferencesCommandsRejectMissingInput(t *testing.T) {
 		{
 			name: "list nil command",
 			run: func() error {
-				_, err := ListViewerPreferences(nil)
+				_, err := listViewerPreferences(t.Context(), nil)
 				return err
 			},
 			want: ErrMissingCommand,
@@ -121,7 +121,7 @@ func TestViewerPreferencesCommandsRejectMissingInput(t *testing.T) {
 		{
 			name: "set missing input",
 			run: func() error {
-				_, err := SetViewerPreferences(&Command{})
+				_, err := setViewerPreferences(t.Context(), &Command{})
 				return err
 			},
 			want: api.ErrMissingPDFInput,
@@ -129,7 +129,7 @@ func TestViewerPreferencesCommandsRejectMissingInput(t *testing.T) {
 		{
 			name: "reset nil command",
 			run: func() error {
-				_, err := ResetViewerPreferences(nil)
+				_, err := resetViewerPreferences(t.Context(), nil)
 				return err
 			},
 			want: ErrMissingCommand,
@@ -154,7 +154,7 @@ func TestPageLayoutCommandsRejectMissingInput(t *testing.T) {
 		{
 			name: "list nil command",
 			run: func() error {
-				_, err := ListPageLayout(nil)
+				_, err := listPageLayout(t.Context(), nil)
 				return err
 			},
 			want: ErrMissingCommand,
@@ -162,7 +162,7 @@ func TestPageLayoutCommandsRejectMissingInput(t *testing.T) {
 		{
 			name: "set missing input",
 			run: func() error {
-				_, err := SetPageLayout(&Command{StringVal: "SinglePage"})
+				_, err := setPageLayout(t.Context(), &Command{StringVal: "SinglePage"})
 				return err
 			},
 			want: api.ErrMissingPDFInput,
@@ -170,7 +170,7 @@ func TestPageLayoutCommandsRejectMissingInput(t *testing.T) {
 		{
 			name: "reset nil command",
 			run: func() error {
-				_, err := ResetPageLayout(nil)
+				_, err := resetPageLayout(t.Context(), nil)
 				return err
 			},
 			want: ErrMissingCommand,
@@ -188,7 +188,7 @@ func TestPageLayoutCommandsRejectMissingInput(t *testing.T) {
 
 func TestSetPageLayoutRejectsInvalidLayout(t *testing.T) {
 	cmd := &Command{InFile: stringPtr("missing.pdf"), StringVal: "bogus"}
-	_, err := SetPageLayout(cmd)
+	_, err := setPageLayout(t.Context(), cmd)
 	if !errors.Is(err, api.ErrInvalidPageLayout) {
 		t.Fatalf("expected %v, got %v", api.ErrInvalidPageLayout, err)
 	}
@@ -201,14 +201,14 @@ func TestSetPageLayoutOneColumnReachesAPI(t *testing.T) {
 	inFile := filepath.Join("..", "testdata", "test.pdf")
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	_, err := Dispatch(SetPageLayoutCommand(inFile, outFile, "OneColumn", nil))
+	_, err := Dispatch(t.Context(), SetPageLayoutCommand(inFile, outFile, "OneColumn", nil))
 	if errors.Is(err, api.ErrInvalidPageLayout) {
 		t.Fatalf("OneColumn rejected as invalid: %v", err)
 	}
 	if err != nil {
 		t.Fatalf("set OneColumn page layout: %v", err)
 	}
-	ss, err := api.ListPageLayoutFile(outFile, nil)
+	ss, err := api.ListPageLayoutFile(t.Context(), outFile, nil)
 	if err != nil {
 		t.Fatalf("list OneColumn page layout: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestPageModeCommandsRejectMissingInput(t *testing.T) {
 		{
 			name: "list nil command",
 			run: func() error {
-				_, err := ListPageMode(nil)
+				_, err := listPageMode(t.Context(), nil)
 				return err
 			},
 			want: ErrMissingCommand,
@@ -234,7 +234,7 @@ func TestPageModeCommandsRejectMissingInput(t *testing.T) {
 		{
 			name: "set missing input",
 			run: func() error {
-				_, err := SetPageMode(&Command{StringVal: "UseNone"})
+				_, err := setPageMode(t.Context(), &Command{StringVal: "UseNone"})
 				return err
 			},
 			want: api.ErrMissingPDFInput,
@@ -242,7 +242,7 @@ func TestPageModeCommandsRejectMissingInput(t *testing.T) {
 		{
 			name: "reset nil command",
 			run: func() error {
-				_, err := ResetPageMode(nil)
+				_, err := resetPageMode(t.Context(), nil)
 				return err
 			},
 			want: ErrMissingCommand,
@@ -260,7 +260,7 @@ func TestPageModeCommandsRejectMissingInput(t *testing.T) {
 
 func TestSetPageModeRejectsInvalidMode(t *testing.T) {
 	cmd := &Command{InFile: stringPtr("missing.pdf"), StringVal: "bogus"}
-	_, err := SetPageMode(cmd)
+	_, err := setPageMode(t.Context(), cmd)
 	if !errors.Is(err, api.ErrInvalidPageMode) {
 		t.Fatalf("expected %v, got %v", api.ErrInvalidPageMode, err)
 	}
@@ -300,7 +300,7 @@ func useStdinBytes(t *testing.T, bb []byte) {
 
 func requireNoViewerPreferences(t *testing.T, bb []byte) {
 	t.Helper()
-	vp, _, err := api.ViewerPreferences(bytes.NewReader(bb), nil)
+	vp, _, err := api.ViewerPreferences(t.Context(), bytes.NewReader(bb), nil)
 	if err != nil {
 		t.Fatalf("read viewer preferences: %v", err)
 	}
@@ -326,7 +326,7 @@ func TestContentStreamingFailuresRemoveNewOutput(t *testing.T) {
 			name:    "page layout",
 			wantErr: pdfcpu.ErrCorruptHeader,
 			run: func(outFile string) error {
-				_, err := SetPageLayout(SetPageLayoutCommand("-", outFile, "SinglePage", nil))
+				_, err := setPageLayout(t.Context(), SetPageLayoutCommand("-", outFile, "SinglePage", nil))
 				return err
 			},
 		},
@@ -334,7 +334,7 @@ func TestContentStreamingFailuresRemoveNewOutput(t *testing.T) {
 			name:    "page mode",
 			wantErr: pdfcpu.ErrCorruptHeader,
 			run: func(outFile string) error {
-				_, err := SetPageMode(SetPageModeCommand("-", outFile, "UseNone", nil))
+				_, err := setPageMode(t.Context(), SetPageModeCommand("-", outFile, "UseNone", nil))
 				return err
 			},
 		},
@@ -342,7 +342,7 @@ func TestContentStreamingFailuresRemoveNewOutput(t *testing.T) {
 			name:    "viewer preferences",
 			wantErr: api.ErrInvalidJSON,
 			run: func(outFile string) error {
-				_, err := SetViewerPreferences(SetViewerPreferencesCommand("-", "", outFile, "{", nil))
+				_, err := setViewerPreferences(t.Context(), SetViewerPreferencesCommand("-", "", outFile, "{", nil))
 				return err
 			},
 		},
@@ -369,7 +369,7 @@ func TestContentStreamingFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := SetViewerPreferences(SetViewerPreferencesCommand("-", "", outFile, "{", nil))
+	_, err := setViewerPreferences(t.Context(), SetViewerPreferencesCommand("-", "", outFile, "{", nil))
 	if !errors.Is(err, api.ErrInvalidJSON) {
 		t.Fatalf("expected %v, got %v", api.ErrInvalidJSON, err)
 	}
@@ -394,15 +394,15 @@ func TestContentFileFailuresPreserveExistingOutput(t *testing.T) {
 		run     func(string) error
 	}{
 		{name: "page layout", wantErr: pdfcpu.ErrEmptyInput, run: func(outFile string) error {
-			_, err := SetPageLayout(SetPageLayoutCommand(badInput, outFile, "SinglePage", nil))
+			_, err := setPageLayout(t.Context(), SetPageLayoutCommand(badInput, outFile, "SinglePage", nil))
 			return err
 		}},
 		{name: "page mode", wantErr: pdfcpu.ErrEmptyInput, run: func(outFile string) error {
-			_, err := SetPageMode(SetPageModeCommand(badInput, outFile, "UseNone", nil))
+			_, err := setPageMode(t.Context(), SetPageModeCommand(badInput, outFile, "UseNone", nil))
 			return err
 		}},
 		{name: "viewer preferences", wantErr: api.ErrInvalidJSON, run: func(outFile string) error {
-			_, err := SetViewerPreferences(SetViewerPreferencesCommand(validInput, "", outFile, "{", nil))
+			_, err := setViewerPreferences(t.Context(), SetViewerPreferencesCommand(validInput, "", outFile, "{", nil))
 			return err
 		}},
 	}
@@ -439,10 +439,10 @@ func TestContentStreamingSuccessReplacesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := ResetPageMode(ResetPageModeCommand("-", outFile, nil)); err != nil {
+	if _, err := resetPageMode(t.Context(), ResetPageModeCommand("-", outFile, nil)); err != nil {
 		t.Fatalf("reset page mode: %v", err)
 	}
-	if _, err := api.PageModeFile(outFile, nil); err != nil {
+	if _, err := api.PageModeFile(t.Context(), outFile, nil); err != nil {
 		t.Fatalf("read replaced output: %v", err)
 	}
 }
@@ -456,7 +456,7 @@ func TestResetViewerPreferencesAbsentCLIFileAndStdinToFile(t *testing.T) {
 
 	t.Run("file", func(t *testing.T) {
 		outFile := filepath.Join(t.TempDir(), "out.pdf")
-		if _, err := ResetViewerPreferences(ResetViewerPreferencesCommand(inFile, outFile, nil)); err != nil {
+		if _, err := resetViewerPreferences(t.Context(), ResetViewerPreferencesCommand(inFile, outFile, nil)); err != nil {
 			t.Fatalf("reset viewer preferences file: %v", err)
 		}
 		out, err := os.ReadFile(outFile)
@@ -469,7 +469,7 @@ func TestResetViewerPreferencesAbsentCLIFileAndStdinToFile(t *testing.T) {
 	t.Run("stdin to file", func(t *testing.T) {
 		useStdinBytes(t, bb)
 		outFile := filepath.Join(t.TempDir(), "out.pdf")
-		if _, err := ResetViewerPreferences(ResetViewerPreferencesCommand("-", outFile, nil)); err != nil {
+		if _, err := resetViewerPreferences(t.Context(), ResetViewerPreferencesCommand("-", outFile, nil)); err != nil {
 			t.Fatalf("reset viewer preferences stdin to file: %v", err)
 		}
 		out, err := os.ReadFile(outFile)
@@ -498,7 +498,7 @@ func TestResetViewerPreferencesAbsentCLIStdinStdout(t *testing.T) {
 		_ = f.Close()
 	})
 
-	if _, err := ResetViewerPreferences(ResetViewerPreferencesCommand("-", "-", nil)); err != nil {
+	if _, err := resetViewerPreferences(t.Context(), ResetViewerPreferencesCommand("-", "-", nil)); err != nil {
 		t.Fatalf("reset viewer preferences stdin/stdout: %v", err)
 	}
 	os.Stdout = stdout
@@ -516,7 +516,7 @@ func TestExportBookmarksRemovesOutputOnFailure(t *testing.T) {
 	useStdin(t, "not a pdf")
 	outFile := filepath.Join(t.TempDir(), "bookmarks.json")
 
-	_, err := ExportBookmarks(ExportBookmarksCommand("-", outFile, nil))
+	_, err := exportBookmarks(t.Context(), ExportBookmarksCommand("-", outFile, nil))
 	if err == nil {
 		t.Fatal("expected export failure")
 	}
@@ -532,7 +532,7 @@ func TestExportBookmarksFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := ExportBookmarks(ExportBookmarksCommand("-", outFile, nil))
+	_, err := exportBookmarks(t.Context(), ExportBookmarksCommand("-", outFile, nil))
 	if err == nil {
 		t.Fatal("expected export failure")
 	}
@@ -549,7 +549,7 @@ func TestExportBookmarksStdoutDoesNotCreateDashFile(t *testing.T) {
 	useStdin(t, "not a pdf")
 	t.Chdir(t.TempDir())
 
-	_, err := ExportBookmarks(ExportBookmarksCommand("-", "-", nil))
+	_, err := exportBookmarks(t.Context(), ExportBookmarksCommand("-", "-", nil))
 	if err == nil {
 		t.Fatal("expected export failure")
 	}
@@ -565,7 +565,7 @@ func TestBookmarkCommandsRejectMissingRequiredFields(t *testing.T) {
 		{
 			name: "list nil command",
 			run: func() error {
-				_, err := ListBookmarks(nil)
+				_, err := listBookmarks(t.Context(), nil)
 				return err
 			},
 			wantErr: ErrMissingCommand,
@@ -573,7 +573,7 @@ func TestBookmarkCommandsRejectMissingRequiredFields(t *testing.T) {
 		{
 			name: "export nil command",
 			run: func() error {
-				_, err := ExportBookmarks(nil)
+				_, err := exportBookmarks(t.Context(), nil)
 				return err
 			},
 			wantErr: ErrMissingCommand,
@@ -581,7 +581,7 @@ func TestBookmarkCommandsRejectMissingRequiredFields(t *testing.T) {
 		{
 			name: "export missing output",
 			run: func() error {
-				_, err := ExportBookmarks(&Command{InFile: stringPtr("-")})
+				_, err := exportBookmarks(t.Context(), &Command{InFile: stringPtr("-")})
 				return err
 			},
 			wantErr: api.ErrMissingJSONOutput,
@@ -589,7 +589,7 @@ func TestBookmarkCommandsRejectMissingRequiredFields(t *testing.T) {
 		{
 			name: "import nil command",
 			run: func() error {
-				_, err := ImportBookmarks(nil)
+				_, err := importBookmarks(t.Context(), nil)
 				return err
 			},
 			wantErr: ErrMissingCommand,
@@ -597,7 +597,7 @@ func TestBookmarkCommandsRejectMissingRequiredFields(t *testing.T) {
 		{
 			name: "import missing JSON input",
 			run: func() error {
-				_, err := ImportBookmarks(&Command{InFile: stringPtr("-")})
+				_, err := importBookmarks(t.Context(), &Command{InFile: stringPtr("-")})
 				return err
 			},
 			wantErr: api.ErrMissingJSONInput,
@@ -605,7 +605,7 @@ func TestBookmarkCommandsRejectMissingRequiredFields(t *testing.T) {
 		{
 			name: "remove nil command",
 			run: func() error {
-				_, err := RemoveBookmarks(nil)
+				_, err := removeBookmarks(t.Context(), nil)
 				return err
 			},
 			wantErr: ErrMissingCommand,
@@ -627,7 +627,7 @@ func TestImportBookmarksRemovesOutputOnFailure(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 	missingJSON := filepath.Join(t.TempDir(), "missing.json")
 
-	_, err := ImportBookmarks(ImportBookmarksCommand("-", missingJSON, outFile, false, nil))
+	_, err := importBookmarks(t.Context(), ImportBookmarksCommand("-", missingJSON, outFile, false, nil))
 	if err == nil {
 		t.Fatal("expected import failure")
 	}
@@ -642,7 +642,7 @@ func TestImportBookmarksMissingJSONPreservesExistingOutput(t *testing.T) {
 	}
 	missingJSON := filepath.Join(t.TempDir(), "missing.json")
 
-	_, err := ImportBookmarks(ImportBookmarksCommand("-", missingJSON, outFile, false, nil))
+	_, err := importBookmarks(t.Context(), ImportBookmarksCommand("-", missingJSON, outFile, false, nil))
 	if err == nil {
 		t.Fatal("expected import failure")
 	}
@@ -660,7 +660,7 @@ func TestRemoveBookmarksRemovesOutputOnFailure(t *testing.T) {
 	useStdin(t, "not a pdf")
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	_, err := RemoveBookmarks(RemoveBookmarksCommand("-", outFile, nil))
+	_, err := removeBookmarks(t.Context(), RemoveBookmarksCommand("-", outFile, nil))
 	if err == nil {
 		t.Fatal("expected remove failure")
 	}

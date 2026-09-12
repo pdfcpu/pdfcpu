@@ -18,12 +18,14 @@ package form
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
@@ -716,6 +718,7 @@ func fillBtn(
 }
 
 func fillComboBox(
+	c context.Context,
 	ctx *model.Context,
 	d types.Dict,
 	id, name string,
@@ -742,7 +745,7 @@ func fillComboBox(
 	}
 	if changed {
 		if lock {
-			if err := primitives.EnsureComboBoxAP(ctx, d, vNew, da, fonts); err != nil {
+			if err := primitives.EnsureComboBoxAP(c, ctx, d, vNew, da, fonts); err != nil {
 				return fmt.Errorf("appearance: %w", err)
 			}
 		} else {
@@ -836,6 +839,7 @@ func updateListBoxValues(multi bool, d types.Dict, opts, vNew []string) (types.A
 }
 
 func fillListBox(
+	c context.Context,
 	ctx *model.Context,
 	d types.Dict,
 	id, name string,
@@ -894,7 +898,7 @@ func fillListBox(
 		return fmt.Errorf("entry DA: %w", err)
 	}
 
-	if err := primitives.EnsureListBoxAP(ctx, d, opts, ind, da, fonts); err != nil {
+	if err := primitives.EnsureListBoxAP(c, ctx, d, opts, ind, da, fonts); err != nil {
 		return fmt.Errorf("appearance: %w", err)
 	}
 
@@ -904,6 +908,7 @@ func fillListBox(
 }
 
 func fillCh(
+	c context.Context,
 	ctx *model.Context,
 	d types.Dict,
 	id, name string,
@@ -919,13 +924,14 @@ func fillCh(
 	}
 
 	if ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldCombo > 0 {
-		return fillComboBox(ctx, d, id, name, opts, locked, format, fonts, fillDetails, ok)
+		return fillComboBox(c, ctx, d, id, name, opts, locked, format, fonts, fillDetails, ok)
 	}
 
-	return fillListBox(ctx, d, id, name, opts, locked, format, fonts, fillDetails, ff, ok)
+	return fillListBox(c, ctx, d, id, name, opts, locked, format, fonts, fillDetails, ff, ok)
 }
 
 func fillDateField(
+	c context.Context,
 	ctx *model.Context,
 	d types.Dict,
 	id, name, vOld string,
@@ -973,7 +979,7 @@ func fillDateField(
 				return fmt.Errorf("kid %d: dereference: %w", i+1, err)
 			}
 
-			if err := primitives.EnsureDateFieldAP(ctx, d, vNew, da, fonts); err != nil {
+			if err := primitives.EnsureDateFieldAP(c, ctx, d, vNew, da, fonts); err != nil {
 				return fmt.Errorf("kid %d: appearance: %w", i+1, err)
 			}
 
@@ -983,7 +989,7 @@ func fillDateField(
 		return nil
 	}
 
-	if err := primitives.EnsureDateFieldAP(ctx, d, vNew, da, fonts); err != nil {
+	if err := primitives.EnsureDateFieldAP(c, ctx, d, vNew, da, fonts); err != nil {
 		return fmt.Errorf("appearance: %w", err)
 	}
 
@@ -992,6 +998,7 @@ func fillDateField(
 }
 
 func fillTextField(
+	c context.Context,
 	ctx *model.Context,
 	d types.Dict,
 	id, name, vOld string,
@@ -1049,7 +1056,7 @@ func fillTextField(
 				return fmt.Errorf("kid %d: dereference: %w", i+1, err)
 			}
 
-			if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, maxLen, da, fonts); err != nil {
+			if err := primitives.EnsureTextFieldAP(c, ctx, d, vNew, multiLine, comb, maxLen, da, fonts); err != nil {
 				return fmt.Errorf("kid %d: appearance: %w", i+1, err)
 			}
 
@@ -1059,7 +1066,7 @@ func fillTextField(
 		return nil
 	}
 
-	if err := primitives.EnsureTextFieldAP(ctx, d, vNew, multiLine, comb, maxLen, da, fonts); err != nil {
+	if err := primitives.EnsureTextFieldAP(c, ctx, d, vNew, multiLine, comb, maxLen, da, fonts); err != nil {
 		return fmt.Errorf("appearance: %w", err)
 	}
 
@@ -1068,6 +1075,7 @@ func fillTextField(
 }
 
 func fillTx(
+	c context.Context,
 	ctx *model.Context,
 	d types.Dict,
 	id, name string,
@@ -1088,13 +1096,14 @@ func fillTx(
 	}
 
 	if df != nil {
-		return fillDateField(ctx, d, id, name, vOld, locked, format, fonts, fillDetails, ok)
+		return fillDateField(c, ctx, d, id, name, vOld, locked, format, fonts, fillDetails, ok)
 	}
 
-	return fillTextField(ctx, d, id, name, vOld, locked, format, fonts, fillDetails, ff, ok)
+	return fillTextField(c, ctx, d, id, name, vOld, locked, format, fonts, fillDetails, ff, ok)
 }
 
 func fillField(
+	c context.Context,
 	ctx *model.Context,
 	d types.Dict,
 	id, name, ft string,
@@ -1109,14 +1118,15 @@ func fillField(
 	case "Btn":
 		return fillBtn(ctx, d, id, name, locked, format, fillDetails, ok)
 	case "Ch":
-		return fillCh(ctx, d, id, name, locked, format, fonts, fillDetails, ff, ok)
+		return fillCh(c, ctx, d, id, name, locked, format, fonts, fillDetails, ff, ok)
 	case "Tx":
-		return fillTx(ctx, d, id, name, locked, format, fonts, fillDetails, ff, ok)
+		return fillTx(c, ctx, d, id, name, locked, format, fonts, fillDetails, ff, ok)
 	}
 	return nil
 }
 
 func fillWidgetAnnots(
+	c context.Context,
 	ctx *model.Context,
 	fields types.Array,
 	indRefs map[types.IndirectRef]bool,
@@ -1126,6 +1136,9 @@ func fillWidgetAnnots(
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ok *bool) error {
 	for _, indRef := range *(wAnnots.IndRefs) {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 
 		found, fi, err := isField(ctx.XRefTable, indRef, fields)
 		if err != nil {
@@ -1169,7 +1182,7 @@ func fillWidgetAnnots(
 			}
 		}
 
-		if err = fillField(ctx, d, id, name, ft.Value(), locked, format, fonts, fillDetails, ff, ok); err != nil {
+		if err = fillField(c, ctx, d, id, name, ft.Value(), locked, format, fonts, fillDetails, ff, ok); err != nil {
 			return fmt.Errorf("field %s: %w", id, err)
 		}
 	}
@@ -1177,7 +1190,10 @@ func fillWidgetAnnots(
 	return nil
 }
 
-func setupFillFonts(xRefTable *model.XRefTable) error {
+func setupFillFonts(c context.Context, xRefTable *model.XRefTable) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	d, err := primitives.FormFontResDict(xRefTable)
 	if err != nil {
 		return fmt.Errorf("AcroForm DR Font: %w", err)
@@ -1191,16 +1207,19 @@ func setupFillFonts(xRefTable *model.XRefTable) error {
 	}
 
 	for k, v := range d {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		indRef, ok := v.(types.IndirectRef)
 		if !ok {
 			return fmt.Errorf("form font resource %q: expected indirect reference, got %T", k, v)
 		}
-		fontName, _, _, err := primitives.FormFontDetails(xRefTable, indRef)
+		fontName, _, _, err := primitives.FormFontDetails(c, xRefTable, indRef)
 		if err != nil {
 			return fmt.Errorf("form font resource %q obj#%d: %w", k, indRef.ObjectNumber.Value(), err)
 		}
 
-		supported, err := xRefTable.FontRepository().SupportedFont(fontName)
+		supported, err := xRefTable.FontRepository().SupportedFont(c, fontName)
 		if err != nil {
 			return fmt.Errorf("form font resource %q: load metrics: %w", k, err)
 		}
@@ -1212,12 +1231,11 @@ func setupFillFonts(xRefTable *model.XRefTable) error {
 	return nil
 }
 
-// FillForm populates form fields as provided by fillDetails and also supports virtual image fields.
-func FillForm(
-	ctx *model.Context,
-	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
-	imgs map[string]*Page,
-	format DataFormat) (bool, []*model.Page, error) {
+// FillForm populates form fields, supports virtual image fields and supports cancellation.
+func FillForm(c context.Context, ctx *model.Context, fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool), imgs map[string]*Page, format DataFormat) (bool, []*model.Page, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, nil, err
+	}
 	if fillDetails == nil {
 		return false, nil, errors.New("missing fill details")
 	}
@@ -1232,30 +1250,20 @@ func FillForm(
 	}
 
 	fonts := map[string]types.IndirectRef{}
-	indRefs := map[types.IndirectRef]bool{}
 
-	if err := setupFillFonts(xRefTable); err != nil {
+	if err := setupFillFonts(c, xRefTable); err != nil {
 		return false, nil, fmt.Errorf("form fonts: setup: %w", err)
 	}
-
-	var ok bool
-
-	for i := 1; i <= xRefTable.PageCount; i++ {
-		pgAnnots := xRefTable.PageAnnots[i]
-		if len(pgAnnots) == 0 {
-			continue
-		}
-		wAnnots, found := pgAnnots[model.AnnWidget]
-		if !found {
-			continue
-		}
-
-		if err := fillWidgetAnnots(ctx, fields, indRefs, wAnnots, format, fonts, fillDetails, &ok); err != nil {
-			return false, nil, fmt.Errorf("page %d: %w", i, err)
-		}
+	if err := contextutil.Check(c); err != nil {
+		return false, nil, err
 	}
 
-	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
+	ok, err := fillFormPages(c, ctx, fields, format, fonts, fillDetails)
+	if err != nil {
+		return false, nil, err
+	}
+
+	if err := pdffont.UpdateUserfonts(c, ctx.XRefTable, fonts); err != nil {
 		return false, nil, fmt.Errorf("form fonts: update: %w", err)
 	}
 
@@ -1266,6 +1274,9 @@ func FillForm(
 			return false, nil, fmt.Errorf("form images: %w", err)
 		}
 	}
+	if err := contextutil.Check(c); err != nil {
+		return false, nil, err
+	}
 
 	// pdfcpu provides all appearance streams for form fields.
 	// Yet for some files and viewers form fields don't get rendered.
@@ -1274,5 +1285,35 @@ func FillForm(
 		xRefTable.Form["NeedAppearances"] = types.Boolean(true)
 	}
 
-	return ok, pages, nil
+	return ok, pages, contextutil.Check(c)
+}
+
+// fillFormPages populates form fields page by page and supports cancellation.
+func fillFormPages(
+	c context.Context,
+	ctx *model.Context,
+	fields types.Array,
+	format DataFormat,
+	fonts map[string]types.IndirectRef,
+	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
+) (bool, error) {
+	indRefs := map[types.IndirectRef]bool{}
+	var ok bool
+	for i := 1; i <= ctx.PageCount; i++ {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
+		pgAnnots := ctx.PageAnnots[i]
+		if len(pgAnnots) == 0 {
+			continue
+		}
+		wAnnots, found := pgAnnots[model.AnnWidget]
+		if !found {
+			continue
+		}
+		if err := fillWidgetAnnots(c, ctx, fields, indRefs, wAnnots, format, fonts, fillDetails, &ok); err != nil {
+			return false, fmt.Errorf("page %d: %w", i, err)
+		}
+	}
+	return ok, contextutil.Check(c)
 }

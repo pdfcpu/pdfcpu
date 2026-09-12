@@ -25,7 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-type extractCommandExecutor func(*Command) ([]string, error)
+type extractCommandExecutor = dispatchFunc
 
 // TestExtractExecutorsRejectNilCommand verifies every public extraction executor has a safe nil boundary.
 func TestExtractExecutorsRejectNilCommand(t *testing.T) {
@@ -33,16 +33,16 @@ func TestExtractExecutorsRejectNilCommand(t *testing.T) {
 		name string
 		run  extractCommandExecutor
 	}{
-		{"ExtractImages", ExtractImages},
-		{"ExtractFonts", ExtractFonts},
-		{"ExtractPages", ExtractPages},
-		{"ExtractContent", ExtractContent},
-		{"ExtractMetadata", ExtractMetadata},
+		{"ExtractImages", extractImages},
+		{"ExtractFonts", extractFonts},
+		{"ExtractPages", extractPages},
+		{"ExtractContent", extractContent},
+		{"ExtractMetadata", extractMetadata},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(nil)
+			_, err := tt.run(t.Context(), nil)
 			if !errors.Is(err, ErrMissingCommand) {
 				t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 			}
@@ -60,21 +60,21 @@ func TestExtractExecutorsRejectIncompleteCommand(t *testing.T) {
 		cmd  *Command
 		want error
 	}{
-		{"ExtractImagesInput", ExtractImages, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
-		{"ExtractImagesOutput", ExtractImages, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"ExtractFontsInput", ExtractFonts, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
-		{"ExtractFontsOutput", ExtractFonts, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"ExtractPagesInput", ExtractPages, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
-		{"ExtractPagesOutput", ExtractPages, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"ExtractContentInput", ExtractContent, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
-		{"ExtractContentOutput", ExtractContent, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"ExtractMetadataInput", ExtractMetadata, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
-		{"ExtractMetadataOutput", ExtractMetadata, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"ExtractImagesInput", extractImages, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
+		{"ExtractImagesOutput", extractImages, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"ExtractFontsInput", extractFonts, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
+		{"ExtractFontsOutput", extractFonts, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"ExtractPagesInput", extractPages, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
+		{"ExtractPagesOutput", extractPages, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"ExtractContentInput", extractContent, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
+		{"ExtractContentOutput", extractContent, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"ExtractMetadataInput", extractMetadata, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
+		{"ExtractMetadataOutput", extractMetadata, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(tt.cmd)
+			_, err := tt.run(t.Context(), tt.cmd)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
@@ -97,7 +97,7 @@ func TestDispatchRejectsIncompleteExtractCommandsWithoutPanic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Dispatch(&Command{Mode: tt.mode})
+			_, err := Dispatch(t.Context(), &Command{Mode: tt.mode})
 			if !errors.Is(err, api.ErrMissingPDFInput) {
 				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 			}

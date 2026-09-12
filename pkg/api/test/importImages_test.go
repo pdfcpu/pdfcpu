@@ -40,10 +40,10 @@ func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impC
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
 	}
-	if err := api.ImportImagesFile(imgFiles, outFile, imp, nil); err != nil {
+	if err := api.ImportImagesFile(t.Context(), imgFiles, outFile, imp, nil); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := api.ValidateFile(outFile, nil); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, nil, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -106,7 +106,7 @@ func TestImportImages(t *testing.T) {
 		testImportImages(t, tt.msg, tt.imgFiles, tt.outFile, tt.impConf)
 	}
 
-	pageCount, err := api.PageCountFile(testFile3)
+	pageCount, err := api.PageCountFile(t.Context(), testFile3)
 	if err != nil {
 		t.Fatalf("TestMultiPageTIFF: %v\n", err)
 	}
@@ -130,7 +130,7 @@ func TestMemBasedWriterPanic(t *testing.T) {
 
 	outBuf := &bytes.Buffer{}
 
-	if err := api.ImportImages(nil, outBuf, rr, nil, nil); err != nil {
+	if err := api.ImportImages(t.Context(), nil, outBuf, rr, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }

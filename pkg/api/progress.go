@@ -101,6 +101,13 @@ func (e *ProgressError) Unwrap() error {
 	return e.Err
 }
 
+func progressOptionsValue(options *ProgressOptions) ProgressOptions {
+	if options == nil {
+		return ProgressOptions{}
+	}
+	return *options
+}
+
 func reportProgress(options ProgressOptions, stage ProgressStage) error {
 	if options.Observer == nil {
 		return nil

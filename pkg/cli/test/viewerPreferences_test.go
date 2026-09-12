@@ -36,7 +36,7 @@ func TestViewerPreferences(t *testing.T) {
 
 	all, json := false, false
 	cmd := cli.ListViewerPreferencesCommand(inFile, all, json, nil)
-	ss, err := cli.Dispatch(cmd)
+	ss, err := cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s %s: list viewer preferences: %v\n", msg, inFile, err)
 	}
@@ -45,12 +45,12 @@ func TestViewerPreferences(t *testing.T) {
 	}
 
 	cmd = cli.ResetViewerPreferencesCommand(inFile, "", nil)
-	if _, err = cli.Dispatch(cmd); err != nil {
+	if _, err = cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: reset viewer preferences: %v\n", msg, inFile, err)
 	}
 
 	cmd = cli.ListViewerPreferencesCommand(inFile, all, json, nil)
-	ss, err = cli.Dispatch(cmd)
+	ss, err = cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s %s: list viewer preferences: %v\n", msg, inFile, err)
 	}
@@ -59,12 +59,12 @@ func TestViewerPreferences(t *testing.T) {
 	}
 
 	cmd = cli.SetViewerPreferencesCommand(inFile, inFileJSON, "", "", nil)
-	if _, err = cli.Dispatch(cmd); err != nil {
+	if _, err = cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: set viewer preferences from JSON file: %v\n", msg, inFile, err)
 	}
 
 	cmd = cli.ListViewerPreferencesCommand(inFile, all, json, nil)
-	ss, err = cli.Dispatch(cmd)
+	ss, err = cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s %s: list viewer preferences: %v\n", msg, inFile, err)
 	}
@@ -73,7 +73,7 @@ func TestViewerPreferences(t *testing.T) {
 	}
 
 	cmd = cli.SetViewerPreferencesCommand(inFile, "", "", stringJSON, nil)
-	if _, err = cli.Dispatch(cmd); err != nil {
+	if _, err = cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: set viewer preferences from JSON string: %v\n", msg, inFile, err)
 	}
 }

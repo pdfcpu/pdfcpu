@@ -17,6 +17,7 @@ limitations under the License.
 package sign
 
 import (
+	"context"
 	"crypto/x509"
 	"testing"
 	"time"
@@ -42,6 +43,7 @@ func TestClaimedSigningTimeDoesNotSelectCertificateAssessmentTime(t *testing.T) 
 	result := unknownSignatureResult()
 
 	err := verifyP7Signer(
+		t.Context(),
 		fixture.signer,
 		fixture.certs,
 		fixture.roots,
@@ -90,7 +92,7 @@ func TestClaimedSigningTimeDoesNotEnableArchivedCRLConclusion(t *testing.T) {
 		claimedTime.Add(time.Hour),
 		nil,
 	)
-	certDetails, result := assessRevocationWithoutTimestamp(
+	certDetails, result := assessRevocationWithoutTimestamp(t.Context(),
 		cert,
 		issuer,
 		[][]byte{crl},
@@ -111,7 +113,7 @@ func TestClaimedSigningTimeDoesNotEnableArchivedOCSPConclusion(t *testing.T) {
 		now.Add(time.Hour),
 		now.Add(time.Hour),
 	)
-	certDetails, result := assessRevocationWithoutTimestamp(
+	certDetails, result := assessRevocationWithoutTimestamp(t.Context(),
 		cert,
 		issuer,
 		nil,
@@ -175,7 +177,7 @@ func TestClaimedGenTimeDoesNotConcludeArchivedRevocation(t *testing.T) {
 			claimedGenTime.Add(time.Hour),
 			nil,
 		)
-		certificate, result := assessRevocationWithoutTimestamp(
+		certificate, result := assessRevocationWithoutTimestamp(t.Context(),
 			cert,
 			issuer,
 			[][]byte{crl},
@@ -197,7 +199,7 @@ func TestClaimedGenTimeDoesNotConcludeArchivedRevocation(t *testing.T) {
 			claimedGenTime.Add(-time.Hour),
 			claimedGenTime.Add(time.Hour),
 		)
-		certificate, result := assessRevocationWithoutTimestamp(
+		certificate, result := assessRevocationWithoutTimestamp(t.Context(),
 			cert,
 			issuer,
 			nil,
@@ -238,7 +240,7 @@ func TestArchivedRevocationWithoutAssessmentTimeIsObservationOnly(t *testing.T) 
 					observedTime.Add(time.Hour),
 					tt.entries,
 				)
-				certificate, result := assessRevocationWithoutTimestamp(
+				certificate, result := assessRevocationWithoutTimestamp(t.Context(),
 					cert,
 					issuer,
 					[][]byte{crl},
@@ -283,7 +285,7 @@ func TestArchivedRevocationWithoutAssessmentTimeIsObservationOnly(t *testing.T) 
 					observedTime.Add(time.Hour),
 					tt.status,
 				)
-				certificate, result := assessRevocationWithoutTimestamp(
+				certificate, result := assessRevocationWithoutTimestamp(t.Context(),
 					cert,
 					issuer,
 					nil,
@@ -365,12 +367,7 @@ func TestManualContextDTSRemainsObservedTimeOnly(t *testing.T) {
 	}
 }
 
-func requireDTSGenTimeNotUsedForRevocation(
-	t *testing.T,
-	cert, issuer *x509.Certificate,
-	genTime time.Time,
-	crls, ocsps [][]byte,
-) {
+func requireDTSGenTimeNotUsedForRevocation(t *testing.T, cert, issuer *x509.Certificate, genTime time.Time, crls, ocsps [][]byte) {
 	t.Helper()
 	roots := x509.NewCertPool()
 	roots.AddCert(issuer)
@@ -384,6 +381,7 @@ func requireDTSGenTimeNotUsedForRevocation(
 	}
 
 	if _, err := validateDTSCert(
+		t.Context(),
 		cert,
 		[]*x509.Certificate{cert, issuer},
 		roots,
@@ -414,11 +412,7 @@ func requireDTSGenTimeNotUsedForRevocation(
 	}
 }
 
-func assessRevocationWithoutTimestamp(
-	cert, issuer *x509.Certificate,
-	crls, ocsps [][]byte,
-	preferred int,
-) (*model.CertificateDetails, *model.SignatureValidationResult) {
+func assessRevocationWithoutTimestamp(testContext context.Context, cert, issuer *x509.Certificate, crls, ocsps [][]byte, preferred int) (*model.CertificateDetails, *model.SignatureValidationResult) {
 	signer := &model.Signer{}
 	certDetails := &model.CertificateDetails{}
 	result := unknownSignatureResult()
@@ -427,6 +421,7 @@ func assessRevocationWithoutTimestamp(
 	conf.PreferredCertRevocationChecker = preferred
 
 	checkRevocation(
+		testContext,
 		cert,
 		issuer,
 		x509.NewCertPool(),
@@ -440,11 +435,7 @@ func assessRevocationWithoutTimestamp(
 	return certDetails, result
 }
 
-func requireUnknownArchivedRevocation(
-	t *testing.T,
-	certificate *model.CertificateDetails,
-	result *model.SignatureValidationResult,
-) {
+func requireUnknownArchivedRevocation(t *testing.T, certificate *model.CertificateDetails, result *model.SignatureValidationResult) {
 	t.Helper()
 	if certificate.Revocation.Status != model.Unknown {
 		t.Fatalf("archived evidence produced status %d: %+v", certificate.Revocation.Status, certificate.Revocation)
@@ -458,10 +449,7 @@ func requireUnknownArchivedRevocation(
 	}
 }
 
-func requireArchivedEvidenceCannotSatisfyRevocationGood(
-	t *testing.T,
-	certificate *model.CertificateDetails,
-) {
+func requireArchivedEvidenceCannotSatisfyRevocationGood(t *testing.T, certificate *model.CertificateDetails) {
 	t.Helper()
 	assessment := completedLocalSignatureAssessment()
 	assessment.applyCertificateAssessment(certificateAssessment{
@@ -477,11 +465,7 @@ func requireArchivedEvidenceCannotSatisfyRevocationGood(
 	}
 }
 
-func requireArchivedOCSPObservation(
-	t *testing.T,
-	certificate *model.CertificateDetails,
-	wantStatus int,
-) {
+func requireArchivedOCSPObservation(t *testing.T, certificate *model.CertificateDetails, wantStatus int) {
 	t.Helper()
 	evidence := certificate.Revocation.OCSP
 	if evidence == nil ||

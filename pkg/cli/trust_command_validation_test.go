@@ -25,7 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-type trustCommandExecutor func(*Command) ([]string, error)
+type trustCommandExecutor = dispatchFunc
 
 // TestTrustExecutorsRejectNilCommand verifies every command-based trust executor has a safe nil boundary.
 func TestTrustExecutorsRejectNilCommand(t *testing.T) {
@@ -33,16 +33,16 @@ func TestTrustExecutorsRejectNilCommand(t *testing.T) {
 		name string
 		run  trustCommandExecutor
 	}{
-		{"ListCertificates", ListCertificates},
-		{"ImportCertificates", ImportCertificates},
-		{"InspectCertificates", InspectCertificates},
-		{"ValidateSignatures", ValidateSignatures},
-		{"RemoveSignatures", RemoveSignatures},
+		{"ListCertificates", listCertificates},
+		{"ImportCertificates", importCertificates},
+		{"InspectCertificates", inspectCertificates},
+		{"ValidateSignatures", validateSignaturesCommand},
+		{"RemoveSignatures", removeSignatures},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(nil)
+			_, err := tt.run(t.Context(), nil)
 			if !errors.Is(err, ErrMissingCommand) {
 				t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 			}
@@ -57,15 +57,15 @@ func TestCertificateExecutorsRejectMissingInput(t *testing.T) {
 		run  trustCommandExecutor
 		cmd  *Command
 	}{
-		{"ImportMissing", ImportCertificates, &Command{}},
-		{"ImportWhitespace", ImportCertificates, &Command{InFiles: []string{" "}}},
-		{"InspectMissing", InspectCertificates, &Command{}},
-		{"InspectWhitespace", InspectCertificates, &Command{InFiles: []string{"\t"}}},
+		{"ImportMissing", importCertificates, &Command{}},
+		{"ImportWhitespace", importCertificates, &Command{InFiles: []string{" "}}},
+		{"InspectMissing", inspectCertificates, &Command{}},
+		{"InspectWhitespace", inspectCertificates, &Command{InFiles: []string{"\t"}}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(tt.cmd)
+			_, err := tt.run(t.Context(), tt.cmd)
 			if !errors.Is(err, api.ErrMissingCertificateInput) {
 				t.Fatalf("expected %v, got %v", api.ErrMissingCertificateInput, err)
 			}
@@ -88,7 +88,7 @@ func TestDispatchRejectsIncompleteTrustCommandsWithoutPanic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Dispatch(&Command{Mode: tt.mode})
+			_, err := Dispatch(t.Context(), &Command{Mode: tt.mode})
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}

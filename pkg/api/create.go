@@ -17,11 +17,13 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
@@ -29,8 +31,11 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// CreatePDFFile creates a PDF file for an xRefTable and writes it to outFile.
-func CreatePDFFile(xRefTable *model.XRefTable, outFile string, conf *model.Configuration) error {
+// CreatePDFFile creates a PDF file for an xRefTable and supports cancellation.
+func CreatePDFFile(c context.Context, xRefTable *model.XRefTable, outFile string, conf *model.Configuration) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if xRefTable == nil {
 		return ErrMissingXRefTable
 	}
@@ -41,18 +46,24 @@ func CreatePDFFile(xRefTable *model.XRefTable, outFile string, conf *model.Confi
 	}
 	f := staged.output.file
 	ctx := pdfcpu.CreateContext(xRefTable, conf)
-	if err := WriteContext(ctx, f); err != nil {
+	if err := WriteContext(c, ctx, f); err != nil {
 		return staged.cleanup(fmt.Errorf("create: write output: %w", err))
+	}
+	if err := contextutil.Check(c); err != nil {
+		return staged.cleanup(err)
 	}
 	return staged.commit()
 }
 
-// Create renders the PDF structure represented by rs into w.
+// Create renders the PDF structure represented by rs into w and supports cancellation.
 // If rs is present, new PDF content will be appended including any empty pages needed.
 // rd is a JSON representation of PDF page content which may include form data.
-func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configuration) (err error) {
+func Create(c context.Context, rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rd == nil {
 		return ErrMissingJSONInput
 	}
@@ -66,7 +77,7 @@ func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configurati
 	var ctx *model.Context
 
 	if rs != nil {
-		ctx, err = ReadValidateAndOptimize(rs, conf)
+		ctx, err = ReadValidateAndOptimize(c, rs, conf, nil)
 		if err != nil {
 			return fmt.Errorf("create: %w", err)
 		}
@@ -77,17 +88,17 @@ func Create(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configurati
 		}
 	}
 
-	if err := create.FromJSON(ctx, rd); err != nil {
+	if err := create.FromJSON(c, ctx, rd); err != nil {
 		return fmt.Errorf("create: import JSON: %w", err)
 	}
 
 	if conf.PostProcessValidate {
-		if err = ValidateContext(ctx); err != nil {
+		if err = ValidateContext(c, ctx); err != nil {
 			return fmt.Errorf("create: validate output: %w", err)
 		}
 	}
 
-	if err = WriteContext(ctx, w); err != nil {
+	if err = WriteContext(c, ctx, w); err != nil {
 		return fmt.Errorf("create: write output: %w", err)
 	}
 	return nil
@@ -99,13 +110,16 @@ func handleOutFilePDF(inFilePDF, outFilePDF string, tmpFile *string) {
 	}
 }
 
-// CreateFile renders the PDF structure represented by inFileJSON into outFilePDF.
+// CreateFile renders the PDF structure represented by inFileJSON into outFilePDF and supports cancellation.
 // If inFilePDF is present, new PDF content will be appended including any empty pages needed.
 // inFileJSON represents PDF page content which may include form data.
-func CreateFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configuration) (err error) {
+func CreateFile(c context.Context, inFilePDF, inFileJSON, outFilePDF string, conf *model.Configuration) (err error) {
 	var f0, f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFileJSON == "" {
 		return ErrMissingJSONInput
 	}
@@ -153,10 +167,13 @@ func CreateFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configurat
 		err = staged.commit()
 	}()
 
-	if err = Create(rs, f0, f2, conf); err != nil {
+	if err = Create(c, rs, f0, f2, conf); err != nil {
 		return err
 	}
 
+	if err = contextutil.Check(c); err != nil {
+		return err
+	}
 	ok = true
 
 	return nil

@@ -86,84 +86,84 @@ func TestPasswordChangeArgumentErrors(t *testing.T) {
 		{
 			name: "user missing reader",
 			run: func() error {
-				return ChangeUserPassword(nil, io.Discard, "old", "new", conf)
+				return ChangeUserPassword(t.Context(), nil, io.Discard, "old", "new", conf)
 			},
 			want: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "user missing writer",
 			run: func() error {
-				return ChangeUserPassword(bytes.NewReader(nil), nil, "old", "new", conf)
+				return ChangeUserPassword(t.Context(), bytes.NewReader(nil), nil, "old", "new", conf)
 			},
 			want: ErrMissingPDFWriter,
 		},
 		{
 			name: "user missing configuration",
 			run: func() error {
-				return ChangeUserPassword(bytes.NewReader(nil), io.Discard, "old", "new", nil)
+				return ChangeUserPassword(t.Context(), bytes.NewReader(nil), io.Discard, "old", "new", nil)
 			},
 			want: ErrMissingConfiguration,
 		},
 		{
 			name: "user file missing configuration",
 			run: func() error {
-				return ChangeUserPasswordFile("in.pdf", "", "old", "new", nil)
+				return ChangeUserPasswordFile(t.Context(), "in.pdf", "", "old", "new", nil)
 			},
 			want: ErrMissingConfiguration,
 		},
 		{
 			name: "user file missing input",
 			run: func() error {
-				return ChangeUserPasswordFile("", "", "old", "new", conf)
+				return ChangeUserPasswordFile(t.Context(), "", "", "old", "new", conf)
 			},
 			want: ErrMissingPDFInput,
 		},
 		{
 			name: "owner missing reader",
 			run: func() error {
-				return ChangeOwnerPassword(nil, io.Discard, "old", "new", conf)
+				return ChangeOwnerPassword(t.Context(), nil, io.Discard, "old", "new", conf)
 			},
 			want: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "owner missing writer",
 			run: func() error {
-				return ChangeOwnerPassword(bytes.NewReader(nil), nil, "old", "new", conf)
+				return ChangeOwnerPassword(t.Context(), bytes.NewReader(nil), nil, "old", "new", conf)
 			},
 			want: ErrMissingPDFWriter,
 		},
 		{
 			name: "owner missing configuration",
 			run: func() error {
-				return ChangeOwnerPassword(bytes.NewReader(nil), io.Discard, "old", "new", nil)
+				return ChangeOwnerPassword(t.Context(), bytes.NewReader(nil), io.Discard, "old", "new", nil)
 			},
 			want: ErrMissingConfiguration,
 		},
 		{
 			name: "owner empty new password",
 			run: func() error {
-				return ChangeOwnerPassword(bytes.NewReader(nil), io.Discard, "old", "", conf)
+				return ChangeOwnerPassword(t.Context(), bytes.NewReader(nil), io.Discard, "old", "", conf)
 			},
 			want: pdfcpu.ErrOwnerPasswordRequired,
 		},
 		{
 			name: "owner file missing configuration",
 			run: func() error {
-				return ChangeOwnerPasswordFile("in.pdf", "", "old", "new", nil)
+				return ChangeOwnerPasswordFile(t.Context(), "in.pdf", "", "old", "new", nil)
 			},
 			want: ErrMissingConfiguration,
 		},
 		{
 			name: "owner file missing input",
 			run: func() error {
-				return ChangeOwnerPasswordFile("", "", "old", "new", conf)
+				return ChangeOwnerPasswordFile(t.Context(), "", "", "old", "new", conf)
 			},
 			want: ErrMissingPDFInput,
 		},
 		{
 			name: "owner file empty new password",
 			run: func() error {
-				return ChangeOwnerPasswordFile("in.pdf", "", "old", "", conf)
+				return ChangeOwnerPasswordFile(t.Context(), "in.pdf", "", "old", "", conf)
 			},
 			want: pdfcpu.ErrOwnerPasswordRequired,
 		},
@@ -188,13 +188,13 @@ func TestPasswordChangeReadErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "change user password",
 			run: func(rs io.ReadSeeker) error {
-				return ChangeUserPassword(rs, io.Discard, "old", "new", model.NewDefaultConfiguration())
+				return ChangeUserPassword(t.Context(), rs, io.Discard, "old", "new", model.NewDefaultConfiguration())
 			},
 		},
 		{
 			name: "change owner password",
 			run: func(rs io.ReadSeeker) error {
-				return ChangeOwnerPassword(rs, io.Discard, "old", "new", model.NewDefaultConfiguration())
+				return ChangeOwnerPassword(t.Context(), rs, io.Discard, "old", "new", model.NewDefaultConfiguration())
 			},
 		},
 	}
@@ -231,7 +231,7 @@ func TestPasswordChangeWriteErrorsIncludeOperationContext(t *testing.T) {
 			run: func(rs io.ReadSeeker, w io.Writer) error {
 				conf := model.NewDefaultConfiguration()
 				conf.OwnerPW = "owner"
-				return ChangeUserPassword(rs, w, "user", "new-user", conf)
+				return ChangeUserPassword(t.Context(), rs, w, "user", "new-user", conf)
 			},
 		},
 		{
@@ -239,7 +239,7 @@ func TestPasswordChangeWriteErrorsIncludeOperationContext(t *testing.T) {
 			run: func(rs io.ReadSeeker, w io.Writer) error {
 				conf := model.NewDefaultConfiguration()
 				conf.UserPW = "user"
-				return ChangeOwnerPassword(rs, w, "owner", "new-owner", conf)
+				return ChangeOwnerPassword(t.Context(), rs, w, "owner", "new-owner", conf)
 			},
 		},
 	}
@@ -281,7 +281,7 @@ func TestPasswordChangePreservesAuthenticationSentinel(t *testing.T) {
 			run: func(outFile string) error {
 				conf := model.NewDefaultConfiguration()
 				conf.OwnerPW = "owner"
-				return ChangeUserPasswordFile(encryptedFile, outFile, "wrong", "new-user", conf)
+				return ChangeUserPasswordFile(t.Context(), encryptedFile, outFile, "wrong", "new-user", conf)
 			},
 			want: pdfcpu.ErrWrongPassword,
 		},
@@ -290,7 +290,7 @@ func TestPasswordChangePreservesAuthenticationSentinel(t *testing.T) {
 			run: func(outFile string) error {
 				conf := model.NewDefaultConfiguration()
 				conf.UserPW = "user"
-				return ChangeOwnerPasswordFile(encryptedFile, outFile, "wrong", "new-owner", conf)
+				return ChangeOwnerPasswordFile(t.Context(), encryptedFile, outFile, "wrong", "new-owner", conf)
 			},
 			want: pdfcpu.ErrOwnerPasswordRequired,
 		},
@@ -312,10 +312,10 @@ func TestPasswordChangePreservesAuthenticationSentinel(t *testing.T) {
 // TestPasswordChangeFilesPreserveExistingOutputOnFailure verifies protected output handling for both password commands.
 func TestPasswordChangeFilesPreserveExistingOutputOnFailure(t *testing.T) {
 	requireExistingSecurityOutputPreserved(t, "change user password", func(inFile, outFile string) error {
-		return ChangeUserPasswordFile(inFile, outFile, "old", "new", model.NewDefaultConfiguration())
+		return ChangeUserPasswordFile(t.Context(), inFile, outFile, "old", "new", model.NewDefaultConfiguration())
 	})
 	requireExistingSecurityOutputPreserved(t, "change owner password", func(inFile, outFile string) error {
-		return ChangeOwnerPasswordFile(inFile, outFile, "old", "new", model.NewDefaultConfiguration())
+		return ChangeOwnerPasswordFile(t.Context(), inFile, outFile, "old", "new", model.NewDefaultConfiguration())
 	})
 }
 
@@ -334,13 +334,13 @@ func TestPasswordChangeFileIOErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "change user password",
 			run: func(inFile, outFile string) error {
-				return ChangeUserPasswordFile(inFile, outFile, "old", "new", model.NewDefaultConfiguration())
+				return ChangeUserPasswordFile(t.Context(), inFile, outFile, "old", "new", model.NewDefaultConfiguration())
 			},
 		},
 		{
 			name: "change owner password",
 			run: func(inFile, outFile string) error {
-				return ChangeOwnerPasswordFile(inFile, outFile, "old", "new", model.NewDefaultConfiguration())
+				return ChangeOwnerPasswordFile(t.Context(), inFile, outFile, "old", "new", model.NewDefaultConfiguration())
 			},
 		},
 	}

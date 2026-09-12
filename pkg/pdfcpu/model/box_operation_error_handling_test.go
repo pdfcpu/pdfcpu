@@ -32,9 +32,9 @@ func TestBoxOperationsIncludePageContext(t *testing.T) {
 		name string
 		run  func() error
 	}{
-		{name: "add", run: func() error { return ctx.AddPageBoundaries(pages, pb) }},
-		{name: "remove", run: func() error { return ctx.RemovePageBoundaries(pages, pb) }},
-		{name: "crop", run: func() error { return ctx.Crop(pages, &Box{}) }},
+		{name: "add", run: func() error { return ctx.AddPageBoundaries(t.Context(), pages, pb) }},
+		{name: "remove", run: func() error { return ctx.RemovePageBoundaries(t.Context(), pages, pb) }},
+		{name: "crop", run: func() error { return ctx.Crop(t.Context(), pages, &Box{}) }},
 	}
 
 	for _, tt := range tests {
@@ -75,7 +75,7 @@ func TestPageBoundariesIncludePageTreeAndPageContext(t *testing.T) {
 	xRefTable.RootDict = types.Dict{"Pages": *pageRef}
 	xRefTable.PageCount = 1
 
-	_, err = xRefTable.PageBoundaries(nil)
+	_, err = xRefTable.PageBoundaries(t.Context(), nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -101,7 +101,7 @@ func TestPageBoundariesRejectsNilPageTreeKid(t *testing.T) {
 	xRefTable.RootDict = types.Dict{"Pages": *pagesRef}
 	xRefTable.PageCount = 1
 
-	_, err = xRefTable.PageBoundaries(nil)
+	_, err = xRefTable.PageBoundaries(t.Context(), nil)
 	if err == nil || !strings.Contains(err.Error(), "page tree obj#2: kid 1: nil object") {
 		t.Fatalf("expected nil child context, got %v", err)
 	}
@@ -168,7 +168,7 @@ func TestPageBoundariesRejectsInvalidPageTreeKids(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			xRefTable := pageBoundariesWithKid(t, tt.kid)
-			_, err := xRefTable.PageBoundaries(nil)
+			_, err := xRefTable.PageBoundaries(t.Context(), nil)
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("expected %q, got %v", tt.want, err)
 			}
@@ -212,7 +212,7 @@ func TestPageBoundariesDistinguishesKidsByNodeType(t *testing.T) {
 			xRefTable.RootDict = types.Dict{"Pages": *pagesRef}
 			xRefTable.PageCount = 1
 
-			_, err = xRefTable.PageBoundaries(nil)
+			_, err = xRefTable.PageBoundaries(t.Context(), nil)
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("expected %q, got %v", tt.want, err)
 			}
@@ -233,7 +233,7 @@ func TestPageBoundariesAllowsPageWithoutKids(t *testing.T) {
 	xRefTable.RootDict = types.Dict{"Pages": *pageRef}
 	xRefTable.PageCount = 1
 
-	pb, err := xRefTable.PageBoundaries(nil)
+	pb, err := xRefTable.PageBoundaries(t.Context(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

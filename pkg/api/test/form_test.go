@@ -46,12 +46,12 @@ func listFormFieldsFile(t *testing.T, inFile string, conf *model.Configuration) 
 	}
 	defer f.Close()
 
-	ctx, err := api.ReadValidateAndOptimize(f, conf)
+	ctx, err := api.ReadValidateAndOptimize(t.Context(), f, conf, nil)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	return form.ListFormFields(ctx)
+	return form.ListFormFields(t.Context(), ctx)
 }
 
 // TestListFormFields verifies list form fields.
@@ -83,7 +83,7 @@ func TestRemoveFormFields(t *testing.T) {
 	}
 	want := len(ss) - 2
 
-	if err := api.RemoveFormFieldsFile(inFile, outFile, []string{"dob1", "firstName1"}, conf); err != nil {
+	if err := api.RemoveFormFieldsFile(t.Context(), inFile, outFile, []string{"dob1", "firstName1"}, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -114,7 +114,7 @@ func TestResetFormFields(t *testing.T) {
 	} {
 		inFile := filepath.Join(samplesDir, "form", "demoSinglePage", tt.inFile)
 		outFile := filepath.Join(samplesDir, "form", "reset", tt.outFile)
-		if err := api.ResetFormFieldsFile(inFile, outFile, nil, conf); err != nil {
+		if err := api.ResetFormFieldsFile(t.Context(), inFile, outFile, nil, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}
@@ -137,7 +137,7 @@ func TestLockFormFields(t *testing.T) {
 	} {
 		inFile := filepath.Join(samplesDir, "form", "demoSinglePage", tt.inFile)
 		outFile := filepath.Join(samplesDir, "form", "lock", tt.outFile)
-		if err := api.LockFormFieldsFile(inFile, outFile, nil, conf); err != nil {
+		if err := api.LockFormFieldsFile(t.Context(), inFile, outFile, nil, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}
@@ -159,7 +159,7 @@ func TestUnlockFormFields(t *testing.T) {
 	} {
 		inFile := filepath.Join(samplesDir, "form", "lock", tt.inFile)
 		outFile := filepath.Join(samplesDir, "form", "lock", tt.outFile)
-		if err := api.UnlockFormFieldsFile(inFile, outFile, nil, conf); err != nil {
+		if err := api.UnlockFormFieldsFile(t.Context(), inFile, outFile, nil, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}
@@ -184,7 +184,7 @@ func TestExportForm(t *testing.T) {
 	} {
 		inFile := filepath.Join(inDir, tt.inFile)
 		outFile := filepath.Join(outDir, tt.outFile)
-		if err := api.ExportFormFile(inFile, outFile, conf); err != nil {
+		if err := api.ExportFormFile(t.Context(), inFile, outFile, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}
@@ -212,7 +212,7 @@ func TestFillForm(t *testing.T) {
 		inFile := filepath.Join(inDir, tt.inFile)
 		inFileJSON := filepath.Join(jsonDir, tt.inFileJSON)
 		outFile := filepath.Join(outDir, tt.outFile)
-		if err := api.FillFormFile(inFile, inFileJSON, outFile, conf); err != nil {
+		if err := api.FillFormFile(t.Context(), inFile, inFileJSON, outFile, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}
@@ -235,7 +235,7 @@ func TestMultiFillFormJSON(t *testing.T) {
 	} {
 		inFile := filepath.Join(inDir, tt.inFile)
 		inFileJSON := filepath.Join(jsonDir, tt.inFileJSON)
-		if err := api.MultiFillFormFile(inFile, inFileJSON, outDir, inFile, false, conf); err != nil {
+		if err := api.MultiFillFormFile(t.Context(), inFile, inFileJSON, outDir, inFile, false, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}
@@ -258,7 +258,7 @@ func TestMultiFillFormJSONMerged(t *testing.T) {
 	} {
 		inFile := filepath.Join(inDir, tt.inFile)
 		inFileJSON := filepath.Join(jsonDir, tt.inFileJSON)
-		if err := api.MultiFillFormFile(inFile, inFileJSON, outDir, inFile, true, conf); err != nil {
+		if err := api.MultiFillFormFile(t.Context(), inFile, inFileJSON, outDir, inFile, true, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}
@@ -282,7 +282,7 @@ func TestMultiFillFormCSV(t *testing.T) {
 
 		inFile := filepath.Join(inDir, tt.inFile)
 		inFileCSV := filepath.Join(csvDir, tt.inFileCSV)
-		if err := api.MultiFillFormFile(inFile, inFileCSV, outDir, inFile, false, conf); err != nil {
+		if err := api.MultiFillFormFile(t.Context(), inFile, inFileCSV, outDir, inFile, false, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}
@@ -306,7 +306,7 @@ func TestMultiFillFormCSVMerged(t *testing.T) {
 
 		inFile := filepath.Join(inDir, tt.inFile)
 		inFileCSV := filepath.Join(csvDir, tt.inFileCSV)
-		if err := api.MultiFillFormFile(inFile, inFileCSV, outDir, inFile, true, conf); err != nil {
+		if err := api.MultiFillFormFile(t.Context(), inFile, inFileCSV, outDir, inFile, true, conf); err != nil {
 			t.Fatalf("%s: %v\n", tt.msg, err)
 		}
 	}

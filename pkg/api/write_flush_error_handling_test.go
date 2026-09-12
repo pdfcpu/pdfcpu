@@ -73,7 +73,7 @@ func TestWriteContextJoinsWriteAndFlushErrors(t *testing.T) {
 	ctx.Names["JavaScript"] = &model.Node{D: types.NewDict()}
 	w := &flushFailingWriter{err: flushErr}
 
-	err = WriteContext(ctx, w)
+	err = WriteContext(t.Context(), ctx, w)
 
 	requireWriteAndFlushCauses(t, err, writeErr, flushErr, w)
 }
@@ -105,7 +105,7 @@ func TestWriteIncrementJoinsWriteAndFlushErrors(t *testing.T) {
 	ctx.Write.ObjNrs = []int{valueRef.ObjectNumber.Value(), streamRef.ObjectNumber.Value()}
 	w := &flushFailingWriter{err: flushErr}
 
-	err = WriteIncrement(ctx, w)
+	err = WriteIncrement(t.Context(), ctx, w)
 
 	requireWriteAndFlushCauses(t, err, writeErr, flushErr, w)
 }

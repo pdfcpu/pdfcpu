@@ -27,7 +27,7 @@ func testUpdateImages(t *testing.T, msg string, inFile, imgFile, outFile string,
 	t.Helper()
 
 	cmd := cli.UpdateImagesCommand(inFile, imgFile, outFile, objNrOrPageNr, id, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 

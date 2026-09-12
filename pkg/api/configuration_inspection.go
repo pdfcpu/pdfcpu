@@ -38,8 +38,8 @@ const (
 	ConfigurationSourceOSDefault ConfigurationSource = "os-default"
 )
 
-// ConfigurationInspection describes selected configuration and filesystem state without exposing secret-bearing
-// operation state.
+// ConfigurationInspection describes selected configuration and filesystem state
+// without exposing secret-bearing operation state.
 type ConfigurationInspection struct {
 	// Mode is the selected configuration mode.
 	Mode ConfigurationMode `json:"mode"`
@@ -179,11 +179,7 @@ func inspectConfigurationPath(path string, available bool) (ConfigurationPathIns
 	return inspection, nil
 }
 
-func inspectConfigurationPaths(root string, conf *model.Configuration) (
-	ConfigurationPathInspection,
-	ConfigurationPathsInspection,
-	error,
-) {
+func inspectConfigurationPaths(root string, conf *model.Configuration) (ConfigurationPathInspection, ConfigurationPathsInspection, error) {
 	rootInspection, err := inspectConfigurationPath(root, true)
 	if err != nil {
 		return ConfigurationPathInspection{}, ConfigurationPathsInspection{}, err
@@ -239,12 +235,7 @@ func inspectConfigurationNetwork(conf *model.Configuration) ConfigurationNetwork
 	}
 }
 
-func configurationForInspection(options ConfigurationOptions) (
-	*model.Configuration,
-	string,
-	ConfigurationSource,
-	error,
-) {
+func configurationForInspection(options ConfigurationOptions) (*model.Configuration, string, ConfigurationSource, error) {
 	if err := validateConfigurationOptions(options); err != nil {
 		return nil, "", "", err
 	}
@@ -255,19 +246,14 @@ func configurationForInspection(options ConfigurationOptions) (
 	if err != nil {
 		return nil, "", "", err
 	}
-	conf, err := LoadConfigurationWithOptions(ConfigurationOptions{Root: root, Mode: ConfigurationModeReadOnly})
+	conf, err := LoadConfiguration(ConfigurationOptions{Root: root, Mode: ConfigurationModeReadOnly})
 	if err != nil {
 		return nil, "", "", err
 	}
 	return conf, root, source, nil
 }
 
-func buildConfigurationInspection(
-	options ConfigurationOptions,
-	conf *model.Configuration,
-	root string,
-	source ConfigurationSource,
-) (*ConfigurationInspection, error) {
+func buildConfigurationInspection(options ConfigurationOptions, conf *model.Configuration, root string, source ConfigurationSource) (*ConfigurationInspection, error) {
 	rootInspection := ConfigurationPathInspection{}
 	paths := ConfigurationPathsInspection{}
 	var err error

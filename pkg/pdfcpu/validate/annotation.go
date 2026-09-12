@@ -17,12 +17,14 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -2060,11 +2062,14 @@ func pageAnnotationWalkKidContext(o types.Object, i int) string {
 	return fmt.Sprintf("page tree annotation walk: kid[%d]", i)
 }
 
-func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage int) (int, error) {
+func validatePagesAnnotations(c context.Context, xRefTable *model.XRefTable, d types.Dict, curPage int) (int, error) {
 	// Iterate over page tree.
 	kidsArray := d.ArrayEntry("Kids")
 
 	for i, v := range kidsArray {
+		if err := contextutil.Check(c); err != nil {
+			return curPage, err
+		}
 
 		if v == nil {
 			if log.ValidateEnabled() {
@@ -2095,7 +2100,7 @@ func validatePagesAnnotations(xRefTable *model.XRefTable, d types.Dict, curPage 
 
 		case "Pages":
 			// Recurse over pagetree
-			curPage, err = validatePagesAnnotations(xRefTable, d, curPage)
+			curPage, err = validatePagesAnnotations(c, xRefTable, d, curPage)
 			if err != nil {
 				return curPage, fmt.Errorf("%s: %w", pageAnnotationWalkKidContext(v, i), err)
 			}

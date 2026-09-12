@@ -138,28 +138,28 @@ func TestAttachmentCLIHandlerBoundaryGuards(t *testing.T) {
 		want error
 	}{
 		{name: "list configuration", run: func() error {
-			return handleListAttachmentsCommand(nil, []string{"in.pdf"})
+			return handleListAttachmentsCommand(t.Context(), nil, []string{"in.pdf"})
 		}, want: api.ErrMissingConfiguration},
 		{name: "list input", run: func() error {
-			return handleListAttachmentsCommand(conf, nil)
+			return handleListAttachmentsCommand(t.Context(), conf, nil)
 		}, want: api.ErrMissingPDFInput},
 		{name: "add input", run: func() error {
-			return handleAddAttachmentsCommand(conf, nil)
+			return handleAddAttachmentsCommand(t.Context(), conf, nil)
 		}, want: api.ErrMissingPDFInput},
 		{name: "add attachment", run: func() error {
-			return handleAddAttachmentsCommand(conf, []string{"in.pdf"})
+			return handleAddAttachmentsCommand(t.Context(), conf, []string{"in.pdf"})
 		}, want: api.ErrNoAttachmentAdded},
 		{name: "portfolio attachment", run: func() error {
-			return handleAddAttachmentsPortfolioCommand(conf, []string{"in.pdf"})
+			return handleAddAttachmentsPortfolioCommand(t.Context(), conf, []string{"in.pdf"})
 		}, want: api.ErrNoAttachmentAdded},
 		{name: "remove input", run: func() error {
-			return handleRemoveAttachmentsCommand(conf, nil)
+			return handleRemoveAttachmentsCommand(t.Context(), conf, nil)
 		}, want: api.ErrMissingPDFInput},
 		{name: "extract input", run: func() error {
-			return handleExtractAttachmentsCommand(conf, nil)
+			return handleExtractAttachmentsCommand(t.Context(), conf, nil)
 		}, want: api.ErrMissingPDFInput},
 		{name: "extract output", run: func() error {
-			return handleExtractAttachmentsCommand(conf, []string{"in.pdf"})
+			return handleExtractAttachmentsCommand(t.Context(), conf, []string{"in.pdf"})
 		}, want: api.ErrMissingPDFOutput},
 	}
 
@@ -184,7 +184,9 @@ func TestExtractAttachmentsHandlerReportsOutputDirectoryContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := handleExtractAttachmentsCommand(model.NewDefaultConfiguration(), []string{"in.pdf", outDir})
+	err := handleExtractAttachmentsCommand(
+		t.Context(), model.NewDefaultConfiguration(), []string{"in.pdf", outDir},
+	)
 	if err == nil || !strings.Contains(err.Error(), "extract attachments: prepare output directory") {
 		t.Fatalf("expected output directory context, got %v", err)
 	}

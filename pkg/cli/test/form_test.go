@@ -37,7 +37,7 @@ func TestListFormFields(t *testing.T) {
 	inFile := filepath.Join(samplesDir, "form", "demo", "english.pdf")
 
 	cmd := cli.ListFormFieldsCommand([]string{inFile}, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }
@@ -48,7 +48,7 @@ func TestListFormFieldsJSON(t *testing.T) {
 	inFile := filepath.Join(samplesDir, "form", "demoSinglePage", "english.pdf")
 
 	cmd := cli.ListFormFieldsJSONCommand([]string{inFile}, conf)
-	ss, err := cli.Dispatch(cmd)
+	ss, err := cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
@@ -76,7 +76,7 @@ func TestListFormFieldsJSONCanFill(t *testing.T) {
 	outFile := filepath.Join(outDir, "english-list-filled.pdf")
 
 	cmd := cli.ListFormFieldsJSONCommand([]string{inFile}, conf)
-	ss, err := cli.Dispatch(cmd)
+	ss, err := cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
@@ -99,7 +99,7 @@ func TestListFormFieldsJSONCanFill(t *testing.T) {
 	}
 
 	cmd = cli.FillFormCommand(inFile, jsonFile, outFile, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }
@@ -114,7 +114,7 @@ func TestListFormFieldsJSONMultiFile(t *testing.T) {
 	}
 
 	cmd := cli.ListFormFieldsJSONCommand(inFiles, conf)
-	ss, err := cli.Dispatch(cmd)
+	ss, err := cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -136,7 +136,7 @@ func TestRemoveFormFields(t *testing.T) {
 	outFile := filepath.Join(outDir, "removedField.pdf")
 
 	cmd := cli.RemoveFormFieldsCommand(inFile, outFile, []string{"dob1"}, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }
@@ -159,7 +159,7 @@ func TestResetFormFields(t *testing.T) {
 		outFile := filepath.Join(outDir, tt.outFile)
 
 		cmd := cli.ResetFormCommand(inFile, outFile, nil, conf)
-		if _, err := cli.Dispatch(cmd); err != nil {
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, inFile, err)
 		}
 	}
@@ -184,7 +184,7 @@ func TestLockFormFields(t *testing.T) {
 		outFile := filepath.Join(outDir, tt.outFile)
 
 		cmd := cli.LockFormCommand(inFile, outFile, nil, conf)
-		if _, err := cli.Dispatch(cmd); err != nil {
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, inFile, err)
 		}
 	}
@@ -208,7 +208,7 @@ func TestUnlockFormFields(t *testing.T) {
 		outFile := filepath.Join(outDir, tt.outFile)
 
 		cmd := cli.UnlockFormCommand(inFile, outFile, nil, conf)
-		if _, err := cli.Dispatch(cmd); err != nil {
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, inFile, err)
 		}
 	}
@@ -234,7 +234,7 @@ func TestExportForm(t *testing.T) {
 		outFile := filepath.Join(outDir, tt.outFile)
 
 		cmd := cli.ExportFormCommand(inFile, outFile, conf)
-		if _, err := cli.Dispatch(cmd); err != nil {
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, inFile, err)
 		}
 	}
@@ -263,7 +263,7 @@ func TestFillForm(t *testing.T) {
 		outFile := filepath.Join(outDir, tt.outFile)
 
 		cmd := cli.FillFormCommand(inFile, inFileJSON, outFile, conf)
-		if _, err := cli.Dispatch(cmd); err != nil {
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, inFile, err)
 		}
 	}
@@ -287,7 +287,7 @@ func TestMultiFillFormJSON(t *testing.T) {
 		inFileJSON := filepath.Join(jsonDir, tt.inFileJSON)
 
 		cmd := cli.MultiFillFormCommand(inFile, inFileJSON, outDir, tt.inFile, false, conf)
-		if _, err := cli.Dispatch(cmd); err != nil {
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, inFile, err)
 		}
 	}
@@ -311,7 +311,7 @@ func TestMultiFillFormJSONMerged(t *testing.T) {
 		inFileJSON := filepath.Join(jsonDir, tt.inFileJSON)
 
 		cmd := cli.MultiFillFormCommand(inFile, inFileJSON, outDir, tt.inFile, true, conf)
-		if _, err := cli.Dispatch(cmd); err != nil {
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, inFile, err)
 		}
 	}
@@ -344,7 +344,7 @@ func TestMultiFillFormJSONMergedStdinStdout(t *testing.T) {
 	})
 
 	cmd := cli.MultiFillFormCommand("-", inFileJSON, "", "-", true, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("multifill stdin/stdout: %v", err)
 	}
 
@@ -376,7 +376,7 @@ func TestMultiFillFormCSV(t *testing.T) {
 		inFileCSV := filepath.Join(csvDir, tt.inFileCSV)
 
 		cmd := cli.MultiFillFormCommand(inFile, inFileCSV, outDir, tt.inFile, false, conf)
-		if _, err := cli.Dispatch(cmd); err != nil {
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, inFile, err)
 		}
 	}
@@ -401,7 +401,7 @@ func TestMultiFillFormCSVMerged(t *testing.T) {
 		inFileCSV := filepath.Join(csvDir, tt.inFileCSV)
 
 		cmd := cli.MultiFillFormCommand(inFile, inFileCSV, outDir, tt.inFile, false, conf)
-		if _, err := cli.Dispatch(cmd); err != nil {
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, inFile, err)
 		}
 	}

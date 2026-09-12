@@ -46,18 +46,18 @@ func TestImageArgumentValidation(t *testing.T) {
 		want error
 	}{
 		{name: "images reader", err: func() error {
-			_, err := Images(nil, nil, nil)
+			_, err := Images(t.Context(), nil, nil, nil)
 			return err
 		}(), want: ErrMissingPDFReadSeeker},
 		{name: "list reader", err: func() error {
-			_, err := ListImages(nil, nil, nil)
+			_, err := ListImages(t.Context(), nil, nil, nil)
 			return err
 		}(), want: ErrMissingPDFReadSeeker},
-		{name: "update reader", err: UpdateImages(nil, bytes.NewReader(nil), io.Discard, 1, 0, "", nil), want: ErrMissingPDFReadSeeker},
-		{name: "update image", err: UpdateImages(bytes.NewReader(nil), nil, io.Discard, 1, 0, "", nil), want: ErrMissingImageInput},
-		{name: "update writer", err: UpdateImages(bytes.NewReader(nil), bytes.NewReader(nil), nil, 1, 0, "", nil), want: ErrMissingPDFWriter},
-		{name: "file input", err: UpdateImagesFile("", "image.png", "", 1, 0, "", nil), want: ErrMissingPDFInput},
-		{name: "file image", err: UpdateImagesFile("input.pdf", "", "", 1, 0, "", nil), want: ErrMissingImageInput},
+		{name: "update reader", err: UpdateImages(t.Context(), nil, bytes.NewReader(nil), io.Discard, 1, 0, "", nil), want: ErrMissingPDFReadSeeker},
+		{name: "update image", err: UpdateImages(t.Context(), bytes.NewReader(nil), nil, io.Discard, 1, 0, "", nil), want: ErrMissingImageInput},
+		{name: "update writer", err: UpdateImages(t.Context(), bytes.NewReader(nil), bytes.NewReader(nil), nil, 1, 0, "", nil), want: ErrMissingPDFWriter},
+		{name: "file input", err: UpdateImagesFile(t.Context(), "", "image.png", "", 1, 0, "", nil), want: ErrMissingPDFInput},
+		{name: "file image", err: UpdateImagesFile(t.Context(), "input.pdf", "", "", 1, 0, "", nil), want: ErrMissingImageInput},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -93,7 +93,7 @@ func TestImageSelectionValidation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := UpdateImages(bytes.NewReader(nil), bytes.NewReader(nil), io.Discard, tt.objNr, tt.pageNr, tt.id, nil)
+			err := UpdateImages(t.Context(), bytes.NewReader(nil), bytes.NewReader(nil), io.Discard, tt.objNr, tt.pageNr, tt.id, nil)
 			if !errors.Is(err, ErrInvalidImageSelection) {
 				t.Fatalf("expected %v, got %v", ErrInvalidImageSelection, err)
 			}
@@ -136,7 +136,7 @@ func TestImageSelectionFromFile(t *testing.T) {
 
 // TestUpdateImagesFileRejectsPartialSelection verifies explicit selector data is not overwritten from a filename.
 func TestUpdateImagesFileRejectsPartialSelection(t *testing.T) {
-	err := UpdateImagesFile("missing.pdf", "mountain_1_Im0.png", "", 0, 1, "", nil)
+	err := UpdateImagesFile(t.Context(), "missing.pdf", "mountain_1_Im0.png", "", 0, 1, "", nil)
 	if !errors.Is(err, ErrInvalidImageSelection) {
 		t.Fatalf("expected %v, got %v", ErrInvalidImageSelection, err)
 	}
@@ -152,11 +152,11 @@ func TestImagesReadErrorsIncludePhaseContext(t *testing.T) {
 		run  func() error
 	}{
 		{name: "raw", run: func() error {
-			_, err := Images(bytes.NewReader(nil), nil, nil)
+			_, err := Images(t.Context(), bytes.NewReader(nil), nil, nil)
 			return err
 		}},
 		{name: "formatted", run: func() error {
-			_, err := ListImages(bytes.NewReader(nil), nil, nil)
+			_, err := ListImages(t.Context(), bytes.NewReader(nil), nil, nil)
 			return err
 		}},
 	}
@@ -180,11 +180,11 @@ func TestImagesPageSelectionErrorsIncludePhaseContext(t *testing.T) {
 		run  func() error
 	}{
 		{name: "raw", run: func() error {
-			_, err := Images(openAPITestPDF(t, imageTestPDF()), []string{"foo"}, nil)
+			_, err := Images(t.Context(), openAPITestPDF(t, imageTestPDF()), []string{"foo"}, nil)
 			return err
 		}},
 		{name: "formatted", run: func() error {
-			_, err := ListImages(openAPITestPDF(t, imageTestPDF()), []string{"foo"}, nil)
+			_, err := ListImages(t.Context(), openAPITestPDF(t, imageTestPDF()), []string{"foo"}, nil)
 			return err
 		}},
 	}
@@ -200,7 +200,7 @@ func TestImagesPageSelectionErrorsIncludePhaseContext(t *testing.T) {
 
 // TestListImagesReturnsFormattedOutput verifies the API adapter preserves CLI-oriented formatting.
 func TestListImagesReturnsFormattedOutput(t *testing.T) {
-	ss, err := ListImages(openAPITestPDF(t, imageTestPDF()), []string{"1"}, nil)
+	ss, err := ListImages(t.Context(), openAPITestPDF(t, imageTestPDF()), []string{"1"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestListImagesReturnsFormattedOutput(t *testing.T) {
 
 // TestUpdateImagesErrorsIncludePhaseContext verifies preparation and operation errors preserve their causes.
 func TestUpdateImagesErrorsIncludePhaseContext(t *testing.T) {
-	err := UpdateImages(bytes.NewReader(nil), bytes.NewReader(nil), io.Discard, 1, 0, "", nil)
+	err := UpdateImages(t.Context(), bytes.NewReader(nil), bytes.NewReader(nil), io.Discard, 1, 0, "", nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -219,7 +219,7 @@ func TestUpdateImagesErrorsIncludePhaseContext(t *testing.T) {
 		t.Fatalf("expected update preparation context, got %q", err)
 	}
 
-	err = UpdateImages(openAPITestPDF(t, imageTestPDF()), bytes.NewReader(nil), io.Discard, 8, 0, "", nil)
+	err = UpdateImages(t.Context(), openAPITestPDF(t, imageTestPDF()), bytes.NewReader(nil), io.Discard, 8, 0, "", nil)
 	if !errors.Is(err, image.ErrFormat) {
 		t.Fatalf("expected %v, got %v", image.ErrFormat, err)
 	}
@@ -232,6 +232,7 @@ func TestUpdateImagesErrorsIncludePhaseContext(t *testing.T) {
 func TestUpdateImagesWriteErrorIncludesPhaseContext(t *testing.T) {
 	wantErr := errors.New("image write failed")
 	err := UpdateImages(
+		t.Context(),
 		openAPITestPDF(t, imageTestPDF()),
 		openAPITestPDF(t, imageTestImage()),
 		failingWriter{err: wantErr},
@@ -251,19 +252,19 @@ func TestUpdateImagesWriteErrorIncludesPhaseContext(t *testing.T) {
 // TestUpdateImagesFileIOErrorContext verifies file opening and creation context.
 func TestUpdateImagesFileIOErrorContext(t *testing.T) {
 	missingInput := filepath.Join(t.TempDir(), "missing.pdf")
-	err := UpdateImagesFile(missingInput, "image.png", "", 1, 0, "", nil)
+	err := UpdateImagesFile(t.Context(), missingInput, "image.png", "", 1, 0, "", nil)
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "update images: open input "+missingInput) {
 		t.Fatalf("expected input context, got %v", err)
 	}
 
 	missingImage := filepath.Join(t.TempDir(), "missing.png")
-	err = UpdateImagesFile(imageTestPDF(), missingImage, "", 8, 0, "", nil)
+	err = UpdateImagesFile(t.Context(), imageTestPDF(), missingImage, "", 8, 0, "", nil)
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "update images: open image "+missingImage) {
 		t.Fatalf("expected image context, got %v", err)
 	}
 
 	missingOutput := filepath.Join(t.TempDir(), "missing", "out.pdf")
-	err = UpdateImagesFile(imageTestPDF(), imageTestImage(), missingOutput, 8, 0, "", nil)
+	err = UpdateImagesFile(t.Context(), imageTestPDF(), imageTestImage(), missingOutput, 8, 0, "", nil)
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "update images: create output") {
 		t.Fatalf("expected output context, got %v", err)
 	}
@@ -296,7 +297,7 @@ func TestUpdateImagesFileFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := UpdateImagesFile(imageTestPDF(), imageFile, outFile, 8, 0, "", nil)
+	err := UpdateImagesFile(t.Context(), imageTestPDF(), imageFile, outFile, 8, 0, "", nil)
 	if !errors.Is(err, image.ErrFormat) {
 		t.Fatalf("expected %v, got %v", image.ErrFormat, err)
 	}
@@ -315,7 +316,7 @@ func TestUpdateImagesFileSuccessReplacesExistingOutput(t *testing.T) {
 	if err := os.WriteFile(outFile, []byte("existing output"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := UpdateImagesFile(imageTestPDF(), imageTestImage(), outFile, 8, 0, "", nil); err != nil {
+	if err := UpdateImagesFile(t.Context(), imageTestPDF(), imageTestImage(), outFile, 8, 0, "", nil); err != nil {
 		t.Fatal(err)
 	}
 	b, err := os.ReadFile(outFile)
@@ -342,7 +343,7 @@ func TestUpdateImagesFileFailurePreservesInput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = UpdateImagesFile(inFile, imageFile, "", 8, 0, "", nil)
+	err = UpdateImagesFile(t.Context(), inFile, imageFile, "", 8, 0, "", nil)
 	if !errors.Is(err, image.ErrFormat) {
 		t.Fatalf("expected %v, got %v", image.ErrFormat, err)
 	}
@@ -365,7 +366,7 @@ func TestUpdateImagesFileSuccessReplacesInput(t *testing.T) {
 	if err := os.WriteFile(inFile, b, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := UpdateImagesFile(inFile, imageTestImage(), "", 8, 0, "", nil); err != nil {
+	if err := UpdateImagesFile(t.Context(), inFile, imageTestImage(), "", 8, 0, "", nil); err != nil {
 		t.Fatal(err)
 	}
 	got, err := os.ReadFile(inFile)
@@ -379,7 +380,7 @@ func TestUpdateImagesFileSuccessReplacesInput(t *testing.T) {
 
 // TestUpdateImagesFileRejectsImageOutputAlias verifies output cannot replace the source image.
 func TestUpdateImagesFileRejectsImageOutputAlias(t *testing.T) {
-	err := UpdateImagesFile(imageTestPDF(), imageTestImage(), imageTestImage(), 8, 0, "", nil)
+	err := UpdateImagesFile(t.Context(), imageTestPDF(), imageTestImage(), imageTestImage(), 8, 0, "", nil)
 	if !errors.Is(err, ErrUpdateImagesOutputConflict) {
 		t.Fatalf("expected %v, got %v", ErrUpdateImagesOutputConflict, err)
 	}

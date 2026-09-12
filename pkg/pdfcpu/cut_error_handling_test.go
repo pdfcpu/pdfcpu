@@ -67,14 +67,14 @@ func TestGeneratedCutsPreserveConfiguration(t *testing.T) {
 		run  func(*model.Context, *model.Cut) error
 	}{
 		{name: "ndown", cut: &model.Cut{Hor: []float64{0.75}, Vert: []float64{0.25}}, run: func(ctx *model.Context, cut *model.Cut) error {
-			_, err := NDownPage(ctx, 1, 2, cut)
+			_, err := NDownPage(t.Context(), ctx, 1, 2, cut)
 			return err
 		}},
 		{name: "poster", cut: &model.Cut{
 			Hor: []float64{0.75}, Vert: []float64{0.25}, Scale: 1,
 			PageDim: &types.Dim{Width: 100, Height: 100}, UserDim: true,
 		}, run: func(ctx *model.Context, cut *model.Cut) error {
-			_, err := PosterPage(ctx, 1, cut)
+			_, err := PosterPage(t.Context(), ctx, 1, cut)
 			return err
 		}},
 	}
@@ -98,7 +98,7 @@ func TestGeneratedCutsPreserveConfiguration(t *testing.T) {
 func TestCutMarginValidationUsesResolvedTileDimensions(t *testing.T) {
 	ctx, _ := cutBlankPageContext(t)
 	cut := &model.Cut{Hor: []float64{0}, Vert: []float64{0, 0.8}, Margin: 60}
-	_, err := CutPage(ctx, 1, cut)
+	_, err := CutPage(t.Context(), ctx, 1, cut)
 	if err == nil {
 		t.Fatal("expected margin error")
 	}
@@ -116,13 +116,16 @@ func TestCutPageOperationsAcceptBlankPagesAndPreserveSource(t *testing.T) {
 		run  func(*model.Context) (*model.Context, error)
 	}{
 		{name: "cut", run: func(ctx *model.Context) (*model.Context, error) {
-			return CutPage(ctx, 1, &model.Cut{Hor: []float64{0, 0.5}, Vert: []float64{0}})
+			return CutPage(t.Context(), ctx, 1, &model.Cut{Hor: []float64{0, 0.5}, Vert: []float64{0}})
 		}},
 		{name: "ndown", run: func(ctx *model.Context) (*model.Context, error) {
-			return NDownPage(ctx, 1, 2, &model.Cut{})
+			return NDownPage(t.Context(), ctx, 1, 2, &model.Cut{})
 		}},
 		{name: "poster", run: func(ctx *model.Context) (*model.Context, error) {
-			return PosterPage(ctx, 1, &model.Cut{Scale: 1, PageDim: &types.Dim{Width: 100, Height: 100}, UserDim: true})
+			return PosterPage(
+				t.Context(), ctx, 1,
+				&model.Cut{Scale: 1, PageDim: &types.Dim{Width: 100, Height: 100}, UserDim: true},
+			)
 		}},
 	}
 
@@ -162,15 +165,18 @@ func TestCutPageOperationsIncludePreparationContext(t *testing.T) {
 		run  func(*model.Context) error
 	}{
 		{name: "cut", run: func(ctx *model.Context) error {
-			_, err := CutPage(ctx, 1, &model.Cut{Hor: []float64{0, 0.5}, Vert: []float64{0}})
+			_, err := CutPage(t.Context(), ctx, 1, &model.Cut{Hor: []float64{0, 0.5}, Vert: []float64{0}})
 			return err
 		}},
 		{name: "ndown", run: func(ctx *model.Context) error {
-			_, err := NDownPage(ctx, 1, 2, &model.Cut{})
+			_, err := NDownPage(t.Context(), ctx, 1, 2, &model.Cut{})
 			return err
 		}},
 		{name: "poster", run: func(ctx *model.Context) error {
-			_, err := PosterPage(ctx, 1, &model.Cut{Scale: 1, PageDim: &types.Dim{Width: 100, Height: 100}, UserDim: true})
+			_, err := PosterPage(
+				t.Context(), ctx, 1,
+				&model.Cut{Scale: 1, PageDim: &types.Dim{Width: 100, Height: 100}, UserDim: true},
+			)
 			return err
 		}},
 	}
@@ -195,7 +201,7 @@ func TestCutPageContentErrorIncludesTransformContext(t *testing.T) {
 	ctx, d := cutBlankPageContext(t)
 	d["Contents"] = types.Integer(7)
 
-	_, err := CutPage(ctx, 1, &model.Cut{Hor: []float64{0, 0.5}, Vert: []float64{0}})
+	_, err := CutPage(t.Context(), ctx, 1, &model.Cut{Hor: []float64{0, 0.5}, Vert: []float64{0}})
 	if err == nil {
 		t.Fatal("expected error")
 	}

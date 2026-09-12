@@ -30,21 +30,21 @@ func TestPagesCommand(t *testing.T) {
 	inFile := filepath.Join(inDir, "Acroforms2.pdf")
 	outFile := filepath.Join(outDir, "test.pdf")
 
-	n1, err := api.PageCountFile(inFile)
+	n1, err := api.PageCountFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 
 	// Insert an empty page before pages 1 and 2.
 	cmd := cli.InsertPagesCommand(inFile, outFile, []string{"-2"}, conf, "before", nil)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	n2, err := api.PageCountFile(outFile)
+	n2, err := api.PageCountFile(t.Context(), outFile)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
@@ -54,14 +54,14 @@ func TestPagesCommand(t *testing.T) {
 
 	// Remove pages 1 and 2.
 	cmd = cli.RemovePagesCommand(outFile, "", []string{"-2"}, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	if err := validateFile(t, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	n2, err = api.PageCountFile(outFile)
+	n2, err = api.PageCountFile(t.Context(), outFile)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}

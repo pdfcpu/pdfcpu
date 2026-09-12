@@ -18,25 +18,33 @@ package pdfcpu
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// KeywordsList returns a list of keywords as recorded in the document info dict.
-func KeywordsList(ctx *model.Context) ([]string, error) {
+// KeywordsList returns a list of keywords as recorded in the document info dict and supports cancellation.
+func KeywordsList(c context.Context, ctx *model.Context) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	var ss []string
 	for keyword, val := range ctx.KeywordList {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		if val {
 			ss = append(ss, keyword)
 		}
 	}
 	sort.Strings(ss)
-	return ss, nil
+	return ss, contextutil.Check(c)
 }
 
 func keywordMetadataStream(ctx *model.Context) (types.Dict, *types.StreamDict, error) {
@@ -74,7 +82,10 @@ func storeKeywordMetadataStream(ctx *model.Context, rootDict types.Dict, sd type
 	return nil
 }
 
-func removeKeywordsFromMetadata(ctx *model.Context) (bool, error) {
+func removeKeywordsFromMetadata(c context.Context, ctx *model.Context) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	rootDict, sd, err := keywordMetadataStream(ctx)
 	if err != nil {
 		return false, err
@@ -83,10 +94,16 @@ func removeKeywordsFromMetadata(ctx *model.Context) (bool, error) {
 	if err = sd.Decode(); err != nil {
 		return false, fmt.Errorf("catalog Metadata stream: decode: %w", err)
 	}
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 
 	before := sd.Content
 	if err = model.RemoveKeywords(&sd.Content); err != nil {
 		return false, fmt.Errorf("catalog Metadata stream: remove keywords: %w", err)
+	}
+	if err := contextutil.Check(c); err != nil {
+		return false, err
 	}
 	if bytes.Equal(before, sd.Content) {
 		return false, nil
@@ -97,14 +114,20 @@ func removeKeywordsFromMetadata(ctx *model.Context) (bool, error) {
 	if err := sd.Encode(); err != nil {
 		return false, fmt.Errorf("catalog Metadata stream: encode: %w", err)
 	}
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 
 	if err := storeKeywordMetadataStream(ctx, rootDict, *sd); err != nil {
 		return false, err
 	}
-	return true, nil
+	return true, contextutil.Check(c)
 }
 
-func finalizeKeywords(ctx *model.Context) error {
+func finalizeKeywords(c context.Context, ctx *model.Context) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if ctx.Info == nil {
 		return errors.New("Info dictionary: missing")
 	}
@@ -116,7 +139,7 @@ func finalizeKeywords(ctx *model.Context) error {
 		return errors.New("Info dictionary: missing object")
 	}
 
-	ss, err := KeywordsList(ctx)
+	ss, err := KeywordsList(c, ctx)
 	if err != nil {
 		return fmt.Errorf("Info dictionary Keywords: collect keywords: %w", err)
 	}
@@ -131,15 +154,18 @@ func finalizeKeywords(ctx *model.Context) error {
 	d["Keywords"] = types.StringLiteral(*s)
 
 	if ctx.CatalogXMPMeta != nil {
-		if _, err := removeKeywordsFromMetadata(ctx); err != nil {
+		if _, err := removeKeywordsFromMetadata(c, ctx); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return contextutil.Check(c)
 }
 
-func prepareKeywordsInfo(ctx *model.Context) error {
+func prepareKeywordsInfo(c context.Context, ctx *model.Context) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if ctx.XRefTable.Version() < model.V20 {
 		if err := ensureInfoDict(ctx); err != nil {
 			return fmt.Errorf("Info dictionary: ensure: %w", err)
@@ -151,25 +177,34 @@ func prepareKeywordsInfo(ctx *model.Context) error {
 	if err := ensureFileID(ctx); err != nil {
 		return fmt.Errorf("file ID: ensure: %w", err)
 	}
-	return nil
+	return contextutil.Check(c)
 }
 
-// KeywordsAdd adds keywords to the document info dict.
-func KeywordsAdd(ctx *model.Context, keywords []string) error {
-	if err := prepareKeywordsInfo(ctx); err != nil {
+// KeywordsAdd adds keywords to the document info dict and supports cancellation.
+func KeywordsAdd(c context.Context, ctx *model.Context, keywords []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if err := prepareKeywordsInfo(c, ctx); err != nil {
 		return err
 	}
 
 	for _, keyword := range keywords {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		ctx.KeywordList[strings.TrimSpace(keyword)] = true
 	}
 
-	return finalizeKeywords(ctx)
+	return finalizeKeywords(c, ctx)
 }
 
 // KeywordsRemove deletes keywords from the document info dict.
-// Returns true if at least one keyword was removed.
-func KeywordsRemove(ctx *model.Context, keywords []string) (bool, error) {
+// It supports cancellation and returns true if at least one keyword was removed.
+func KeywordsRemove(c context.Context, ctx *model.Context, keywords []string) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	if ctx.Info == nil {
 		return false, nil
 	}
@@ -183,41 +218,53 @@ func KeywordsRemove(ctx *model.Context, keywords []string) (bool, error) {
 	}
 
 	if len(keywords) == 0 {
-		// Remove all keywords.
-		_, removed := d["Keywords"]
-		delete(d, "Keywords")
+		return removeAllKeywords(c, ctx, d)
+	}
+	return removeSelectedKeywords(c, ctx, keywords)
+}
 
-		if ctx.CatalogXMPMeta != nil {
-			metadataRemoved, err := removeKeywordsFromMetadata(ctx)
-			if err != nil {
-				return false, err
-			}
-			removed = removed || metadataRemoved
+func removeAllKeywords(c context.Context, ctx *model.Context, d types.Dict) (bool, error) {
+	_, removed := d["Keywords"]
+	delete(d, "Keywords")
+
+	if ctx.CatalogXMPMeta != nil {
+		metadataRemoved, err := removeKeywordsFromMetadata(c, ctx)
+		if err != nil {
+			return false, err
 		}
-
-		for keyword, active := range ctx.KeywordList {
-			removed = removed || active
-			ctx.KeywordList[keyword] = false
-		}
-
-		return removed, nil
+		removed = removed || metadataRemoved
 	}
 
+	for keyword, active := range ctx.KeywordList {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
+		removed = removed || active
+		ctx.KeywordList[keyword] = false
+	}
+	return removed, contextutil.Check(c)
+}
+
+func removeSelectedKeywords(c context.Context, ctx *model.Context, keywords []string) (bool, error) {
 	remove := types.StringSet{}
 	for _, keyword := range keywords {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
 		remove[strings.TrimSpace(keyword)] = true
 	}
 	var removed bool
 	for keyword := range ctx.KeywordList {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
 		if remove[keyword] {
 			ctx.KeywordList[keyword] = false
 			removed = true
 		}
 	}
-
 	if removed {
-		err = finalizeKeywords(ctx)
+		return true, finalizeKeywords(c, ctx)
 	}
-
-	return removed, err
+	return false, contextutil.Check(c)
 }

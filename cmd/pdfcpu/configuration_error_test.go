@@ -38,7 +38,7 @@ func TestConfigurationSchemaCommandErrorPreservesCause(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, loadErr := api.LoadConfigurationWithOptions(api.ConfigurationOptions{
+	_, loadErr := api.LoadConfiguration(api.ConfigurationOptions{
 		Root: root,
 		Mode: api.ConfigurationModeReadOnly,
 	})

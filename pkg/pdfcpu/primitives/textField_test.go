@@ -58,7 +58,7 @@ func TestTextFieldCombEscapesEachCell(t *testing.T) {
 		fontID: "Helv",
 	}
 
-	bb, err := tf.renderN(ctx.XRefTable)
+	bb, err := tf.renderN(t.Context(), ctx.XRefTable)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,13 +92,14 @@ func TestTextFieldMetricsUseStatelessRepository(t *testing.T) {
 		fontID: "F0",
 	}
 
-	if _, err := tf.renderN(ctx.XRefTable); !errors.Is(err, corefont.ErrUnknownFont) {
+	if _, err := tf.renderN(t.Context(), ctx.XRefTable); !errors.Is(err, corefont.ErrUnknownFont) {
 		t.Fatalf("expected %v, got %v", corefont.ErrUnknownFont, err)
 	}
-	if _, err := textFieldLines(ctx.XRefTable, "text", "Demo", 10, true, 60); !errors.Is(err, corefont.ErrUnknownFont) {
+	if _, err := textFieldLines(t.Context(), ctx.XRefTable, "text", "Demo", 10, true, 60); !errors.Is(err, corefont.ErrUnknownFont) {
 		t.Fatalf("expected %v from multiline wrapping, got %v", corefont.ErrUnknownFont, err)
 	}
 	if err := tf.renderLines(
+		t.Context(),
 		ctx.XRefTable,
 		ctx.XRefTable.FontRepository(),
 		0,

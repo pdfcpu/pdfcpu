@@ -35,7 +35,7 @@ func attachmentCountWindows(t *testing.T, fileName string) int {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	aa, err := Attachments(f, nil)
+	aa, err := Attachments(t.Context(), f, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestWriteAttachmentReplacesExistingOutputWindows(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := writeAttachmentToPath(fileName, model.Attachment{Reader: strings.NewReader("replacement")})
+	err := writeAttachmentToPath(t.Context(), fileName, model.Attachment{Reader: strings.NewReader("replacement")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestWriteAttachmentReplacesExistingOutputWindows(t *testing.T) {
 func TestAddAttachmentsFileInPlaceWindows(t *testing.T) {
 	inFile := copyAttachmentTestInput(t)
 
-	err := AddAttachmentsFile(inFile, "", []string{attachmentTestInputFile()}, false, nil)
+	err := AddAttachmentsFile(t.Context(), inFile, "", []string{attachmentTestInputFile()}, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,11 +79,11 @@ func TestAddAttachmentsFileInPlaceWindows(t *testing.T) {
 func TestRemoveAttachmentsFileInPlaceWindows(t *testing.T) {
 	inFile := copyAttachmentTestInput(t)
 	attachment := attachmentTestInputFile()
-	if err := AddAttachmentsFile(inFile, "", []string{attachment}, false, nil); err != nil {
+	if err := AddAttachmentsFile(t.Context(), inFile, "", []string{attachment}, false, nil); err != nil {
 		t.Fatal(err)
 	}
 
-	err := RemoveAttachmentsFile(inFile, "", []string{filepath.Base(attachment)}, nil)
+	err := RemoveAttachmentsFile(t.Context(), inFile, "", []string{filepath.Base(attachment)}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestAddAttachmentsFileReplacesExistingDistinctOutputWindows(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := AddAttachmentsFile(inFile, outFile, []string{attachmentTestInputFile()}, false, nil)
+	err := AddAttachmentsFile(t.Context(), inFile, outFile, []string{attachmentTestInputFile()}, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestWriteAttachmentsRejectsCaseEquivalentOutputsWindows(t *testing.T) {
 		{Reader: strings.NewReader("second"), ID: "attachment-2", FileName: "SHARED.TXT"},
 	}
 
-	err := writeAttachments(outDir, aa)
+	err := writeAttachments(t.Context(), outDir, aa)
 
 	if !errors.Is(err, ErrAttachmentOutputCollision) {
 		t.Fatalf("expected %v, got %v", ErrAttachmentOutputCollision, err)

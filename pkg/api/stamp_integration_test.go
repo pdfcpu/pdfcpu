@@ -53,7 +53,7 @@ func twoPageStampInput(t *testing.T) []byte {
 	}
 	ctx.PageCount = 2
 	var buf bytes.Buffer
-	if err := WriteContext(ctx, &buf); err != nil {
+	if err := WriteContext(t.Context(), ctx, &buf); err != nil {
 		t.Fatal(err)
 	}
 	return buf.Bytes()
@@ -79,20 +79,20 @@ func TestRemoveWatermarkFromOnePagePreservesOtherPage(t *testing.T) {
 	input := twoPageStampInput(t)
 	wm := stampTestWatermark(t, false)
 	var stamped bytes.Buffer
-	if err := AddWatermarks(bytes.NewReader(input), &stamped, []string{"1-2"}, wm, nil); err != nil {
+	if err := AddWatermarks(t.Context(), bytes.NewReader(input), &stamped, []string{"1-2"}, wm, nil); err != nil {
 		t.Fatal(err)
 	}
 
 	var output bytes.Buffer
-	if err := RemoveWatermarks(bytes.NewReader(stamped.Bytes()), &output, []string{"1"}, nil); err != nil {
+	if err := RemoveWatermarks(t.Context(), bytes.NewReader(stamped.Bytes()), &output, []string{"1"}, nil); err != nil {
 		t.Fatal(err)
 	}
 
-	ctx, err := ReadContext(bytes.NewReader(output.Bytes()), model.NewDefaultConfiguration())
+	ctx, err := ReadContext(t.Context(), bytes.NewReader(output.Bytes()), model.NewDefaultConfiguration())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateContext(ctx); err != nil {
+	if err := ValidateContext(t.Context(), ctx); err != nil {
 		t.Fatal(err)
 	}
 	if pageHasWatermarkArtifact(t, ctx, 1) {

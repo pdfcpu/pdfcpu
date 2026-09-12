@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -25,6 +26,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/matrix"
@@ -325,8 +327,21 @@ func importImagePDFBytes(wr io.Writer, pageDim *types.Dim, imgWidth, imgHeight f
 		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 }
 
-// NewPagesForImage creates a new page dicts in xRefTable for given image reader r.
-func NewPagesForImage(xRefTable *model.XRefTable, r io.Reader, parentIndRef *types.IndirectRef, imp *Import) ([]*types.IndirectRef, error) {
+// NewPagesForImage creates new page dicts in xRefTable for the image represented by r and supports cancellation.
+func NewPagesForImage(c context.Context, xRefTable *model.XRefTable, r io.Reader, parentIndRef *types.IndirectRef, imp *Import) ([]*types.IndirectRef, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	return newPagesForImage(c, xRefTable, r, parentIndRef, imp)
+}
+
+func newPagesForImage(
+	c context.Context,
+	xRefTable *model.XRefTable,
+	r io.Reader,
+	parentIndRef *types.IndirectRef,
+	imp *Import,
+) ([]*types.IndirectRef, error) {
 	if xRefTable == nil {
 		return nil, fmt.Errorf("create image resources: %w", model.ErrMissingXRefTable)
 	}
@@ -340,13 +355,16 @@ func NewPagesForImage(xRefTable *model.XRefTable, r io.Reader, parentIndRef *typ
 		return nil, errors.New("missing import page dimensions")
 	}
 
-	imgResources, err := model.CreateImageResources(xRefTable, r, imp.Gray, imp.Sepia)
+	imgResources, err := model.CreateImageResources(xRefTable, contextReader{ctx: c, r: r}, imp.Gray, imp.Sepia)
 	if err != nil {
 		return nil, fmt.Errorf("create image resources: %w", err)
 	}
 
 	indRefs := make([]*types.IndirectRef, 0, len(imgResources))
 	for i, imgRes := range imgResources {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		if imgRes.Res.IndRef == nil {
 			return nil, fmt.Errorf("image resource %d: missing object reference", i+1)
 		}
@@ -403,5 +421,5 @@ func NewPagesForImage(xRefTable *model.XRefTable, r io.Reader, parentIndRef *typ
 		indRefs = append(indRefs, indRef)
 	}
 
-	return indRefs, nil
+	return indRefs, contextutil.Check(c)
 }

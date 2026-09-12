@@ -37,11 +37,11 @@ func TestStampUserFont(t *testing.T) {
 			align, rtl = "r", "on"
 		}
 		desc := fmt.Sprintf("font:%s, rtl:%s, align:%s, scale:1.0 rel, rot:0, fillc:#000000, bgcol:#ab6f30, margin:10, border:10 round, opacity:.7", sample.fontName, rtl, align)
-		err := api.AddTextWatermarksFile(inFile, outFile, nil, true, sample.text, desc, nil)
+		err := api.AddTextWatermarksFile(t.Context(), inFile, outFile, nil, true, sample.text, desc, nil)
 		if err != nil {
 			t.Fatalf("%s %s: %v\n", msg, outFile, err)
 		}
-		if err := api.ValidateFile(outFile, nil); err != nil {
+		if err := api.ValidateFile(t.Context(), outFile, nil, nil); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 	}

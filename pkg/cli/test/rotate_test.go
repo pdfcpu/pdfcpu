@@ -31,7 +31,7 @@ func TestRotateCommand(t *testing.T) {
 	rotation := 90
 
 	cmd := cli.RotateCommand(inFile, outFile, rotation, []string{"-2"}, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 

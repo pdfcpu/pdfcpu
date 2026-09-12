@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -67,10 +68,10 @@ func TestPDFInfoAlwaysUsesRelaxedValidation(t *testing.T) {
 	strict := model.NewDefaultConfiguration()
 	strict.ValidationMode = model.ValidationStrict
 
-	if _, err := ReadAndValidate(bytes.NewReader(pdf), strict); err == nil {
+	if _, err := ReadAndValidate(t.Context(), bytes.NewReader(pdf), strict); err == nil {
 		t.Fatal("expected strict validation error")
 	}
-	info, err := PDFInfo(bytes.NewReader(pdf), "relaxed-only.pdf", nil, false, strict)
+	info, err := PDFInfo(t.Context(), bytes.NewReader(pdf), "relaxed-only.pdf", nil, false, strict)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,37 +88,37 @@ type validationModeOperation struct {
 	run  func(*model.Configuration) error
 }
 
-func configuredValidationModeOperations() []validationModeOperation {
+func configuredValidationModeOperations(testContext context.Context) []validationModeOperation {
 	return []validationModeOperation{
 		{"bookmarks", func(conf *model.Configuration) error {
-			_, err := Bookmarks(bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, err := Bookmarks(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 		{"keywords", func(conf *model.Configuration) error {
-			_, err := Keywords(bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, err := Keywords(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 		{"properties", func(conf *model.Configuration) error {
-			_, err := Properties(bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, err := Properties(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 		{"page layout", func(conf *model.Configuration) error {
-			_, err := PageLayout(bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, err := PageLayout(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 		{"page mode", func(conf *model.Configuration) error {
-			_, err := PageMode(bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, err := PageMode(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 		{"viewer preferences", func(conf *model.Configuration) error {
-			_, _, err := ViewerPreferences(bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, _, err := ViewerPreferences(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 	}
 }
 
 func TestConfiguredValidationModeIsHonored(t *testing.T) {
-	for _, tt := range configuredValidationModeOperations() {
+	for _, tt := range configuredValidationModeOperations(t.Context()) {
 		t.Run(tt.name, func(t *testing.T) {
 			strict := model.NewDefaultConfiguration()
 			strict.ValidationMode = model.ValidationStrict

@@ -40,7 +40,7 @@ func testImportImages(t *testing.T, msg string, imgFiles []string, outFile, impC
 		}
 	}
 	cmd := cli.ImportImagesCommand(imgFiles, outFile, imp, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	if err := validateFile(t, outFile, conf); err != nil {
@@ -95,7 +95,7 @@ func TestImportCommand(t *testing.T) {
 		testImportImages(t, tt.msg, tt.imgFiles, tt.outFile, tt.impConf)
 	}
 
-	pageCount, err := api.PageCountFile(filepath.Join(outDir, "MultiPageTIFF.pdf"))
+	pageCount, err := api.PageCountFile(t.Context(), filepath.Join(outDir, "MultiPageTIFF.pdf"))
 	if err != nil {
 		t.Fatalf("TestMultiPageTIFF: %v\n", err)
 	}

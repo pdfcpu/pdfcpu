@@ -30,98 +30,98 @@ func TestAPIUserStringGuardsRejectEmptyStrings(t *testing.T) {
 		{
 			name: "add keywords",
 			fn: func() error {
-				return AddKeywordsFile("missing.pdf", "", []string{""}, nil)
+				return AddKeywordsFile(t.Context(), "missing.pdf", "", []string{""}, nil)
 			},
 			want: "keyword must not be empty",
 		},
 		{
 			name: "remove keywords",
 			fn: func() error {
-				return RemoveKeywordsFile("missing.pdf", "", []string{""}, nil)
+				return RemoveKeywordsFile(t.Context(), "missing.pdf", "", []string{""}, nil)
 			},
 			want: "keyword must not be empty",
 		},
 		{
 			name: "add properties name",
 			fn: func() error {
-				return AddPropertiesFile("missing.pdf", "", map[string]string{"": "value"}, nil)
+				return AddPropertiesFile(t.Context(), "missing.pdf", "", map[string]string{"": "value"}, nil)
 			},
 			want: "property name must not be empty",
 		},
 		{
 			name: "add properties value",
 			fn: func() error {
-				return AddPropertiesFile("missing.pdf", "", map[string]string{"subject": ""}, nil)
+				return AddPropertiesFile(t.Context(), "missing.pdf", "", map[string]string{"subject": ""}, nil)
 			},
 			want: "property value must not be empty",
 		},
 		{
 			name: "remove properties",
 			fn: func() error {
-				return RemovePropertiesFile("missing.pdf", "", []string{" "}, nil)
+				return RemovePropertiesFile(t.Context(), "missing.pdf", "", []string{" "}, nil)
 			},
 			want: "property name must not be empty",
 		},
 		{
 			name: "add attachments",
 			fn: func() error {
-				return AddAttachmentsFile("missing.pdf", "", []string{",desc"}, false, nil)
+				return AddAttachmentsFile(t.Context(), "missing.pdf", "", []string{",desc"}, false, nil)
 			},
 			want: "attachment filename must not be empty",
 		},
 		{
 			name: "remove attachments",
 			fn: func() error {
-				return RemoveAttachmentsFile("missing.pdf", "", []string{""}, nil)
+				return RemoveAttachmentsFile(t.Context(), "missing.pdf", "", []string{""}, nil)
 			},
 			want: "attachment filename must not be empty",
 		},
 		{
 			name: "extract attachments",
 			fn: func() error {
-				return ExtractAttachmentsFile("missing.pdf", "out", []string{""}, nil)
+				return ExtractAttachmentsFile(t.Context(), "missing.pdf", "out", []string{""}, nil)
 			},
 			want: "attachment filename must not be empty",
 		},
 		{
 			name: "remove form fields",
 			fn: func() error {
-				return RemoveFormFieldsFile("missing.pdf", "", []string{""}, nil)
+				return RemoveFormFieldsFile(t.Context(), "missing.pdf", "", []string{""}, nil)
 			},
 			want: "form field ID or name must not be empty",
 		},
 		{
 			name: "lock form fields",
 			fn: func() error {
-				return LockFormFieldsFile("missing.pdf", "", []string{""}, nil)
+				return LockFormFieldsFile(t.Context(), "missing.pdf", "", []string{""}, nil)
 			},
 			want: "form field ID or name must not be empty",
 		},
 		{
 			name: "unlock form fields",
 			fn: func() error {
-				return UnlockFormFieldsFile("missing.pdf", "", []string{""}, nil)
+				return UnlockFormFieldsFile(t.Context(), "missing.pdf", "", []string{""}, nil)
 			},
 			want: "form field ID or name must not be empty",
 		},
 		{
 			name: "reset form fields",
 			fn: func() error {
-				return ResetFormFieldsFile("missing.pdf", "", []string{""}, nil)
+				return ResetFormFieldsFile(t.Context(), "missing.pdf", "", []string{""}, nil)
 			},
 			want: "form field ID or name must not be empty",
 		},
 		{
 			name: "remove annotations",
 			fn: func() error {
-				return RemoveAnnotationsFile("missing.pdf", "", nil, []string{""}, nil, nil, false)
+				return RemoveAnnotationsFile(t.Context(), "missing.pdf", "", nil, []string{""}, nil, nil, false)
 			},
 			want: "annotation ID or type must not be empty",
 		},
 		{
 			name: "font cheatsheet",
 			fn: func() error {
-				return CreateCheatSheetsUserFonts([]string{""})
+				return CreateCheatSheetsUserFonts(t.Context(), []string{""})
 			},
 			want: "font name must not be empty",
 		},

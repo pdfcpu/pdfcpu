@@ -44,7 +44,7 @@ func testGrid(t *testing.T, msg string, inFiles []string, outFile string, select
 	}
 
 	cmd := cli.GridCommand(inFiles, outFile, selectedPages, nup, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 

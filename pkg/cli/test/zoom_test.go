@@ -37,7 +37,7 @@ func TestZoomInByFactor(t *testing.T) {
 	}
 	outFile := filepath.Join(outDir, "zoomInByFactor2.pdf")
 	cmd := cli.ZoomCommand(inFile, outFile, nil, zoom, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -47,7 +47,7 @@ func TestZoomInByFactor(t *testing.T) {
 	}
 	outFile = filepath.Join(outDir, "zoomInByFactor4.pdf")
 	cmd = cli.ZoomCommand(inFile, outFile, nil, zoom, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }
@@ -64,7 +64,7 @@ func TestZoomOutByFactor(t *testing.T) {
 	}
 	outFile := filepath.Join(outDir, "zoomOutByFactor05.pdf")
 	cmd := cli.ZoomCommand(inFile, outFile, nil, zoom, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -74,7 +74,7 @@ func TestZoomOutByFactor(t *testing.T) {
 	}
 	outFile = filepath.Join(outDir, "zoomOutByFactor025.pdf")
 	cmd = cli.ZoomCommand(inFile, outFile, nil, zoom, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }
@@ -91,7 +91,7 @@ func TestZoomOutByHorizontalMargin(t *testing.T) {
 	}
 	outFile := filepath.Join(outDir, "zoomOutByHMarginPoints.pdf")
 	cmd := cli.ZoomCommand(inFile, outFile, nil, zoom, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -101,7 +101,7 @@ func TestZoomOutByHorizontalMargin(t *testing.T) {
 	}
 	outFile = filepath.Join(outDir, "zoomOutByHMarginCm.pdf")
 	cmd = cli.ZoomCommand(inFile, outFile, nil, zoom, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }
@@ -118,7 +118,7 @@ func TestZoomOutByVerticalMargin(t *testing.T) {
 	}
 	outFile := filepath.Join(outDir, "zoomOutByVMarginInches.pdf")
 	cmd := cli.ZoomCommand(inFile, outFile, nil, zoom, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -128,7 +128,7 @@ func TestZoomOutByVerticalMargin(t *testing.T) {
 	}
 	outFile = filepath.Join(outDir, "zoomOutByVMarginMm.pdf")
 	cmd = cli.ZoomCommand(inFile, outFile, nil, zoom, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 }

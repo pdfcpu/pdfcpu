@@ -70,7 +70,7 @@ func corruptBookletFreeList(ctx *model.Context) {
 func TestBookletFromImagesOpenErrorIncludesSourceContext(t *testing.T) {
 	ctx, nup, pagesDict, pagesIndRef := bookletOperationTestContext(t, true)
 	fileName := filepath.Join(t.TempDir(), "missing.png")
-	err := BookletFromImages(ctx, []string{fileName}, nup, pagesDict, pagesIndRef)
+	err := BookletFromImages(t.Context(), ctx, []string{fileName}, nup, pagesDict, pagesIndRef)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -87,7 +87,7 @@ func TestBookletFromImagesRetryDoesNotMutatePageDimensions(t *testing.T) {
 	fileName := filepath.Join(t.TempDir(), "missing.png")
 
 	for attempt := 1; attempt <= 2; attempt++ {
-		err := BookletFromImages(ctx, []string{fileName}, nup, pagesDict, pagesIndRef)
+		err := BookletFromImages(t.Context(), ctx, []string{fileName}, nup, pagesDict, pagesIndRef)
 		if !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("attempt %d: expected %v, got %v", attempt, os.ErrNotExist, err)
 		}
@@ -103,7 +103,7 @@ func TestBookletFromImagesDecodeErrorIncludesSourceContext(t *testing.T) {
 	if err := os.WriteFile(fileName, []byte("not an image"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	err := BookletFromImages(ctx, []string{fileName}, nup, pagesDict, pagesIndRef)
+	err := BookletFromImages(t.Context(), ctx, []string{fileName}, nup, pagesDict, pagesIndRef)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -170,7 +170,7 @@ func TestLoadBookletImageResourcePreservesResourceAndCloseErrors(t *testing.T) {
 
 func TestBookletPagesTileErrorIncludesSourcePage(t *testing.T) {
 	ctx, nup, _, _ := bookletOperationTestContext(t, false)
-	err := BookletFromPDF(ctx, types.IntSet{1: true}, nup)
+	err := BookletFromPDF(t.Context(), ctx, types.IntSet{1: true}, nup)
 	if !errors.Is(err, model.ErrPageNotFound) {
 		t.Fatalf("expected %v, got %v", model.ErrPageNotFound, err)
 	}
@@ -182,7 +182,7 @@ func TestBookletPagesTileErrorIncludesSourcePage(t *testing.T) {
 func TestBookletPagesWrapErrorIncludesOutputPage(t *testing.T) {
 	ctx, nup, pagesDict, pagesIndRef := bookletOperationTestContext(t, false)
 	corruptBookletFreeList(ctx)
-	_, err := bookletPages(ctx, nil, nup, pagesDict, pagesIndRef)
+	_, err := bookletPages(t.Context(), ctx, nil, nup, pagesDict, pagesIndRef)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -209,7 +209,7 @@ func TestCreateNUpFormForImageErrorIncludesFormContext(t *testing.T) {
 func TestBookletFromPDFRootErrorIncludesPageTreeContext(t *testing.T) {
 	ctx, nup, _, _ := bookletOperationTestContext(t, false)
 	corruptBookletFreeList(ctx)
-	err := BookletFromPDF(ctx, nil, nup)
+	err := BookletFromPDF(t.Context(), ctx, nil, nup)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -222,7 +222,7 @@ func TestBookletFromPDFCatalogErrorIncludesPageTreeContext(t *testing.T) {
 	ctx, nup, _, _ := bookletOperationTestContext(t, false)
 	ctx.Root = nil
 	ctx.RootDict = nil
-	err := BookletFromPDF(ctx, nil, nup)
+	err := BookletFromPDF(t.Context(), ctx, nil, nup)
 	if err == nil {
 		t.Fatal("expected error")
 	}

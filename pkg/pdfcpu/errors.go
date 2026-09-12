@@ -32,6 +32,9 @@ var (
 	// ErrMissingAnnotation signals a missing required annotation.
 	ErrMissingAnnotation = errors.New("missing annotation")
 
+	// ErrMissingContext signals a missing required Go context.
+	ErrMissingContext = model.ErrMissingContext
+
 	// ErrMissingImageReader signals a missing required image reader.
 	ErrMissingImageReader = model.ErrMissingImageReader
 

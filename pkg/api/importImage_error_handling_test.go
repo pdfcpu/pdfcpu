@@ -66,13 +66,14 @@ func writeImportImageTestPNG(t *testing.T, fileName string) {
 	}
 }
 
-func importImagesError(imgs []io.Reader, imp *pdfcpu.Import) (err error) {
+func importImagesError(t *testing.T, imgs []io.Reader, imp *pdfcpu.Import) (err error) {
+	t.Helper()
 	defer func() {
 		if v := recover(); v != nil {
 			err = fmt.Errorf("panic: %v", v)
 		}
 	}()
-	return ImportImages(nil, io.Discard, imgs, imp, nil)
+	return ImportImages(t.Context(), nil, io.Discard, imgs, imp, nil)
 }
 
 // TestImportImagesArgumentValidation verifies public import-images boundary guards.
@@ -84,17 +85,17 @@ func TestImportImagesArgumentValidation(t *testing.T) {
 	}{
 		{
 			name: "missing writer",
-			err:  ImportImages(nil, nil, []io.Reader{bytes.NewReader(importImageTestPNG(t))}, nil, nil),
+			err:  ImportImages(t.Context(), nil, nil, []io.Reader{bytes.NewReader(importImageTestPNG(t))}, nil, nil),
 			want: ErrMissingPDFWriter,
 		},
 		{
 			name: "missing images",
-			err:  ImportImages(nil, io.Discard, nil, nil, nil),
+			err:  ImportImages(t.Context(), nil, io.Discard, nil, nil, nil),
 			want: ErrMissingImageInput,
 		},
 		{
 			name: "missing image reader",
-			err:  ImportImages(nil, io.Discard, []io.Reader{nil}, nil, nil),
+			err:  ImportImages(t.Context(), nil, io.Discard, []io.Reader{nil}, nil, nil),
 			want: ErrMissingImageReader,
 		},
 	}
@@ -116,17 +117,17 @@ func TestImportImagesFileArgumentValidation(t *testing.T) {
 	}{
 		{
 			name: "missing images",
-			err:  ImportImagesFile(nil, filepath.Join(t.TempDir(), "out.pdf"), nil, nil),
+			err:  ImportImagesFile(t.Context(), nil, filepath.Join(t.TempDir(), "out.pdf"), nil, nil),
 			want: ErrMissingImageInput,
 		},
 		{
 			name: "empty image",
-			err:  ImportImagesFile([]string{""}, filepath.Join(t.TempDir(), "out.pdf"), nil, nil),
+			err:  ImportImagesFile(t.Context(), []string{""}, filepath.Join(t.TempDir(), "out.pdf"), nil, nil),
 			want: ErrMissingImageInput,
 		},
 		{
 			name: "missing output",
-			err:  ImportImagesFile([]string{"image.png"}, "", nil, nil),
+			err:  ImportImagesFile(t.Context(), []string{"image.png"}, "", nil, nil),
 			want: ErrMissingPDFOutput,
 		},
 	}
@@ -145,7 +146,7 @@ func TestImportImagesFileValidatesConfigurationBeforeFilesystemAccess(t *testing
 	imp := DefaultImportConfig()
 	imp.PageDim = nil
 
-	err := ImportImagesFile([]string{"missing.png"}, outFile, imp, nil)
+	err := ImportImagesFile(t.Context(), []string{"missing.png"}, outFile, imp, nil)
 	if !errors.Is(err, ErrInvalidImportConfiguration) {
 		t.Fatalf("expected %v, got %v", ErrInvalidImportConfiguration, err)
 	}
@@ -246,7 +247,7 @@ func TestImportImagesFileRejectsOutputAliasBeforeSourceIO(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := ImportImagesFile([]string{missingImage, imageFile}, imageFile, nil, nil)
+	err := ImportImagesFile(t.Context(), []string{missingImage, imageFile}, imageFile, nil, nil)
 	if !errors.Is(err, ErrImportImagesOutputConflict) {
 		t.Fatalf("expected %v, got %v", ErrImportImagesOutputConflict, err)
 	}
@@ -292,7 +293,7 @@ func TestImportImagesFileRejectsOutputAliasesPreservingInput(t *testing.T) {
 				}
 			}
 
-			err := ImportImagesFile([]string{imageFile}, outFile, nil, nil)
+			err := ImportImagesFile(t.Context(), []string{imageFile}, outFile, nil, nil)
 			if !errors.Is(err, ErrImportImagesOutputConflict) {
 				t.Fatalf("expected %v, got %v", ErrImportImagesOutputConflict, err)
 			}
@@ -337,7 +338,7 @@ func TestImportImagesFileTreatsDashAsLiteralFile(t *testing.T) {
 			}
 			before := importImageTestDirectoryEntries(t, ".")
 
-			err := ImportImagesFile([]string{"-"}, tt.outFile, nil, nil)
+			err := ImportImagesFile(t.Context(), []string{"-"}, tt.outFile, nil, nil)
 			if !errors.Is(err, ErrImportImagesOutputConflict) {
 				t.Fatalf("expected %v, got %v", ErrImportImagesOutputConflict, err)
 			}
@@ -382,7 +383,7 @@ func importImageTestDirectoryEntries(t *testing.T, dir string) string {
 // TestImportImagesFilePreflightDoesNotCreateOutput verifies rejection precedes output creation.
 func TestImportImagesFilePreflightDoesNotCreateOutput(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "missing.png")
-	err := ImportImagesFile([]string{outFile}, outFile, nil, nil)
+	err := ImportImagesFile(t.Context(), []string{outFile}, outFile, nil, nil)
 	if !errors.Is(err, ErrImportImagesOutputConflict) {
 		t.Fatalf("expected %v, got %v", ErrImportImagesOutputConflict, err)
 	}
@@ -406,6 +407,7 @@ func TestImportReportsConfigurationContext(t *testing.T) {
 // TestImportImagesReadErrorContext verifies an existing PDF failure stops at the validated-context boundary.
 func TestImportImagesReadErrorContext(t *testing.T) {
 	err := ImportImages(
+		t.Context(),
 		bytes.NewReader(nil),
 		io.Discard,
 		[]io.Reader{bytes.NewReader(importImageTestPNG(t))},
@@ -424,6 +426,7 @@ func TestImportImagesReadErrorContext(t *testing.T) {
 func TestImportImagesReportsImageIndex(t *testing.T) {
 	wantErr := errors.New("image read failure")
 	err := ImportImages(
+		t.Context(),
 		nil,
 		io.Discard,
 		[]io.Reader{
@@ -445,6 +448,7 @@ func TestImportImagesReportsImageIndex(t *testing.T) {
 func TestImportImagesWriteErrorContext(t *testing.T) {
 	wantErr := errors.New("write failure")
 	err := ImportImages(
+		t.Context(),
 		nil,
 		failingWriter{err: wantErr},
 		[]io.Reader{bytes.NewReader(importImageTestPNG(t))},
@@ -482,6 +486,7 @@ func TestImportImagesRejectsInvalidConfiguration(t *testing.T) {
 			tt.mutate(imp)
 
 			err := importImagesError(
+				t,
 				[]io.Reader{bytes.NewReader(importImageTestPNG(t))},
 				imp,
 			)
@@ -510,7 +515,7 @@ func TestImportImagesFileMissingOutputDoesNotPanic(t *testing.T) {
 			t.Fatalf("ImportImagesFile panicked: %v", v)
 		}
 	}()
-	if err := ImportImagesFile([]string{imageFile}, outFile, nil, nil); err != nil {
+	if err := ImportImagesFile(t.Context(), []string{imageFile}, outFile, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -526,7 +531,7 @@ func TestImportImagesFileOpenImageErrorContext(t *testing.T) {
 			t.Fatalf("ImportImagesFile panicked: %v", v)
 		}
 	}()
-	err := ImportImagesFile([]string{imageFile}, outFile, nil, nil)
+	err := ImportImagesFile(t.Context(), []string{imageFile}, outFile, nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -548,7 +553,7 @@ func TestImportImagesFileCreateOutputErrorContext(t *testing.T) {
 			t.Fatalf("ImportImagesFile panicked: %v", v)
 		}
 	}()
-	err := ImportImagesFile([]string{imageFile}, outFile, nil, nil)
+	err := ImportImagesFile(t.Context(), []string{imageFile}, outFile, nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -572,7 +577,7 @@ func TestImportImagesFilePreflightOutputErrorContext(t *testing.T) {
 			t.Fatalf("ImportImagesFile panicked: %v", v)
 		}
 	}()
-	err := ImportImagesFile([]string{imageFile}, outFile, nil, nil)
+	err := ImportImagesFile(t.Context(), []string{imageFile}, outFile, nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -616,6 +621,7 @@ func TestImportImagesFileAppendsWithoutReplacingOnFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := ImportImages(
+		t.Context(),
 		nil,
 		f,
 		[]io.Reader{bytes.NewReader(importImageTestPNG(t))},
@@ -634,7 +640,7 @@ func TestImportImagesFileAppendsWithoutReplacingOnFailure(t *testing.T) {
 	}
 
 	missingImage := filepath.Join(dir, "missing.png")
-	err = ImportImagesFile([]string{missingImage}, outFile, nil, nil)
+	err = ImportImagesFile(t.Context(), []string{missingImage}, outFile, nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}

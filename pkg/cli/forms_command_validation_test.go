@@ -25,7 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-type formCommandExecutor func(*Command) ([]string, error)
+type formCommandExecutor = dispatchFunc
 
 // TestFormExecutorsRejectNilCommand verifies every public form executor has a safe nil boundary.
 func TestFormExecutorsRejectNilCommand(t *testing.T) {
@@ -33,19 +33,19 @@ func TestFormExecutorsRejectNilCommand(t *testing.T) {
 		name string
 		run  formCommandExecutor
 	}{
-		{"ListFormFields", ListFormFields},
-		{"RemoveFormFields", RemoveFormFields},
-		{"LockFormFields", LockFormFields},
-		{"UnlockFormFields", UnlockFormFields},
-		{"ResetFormFields", ResetFormFields},
-		{"ExportFormFields", ExportFormFields},
-		{"FillFormFields", FillFormFields},
-		{"MultiFillFormFields", MultiFillFormFields},
+		{"ListFormFields", listFormFieldsForCommand},
+		{"RemoveFormFields", removeFormFields},
+		{"LockFormFields", lockFormFields},
+		{"UnlockFormFields", unlockFormFields},
+		{"ResetFormFields", resetFormFields},
+		{"ExportFormFields", exportFormFields},
+		{"FillFormFields", fillFormFields},
+		{"MultiFillFormFields", multiFillFormFields},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(nil)
+			_, err := tt.run(t.Context(), nil)
 			if !errors.Is(err, ErrMissingCommand) {
 				t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 			}
@@ -64,22 +64,22 @@ func TestFormExecutorsRejectIncompleteCommand(t *testing.T) {
 		cmd  *Command
 		want error
 	}{
-		{"ListInput", ListFormFields, &Command{}, api.ErrMissingPDFInput},
-		{"RemoveInput", RemoveFormFields, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"RemoveOutput", RemoveFormFields, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"LockInput", LockFormFields, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"UnlockInput", UnlockFormFields, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"ResetInput", ResetFormFields, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"ExportInput", ExportFormFields, &Command{}, api.ErrMissingPDFInput},
-		{"ExportOutput", ExportFormFields, &Command{InFile: &inFile}, api.ErrMissingJSONOutput},
-		{"FillInput", FillFormFields, &Command{}, api.ErrMissingPDFInput},
-		{"FillOutput", FillFormFields, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"FillData", FillFormFields, &Command{InFile: &inFile, OutFile: &outFile}, api.ErrMissingJSONInput},
-		{"MultiFillInput", MultiFillFormFields, &Command{}, api.ErrMissingPDFInput},
-		{"MultiFillOutput", MultiFillFormFields, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"MultiFillData", MultiFillFormFields, &Command{InFile: &inFile, OutFile: &outFile},
+		{"ListInput", listFormFieldsForCommand, &Command{}, api.ErrMissingPDFInput},
+		{"RemoveInput", removeFormFields, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"RemoveOutput", removeFormFields, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"LockInput", lockFormFields, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"UnlockInput", unlockFormFields, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"ResetInput", resetFormFields, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"ExportInput", exportFormFields, &Command{}, api.ErrMissingPDFInput},
+		{"ExportOutput", exportFormFields, &Command{InFile: &inFile}, api.ErrMissingJSONOutput},
+		{"FillInput", fillFormFields, &Command{}, api.ErrMissingPDFInput},
+		{"FillOutput", fillFormFields, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"FillData", fillFormFields, &Command{InFile: &inFile, OutFile: &outFile}, api.ErrMissingJSONInput},
+		{"MultiFillInput", multiFillFormFields, &Command{}, api.ErrMissingPDFInput},
+		{"MultiFillOutput", multiFillFormFields, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"MultiFillData", multiFillFormFields, &Command{InFile: &inFile, OutFile: &outFile},
 			api.ErrMissingFormInput},
-		{"MultiFillOutputDirectory", MultiFillFormFields, &Command{
+		{"MultiFillOutputDirectory", multiFillFormFields, &Command{
 			InFile:     &inFile,
 			InFileJSON: &dataFile,
 			OutFile:    &outFile,
@@ -88,7 +88,7 @@ func TestFormExecutorsRejectIncompleteCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(tt.cmd)
+			_, err := tt.run(t.Context(), tt.cmd)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
@@ -125,7 +125,7 @@ func TestValidateMultiFillFormCommandPreservesOutputModes(t *testing.T) {
 func TestListFormFieldsFileRejectsMissingInput(t *testing.T) {
 	tests := [][]string{nil, {""}}
 	for _, inFiles := range tests {
-		if _, err := ListFormFieldsFile(inFiles, nil); !errors.Is(err, api.ErrMissingPDFInput) {
+		if _, err := ListFormFieldsFile(t.Context(), inFiles, nil); !errors.Is(err, api.ErrMissingPDFInput) {
 			t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 		}
 	}
@@ -149,7 +149,7 @@ func TestDispatchRejectsIncompleteFormCommandsWithoutPanic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Dispatch(&Command{Mode: tt.mode})
+			_, err := Dispatch(t.Context(), &Command{Mode: tt.mode})
 			if !errors.Is(err, api.ErrMissingPDFInput) {
 				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 			}

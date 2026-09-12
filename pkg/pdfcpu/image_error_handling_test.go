@@ -81,7 +81,7 @@ func TestImagesAddsPageContext(t *testing.T) {
 		},
 		Optimize: &model.OptimizationContext{},
 	}
-	_, _, err := Images(ctx, types.IntSet{1: true})
+	_, _, err := Images(t.Context(), ctx, types.IntSet{1: true})
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -96,7 +96,7 @@ func TestImagesAddsPageContext(t *testing.T) {
 // TestUpdateImagesByObjNrAddsConstructionContext verifies image decode causes remain discoverable.
 func TestUpdateImagesByObjNrAddsConstructionContext(t *testing.T) {
 	ctx := testOptimizeContext(t)
-	err := UpdateImagesByObjNr(ctx, bytes.NewReader(nil), 7)
+	err := UpdateImagesByObjNr(t.Context(), ctx, bytes.NewReader(nil), 7)
 	if !errors.Is(err, image.ErrFormat) {
 		t.Fatalf("expected %v, got %v", image.ErrFormat, err)
 	}
@@ -145,7 +145,7 @@ func TestUpdateImagesByObjNrReportsMissingXRefEntry(t *testing.T) {
 		"Width":  types.Integer(1),
 		"Height": types.Integer(1),
 	}}}
-	err := UpdateImagesByObjNr(ctx, bytes.NewReader(imageOperationPNG(t, 1, 1)), 7)
+	err := UpdateImagesByObjNr(t.Context(), ctx, bytes.NewReader(imageOperationPNG(t, 1, 1)), 7)
 	if err == nil || !strings.Contains(err.Error(), "image obj#7: missing xref entry") {
 		t.Fatalf("expected xref context, got %v", err)
 	}
@@ -156,7 +156,7 @@ func TestUpdateImagesByPageNrAndIdRejectsMalformedResource(t *testing.T) {
 	ctx, pageDict := imageOperationPage(t)
 	pageDict["Resources"] = types.Dict{"XObject": types.Dict{"Im0": types.Name("broken")}}
 
-	err := UpdateImagesByPageNrAndId(ctx, bytes.NewReader(nil), 1, "Im0")
+	err := UpdateImagesByPageNrAndId(t.Context(), ctx, bytes.NewReader(nil), 1, "Im0")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -170,7 +170,7 @@ func TestUpdateImagesByPageNrAndIdAddsDereferenceContext(t *testing.T) {
 	ctx, pageDict := imageOperationPage(t)
 	pageDict["Resources"] = types.Dict{"XObject": *types.NewIndirectRef(999, 0)}
 
-	err := UpdateImagesByPageNrAndId(ctx, bytes.NewReader(nil), 1, "Im0")
+	err := UpdateImagesByPageNrAndId(t.Context(), ctx, bytes.NewReader(nil), 1, "Im0")
 	if err == nil || !strings.Contains(err.Error(), "page 1 resource Im0: missing XObject dictionary for obj#999") {
 		t.Fatalf("expected XObject identity context, got %v", err)
 	}
@@ -179,7 +179,7 @@ func TestUpdateImagesByPageNrAndIdAddsDereferenceContext(t *testing.T) {
 // TestUpdateImagesByPageNrAndIdPreservesPageSentinel verifies page lookup causes remain discoverable.
 func TestUpdateImagesByPageNrAndIdPreservesPageSentinel(t *testing.T) {
 	ctx := testOptimizeContext(t)
-	err := UpdateImagesByPageNrAndId(ctx, bytes.NewReader(nil), 1, "Im0")
+	err := UpdateImagesByPageNrAndId(t.Context(), ctx, bytes.NewReader(nil), 1, "Im0")
 	if !errors.Is(err, model.ErrPageNotFound) {
 		t.Fatalf("expected %v, got %v", model.ErrPageNotFound, err)
 	}
@@ -195,7 +195,7 @@ func TestUpdateImagesByPageNrAndIdReplacesDirectResource(t *testing.T) {
 	xObjects := types.Dict{"Im0": targetRef}
 	pageDict["Resources"] = types.Dict{"XObject": xObjects}
 
-	if err := UpdateImagesByPageNrAndId(ctx, bytes.NewReader(imageOperationPNG(t, 1, 1)), 1, "Im0"); err != nil {
+	if err := UpdateImagesByPageNrAndId(t.Context(), ctx, bytes.NewReader(imageOperationPNG(t, 1, 1)), 1, "Im0"); err != nil {
 		t.Fatal(err)
 	}
 	got := xObjects.IndirectRefEntry("Im0")
@@ -221,18 +221,19 @@ func TestUpdateImagesByPageNrAndIdIgnoresShadowedInheritedResources(t *testing.T
 	}
 	parent["Resources"] = types.Dict{"XObject": types.Name("broken")}
 
-	if err := UpdateImagesByPageNrAndId(ctx, bytes.NewReader(imageOperationPNG(t, 1, 1)), 1, "Im0"); err != nil {
+	if err := UpdateImagesByPageNrAndId(t.Context(), ctx, bytes.NewReader(imageOperationPNG(t, 1, 1)), 1, "Im0"); err != nil {
 		t.Fatal(err)
 	}
 }
 
-// TestUpdateImagesByPageNrAndIdValidatesInheritedDimensions verifies inherited resources use the target image dimensions.
+// TestUpdateImagesByPageNrAndIdValidatesInheritedDimensions verifies inherited resources use the target image
+// dimensions.
 func TestUpdateImagesByPageNrAndIdValidatesInheritedDimensions(t *testing.T) {
 	ctx, pageDict := imageOperationPage(t)
 	targetRef := imageOperationTarget(t, ctx, 7, 2, 2)
 	setInheritedImageResource(t, ctx, pageDict, "Im0", targetRef)
 
-	err := UpdateImagesByPageNrAndId(ctx, bytes.NewReader(imageOperationPNG(t, 1, 1)), 1, "Im0")
+	err := UpdateImagesByPageNrAndId(t.Context(), ctx, bytes.NewReader(imageOperationPNG(t, 1, 1)), 1, "Im0")
 	if err == nil {
 		t.Fatal("expected error")
 	}

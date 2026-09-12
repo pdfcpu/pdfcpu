@@ -360,7 +360,10 @@ func TestBookletPageOrder(t *testing.T) {
 				pageNumbers[i+1] = true
 			}
 			pageOrder := make([]int, len(test.expectedPageOrder))
-			out := getBookletOrdering(pageNumbers, nup)
+			out, err := getBookletOrdering(tt.Context(), pageNumbers, nup)
+			if err != nil {
+				tt.Fatal(err)
+			}
 			if len(test.expectedPageOrder) != len(out) {
 				tt.Fatalf("page order output has the wrong length, expected %d but got %d", len(test.expectedPageOrder), len(out))
 			}

@@ -26,7 +26,7 @@ import (
 func listProperties(t *testing.T, msg, fileName string, want []string) []string {
 	t.Helper()
 	cmd := cli.ListPropertiesCommand(fileName, conf)
-	got, err := cli.Dispatch(cmd)
+	got, err := cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s list properties: %v\n", msg, err)
 	}
@@ -55,21 +55,21 @@ func TestPropertiesCommand(t *testing.T) {
 
 	properties := map[string]string{"name1": "value1", "name2": "value2"}
 	cmd := cli.AddPropertiesCommand(fileName, "", properties, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s add properties: %v\n", msg, err)
 	}
 
 	listProperties(t, msg, fileName, []string{"name1 = value1", "name2 = value2"})
 
 	cmd = cli.RemovePropertiesCommand(fileName, "", []string{"name2"}, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s remove 1 property: %v\n", msg, err)
 	}
 
 	listProperties(t, msg, fileName, []string{"name1 = value1"})
 
 	cmd = cli.RemovePropertiesCommand(fileName, "", nil, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s remove all properties: %v\n", msg, err)
 	}
 

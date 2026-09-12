@@ -886,7 +886,7 @@ func minimalSubsetFont(t *testing.T) []byte {
 }
 
 func TestSubsetGuardsAndPreservesPhaseErrors(t *testing.T) {
-	if _, err := Subset(" ", nil); !errors.Is(err, ErrMissingFontName) {
+	if _, err := Subset(t.Context(), " ", nil); !errors.Is(err, ErrMissingFontName) {
 		t.Fatalf("expected %v, got %v", ErrMissingFontName, err)
 	}
 
@@ -894,7 +894,7 @@ func TestSubsetGuardsAndPreservesPhaseErrors(t *testing.T) {
 	UserFontDir = t.TempDir()
 	t.Cleanup(func() { UserFontDir = originalDir })
 
-	_, err := Subset("Missing", nil)
+	_, err := Subset(t.Context(), "Missing", nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -903,7 +903,7 @@ func TestSubsetGuardsAndPreservesPhaseErrors(t *testing.T) {
 	}
 
 	writeSubsetFont(t, "Short", []byte{0x00, 0x01})
-	_, err = Subset("Short", nil)
+	_, err = Subset(t.Context(), "Short", nil)
 	if !errors.Is(err, ErrInvalidFontData) {
 		t.Fatalf("expected %v, got %v", ErrInvalidFontData, err)
 	}
@@ -912,7 +912,7 @@ func TestSubsetGuardsAndPreservesPhaseErrors(t *testing.T) {
 	}
 
 	writeSubsetFont(t, "Minimal", minimalSubsetFont(t))
-	if _, err := Subset("Minimal", nil); err != nil {
+	if _, err := Subset(t.Context(), "Minimal", nil); err != nil {
 		t.Fatalf("expected nil glyph map to be accepted, got %v", err)
 	}
 }
@@ -1209,7 +1209,7 @@ func TestSubsetPreservesMalformedGlyphErrorChain(t *testing.T) {
 	}
 	writeSubsetFont(t, "MalformedGlyph", bb)
 
-	_, err = Subset("MalformedGlyph", nil)
+	_, err = Subset(t.Context(), "MalformedGlyph", nil)
 	if !errors.Is(err, ErrInvalidFontData) {
 		t.Fatalf("expected %v, got %v", ErrInvalidFontData, err)
 	}
@@ -1236,7 +1236,7 @@ func TestSubsetDoesNotMutateCallerGlyphMap(t *testing.T) {
 	writeSubsetFont(t, "Compound", bb)
 
 	usedGIDs := map[uint16]bool{}
-	if _, err := Subset("Compound", usedGIDs); err != nil {
+	if _, err := Subset(t.Context(), "Compound", usedGIDs); err != nil {
 		t.Fatal(err)
 	}
 	if len(usedGIDs) != 0 {

@@ -33,7 +33,7 @@ func TestListCertificates(t *testing.T) {
 	msg := "TestListCertificates"
 
 	cmd := cli.ListCertificatesCommand(false, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -54,7 +54,7 @@ func TestListCertificatesJSON(t *testing.T) {
 	}
 
 	cmd := cli.ListCertificatesCommand(true, conf)
-	out, err := cli.Dispatch(cmd)
+	out, err := cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -98,7 +98,7 @@ func TestListCertificatesErrorContext(t *testing.T) {
 	restoreTrustedCertDir(t, filepath.Join(fileName, "certs"))
 
 	cmd := cli.ListCertificatesCommand(false, conf)
-	_, err := cli.Dispatch(cmd)
+	_, err := cli.Dispatch(t.Context(), cmd)
 	if err == nil {
 		t.Fatal("expected directory creation error")
 	}
@@ -128,7 +128,7 @@ func TestCertificateCommandErrorContext(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := cli.Dispatch(tt.cmd)
+			_, err := cli.Dispatch(t.Context(), tt.cmd)
 			if !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 			}

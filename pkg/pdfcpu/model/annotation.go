@@ -452,7 +452,6 @@ func NewPopupAnnotation(
 	borderRadX float64,
 	borderRadY float64,
 	borderWidth float64,
-
 	parentIndRef *types.IndirectRef,
 	displayOpen bool) PopupAnnotation {
 
@@ -617,7 +616,6 @@ func NewMarkupAnnotation(
 	borderRadX float64,
 	borderRadY float64,
 	borderWidth float64,
-
 	title string,
 	popupIndRef *types.IndirectRef,
 	ca *float64,
@@ -710,7 +708,6 @@ func NewTextAnnotation(
 	borderRadX float64,
 	borderRadY float64,
 	borderWidth float64,
-
 	displayOpen bool,
 	name string) TextAnnotation {
 
@@ -799,7 +796,6 @@ func NewFreeTextAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	text string,
 	hAlign types.HAlignment,
 	fontName string,
@@ -977,7 +973,6 @@ func NewLineAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	p1, p2 types.Point,
 	beginLineEndingStyle *LineEndingStyle,
 	endLineEndingStyle *LineEndingStyle,
@@ -1048,7 +1043,6 @@ func (ann LineAnnotation) validateLeaderLineAttrs() error {
 
 // RenderDict renders ann into a PDF annotation dict.
 func (ann LineAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
-
 	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
 	if err != nil {
 		return nil, err
@@ -1126,7 +1120,6 @@ func NewSquareAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	fillCol *color.SimpleColor,
 	MLeft, MTop, MRight, MBot float64,
 	borderWidth float64,
@@ -1205,7 +1198,6 @@ func NewCircleAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	fillCol *color.SimpleColor,
 	MLeft, MTop, MRight, MBot float64,
 	borderWidth float64,
@@ -1308,7 +1300,6 @@ func NewPolygonAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	vertices types.Array,
 	path types.Array,
 	intent *PolygonIntent,
@@ -1348,7 +1339,6 @@ func NewPolygonAnnotation(
 
 // RenderDict renders ann into a PDF annotation dict.
 func (ann PolygonAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
-
 	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
 	if err != nil {
 		return nil, err
@@ -1432,7 +1422,6 @@ func NewPolyLineAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	vertices types.Array,
 	path types.Array,
 	intent *PolyLineIntent,
@@ -1474,7 +1463,6 @@ func NewPolyLineAnnotation(
 
 // RenderDict renders ann into a PDF annotation dict.
 func (ann PolyLineAnnotation) RenderDict(xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
-
 	d, err := ann.MarkupAnnotation.RenderDict(xRefTable, pageIndRef)
 	if err != nil {
 		return nil, err
@@ -1536,7 +1524,6 @@ func NewTextMarkupAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	quad types.QuadPoints) TextMarkupAnnotation {
 
 	ma := NewMarkupAnnotation(subType, rect, apObjNr, contents, id, modDate, f, col, borderRadX, borderRadY, borderWidth, title, popupIndRef, ca, rc, subject)
@@ -1581,7 +1568,6 @@ func NewHighlightAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	quad types.QuadPoints) HighlightAnnotation {
 
 	return HighlightAnnotation{
@@ -1609,7 +1595,6 @@ func NewUnderlineAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	quad types.QuadPoints) UnderlineAnnotation {
 
 	return UnderlineAnnotation{
@@ -1637,7 +1622,6 @@ func NewSquigglyAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	quad types.QuadPoints) SquigglyAnnotation {
 
 	return SquigglyAnnotation{
@@ -1665,7 +1649,6 @@ func NewStrikeOutAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	quad types.QuadPoints) StrikeOutAnnotation {
 
 	return StrikeOutAnnotation{
@@ -1695,7 +1678,6 @@ func NewCaretAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	rd *types.Rectangle,
 	paragraph bool) CaretAnnotation {
 
@@ -1749,7 +1731,6 @@ func NewInkAnnotation(
 	popupIndRef *types.IndirectRef,
 	ca *float64,
 	rc, subject string,
-
 	ink []InkPath,
 	borderWidth float64,
 	borderStyle BorderStyle) InkAnnotation {

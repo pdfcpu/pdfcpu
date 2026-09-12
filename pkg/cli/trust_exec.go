@@ -17,14 +17,17 @@ limitations under the License.
 package cli
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 type signatureValidationFileOperation func(
+	context.Context,
 	string,
 	bool,
 	bool,
@@ -47,64 +50,70 @@ func validateCertificateCommand(cmd *Command, operation string) error {
 	return nil
 }
 
-// ListCertificatesAll returns information about installed certificates.
-func ListCertificatesAll(json bool, _ *model.Configuration) ([]string, error) {
-	return api.ListCertificates(json)
+// ListCertificatesAll returns information about installed certificates and supports cancellation.
+func ListCertificatesAll(c context.Context, json bool, _ *model.Configuration) ([]string, error) {
+	return api.ListCertificates(c, json)
 }
 
-// ListCertificates returns installed certificates.
-func ListCertificates(cmd *Command) ([]string, error) {
+func listCertificates(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandRequirements(cmd, commandRequirements{operation: "list certificates"}); err != nil {
 		return nil, err
 	}
-	return ListCertificatesAll(cmd.BoolVal1, cmd.Conf)
+	return ListCertificatesAll(c, cmd.BoolVal1, cmd.Conf)
 }
 
-// ImportCertificates imports certificates, replacing existing destinations with matching names.
-func ImportCertificates(cmd *Command) ([]string, error) {
+func importCertificates(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCertificateCommand(cmd, "import certificates"); err != nil {
 		return nil, err
 	}
-	return api.ImportCertificates(cmd.InFiles)
+	return api.ImportCertificates(c, cmd.InFiles)
 }
 
-// InspectCertificates prints the certificate details.
-func InspectCertificates(cmd *Command) ([]string, error) {
+func inspectCertificates(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCertificateCommand(cmd, "inspect certificates"); err != nil {
 		return nil, err
 	}
-	return api.InspectCertificates(cmd.InFiles)
+	return api.InspectCertificates(c, cmd.InFiles)
 }
 
-// ValidateSignatures validates signature integrity, reports available trust evidence and performs a best-effort local
-// assessment.
-func ValidateSignatures(cmd *Command) ([]string, error) {
-	return validateSignatures(cmd, api.ValidateSignaturesFile)
+func validateSignaturesCommand(c context.Context, cmd *Command) ([]string, error) {
+	return validateSignatures(c, cmd, api.ValidateSignaturesFile)
 }
 
-func validateSignatures(
-	cmd *Command,
-	operation signatureValidationFileOperation,
-) ([]string, error) {
+func validateSignatures(c context.Context, cmd *Command, operation signatureValidationFileOperation) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "validate signatures")
 	if err != nil {
 		return nil, err
 	}
 
 	if inFile == "-" {
-		in, err := readSeekerFromStdin("validate signatures")
+		in, err := readSeekerFromStdin(c, "validate signatures")
 		if err != nil {
 			return nil, err
 		}
-		result, opErr := operation(in.path, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
+		result, opErr := operation(c, in.path, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
 		return result, in.finalize("validate signatures", opErr)
 	}
 
-	return operation(inFile, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
+	return operation(c, inFile, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
 }
 
-// RemoveSignatures removes contained digital signatures.
-func RemoveSignatures(cmd *Command) ([]string, error) {
+func removeSignatures(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "remove signatures")
 	if err != nil {
 		return nil, err
@@ -113,12 +122,12 @@ func RemoveSignatures(cmd *Command) ([]string, error) {
 	reportCommandOutputPath(cmd)
 
 	if inFile != "-" && outFile != "-" {
-		return nil, api.RemoveSignaturesFile(inFile, outFile, cmd.Conf)
+		return nil, api.RemoveSignaturesFile(c, inFile, outFile, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(inFile, outFile, "remove signatures")
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "remove signatures")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.RemoveSignatures(rs, w, cmd.Conf))
+	return nil, finalize(api.RemoveSignatures(c, rs, w, cmd.Conf))
 }

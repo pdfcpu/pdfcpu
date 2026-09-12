@@ -31,14 +31,14 @@ func TestOptimize(t *testing.T) {
 	outFile := filepath.Join(outDir, fileName)
 
 	// Create an optimized version of inFile.
-	if err := api.OptimizeFile(inFile, outFile, nil); err != nil {
+	if err := api.OptimizeFile(t.Context(), inFile, outFile, nil, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	// Create an optimized version of inFile.
 	// If you want to modify the original file, pass an empty string for outFile.
 	inFile = outFile
-	if err := api.OptimizeFile(inFile, "", nil); err != nil {
+	if err := api.OptimizeFile(t.Context(), inFile, "", nil, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

@@ -71,26 +71,26 @@ func TestAttachmentAPIArgumentErrors(t *testing.T) {
 		want error
 	}{
 		{name: "list reader", err: func() error {
-			_, err := Attachments(nil, nil)
+			_, err := Attachments(t.Context(), nil, nil)
 			return err
 		}(), want: ErrMissingPDFReadSeeker},
-		{name: "add reader", err: AddAttachments(nil, io.Discard, nil, false, nil), want: ErrMissingPDFReadSeeker},
-		{name: "add writer", err: AddAttachments(bytes.NewReader(nil), nil, nil, false, nil), want: ErrMissingPDFWriter},
-		{name: "remove reader", err: RemoveAttachments(nil, io.Discard, nil, nil), want: ErrMissingPDFReadSeeker},
-		{name: "remove writer", err: RemoveAttachments(bytes.NewReader(nil), nil, nil, nil), want: ErrMissingPDFWriter},
-		{name: "extract reader", err: ExtractAttachments(nil, "", nil, nil), want: ErrMissingPDFReadSeeker},
+		{name: "add reader", err: AddAttachments(t.Context(), nil, io.Discard, nil, false, nil), want: ErrMissingPDFReadSeeker},
+		{name: "add writer", err: AddAttachments(t.Context(), bytes.NewReader(nil), nil, nil, false, nil), want: ErrMissingPDFWriter},
+		{name: "remove reader", err: RemoveAttachments(t.Context(), nil, io.Discard, nil, nil), want: ErrMissingPDFReadSeeker},
+		{name: "remove writer", err: RemoveAttachments(t.Context(), bytes.NewReader(nil), nil, nil, nil), want: ErrMissingPDFWriter},
+		{name: "extract reader", err: ExtractAttachments(t.Context(), nil, "", nil, nil), want: ErrMissingPDFReadSeeker},
 		{
 			name: "extract output",
-			err:  ExtractAttachments(bytes.NewReader(nil), "", nil, nil),
+			err:  ExtractAttachments(t.Context(), bytes.NewReader(nil), "", nil, nil),
 			want: ErrMissingPDFOutput,
 		},
-		{name: "add file input", err: AddAttachmentsFile("", "", nil, false, nil), want: ErrMissingPDFInput},
-		{name: "add portfolio file input", err: AddAttachmentsFile("", "", nil, true, nil), want: ErrMissingPDFInput},
-		{name: "remove file input", err: RemoveAttachmentsFile("", "", nil, nil), want: ErrMissingPDFInput},
-		{name: "extract file input", err: ExtractAttachmentsFile("", "", nil, nil), want: ErrMissingPDFInput},
+		{name: "add file input", err: AddAttachmentsFile(t.Context(), "", "", nil, false, nil), want: ErrMissingPDFInput},
+		{name: "add portfolio file input", err: AddAttachmentsFile(t.Context(), "", "", nil, true, nil), want: ErrMissingPDFInput},
+		{name: "remove file input", err: RemoveAttachmentsFile(t.Context(), "", "", nil, nil), want: ErrMissingPDFInput},
+		{name: "extract file input", err: ExtractAttachmentsFile(t.Context(), "", "", nil, nil), want: ErrMissingPDFInput},
 		{
 			name: "extract file output",
-			err:  ExtractAttachmentsFile("input.pdf", "", nil, nil),
+			err:  ExtractAttachmentsFile(t.Context(), "input.pdf", "", nil, nil),
 			want: ErrMissingPDFOutput,
 		},
 	}
@@ -113,28 +113,28 @@ func TestAttachmentAPIsValidateFileNamesBeforeReading(t *testing.T) {
 		{
 			name: "add attachments",
 			run: func(rs *attachmentIOTracker) error {
-				return AddAttachments(rs, io.Discard, []string{",description"}, false, nil)
+				return AddAttachments(t.Context(), rs, io.Discard, []string{",description"}, false, nil)
 			},
 			want: "add attachments: validate attachment filenames",
 		},
 		{
 			name: "add portfolio attachments",
 			run: func(rs *attachmentIOTracker) error {
-				return AddAttachments(rs, io.Discard, []string{",description"}, true, nil)
+				return AddAttachments(t.Context(), rs, io.Discard, []string{",description"}, true, nil)
 			},
 			want: "add portfolio attachments: validate attachment filenames",
 		},
 		{
 			name: "remove attachments",
 			run: func(rs *attachmentIOTracker) error {
-				return RemoveAttachments(rs, io.Discard, []string{""}, nil)
+				return RemoveAttachments(t.Context(), rs, io.Discard, []string{""}, nil)
 			},
 			want: "remove attachments: validate attachment filenames",
 		},
 		{
 			name: "extract attachments",
 			run: func(rs *attachmentIOTracker) error {
-				_, err := ExtractAttachmentsRaw(rs, "", []string{""}, nil)
+				_, err := ExtractAttachmentsRaw(t.Context(), rs, "", []string{""}, nil)
 				return err
 			},
 			want: "extract attachments: validate attachment filenames",
@@ -163,19 +163,19 @@ func TestAttachmentAPIsPreserveCallerCommandMode(t *testing.T) {
 		{
 			name: "add attachments",
 			run: func(conf *model.Configuration) error {
-				return AddAttachments(bytes.NewReader(nil), io.Discard, []string{"attachment.pdf"}, false, conf)
+				return AddAttachments(t.Context(), bytes.NewReader(nil), io.Discard, []string{"attachment.pdf"}, false, conf)
 			},
 		},
 		{
 			name: "add portfolio attachments",
 			run: func(conf *model.Configuration) error {
-				return AddAttachments(bytes.NewReader(nil), io.Discard, []string{"attachment.pdf"}, true, conf)
+				return AddAttachments(t.Context(), bytes.NewReader(nil), io.Discard, []string{"attachment.pdf"}, true, conf)
 			},
 		},
 		{
 			name: "remove attachments",
 			run: func(conf *model.Configuration) error {
-				return RemoveAttachments(bytes.NewReader(nil), io.Discard, nil, conf)
+				return RemoveAttachments(t.Context(), bytes.NewReader(nil), io.Discard, nil, conf)
 			},
 		},
 	}
@@ -201,7 +201,7 @@ func TestAttachmentAPIReadErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "list attachments",
 			run: func() error {
-				_, err := Attachments(bytes.NewReader(nil), nil)
+				_, err := Attachments(t.Context(), bytes.NewReader(nil), nil)
 				return err
 			},
 			want: "list attachments: prepare PDF context: read context",
@@ -209,28 +209,28 @@ func TestAttachmentAPIReadErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "add attachments",
 			run: func() error {
-				return AddAttachments(bytes.NewReader(nil), io.Discard, []string{"attachment.pdf"}, false, nil)
+				return AddAttachments(t.Context(), bytes.NewReader(nil), io.Discard, []string{"attachment.pdf"}, false, nil)
 			},
 			want: "add attachments: prepare PDF context: read context",
 		},
 		{
 			name: "add portfolio attachments",
 			run: func() error {
-				return AddAttachments(bytes.NewReader(nil), io.Discard, []string{"attachment.pdf"}, true, nil)
+				return AddAttachments(t.Context(), bytes.NewReader(nil), io.Discard, []string{"attachment.pdf"}, true, nil)
 			},
 			want: "add portfolio attachments: prepare PDF context: read context",
 		},
 		{
 			name: "remove attachments",
 			run: func() error {
-				return RemoveAttachments(bytes.NewReader(nil), io.Discard, nil, nil)
+				return RemoveAttachments(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 			},
 			want: "remove attachments: prepare PDF context: read context",
 		},
 		{
 			name: "extract attachments",
 			run: func() error {
-				_, err := ExtractAttachmentsRaw(bytes.NewReader(nil), "", nil, nil)
+				_, err := ExtractAttachmentsRaw(t.Context(), bytes.NewReader(nil), "", nil, nil)
 				return err
 			},
 			want: "extract attachments: read context",
@@ -251,7 +251,7 @@ func attachmentTestPDFWithAttachment(t *testing.T) []byte {
 	t.Helper()
 
 	var buf bytes.Buffer
-	err := AddAttachments(
+	err := AddAttachments(t.Context(),
 		openAPITestPDF(t, attachmentTestInputFile()),
 		&buf,
 		[]string{attachmentTestInputFile()},
@@ -274,7 +274,7 @@ func TestAttachmentAPIWriteErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "add attachments",
 			run: func() error {
-				return AddAttachments(
+				return AddAttachments(t.Context(),
 					openAPITestPDF(t, attachmentTestInputFile()),
 					failingWriter{err: wantErr},
 					[]string{attachmentTestInputFile()},
@@ -287,7 +287,7 @@ func TestAttachmentAPIWriteErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "add portfolio attachments",
 			run: func() error {
-				return AddAttachments(
+				return AddAttachments(t.Context(),
 					openAPITestPDF(t, attachmentTestInputFile()),
 					failingWriter{err: wantErr},
 					[]string{attachmentTestInputFile()},
@@ -300,7 +300,7 @@ func TestAttachmentAPIWriteErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "remove attachments",
 			run: func() error {
-				return RemoveAttachments(
+				return RemoveAttachments(t.Context(),
 					bytes.NewReader(attachmentTestPDFWithAttachment(t)),
 					failingWriter{err: wantErr},
 					[]string{filepath.Base(attachmentTestInputFile())},
@@ -338,7 +338,7 @@ func TestAddAttachmentsNoFilesStopsBeforeConfigurationOrPDF(t *testing.T) {
 			conf := model.NewDefaultConfiguration()
 			cmd := conf.Cmd
 
-			err := AddAttachments(rs, io.Discard, nil, tt.coll, conf)
+			err := AddAttachments(t.Context(), rs, io.Discard, nil, tt.coll, conf)
 
 			if !errors.Is(err, ErrNoAttachmentAdded) {
 				t.Fatalf("expected %v, got %v", ErrNoAttachmentAdded, err)
@@ -372,7 +372,7 @@ func TestAddAttachmentsFileNoFilesStopsBeforeFileIO(t *testing.T) {
 			conf := model.NewDefaultConfiguration()
 			cmd := conf.Cmd
 
-			err := AddAttachmentsFile("input.pdf", "output.pdf", nil, tt.coll, conf)
+			err := AddAttachmentsFile(t.Context(), "input.pdf", "output.pdf", nil, tt.coll, conf)
 
 			if !errors.Is(err, ErrNoAttachmentAdded) {
 				t.Fatalf("expected %v, got %v", ErrNoAttachmentAdded, err)
@@ -390,7 +390,7 @@ func TestAddAttachmentsFileNoFilesStopsBeforeFileIO(t *testing.T) {
 func TestExtractAttachmentsMissingOutputStopsBeforePDF(t *testing.T) {
 	rs := &attachmentIOTracker{}
 
-	err := ExtractAttachments(rs, "", []string{""}, nil)
+	err := ExtractAttachments(t.Context(), rs, "", []string{""}, nil)
 
 	if !errors.Is(err, ErrMissingPDFOutput) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFOutput, err)
@@ -404,7 +404,7 @@ func TestExtractAttachmentsMissingOutputStopsBeforePDF(t *testing.T) {
 }
 
 func TestExtractAttachmentsFileMissingOutputStopsBeforeOpen(t *testing.T) {
-	err := ExtractAttachmentsFile("input.pdf", "", []string{""}, nil)
+	err := ExtractAttachmentsFile(t.Context(), "input.pdf", "", []string{""}, nil)
 
 	if !errors.Is(err, ErrMissingPDFOutput) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFOutput, err)
@@ -415,7 +415,7 @@ func TestExtractAttachmentsFileMissingOutputStopsBeforeOpen(t *testing.T) {
 }
 
 func TestRemoveAttachmentsNoMatchPreservesSentinel(t *testing.T) {
-	err := RemoveAttachments(
+	err := RemoveAttachments(t.Context(),
 		bytes.NewReader(attachmentTestPDFWithAttachment(t)),
 		io.Discard,
 		[]string{"missing-attachment"},
@@ -430,7 +430,7 @@ func TestRemoveAttachmentsNoMatchPreservesSentinel(t *testing.T) {
 }
 
 func TestRemoveAttachmentsWithoutAttachmentsPreservesSentinel(t *testing.T) {
-	err := RemoveAttachments(openAPITestPDF(t, attachmentTestInputFile()), io.Discard, nil, nil)
+	err := RemoveAttachments(t.Context(), openAPITestPDF(t, attachmentTestInputFile()), io.Discard, nil, nil)
 	if !errors.Is(err, ErrNoAttachmentRemoved) {
 		t.Fatalf("expected %v, got %v", ErrNoAttachmentRemoved, err)
 	}
@@ -443,7 +443,7 @@ func TestAddAttachmentsPreservesCommaInDescription(t *testing.T) {
 	const desc = "description,with,commas"
 
 	var buf bytes.Buffer
-	err := AddAttachments(
+	err := AddAttachments(t.Context(),
 		openAPITestPDF(t, attachmentTestInputFile()),
 		&buf,
 		[]string{attachmentTestInputFile() + "," + desc},
@@ -454,7 +454,7 @@ func TestAddAttachmentsPreservesCommaInDescription(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	attachments, err := Attachments(bytes.NewReader(buf.Bytes()), nil)
+	attachments, err := Attachments(t.Context(), bytes.NewReader(buf.Bytes()), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -479,7 +479,7 @@ func TestAddAttachmentsSourceErrorsIncludeContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := AddAttachments(openAPITestPDF(t, attachmentTestInputFile()), io.Discard, []string{missing}, tt.coll, nil)
+			err := AddAttachments(t.Context(), openAPITestPDF(t, attachmentTestInputFile()), io.Discard, []string{missing}, tt.coll, nil)
 			if !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 			}
@@ -502,35 +502,35 @@ func TestAttachmentMutationFileErrorsIncludeContext(t *testing.T) {
 		{
 			name: "add open input",
 			run: func() error {
-				return AddAttachmentsFile(missing, "", []string{attachmentTestInputFile()}, false, nil)
+				return AddAttachmentsFile(t.Context(), missing, "", []string{attachmentTestInputFile()}, false, nil)
 			},
 			want: "add attachments: open input " + missing,
 		},
 		{
 			name: "portfolio open input",
 			run: func() error {
-				return AddAttachmentsFile(missing, "", []string{attachmentTestInputFile()}, true, nil)
+				return AddAttachmentsFile(t.Context(), missing, "", []string{attachmentTestInputFile()}, true, nil)
 			},
 			want: "add portfolio attachments: open input " + missing,
 		},
 		{
 			name: "remove open input",
 			run: func() error {
-				return RemoveAttachmentsFile(missing, "", nil, nil)
+				return RemoveAttachmentsFile(t.Context(), missing, "", nil, nil)
 			},
 			want: "remove attachments: open input " + missing,
 		},
 		{
 			name: "add create output",
 			run: func() error {
-				return AddAttachmentsFile(inFile, outFile, []string{attachmentTestInputFile()}, false, nil)
+				return AddAttachmentsFile(t.Context(), inFile, outFile, []string{attachmentTestInputFile()}, false, nil)
 			},
 			want: "add attachments: create output",
 		},
 		{
 			name: "remove create output",
 			run: func() error {
-				return RemoveAttachmentsFile(inFile, outFile, nil, nil)
+				return RemoveAttachmentsFile(t.Context(), inFile, outFile, nil, nil)
 			},
 			want: "remove attachments: create output",
 		},
@@ -555,7 +555,7 @@ func TestAttachmentMutationFailurePreservesExistingOutput(t *testing.T) {
 	}
 
 	missing := filepath.Join(t.TempDir(), "missing.bin")
-	err := AddAttachmentsFile(inFile, outFile, []string{missing}, false, nil)
+	err := AddAttachmentsFile(t.Context(), inFile, outFile, []string{missing}, false, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -575,7 +575,7 @@ func TestAttachmentMutationReplacesExistingOutputAfterSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := AddAttachmentsFile(inFile, outFile, []string{attachmentTestInputFile()}, false, nil); err != nil {
+	if err := AddAttachmentsFile(t.Context(), inFile, outFile, []string{attachmentTestInputFile()}, false, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -584,7 +584,7 @@ func TestAttachmentMutationReplacesExistingOutputAfterSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer f.Close()
-	attachments, err := Attachments(f, nil)
+	attachments, err := Attachments(t.Context(), f, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -597,7 +597,7 @@ func TestAttachmentMutationReplacesExistingOutputAfterSuccess(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer input.Close()
-	attachments, err = Attachments(input, nil)
+	attachments, err = Attachments(t.Context(), input, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -656,7 +656,7 @@ func TestWriteAttachmentCopyFailurePreservesOutput(t *testing.T) {
 		FileName: filepath.Base(fileName),
 	}
 
-	err := writeAttachment(filepath.Dir(fileName), 0, a)
+	err := writeAttachment(t.Context(), filepath.Dir(fileName), 0, a)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -669,7 +669,7 @@ func TestWriteAttachmentCopyFailurePreservesOutput(t *testing.T) {
 func TestWriteAttachmentReplacesOutputAfterCopyAndClose(t *testing.T) {
 	fileName, _ := attachmentExtractionOutput(t)
 
-	err := writeAttachmentToPath(fileName, model.Attachment{Reader: strings.NewReader("replacement")})
+	err := writeAttachmentToPath(t.Context(), fileName, model.Attachment{Reader: strings.NewReader("replacement")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -686,7 +686,7 @@ func TestWriteAttachmentReplacesOutputAfterCopyAndClose(t *testing.T) {
 
 func TestExtractAttachmentsFileOpenErrorIncludesContext(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "missing.pdf")
-	err := ExtractAttachmentsFile(missing, t.TempDir(), nil, nil)
+	err := ExtractAttachmentsFile(t.Context(), missing, t.TempDir(), nil, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}

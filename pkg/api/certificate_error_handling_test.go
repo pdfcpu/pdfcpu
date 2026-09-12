@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/json"
 	"errors"
@@ -58,6 +59,18 @@ func certificateImportTestInputs(t *testing.T, dir string, names ...string) []st
 	return inFiles
 }
 
+func prepareCertificateImportsForTest(t *testing.T, c context.Context, inFiles []string) []certificateImport {
+	t.Helper()
+	imports, err := prepareCertificateImports(c, inFiles)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureTrustedCertificateDir(c); err != nil {
+		t.Fatal(err)
+	}
+	return imports
+}
+
 func assertCertificateDirectoryEntries(t *testing.T, dir string, want ...string) {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
@@ -84,7 +97,7 @@ func TestCertificateInputValidation(t *testing.T) {
 			name:      "import",
 			operation: "import certificates",
 			run: func(inFiles []string) error {
-				_, err := ImportCertificates(inFiles)
+				_, err := ImportCertificates(t.Context(), inFiles)
 				return err
 			},
 		},
@@ -92,7 +105,7 @@ func TestCertificateInputValidation(t *testing.T) {
 			name:      "inspect",
 			operation: "inspect certificates",
 			run: func(inFiles []string) error {
-				_, err := InspectCertificates(inFiles)
+				_, err := InspectCertificates(t.Context(), inFiles)
 				return err
 			},
 		},
@@ -134,7 +147,7 @@ func TestCertificateInputErrorContext(t *testing.T) {
 		{
 			name: "import",
 			run: func(inFile string) error {
-				_, err := ImportCertificates([]string{inFile})
+				_, err := ImportCertificates(t.Context(), []string{inFile})
 				return err
 			},
 			want: fmt.Sprintf("import certificates: input 1 %q", missingFile),
@@ -142,7 +155,7 @@ func TestCertificateInputErrorContext(t *testing.T) {
 		{
 			name: "inspect",
 			run: func(inFile string) error {
-				_, err := InspectCertificates([]string{inFile})
+				_, err := InspectCertificates(t.Context(), []string{inFile})
 				return err
 			},
 			want: fmt.Sprintf("inspect certificates: input 1 %q: load certificates", missingFile),
@@ -167,7 +180,7 @@ func TestCertificateInputErrorContextPreservesSentinel(t *testing.T) {
 		t.Fatal("API unsupported-certificate sentinel is not a core alias")
 	}
 	inFile := filepath.Join(t.TempDir(), "certificate.txt")
-	_, err := InspectCertificates([]string{inFile})
+	_, err := InspectCertificates(t.Context(), []string{inFile})
 	if !errors.Is(err, ErrUnsupportedCertificateFile) {
 		t.Fatalf("expected %v, got %v", ErrUnsupportedCertificateFile, err)
 	}
@@ -213,13 +226,13 @@ func TestCertificateMultiFileSummaries(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	certs, err := pdfcpu.LoadCertificatesFile(source)
+	certs, err := pdfcpu.LoadCertificatesFile(t.Context(), source)
 	if err != nil {
 		t.Fatal(err)
 	}
 	count := len(certs)
 
-	imported, err := ImportCertificates(inFiles)
+	imported, err := ImportCertificates(t.Context(), inFiles)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +245,7 @@ func TestCertificateMultiFileSummaries(t *testing.T) {
 		t.Fatalf("import summary: got %q, want %q", imported, wantImported)
 	}
 
-	inspected, err := InspectCertificates(inFiles)
+	inspected, err := InspectCertificates(t.Context(), inFiles)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +278,7 @@ func TestImportCertificatesPreflightPreventsPartialPublication(t *testing.T) {
 	}
 	missingFile := filepath.Join(dir, "missing.crt")
 
-	_, err = ImportCertificates([]string{validFile, emptyFile, missingFile})
+	_, err = ImportCertificates(t.Context(), []string{validFile, emptyFile, missingFile})
 	if !errors.Is(err, ErrNoCertificates) || !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected joined preflight errors, got %v", err)
 	}
@@ -307,7 +320,7 @@ func TestImportCertificatesRejectsDuplicateDestinations(t *testing.T) {
 		inFiles = append(inFiles, inFile)
 	}
 
-	_, err = ImportCertificates(inFiles)
+	_, err = ImportCertificates(t.Context(), inFiles)
 	if !errors.Is(err, ErrDuplicateCertificateDestination) {
 		t.Fatalf("expected %v, got %v", ErrDuplicateCertificateDestination, err)
 	}
@@ -335,11 +348,11 @@ func TestImportCertificatesEnsuresTrustedDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := ImportCertificates([]string{inFile}); err != nil {
+	if _, err := ImportCertificates(t.Context(), []string{inFile}); err != nil {
 		t.Fatal(err)
 	}
 	outFile := filepath.Join(trustedDir, "valid.p7c")
-	if _, err := pdfcpu.LoadCertificatesFile(outFile); err != nil {
+	if _, err := pdfcpu.LoadCertificatesFile(t.Context(), outFile); err != nil {
 		t.Fatalf("load published certificates: %v", err)
 	}
 }
@@ -350,7 +363,7 @@ func TestImportCertificatesRefreshesLoadedTrustPool(t *testing.T) {
 	restoreCertificateTestDir(t, trustedDir)
 	pdfcpu.InvalidateCertificatePool()
 	t.Cleanup(pdfcpu.InvalidateCertificatePool)
-	if err := pdfcpu.LoadCertificates(); err != nil {
+	if err := pdfcpu.LoadCertificates(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	oldPool := model.UserCertPool
@@ -359,10 +372,10 @@ func TestImportCertificatesRefreshesLoadedTrustPool(t *testing.T) {
 	}
 
 	inFile := certificateImportTestInputs(t, t.TempDir(), "imported.p7c")[0]
-	if _, err := ImportCertificates([]string{inFile}); err != nil {
+	if _, err := ImportCertificates(t.Context(), []string{inFile}); err != nil {
 		t.Fatal(err)
 	}
-	if err := pdfcpu.LoadCertificates(); err != nil {
+	if err := pdfcpu.LoadCertificates(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	if pool := model.UserCertPool; pool == nil || pool == oldPool || len(pool.Subjects()) == 0 {
@@ -385,7 +398,7 @@ func TestImportCertificatesReplacesExistingDestination(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, err := ImportCertificates([]string{inFile})
+	out, err := ImportCertificates(t.Context(), []string{inFile})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -399,7 +412,7 @@ func TestImportCertificatesReplacesExistingDestination(t *testing.T) {
 	if slices.Equal(bb, original) {
 		t.Fatal("existing destination was not replaced")
 	}
-	if _, err := pdfcpu.LoadCertificatesFile(outFile); err != nil {
+	if _, err := pdfcpu.LoadCertificatesFile(t.Context(), outFile); err != nil {
 		t.Fatalf("load replacement certificate: %v", err)
 	}
 	assertCertificateDirectoryEntries(t, trustedDir, "existing.p7c")
@@ -419,7 +432,7 @@ func TestImportCertificatesStagesEntireBatchBeforePublication(t *testing.T) {
 	ops := defaultCertificateImportOperations()
 	saveCertificates := ops.saveCertificates
 	saveCalls := 0
-	ops.saveCertificates = func(certs []*x509.Certificate, fileName string) error {
+	ops.saveCertificates = func(c context.Context, certs []*x509.Certificate, fileName string) error {
 		saveCalls++
 		if filepath.Dir(fileName) != trustedDir {
 			t.Fatalf("staging file outside destination directory: %s", fileName)
@@ -427,7 +440,7 @@ func TestImportCertificatesStagesEntireBatchBeforePublication(t *testing.T) {
 		if saveCalls == 2 {
 			return stageErr
 		}
-		return saveCertificates(certs, fileName)
+		return saveCertificates(c, certs, fileName)
 	}
 	replaceCalls := 0
 	replace := ops.files.replaceFn
@@ -436,12 +449,10 @@ func TestImportCertificatesStagesEntireBatchBeforePublication(t *testing.T) {
 		return replace(oldName, newName)
 	}
 
-	out, err := importCertificates(inFiles, ops)
+	imports := prepareCertificateImportsForTest(t, t.Context(), inFiles)
+	err := publishCertificateImports(t.Context(), imports, ops)
 	if !errors.Is(err, stageErr) {
 		t.Fatalf("expected %v, got %v", stageErr, err)
-	}
-	if out != nil {
-		t.Fatalf("staging failure returned success output: %q", out)
 	}
 	if replaceCalls != 0 {
 		t.Fatalf("staging failure reached publication: %d renames", replaceCalls)
@@ -473,12 +484,10 @@ func TestImportCertificatesSecondPublicationFailureLeavesNoPartialInstallation(t
 		return replace(oldName, newName)
 	}
 
-	out, err := importCertificates(inFiles, ops)
+	imports := prepareCertificateImportsForTest(t, t.Context(), inFiles)
+	err := publishCertificateImports(t.Context(), imports, ops)
 	if !errors.Is(err, publishErr) {
 		t.Fatalf("expected %v, got %v", publishErr, err)
-	}
-	if out != nil {
-		t.Fatalf("publication failure returned success output: %q", out)
 	}
 	if publishCalls != 2 {
 		t.Fatalf("publication attempts: got %d, want 2", publishCalls)
@@ -519,12 +528,10 @@ func TestImportCertificatesRollsBackPublishedFiles(t *testing.T) {
 		return replace(oldName, newName)
 	}
 
-	out, err := importCertificates(inFiles, ops)
+	imports := prepareCertificateImportsForTest(t, t.Context(), inFiles)
+	err := publishCertificateImports(t.Context(), imports, ops)
 	if !errors.Is(err, publishErr) {
 		t.Fatalf("expected %v, got %v", publishErr, err)
-	}
-	if out != nil {
-		t.Fatalf("publication failure returned success output: %q", out)
 	}
 	for name, want := range originals {
 		bb, readErr := os.ReadFile(filepath.Join(trustedDir, name))
@@ -578,14 +585,12 @@ func TestImportCertificatesJoinsPublicationRollbackAndCleanupErrors(t *testing.T
 		return remove(path)
 	}
 
-	out, err := importCertificates(inFiles, ops)
+	imports := prepareCertificateImportsForTest(t, t.Context(), inFiles)
+	err := publishCertificateImports(t.Context(), imports, ops)
 	for _, want := range []error{publishErr, rollbackErr, cleanupErr} {
 		if !errors.Is(err, want) {
 			t.Fatalf("expected joined %v, got %v", want, err)
 		}
-	}
-	if out != nil {
-		t.Fatalf("transaction failure returned success output: %q", out)
 	}
 	assertCertificateDirectoryEntries(t, trustedDir, "one.p7c", "two.p7c")
 }
@@ -617,14 +622,12 @@ func TestImportCertificatesReportsCleanupFailureAfterCommit(t *testing.T) {
 		return remove(path)
 	}
 
-	out, err := importCertificates(inFiles, ops)
+	imports := prepareCertificateImportsForTest(t, t.Context(), inFiles)
+	err := publishCertificateImports(t.Context(), imports, ops)
 	if !errors.Is(err, cleanupErr) {
 		t.Fatalf("expected %v, got %v", cleanupErr, err)
 	}
-	if out != nil {
-		t.Fatalf("cleanup failure returned success output: %q", out)
-	}
-	if _, err := pdfcpu.LoadCertificatesFile(filepath.Join(trustedDir, "one.p7c")); err != nil {
+	if _, err := pdfcpu.LoadCertificatesFile(t.Context(), filepath.Join(trustedDir, "one.p7c")); err != nil {
 		t.Fatalf("committed certificate missing after cleanup failure: %v", err)
 	}
 	assertCertificateDirectoryEntries(t, trustedDir, "one.p7c")
@@ -658,13 +661,13 @@ func TestImportCertificatesConcurrentWithTrustPoolLoad(t *testing.T) {
 	}
 
 	importDone := make(chan error, 1)
+	imports := prepareCertificateImportsForTest(t, t.Context(), inFiles)
 	go func() {
-		_, err := importCertificates(inFiles, ops)
-		importDone <- err
+		importDone <- publishCertificateImports(t.Context(), imports, ops)
 	}()
 
 	<-firstPublished
-	loadErr := pdfcpu.LoadCertificates()
+	loadErr := pdfcpu.LoadCertificates(t.Context())
 	partialPool := model.UserCertPool
 	close(continuePublication)
 	importErr := <-importDone
@@ -678,7 +681,7 @@ func TestImportCertificatesConcurrentWithTrustPoolLoad(t *testing.T) {
 		t.Fatal("concurrent load did not publish its intermediate pool")
 	}
 
-	if err := pdfcpu.LoadCertificates(); err != nil {
+	if err := pdfcpu.LoadCertificates(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	if pool := model.UserCertPool; pool == nil || pool == partialPool || len(pool.Subjects()) == 0 {
@@ -705,12 +708,12 @@ func TestListCertificatesText(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	certs, err := pdfcpu.LoadCertificatesFile(source)
+	certs, err := pdfcpu.LoadCertificatesFile(t.Context(), source)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := ListCertificates(false)
+	out, err := ListCertificates(t.Context(), false)
 	if !errors.Is(err, ErrNoCertificates) {
 		t.Fatalf("expected %v, got %v", ErrNoCertificates, err)
 	}
@@ -753,7 +756,7 @@ func TestListCertificatesJSONReportsFileErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, err := ListCertificates(true)
+	out, err := ListCertificates(t.Context(), true)
 	if !errors.Is(err, ErrNoCertificates) {
 		t.Fatalf("expected %v, got %v", ErrNoCertificates, err)
 	}
@@ -797,7 +800,7 @@ func TestListCertificatesDirectoryErrorContext(t *testing.T) {
 	}
 	restoreCertificateTestDir(t, filepath.Join(fileName, "certs"))
 
-	_, err := ListCertificates(false)
+	_, err := ListCertificates(t.Context(), false)
 	if err == nil {
 		t.Fatal("expected directory creation error")
 	}

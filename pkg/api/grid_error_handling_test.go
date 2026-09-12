@@ -135,14 +135,14 @@ func TestGridEntryPointsRejectMissingConfiguration(t *testing.T) {
 		run  func() error
 	}{
 		{name: "images", run: func() error {
-			_, err := GridFromImage(nil, []string{"unused"}, nil)
+			_, err := GridFromImage(t.Context(), nil, []string{"unused"}, nil)
 			return err
 		}},
 		{name: "stream", run: func() error {
-			return Grid(bytes.NewReader(nil), io.Discard, nil, nil, nil, nil)
+			return Grid(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nil, nil)
 		}},
 		{name: "file", run: func() error {
-			return GridFile([]string{"unused"}, filepath.Join(t.TempDir(), "out.pdf"), nil, nil, nil)
+			return GridFile(t.Context(), []string{"unused"}, filepath.Join(t.TempDir(), "out.pdf"), nil, nil, nil)
 		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -160,20 +160,20 @@ func TestGridEntryPointsRejectMissingInput(t *testing.T) {
 		wantErr error
 	}{
 		{name: "image context", run: func() error {
-			_, err := GridFromImage(nil, nil, gridTestConfiguration(t, true))
+			_, err := GridFromImage(t.Context(), nil, nil, gridTestConfiguration(t, true))
 			return err
 		}, wantErr: ErrMissingImageInput},
 		{name: "image stream", run: func() error {
-			return Grid(nil, io.Discard, nil, nil, gridTestConfiguration(t, true), nil)
+			return Grid(t.Context(), nil, io.Discard, nil, nil, gridTestConfiguration(t, true), nil)
 		}, wantErr: ErrMissingImageInput},
 		{name: "PDF stream", run: func() error {
-			return Grid(nil, io.Discard, nil, nil, gridTestConfiguration(t, false), nil)
+			return Grid(t.Context(), nil, io.Discard, nil, nil, gridTestConfiguration(t, false), nil)
 		}, wantErr: ErrMissingPDFReadSeeker},
 		{name: "image file", run: func() error {
-			return GridFile(nil, filepath.Join(t.TempDir(), "out.pdf"), nil, gridTestConfiguration(t, true), nil)
+			return GridFile(t.Context(), nil, filepath.Join(t.TempDir(), "out.pdf"), nil, gridTestConfiguration(t, true), nil)
 		}, wantErr: ErrMissingImageInput},
 		{name: "PDF file", run: func() error {
-			return GridFile(nil, filepath.Join(t.TempDir(), "out.pdf"), nil, gridTestConfiguration(t, false), nil)
+			return GridFile(t.Context(), nil, filepath.Join(t.TempDir(), "out.pdf"), nil, gridTestConfiguration(t, false), nil)
 		}, wantErr: ErrMissingPDFInput},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -185,10 +185,10 @@ func TestGridEntryPointsRejectMissingInput(t *testing.T) {
 }
 
 func TestGridEntryPointsRejectMissingOutput(t *testing.T) {
-	if err := Grid(bytes.NewReader(nil), nil, nil, nil, gridTestConfiguration(t, false), nil); !errors.Is(err, ErrMissingPDFWriter) {
+	if err := Grid(t.Context(), bytes.NewReader(nil), nil, nil, nil, gridTestConfiguration(t, false), nil); !errors.Is(err, ErrMissingPDFWriter) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFWriter, err)
 	}
-	if err := GridFile([]string{"unused"}, "", nil, gridTestConfiguration(t, false), nil); !errors.Is(err, ErrMissingPDFOutput) {
+	if err := GridFile(t.Context(), []string{"unused"}, "", nil, gridTestConfiguration(t, false), nil); !errors.Is(err, ErrMissingPDFOutput) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFOutput, err)
 	}
 }
@@ -196,7 +196,7 @@ func TestGridEntryPointsRejectMissingOutput(t *testing.T) {
 func TestGridEntryPointsPreserveCallerCommandMode(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
 	want := conf.Cmd
-	err := Grid(bytes.NewReader(nil), io.Discard, nil, nil, gridTestConfiguration(t, false), conf)
+	err := Grid(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, gridTestConfiguration(t, false), conf)
 	if err == nil {
 		t.Fatal("expected invalid PDF error")
 	}
@@ -206,7 +206,7 @@ func TestGridEntryPointsPreserveCallerCommandMode(t *testing.T) {
 
 	conf = model.NewDefaultConfiguration()
 	want = conf.Cmd
-	_, err = GridFromImage(conf, []string{filepath.Join(t.TempDir(), "missing.png")}, gridTestConfiguration(t, true))
+	_, err = GridFromImage(t.Context(), conf, []string{filepath.Join(t.TempDir(), "missing.png")}, gridTestConfiguration(t, true))
 	if err == nil {
 		t.Fatal("expected missing image error")
 	}
@@ -222,14 +222,14 @@ func TestGridEntryPointsRejectNUpConfiguration(t *testing.T) {
 		run  func() error
 	}{
 		{name: "images", run: func() error {
-			_, err := GridFromImage(nil, []string{"unused"}, nup)
+			_, err := GridFromImage(t.Context(), nil, []string{"unused"}, nup)
 			return err
 		}},
 		{name: "stream", run: func() error {
-			return Grid(bytes.NewReader(nil), io.Discard, nil, nil, nup, nil)
+			return Grid(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nup, nil)
 		}},
 		{name: "file", run: func() error {
-			return GridFile([]string{"unused"}, filepath.Join(t.TempDir(), "out.pdf"), nil, nup, nil)
+			return GridFile(t.Context(), []string{"unused"}, filepath.Join(t.TempDir(), "out.pdf"), nil, nup, nil)
 		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -243,7 +243,7 @@ func TestGridEntryPointsRejectNUpConfiguration(t *testing.T) {
 }
 
 func TestGridReadErrorIncludesPreparationContext(t *testing.T) {
-	err := Grid(bytes.NewReader(nil), io.Discard, nil, nil, gridTestConfiguration(t, false), nil)
+	err := Grid(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, gridTestConfiguration(t, false), nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -256,7 +256,7 @@ func TestGridOperationErrorsIncludePhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 
 	t.Run("page selection", func(t *testing.T) {
-		err := Grid(openAPITestPDF(t, inFile), io.Discard, nil, []string{"bogus"}, gridTestConfiguration(t, false), nil)
+		err := Grid(t.Context(), openAPITestPDF(t, inFile), io.Discard, nil, []string{"bogus"}, gridTestConfiguration(t, false), nil)
 		if err == nil || !strings.Contains(err.Error(), "grid: parse page selection") {
 			t.Fatalf("expected page selection context, got %v", err)
 		}
@@ -264,7 +264,7 @@ func TestGridOperationErrorsIncludePhaseContext(t *testing.T) {
 
 	t.Run("write", func(t *testing.T) {
 		wantErr := errors.New("write failed")
-		err := Grid(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil, nil, gridTestConfiguration(t, false), nil)
+		err := Grid(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil, nil, gridTestConfiguration(t, false), nil)
 		if !errors.Is(err, wantErr) {
 			t.Fatalf("expected %v, got %v", wantErr, err)
 		}
@@ -275,7 +275,7 @@ func TestGridOperationErrorsIncludePhaseContext(t *testing.T) {
 
 	t.Run("images", func(t *testing.T) {
 		missingImage := filepath.Join(t.TempDir(), "missing.png")
-		err := Grid(nil, io.Discard, []string{missingImage}, nil, gridTestConfiguration(t, true), nil)
+		err := Grid(t.Context(), nil, io.Discard, []string{missingImage}, nil, gridTestConfiguration(t, true), nil)
 		if !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 		}
@@ -287,7 +287,7 @@ func TestGridOperationErrorsIncludePhaseContext(t *testing.T) {
 
 func TestGridFileErrorsIncludeFilePhaseContext(t *testing.T) {
 	missingInput := filepath.Join(t.TempDir(), "missing.pdf")
-	err := GridFile([]string{missingInput}, filepath.Join(t.TempDir(), "out.pdf"), nil, gridTestConfiguration(t, false), nil)
+	err := GridFile(t.Context(), []string{missingInput}, filepath.Join(t.TempDir(), "out.pdf"), nil, gridTestConfiguration(t, false), nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -302,7 +302,7 @@ func TestGridFileRejectsImageOutputAliasing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := GridFile([]string{imageFile}, imageFile, nil, gridTestConfiguration(t, true), nil)
+	err := GridFile(t.Context(), []string{imageFile}, imageFile, nil, gridTestConfiguration(t, true), nil)
 	if !errors.Is(err, ErrGridImageOutputConflict) {
 		t.Fatalf("expected %v, got %v", ErrGridImageOutputConflict, err)
 	}
@@ -318,14 +318,14 @@ func TestGridEntryPointsRejectInvalidGrid(t *testing.T) {
 		run  func(*model.NUp) error
 	}{
 		{name: "images", run: func(nup *model.NUp) error {
-			_, err := GridFromImage(nil, []string{"unused"}, nup)
+			_, err := GridFromImage(t.Context(), nil, []string{"unused"}, nup)
 			return err
 		}},
 		{name: "stream", run: func(nup *model.NUp) error {
-			return Grid(bytes.NewReader(nil), io.Discard, nil, nil, nup, nil)
+			return Grid(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nup, nil)
 		}},
 		{name: "file", run: func(nup *model.NUp) error {
-			return GridFile([]string{"unused"}, filepath.Join(t.TempDir(), "out.pdf"), nil, nup, nil)
+			return GridFile(t.Context(), []string{"unused"}, filepath.Join(t.TempDir(), "out.pdf"), nil, nup, nil)
 		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -343,7 +343,7 @@ func TestGridEntryPointsRejectInvalidGrid(t *testing.T) {
 func TestGridFileCreateOutputErrorIncludesPhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	outFile := filepath.Join(t.TempDir(), "missing", "out.pdf")
-	err := GridFile([]string{inFile}, outFile, nil, gridTestConfiguration(t, false), nil)
+	err := GridFile(t.Context(), []string{inFile}, outFile, nil, gridTestConfiguration(t, false), nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -359,7 +359,7 @@ func TestGridFileMalformedInputPreservesCauseAndCleansOutput(t *testing.T) {
 	}
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	err := GridFile([]string{inFile}, outFile, nil, gridTestConfiguration(t, false), nil)
+	err := GridFile(t.Context(), []string{inFile}, outFile, nil, gridTestConfiguration(t, false), nil)
 	if !errors.Is(err, pdfcpu.ErrCorruptHeader) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrCorruptHeader, err)
 	}
@@ -374,7 +374,7 @@ func TestGridFileMalformedInputPreservesCauseAndCleansOutput(t *testing.T) {
 func TestGridFileRemovesNewOutputOnFailure(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	err := GridFile([]string{inFile}, outFile, []string{"bogus"}, gridTestConfiguration(t, false), nil)
+	err := GridFile(t.Context(), []string{inFile}, outFile, []string{"bogus"}, gridTestConfiguration(t, false), nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -391,7 +391,7 @@ func TestGridFilePreservesExistingOutputOnFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := GridFile([]string{inFile}, outFile, []string{"bogus"}, gridTestConfiguration(t, false), nil)
+	err := GridFile(t.Context(), []string{inFile}, outFile, []string{"bogus"}, gridTestConfiguration(t, false), nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -412,7 +412,7 @@ func TestGridFilePreservesExistingOutputOnImageFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := GridFile([]string{missingImage}, outFile, nil, gridTestConfiguration(t, true), nil)
+	err := GridFile(t.Context(), []string{missingImage}, outFile, nil, gridTestConfiguration(t, true), nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -436,7 +436,7 @@ func TestGridFileRejectsImageFilesystemAliases(t *testing.T) {
 		if err := os.Link(source, outFile); err != nil {
 			t.Fatal(err)
 		}
-		err := GridFile([]string{source}, outFile, nil, gridTestConfiguration(t, true), nil)
+		err := GridFile(t.Context(), []string{source}, outFile, nil, gridTestConfiguration(t, true), nil)
 		if !errors.Is(err, ErrGridImageOutputConflict) {
 			t.Fatalf("expected %v, got %v", ErrGridImageOutputConflict, err)
 		}
@@ -450,7 +450,7 @@ func TestGridFileRejectsImageFilesystemAliases(t *testing.T) {
 			}
 			t.Fatal(err)
 		}
-		err := GridFile([]string{source}, outFile, nil, gridTestConfiguration(t, true), nil)
+		err := GridFile(t.Context(), []string{source}, outFile, nil, gridTestConfiguration(t, true), nil)
 		if !errors.Is(err, ErrGridImageOutputConflict) {
 			t.Fatalf("expected %v, got %v", ErrGridImageOutputConflict, err)
 		}
@@ -468,10 +468,10 @@ func TestGridFileSafelyReplacesInput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = GridFile([]string{inOutFile}, inOutFile, nil, gridTestConfiguration(t, false), nil); err != nil {
+	if err = GridFile(t.Context(), []string{inOutFile}, inOutFile, nil, gridTestConfiguration(t, false), nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = ReadContextFile(inOutFile); err != nil {
+	if _, err = ReadContextFile(t.Context(), inOutFile); err != nil {
 		t.Fatalf("expected valid replacement PDF: %v", err)
 	}
 }

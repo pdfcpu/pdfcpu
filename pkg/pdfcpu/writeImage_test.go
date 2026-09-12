@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -32,6 +33,21 @@ import (
 type writeReaderErrorReader struct {
 	err  error
 	read bool
+}
+
+type writeReaderCancelingReader struct {
+	cancel context.CancelFunc
+	read   bool
+}
+
+func (r *writeReaderCancelingReader) Read(p []byte) (int, error) {
+	if r.read {
+		return 0, errors.New("read after cancellation")
+	}
+	r.read = true
+	n := copy(p, "partial replacement")
+	r.cancel()
+	return n, nil
 }
 
 // Read implements io.Reader.
@@ -155,7 +171,7 @@ func TestPDFImageResolvesIndirectIntegerEntries(t *testing.T) {
 // TestWriteReaderLabelsCreateFailure verifies the corresponding behavior.
 func TestWriteReaderLabelsCreateFailure(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "missing", "out.bin")
-	err := WriteReader(path, strings.NewReader("data"))
+	err := WriteReader(t.Context(), path, strings.NewReader("data"))
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -182,7 +198,7 @@ func TestWriteReaderRejectsNilReader(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err := WriteReader(path, tt.reader)
+			err := WriteReader(t.Context(), path, tt.reader)
 			if !errors.Is(err, ErrMissingReader) {
 				t.Fatalf("expected %v, got %v", ErrMissingReader, err)
 			}
@@ -197,12 +213,40 @@ func TestWriteReaderRejectsNilReader(t *testing.T) {
 	}
 }
 
+// TestWriteReaderCancellationPreservesDestination verifies cancelled staged copies are not published.
+func TestWriteReaderCancellationPreservesDestination(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "out.bin")
+	if err := os.WriteFile(path, []byte("previous"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	err := WriteReader(ctx, path, &writeReaderCancelingReader{cancel: cancel})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected cancellation, got %v", err)
+	}
+	bb, readErr := os.ReadFile(path)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if got, want := string(bb), "previous"; got != want {
+		t.Fatalf("existing output: got %q, want %q", got, want)
+	}
+	matches, globErr := filepath.Glob(filepath.Join(dir, ".out.bin.tmp-*"))
+	if globErr != nil {
+		t.Fatal(globErr)
+	}
+	if len(matches) != 0 {
+		t.Fatalf("temporary output remains: %v", matches)
+	}
+}
+
 // TestWriteReaderRemovesPartialOutputAfterCopyFailure verifies the corresponding behavior.
 func TestWriteReaderRemovesPartialOutputAfterCopyFailure(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "out.bin")
 	wantErr := errors.New("copy failed")
 
-	err := WriteReader(path, &writeReaderErrorReader{err: wantErr})
+	err := WriteReader(t.Context(), path, &writeReaderErrorReader{err: wantErr})
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -222,7 +266,7 @@ func TestWriteReaderPreservesExistingOutputAfterCopyFailure(t *testing.T) {
 	}
 	wantErr := errors.New("copy failed")
 
-	err := WriteReader(path, &writeReaderErrorReader{err: wantErr})
+	err := WriteReader(t.Context(), path, &writeReaderErrorReader{err: wantErr})
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -386,7 +430,7 @@ func TestWriteReaderRenameFailurePreservesDestination(t *testing.T) {
 // TestWriteReaderSuccess verifies the corresponding behavior.
 func TestWriteReaderSuccess(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "out.bin")
-	if err := WriteReader(path, strings.NewReader("data")); err != nil {
+	if err := WriteReader(t.Context(), path, strings.NewReader("data")); err != nil {
 		t.Fatal(err)
 	}
 	bb, err := os.ReadFile(path)
@@ -411,7 +455,7 @@ func TestWriteReaderNewOutputUsesCreatePermissions(t *testing.T) {
 	}
 
 	path := filepath.Join(dir, "out.bin")
-	if err := WriteReader(path, strings.NewReader("data")); err != nil {
+	if err := WriteReader(t.Context(), path, strings.NewReader("data")); err != nil {
 		t.Fatal(err)
 	}
 	info, err := os.Stat(path)
@@ -429,7 +473,7 @@ func TestWriteReaderReplacesExistingOutput(t *testing.T) {
 	if err := os.WriteFile(path, []byte("previous"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteReader(path, strings.NewReader("replacement")); err != nil {
+	if err := WriteReader(t.Context(), path, strings.NewReader("replacement")); err != nil {
 		t.Fatal(err)
 	}
 	bb, err := os.ReadFile(path)
@@ -452,7 +496,7 @@ func TestWriteReaderPreservesExistingOutputPermissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := WriteReader(path, strings.NewReader("replacement")); err != nil {
+	if err := WriteReader(t.Context(), path, strings.NewReader("replacement")); err != nil {
 		t.Fatal(err)
 	}
 	after, err := os.Stat(path)

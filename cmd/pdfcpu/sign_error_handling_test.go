@@ -77,7 +77,9 @@ func TestHandleValidateSignaturesCommandRetainsInputPhase(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
 	conf.CheckFileNameExt = true
 
-	err := handleValidateSignaturesCommand(conf, []string{"input.txt"}, &signaturesValidateOptions{})
+	err := handleValidateSignaturesCommand(
+		t.Context(), conf, []string{"input.txt"}, &signaturesValidateOptions{},
+	)
 	if err == nil {
 		t.Fatal("expected input extension failure")
 	}

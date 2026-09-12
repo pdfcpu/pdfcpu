@@ -18,12 +18,14 @@ limitations under the License.
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/internal/fileutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 )
@@ -40,6 +42,11 @@ type temporaryInput struct {
 	file   *os.File
 	path   string
 	remove func(string) error
+}
+
+type contextReader struct {
+	ctx context.Context
+	r   io.Reader
 }
 
 var (
@@ -60,6 +67,13 @@ func (in *temporaryInput) Seek(offset int64, whence int) (int64, error) {
 	return in.file.Seek(offset, whence)
 }
 
+func (r contextReader) Read(p []byte) (int, error) {
+	if err := r.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return r.r.Read(p)
+}
+
 func (in *temporaryInput) finalize(op string, opErr error) error {
 	closeErr := in.file.Close()
 	if closeErr != nil {
@@ -74,14 +88,21 @@ func (in *temporaryInput) finalize(op string, opErr error) error {
 	return errors.Join(opErr, closeErr, removeErr)
 }
 
-func readSeekerFromStdin(op string) (*temporaryInput, error) {
+func readSeekerFromStdin(ctx context.Context, op string) (*temporaryInput, error) {
+	return readSeekerFromReader(ctx, op, os.Stdin)
+}
+
+func readSeekerFromReader(ctx context.Context, op string, r io.Reader) (*temporaryInput, error) {
+	if err := contextutil.Check(ctx); err != nil {
+		return nil, err
+	}
 	f, err := createTemporaryInputFile("", "pdfcpu-stdin-*.pdf")
 	if err != nil {
 		return nil, fmt.Errorf("%s: create temporary input: %w", op, err)
 	}
 	in := &temporaryInput{file: f, path: f.Name(), remove: os.Remove}
 
-	n, copyErr := io.Copy(f, os.Stdin)
+	n, copyErr := io.Copy(f, contextReader{ctx: ctx, r: r})
 	if copyErr != nil {
 		return nil, in.finalize(op, fmt.Errorf("%s: read stdin: %w", op, copyErr))
 	}
@@ -94,9 +115,9 @@ func readSeekerFromStdin(op string) (*temporaryInput, error) {
 	return in, nil
 }
 
-func withStdinReadSeeker[T any](op string, fn func(io.ReadSeeker) (T, error)) (T, error) {
+func withStdinReadSeeker[T any](ctx context.Context, op string, fn func(io.ReadSeeker) (T, error)) (T, error) {
 	var zero T
-	in, err := readSeekerFromStdin(op)
+	in, err := readSeekerFromStdin(ctx, op)
 	if err != nil {
 		return zero, err
 	}
@@ -177,7 +198,10 @@ func createStreamOutput(fileName string) (*os.File, string, string, error) {
 	return f, f.Name(), fileName, nil
 }
 
-func streamInOutForOperation(inFile, outFile, op string) (io.ReadSeeker, io.Writer, func(error) error, error) {
+func streamInOutForOperation(ctx context.Context, inFile, outFile, op string) (io.ReadSeeker, io.Writer, func(error) error, error) {
+	if err := contextutil.Check(ctx); err != nil {
+		return nil, nil, nil, err
+	}
 	if inFile == "-" && outFile == "" {
 		outFile = "-"
 	}
@@ -186,7 +210,7 @@ func streamInOutForOperation(inFile, outFile, op string) (io.ReadSeeker, io.Writ
 	finalizer := &streamInOutFinalizer{}
 	if inFile != "" {
 		if inFile == "-" {
-			in, err := readSeekerFromStdin(op)
+			in, err := readSeekerFromStdin(ctx, op)
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -204,7 +228,9 @@ func streamInOutForOperation(inFile, outFile, op string) (io.ReadSeeker, io.Writ
 
 	if outFile == "-" {
 		log.SetCLILogger(nil)
-		return rs, os.Stdout, func(err error) error { return finalizer.finalize(op, err) }, nil
+		return rs, os.Stdout, func(err error) error {
+			return finalizer.finalize(op, errors.Join(err, ctx.Err()))
+		}, nil
 	}
 
 	f, tmpFile, replaceOut, err := createStreamOutput(outFile)
@@ -215,5 +241,7 @@ func streamInOutForOperation(inFile, outFile, op string) (io.ReadSeeker, io.Writ
 	finalizer.output = f
 	finalizer.outFile = tmpFile
 	finalizer.replaceOut = replaceOut
-	return rs, f, func(err error) error { return finalizer.finalize(op, err) }, nil
+	return rs, f, func(err error) error {
+		return finalizer.finalize(op, errors.Join(err, ctx.Err()))
+	}, nil
 }

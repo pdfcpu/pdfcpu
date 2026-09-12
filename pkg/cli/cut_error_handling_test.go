@@ -23,7 +23,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
-type cutCLIExec func(*Command) ([]string, error)
+type cutCLIExec = dispatchFunc
 
 func runCutCLIWithoutPanic(t *testing.T, run cutCLIExec, cmd *Command) (err error) {
 	t.Helper()
@@ -32,11 +32,11 @@ func runCutCLIWithoutPanic(t *testing.T, run cutCLIExec, cmd *Command) (err erro
 			t.Fatalf("unexpected panic: %v", recovered)
 		}
 	}()
-	_, err = run(cmd)
+	_, err = run(t.Context(), cmd)
 	return err
 }
 
-// TestCutCLIExecutorsRejectMissingFields verifies exported slice command boundary guards.
+// TestCutCLIExecutorsRejectMissingFields verifies slice command boundary guards.
 func TestCutCLIExecutorsRejectMissingFields(t *testing.T) {
 	inFile, empty, outDir := "in.pdf", "", "out"
 	tests := []struct {
@@ -56,9 +56,9 @@ func TestCutCLIExecutorsRejectMissingFields(t *testing.T) {
 		name string
 		run  cutCLIExec
 	}{
-		{name: "poster", run: Poster},
-		{name: "ndown", run: NDown},
-		{name: "cut", run: Cut},
+		{name: "poster", run: poster},
+		{name: "ndown", run: nDown},
+		{name: "cut", run: cut},
 	}
 
 	for _, operation := range operations {

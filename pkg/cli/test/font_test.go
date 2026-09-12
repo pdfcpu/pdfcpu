@@ -32,7 +32,7 @@ func TestInstallFontsCommand(t *testing.T) {
 	msg := "TestInstallFontsCommand"
 	userFontName := filepath.Join(fontDir, "Roboto-Regular.ttf")
 	cmd := cli.InstallFontsCommand([]string{userFontName}, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s install fonts: %v\n", msg, err)
 	}
 }
@@ -41,7 +41,7 @@ func TestInstallFontsCommand(t *testing.T) {
 func TestInstallTTCFontsCommandReportsMissingInput(t *testing.T) {
 	userFontName := filepath.Join(fontDir, "Songti.ttc")
 	cmd := cli.InstallFontsCommand([]string{userFontName}, conf)
-	_, err := cli.Dispatch(cmd)
+	_, err := cli.Dispatch(t.Context(), cmd)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -54,7 +54,7 @@ func TestInstallTTCFontsCommandReportsMissingInput(t *testing.T) {
 func TestListFontsCommand(t *testing.T) {
 	msg := "TestListFontsCommand"
 	cmd := cli.ListFontsCommand(conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s list fonts: %v\n", msg, err)
 	}
 }
@@ -63,7 +63,7 @@ func TestListFontsCommand(t *testing.T) {
 func TestCreateCheatSheetsFontsCommandReportsUnknownFont(t *testing.T) {
 	userFontName := filepath.Join(fontDir, "Songti.ttc")
 	cmd := cli.CreateCheatSheetsFontsCommand([]string{userFontName}, conf)
-	_, err := cli.Dispatch(cmd)
+	_, err := cli.Dispatch(t.Context(), cmd)
 	if !errors.Is(err, api.ErrUserFontNotFound) {
 		t.Fatalf("expected %v, got %v", api.ErrUserFontNotFound, err)
 	}

@@ -43,24 +43,36 @@ func TestDecodeNameHexInvalid(t *testing.T) {
 	}
 }
 
-// TestParseObjectContextRejectsRecursionDepth verifies object parsing respects recursion limits.
-func TestParseObjectContextRejectsRecursionDepth(t *testing.T) {
+// TestParseObjectRejectsRecursionDepth verifies object parsing respects recursion limits.
+func TestParseObjectRejectsRecursionDepth(t *testing.T) {
 	s := "[[[1]]]"
 
-	_, err := ParseObjectContext(t.Context(), &s, 0, 1)
+	_, err := ParseObject(t.Context(), &s, 0, 1)
 	if !errors.Is(err, ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
 }
 
-func TestParseObjectContextBoundsRelaxedFallback(t *testing.T) {
+// TestParseObjectBoundsRelaxedFallback verifies relaxed parsing remains bounded.
+func TestParseObjectBoundsRelaxedFallback(t *testing.T) {
 	s := strings.Repeat("<</Differences[24/breve/quotesingle0 obj\r", 34)
 	ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 	defer cancel()
 
-	_, err := ParseObjectContext(ctx, &s, 0)
+	_, err := ParseObject(ctx, &s, 0)
 	if !errors.Is(err, errArrayNotTerminated) {
 		t.Fatalf("got %v, want errArrayNotTerminated", err)
+	}
+}
+
+// TestParseRejectsMissingContext verifies context-aware parsers reject a nil context.
+func TestParseRejectsMissingContext(t *testing.T) {
+	s := "1"
+	if _, err := ParseObject(nil, &s, 0); !errors.Is(err, ErrMissingContext) {
+		t.Fatalf("parse object: got %v, want ErrMissingContext", err)
+	}
+	if _, _, err := DetectKeywords(nil, s); !errors.Is(err, ErrMissingContext) {
+		t.Fatalf("detect keywords: got %v, want ErrMissingContext", err)
 	}
 }
 
@@ -145,7 +157,7 @@ func TestPageTreeMutationRejectsRecursionDepth(t *testing.T) {
 	attrs := InheritedPageAttrs{}
 	pageCount := 0
 
-	_, err := xRefTable.insertBlankPagesDepth(ir, &attrs, &pageCount, nil, nil, false, maxDepth+1, NewPageTreeVisit())
+	_, err := xRefTable.insertBlankPagesDepth(t.Context(), ir, &attrs, &pageCount, nil, nil, false, maxDepth+1, NewPageTreeVisit())
 	if !errors.Is(err, ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
@@ -417,7 +429,7 @@ func TestDetectKeywords(t *testing.T) {
 
 	s := "1 0 obj\n<<\n /Lang (en-endobject-stream-UK%)  % comment \n>>\nendobj\n\n2 0 obj\n"
 	//    0....... ..1 .........2.........3.........4.........5..... ... .6
-	endInd, _, err := DetectKeywords(s)
+	endInd, _, err := DetectKeywords(t.Context(), s)
 	if err != nil {
 		t.Errorf("%s failed: %v", msg, err)
 	}
@@ -427,7 +439,7 @@ func TestDetectKeywords(t *testing.T) {
 
 	// negative test
 	s = "1 0 obj\n<<\n /Lang (en-endobject-stream-UK%)  % endobject"
-	endInd, _, err = DetectKeywords(s)
+	endInd, _, err = DetectKeywords(t.Context(), s)
 	if err != nil {
 		t.Errorf("%s failed: %v", msg, err)
 	}

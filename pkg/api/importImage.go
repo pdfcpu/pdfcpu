@@ -18,12 +18,14 @@ package api
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"math"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -145,9 +147,12 @@ func ValidateImportImagesOutput(imgFiles []string, outFile string) error {
 	return validateImportImagesOutput(imgFiles, outFile, true)
 }
 
-func importImagesContext(rs io.ReadSeeker, imp *pdfcpu.Import, conf *model.Configuration) (*model.Context, error) {
+func importImagesContext(c context.Context, rs io.ReadSeeker, imp *pdfcpu.Import, conf *model.Configuration) (*model.Context, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if rs != nil {
-		ctx, err := ReadAndValidate(rs, conf)
+		ctx, err := ReadAndValidate(c, rs, conf)
 		if err != nil {
 			return nil, fmt.Errorf("import images: prepare PDF context: %w", err)
 		}
@@ -157,7 +162,7 @@ func importImagesContext(rs io.ReadSeeker, imp *pdfcpu.Import, conf *model.Confi
 	if err != nil {
 		return nil, fmt.Errorf("import images: create PDF context: %w", err)
 	}
-	return ctx, nil
+	return ctx, contextutil.Check(c)
 }
 
 func importImagesPageTree(ctx *model.Context) (*types.IndirectRef, types.Dict, error) {
@@ -178,13 +183,11 @@ func importImagesPageTree(ctx *model.Context) (*types.IndirectRef, types.Dict, e
 	return pagesIndRef, pagesDict, nil
 }
 
-func appendImportedImagePages(
-	ctx *model.Context,
-	indRefs []*types.IndirectRef,
-	imageIndex int,
-	pagesDict types.Dict,
-) error {
+func appendImportedImagePages(c context.Context, ctx *model.Context, indRefs []*types.IndirectRef, imageIndex int, pagesDict types.Dict) error {
 	for pageIndex, indRef := range indRefs {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		if indRef == nil {
 			return fmt.Errorf("import images: image %d page %d: missing page reference", imageIndex, pageIndex+1)
 		}
@@ -199,30 +202,30 @@ func appendImportedImagePages(
 	return nil
 }
 
-func appendImportedImages(
-	ctx *model.Context,
-	imgs []io.Reader,
-	pagesIndRef *types.IndirectRef,
-	pagesDict types.Dict,
-	imp *pdfcpu.Import,
-) error {
+func appendImportedImages(c context.Context, ctx *model.Context, imgs []io.Reader, pagesIndRef *types.IndirectRef, pagesDict types.Dict, imp *pdfcpu.Import) error {
 	for imageIndex, r := range imgs {
-		indRefs, err := pdfcpu.NewPagesForImage(ctx.XRefTable, r, pagesIndRef, imp)
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		indRefs, err := pdfcpu.NewPagesForImage(c, ctx.XRefTable, r, pagesIndRef, imp)
 		if err != nil {
 			return fmt.Errorf("import images: image %d: create pages: %w", imageIndex+1, err)
 		}
-		if err := appendImportedImagePages(ctx, indRefs, imageIndex+1, pagesDict); err != nil {
+		if err := appendImportedImagePages(c, ctx, indRefs, imageIndex+1, pagesDict); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// ImportImages appends PDF pages containing images to rs and writes the result to w.
+// ImportImages appends PDF pages containing images to rs, writes the result to w and supports cancellation.
 // If rs == nil a new PDF file will be written to w.
-func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.Import, conf *model.Configuration) (err error) {
+func ImportImages(c context.Context, rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.Import, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if w == nil {
 		return ErrMissingPDFWriter
 	}
@@ -237,7 +240,7 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 
 	conf = operationConfiguration(conf, model.IMPORTIMAGES)
 
-	ctx, err := importImagesContext(rs, imp, conf)
+	ctx, err := importImagesContext(c, rs, imp, conf)
 	if err != nil {
 		return err
 	}
@@ -245,10 +248,10 @@ func ImportImages(rs io.ReadSeeker, w io.Writer, imgs []io.Reader, imp *pdfcpu.I
 	if err != nil {
 		return err
 	}
-	if err := appendImportedImages(ctx, imgs, pagesIndRef, pagesDict, imp); err != nil {
+	if err := appendImportedImages(c, ctx, imgs, pagesIndRef, pagesDict, imp); err != nil {
 		return err
 	}
-	if err := Write(ctx, w, conf); err != nil {
+	if err := Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("import images: write output: %w", err)
 	}
 	return nil
@@ -260,10 +263,13 @@ type importImageFileCloser struct {
 	fileName   string
 }
 
-func prepImgFiles(imgFiles []string) ([]importImageFileCloser, []io.Reader, error) {
+func prepImgFiles(c context.Context, imgFiles []string) ([]importImageFileCloser, []io.Reader, error) {
 	rc := make([]importImageFileCloser, 0, len(imgFiles))
 	rr := make([]io.Reader, 0, len(imgFiles))
 	for i, fn := range imgFiles {
+		if err := contextutil.Check(c); err != nil {
+			return nil, nil, errors.Join(err, closeImportImageInputs(rc))
+		}
 		f, err := os.Open(fn)
 		if err != nil {
 			return nil, nil, errors.Join(
@@ -308,8 +314,12 @@ func closeImportImageInputs(rc []importImageFileCloser) error {
 	return errors.Join(errs...)
 }
 
-// ImportImagesFile appends PDF pages containing images to outFile which will be created if necessary.
-func ImportImagesFile(imgFiles []string, outFile string, imp *pdfcpu.Import, conf *model.Configuration) (err error) {
+// ImportImagesFile appends PDF pages containing images to outFile and supports cancellation.
+// The output file is created if necessary.
+func ImportImagesFile(c context.Context, imgFiles []string, outFile string, imp *pdfcpu.Import, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := validateImportImageFiles(imgFiles); err != nil {
 		return err
 	}
@@ -331,7 +341,7 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdfcpu.Import, con
 		return err
 	}
 
-	rc, rr, err := prepImgFiles(imgFiles)
+	rc, rr, err := prepImgFiles(c, imgFiles)
 	if err != nil {
 		return errors.Join(err, closeFile(f1, "import images: close input"))
 	}
@@ -360,7 +370,10 @@ func ImportImagesFile(imgFiles []string, outFile string, imp *pdfcpu.Import, con
 		err = staged.commit()
 	}()
 
-	if err = ImportImages(rs, f2, rr, imp, conf); err != nil {
+	if err = ImportImages(c, rs, f2, rr, imp, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 

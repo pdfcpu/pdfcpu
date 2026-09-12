@@ -53,7 +53,7 @@ func TestExtractPagesStdoutReadErrorHasPhaseContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := ExtractPages(ExtractPagesCommand(inFile, "-", []string{"1"}, nil))
+	_, err := extractPages(t.Context(), ExtractPagesCommand(inFile, "-", []string{"1"}, nil))
 	if err == nil || !strings.Contains(err.Error(), "extract pages: read") {
 		t.Fatalf("expected read phase context, got %v", err)
 	}
@@ -76,13 +76,13 @@ func TestExtractCommandsContextualizeStdinFailures(t *testing.T) {
 		name string
 		op   string
 		cmd  *Command
-		fn   func(*Command) ([]string, error)
+		fn   dispatchFunc
 	}{
-		{name: "images", op: "extract images", cmd: ExtractImagesCommand("-", t.TempDir(), nil, nil), fn: ExtractImages},
-		{name: "fonts", op: "extract fonts", cmd: ExtractFontsCommand("-", t.TempDir(), nil, nil), fn: ExtractFonts},
-		{name: "pages", op: "extract pages", cmd: ExtractPagesCommand("-", t.TempDir(), nil, nil), fn: ExtractPages},
-		{name: "content", op: "extract content", cmd: ExtractContentCommand("-", t.TempDir(), nil, nil), fn: ExtractContent},
-		{name: "metadata", op: "extract metadata", cmd: ExtractMetadataCommand("-", t.TempDir(), nil), fn: ExtractMetadata},
+		{name: "images", op: "extract images", cmd: ExtractImagesCommand("-", t.TempDir(), nil, nil), fn: extractImages},
+		{name: "fonts", op: "extract fonts", cmd: ExtractFontsCommand("-", t.TempDir(), nil, nil), fn: extractFonts},
+		{name: "pages", op: "extract pages", cmd: ExtractPagesCommand("-", t.TempDir(), nil, nil), fn: extractPages},
+		{name: "content", op: "extract content", cmd: ExtractContentCommand("-", t.TempDir(), nil, nil), fn: extractContent},
+		{name: "metadata", op: "extract metadata", cmd: ExtractMetadataCommand("-", t.TempDir(), nil), fn: extractMetadata},
 	}
 
 	for _, tt := range tests {
@@ -90,7 +90,7 @@ func TestExtractCommandsContextualizeStdinFailures(t *testing.T) {
 			if _, err := f.Seek(0, io.SeekStart); err != nil {
 				t.Fatal(err)
 			}
-			_, err := tt.fn(tt.cmd)
+			_, err := tt.fn(t.Context(), tt.cmd)
 			want := tt.op + ": read stdin"
 			if err == nil || !strings.Contains(err.Error(), want) {
 				t.Fatalf("expected %q, got %v", want, err)
@@ -101,7 +101,7 @@ func TestExtractCommandsContextualizeStdinFailures(t *testing.T) {
 
 // TestExtractPagesStdoutSelectionErrorHasPhaseContext verifies the corresponding behavior.
 func TestExtractPagesStdoutSelectionErrorHasPhaseContext(t *testing.T) {
-	_, err := ExtractPages(ExtractPagesCommand(extractTestPDF(t), "-", []string{"invalid"}, nil))
+	_, err := extractPages(t.Context(), ExtractPagesCommand(extractTestPDF(t), "-", []string{"invalid"}, nil))
 	if err == nil || !strings.Contains(err.Error(), "extract pages: selection") {
 		t.Fatalf("expected selection phase context, got %v", err)
 	}
@@ -109,7 +109,7 @@ func TestExtractPagesStdoutSelectionErrorHasPhaseContext(t *testing.T) {
 
 // TestExtractPagesStdoutExtractionErrorHasPhaseContext verifies the corresponding behavior.
 func TestExtractPagesStdoutExtractionErrorHasPhaseContext(t *testing.T) {
-	err := writeExtractedPageToStdout(nil, 1, io.Discard)
+	err := writeExtractedPageToStdout(t.Context(), nil, 1, io.Discard)
 	if !errors.Is(err, pdfcpu.ErrMissingPDFContext) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrMissingPDFContext, err)
 	}
@@ -128,7 +128,7 @@ func TestExtractPagesStdoutCopyErrorHasPhaseContext(t *testing.T) {
 
 	wantErr := errors.New("copy failed")
 	cmd := ExtractPagesCommand("unused.pdf", "-", []string{"1"}, nil)
-	err = extractSelectedPageToStdout(f, extractErrorWriter{err: wantErr}, cmd)
+	err = extractSelectedPageToStdout(t.Context(), f, extractErrorWriter{err: wantErr}, cmd)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -150,7 +150,7 @@ func TestExtractPagesStdoutSuccessIsPurePDF(t *testing.T) {
 		_ = out.Close()
 	})
 
-	_, extractErr := ExtractPages(ExtractPagesCommand(extractTestPDF(t), "-", []string{"1"}, nil))
+	_, extractErr := extractPages(t.Context(), ExtractPagesCommand(extractTestPDF(t), "-", []string{"1"}, nil))
 	os.Stdout = stdout
 	if extractErr != nil {
 		t.Fatal(extractErr)
@@ -169,7 +169,7 @@ func TestExtractPagesStdoutSuccessIsPurePDF(t *testing.T) {
 	if !bytes.HasSuffix(pdf, []byte("%%EOF")) {
 		t.Fatalf("stdout contains data after the PDF trailer: %q", pdf[len(pdf)-min(len(pdf), 80):])
 	}
-	if err := api.Validate(bytes.NewReader(bb), nil); err != nil {
+	if err := api.Validate(t.Context(), bytes.NewReader(bb), nil, nil); err != nil {
 		t.Fatalf("stdout is not a valid PDF: %v", err)
 	}
 }
@@ -198,7 +198,7 @@ func TestExtractPagesStdoutBrokenPipe(t *testing.T) {
 		os.Stdout = stdout
 		_ = pipeWriter.Close()
 	})
-	_, extractErr := ExtractPages(ExtractPagesCommand(extractTestPDF(t), "-", []string{"1"}, nil))
+	_, extractErr := extractPages(t.Context(), ExtractPagesCommand(extractTestPDF(t), "-", []string{"1"}, nil))
 	os.Stdout = stdout
 
 	if !errors.Is(extractErr, pipeErr) {
@@ -211,7 +211,7 @@ func TestExtractPagesStdoutBrokenPipe(t *testing.T) {
 
 // TestExtractPagesStdoutCleanupPreservesErrors verifies the corresponding behavior.
 func TestExtractPagesStdoutCleanupPreservesErrors(t *testing.T) {
-	rs, _, finalize, err := streamInOutForOperation(extractTestPDF(t), "-", extractPagesOperation)
+	rs, _, finalize, err := streamInOutForOperation(t.Context(), extractTestPDF(t), "-", extractPagesOperation)
 	if err != nil {
 		t.Fatal(err)
 	}

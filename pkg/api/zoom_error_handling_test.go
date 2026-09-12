@@ -47,11 +47,11 @@ func TestZoomArgumentValidation(t *testing.T) {
 		err  error
 		want error
 	}{
-		{name: "reader", err: Zoom(nil, io.Discard, nil, zoom, nil), want: ErrMissingPDFReadSeeker},
-		{name: "writer", err: Zoom(bytes.NewReader(nil), nil, nil, zoom, nil), want: ErrMissingPDFWriter},
-		{name: "configuration", err: Zoom(bytes.NewReader(nil), io.Discard, nil, nil, nil), want: ErrMissingZoomConfiguration},
-		{name: "input", err: ZoomFile("", "", nil, zoom, nil), want: ErrMissingPDFInput},
-		{name: "file configuration", err: ZoomFile("missing.pdf", "", nil, nil, nil), want: ErrMissingZoomConfiguration},
+		{name: "reader", err: Zoom(t.Context(), nil, io.Discard, nil, zoom, nil), want: ErrMissingPDFReadSeeker},
+		{name: "writer", err: Zoom(t.Context(), bytes.NewReader(nil), nil, nil, zoom, nil), want: ErrMissingPDFWriter},
+		{name: "configuration", err: Zoom(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nil), want: ErrMissingZoomConfiguration},
+		{name: "input", err: ZoomFile(t.Context(), "", "", nil, zoom, nil), want: ErrMissingPDFInput},
+		{name: "file configuration", err: ZoomFile(t.Context(), "missing.pdf", "", nil, nil, nil), want: ErrMissingZoomConfiguration},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -81,7 +81,7 @@ func TestZoomRejectsInvalidConfigurationsBeforeReading(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := Zoom(bytes.NewReader(nil), io.Discard, nil, tt.zoom, nil)
+			err := Zoom(t.Context(), bytes.NewReader(nil), io.Discard, nil, tt.zoom, nil)
 			if !errors.Is(err, ErrInvalidZoomConfiguration) {
 				t.Fatalf("expected %v, got %v", ErrInvalidZoomConfiguration, err)
 			}
@@ -97,7 +97,7 @@ func TestZoomRejectsInvalidConfigurationsBeforeReading(t *testing.T) {
 
 // TestZoomFileRejectsInvalidConfigurationBeforeOpening verifies file API validation order.
 func TestZoomFileRejectsInvalidConfigurationBeforeOpening(t *testing.T) {
-	err := ZoomFile("missing.pdf", "", nil, &model.Zoom{}, nil)
+	err := ZoomFile(t.Context(), "missing.pdf", "", nil, &model.Zoom{}, nil)
 	if !errors.Is(err, ErrInvalidZoomConfiguration) {
 		t.Fatalf("expected %v, got %v", ErrInvalidZoomConfiguration, err)
 	}
@@ -110,7 +110,7 @@ func TestZoomFileRejectsInvalidConfigurationBeforeOpening(t *testing.T) {
 func TestZoomConfigurationValidationDoesNotMutate(t *testing.T) {
 	zoom := &model.Zoom{HMargin: -10}
 	want := *zoom
-	err := Zoom(bytes.NewReader(nil), io.Discard, nil, zoom, nil)
+	err := Zoom(t.Context(), bytes.NewReader(nil), io.Discard, nil, zoom, nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -125,7 +125,7 @@ func TestZoomAPIOwnsMissingFactorOrMarginValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parser should accept parameter-complete configuration: %v", err)
 	}
-	err = Zoom(bytes.NewReader(nil), io.Discard, nil, zoom, nil)
+	err = Zoom(t.Context(), bytes.NewReader(nil), io.Discard, nil, zoom, nil)
 	if !errors.Is(err, ErrInvalidZoomConfiguration) {
 		t.Fatalf("expected %v, got %v", ErrInvalidZoomConfiguration, err)
 	}
@@ -144,10 +144,10 @@ func TestZoomConfigurationErrorsIncludePhaseContext(t *testing.T) {
 		run  func() error
 	}{
 		{name: "Zoom", run: func() error {
-			return Zoom(bytes.NewReader(nil), io.Discard, nil, nil, nil)
+			return Zoom(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nil)
 		}},
 		{name: "ZoomFile", run: func() error {
-			return ZoomFile("missing.pdf", "", nil, nil, nil)
+			return ZoomFile(t.Context(), "missing.pdf", "", nil, nil, nil)
 		}},
 	}
 	for _, tt := range tests {
@@ -165,7 +165,7 @@ func TestZoomConfigurationErrorsIncludePhaseContext(t *testing.T) {
 
 // TestZoomReadErrorIncludesPhaseContext verifies PDF preparation context.
 func TestZoomReadErrorIncludesPhaseContext(t *testing.T) {
-	err := Zoom(bytes.NewReader(nil), io.Discard, nil, zoomTestConfiguration(), nil)
+	err := Zoom(t.Context(), bytes.NewReader(nil), io.Discard, nil, zoomTestConfiguration(), nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -179,7 +179,7 @@ func TestZoomReadErrorIncludesPhaseContext(t *testing.T) {
 
 // TestZoomPageSelectionErrorIncludesPhaseContext verifies page-selection context.
 func TestZoomPageSelectionErrorIncludesPhaseContext(t *testing.T) {
-	err := Zoom(openAPITestPDF(t, zoomTestInputFile()), io.Discard, []string{"foo"}, zoomTestConfiguration(), nil)
+	err := Zoom(t.Context(), openAPITestPDF(t, zoomTestInputFile()), io.Discard, []string{"foo"}, zoomTestConfiguration(), nil)
 	if err == nil || !strings.Contains(err.Error(), "zoom: parse page selection") {
 		t.Fatalf("expected page-selection context, got %v", err)
 	}
@@ -187,7 +187,7 @@ func TestZoomPageSelectionErrorIncludesPhaseContext(t *testing.T) {
 
 // TestZoomApplyErrorIncludesPhaseContext verifies operation and page context propagation.
 func TestZoomApplyErrorIncludesPhaseContext(t *testing.T) {
-	err := Zoom(openAPITestPDF(t, zoomTestInputFile()), io.Discard, []string{"1"}, &model.Zoom{HMargin: 10000}, nil)
+	err := Zoom(t.Context(), openAPITestPDF(t, zoomTestInputFile()), io.Discard, []string{"1"}, &model.Zoom{HMargin: 10000}, nil)
 	if err == nil || !strings.Contains(err.Error(), "zoom: apply pages: page 1: derive factor and margins") {
 		t.Fatalf("expected operation context, got %v", err)
 	}
@@ -196,7 +196,7 @@ func TestZoomApplyErrorIncludesPhaseContext(t *testing.T) {
 // TestZoomWriteErrorIncludesPhaseContext verifies output-writing context and cause preservation.
 func TestZoomWriteErrorIncludesPhaseContext(t *testing.T) {
 	wantErr := errors.New("zoom write failed")
-	err := Zoom(openAPITestPDF(t, zoomTestInputFile()), failingWriter{err: wantErr}, []string{"1"}, zoomTestConfiguration(), nil)
+	err := Zoom(t.Context(), openAPITestPDF(t, zoomTestInputFile()), failingWriter{err: wantErr}, []string{"1"}, zoomTestConfiguration(), nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -208,13 +208,13 @@ func TestZoomWriteErrorIncludesPhaseContext(t *testing.T) {
 // TestZoomFileIOErrorContext verifies file opening and creation context.
 func TestZoomFileIOErrorContext(t *testing.T) {
 	missingInput := filepath.Join(t.TempDir(), "missing.pdf")
-	err := ZoomFile(missingInput, "", nil, zoomTestConfiguration(), nil)
+	err := ZoomFile(t.Context(), missingInput, "", nil, zoomTestConfiguration(), nil)
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "zoom: open input "+missingInput) {
 		t.Fatalf("expected input context, got %v", err)
 	}
 
 	missingOutput := filepath.Join(t.TempDir(), "missing", "out.pdf")
-	err = ZoomFile(zoomTestInputFile(), missingOutput, nil, zoomTestConfiguration(), nil)
+	err = ZoomFile(t.Context(), zoomTestInputFile(), missingOutput, nil, zoomTestConfiguration(), nil)
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "zoom: create output") {
 		t.Fatalf("expected output context, got %v", err)
 	}
@@ -242,7 +242,7 @@ func TestZoomFileFailurePreservesExistingOutput(t *testing.T) {
 	if err := os.WriteFile(outFile, want, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	err := ZoomFile(zoomTestInputFile(), outFile, []string{"foo"}, zoomTestConfiguration(), nil)
+	err := ZoomFile(t.Context(), zoomTestInputFile(), outFile, []string{"foo"}, zoomTestConfiguration(), nil)
 	if err == nil || !strings.Contains(err.Error(), "zoom: parse page selection") {
 		t.Fatalf("expected page-selection error, got %v", err)
 	}
@@ -261,7 +261,7 @@ func TestZoomFileSuccessReplacesExistingOutput(t *testing.T) {
 	if err := os.WriteFile(outFile, []byte("existing output"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := ZoomFile(zoomTestInputFile(), outFile, []string{"1"}, zoomTestConfiguration(), nil); err != nil {
+	if err := ZoomFile(t.Context(), zoomTestInputFile(), outFile, []string{"1"}, zoomTestConfiguration(), nil); err != nil {
 		t.Fatal(err)
 	}
 	b, err := os.ReadFile(outFile)
@@ -278,7 +278,7 @@ func TestZoomDoesNotMutateConfiguration(t *testing.T) {
 	zoom := &model.Zoom{HMargin: -10}
 	want := *zoom
 	var out bytes.Buffer
-	if err := Zoom(openAPITestPDF(t, zoomTestInputFile()), &out, []string{"1"}, zoom, nil); err != nil {
+	if err := Zoom(t.Context(), openAPITestPDF(t, zoomTestInputFile()), &out, []string{"1"}, zoom, nil); err != nil {
 		t.Fatal(err)
 	}
 	if *zoom != want {

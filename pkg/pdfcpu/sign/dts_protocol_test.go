@@ -468,6 +468,7 @@ func TestDTSCertificatePathDoesNotUseClaimedGenTime(t *testing.T) {
 		XRefTable:     &model.XRefTable{},
 	}
 	pathValidated, err := validateDTSCert(
+		t.Context(),
 		cert,
 		[]*x509.Certificate{cert},
 		roots,

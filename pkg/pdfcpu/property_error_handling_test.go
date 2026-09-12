@@ -36,7 +36,7 @@ func propertyOperationTestContext(t *testing.T) *model.Context {
 	}
 	defer f.Close()
 
-	ctx, err := Read(f, model.NewDefaultConfiguration())
+	ctx, err := Read(t.Context(), f, model.NewDefaultConfiguration())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestPropertiesAddReportsInfoDictionaryDereference(t *testing.T) {
 	ctx.HeaderVersion = &version
 	ctx.RootVersion = nil
 
-	err = PropertiesAdd(ctx, map[string]string{"name": "value"})
+	err = PropertiesAdd(t.Context(), ctx, map[string]string{"name": "value"})
 	if err == nil || !strings.Contains(err.Error(), "Info dictionary: dereference") {
 		t.Fatalf("expected Info dictionary dereference context, got %v", err)
 	}
@@ -69,7 +69,7 @@ func TestPropertiesAddReportsMissingInfoDictionary(t *testing.T) {
 	ctx.RootVersion = nil
 	ctx.Info = nil
 
-	err := PropertiesAdd(ctx, map[string]string{"name": "value"})
+	err := PropertiesAdd(t.Context(), ctx, map[string]string{"name": "value"})
 	if err == nil || !strings.Contains(err.Error(), "Info dictionary: missing") {
 		t.Fatalf("expected missing Info dictionary context, got %v", err)
 	}
@@ -85,7 +85,7 @@ func TestPreparePropertiesInfoReportsDistinctPhases(t *testing.T) {
 		}
 		ctx.Info = indRef
 
-		err = preparePropertiesInfo(ctx)
+		err = preparePropertiesInfo(t.Context(), ctx)
 		if err == nil || !strings.Contains(err.Error(), "Info dictionary: ensure") {
 			t.Fatalf("expected Info dictionary ensure context, got %v", err)
 		}
@@ -101,7 +101,7 @@ func TestPreparePropertiesInfoReportsDistinctPhases(t *testing.T) {
 		ctx.RootVersion = nil
 		ctx.Info = nil
 
-		err := preparePropertiesInfo(ctx)
+		err := preparePropertiesInfo(t.Context(), ctx)
 		if err == nil || err.Error() != "Info dictionary: missing" {
 			t.Fatalf("expected missing Info dictionary context, got %v", err)
 		}
@@ -114,7 +114,7 @@ func TestPreparePropertiesInfoReportsDistinctPhases(t *testing.T) {
 		ctx := propertyOperationTestContext(t)
 		ctx.ID = types.Array{types.HexLiteral("one")}
 
-		err := preparePropertiesInfo(ctx)
+		err := preparePropertiesInfo(t.Context(), ctx)
 		if err == nil || !strings.Contains(err.Error(), "file ID: ensure") {
 			t.Fatalf("expected file ID ensure context, got %v", err)
 		}
@@ -128,11 +128,11 @@ func TestPreparePropertiesInfoReportsDistinctPhases(t *testing.T) {
 // TestPropertiesRemoveDeletesEveryMatch verifies named removal is not limited to the first match.
 func TestPropertiesRemoveDeletesEveryMatch(t *testing.T) {
 	ctx := propertyOperationTestContext(t)
-	if err := PropertiesAdd(ctx, map[string]string{"alpha": "one", "beta": "two"}); err != nil {
+	if err := PropertiesAdd(t.Context(), ctx, map[string]string{"alpha": "one", "beta": "two"}); err != nil {
 		t.Fatal(err)
 	}
 
-	removed, err := PropertiesRemove(ctx, []string{"alpha", "beta"})
+	removed, err := PropertiesRemove(t.Context(), ctx, []string{"alpha", "beta"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestPropertiesRemoveReportsInfoDictionaryDereference(t *testing.T) {
 	}
 	ctx.Info = indRef
 
-	_, err = PropertiesRemove(ctx, []string{"name"})
+	_, err = PropertiesRemove(t.Context(), ctx, []string{"name"})
 	if err == nil || !strings.Contains(err.Error(), "Info dictionary: dereference") {
 		t.Fatalf("expected Info dictionary dereference context, got %v", err)
 	}
@@ -173,7 +173,7 @@ func TestPropertiesRemoveAllReportsCatalogContext(t *testing.T) {
 	ctx.Root = indRef
 	ctx.RootDict = nil
 
-	_, err = PropertiesRemove(ctx, nil)
+	_, err = PropertiesRemove(t.Context(), ctx, nil)
 	if err == nil || !strings.Contains(err.Error(), "catalog: access") {
 		t.Fatalf("expected catalog access context, got %v", err)
 	}

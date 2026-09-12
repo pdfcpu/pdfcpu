@@ -68,7 +68,7 @@ func inspectionTreeSnapshot(t *testing.T, root string) map[string]inspectionTree
 
 func initializeInspectionRoot(t *testing.T, root string) string {
 	t.Helper()
-	conf, err := LoadConfigurationWithOptions(ConfigurationOptions{Root: root})
+	conf, err := LoadConfiguration(ConfigurationOptions{Root: root})
 	if err != nil {
 		t.Fatalf("initialize configuration: %v", err)
 	}

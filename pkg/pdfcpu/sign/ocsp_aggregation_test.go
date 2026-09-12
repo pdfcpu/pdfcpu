@@ -294,6 +294,7 @@ func processCurrentOCSPFixture(
 	}
 	fixture.certificate.OCSPServer = urls
 	return processCurrentOCSPResponses(
+		t.Context(),
 		fixture.certificate,
 		fixture.issuer,
 		testCurrentCRLClient(responseByURL),

@@ -19,7 +19,7 @@ package model
 import "testing"
 
 func doTestParseArrayOK(parseString string, t *testing.T) {
-	_, err := ParseObject(&parseString)
+	_, err := ParseObject(t.Context(), &parseString, 0)
 	if err != nil {
 		t.Errorf("parseArray failed: <%v> <%s>\n", err, parseString)
 		return
@@ -28,7 +28,7 @@ func doTestParseArrayOK(parseString string, t *testing.T) {
 
 func doTestParseArrayFail(parseString string, t *testing.T) {
 	s := parseString
-	_, err := ParseObject(&parseString)
+	_, err := ParseObject(t.Context(), &parseString, 0)
 	if err == nil {
 		t.Errorf("parseArray should have returned an error for %s\n", s)
 	}

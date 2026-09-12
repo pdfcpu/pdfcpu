@@ -54,7 +54,7 @@ func readPropertyTestFile(t *testing.T, fileName string) map[string]string {
 	}
 	defer f.Close()
 
-	properties, err := Properties(f, nil)
+	properties, err := Properties(t.Context(), f, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,15 +85,15 @@ func TestPropertyAPIArgumentErrors(t *testing.T) {
 		want error
 	}{
 		{name: "list reader", err: func() error {
-			_, err := Properties(nil, nil)
+			_, err := Properties(t.Context(), nil, nil)
 			return err
 		}(), want: ErrMissingPDFReadSeeker},
-		{name: "add reader", err: AddProperties(nil, io.Discard, nil, nil), want: ErrMissingPDFReadSeeker},
-		{name: "add writer", err: AddProperties(bytes.NewReader(nil), nil, nil, nil), want: ErrMissingPDFWriter},
-		{name: "remove reader", err: RemoveProperties(nil, io.Discard, nil, nil), want: ErrMissingPDFReadSeeker},
-		{name: "remove writer", err: RemoveProperties(bytes.NewReader(nil), nil, nil, nil), want: ErrMissingPDFWriter},
-		{name: "add file input", err: AddPropertiesFile("", "", nil, nil), want: ErrMissingPDFInput},
-		{name: "remove file input", err: RemovePropertiesFile("", "", nil, nil), want: ErrMissingPDFInput},
+		{name: "add reader", err: AddProperties(t.Context(), nil, io.Discard, nil, nil), want: ErrMissingPDFReadSeeker},
+		{name: "add writer", err: AddProperties(t.Context(), bytes.NewReader(nil), nil, nil, nil), want: ErrMissingPDFWriter},
+		{name: "remove reader", err: RemoveProperties(t.Context(), nil, io.Discard, nil, nil), want: ErrMissingPDFReadSeeker},
+		{name: "remove writer", err: RemoveProperties(t.Context(), bytes.NewReader(nil), nil, nil, nil), want: ErrMissingPDFWriter},
+		{name: "add file input", err: AddPropertiesFile(t.Context(), "", "", nil, nil), want: ErrMissingPDFInput},
+		{name: "remove file input", err: RemovePropertiesFile(t.Context(), "", "", nil, nil), want: ErrMissingPDFInput},
 	}
 
 	for _, tt := range tests {
@@ -108,6 +108,7 @@ func TestPropertyAPIArgumentErrors(t *testing.T) {
 // TestRemovePropertiesNoMatchPreservesSentinel verifies callers can detect a no-op removal.
 func TestRemovePropertiesNoMatchPreservesSentinel(t *testing.T) {
 	err := RemoveProperties(
+		t.Context(),
 		openAPITestPDF(t, propertyTestInputFile()),
 		io.Discard,
 		[]string{"pdfcpu-property-that-does-not-exist"},
@@ -128,10 +129,10 @@ func TestPropertyAPIValidatesPropertiesBeforeReading(t *testing.T) {
 		err  error
 		want string
 	}{
-		{name: "add stream", err: AddProperties(bytes.NewReader(nil), io.Discard, map[string]string{"": "value"}, nil), want: "add properties: validate properties"},
-		{name: "remove stream", err: RemoveProperties(bytes.NewReader(nil), io.Discard, []string{" "}, nil), want: "remove properties: validate properties"},
-		{name: "add file", err: AddPropertiesFile(filepath.Join(t.TempDir(), "missing.pdf"), "", map[string]string{"name": ""}, nil), want: "add properties: validate properties"},
-		{name: "remove file", err: RemovePropertiesFile(filepath.Join(t.TempDir(), "missing.pdf"), "", []string{" "}, nil), want: "remove properties: validate properties"},
+		{name: "add stream", err: AddProperties(t.Context(), bytes.NewReader(nil), io.Discard, map[string]string{"": "value"}, nil), want: "add properties: validate properties"},
+		{name: "remove stream", err: RemoveProperties(t.Context(), bytes.NewReader(nil), io.Discard, []string{" "}, nil), want: "remove properties: validate properties"},
+		{name: "add file", err: AddPropertiesFile(t.Context(), filepath.Join(t.TempDir(), "missing.pdf"), "", map[string]string{"name": ""}, nil), want: "add properties: validate properties"},
+		{name: "remove file", err: RemovePropertiesFile(t.Context(), filepath.Join(t.TempDir(), "missing.pdf"), "", []string{" "}, nil), want: "remove properties: validate properties"},
 	}
 
 	for _, tt := range tests {
@@ -155,16 +156,16 @@ func TestPropertyAPIRejectsProtectedNamesBeforeIO(t *testing.T) {
 				run  func(*propertyIOTracker, string) error
 			}{
 				{name: "add stream", run: func(rs *propertyIOTracker, _ string) error {
-					return AddProperties(rs, io.Discard, map[string]string{property: "value"}, nil)
+					return AddProperties(t.Context(), rs, io.Discard, map[string]string{property: "value"}, nil)
 				}},
 				{name: "remove stream", run: func(rs *propertyIOTracker, _ string) error {
-					return RemoveProperties(rs, io.Discard, []string{property}, nil)
+					return RemoveProperties(t.Context(), rs, io.Discard, []string{property}, nil)
 				}},
 				{name: "add file", run: func(_ *propertyIOTracker, missing string) error {
-					return AddPropertiesFile(missing, "", map[string]string{property: "value"}, nil)
+					return AddPropertiesFile(t.Context(), missing, "", map[string]string{property: "value"}, nil)
 				}},
 				{name: "remove file", run: func(_ *propertyIOTracker, missing string) error {
-					return RemovePropertiesFile(missing, "", []string{property}, nil)
+					return RemovePropertiesFile(t.Context(), missing, "", []string{property}, nil)
 				}},
 			}
 
@@ -196,11 +197,11 @@ func TestPropertyAPIPrepareContextErrors(t *testing.T) {
 		want string
 	}{
 		{name: "list", err: func() error {
-			_, err := Properties(bytes.NewReader(nil), nil)
+			_, err := Properties(t.Context(), bytes.NewReader(nil), nil)
 			return err
 		}(), want: "list properties: prepare PDF context"},
-		{name: "add", err: AddProperties(bytes.NewReader(nil), io.Discard, nil, nil), want: "add properties: prepare PDF context"},
-		{name: "remove", err: RemoveProperties(bytes.NewReader(nil), io.Discard, nil, nil), want: "remove properties: prepare PDF context"},
+		{name: "add", err: AddProperties(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil), want: "add properties: prepare PDF context"},
+		{name: "remove", err: RemoveProperties(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil), want: "remove properties: prepare PDF context"},
 	}
 
 	for _, tt := range tests {
@@ -216,6 +217,7 @@ func TestPropertyAPIPrepareContextErrors(t *testing.T) {
 func TestAddPropertiesWriteErrorPreservesCause(t *testing.T) {
 	want := errors.New("property writer failed")
 	err := AddProperties(
+		t.Context(),
 		openAPITestPDF(t, propertyTestInputFile()),
 		failingWriter{err: want},
 		map[string]string{"name": "value"},
@@ -232,12 +234,13 @@ func TestAddPropertiesWriteErrorPreservesCause(t *testing.T) {
 // TestRemovePropertiesWriteErrorPreservesCause verifies remove write failures retain their cause and phase.
 func TestRemovePropertiesWriteErrorPreservesCause(t *testing.T) {
 	inFile := copyPropertyTestInput(t)
-	if err := AddPropertiesFile(inFile, "", map[string]string{"name": "value"}, nil); err != nil {
+	if err := AddPropertiesFile(t.Context(), inFile, "", map[string]string{"name": "value"}, nil); err != nil {
 		t.Fatal(err)
 	}
 
 	want := errors.New("property writer failed")
 	err := RemoveProperties(
+		t.Context(),
 		openAPITestPDF(t, inFile),
 		failingWriter{err: want},
 		[]string{"name"},
@@ -259,10 +262,10 @@ func TestPropertyFileOpenAndCreateErrors(t *testing.T) {
 		err  error
 		want string
 	}{
-		{name: "add open", err: AddPropertiesFile(missing, "", nil, nil), want: "add properties: open input"},
-		{name: "remove open", err: RemovePropertiesFile(missing, "", nil, nil), want: "remove properties: open input"},
-		{name: "add create", err: AddPropertiesFile(propertyTestInputFile(), filepath.Join(t.TempDir(), "missing", "out.pdf"), nil, nil), want: "add properties: create output"},
-		{name: "remove create", err: RemovePropertiesFile(propertyTestInputFile(), filepath.Join(t.TempDir(), "missing", "out.pdf"), nil, nil), want: "remove properties: create output"},
+		{name: "add open", err: AddPropertiesFile(t.Context(), missing, "", nil, nil), want: "add properties: open input"},
+		{name: "remove open", err: RemovePropertiesFile(t.Context(), missing, "", nil, nil), want: "remove properties: open input"},
+		{name: "add create", err: AddPropertiesFile(t.Context(), propertyTestInputFile(), filepath.Join(t.TempDir(), "missing", "out.pdf"), nil, nil), want: "add properties: create output"},
+		{name: "remove create", err: RemovePropertiesFile(t.Context(), propertyTestInputFile(), filepath.Join(t.TempDir(), "missing", "out.pdf"), nil, nil), want: "remove properties: create output"},
 	}
 
 	for _, tt := range tests {
@@ -290,7 +293,7 @@ func TestPropertyFileFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := AddPropertiesFile(inFile, outFile, map[string]string{"name": "value"}, nil)
+	err := AddPropertiesFile(t.Context(), inFile, outFile, map[string]string{"name": "value"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "add properties: prepare PDF context") {
 		t.Fatalf("expected prepare-context error, got %v", err)
 	}
@@ -309,7 +312,7 @@ func TestPropertyFileSuccessReplacesExistingOutput(t *testing.T) {
 	if err := os.WriteFile(outFile, []byte("existing output"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := AddPropertiesFile(propertyTestInputFile(), outFile, map[string]string{"name": "value"}, nil); err != nil {
+	if err := AddPropertiesFile(t.Context(), propertyTestInputFile(), outFile, map[string]string{"name": "value"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, found := readPropertyTestFile(t, outFile)["name"]; !found {
@@ -326,7 +329,7 @@ func TestPropertyFileFailureRemovesNewOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := AddPropertiesFile(inFile, outFile, map[string]string{"name": "value"}, nil)
+	err := AddPropertiesFile(t.Context(), inFile, outFile, map[string]string{"name": "value"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "add properties: prepare PDF context") {
 		t.Fatalf("expected prepare-context error, got %v", err)
 	}
@@ -338,7 +341,7 @@ func TestPropertyFileFailureRemovesNewOutput(t *testing.T) {
 // TestAddPropertiesFileReplacesInput verifies successful in-place finalization.
 func TestAddPropertiesFileReplacesInput(t *testing.T) {
 	inFile := copyPropertyTestInput(t)
-	if err := AddPropertiesFile(inFile, "", map[string]string{"name": "value"}, nil); err != nil {
+	if err := AddPropertiesFile(t.Context(), inFile, "", map[string]string{"name": "value"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, found := readPropertyTestFile(t, inFile)["name"]; !found {
@@ -349,7 +352,7 @@ func TestAddPropertiesFileReplacesInput(t *testing.T) {
 // TestRemovePropertiesFileReplacesExistingOutput verifies delayed replacement for removal.
 func TestRemovePropertiesFileReplacesExistingOutput(t *testing.T) {
 	inFile := copyPropertyTestInput(t)
-	if err := AddPropertiesFile(inFile, "", map[string]string{"name": "value"}, nil); err != nil {
+	if err := AddPropertiesFile(t.Context(), inFile, "", map[string]string{"name": "value"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
@@ -357,7 +360,7 @@ func TestRemovePropertiesFileReplacesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := RemovePropertiesFile(inFile, outFile, []string{"name"}, nil); err != nil {
+	if err := RemovePropertiesFile(t.Context(), inFile, outFile, []string{"name"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, found := readPropertyTestFile(t, outFile)["name"]; found {
@@ -372,7 +375,7 @@ func TestPropertyFileAliasDoesNotOverwriteInput(t *testing.T) {
 	if err := os.Link(inFile, outFile); err != nil {
 		t.Fatal(err)
 	}
-	if err := AddPropertiesFile(inFile, outFile, map[string]string{"name": "value"}, nil); err != nil {
+	if err := AddPropertiesFile(t.Context(), inFile, outFile, map[string]string{"name": "value"}, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -389,7 +392,7 @@ func TestAddPropertiesDoesNotMutateCallerMap(t *testing.T) {
 	properties := map[string]string{"name": " value "}
 	want := maps.Clone(properties)
 	var out bytes.Buffer
-	if err := AddProperties(openAPITestPDF(t, propertyTestInputFile()), &out, properties, nil); err != nil {
+	if err := AddProperties(t.Context(), openAPITestPDF(t, propertyTestInputFile()), &out, properties, nil); err != nil {
 		t.Fatal(err)
 	}
 	if !maps.Equal(properties, want) {

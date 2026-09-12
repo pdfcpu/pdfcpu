@@ -366,7 +366,7 @@ func parseArray(c context.Context, line *string, level, maxDepth int, relaxed bo
 
 	for !strings.HasPrefix(l, "]") {
 
-		obj, err := parseObjectContext(c, &l, level+1, maxDepth, relaxed)
+		obj, err := parseObject(c, &l, level+1, maxDepth, relaxed)
 		if err != nil {
 			return nil, err
 		}
@@ -611,7 +611,7 @@ func processDictKeys(c context.Context, line *string, level, maxDepth int, relax
 			// #252: For dicts with kv pairs terminated by eol we accept a missing value as an empty string.
 			val = types.StringLiteral("")
 		} else {
-			if val, err = parseObjectContext(c, &l, level+1, maxDepth, relaxed); err != nil {
+			if val, err = parseObject(c, &l, level+1, maxDepth, relaxed); err != nil {
 				return nil, err
 			}
 		}
@@ -932,11 +932,6 @@ func parseBooleanOrNull(l string) (types.Object, string, bool) {
 	return nil, "", false
 }
 
-// ParseObject parses next Object from string buffer and returns the updated (left clipped) buffer.
-func ParseObject(line *string) (types.Object, error) {
-	return ParseObjectContext(context.Background(), line, 0)
-}
-
 func parseObjectDepthLimit(maxDepth []int) int {
 	depthLimit := DefaultResourceLimits().MaxRecursionDepth
 	if len(maxDepth) > 0 {
@@ -982,7 +977,7 @@ func parseObjectValue(c context.Context, l *string, level, depthLimit int, relax
 	}
 }
 
-func parseObjectContext(c context.Context, line *string, level, depthLimit int, relaxed bool) (types.Object, error) {
+func parseObject(c context.Context, line *string, level, depthLimit int, relaxed bool) (types.Object, error) {
 	if noBuf(line) {
 		return nil, errBufNotAvailable
 	}
@@ -1018,22 +1013,25 @@ func parseObjectContext(c context.Context, line *string, level, depthLimit int, 
 	return value, nil
 }
 
-// ParseObjectContext parses next Object from string buffer and returns the updated (left clipped) buffer.
+// ParseObject parses next Object from string buffer and returns the updated (left clipped) buffer.
 // If the passed context is cancelled, parsing will be interrupted.
-func ParseObjectContext(c context.Context, line *string, level int, maxDepth ...int) (types.Object, error) {
+func ParseObject(c context.Context, line *string, level int, maxDepth ...int) (types.Object, error) {
+	if c == nil {
+		return nil, ErrMissingContext
+	}
 	if noBuf(line) {
 		return nil, errBufNotAvailable
 	}
 
 	depthLimit := parseObjectDepthLimit(maxDepth)
 	original := *line
-	value, err := parseObjectContext(c, line, level, depthLimit, false)
+	value, err := parseObject(c, line, level, depthLimit, false)
 	if err == nil || errors.Is(err, ErrMaxRecursionDepthExceeded) || c.Err() != nil {
 		return value, err
 	}
 
 	*line = original
-	return parseObjectContext(c, line, level, depthLimit, true)
+	return parseObject(c, line, level, depthLimit, true)
 }
 
 func createXRefStreamDict(sd *types.StreamDict, objs []int, size int) (*types.XRefStreamDict, error) {
@@ -1236,11 +1234,7 @@ func ObjectStreamDictWithLimits(sd *types.StreamDict, limits ResourceLimits) (*t
 }
 
 // ObjectStreamDictWithResolvedIntegers creates an object stream dictionary using resolved N and First entries.
-func ObjectStreamDictWithResolvedIntegers(
-	sd *types.StreamDict,
-	limits ResourceLimits,
-	n, first *types.Integer,
-) (*types.ObjectStreamDict, error) {
+func ObjectStreamDictWithResolvedIntegers(sd *types.StreamDict, limits ResourceLimits, n, first *types.Integer) (*types.ObjectStreamDict, error) {
 	var nValue, firstValue *int
 	if n != nil {
 		i := n.Value()
@@ -1418,11 +1412,6 @@ func isComment(commentPos, strLitPos int) bool {
 	return commentPos >= 0 && (strLitPos < 0 || commentPos < strLitPos)
 }
 
-// DetectKeywords detects endobj and stream keywords in line.
-func DetectKeywords(line string) (endInd int, streamInd int, err error) {
-	return DetectKeywordsWithContext(context.Background(), line)
-}
-
 func skipComment(line string, commentPos int, off, endInd, streamInd *int) string {
 	l, i := positionToNextEOL(line[commentPos:])
 	if l == "" {
@@ -1478,8 +1467,15 @@ func skipCommentOrStringLiteral(line string, commentPos, slPos int, off, endInd,
 	return skipStringLit(line, slPos, off, endInd, streamInd)
 }
 
-// DetectKeywordsWithContext detects endobj and stream keywords in line using c for cancellation.
-func DetectKeywordsWithContext(c context.Context, line string) (endInd int, streamInd int, err error) {
+// DetectKeywords detects endobj and stream keywords in line using c for cancellation.
+func DetectKeywords(c context.Context, line string) (endInd int, streamInd int, err error) {
+	if c == nil {
+		return -1, -1, ErrMissingContext
+	}
+	return detectKeywords(c, line)
+}
+
+func detectKeywords(c context.Context, line string) (endInd int, streamInd int, err error) {
 	// return endInd or streamInd which ever first encountered.
 	off := 0
 	strLitPos, commentPos := 0, 0

@@ -40,42 +40,46 @@ func TestCryptoCLIHandlersRejectMissingConfigurationAndArguments(t *testing.T) {
 		{
 			name: "decrypt nil configuration",
 			run: func() error {
-				return handleDecryptCommand(nil, []string{"in.pdf"})
+				return handleDecryptCommand(t.Context(), nil, []string{"in.pdf"})
 			},
 			want: api.ErrMissingConfiguration,
 		},
 		{
 			name: "decrypt missing input",
 			run: func() error {
-				return handleDecryptCommand(model.NewDefaultConfiguration(), nil)
+				return handleDecryptCommand(t.Context(), model.NewDefaultConfiguration(), nil)
 			},
 			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "decrypt empty input",
 			run: func() error {
-				return handleDecryptCommand(model.NewDefaultConfiguration(), []string{""})
+				return handleDecryptCommand(t.Context(), model.NewDefaultConfiguration(), []string{""})
 			},
 			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "encrypt nil configuration",
 			run: func() error {
-				return handleEncryptCommand(nil, []string{"in.pdf"}, defaultEncryptOptions())
+				return handleEncryptCommand(t.Context(), nil, []string{"in.pdf"}, defaultEncryptOptions())
 			},
 			want: api.ErrMissingConfiguration,
 		},
 		{
 			name: "encrypt missing input",
 			run: func() error {
-				return handleEncryptCommand(model.NewDefaultConfiguration(), nil, defaultEncryptOptions())
+				return handleEncryptCommand(
+					t.Context(), model.NewDefaultConfiguration(), nil, defaultEncryptOptions(),
+				)
 			},
 			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "encrypt empty input",
 			run: func() error {
-				return handleEncryptCommand(model.NewDefaultConfiguration(), []string{""}, defaultEncryptOptions())
+				return handleEncryptCommand(
+					t.Context(), model.NewDefaultConfiguration(), []string{""}, defaultEncryptOptions(),
+				)
 			},
 			want: api.ErrMissingPDFInput,
 		},
@@ -100,11 +104,11 @@ func TestCryptoCLIHandlersRejectExcessArguments(t *testing.T) {
 	}{
 		{
 			name: "encrypt",
-			err:  handleEncryptCommand(conf, []string{"in.pdf", "out.pdf", "extra.pdf"}, opts),
+			err:  handleEncryptCommand(t.Context(), conf, []string{"in.pdf", "out.pdf", "extra.pdf"}, opts),
 		},
 		{
 			name: "decrypt",
-			err:  handleDecryptCommand(conf, []string{"in.pdf", "out.pdf", "extra.pdf"}),
+			err:  handleDecryptCommand(t.Context(), conf, []string{"in.pdf", "out.pdf", "extra.pdf"}),
 		},
 	}
 
@@ -119,13 +123,13 @@ func TestCryptoCLIHandlersRejectExcessArguments(t *testing.T) {
 
 func TestEncryptCLIRejectsMissingOptionsAndOwnerPassword(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
-	if err := handleEncryptCommand(conf, []string{"in.pdf"}, nil); err == nil ||
+	if err := handleEncryptCommand(t.Context(), conf, []string{"in.pdf"}, nil); err == nil ||
 		!strings.Contains(err.Error(), "encrypt: missing options") {
 		t.Fatalf("expected missing-options context, got %v", err)
 	}
 
 	opts := &encryptOptions{mode: "aes", key: "256", perm: "none"}
-	if err := handleEncryptCommand(conf, []string{"in.pdf"}, opts); err == nil ||
+	if err := handleEncryptCommand(t.Context(), conf, []string{"in.pdf"}, opts); err == nil ||
 		!strings.Contains(err.Error(), "owner password must not be empty") ||
 		!strings.Contains(err.Error(), "--opw") {
 		t.Fatalf("expected actionable owner-password error, got %v", err)
@@ -137,7 +141,7 @@ func TestEncryptCLIMissingOwnerPasswordPreservesSentinel(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
 	opts := &encryptOptions{mode: "aes", key: "256", perm: "none"}
 
-	err := handleEncryptCommand(conf, []string{"in.pdf"}, opts)
+	err := handleEncryptCommand(t.Context(), conf, []string{"in.pdf"}, opts)
 	if !errors.Is(err, pdfcpu.ErrOwnerPasswordRequired) {
 		t.Fatalf("got %v, want %v", err, pdfcpu.ErrOwnerPasswordRequired)
 	}
@@ -178,7 +182,7 @@ func TestEncryptCLIFlagErrorsIncludeContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := handleEncryptCommand(conf, []string{"in.pdf"}, tt.opts)
+			err := handleEncryptCommand(t.Context(), conf, []string{"in.pdf"}, tt.opts)
 			if err == nil || !strings.Contains(err.Error(), "encrypt: validate flags") ||
 				!strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("expected flag context containing %q, got %v", tt.want, err)
@@ -289,6 +293,7 @@ func TestCryptoCLIPDFArgumentErrorsIncludeContext(t *testing.T) {
 		{
 			name: "encrypt input",
 			err: handleEncryptCommand(
+				t.Context(),
 				encryptConf,
 				[]string{"in.txt"},
 				&encryptOptions{mode: "aes", key: "256", perm: "none"},
@@ -297,7 +302,9 @@ func TestCryptoCLIPDFArgumentErrorsIncludeContext(t *testing.T) {
 		},
 		{
 			name: "decrypt input",
-			err:  handleDecryptCommand(model.NewDefaultConfiguration(), []string{"in.txt"}),
+			err: handleDecryptCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"in.txt"},
+			),
 			want: "decrypt: parse arguments",
 		},
 	}
@@ -359,84 +366,92 @@ func TestSecurityCLIHandlersRejectMissingConfigurationAndArguments(t *testing.T)
 		{
 			name: "list permissions nil configuration",
 			run: func() error {
-				return handleListPermissionsCommand(nil, []string{"in.pdf"})
+				return handleListPermissionsCommand(t.Context(), nil, []string{"in.pdf"})
 			},
 			want: api.ErrMissingConfiguration,
 		},
 		{
 			name: "list permissions missing input",
 			run: func() error {
-				return handleListPermissionsCommand(conf, nil)
+				return handleListPermissionsCommand(t.Context(), conf, nil)
 			},
 			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "list permissions empty input",
 			run: func() error {
-				return handleListPermissionsCommand(conf, []string{""})
+				return handleListPermissionsCommand(t.Context(), conf, []string{""})
 			},
 			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "set permissions nil configuration",
 			run: func() error {
-				return handleSetPermissionsCommand(nil, []string{"in.pdf"})
+				return handleSetPermissionsCommand(t.Context(), nil, []string{"in.pdf"})
 			},
 			want: api.ErrMissingConfiguration,
 		},
 		{
 			name: "set permissions missing input",
 			run: func() error {
-				return handleSetPermissionsCommand(conf, nil)
+				return handleSetPermissionsCommand(t.Context(), conf, nil)
 			},
 			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "set permissions empty input",
 			run: func() error {
-				return handleSetPermissionsCommand(conf, []string{""})
+				return handleSetPermissionsCommand(t.Context(), conf, []string{""})
 			},
 			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "change user password nil configuration",
 			run: func() error {
-				return handleChangeUserPasswordCommand(nil, []string{"in.pdf", "old", "new"})
+				return handleChangeUserPasswordCommand(
+					t.Context(), nil, []string{"in.pdf", "old", "new"},
+				)
 			},
 			want: api.ErrMissingConfiguration,
 		},
 		{
 			name: "change user password missing input",
 			run: func() error {
-				return handleChangeUserPasswordCommand(conf, nil)
+				return handleChangeUserPasswordCommand(t.Context(), conf, nil)
 			},
 			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "change user password empty input",
 			run: func() error {
-				return handleChangeUserPasswordCommand(conf, []string{"", "old", "new"})
+				return handleChangeUserPasswordCommand(
+					t.Context(), conf, []string{"", "old", "new"},
+				)
 			},
 			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "change owner password nil configuration",
 			run: func() error {
-				return handleChangeOwnerPasswordCommand(nil, []string{"in.pdf", "old", "new"})
+				return handleChangeOwnerPasswordCommand(
+					t.Context(), nil, []string{"in.pdf", "old", "new"},
+				)
 			},
 			want: api.ErrMissingConfiguration,
 		},
 		{
 			name: "change owner password missing input",
 			run: func() error {
-				return handleChangeOwnerPasswordCommand(conf, nil)
+				return handleChangeOwnerPasswordCommand(t.Context(), conf, nil)
 			},
 			want: api.ErrMissingPDFInput,
 		},
 		{
 			name: "change owner password empty input",
 			run: func() error {
-				return handleChangeOwnerPasswordCommand(conf, []string{"", "old", "new"})
+				return handleChangeOwnerPasswordCommand(
+					t.Context(), conf, []string{"", "old", "new"},
+				)
 			},
 			want: api.ErrMissingPDFInput,
 		},
@@ -468,14 +483,14 @@ func TestSecurityCLIHandlersRejectInvalidArguments(t *testing.T) {
 		{
 			name: "list malformed glob",
 			run: func() error {
-				return handleListPermissionsCommand(conf, []string{"*["})
+				return handleListPermissionsCommand(t.Context(), conf, []string{"*["})
 			},
 			want: "list permissions: expand input pattern",
 		},
 		{
 			name: "list invalid extension",
 			run: func() error {
-				return handleListPermissionsCommand(conf, []string{"in.txt"})
+				return handleListPermissionsCommand(t.Context(), conf, []string{"in.txt"})
 			},
 			want: "list permissions: parse arguments",
 		},
@@ -483,7 +498,9 @@ func TestSecurityCLIHandlersRejectInvalidArguments(t *testing.T) {
 			name: "set extra argument",
 			run: func() error {
 				perm = "none"
-				return handleSetPermissionsCommand(conf, []string{"in.pdf", "out.pdf", "extra.pdf"})
+				return handleSetPermissionsCommand(
+					t.Context(), conf, []string{"in.pdf", "out.pdf", "extra.pdf"},
+				)
 			},
 			want: "set permissions: expected 1 or 2 arguments",
 		},
@@ -491,35 +508,39 @@ func TestSecurityCLIHandlersRejectInvalidArguments(t *testing.T) {
 			name: "set invalid permissions",
 			run: func() error {
 				perm = "invalid"
-				return handleSetPermissionsCommand(conf, []string{"in.pdf"})
+				return handleSetPermissionsCommand(t.Context(), conf, []string{"in.pdf"})
 			},
 			want: "set permissions: validate permissions",
 		},
 		{
 			name: "change user missing passwords",
 			run: func() error {
-				return handleChangeUserPasswordCommand(conf, []string{"in.pdf"})
+				return handleChangeUserPasswordCommand(t.Context(), conf, []string{"in.pdf"})
 			},
 			want: "change user password: expected 3 or 4 arguments",
 		},
 		{
 			name: "change user extra argument",
 			run: func() error {
-				return handleChangeUserPasswordCommand(conf, []string{"in.pdf", "old", "new", "out.pdf", "extra.pdf"})
+				return handleChangeUserPasswordCommand(
+					t.Context(), conf, []string{"in.pdf", "old", "new", "out.pdf", "extra.pdf"},
+				)
 			},
 			want: "change user password: expected 3 or 4 arguments",
 		},
 		{
 			name: "change owner missing passwords",
 			run: func() error {
-				return handleChangeOwnerPasswordCommand(conf, []string{"in.pdf"})
+				return handleChangeOwnerPasswordCommand(t.Context(), conf, []string{"in.pdf"})
 			},
 			want: "change owner password: expected 3 or 4 arguments",
 		},
 		{
 			name: "change owner empty new password",
 			run: func() error {
-				return handleChangeOwnerPasswordCommand(conf, []string{"in.pdf", "old", ""})
+				return handleChangeOwnerPasswordCommand(
+					t.Context(), conf, []string{"in.pdf", "old", ""},
+				)
 			},
 			want:     "change owner password: new owner password must not be empty",
 			sentinel: pdfcpu.ErrOwnerPasswordRequired,
@@ -550,7 +571,7 @@ func TestSecurityCLIPermissionNormalizationStaysLocal(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
 	inFile := filepath.Join(t.TempDir(), "missing.pdf")
 
-	if err := handleSetPermissionsCommand(conf, []string{inFile}); err == nil {
+	if err := handleSetPermissionsCommand(t.Context(), conf, []string{inFile}); err == nil {
 		t.Fatal("expected missing input error")
 	}
 	if perm != "p" {

@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-func TestLoadConfigurationWithOptionsSchemaUpgradeContract(t *testing.T) {
+func TestLoadConfigurationSchemaUpgradeContract(t *testing.T) {
 	tests := []struct {
 		name       string
 		prepare    func(*testing.T, string) string
@@ -78,11 +78,11 @@ func TestLoadConfigurationWithOptionsSchemaUpgradeContract(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			root := t.TempDir()
-			if _, err := LoadConfigurationWithOptions(ConfigurationOptions{Root: root}); err != nil {
+			if _, err := LoadConfiguration(ConfigurationOptions{Root: root}); err != nil {
 				t.Fatalf("initialize configuration: %v", err)
 			}
 			path := tt.prepare(t, root)
-			_, err := LoadConfigurationWithOptions(ConfigurationOptions{
+			_, err := LoadConfiguration(ConfigurationOptions{
 				Root: root,
 				Mode: ConfigurationModeReadOnly,
 			})
@@ -114,16 +114,16 @@ func TestLoadConfigurationWithOptionsSchemaUpgradeContract(t *testing.T) {
 	}
 }
 
-func TestLoadConfigurationWithOptionsStatelessIgnoresPersistedSchema(t *testing.T) {
+func TestLoadConfigurationStatelessIgnoresPersistedSchema(t *testing.T) {
 	root := t.TempDir()
-	if _, err := LoadConfigurationWithOptions(ConfigurationOptions{Root: root}); err != nil {
+	if _, err := LoadConfiguration(ConfigurationOptions{Root: root}); err != nil {
 		t.Fatalf("initialize configuration: %v", err)
 	}
 	path := filepath.Join(root, "pdfcpu", "config.yml")
 	replaceConfigurationSetting(t, path, "schemaVersion: 1", "schemaVersion: 2")
 	t.Setenv(configurationRootEnv, root)
 
-	if _, err := LoadConfigurationWithOptions(ConfigurationOptions{Mode: ConfigurationModeStateless}); err != nil {
+	if _, err := LoadConfiguration(ConfigurationOptions{Mode: ConfigurationModeStateless}); err != nil {
 		t.Fatalf("load stateless configuration: %v", err)
 	}
 }

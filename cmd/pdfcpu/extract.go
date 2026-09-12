@@ -17,9 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/spf13/cobra"
@@ -39,8 +41,8 @@ func extractCmd() *cobra.Command {
 		Short: "Extract images, fonts, content, pages or metadata",
 		Long:  usageLongExtract,
 		Args:  cobra.ExactArgs(2),
-		RunE: wrapHandler(func(conf *model.Configuration, args []string) error {
-			return handleExtractCommand(conf, args, opts)
+		RunE: wrapContextHandler(func(c context.Context, conf *model.Configuration, args []string) error {
+			return handleExtractCommand(c, conf, args, opts)
 		}),
 	}
 
@@ -88,7 +90,10 @@ func extractCommandForMode(mode, inFile, outDir string, pages []string, conf *mo
 	return nil, fmt.Errorf("unknown extract mode: %s", mode)
 }
 
-func handleExtractCommand(conf *model.Configuration, args []string, opts *extractOptions) error {
+func handleExtractCommand(c context.Context, conf *model.Configuration, args []string, opts *extractOptions) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := extractMode(opts); err != nil {
 		return err
 	}
@@ -104,5 +109,5 @@ func handleExtractCommand(conf *model.Configuration, args []string, opts *extrac
 	if err != nil {
 		return err
 	}
-	return runCommand(cmd)
+	return runCommand(c, cmd)
 }

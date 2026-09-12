@@ -34,7 +34,7 @@ func TestPageMode(t *testing.T) {
 
 	pageMode := model.PageModeUseOutlines
 
-	pl, err := api.PageModeFile(inFile, nil)
+	pl, err := api.PageModeFile(t.Context(), inFile, nil)
 	if err != nil {
 		t.Fatalf("%s %s: list pageMode: %v\n", msg, inFile, err)
 	}
@@ -42,11 +42,11 @@ func TestPageMode(t *testing.T) {
 		t.Fatalf("%s %s: list pageMode, unexpected: %s\n", msg, inFile, pl)
 	}
 
-	if err := api.SetPageModeFile(inFile, "", pageMode, nil); err != nil {
+	if err := api.SetPageModeFile(t.Context(), inFile, "", pageMode, nil); err != nil {
 		t.Fatalf("%s %s: set pageMode: %v\n", msg, inFile, err)
 	}
 
-	pm, err := api.PageModeFile(inFile, nil)
+	pm, err := api.PageModeFile(t.Context(), inFile, nil)
 	if err != nil {
 		t.Fatalf("%s %s: list pageMode: %v\n", msg, inFile, err)
 	}
@@ -57,11 +57,11 @@ func TestPageMode(t *testing.T) {
 		t.Fatalf("%s %s: list pageMode, want:%s, got:%s\n", msg, inFile, pageMode.String(), pm.String())
 	}
 
-	if err := api.ResetPageModeFile(inFile, "", nil); err != nil {
+	if err := api.ResetPageModeFile(t.Context(), inFile, "", nil); err != nil {
 		t.Fatalf("%s %s: reset pageMode: %v\n", msg, inFile, err)
 	}
 
-	pl, err = api.PageModeFile(inFile, nil)
+	pl, err = api.PageModeFile(t.Context(), inFile, nil)
 	if err != nil {
 		t.Fatalf("%s %s: list pageMode: %v\n", msg, inFile, err)
 	}

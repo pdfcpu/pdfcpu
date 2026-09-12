@@ -18,10 +18,12 @@ package primitives
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"unicode/utf8"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -188,7 +190,6 @@ func (cb *ComboBox) validateTab() error {
 }
 
 func (cb *ComboBox) validate() error {
-
 	if err := cb.validateID(); err != nil {
 		return err
 	}
@@ -232,8 +233,9 @@ func (cb *ComboBox) validate() error {
 	return cb.validateTab()
 }
 
-func (cb *ComboBox) calcFontFromDA(ctx *model.Context, d types.Dict, da *string, fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
-	id, font, rtl, fontIndRef, err := calcFontDetailsFromDA(ctx, d, da, false, fonts)
+func (cb *ComboBox) calcFontFromDA(c context.Context, ctx *model.Context, d types.Dict, da *string,
+	fonts map[string]types.IndirectRef) (*types.IndirectRef, error) {
+	id, font, rtl, fontIndRef, err := calcFontDetailsFromDA(c, ctx, d, da, false, fonts)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +298,6 @@ func (cb *ComboBox) calcMargin() (float64, float64, float64, float64, error) {
 }
 
 func (cb *ComboBox) labelPos(labelHeight, w, g float64) (float64, float64) {
-
 	var x, y float64
 	bb, horAlign := cb.BoundingBox, cb.Label.HorAlign
 
@@ -333,7 +334,7 @@ func (cb *ComboBox) labelPos(labelHeight, w, g float64) (float64, float64) {
 	return x, y
 }
 
-func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
+func (cb *ComboBox) renderN(c context.Context, xRefTable *model.XRefTable) ([]byte, error) {
 	w, h := cb.BoundingBox.Width(), cb.BoundingBox.Height()
 	repo := xRefTable.FontRepository()
 	bgCol := cb.BgCol
@@ -366,17 +367,17 @@ func (cb *ComboBox) renderN(xRefTable *model.XRefTable) ([]byte, error) {
 	if font.IsCoreFont(f.Name) && utf8.ValidString(v) {
 		v = model.DecodeUTF8ToByte(v)
 	}
-	lineBB, err := repo.TextBoundingBox(v, f.Name, f.Size)
+	lineBB, err := repo.TextBoundingBox(c, v, f.Name, f.Size)
 	if err != nil {
 		return nil, fmt.Errorf("combo box text: %w", err)
 	}
-	s, err := model.PrepBytes(xRefTable, v, f.Name, true, cb.RTL, f.FillFont)
+	s, err := model.PrepBytes(c, xRefTable, v, f.Name, true, cb.RTL, f.FillFont)
 	if err != nil {
 		return nil, fmt.Errorf("combo box text: %w", err)
 	}
 	x := alignedFieldTextX(cb.HorAlign, w, lineBB.Width(), boWidth)
 
-	lineHeight, descent, err := fontLineMetrics(repo, f.Name, f.Size)
+	lineHeight, descent, err := fontLineMetrics(c, repo, f.Name, f.Size)
 	if err != nil {
 		return nil, fmt.Errorf("combo box text: %w", err)
 	}
@@ -561,7 +562,6 @@ func (cb *ComboBox) prepareRectLL(mTop, mRight, mBottom, mLeft float64) (float64
 }
 
 func (cb *ComboBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	if cb.Label == nil {
 		return nil
 	}
@@ -598,7 +598,9 @@ func (cb *ComboBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) er
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *l.BgCol
 	}
 
-	bb, err := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(
+		cb.pdf.ctx, cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td,
+	)
 	if err != nil {
 		return fmt.Errorf("combo box label: %w", err)
 	}
@@ -627,7 +629,6 @@ func (cb *ComboBox) prepLabel(p *model.Page, pageNr int, fonts model.FontMap) er
 }
 
 func (cb *ComboBox) prepForRender(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	mTop, mRight, mBottom, mLeft, err := cb.calcMargin()
 	if err != nil {
 		return err
@@ -648,7 +649,9 @@ func (cb *ComboBox) prepForRender(p *model.Page, pageNr int, fonts model.FontMap
 		ScaleAbs: true,
 	}
 
-	bb, err := model.WriteMultiLine(cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td)
+	bb, err := model.WriteMultiLine(
+		cb.pdf.ctx, cb.pdf.XRefTable, new(bytes.Buffer), types.RectForFormat("A4"), nil, td,
+	)
 	if err != nil {
 		return fmt.Errorf("combo box text: %w", err)
 	}
@@ -670,7 +673,6 @@ func (cb *ComboBox) prepForRender(p *model.Page, pageNr int, fonts model.FontMap
 }
 
 func (cb *ComboBox) doRender(p *model.Page, fonts model.FontMap) error {
-
 	d, err := cb.prepareDict(fonts)
 	if err != nil {
 		return err
@@ -684,7 +686,7 @@ func (cb *ComboBox) doRender(p *model.Page, fonts model.FontMap) error {
 	}
 
 	if cb.Label != nil {
-		if _, err := model.WriteColumn(cb.pdf.XRefTable, p.Buf, p.MediaBox, nil, *cb.Label.td, 0); err != nil {
+		if _, err := model.WriteColumn(cb.pdf.ctx, cb.pdf.XRefTable, p.Buf, p.MediaBox, nil, *cb.Label.td, 0); err != nil {
 			return fmt.Errorf("combo box label: %w", err)
 		}
 	}
@@ -697,7 +699,6 @@ func (cb *ComboBox) doRender(p *model.Page, fonts model.FontMap) error {
 }
 
 func (cb *ComboBox) render(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	if err := cb.prepForRender(p, pageNr, fonts); err != nil {
 		return err
 	}
@@ -705,13 +706,11 @@ func (cb *ComboBox) render(p *model.Page, pageNr int, fonts model.FontMap) error
 	return cb.doRender(p, fonts)
 }
 
-// NewComboBox creates a new combobox for d.
-func NewComboBox(
-	ctx *model.Context,
-	d types.Dict,
-	v string,
-	da *string,
-	fonts map[string]types.IndirectRef) (*ComboBox, *types.IndirectRef, error) {
+// NewComboBox creates a new combo box and supports cancellation.
+func NewComboBox(c context.Context, ctx *model.Context, d types.Dict, v string, da *string, fonts map[string]types.IndirectRef) (*ComboBox, *types.IndirectRef, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 
 	cb := &ComboBox{Value: v}
 
@@ -724,7 +723,7 @@ func NewComboBox(
 
 	cb.BoundingBox = types.RectForDim(bb.Width(), bb.Height())
 
-	fontIndRef, err := cb.calcFontFromDA(ctx, d, da, fonts)
+	fontIndRef, err := cb.calcFontFromDA(c, ctx, d, da, fonts)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -758,14 +757,15 @@ func NewComboBox(
 	return cb, fontIndRef, nil
 }
 
-func renderComboBoxAP(ctx *model.Context, d types.Dict, v string, da *string, fonts map[string]types.IndirectRef) error {
+func renderComboBoxAP(c context.Context, ctx *model.Context, d types.Dict, v string, da *string,
+	fonts map[string]types.IndirectRef) error {
 
-	cb, fontIndRef, err := NewComboBox(ctx, d, v, da, fonts)
+	cb, fontIndRef, err := NewComboBox(c, ctx, d, v, da, fonts)
 	if err != nil {
 		return err
 	}
 
-	bb, err := cb.renderN(ctx.XRefTable)
+	bb, err := cb.renderN(c, ctx.XRefTable)
 	if err != nil {
 		return err
 	}
@@ -780,14 +780,15 @@ func renderComboBoxAP(ctx *model.Context, d types.Dict, v string, da *string, fo
 	return nil
 }
 
-func refreshComboBoxAP(ctx *model.Context, d types.Dict, v string, da *string, fonts map[string]types.IndirectRef, irN *types.IndirectRef) error {
+func refreshComboBoxAP(c context.Context, ctx *model.Context, d types.Dict, v string, da *string,
+	fonts map[string]types.IndirectRef, irN *types.IndirectRef) error {
 
-	cb, _, err := NewComboBox(ctx, d, v, da, fonts)
+	cb, _, err := NewComboBox(c, ctx, d, v, da, fonts)
 	if err != nil {
 		return err
 	}
 
-	bb, err := cb.renderN(ctx.XRefTable)
+	bb, err := cb.renderN(c, ctx.XRefTable)
 	if err != nil {
 		return err
 	}
@@ -795,12 +796,15 @@ func refreshComboBoxAP(ctx *model.Context, d types.Dict, v string, da *string, f
 	return updateForm(ctx.XRefTable, bb, irN)
 }
 
-// EnsureComboBoxAP ensures combo box ap.
-func EnsureComboBoxAP(ctx *model.Context, d types.Dict, v string, da *string, fonts map[string]types.IndirectRef) error {
+// EnsureComboBoxAP ensures a combo box appearance and supports cancellation.
+func EnsureComboBoxAP(c context.Context, ctx *model.Context, d types.Dict, v string, da *string, fonts map[string]types.IndirectRef) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 
 	apd := d.DictEntry("AP")
 	if apd == nil {
-		return renderComboBoxAP(ctx, d, v, da, fonts)
+		return renderComboBoxAP(c, ctx, d, v, da, fonts)
 	}
 
 	irN := apd.IndirectRefEntry("N")
@@ -808,5 +812,5 @@ func EnsureComboBoxAP(ctx *model.Context, d types.Dict, v string, da *string, fo
 		return nil
 	}
 
-	return refreshComboBoxAP(ctx, d, v, da, fonts, irN)
+	return refreshComboBoxAP(c, ctx, d, v, da, fonts, irN)
 }

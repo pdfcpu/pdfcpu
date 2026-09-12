@@ -18,6 +18,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -26,6 +27,21 @@ import (
 	"syscall"
 	"testing"
 )
+
+type cancelingReader struct {
+	cancel context.CancelFunc
+	reads  int
+}
+
+func (r *cancelingReader) Read(p []byte) (int, error) {
+	r.reads++
+	if r.reads > 1 {
+		return 0, errors.New("read after cancellation")
+	}
+	n := copy(p, "partial stdin")
+	r.cancel()
+	return n, nil
+}
 
 // TestReadSeekerFromStdinSpoolsToTemporaryInput verifies the corresponding behavior.
 func TestReadSeekerFromStdinSpoolsToTemporaryInput(t *testing.T) {
@@ -47,7 +63,7 @@ func TestReadSeekerFromStdinSpoolsToTemporaryInput(t *testing.T) {
 		_ = source.Close()
 	})
 
-	in, err := readSeekerFromStdin("test operation")
+	in, err := readSeekerFromStdin(t.Context(), "test operation")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,6 +83,35 @@ func TestReadSeekerFromStdinSpoolsToTemporaryInput(t *testing.T) {
 	}
 	if _, err := os.Stat(tmpPath); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected temporary input removal, got %v", err)
+	}
+}
+
+// TestReadSeekerFromStdinCancellationRemovesTemporaryInput verifies cancellation while spooling stdin.
+func TestReadSeekerFromStdinCancellationRemovesTemporaryInput(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("TMPDIR", tmpDir)
+	ctx, cancel := context.WithCancel(t.Context())
+	r := &cancelingReader{cancel: cancel}
+
+	in, err := readSeekerFromReader(ctx, "test operation", r)
+	if in != nil {
+		t.Fatal("expected no temporary input")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected cancellation, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "test operation: read stdin") {
+		t.Fatalf("expected contextual stdin error, got %q", err)
+	}
+	if r.reads != 1 {
+		t.Fatalf("stdin reads: got %d, want 1", r.reads)
+	}
+	matches, globErr := filepath.Glob(filepath.Join(tmpDir, "pdfcpu-stdin-*.pdf"))
+	if globErr != nil {
+		t.Fatal(globErr)
+	}
+	if len(matches) != 0 {
+		t.Fatalf("temporary stdin was not removed: %v", matches)
 	}
 }
 
@@ -122,7 +167,7 @@ func TestTemporaryStdinRemovedWhenOutputCreationFails(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("TMPDIR", tmpDir)
 	outFile := filepath.Join(tmpDir, "missing", "out.pdf")
-	_, _, _, err = streamInOutForOperation("-", outFile, "test operation")
+	_, _, _, err = streamInOutForOperation(t.Context(), "-", outFile, "test operation")
 	if err == nil {
 		t.Fatal("expected output creation failure")
 	}
@@ -147,7 +192,7 @@ func TestStreamInOutFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, w, finalize, err := streamInOutForOperation("", outFile, "test operation")
+	_, w, finalize, err := streamInOutForOperation(t.Context(), "", outFile, "test operation")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +225,7 @@ func TestStdinStorageCreationFailures(t *testing.T) {
 			if err := os.WriteFile(outFile, []byte("original"), 0600); err != nil {
 				t.Fatal(err)
 			}
-			_, _, _, err := streamInOutForOperation("-", outFile, "test storage")
+			_, _, _, err := streamInOutForOperation(t.Context(), "-", outFile, "test storage")
 			if !errors.Is(err, cause) || !strings.Contains(err.Error(), "create temporary input") {
 				t.Fatalf("expected contextual storage error, got %v", err)
 			}

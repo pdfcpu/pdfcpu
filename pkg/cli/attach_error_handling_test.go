@@ -32,7 +32,7 @@ func cliAttachmentTestInputFile() string {
 }
 
 func TestListAttachmentsUsesAPIBoundarySentinel(t *testing.T) {
-	_, err := listAttachments(nil, nil, true, true)
+	_, err := listAttachments(t.Context(), nil, nil, true, true)
 	if !errors.Is(err, api.ErrMissingPDFReadSeeker) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFReadSeeker, err)
 	}
@@ -47,7 +47,7 @@ func TestListAttachmentsUsesAPIOperationContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = ListAttachmentsFile(f.Name(), nil)
+	_, err = ListAttachmentsFile(t.Context(), f.Name(), nil)
 	if err == nil || !strings.Contains(err.Error(), "list attachments: prepare PDF context: read context") {
 		t.Fatalf("expected API operation context, got %v", err)
 	}
@@ -63,39 +63,39 @@ func TestAttachmentCommandBoundaryGuards(t *testing.T) {
 		want error
 	}{
 		{name: "list nil command", run: func() error {
-			_, err := ListAttachments(nil)
+			_, err := listAttachmentsCommand(t.Context(), nil)
 			return err
 		}, want: ErrMissingCommand},
 		{name: "list missing input", run: func() error {
-			_, err := ListAttachments(&Command{})
+			_, err := listAttachmentsCommand(t.Context(), &Command{})
 			return err
 		}, want: api.ErrMissingPDFInput},
 		{name: "add nil command", run: func() error {
-			_, err := AddAttachments(nil)
+			_, err := addAttachments(t.Context(), nil)
 			return err
 		}, want: ErrMissingCommand},
 		{name: "add missing output", run: func() error {
-			_, err := AddAttachments(&Command{InFile: &inFile})
+			_, err := addAttachments(t.Context(), &Command{InFile: &inFile})
 			return err
 		}, want: api.ErrMissingPDFOutput},
 		{name: "remove nil command", run: func() error {
-			_, err := RemoveAttachments(nil)
+			_, err := removeAttachments(t.Context(), nil)
 			return err
 		}, want: ErrMissingCommand},
 		{name: "remove missing output", run: func() error {
-			_, err := RemoveAttachments(&Command{InFile: &inFile})
+			_, err := removeAttachments(t.Context(), &Command{InFile: &inFile})
 			return err
 		}, want: api.ErrMissingPDFOutput},
 		{name: "extract nil command", run: func() error {
-			_, err := ExtractAttachments(nil)
+			_, err := extractAttachments(t.Context(), nil)
 			return err
 		}, want: ErrMissingCommand},
 		{name: "extract missing directory", run: func() error {
-			_, err := ExtractAttachments(&Command{InFile: &inFile, OutFile: &outFile})
+			_, err := extractAttachments(t.Context(), &Command{InFile: &inFile, OutFile: &outFile})
 			return err
 		}, want: api.ErrMissingPDFOutput},
 		{name: "extract empty directory", run: func() error {
-			_, err := ExtractAttachments(&Command{InFile: &inFile, OutDir: &empty})
+			_, err := extractAttachments(t.Context(), &Command{InFile: &inFile, OutDir: &empty})
 			return err
 		}, want: api.ErrMissingPDFOutput},
 	}
@@ -110,12 +110,12 @@ func TestAttachmentCommandBoundaryGuards(t *testing.T) {
 }
 
 func TestListAttachmentsFileErrorsIncludeContext(t *testing.T) {
-	if _, err := ListAttachmentsFile("", nil); !errors.Is(err, api.ErrMissingPDFInput) {
+	if _, err := ListAttachmentsFile(t.Context(), "", nil); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
 
 	missing := filepath.Join(t.TempDir(), "missing.pdf")
-	_, err := ListAttachmentsFile(missing, nil)
+	_, err := ListAttachmentsFile(t.Context(), missing, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -135,7 +135,7 @@ func TestListAttachmentsFileReportsCloseError(t *testing.T) {
 		closeListAttachmentsInput = closeInput
 	})
 
-	_, err := ListAttachmentsFile(cliAttachmentTestInputFile(), nil)
+	_, err := ListAttachmentsFile(t.Context(), cliAttachmentTestInputFile(), nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -157,7 +157,7 @@ func TestAttachmentStreamingOpenErrorsIncludeOperationContext(t *testing.T) {
 			name: "add",
 			cmd:  &Command{InFile: &missing, OutFile: &out},
 			run: func(cmd *Command) error {
-				_, err := AddAttachments(cmd)
+				_, err := addAttachments(t.Context(), cmd)
 				return err
 			},
 			want: "add attachments: open input " + missing,
@@ -166,7 +166,7 @@ func TestAttachmentStreamingOpenErrorsIncludeOperationContext(t *testing.T) {
 			name: "portfolio",
 			cmd:  &Command{Mode: model.ADDATTACHMENTSPORTFOLIO, InFile: &missing, OutFile: &out},
 			run: func(cmd *Command) error {
-				_, err := AddAttachments(cmd)
+				_, err := addAttachments(t.Context(), cmd)
 				return err
 			},
 			want: "add portfolio attachments: open input " + missing,
@@ -175,7 +175,7 @@ func TestAttachmentStreamingOpenErrorsIncludeOperationContext(t *testing.T) {
 			name: "remove",
 			cmd:  &Command{InFile: &missing, OutFile: &out},
 			run: func(cmd *Command) error {
-				_, err := RemoveAttachments(cmd)
+				_, err := removeAttachments(t.Context(), cmd)
 				return err
 			},
 			want: "remove attachments: open input " + missing,

@@ -117,7 +117,7 @@ func TestInsertBlankPagesRetainsPageCreationContext(t *testing.T) {
 	xRefTable.PageCount = 1
 	pointFreeListAtMissingObject(xRefTable, 999)
 
-	err = xRefTable.InsertBlankPages(types.IntSet{1: true}, nil, false)
+	err = xRefTable.InsertBlankPages(t.Context(), types.IntSet{1: true}, nil, false)
 	for _, want := range []string{"page 1: create blank page", "empty page: create content object"} {
 		if err == nil || !strings.Contains(err.Error(), want) {
 			t.Fatalf("expected %q, got %v", want, err)
@@ -197,7 +197,7 @@ func TestInsertBlankPagesRejectsMissingPageTree(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.xRefTable.InsertBlankPages(types.IntSet{1: true}, nil, false)
+			err := tt.xRefTable.InsertBlankPages(t.Context(), types.IntSet{1: true}, nil, false)
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("expected %q, got %v", tt.want, err)
 			}
@@ -260,7 +260,7 @@ func TestInsertBlankPagesRejectsInvalidKidsEntry(t *testing.T) {
 			xRefTable.RootDict = types.Dict{"Pages": *pagesRef}
 			xRefTable.PageCount = 1
 
-			err = xRefTable.InsertBlankPages(types.IntSet{1: true}, nil, false)
+			err = xRefTable.InsertBlankPages(t.Context(), types.IntSet{1: true}, nil, false)
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("expected %q, got %v", tt.want, err)
 			}
@@ -272,7 +272,7 @@ func TestInsertBlankPagesRejectsInvalidKidsEntry(t *testing.T) {
 func TestInsertBlankPagesRejectsInvalidPageTreeKids(t *testing.T) {
 	t.Run("nil object", func(t *testing.T) {
 		xRefTable := insertBlankPagesTestXRefTable(t, nil)
-		err := xRefTable.InsertBlankPages(types.IntSet{1: true}, nil, false)
+		err := xRefTable.InsertBlankPages(t.Context(), types.IntSet{1: true}, nil, false)
 		if err == nil || !strings.Contains(err.Error(), "page tree obj#2: kid 1: nil object") {
 			t.Fatalf("expected nil child context, got %v", err)
 		}
@@ -280,7 +280,7 @@ func TestInsertBlankPagesRejectsInvalidPageTreeKids(t *testing.T) {
 
 	t.Run("direct object", func(t *testing.T) {
 		xRefTable := insertBlankPagesTestXRefTable(t, types.Integer(1))
-		err := xRefTable.InsertBlankPages(types.IntSet{1: true}, nil, false)
+		err := xRefTable.InsertBlankPages(t.Context(), types.IntSet{1: true}, nil, false)
 		for _, want := range []string{"page tree obj#2: kid 1", "expected indirect reference"} {
 			if err == nil || !strings.Contains(err.Error(), want) {
 				t.Fatalf("expected %q, got %v", want, err)
@@ -306,7 +306,7 @@ func TestInsertBlankPagesRejectsInvalidPageTreeKids(t *testing.T) {
 		xRefTable.RootDict = types.Dict{"Pages": *pagesRef}
 		xRefTable.PageCount = 1
 
-		err = xRefTable.InsertBlankPages(types.IntSet{1: true}, nil, false)
+		err = xRefTable.InsertBlankPages(t.Context(), types.IntSet{1: true}, nil, false)
 		if err == nil || !strings.Contains(err.Error(), "page tree kid obj#1: missing Type") {
 			t.Fatalf("expected missing Type context, got %v", err)
 		}

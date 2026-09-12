@@ -18,6 +18,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -43,55 +44,55 @@ func TestKeywordCommandBoundaryGuards(t *testing.T) {
 		want error
 	}{
 		{name: "list nil command", run: func() error {
-			_, err := ListKeywords(nil)
+			_, err := listKeywords(t.Context(), nil)
 			return err
 		}, want: ErrMissingCommand},
 		{name: "list missing input", run: func() error {
-			_, err := ListKeywords(&Command{})
+			_, err := listKeywords(t.Context(), &Command{})
 			return err
 		}, want: api.ErrMissingPDFInput},
 		{name: "list empty input", run: func() error {
-			_, err := ListKeywords(&Command{InFile: &empty})
+			_, err := listKeywords(t.Context(), &Command{InFile: &empty})
 			return err
 		}, want: api.ErrMissingPDFInput},
 		{name: "add nil command", run: func() error {
-			_, err := AddKeywords(nil)
+			_, err := addKeywords(t.Context(), nil)
 			return err
 		}, want: ErrMissingCommand},
 		{name: "add missing input", run: func() error {
-			_, err := AddKeywords(&Command{OutFile: &outFile})
+			_, err := addKeywords(t.Context(), &Command{OutFile: &outFile})
 			return err
 		}, want: api.ErrMissingPDFInput},
 		{name: "add empty input", run: func() error {
-			_, err := AddKeywords(&Command{InFile: &empty, OutFile: &outFile})
+			_, err := addKeywords(t.Context(), &Command{InFile: &empty, OutFile: &outFile})
 			return err
 		}, want: api.ErrMissingPDFInput},
 		{name: "add missing output", run: func() error {
-			_, err := AddKeywords(&Command{InFile: &inFile})
+			_, err := addKeywords(t.Context(), &Command{InFile: &inFile})
 			return err
 		}, want: api.ErrMissingPDFOutput},
 		{name: "add empty output", run: func() error {
-			_, err := AddKeywords(&Command{InFile: &inFile, OutFile: &empty})
+			_, err := addKeywords(t.Context(), &Command{InFile: &inFile, OutFile: &empty})
 			return err
 		}, want: api.ErrMissingPDFOutput},
 		{name: "remove nil command", run: func() error {
-			_, err := RemoveKeywords(nil)
+			_, err := removeKeywords(t.Context(), nil)
 			return err
 		}, want: ErrMissingCommand},
 		{name: "remove missing input", run: func() error {
-			_, err := RemoveKeywords(&Command{OutFile: &outFile})
+			_, err := removeKeywords(t.Context(), &Command{OutFile: &outFile})
 			return err
 		}, want: api.ErrMissingPDFInput},
 		{name: "remove empty input", run: func() error {
-			_, err := RemoveKeywords(&Command{InFile: &empty, OutFile: &outFile})
+			_, err := removeKeywords(t.Context(), &Command{InFile: &empty, OutFile: &outFile})
 			return err
 		}, want: api.ErrMissingPDFInput},
 		{name: "remove missing output", run: func() error {
-			_, err := RemoveKeywords(&Command{InFile: &inFile})
+			_, err := removeKeywords(t.Context(), &Command{InFile: &inFile})
 			return err
 		}, want: api.ErrMissingPDFOutput},
 		{name: "remove empty output", run: func() error {
-			_, err := RemoveKeywords(&Command{InFile: &inFile, OutFile: &empty})
+			_, err := removeKeywords(t.Context(), &Command{InFile: &inFile, OutFile: &empty})
 			return err
 		}, want: api.ErrMissingPDFOutput},
 	}
@@ -144,7 +145,6 @@ func TestKeywordCommandConstructorsOwnKeywordSlices(t *testing.T) {
 			keywords := []string{"alpha", "beta"}
 			cmd := tt.new(keywords)
 			keywords[0] = "changed"
-			keywords = append(keywords, "gamma")
 
 			want := []string{"alpha", "beta"}
 			if !slices.Equal(cmd.StringVals, want) {
@@ -154,30 +154,15 @@ func TestKeywordCommandConstructorsOwnKeywordSlices(t *testing.T) {
 	}
 }
 
-// TestDispatchKeywordsRejectsInvalidState verifies direct keyword dispatch rejects malformed state.
-func TestDispatchKeywordsRejectsInvalidState(t *testing.T) {
-	if _, err := dispatchKeywords(nil); !errors.Is(err, ErrMissingCommand) ||
-		!strings.Contains(err.Error(), "dispatch keywords") {
-		t.Fatalf("expected missing-command context, got %v", err)
-	}
-
-	mode := model.VALIDATE
-	_, err := dispatchKeywords(&Command{Mode: mode})
-	want := fmt.Sprintf("mode %d", mode)
-	if !errors.Is(err, ErrUnsupportedCommandMode) || !strings.Contains(err.Error(), want) {
-		t.Fatalf("expected %q context, got %v", want, err)
-	}
-}
-
 // TestDispatchRejectsInvalidState verifies public dispatch preserves command-state sentinels.
 func TestDispatchRejectsInvalidState(t *testing.T) {
-	if _, err := Dispatch(nil); !errors.Is(err, ErrMissingCommand) ||
+	if _, err := Dispatch(t.Context(), nil); !errors.Is(err, ErrMissingCommand) ||
 		!strings.Contains(err.Error(), "pdfcpu: dispatch") {
 		t.Fatalf("expected missing-command context, got %v", err)
 	}
 
 	mode := model.CommandMode(-1)
-	_, err := Dispatch(&Command{Mode: mode})
+	_, err := Dispatch(t.Context(), &Command{Mode: mode})
 	want := fmt.Sprintf("mode %d", mode)
 	if !errors.Is(err, ErrUnsupportedCommandMode) || !strings.Contains(err.Error(), want) {
 		t.Fatalf("expected %q context, got %v", want, err)
@@ -196,11 +181,11 @@ func TestKeywordCLIMalformedPDFErrorsIncludeReadPhase(t *testing.T) {
 		op   string
 	}{
 		{name: "add", run: func(outFile string) error {
-			_, err := Dispatch(AddKeywordsCommand(inFile, outFile, []string{"keyword"}, nil))
+			_, err := Dispatch(t.Context(), AddKeywordsCommand(inFile, outFile, []string{"keyword"}, nil))
 			return err
 		}, op: "add keywords"},
 		{name: "remove", run: func(outFile string) error {
-			_, err := Dispatch(RemoveKeywordsCommand(inFile, outFile, []string{"keyword"}, nil))
+			_, err := Dispatch(t.Context(), RemoveKeywordsCommand(inFile, outFile, []string{"keyword"}, nil))
 			return err
 		}, op: "remove keywords"},
 	}
@@ -225,7 +210,7 @@ func TestKeywordCLIMalformedPDFErrorsIncludeReadPhase(t *testing.T) {
 func TestKeywordCLINoMatchPreservesSentinel(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	_, err := Dispatch(RemoveKeywordsCommand(
+	_, err := Dispatch(t.Context(), RemoveKeywordsCommand(
 		inFile,
 		outFile,
 		[]string{"pdfcpu-keyword-that-does-not-exist"},
@@ -244,11 +229,11 @@ func TestKeywordCLIRejectsEmptyKeywordsBeforeFileIO(t *testing.T) {
 		op   string
 	}{
 		{name: "add", run: func(outFile string) error {
-			_, err := Dispatch(AddKeywordsCommand("-", outFile, []string{" "}, nil))
+			_, err := Dispatch(t.Context(), AddKeywordsCommand("-", outFile, []string{" "}, nil))
 			return err
 		}, op: "add keywords: validate keywords"},
 		{name: "remove", run: func(outFile string) error {
-			_, err := Dispatch(RemoveKeywordsCommand("-", outFile, []string{" "}, nil))
+			_, err := Dispatch(t.Context(), RemoveKeywordsCommand("-", outFile, []string{" "}, nil))
 			return err
 		}, op: "remove keywords: validate keywords"},
 	}
@@ -296,12 +281,12 @@ func setClosedKeywordStdin(t *testing.T) {
 	})
 }
 
-func runKeywordStdinCommand(add bool, outFile string) error {
+func runKeywordStdinCommand(c context.Context, add bool, outFile string) error {
 	if add {
-		_, err := Dispatch(AddKeywordsCommand("-", outFile, []string{"keyword"}, nil))
+		_, err := Dispatch(c, AddKeywordsCommand("-", outFile, []string{"keyword"}, nil))
 		return err
 	}
-	_, err := Dispatch(RemoveKeywordsCommand("-", outFile, []string{"keyword"}, nil))
+	_, err := Dispatch(c, RemoveKeywordsCommand("-", outFile, []string{"keyword"}, nil))
 	return err
 }
 
@@ -328,7 +313,7 @@ func TestKeywordCLIStdinTemporaryFileFailuresRetainOperationContext(t *testing.T
 			})
 
 			outFile := filepath.Join(t.TempDir(), "out.pdf")
-			err := runKeywordStdinCommand(tt.add, outFile)
+			err := runKeywordStdinCommand(t.Context(), tt.add, outFile)
 			if !errors.Is(err, wantErr) {
 				t.Fatalf("expected %v, got %v", wantErr, err)
 			}
@@ -354,7 +339,7 @@ func TestKeywordCLIStdinReadFailuresRetainOperationContext(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			setClosedKeywordStdin(t)
 			outFile := filepath.Join(t.TempDir(), "out.pdf")
-			err := runKeywordStdinCommand(tt.add, outFile)
+			err := runKeywordStdinCommand(t.Context(), tt.add, outFile)
 			if !errors.Is(err, os.ErrClosed) {
 				t.Fatalf("expected %v, got %v", os.ErrClosed, err)
 			}
@@ -387,7 +372,7 @@ func TestKeywordCLIStdinRewindFailuresRetainOperationContext(t *testing.T) {
 			})
 
 			outFile := filepath.Join(t.TempDir(), "out.pdf")
-			err := runKeywordStdinCommand(tt.add, outFile)
+			err := runKeywordStdinCommand(t.Context(), tt.add, outFile)
 			if !errors.Is(err, wantErr) {
 				t.Fatalf("expected %v, got %v", wantErr, err)
 			}
@@ -400,12 +385,12 @@ func TestKeywordCLIStdinRewindFailuresRetainOperationContext(t *testing.T) {
 
 // TestListKeywordsFileOpenError verifies input-open failures preserve their cause and filename.
 func TestListKeywordsFileOpenError(t *testing.T) {
-	if _, err := ListKeywordsFile("", nil); !errors.Is(err, api.ErrMissingPDFInput) {
+	if _, err := ListKeywordsFile(t.Context(), "", nil); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
 
 	inFile := filepath.Join(t.TempDir(), "missing.pdf")
-	_, err := ListKeywordsFile(inFile, nil)
+	_, err := ListKeywordsFile(t.Context(), inFile, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -433,7 +418,7 @@ func TestListKeywordsFileJoinsCloseError(t *testing.T) {
 		closeListKeywordsInput = closeInput
 	})
 
-	_, err := ListKeywordsFile(inFile, nil)
+	_, err := ListKeywordsFile(t.Context(), inFile, nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -455,11 +440,11 @@ func TestKeywordStreamingOpenErrorsUseExactOperation(t *testing.T) {
 		op   string
 	}{
 		{name: "add", run: func(cmd *Command) error {
-			_, err := AddKeywords(cmd)
+			_, err := addKeywords(t.Context(), cmd)
 			return err
 		}, op: "add keywords"},
 		{name: "remove", run: func(cmd *Command) error {
-			_, err := RemoveKeywords(cmd)
+			_, err := removeKeywords(t.Context(), cmd)
 			return err
 		}, op: "remove keywords"},
 	}
@@ -493,7 +478,7 @@ func TestRunKeywordStreamOperationPreservesOutput(t *testing.T) {
 	}
 	wantErr := errors.New("keyword operation failed")
 
-	err := runKeywordStreamOperation(inFile, outFile, "add keywords", func(io.ReadSeeker, io.Writer) error {
+	err := runKeywordStreamOperation(t.Context(), inFile, outFile, "add keywords", func(context.Context, io.ReadSeeker, io.Writer) error {
 		return wantErr
 	})
 	if !errors.Is(err, wantErr) {
@@ -517,7 +502,7 @@ func TestKeywordStreamingFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := AddKeywords(AddKeywordsCommand("-", outFile, []string{"keyword"}, nil))
+	_, err := addKeywords(t.Context(), AddKeywordsCommand("-", outFile, []string{"keyword"}, nil))
 	if err == nil {
 		t.Fatal("expected read failure")
 	}
@@ -535,7 +520,7 @@ func TestKeywordStreamingFailureRemovesNewOutput(t *testing.T) {
 	useStdin(t, "not a PDF")
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	_, err := RemoveKeywords(RemoveKeywordsCommand("-", outFile, nil, nil))
+	_, err := removeKeywords(t.Context(), RemoveKeywordsCommand("-", outFile, nil, nil))
 	if err == nil {
 		t.Fatal("expected read failure")
 	}
@@ -556,10 +541,10 @@ func TestKeywordStreamingSuccessReplacesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := AddKeywords(AddKeywordsCommand("-", outFile, []string{"keyword"}, nil)); err != nil {
+	if _, err := addKeywords(t.Context(), AddKeywordsCommand("-", outFile, []string{"keyword"}, nil)); err != nil {
 		t.Fatal(err)
 	}
-	keywords, err := ListKeywordsFile(outFile, nil)
+	keywords, err := ListKeywordsFile(t.Context(), outFile, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

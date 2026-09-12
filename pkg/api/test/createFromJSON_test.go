@@ -42,11 +42,11 @@ func createPDF(t *testing.T, msg, inFile, inFileJSON, outFile string, conf *mode
 		outFile = inFile
 	}
 
-	if err := api.CreateFile(inFile, inFileJSON, outFile, conf); err != nil {
+	if err := api.CreateFile(t.Context(), inFile, inFileJSON, outFile, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	if err := api.ValidateFile(outFile, nil); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, nil, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 

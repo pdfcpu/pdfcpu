@@ -61,7 +61,7 @@ func TestExtractAttachmentsPreservesCanonicalKeyForAllLookups(t *testing.T) {
 		{name: "description", lookup: "quarterly report"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			aa, err := canonicalAttachmentKeyContext().ExtractAttachments([]string{tt.lookup})
+			aa, err := canonicalAttachmentKeyContext().ExtractAttachments(t.Context(), []string{tt.lookup})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -104,7 +104,7 @@ func TestListAttachmentsSkipsEmbeddedStreamDecoding(t *testing.T) {
 		XRefTable:     xRefTable,
 	}
 
-	aa, err := ctx.ListAttachments()
+	aa, err := ctx.ListAttachments(t.Context())
 
 	if err != nil {
 		t.Fatal(err)

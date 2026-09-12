@@ -45,7 +45,7 @@ func annotationTestContext(t *testing.T) *model.Context {
 	}
 	defer f.Close()
 
-	ctx, err := Read(f, model.NewDefaultConfiguration())
+	ctx, err := Read(t.Context(), f, model.NewDefaultConfiguration())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,7 +330,7 @@ func TestAnnotationOperationsRejectMissingInput(t *testing.T) {
 		{
 			name: "remove annotations missing context",
 			fn: func() error {
-				_, err := RemoveAnnotations(nil, nil, nil, nil, false)
+				_, err := RemoveAnnotations(t.Context(), nil, nil, nil, nil, false)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -338,7 +338,7 @@ func TestAnnotationOperationsRejectMissingInput(t *testing.T) {
 		{
 			name: "remove annotations from page dict missing xref table",
 			fn: func() error {
-				_, err := RemoveAnnotationsFromPageDict(&model.Context{}, nil, nil, nil, types.Dict{}, 1, 1, false)
+				_, err := RemoveAnnotationsFromPageDict(t.Context(), &model.Context{}, nil, nil, nil, types.Dict{}, 1, 1, false)
 				return err
 			},
 			wantErr: ErrMissingXRefTable,
@@ -348,7 +348,7 @@ func TestAnnotationOperationsRejectMissingInput(t *testing.T) {
 			fn: func() error {
 				incrCtx := annotationTestContext(t)
 				incrCtx.Read = nil
-				_, err := RemoveAnnotations(incrCtx, nil, nil, nil, true)
+				_, err := RemoveAnnotations(t.Context(), incrCtx, nil, nil, nil, true)
 				return err
 			},
 			wantErr: ErrMissingReadContext,
@@ -358,7 +358,7 @@ func TestAnnotationOperationsRejectMissingInput(t *testing.T) {
 			fn: func() error {
 				incrCtx := annotationTestContext(t)
 				incrCtx.Write = nil
-				_, err := RemoveAnnotationsFromPageDict(incrCtx, nil, nil, nil, types.Dict{}, 1, 1, true)
+				_, err := RemoveAnnotationsFromPageDict(t.Context(), incrCtx, nil, nil, nil, types.Dict{}, 1, 1, true)
 				return err
 			},
 			wantErr: ErrMissingWriteContext,
@@ -581,7 +581,7 @@ func TestRemoveAnnotationsReportsInvalidAnnotsEntry(t *testing.T) {
 		model.AnnLink: model.Annot{Map: model.AnnotMap{1: ann}},
 	}
 
-	_, err := RemoveAnnotations(ctx, nil, nil, nil, false)
+	_, err := RemoveAnnotations(t.Context(), ctx, nil, nil, nil, false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -630,7 +630,7 @@ func TestRemoveAllAnnotationsMalformedIndirectAnnotsDoesNotMutateState(t *testin
 			refCount := entry.RefCount
 			pageObjNr := annotationTestPageDictIndRef(t, ctx).ObjectNumber.Value()
 
-			_, err = RemoveAnnotationsFromPageDict(ctx, nil, nil, nil, pageDict, pageObjNr, 1, false)
+			_, err = RemoveAnnotationsFromPageDict(t.Context(), ctx, nil, nil, nil, pageDict, pageObjNr, 1, false)
 			if err == nil || !strings.Contains(err.Error(), tt.wantErrPart) {
 				t.Fatalf("expected %q error, got %v", tt.wantErrPart, err)
 			}
@@ -650,7 +650,7 @@ func TestSelectiveAnnotationRemovalPreflightPreventsPartialMutation(t *testing.T
 
 	delete(ctx.PageAnnots[1][model.AnnLink].Map, secondIndRef.ObjectNumber.Value())
 	pageObjNr := annotationTestPageDictIndRef(t, ctx).ObjectNumber.Value()
-	_, err := RemoveAnnotationsFromPageDict(ctx, nil, []string{"first", "second"}, nil, pageDict, pageObjNr, 1, false)
+	_, err := RemoveAnnotationsFromPageDict(t.Context(), ctx, nil, []string{"first", "second"}, nil, pageDict, pageObjNr, 1, false)
 	if err == nil || !strings.Contains(err.Error(), "expected one cache entry, got 0") {
 		t.Fatalf("expected cache consistency error, got %v", err)
 	}
@@ -673,7 +673,7 @@ func TestSelectiveAnnotationRemovalPreflightDetectsXRefInconsistency(t *testing.
 	delete(ctx.Table, secondIndRef.ObjectNumber.Value())
 
 	pageObjNr := annotationTestPageDictIndRef(t, ctx).ObjectNumber.Value()
-	_, err := RemoveAnnotationsFromPageDict(ctx, nil, []string{"first", "second"}, nil, pageDict, pageObjNr, 1, false)
+	_, err := RemoveAnnotationsFromPageDict(t.Context(), ctx, nil, []string{"first", "second"}, nil, pageDict, pageObjNr, 1, false)
 	if err == nil || !strings.Contains(err.Error(), "missing xref table entry") {
 		t.Fatalf("expected xref consistency error, got %v", err)
 	}
@@ -693,14 +693,14 @@ func TestAnnotationRemovalDeletionGraphFailureDoesNotMutateState(t *testing.T) {
 		{
 			name: "selective removal",
 			remove: func(ctx *model.Context) error {
-				_, err := RemoveAnnotations(ctx, nil, []string{"broken"}, nil, false)
+				_, err := RemoveAnnotations(t.Context(), ctx, nil, []string{"broken"}, nil, false)
 				return err
 			},
 		},
 		{
 			name: "remove all",
 			remove: func(ctx *model.Context) error {
-				_, err := RemoveAnnotations(ctx, nil, nil, nil, false)
+				_, err := RemoveAnnotations(t.Context(), ctx, nil, nil, nil, false)
 				return err
 			},
 		},
@@ -742,7 +742,7 @@ func TestSelectiveRemovalSecondTargetFailureDoesNotMutateFirst(t *testing.T) {
 	}
 	secondDict["Broken"] = *types.NewIndirectRef(999, 0)
 
-	_, err = RemoveAnnotations(ctx, nil, []string{"first", "second"}, nil, false)
+	_, err = RemoveAnnotations(t.Context(), ctx, nil, []string{"first", "second"}, nil, false)
 	if err == nil || !strings.Contains(err.Error(), "deletion target 2") {
 		t.Fatalf("expected second-target deletion error, got %v", err)
 	}
@@ -764,7 +764,7 @@ func TestRemoveAllResolvesCatalogBeforeMutation(t *testing.T) {
 	ctx.Root = nil
 	ctx.RootDict = nil
 
-	_, err := RemoveAnnotations(ctx, nil, nil, nil, false)
+	_, err := RemoveAnnotations(t.Context(), ctx, nil, nil, nil, false)
 	if err == nil || !strings.Contains(err.Error(), "catalog") {
 		t.Fatalf("expected catalog error, got %v", err)
 	}
@@ -780,7 +780,7 @@ func TestRemoveAllPreservesStructTreeWithoutRemoval(t *testing.T) {
 	root["StructTreeRoot"] = types.Name("keep")
 	ctx.PageAnnots = map[int]model.PgAnnots{}
 
-	removed, err := RemoveAnnotations(ctx, nil, nil, nil, false)
+	removed, err := RemoveAnnotations(t.Context(), ctx, nil, nil, nil, false)
 	if err != nil {
 		t.Fatalf("remove annotations: %v", err)
 	}
@@ -806,7 +806,7 @@ func TestRemoveAnnotationsByTypeWithoutIndRefsDoesNotPanic(t *testing.T) {
 		}
 	}()
 
-	_, err := RemoveAnnotations(ctx, nil, []string{"Text"}, nil, false)
+	_, err := RemoveAnnotations(t.Context(), ctx, nil, []string{"Text"}, nil, false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -828,7 +828,7 @@ func TestRemoveLastDirectAnnotationDeletesAnnotsEntry(t *testing.T) {
 		t.Fatal("expected annotation added")
 	}
 
-	ok, err = RemoveAnnotations(ctx, nil, []string{"pdfcpu-test-annotation"}, nil, false)
+	ok, err = RemoveAnnotations(t.Context(), ctx, nil, []string{"pdfcpu-test-annotation"}, nil, false)
 	if err != nil {
 		t.Fatalf("remove annotation: %v", err)
 	}

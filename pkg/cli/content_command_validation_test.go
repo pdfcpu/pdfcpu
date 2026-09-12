@@ -17,6 +17,7 @@ limitations under the License.
 package cli
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -25,7 +26,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-type contentCommandExecutor func(*Command) ([]string, error)
+type contentCommandExecutor func(context.Context, *Command) ([]string, error)
 
 // TestContentExecutorsRejectNilCommand verifies every public content executor has a safe nil boundary.
 func TestContentExecutorsRejectNilCommand(t *testing.T) {
@@ -33,28 +34,28 @@ func TestContentExecutorsRejectNilCommand(t *testing.T) {
 		name string
 		run  contentCommandExecutor
 	}{
-		{"AddWatermarks", AddWatermarks},
-		{"RemoveWatermarks", RemoveWatermarks},
-		{"ListAnnotations", ListAnnotations},
-		{"RemoveAnnotations", RemoveAnnotations},
-		{"ListBookmarks", ListBookmarks},
-		{"ExportBookmarks", ExportBookmarks},
-		{"ImportBookmarks", ImportBookmarks},
-		{"RemoveBookmarks", RemoveBookmarks},
-		{"ListPageLayout", ListPageLayout},
-		{"SetPageLayout", SetPageLayout},
-		{"ResetPageLayout", ResetPageLayout},
-		{"ListPageMode", ListPageMode},
-		{"SetPageMode", SetPageMode},
-		{"ResetPageMode", ResetPageMode},
-		{"ListViewerPreferences", ListViewerPreferences},
-		{"SetViewerPreferences", SetViewerPreferences},
-		{"ResetViewerPreferences", ResetViewerPreferences},
+		{"AddWatermarks", addWatermarks},
+		{"RemoveWatermarks", removeWatermarks},
+		{"ListAnnotations", listAnnotationsForCommand},
+		{"RemoveAnnotations", removeAnnotations},
+		{"ListBookmarks", listBookmarks},
+		{"ExportBookmarks", exportBookmarks},
+		{"ImportBookmarks", importBookmarks},
+		{"RemoveBookmarks", removeBookmarks},
+		{"ListPageLayout", listPageLayout},
+		{"SetPageLayout", setPageLayout},
+		{"ResetPageLayout", resetPageLayout},
+		{"ListPageMode", listPageMode},
+		{"SetPageMode", setPageMode},
+		{"ResetPageMode", resetPageMode},
+		{"ListViewerPreferences", listViewerPreferences},
+		{"SetViewerPreferences", setViewerPreferences},
+		{"ResetViewerPreferences", resetViewerPreferences},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(nil)
+			_, err := tt.run(t.Context(), nil)
 			if !errors.Is(err, ErrMissingCommand) {
 				t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 			}
@@ -73,33 +74,33 @@ func TestContentExecutorsRejectIncompleteCommand(t *testing.T) {
 		cmd  *Command
 		want error
 	}{
-		{"AddWatermarksInput", AddWatermarks, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"AddWatermarksOutput", AddWatermarks, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"AddWatermarksConfig", AddWatermarks, &Command{InFile: &inFile, OutFile: &outFile},
+		{"AddWatermarksInput", addWatermarks, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"AddWatermarksOutput", addWatermarks, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"AddWatermarksConfig", addWatermarks, &Command{InFile: &inFile, OutFile: &outFile},
 			api.ErrMissingWatermarkConfiguration},
-		{"RemoveWatermarksInput", RemoveWatermarks, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"RemoveWatermarksOutput", RemoveWatermarks, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"ListAnnotationsInput", ListAnnotations, &Command{InFile: &empty}, api.ErrMissingPDFInput},
-		{"RemoveAnnotationsInput", RemoveAnnotations, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"RemoveAnnotationsOutput", RemoveAnnotations, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"ListBookmarksInput", ListBookmarks, &Command{}, api.ErrMissingPDFInput},
-		{"ExportBookmarksOutput", ExportBookmarks, &Command{InFile: &inFile}, api.ErrMissingJSONOutput},
-		{"ImportBookmarksInput", ImportBookmarks, &Command{InFile: &inFile}, api.ErrMissingJSONInput},
-		{"RemoveBookmarksInput", RemoveBookmarks, &Command{}, api.ErrMissingPDFInput},
-		{"ListPageLayoutInput", ListPageLayout, &Command{}, api.ErrMissingPDFInput},
-		{"SetPageLayoutInput", SetPageLayout, &Command{}, api.ErrMissingPDFInput},
-		{"ResetPageLayoutInput", ResetPageLayout, &Command{}, api.ErrMissingPDFInput},
-		{"ListPageModeInput", ListPageMode, &Command{}, api.ErrMissingPDFInput},
-		{"SetPageModeInput", SetPageMode, &Command{}, api.ErrMissingPDFInput},
-		{"ResetPageModeInput", ResetPageMode, &Command{}, api.ErrMissingPDFInput},
-		{"ListViewerPreferencesInput", ListViewerPreferences, &Command{}, api.ErrMissingPDFInput},
-		{"SetViewerPreferencesInput", SetViewerPreferences, &Command{}, api.ErrMissingPDFInput},
-		{"ResetViewerPreferencesInput", ResetViewerPreferences, &Command{}, api.ErrMissingPDFInput},
+		{"RemoveWatermarksInput", removeWatermarks, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"RemoveWatermarksOutput", removeWatermarks, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"ListAnnotationsInput", listAnnotationsForCommand, &Command{InFile: &empty}, api.ErrMissingPDFInput},
+		{"RemoveAnnotationsInput", removeAnnotations, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"RemoveAnnotationsOutput", removeAnnotations, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"ListBookmarksInput", listBookmarks, &Command{}, api.ErrMissingPDFInput},
+		{"ExportBookmarksOutput", exportBookmarks, &Command{InFile: &inFile}, api.ErrMissingJSONOutput},
+		{"ImportBookmarksInput", importBookmarks, &Command{InFile: &inFile}, api.ErrMissingJSONInput},
+		{"RemoveBookmarksInput", removeBookmarks, &Command{}, api.ErrMissingPDFInput},
+		{"ListPageLayoutInput", listPageLayout, &Command{}, api.ErrMissingPDFInput},
+		{"SetPageLayoutInput", setPageLayout, &Command{}, api.ErrMissingPDFInput},
+		{"ResetPageLayoutInput", resetPageLayout, &Command{}, api.ErrMissingPDFInput},
+		{"ListPageModeInput", listPageMode, &Command{}, api.ErrMissingPDFInput},
+		{"SetPageModeInput", setPageMode, &Command{}, api.ErrMissingPDFInput},
+		{"ResetPageModeInput", resetPageMode, &Command{}, api.ErrMissingPDFInput},
+		{"ListViewerPreferencesInput", listViewerPreferences, &Command{}, api.ErrMissingPDFInput},
+		{"SetViewerPreferencesInput", setViewerPreferences, &Command{}, api.ErrMissingPDFInput},
+		{"ResetViewerPreferencesInput", resetViewerPreferences, &Command{}, api.ErrMissingPDFInput},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(tt.cmd)
+			_, err := tt.run(t.Context(), tt.cmd)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
@@ -109,10 +110,10 @@ func TestContentExecutorsRejectIncompleteCommand(t *testing.T) {
 
 // TestContentFileHelpersRejectMissingInput verifies exported file helpers reject empty paths consistently.
 func TestContentFileHelpersRejectMissingInput(t *testing.T) {
-	if _, _, err := ListAnnotationsFile("", nil, nil); !errors.Is(err, api.ErrMissingPDFInput) {
+	if _, _, err := ListAnnotationsFile(t.Context(), "", nil, nil); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("ListAnnotationsFile: expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
-	if _, _, err := ListAnnotationsJSONFile("", nil, nil); !errors.Is(err, api.ErrMissingPDFInput) {
+	if _, _, err := ListAnnotationsJSONFile(t.Context(), "", nil, nil); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("ListAnnotationsJSONFile: expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
 }
@@ -136,7 +137,7 @@ func TestDispatchRejectsIncompleteContentCommandsWithoutPanic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Dispatch(tt.cmd)
+			_, err := Dispatch(t.Context(), tt.cmd)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}

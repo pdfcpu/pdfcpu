@@ -60,7 +60,7 @@ func TestNextStreamOffset(t *testing.T) {
 
 // TestBufferRejectsObjectBeyondLimit verifies bounded indirect object buffering.
 func TestBufferRejectsObjectBeyondLimit(t *testing.T) {
-	_, _, _, _, err := buffer(context.Background(), strings.NewReader(strings.Repeat("x", 32)), 16)
+	_, _, _, _, err := buffer(t.Context(), strings.NewReader(strings.Repeat("x", 32)), 16)
 	if !errors.Is(err, errObjectBufferLimit) {
 		t.Fatalf("got %v, want object buffer limit error", err)
 	}
@@ -73,7 +73,7 @@ func TestBufferAcceptsMarkersAtLimit(t *testing.T) {
 		"1 0 obj <<>>stream\n",
 	} {
 		t.Run(input, func(t *testing.T) {
-			buf, _, _, _, err := buffer(context.Background(), strings.NewReader(input), int64(len(input)))
+			buf, _, _, _, err := buffer(t.Context(), strings.NewReader(input), int64(len(input)))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -86,7 +86,7 @@ func TestBufferAcceptsMarkersAtLimit(t *testing.T) {
 
 // TestBufferHonorsCancellation verifies cancellation takes precedence over reading.
 func TestBufferHonorsCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	_, _, _, _, err := buffer(ctx, strings.NewReader(strings.Repeat("x", 32)), 16)
 	if !errors.Is(err, context.Canceled) {

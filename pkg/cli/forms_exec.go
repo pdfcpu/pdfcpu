@@ -17,14 +17,17 @@ limitations under the License.
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/form"
@@ -60,40 +63,55 @@ func validateMultiFillFormCommand(cmd *Command) error {
 	)
 }
 
-func listFormFields(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
-	return api.ListFormFields(rs, conf)
+func listFormFields(c context.Context, rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	return api.ListFormFields(c, rs, conf)
 }
 
-func exportFormGroup(rs io.ReadSeeker, source string, conf *model.Configuration) (*form.FormGroup, error) {
-	formGroup, err := api.ExportForm(rs, source, conf)
+func exportFormGroup(c context.Context, rs io.ReadSeeker, source string, conf *model.Configuration) (*form.FormGroup, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	formGroup, err := api.ExportForm(c, rs, source, conf)
 	if err != nil {
 		return nil, fmt.Errorf("list form fields: export data: %w", err)
 	}
 	return formGroup, nil
 }
 
-func exportFormGroupFile(fileName string, conf *model.Configuration) (*form.FormGroup, error) {
+func exportFormGroupFile(c context.Context, fileName string, conf *model.Configuration) (*form.FormGroup, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("list form fields: open input %s: %w", fileName, err)
 	}
-	formGroup, opErr := exportFormGroup(f, formFieldSource(fileName), conf)
+	formGroup, opErr := exportFormGroup(c, f, formFieldSource(fileName), conf)
 	return formGroup, errors.Join(opErr, closeStreamFile(f, "list form fields: close input"))
 }
 
-func listFormFieldsJSON(inFiles []string, conf *model.Configuration) ([]string, error) {
+func listFormFieldsJSON(c context.Context, inFiles []string, conf *model.Configuration) ([]string, error) {
+	if c == nil {
+		return nil, ErrMissingContext
+	}
 	formGroup := &form.FormGroup{}
 
 	for _, fn := range inFiles {
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
 		source := formFieldSource(fn)
 		var fg *form.FormGroup
 		var err error
 		if fn == "-" {
-			fg, err = withStdinReadSeeker("list form fields", func(rs io.ReadSeeker) (*form.FormGroup, error) {
-				return exportFormGroup(rs, source, conf)
+			fg, err = withStdinReadSeeker(c, "list form fields", func(rs io.ReadSeeker) (*form.FormGroup, error) {
+				return exportFormGroup(c, rs, source, conf)
 			})
 		} else {
-			fg, err = exportFormGroupFile(fn, conf)
+			fg, err = exportFormGroupFile(c, fn, conf)
 		}
 		if err != nil {
 			return nil, err
@@ -108,15 +126,18 @@ func listFormFieldsJSON(inFiles []string, conf *model.Configuration) ([]string, 
 	if err != nil {
 		return nil, fmt.Errorf("list form fields: encode JSON: %w", err)
 	}
-	return []string{string(bb)}, nil
+	return []string{string(bb)}, c.Err()
 }
 
-func listFormFieldsFile(fileName string, conf *model.Configuration) ([]string, error) {
+func listFormFieldsFile(c context.Context, fileName string, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("list form fields: open input %s: %w", fileName, err)
 	}
-	ss, opErr := listFormFields(f, conf)
+	ss, opErr := listFormFields(c, f, conf)
 	return ss, errors.Join(opErr, closeStreamFile(f, "list form fields: close input"))
 }
 
@@ -127,8 +148,11 @@ func formFieldSource(fn string) string {
 	return fn
 }
 
-// ListFormFieldsFile returns a list of form field ids in inFile.
-func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, error) {
+// ListFormFieldsFile returns form field IDs in inFiles and supports cancellation.
+func ListFormFieldsFile(c context.Context, inFiles []string, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateCommandInputFiles(inFiles, 1, 0, nil); err != nil {
 		return nil, commandValidationError("list form fields", err)
 	}
@@ -138,7 +162,10 @@ func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, 
 	var errs []error
 
 	for _, fn := range inFiles {
-		output, err := listFormFieldsFile(fn, conf)
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
+		output, err := listFormFieldsFile(c, fn, conf)
 		if err != nil {
 			if len(inFiles) > 1 {
 				errs = append(errs, err)
@@ -151,11 +178,13 @@ func ListFormFieldsFile(inFiles []string, conf *model.Configuration) ([]string, 
 		ss = append(ss, output...)
 	}
 
-	return ss, errors.Join(errs...)
+	return ss, errors.Join(c.Err(), errors.Join(errs...))
 }
 
-// ListFormFields returns inFile's form field ids.
-func ListFormFields(cmd *Command) ([]string, error) {
+func listFormFieldsForCommand(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	requirements := commandRequirements{
 		operation:     "list form fields",
 		minInputFiles: 1,
@@ -165,32 +194,29 @@ func ListFormFields(cmd *Command) ([]string, error) {
 	}
 	if cmd.BoolVal1 {
 		log.SetCLILogger(nil)
-		return listFormFieldsJSON(cmd.InFiles, cmd.Conf)
+		return listFormFieldsJSON(c, cmd.InFiles, cmd.Conf)
 	}
 
-	stdin := false
-	for _, fn := range cmd.InFiles {
-		if fn == "-" {
-			stdin = true
-			break
-		}
-	}
+	stdin := slices.Contains(cmd.InFiles, "-")
 	if !stdin {
-		return ListFormFieldsFile(cmd.InFiles, cmd.Conf)
+		return ListFormFieldsFile(c, cmd.InFiles, cmd.Conf)
 	}
 
 	log.SetCLILogger(nil)
 	var ss []string
 	var errs []error
 	for _, fn := range cmd.InFiles {
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
 		var output []string
 		var err error
 		if fn == "-" {
-			output, err = withStdinReadSeeker("list form fields", func(rs io.ReadSeeker) ([]string, error) {
-				return listFormFields(rs, cmd.Conf)
+			output, err = withStdinReadSeeker(c, "list form fields", func(rs io.ReadSeeker) ([]string, error) {
+				return listFormFields(c, rs, cmd.Conf)
 			})
 		} else {
-			output, err = listFormFieldsFile(fn, cmd.Conf)
+			output, err = listFormFieldsFile(c, fn, cmd.Conf)
 		}
 		if err != nil {
 			if len(cmd.InFiles) == 1 {
@@ -208,32 +234,41 @@ func ListFormFields(cmd *Command) ([]string, error) {
 		ss = append(ss, output...)
 	}
 
-	return ss, errors.Join(errs...)
+	return ss, errors.Join(c.Err(), errors.Join(errs...))
 }
 
-func formTemplateFileFromStdin() (string, func(error) error, error) {
-	in, err := readSeekerFromStdin("multi-fill form")
+func formTemplateFileFromStdin(c context.Context) (string, func(error) error, error) {
+	if c == nil {
+		return "", nil, ErrMissingContext
+	}
+	in, err := readSeekerFromStdin(c, "multi-fill form")
 	if err != nil {
 		return "", nil, err
 	}
 	return in.path, func(opErr error) error { return in.finalize("multi-fill form", opErr) }, nil
 }
 
-func formPDFFileCommand(inFile, outFile, operation string, fileFn func() error, readerFn func(io.ReadSeeker, io.Writer) error) ([]string, error) {
+func formPDFFileCommand(c context.Context, inFile, outFile, operation string, fileFn func(context.Context) error, readerFn func(context.Context, io.ReadSeeker, io.Writer) error) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile != "-" && outFile != "-" {
-		return nil, fileFn()
+		return nil, fileFn(c)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(inFile, outFile, operation)
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, operation)
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(readerFn(rs, w))
+	return nil, finalize(readerFn(c, rs, w))
 }
 
-func formPDFWithData(cmd *Command, operation string, fileFn func() error, readerFn func(io.ReadSeeker, io.Reader, io.Writer) error) ([]string, error) {
+func formPDFWithData(c context.Context, cmd *Command, operation string, fileFn func(context.Context) error, readerFn func(context.Context, io.ReadSeeker, io.Reader, io.Writer) error) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, fileFn()
+		return nil, fileFn(c)
 	}
 
 	rd, err := os.Open(*cmd.InFileJSON)
@@ -241,94 +276,108 @@ func formPDFWithData(cmd *Command, operation string, fileFn func() error, reader
 		return nil, fmt.Errorf("%s: open form data %s: %w", operation, *cmd.InFileJSON, err)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, operation)
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, operation)
 	if err != nil {
 		return nil, errors.Join(err, closeStreamFile(rd, operation+": close form data"))
 	}
 
-	err = readerFn(rs, rd, w)
+	err = readerFn(c, rs, rd, w)
 	err = errors.Join(err, closeStreamFile(rd, operation+": close form data"))
 	return nil, finalize(err)
 }
 
-// RemoveFormFields removes some form fields from inFile.
-func RemoveFormFields(cmd *Command) ([]string, error) {
+func removeFormFields(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateFormPDFCommand(cmd, "remove form fields"); err != nil {
 		return nil, err
 	}
 	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
+		c,
 		*cmd.InFile,
 		*cmd.OutFile,
 		"remove form fields",
-		func() error {
-			return api.RemoveFormFieldsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
+		func(c context.Context) error {
+			return api.RemoveFormFieldsFile(c, *cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
 		},
-		func(rs io.ReadSeeker, w io.Writer) error {
-			return api.RemoveFormFields(rs, w, cmd.StringVals, cmd.Conf)
+		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
+			return api.RemoveFormFields(c, rs, w, cmd.StringVals, cmd.Conf)
 		},
 	)
 }
 
-// LockFormFields makes some or all form fields of inFile read-only.
-func LockFormFields(cmd *Command) ([]string, error) {
+func lockFormFields(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateFormPDFCommand(cmd, "lock form fields"); err != nil {
 		return nil, err
 	}
 	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
+		c,
 		*cmd.InFile,
 		*cmd.OutFile,
 		"lock form fields",
-		func() error {
-			return api.LockFormFieldsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
+		func(c context.Context) error {
+			return api.LockFormFieldsFile(c, *cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
 		},
-		func(rs io.ReadSeeker, w io.Writer) error {
-			return api.LockFormFields(rs, w, cmd.StringVals, cmd.Conf)
+		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
+			return api.LockFormFields(c, rs, w, cmd.StringVals, cmd.Conf)
 		},
 	)
 }
 
-// UnlockFormFields makes some or all form fields of inFile writable.
-func UnlockFormFields(cmd *Command) ([]string, error) {
+func unlockFormFields(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateFormPDFCommand(cmd, "unlock form fields"); err != nil {
 		return nil, err
 	}
 	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
+		c,
 		*cmd.InFile,
 		*cmd.OutFile,
 		"unlock form fields",
-		func() error {
-			return api.UnlockFormFieldsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
+		func(c context.Context) error {
+			return api.UnlockFormFieldsFile(c, *cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
 		},
-		func(rs io.ReadSeeker, w io.Writer) error {
-			return api.UnlockFormFields(rs, w, cmd.StringVals, cmd.Conf)
+		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
+			return api.UnlockFormFields(c, rs, w, cmd.StringVals, cmd.Conf)
 		},
 	)
 }
 
-// ResetFormFields sets some or all form fields of inFile to the corresponding default value.
-func ResetFormFields(cmd *Command) ([]string, error) {
+func resetFormFields(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateFormPDFCommand(cmd, "reset form fields"); err != nil {
 		return nil, err
 	}
 	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
+		c,
 		*cmd.InFile,
 		*cmd.OutFile,
 		"reset form fields",
-		func() error {
-			return api.ResetFormFieldsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
+		func(c context.Context) error {
+			return api.ResetFormFieldsFile(c, *cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
 		},
-		func(rs io.ReadSeeker, w io.Writer) error {
-			return api.ResetFormFields(rs, w, cmd.StringVals, cmd.Conf)
+		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
+			return api.ResetFormFields(c, rs, w, cmd.StringVals, cmd.Conf)
 		},
 	)
 }
 
-// ExportFormFields returns a representation of inFile's form as outFileJSON.
-func ExportFormFields(cmd *Command) ([]string, error) {
+func exportFormFields(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	requirements := commandRequirements{
 		operation:   "export form",
 		inFile:      commandStringRequiredNonEmpty,
@@ -339,19 +388,21 @@ func ExportFormFields(cmd *Command) ([]string, error) {
 	}
 	reportOutputPath(*cmd.OutFileJSON)
 	if *cmd.InFile == "-" {
-		rs, w, finalize, err := streamInOutForOperation("-", *cmd.OutFileJSON, "export form")
+		rs, w, finalize, err := streamInOutForOperation(c, "-", *cmd.OutFileJSON, "export form")
 		if err != nil {
 			return nil, err
 		}
 
-		return nil, finalize(api.ExportFormJSON(rs, w, "stdin", cmd.Conf))
+		return nil, finalize(api.ExportFormJSON(c, rs, w, "stdin", cmd.Conf))
 	}
 
-	return nil, api.ExportFormFile(*cmd.InFile, *cmd.OutFileJSON, cmd.Conf)
+	return nil, api.ExportFormFile(c, *cmd.InFile, *cmd.OutFileJSON, cmd.Conf)
 }
 
-// FillFormFields fills out inFile's form using data represented by inFileJSON.
-func FillFormFields(cmd *Command) ([]string, error) {
+func fillFormFields(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	requirements := commandRequirements{
 		operation:  "fill form",
 		inFile:     commandStringRequiredNonEmpty,
@@ -364,22 +415,26 @@ func FillFormFields(cmd *Command) ([]string, error) {
 	reportCommandProgress(cmd, "filling...\n")
 	reportCommandOutputPath(cmd)
 	return formPDFWithData(
+		c,
 		cmd,
 		"fill form",
-		func() error {
-			return api.FillFormFile(*cmd.InFile, *cmd.InFileJSON, *cmd.OutFile, cmd.Conf)
+		func(c context.Context) error {
+			return api.FillFormFile(c, *cmd.InFile, *cmd.InFileJSON, *cmd.OutFile, cmd.Conf)
 		},
-		func(rs io.ReadSeeker, rd io.Reader, w io.Writer) error {
-			return api.FillForm(rs, rd, w, cmd.Conf)
+		func(c context.Context, rs io.ReadSeeker, rd io.Reader, w io.Writer) error {
+			return api.FillForm(c, rs, rd, w, cmd.Conf)
 		},
 	)
 }
 
-func multiFillFormInputFile(cmd *Command) (string, func(error) error, error) {
+func multiFillFormInputFile(c context.Context, cmd *Command) (string, func(error) error, error) {
+	if err := contextutil.Check(c); err != nil {
+		return "", nil, err
+	}
 	if *cmd.InFile != "-" {
 		return *cmd.InFile, nil, nil
 	}
-	return formTemplateFileFromStdin()
+	return formTemplateFileFromStdin(c)
 }
 
 func multiFillFormOutputFile(cmd *Command) string {
@@ -410,7 +465,10 @@ func reportMultiFillFormProgress(cmd *Command) {
 	)
 }
 
-func multiFillFormFieldsToStdout(cmd *Command, inFile string) ([]string, error) {
+func multiFillFormFieldsToStdout(c context.Context, cmd *Command, inFile string) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if !cmd.BoolVal1 {
 		return nil, errors.New("multi-fill form: stdout requires merge mode")
 	}
@@ -427,7 +485,9 @@ func multiFillFormFieldsToStdout(cmd *Command, inFile string) ([]string, error) 
 	}
 
 	outFile := "stdout.pdf"
-	if err := api.MultiFillFormFile(inFile, *cmd.InFileJSON, outDir, outFile, true, cmd.Conf); err != nil {
+	if err := api.MultiFillFormFile(
+		c, inFile, *cmd.InFileJSON, outDir, outFile, true, cmd.Conf,
+	); err != nil {
 		return nil, cleanup(err)
 	}
 
@@ -438,7 +498,7 @@ func multiFillFormFieldsToStdout(cmd *Command, inFile string) ([]string, error) 
 		return nil, cleanup(fmt.Errorf("multi-fill form: open merged output %s: %w", outPath, err))
 	}
 
-	_, err = io.Copy(os.Stdout, f)
+	_, err = io.Copy(os.Stdout, contextReader{ctx: c, r: f})
 	if err != nil {
 		err = fmt.Errorf("multi-fill form: write stdout: %w", err)
 	}
@@ -446,22 +506,26 @@ func multiFillFormFieldsToStdout(cmd *Command, inFile string) ([]string, error) 
 	return nil, cleanup(err)
 }
 
-// MultiFillFormFields fills out multiple instances of inFile's form using JSON or CSV data.
-func MultiFillFormFields(cmd *Command) ([]string, error) {
+func multiFillFormFields(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateMultiFillFormCommand(cmd); err != nil {
 		return nil, err
 	}
 	reportMultiFillFormProgress(cmd)
-	inFile, finalize, err := multiFillFormInputFile(cmd)
+	inFile, finalize, err := multiFillFormInputFile(c, cmd)
 	if err != nil {
 		return nil, err
 	}
 
 	var result []string
 	if *cmd.OutFile == "-" {
-		result, err = multiFillFormFieldsToStdout(cmd, inFile)
+		result, err = multiFillFormFieldsToStdout(c, cmd, inFile)
 	} else {
-		err = api.MultiFillFormFile(inFile, *cmd.InFileJSON, *cmd.OutDir, multiFillFormOutputFile(cmd), cmd.BoolVal1, cmd.Conf)
+		err = api.MultiFillFormFile(
+			c, inFile, *cmd.InFileJSON, *cmd.OutDir, multiFillFormOutputFile(cmd), cmd.BoolVal1, cmd.Conf,
+		)
 	}
 	if finalize != nil {
 		err = finalize(err)

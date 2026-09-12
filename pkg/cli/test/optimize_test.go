@@ -27,7 +27,7 @@ import (
 func optimizeFile(t *testing.T, fileName string, conf *model.Configuration) error {
 	t.Helper()
 	cmd := cli.OptimizeCommand(fileName, "", conf)
-	_, err := cli.Dispatch(cmd)
+	_, err := cli.Dispatch(t.Context(), cmd)
 	return err
 }
 
@@ -37,13 +37,13 @@ func testOptimizeFile(t *testing.T, inFile, outFile string) {
 
 	// Optimize inFile and write result to outFile.
 	cmd := cli.OptimizeCommand(inFile, outFile, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 
 	// Optimize outFile and write result to outFile.
 	cmd = cli.OptimizeCommand(outFile, "", conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 

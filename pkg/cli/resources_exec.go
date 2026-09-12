@@ -18,6 +18,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -34,9 +36,10 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/validate"
 )
 
-// ImportImages turns image files into a page sequence and writes the result to outFile.
-// In its simplest form this operation converts an image into a PDF.
-func ImportImages(cmd *Command) (result []string, err error) {
+func importImages(c context.Context, cmd *Command) (result []string, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateImportImagesCommand(cmd); err != nil {
 		return nil, err
 	}
@@ -59,10 +62,10 @@ func ImportImages(cmd *Command) (result []string, err error) {
 		}
 	}
 	if *cmd.OutFile != "-" && !stdinImage {
-		return nil, api.ImportImagesFile(cmd.InFiles, *cmd.OutFile, imp, conf)
+		return nil, api.ImportImagesFile(c, cmd.InFiles, *cmd.OutFile, imp, conf)
 	}
 
-	readers, closers, err := importImageReaders(cmd.InFiles, conf.Limits.MaxStreamBytes)
+	readers, closers, err := importImageReaders(c, cmd.InFiles, conf.Limits.MaxStreamBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -72,10 +75,10 @@ func ImportImages(cmd *Command) (result []string, err error) {
 			err = errors.Join(err, closeImportImageInputs(closers))
 		}()
 		log.SetCLILogger(nil)
-		return nil, api.ImportImages(nil, os.Stdout, readers, imp, conf)
+		return nil, api.ImportImages(c, nil, os.Stdout, readers, imp, conf)
 	}
 
-	return nil, importImagesToFile(*cmd.OutFile, readers, closers, imp, conf)
+	return nil, importImagesToFile(c, *cmd.OutFile, readers, closers, imp, conf)
 }
 
 func reportImportImagesProgress(cmd *Command) {
@@ -116,7 +119,10 @@ func hasStdinImage(inFiles []string) (bool, error) {
 	return stdinImage, nil
 }
 
-func readImportImageStdin(r io.Reader, imageIndex int, maxStreamBytes int64) (io.Reader, error) {
+func readImportImageStdin(c context.Context, r io.Reader, imageIndex int, maxStreamBytes int64) (io.Reader, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if r == nil {
 		return nil, fmt.Errorf("import images: image %d stdin: read: missing reader", imageIndex)
 	}
@@ -131,7 +137,7 @@ func readImportImageStdin(r io.Reader, imageIndex int, maxStreamBytes int64) (io
 	if maxStreamBytes < math.MaxInt64 {
 		readLimit++
 	}
-	bb, err := io.ReadAll(io.LimitReader(r, readLimit))
+	bb, err := io.ReadAll(io.LimitReader(contextReader{ctx: c, r: r}, readLimit))
 	if err != nil {
 		return nil, fmt.Errorf("import images: image %d stdin: read: %w", imageIndex, err)
 	}
@@ -149,7 +155,10 @@ func readImportImageStdin(r io.Reader, imageIndex int, maxStreamBytes int64) (io
 	return bytes.NewReader(bb), nil
 }
 
-func importImageReader(fn string, imageIndex int, maxStreamBytes int64) (io.Reader, io.Closer, error) {
+func importImageReader(c context.Context, fn string, imageIndex int, maxStreamBytes int64) (io.Reader, io.Closer, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	if fn != "-" {
 		f, err := os.Open(fn)
 		if err != nil {
@@ -158,7 +167,7 @@ func importImageReader(fn string, imageIndex int, maxStreamBytes int64) (io.Read
 		return f, f, nil
 	}
 
-	r, err := readImportImageStdin(os.Stdin, imageIndex, maxStreamBytes)
+	r, err := readImportImageStdin(c, os.Stdin, imageIndex, maxStreamBytes)
 	return r, nil, err
 }
 
@@ -168,18 +177,24 @@ type importImageInputCloser struct {
 	fileName   string
 }
 
-func importImageReaders(inFiles []string, maxStreamBytes int64) ([]io.Reader, []importImageInputCloser, error) {
+func importImageReaders(c context.Context, inFiles []string, maxStreamBytes int64) ([]io.Reader, []importImageInputCloser, error) {
+	if c == nil {
+		return nil, nil, ErrMissingContext
+	}
 	readers := make([]io.Reader, 0, len(inFiles))
 	closers := make([]importImageInputCloser, 0, len(inFiles))
 	for i, fn := range inFiles {
-		r, c, err := importImageReader(fn, i+1, maxStreamBytes)
+		if err := c.Err(); err != nil {
+			return nil, nil, errors.Join(err, closeImportImageInputs(closers))
+		}
+		r, closer, err := importImageReader(c, fn, i+1, maxStreamBytes)
 		if err != nil {
 			return nil, nil, errors.Join(err, closeImportImageInputs(closers))
 		}
 		readers = append(readers, r)
-		if c != nil {
+		if closer != nil {
 			closers = append(closers, importImageInputCloser{
-				closer:     c,
+				closer:     closer,
 				imageIndex: i + 1,
 				fileName:   fn,
 			})
@@ -220,13 +235,10 @@ func createImportImagesStreamOutput(outFile string, replace bool) (*os.File, str
 	return f, outFile, "", err
 }
 
-func importImagesToFile(
-	outFile string,
-	readers []io.Reader,
-	closers []importImageInputCloser,
-	imp *pdfcpu.Import,
-	conf *model.Configuration,
-) (err error) {
+func importImagesToFile(c context.Context, outFile string, readers []io.Reader, closers []importImageInputCloser, imp *pdfcpu.Import, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	f1, err := importImagesDestination(outFile)
 	if err != nil {
 		return errors.Join(err, closeImportImageInputs(closers))
@@ -248,25 +260,25 @@ func importImagesToFile(
 	}
 	defer func() {
 		err = errors.Join(err, closeImportImageInputs(closers))
+		err = errors.Join(err, c.Err())
 		err = finalizer.finalize("import images", err)
 	}()
 
-	return api.ImportImages(f1, f2, readers, imp, conf)
+	return api.ImportImages(c, f1, f2, readers, imp, conf)
 }
 
-// CreateCheatSheetsFonts creates single page PDF cheat sheets for user fonts in current dir.
-func CreateCheatSheetsFonts(cmd *Command) ([]string, error) {
-	return createCheatSheetsFontsCommand(cmd, api.CreateCheatSheetsUserFontsWithResult)
+func createCheatSheetsFonts(c context.Context, cmd *Command) ([]string, error) {
+	return createCheatSheetsFontsCommand(c, cmd, api.CreateCheatSheetsUserFontsWithResult)
 }
 
-func createCheatSheetsFontsCommand(
-	cmd *Command,
-	create func([]string) (api.FontCheatSheetResult, error),
-) ([]string, error) {
+func createCheatSheetsFontsCommand(c context.Context, cmd *Command, create func(context.Context, []string) (api.FontCheatSheetResult, error)) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateFontsCommand(cmd, model.CHEATSHEETSFONTS); err != nil {
 		return nil, err
 	}
-	result, err := create(cmd.InFiles)
+	result, err := create(c, cmd.InFiles)
 	for _, path := range result.Paths {
 		reportCommandProgress(cmd, "%s\n", path)
 	}
@@ -288,23 +300,24 @@ func validateFontsCommand(cmd *Command, expectedMode model.CommandMode) error {
 	return nil
 }
 
-// ListFonts gathers information about supported fonts and returns the result as []string.
-func ListFonts(cmd *Command) ([]string, error) {
+func listFonts(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateFontsCommand(cmd, model.LISTFONTS); err != nil {
 		return nil, err
 	}
-	return api.ListFonts()
+	return api.ListFonts(c)
 }
 
-// InstallFonts installs True Type fonts into the pdfcpu pconfig dir.
-func InstallFonts(cmd *Command) ([]string, error) {
-	return installFontsCommand(cmd, api.InstallFontsWithResult)
+func installFonts(c context.Context, cmd *Command) ([]string, error) {
+	return installFontsCommand(c, cmd, api.InstallFontsWithResult)
 }
 
-func installFontsCommand(
-	cmd *Command,
-	install func([]string) (api.FontInstallResult, error),
-) ([]string, error) {
+func installFontsCommand(c context.Context, cmd *Command, install func(context.Context, []string) (api.FontInstallResult, error)) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateFontsCommand(cmd, model.INSTALLFONTS); err != nil {
 		return nil, err
 	}
@@ -312,7 +325,7 @@ func installFontsCommand(
 		return nil, fmt.Errorf("install fonts: %w", api.ErrMissingFontInput)
 	}
 	reportCommandProgress(cmd, "installing to %s...\n", font.UserFontDir)
-	result, err := install(cmd.InFiles)
+	result, err := install(c, cmd.InFiles)
 	for _, warning := range result.Warnings {
 		reportCommandProgress(cmd, "warning: %v\n", warning)
 	}
@@ -324,10 +337,13 @@ var (
 	closeListImagesInput = (*os.File).Close
 )
 
-func listImagesFile(inFile string, selectedPages []string, conf *model.Configuration) ([]string, error) {
+func listImagesFile(c context.Context, inFile string, selectedPages []string, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "-" {
-		return withStdinReadSeeker("list images", func(rs io.ReadSeeker) ([]string, error) {
-			output, err := api.ListImages(rs, selectedPages, conf)
+		return withStdinReadSeeker(c, "list images", func(rs io.ReadSeeker) ([]string, error) {
+			output, err := api.ListImages(c, rs, selectedPages, conf)
 			if err != nil {
 				return nil, fmt.Errorf("stdin: %w", err)
 			}
@@ -338,7 +354,7 @@ func listImagesFile(inFile string, selectedPages []string, conf *model.Configura
 	if err != nil {
 		return nil, fmt.Errorf("list images: open input: %w", err)
 	}
-	output, opErr := api.ListImages(f, selectedPages, conf)
+	output, opErr := api.ListImages(c, f, selectedPages, conf)
 	if opErr != nil {
 		opErr = fmt.Errorf("%s: %w", inFile, opErr)
 	}
@@ -365,8 +381,11 @@ func validateListImagesInputs(inFiles []string) error {
 	return nil
 }
 
-// ListImagesFile returns a formatted list of embedded images of inFile.
-func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Configuration) ([]string, error) {
+// ListImagesFile returns a formatted list of embedded images of inFile and supports cancellation.
+func ListImagesFile(c context.Context, inFiles []string, selectedPages []string, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateListImagesInputs(inFiles); err != nil {
 		return nil, err
 	}
@@ -380,8 +399,14 @@ func ListImagesFile(inFiles []string, selectedPages []string, conf *model.Config
 	var errs []error
 
 	for _, fn := range inFiles {
-		output, err := listImagesFile(fn, selectedPages, conf)
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
+		output, err := listImagesFile(c, fn, selectedPages, conf)
 		if err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return nil, err
+			}
 			if len(inFiles) > 1 {
 				errs = append(errs, err)
 				continue
@@ -406,12 +431,14 @@ func validateListImagesCommand(cmd *Command) error {
 	return validateListImagesInputs(cmd.InFiles)
 }
 
-// ListImages returns inFiles embedded images.
-func ListImages(cmd *Command) ([]string, error) {
+func listImages(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateListImagesCommand(cmd); err != nil {
 		return nil, err
 	}
-	return ListImagesFile(cmd.InFiles, cmd.PageSelection, cmd.Conf)
+	return ListImagesFile(c, cmd.InFiles, cmd.PageSelection, cmd.Conf)
 }
 
 func updateImageParams(cmd *Command) (objNr, pageNr int, id string) {
@@ -444,9 +471,14 @@ func validateUpdateImagesCommand(cmd *Command) error {
 	)
 }
 
-func updateImagesInOut(cmd *Command, objNr, pageNr int, id string) ([]string, error) {
+func updateImagesInOut(c context.Context, cmd *Command, objNr, pageNr int, id string) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if cmd.InFiles[0] != "-" && *cmd.OutFile != "-" {
-		return nil, api.UpdateImagesFile(cmd.InFiles[0], cmd.InFiles[1], *cmd.OutFile, objNr, pageNr, id, cmd.Conf)
+		return nil, api.UpdateImagesFile(
+			c, cmd.InFiles[0], cmd.InFiles[1], *cmd.OutFile, objNr, pageNr, id, cmd.Conf,
+		)
 	}
 
 	imageFile := cmd.InFiles[1]
@@ -462,16 +494,18 @@ func updateImagesInOut(cmd *Command, objNr, pageNr int, id string) ([]string, er
 			return nil, errors.Join(err, closeImage())
 		}
 	}
-	rs, w, finalize, err := streamInOutForOperation(cmd.InFiles[0], *cmd.OutFile, "update images")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.InFiles[0], *cmd.OutFile, "update images")
 	if err != nil {
 		return nil, errors.Join(err, closeImage())
 	}
-	opErr := api.UpdateImages(rs, f, w, objNr, pageNr, id, cmd.Conf)
+	opErr := api.UpdateImages(c, rs, f, w, objNr, pageNr, id, cmd.Conf)
 	return nil, finalize(errors.Join(opErr, closeImage()))
 }
 
-// UpdateImages replaces image objects.
-func UpdateImages(cmd *Command) ([]string, error) {
+func updateImages(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateUpdateImagesCommand(cmd); err != nil {
 		return nil, err
 	}
@@ -481,16 +515,23 @@ func UpdateImages(cmd *Command) ([]string, error) {
 	}
 	reportOutputPath(outFile)
 	objNr, pageNr, id := updateImageParams(cmd)
-	return updateImagesInOut(cmd, objNr, pageNr, id)
+	return updateImagesInOut(c, cmd, objNr, pageNr, id)
 }
-func listAttachments(rs io.ReadSeeker, conf *model.Configuration, withDesc, sorted bool) ([]string, error) {
-	aa, err := api.Attachments(rs, conf)
+
+func listAttachments(c context.Context, rs io.ReadSeeker, conf *model.Configuration, withDesc, sorted bool) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	aa, err := api.Attachments(c, rs, conf)
 	if err != nil {
 		return nil, err
 	}
 
 	var ss []string
 	for _, a := range aa {
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
 		s := a.FileName
 		if withDesc && a.Desc != "" {
 			s = fmt.Sprintf("%s (%s)", s, a.Desc)
@@ -506,8 +547,11 @@ func listAttachments(rs io.ReadSeeker, conf *model.Configuration, withDesc, sort
 
 var closeListAttachmentsInput = (*os.File).Close
 
-// ListAttachmentsFile returns a list of embedded file attachments of inFile with optional description.
-func ListAttachmentsFile(inFile string, conf *model.Configuration) (ss []string, err error) {
+// ListAttachmentsFile returns a list of embedded file attachments of inFile with optional description and supports cancellation.
+func ListAttachmentsFile(c context.Context, inFile string, conf *model.Configuration) (ss []string, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, api.ErrMissingPDFInput
 	}
@@ -516,7 +560,7 @@ func ListAttachmentsFile(inFile string, conf *model.Configuration) (ss []string,
 		return nil, fmt.Errorf("list attachments: open input %s: %w", inFile, err)
 	}
 
-	ss, opErr := listAttachments(f, conf, true, true)
+	ss, opErr := listAttachments(c, f, conf, true, true)
 	closeErr := closeListAttachmentsInput(f)
 	if closeErr != nil {
 		closeErr = fmt.Errorf("list attachments: close input %s: %w", inFile, closeErr)
@@ -524,8 +568,11 @@ func ListAttachmentsFile(inFile string, conf *model.Configuration) (ss []string,
 	return ss, errors.Join(opErr, closeErr)
 }
 
-// ListAttachmentsCompactFile returns a list of embedded file attachments of inFile w/o optional description.
-func ListAttachmentsCompactFile(inFile string, conf *model.Configuration) (ss []string, err error) {
+// ListAttachmentsCompactFile returns a compact list of embedded file attachments of inFile and supports cancellation.
+func ListAttachmentsCompactFile(c context.Context, inFile string, conf *model.Configuration) (ss []string, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, api.ErrMissingPDFInput
 	}
@@ -534,7 +581,7 @@ func ListAttachmentsCompactFile(inFile string, conf *model.Configuration) (ss []
 		return nil, fmt.Errorf("list attachments: open input %s: %w", inFile, err)
 	}
 
-	ss, opErr := listAttachments(f, conf, false, false)
+	ss, opErr := listAttachments(c, f, conf, false, false)
 	closeErr := closeListAttachmentsInput(f)
 	if closeErr != nil {
 		closeErr = fmt.Errorf("list attachments: close input %s: %w", inFile, closeErr)
@@ -565,25 +612,30 @@ func validateExtractAttachmentsCommand(cmd *Command) error {
 	})
 }
 
-// ListAttachments returns a list of embedded file attachments for inFile.
-func ListAttachments(cmd *Command) ([]string, error) {
+func listAttachmentsCommand(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateListAttachmentsCommand(cmd); err != nil {
 		return nil, err
 	}
 	if *cmd.InFile == "-" {
-		return withStdinReadSeeker("list attachments", func(rs io.ReadSeeker) ([]string, error) {
-			return listAttachments(rs, cmd.Conf, true, true)
+		return withStdinReadSeeker(c, "list attachments", func(rs io.ReadSeeker) ([]string, error) {
+			return listAttachments(c, rs, cmd.Conf, true, true)
 		})
 	}
 
-	return ListAttachmentsFile(*cmd.InFile, cmd.Conf)
+	return ListAttachmentsFile(c, *cmd.InFile, cmd.Conf)
 }
 
-// AddAttachments embeds inFiles into a PDF context read from inFile and writes the result to outFile.
-func AddAttachments(cmd *Command) ([]string, error) {
+func addAttachments(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateMutateAttachmentsCommand(cmd, "add attachments"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	for _, spec := range cmd.InFiles {
 		fileName := strings.SplitN(spec, ",", 2)[0]
 		reportCommandProgress(cmd, "adding %s\n", fileName)
@@ -593,53 +645,67 @@ func AddAttachments(cmd *Command) ([]string, error) {
 		op = "add portfolio attachments"
 	}
 	if *cmd.InFile == "-" || *cmd.OutFile == "-" {
-		rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, op)
+		rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, op)
 		if err != nil {
 			return nil, err
 		}
-		opErr := api.AddAttachments(rs, w, cmd.InFiles, cmd.Mode == model.ADDATTACHMENTSPORTFOLIO, cmd.Conf)
+		opErr := api.AddAttachments(
+			c, rs, w, cmd.InFiles, cmd.Mode == model.ADDATTACHMENTSPORTFOLIO, cmd.Conf,
+		)
 		return nil, finalize(opErr)
 	}
 
-	return nil, api.AddAttachmentsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Mode == model.ADDATTACHMENTSPORTFOLIO, cmd.Conf)
+	return nil, api.AddAttachmentsFile(
+		c, *cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Mode == model.ADDATTACHMENTSPORTFOLIO, cmd.Conf,
+	)
 }
 
-// RemoveAttachments deletes inFiles from a PDF context read from inFile and writes the result to outFile.
-func RemoveAttachments(cmd *Command) ([]string, error) {
+func removeAttachments(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateMutateAttachmentsCommand(cmd, "remove attachments"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile == "-" || *cmd.OutFile == "-" {
-		rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "remove attachments")
+		rs, w, finalize, err := streamInOutForOperation(
+			c, *cmd.InFile, *cmd.OutFile, "remove attachments",
+		)
 		if err != nil {
 			return nil, err
 		}
-		opErr := api.RemoveAttachments(rs, w, cmd.InFiles, cmd.Conf)
+		opErr := api.RemoveAttachments(c, rs, w, cmd.InFiles, cmd.Conf)
 		return nil, finalize(opErr)
 	}
 
-	return nil, api.RemoveAttachmentsFile(*cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Conf)
+	return nil, api.RemoveAttachmentsFile(c, *cmd.InFile, *cmd.OutFile, cmd.InFiles, cmd.Conf)
 }
 
-// ExtractAttachments extracts inFiles from a PDF context read from inFile and writes the result to outFile.
-func ExtractAttachments(cmd *Command) ([]string, error) {
+func extractAttachments(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateExtractAttachmentsCommand(cmd); err != nil {
 		return nil, err
 	}
 	reportExtractionProgress(cmd, "attachments")
 	if *cmd.InFile == "-" {
-		return withStdinReadSeeker("extract attachments", func(rs io.ReadSeeker) ([]string, error) {
-			return nil, api.ExtractAttachments(rs, *cmd.OutDir, cmd.InFiles, cmd.Conf)
+		return withStdinReadSeeker(c, "extract attachments", func(rs io.ReadSeeker) ([]string, error) {
+			return nil, api.ExtractAttachments(c, rs, *cmd.OutDir, cmd.InFiles, cmd.Conf)
 		})
 	}
 
-	return nil, api.ExtractAttachmentsFile(*cmd.InFile, *cmd.OutDir, cmd.InFiles, cmd.Conf)
+	return nil, api.ExtractAttachmentsFile(c, *cmd.InFile, *cmd.OutDir, cmd.InFiles, cmd.Conf)
 }
 
 var closeListKeywordsInput = (*os.File).Close
 
-// ListKeywordsFile returns the keyword list of inFile.
-func ListKeywordsFile(inFile string, conf *model.Configuration) ([]string, error) {
+// ListKeywordsFile returns the keyword list of inFile and supports cancellation.
+func ListKeywordsFile(c context.Context, inFile string, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, api.ErrMissingPDFInput
 	}
@@ -648,7 +714,7 @@ func ListKeywordsFile(inFile string, conf *model.Configuration) ([]string, error
 		return nil, fmt.Errorf("list keywords: open input %s: %w", inFile, err)
 	}
 
-	keywords, opErr := api.Keywords(f, conf)
+	keywords, opErr := api.Keywords(c, f, conf)
 	closeErr := closeListKeywordsInput(f)
 	if closeErr != nil {
 		closeErr = fmt.Errorf("list keywords: close input %s: %w", inFile, closeErr)
@@ -656,27 +722,29 @@ func ListKeywordsFile(inFile string, conf *model.Configuration) ([]string, error
 	return keywords, errors.Join(opErr, closeErr)
 }
 
-// ListKeywords returns a list of keywords for inFile.
-func ListKeywords(cmd *Command) ([]string, error) {
+func listKeywords(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "list keywords")
 	if err != nil {
 		return nil, err
 	}
 	if inFile == "-" {
-		return withStdinReadSeeker("list keywords", func(rs io.ReadSeeker) ([]string, error) {
-			return api.Keywords(rs, cmd.Conf)
+		return withStdinReadSeeker(c, "list keywords", func(rs io.ReadSeeker) ([]string, error) {
+			return api.Keywords(c, rs, cmd.Conf)
 		})
 	}
 
-	return ListKeywordsFile(inFile, cmd.Conf)
+	return ListKeywordsFile(c, inFile, cmd.Conf)
 }
 
-func runKeywordStreamOperation(inFile, outFile, op string, fn func(io.ReadSeeker, io.Writer) error) error {
-	rs, w, finalize, err := streamInOutForOperation(inFile, outFile, op)
+func runKeywordStreamOperation(c context.Context, inFile, outFile, op string, fn func(context.Context, io.ReadSeeker, io.Writer) error) error {
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, op)
 	if err != nil {
 		return err
 	}
-	return finalize(fn(rs, w))
+	return finalize(fn(c, rs, w))
 }
 
 func validateKeywordValues(keywords []string, op string) error {
@@ -688,8 +756,10 @@ func validateKeywordValues(keywords []string, op string) error {
 	return nil
 }
 
-// AddKeywords adds keywords to inFile's document info dict and writes the result to outFile.
-func AddKeywords(cmd *Command) ([]string, error) {
+func addKeywords(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	requirements := commandRequirements{
 		operation: "add keywords",
 		inFile:    commandStringRequiredNonEmpty,
@@ -701,18 +771,24 @@ func AddKeywords(cmd *Command) ([]string, error) {
 	if err := validateKeywordValues(cmd.StringVals, "add keywords"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.AddKeywordsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
+		return nil, api.AddKeywordsFile(c, *cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
 	}
 
-	err := runKeywordStreamOperation(*cmd.InFile, *cmd.OutFile, "add keywords", func(rs io.ReadSeeker, w io.Writer) error {
-		return api.AddKeywords(rs, w, cmd.StringVals, cmd.Conf)
-	})
+	err := runKeywordStreamOperation(
+		c, *cmd.InFile, *cmd.OutFile, "add keywords",
+		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
+			return api.AddKeywords(c, rs, w, cmd.StringVals, cmd.Conf)
+		},
+	)
 	return nil, err
 }
 
-// RemoveKeywords deletes keywords from inFile's document info dict and writes the result to outFile.
-func RemoveKeywords(cmd *Command) ([]string, error) {
+func removeKeywords(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	requirements := commandRequirements{
 		operation: "remove keywords",
 		inFile:    commandStringRequiredNonEmpty,
@@ -724,37 +800,53 @@ func RemoveKeywords(cmd *Command) ([]string, error) {
 	if err := validateKeywordValues(cmd.StringVals, "remove keywords"); err != nil {
 		return nil, err
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.RemoveKeywordsFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
+		return nil, api.RemoveKeywordsFile(c, *cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
 	}
 
-	err := runKeywordStreamOperation(*cmd.InFile, *cmd.OutFile, "remove keywords", func(rs io.ReadSeeker, w io.Writer) error {
-		return api.RemoveKeywords(rs, w, cmd.StringVals, cmd.Conf)
-	})
+	err := runKeywordStreamOperation(
+		c, *cmd.InFile, *cmd.OutFile, "remove keywords",
+		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
+			return api.RemoveKeywords(c, rs, w, cmd.StringVals, cmd.Conf)
+		},
+	)
 	return nil, err
 }
 
-func renderProperties(properties map[string]string) []string {
+func renderProperties(c context.Context, properties map[string]string) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	ss := make([]string, 0, len(properties))
 	for k, v := range properties {
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
 		ss = append(ss, fmt.Sprintf("%s = %s", k, v))
 	}
 	sort.Strings(ss)
-	return ss
+	return ss, c.Err()
 }
 
-func listProperties(rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
-	properties, err := api.Properties(rs, conf)
+func listProperties(c context.Context, rs io.ReadSeeker, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	properties, err := api.Properties(c, rs, conf)
 	if err != nil {
 		return nil, err
 	}
-	return renderProperties(properties), nil
+	return renderProperties(c, properties)
 }
 
 var closeListPropertiesInput = (*os.File).Close
 
-// ListPropertiesFile returns the property list of inFile.
-func ListPropertiesFile(inFile string, conf *model.Configuration) ([]string, error) {
+// ListPropertiesFile returns the property list of inFile and supports cancellation.
+func ListPropertiesFile(c context.Context, inFile string, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, api.ErrMissingPDFInput
 	}
@@ -763,7 +855,7 @@ func ListPropertiesFile(inFile string, conf *model.Configuration) ([]string, err
 		return nil, fmt.Errorf("list properties: open input %s: %w", inFile, err)
 	}
 
-	properties, opErr := listProperties(f, conf)
+	properties, opErr := listProperties(c, f, conf)
 	closeErr := closeListPropertiesInput(f)
 	if closeErr != nil {
 		closeErr = fmt.Errorf("list properties: close input %s: %w", inFile, closeErr)
@@ -771,19 +863,21 @@ func ListPropertiesFile(inFile string, conf *model.Configuration) ([]string, err
 	return properties, errors.Join(opErr, closeErr)
 }
 
-// ListProperties returns inFile's properties.
-func ListProperties(cmd *Command) ([]string, error) {
+func listPropertiesCommand(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "list properties")
 	if err != nil {
 		return nil, err
 	}
 	if inFile == "-" {
-		return withStdinReadSeeker("list properties", func(rs io.ReadSeeker) ([]string, error) {
-			return listProperties(rs, cmd.Conf)
+		return withStdinReadSeeker(c, "list properties", func(rs io.ReadSeeker) ([]string, error) {
+			return listProperties(c, rs, cmd.Conf)
 		})
 	}
 
-	return ListPropertiesFile(inFile, cmd.Conf)
+	return ListPropertiesFile(c, inFile, cmd.Conf)
 }
 
 func validatePropertyMap(properties map[string]string) error {
@@ -813,12 +907,12 @@ func validatePropertyNames(properties []string) error {
 	return nil
 }
 
-func runPropertyStreamOperation(inFile, outFile, op string, fn func(io.ReadSeeker, io.Writer) error) error {
-	rs, w, finalize, err := streamInOutForOperation(inFile, outFile, op)
+func runPropertyStreamOperation(c context.Context, inFile, outFile, op string, fn func(context.Context, io.ReadSeeker, io.Writer) error) error {
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, op)
 	if err != nil {
 		return err
 	}
-	return finalize(fn(rs, w))
+	return finalize(fn(c, rs, w))
 }
 
 func validatePropertyCommand(cmd *Command, operation string) error {
@@ -836,38 +930,50 @@ func validatePropertyCommand(cmd *Command, operation string) error {
 	return nil
 }
 
-// AddProperties adds properties to inFile's document info dict and writes the result to outFile.
-func AddProperties(cmd *Command) ([]string, error) {
+func addProperties(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validatePropertyCommand(cmd, "add properties"); err != nil {
 		return nil, err
 	}
 	if err := validatePropertyMap(cmd.StringMap); err != nil {
 		return nil, fmt.Errorf("add properties: validate properties: %w", err)
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.AddPropertiesFile(*cmd.InFile, *cmd.OutFile, cmd.StringMap, cmd.Conf)
+		return nil, api.AddPropertiesFile(c, *cmd.InFile, *cmd.OutFile, cmd.StringMap, cmd.Conf)
 	}
 
-	err := runPropertyStreamOperation(*cmd.InFile, *cmd.OutFile, "add properties", func(rs io.ReadSeeker, w io.Writer) error {
-		return api.AddProperties(rs, w, cmd.StringMap, cmd.Conf)
-	})
+	err := runPropertyStreamOperation(
+		c, *cmd.InFile, *cmd.OutFile, "add properties",
+		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
+			return api.AddProperties(c, rs, w, cmd.StringMap, cmd.Conf)
+		},
+	)
 	return nil, err
 }
 
-// RemoveProperties deletes properties from inFile's document info dict and writes the result to outFile.
-func RemoveProperties(cmd *Command) ([]string, error) {
+func removeProperties(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validatePropertyCommand(cmd, "remove properties"); err != nil {
 		return nil, err
 	}
 	if err := validatePropertyNames(cmd.StringVals); err != nil {
 		return nil, fmt.Errorf("remove properties: validate properties: %w", err)
 	}
+	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.RemovePropertiesFile(*cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
+		return nil, api.RemovePropertiesFile(c, *cmd.InFile, *cmd.OutFile, cmd.StringVals, cmd.Conf)
 	}
 
-	err := runPropertyStreamOperation(*cmd.InFile, *cmd.OutFile, "remove properties", func(rs io.ReadSeeker, w io.Writer) error {
-		return api.RemoveProperties(rs, w, cmd.StringVals, cmd.Conf)
-	})
+	err := runPropertyStreamOperation(
+		c, *cmd.InFile, *cmd.OutFile, "remove properties",
+		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
+			return api.RemoveProperties(c, rs, w, cmd.StringVals, cmd.Conf)
+		},
+	)
 	return nil, err
 }

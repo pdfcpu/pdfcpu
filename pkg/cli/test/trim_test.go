@@ -30,7 +30,7 @@ func TestTrimCommand(t *testing.T) {
 	outFile := filepath.Join(outDir, "test.pdf")
 
 	cmd := cli.TrimCommand(inFile, outFile, []string{"-2"}, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 

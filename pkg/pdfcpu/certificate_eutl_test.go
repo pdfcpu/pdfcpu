@@ -37,7 +37,7 @@ func TestLoadCertificatesReloadsBundledEUTL(t *testing.T) {
 	}
 	model.TrustedCertDir = trustedDir
 
-	if err := LoadCertificates(); err != nil {
+	if err := LoadCertificates(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	oldPool := userCertificatePool()
@@ -48,7 +48,7 @@ func TestLoadCertificatesReloadsBundledEUTL(t *testing.T) {
 	if err := model.EnsureDefaultConfigAt(configRoot, false); err != nil {
 		t.Fatal(err)
 	}
-	if err := LoadCertificates(); err != nil {
+	if err := LoadCertificates(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	if pool := userCertificatePool(); pool == nil || pool == oldPool || len(pool.Subjects()) == 0 {

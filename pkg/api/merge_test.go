@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -27,18 +28,79 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
+func mergeContextAPICalls(c context.Context) []struct {
+	name string
+	call func() error
+} {
+	return []struct {
+		name string
+		call func() error
+	}{
+		{"merge raw", func() error { return MergeRaw(c, nil, nil, false, nil) }},
+		{"merge", func() error { return Merge(c, "", nil, nil, nil, false) }},
+		{"merge create file", func() error { return MergeCreateFile(c, nil, "", false, nil) }},
+		{"merge append file", func() error { return MergeAppendFile(c, nil, "", false, nil) }},
+		{"merge create zip", func() error { return MergeCreateZip(c, nil, nil, nil, nil) }},
+		{"merge create zip file", func() error { return MergeCreateZipFile(c, "", "", "", nil) }},
+	}
+}
+
+func TestMergeContextAPIsRejectNilContext(t *testing.T) {
+	for _, tt := range mergeContextAPICalls(nil) {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.call(); !errors.Is(err, ErrMissingContext) {
+				t.Fatalf("got %v, want ErrMissingContext", err)
+			}
+		})
+	}
+}
+
+func TestMergeContextAPIsReturnCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	for _, tt := range mergeContextAPICalls(c) {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.call(); !errors.Is(err, context.Canceled) {
+				t.Fatalf("got %v, want context.Canceled", err)
+			}
+		})
+	}
+}
+
+func TestMergeCreateFileCancellationPreservesDestination(t *testing.T) {
+	outFile := filepath.Join(t.TempDir(), "out.pdf")
+	original := []byte("existing output")
+	if err := os.WriteFile(outFile, original, 0o640); err != nil {
+		t.Fatal(err)
+	}
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if err := MergeCreateFile(c, nil, outFile, false, nil); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+	bb, err := os.ReadFile(outFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(bb, original) {
+		t.Fatalf("existing output changed: got %q, want %q", bb, original)
+	}
+}
+
 type mergeValidationModeTest struct {
 	name string
 	run  func(*model.Configuration) error
 }
 
-func mergeValidationModeTests(validFile, relaxedOnlyFile string) []mergeValidationModeTest {
+func mergeValidationModeTests(testContext context.Context, validFile, relaxedOnlyFile string) []mergeValidationModeTest {
 	valid := strictValidationTestPDF()
 	relaxedOnly := relaxedOnlyValidationTestPDF()
 
 	return []mergeValidationModeTest{
 		{"raw destination", func(conf *model.Configuration) error {
 			return MergeRaw(
+				testContext,
 				[]io.ReadSeeker{bytes.NewReader(relaxedOnly), bytes.NewReader(valid)},
 				io.Discard,
 				false,
@@ -47,6 +109,7 @@ func mergeValidationModeTests(validFile, relaxedOnlyFile string) []mergeValidati
 		}},
 		{"raw source", func(conf *model.Configuration) error {
 			return MergeRaw(
+				testContext,
 				[]io.ReadSeeker{bytes.NewReader(valid), bytes.NewReader(relaxedOnly)},
 				io.Discard,
 				false,
@@ -54,22 +117,22 @@ func mergeValidationModeTests(validFile, relaxedOnlyFile string) []mergeValidati
 			)
 		}},
 		{"create destination", func(conf *model.Configuration) error {
-			return Merge("", []string{relaxedOnlyFile, validFile}, io.Discard, conf, false)
+			return Merge(testContext, "", []string{relaxedOnlyFile, validFile}, io.Discard, conf, false)
 		}},
 		{"create source", func(conf *model.Configuration) error {
-			return Merge("", []string{validFile, relaxedOnlyFile}, io.Discard, conf, false)
+			return Merge(testContext, "", []string{validFile, relaxedOnlyFile}, io.Discard, conf, false)
 		}},
 		{"append destination", func(conf *model.Configuration) error {
-			return Merge(relaxedOnlyFile, []string{validFile}, io.Discard, conf, false)
+			return Merge(testContext, relaxedOnlyFile, []string{validFile}, io.Discard, conf, false)
 		}},
 		{"append source", func(conf *model.Configuration) error {
-			return Merge(validFile, []string{relaxedOnlyFile}, io.Discard, conf, false)
+			return Merge(testContext, validFile, []string{relaxedOnlyFile}, io.Discard, conf, false)
 		}},
 		{"zip destination", func(conf *model.Configuration) error {
-			return MergeCreateZip(bytes.NewReader(relaxedOnly), bytes.NewReader(valid), io.Discard, conf)
+			return MergeCreateZip(testContext, bytes.NewReader(relaxedOnly), bytes.NewReader(valid), io.Discard, conf)
 		}},
 		{"zip source", func(conf *model.Configuration) error {
-			return MergeCreateZip(bytes.NewReader(valid), bytes.NewReader(relaxedOnly), io.Discard, conf)
+			return MergeCreateZip(testContext, bytes.NewReader(valid), bytes.NewReader(relaxedOnly), io.Discard, conf)
 		}},
 	}
 }
@@ -93,7 +156,7 @@ func TestMergeHonorsValidationModeForEverySubject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, tt := range mergeValidationModeTests(validFile, relaxedOnlyFile) {
+	for _, tt := range mergeValidationModeTests(t.Context(), validFile, relaxedOnlyFile) {
 		t.Run(tt.name, func(t *testing.T) {
 			strict := mergeValidationConfiguration(model.ValidationStrict)
 			err := tt.run(strict)
@@ -124,8 +187,50 @@ func TestMergeAppendFileFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := MergeAppendFile(nil, outFile, false, nil); err == nil {
+	if err := MergeAppendFile(t.Context(), nil, outFile, false, nil); err == nil {
 		t.Fatal("expected merge-append failure")
+	}
+	bb, err := os.ReadFile(outFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(bb, original) {
+		t.Fatalf("existing output changed: got %q, want %q", bb, original)
+	}
+}
+
+func TestMergeAppendFileCancellationPreservesDestination(t *testing.T) {
+	outFile := filepath.Join(t.TempDir(), "append.pdf")
+	original := []byte("existing output")
+	if err := os.WriteFile(outFile, original, 0o640); err != nil {
+		t.Fatal(err)
+	}
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if err := MergeAppendFile(c, nil, outFile, false, nil); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+	bb, err := os.ReadFile(outFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(bb, original) {
+		t.Fatalf("existing output changed: got %q, want %q", bb, original)
+	}
+}
+
+func TestMergeCreateZipFileCancellationPreservesDestination(t *testing.T) {
+	outFile := filepath.Join(t.TempDir(), "zip.pdf")
+	original := []byte("existing output")
+	if err := os.WriteFile(outFile, original, 0o640); err != nil {
+		t.Fatal(err)
+	}
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if err := MergeCreateZipFile(c, "", "", outFile, nil); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
 	}
 	bb, err := os.ReadFile(outFile)
 	if err != nil {

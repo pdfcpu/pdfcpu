@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -58,7 +59,7 @@ func TestKeywordCommandsMalformedInputPreservesCause(t *testing.T) {
 	tests := []struct {
 		name string
 		op   string
-		run  func(*model.Configuration, []string) error
+		run  func(context.Context, *model.Configuration, []string) error
 	}{
 		{name: "add", op: "add keywords", run: handleAddKeywordsCommand},
 		{name: "remove", op: "remove keywords", run: handleRemoveKeywordsCommand},
@@ -66,7 +67,7 @@ func TestKeywordCommandsMalformedInputPreservesCause(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.run(model.NewDefaultConfiguration(), []string{inFile, "keyword"})
+			err := tt.run(t.Context(), model.NewDefaultConfiguration(), []string{inFile, "keyword"})
 			if !errors.Is(err, pdfcpu.ErrCorruptHeader) {
 				t.Fatalf("expected %v, got %v", pdfcpu.ErrCorruptHeader, err)
 			}
@@ -82,6 +83,7 @@ func TestKeywordCommandsMalformedInputPreservesCause(t *testing.T) {
 func TestRemoveKeywordsCommandNoMatchPreservesCause(t *testing.T) {
 	inFile := copyKeywordCommandTestPDF(t)
 	err := handleRemoveKeywordsCommand(
+		t.Context(),
 		model.NewDefaultConfiguration(),
 		[]string{inFile, "pdfcpu-keyword-that-does-not-exist"},
 	)

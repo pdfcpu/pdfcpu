@@ -63,6 +63,7 @@ func TestSignatureValidationConvertsParserFailureToEvidence(t *testing.T) {
 	ctx := &model.Context{Configuration: model.NewDefaultConfiguration()}
 
 	err := sign.ValidatePKCS7Signatures(
+		t.Context(),
 		bytes.NewReader(nil),
 		sigDict,
 		false,

@@ -47,11 +47,11 @@ func TestResizeArgumentValidation(t *testing.T) {
 		err  error
 		want error
 	}{
-		{name: "reader", err: Resize(nil, io.Discard, nil, res, nil), want: ErrMissingPDFReadSeeker},
-		{name: "writer", err: Resize(bytes.NewReader(nil), nil, nil, res, nil), want: ErrMissingPDFWriter},
-		{name: "configuration", err: Resize(bytes.NewReader(nil), io.Discard, nil, nil, nil), want: ErrMissingResizeConfiguration},
-		{name: "input", err: ResizeFile("", "", nil, res, nil), want: ErrMissingPDFInput},
-		{name: "file configuration", err: ResizeFile("missing.pdf", "", nil, nil, nil), want: ErrMissingResizeConfiguration},
+		{name: "reader", err: Resize(t.Context(), nil, io.Discard, nil, res, nil), want: ErrMissingPDFReadSeeker},
+		{name: "writer", err: Resize(t.Context(), bytes.NewReader(nil), nil, nil, res, nil), want: ErrMissingPDFWriter},
+		{name: "configuration", err: Resize(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, nil), want: ErrMissingResizeConfiguration},
+		{name: "input", err: ResizeFile(t.Context(), "", "", nil, res, nil), want: ErrMissingPDFInput},
+		{name: "file configuration", err: ResizeFile(t.Context(), "missing.pdf", "", nil, nil, nil), want: ErrMissingResizeConfiguration},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -79,7 +79,7 @@ func TestResizeRejectsInvalidConfigurations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := Resize(bytes.NewReader(nil), io.Discard, nil, tt.res, nil)
+			err := Resize(t.Context(), bytes.NewReader(nil), io.Discard, nil, tt.res, nil)
 			if !errors.Is(err, ErrInvalidResizeConfiguration) {
 				t.Fatalf("expected %v, got %v", ErrInvalidResizeConfiguration, err)
 			}
@@ -114,10 +114,10 @@ func TestResizeConfigurationErrorsIncludeValidationContext(t *testing.T) {
 		run  func(*model.Resize) error
 	}{
 		{name: "Resize", run: func(res *model.Resize) error {
-			return Resize(bytes.NewReader(nil), io.Discard, nil, res, nil)
+			return Resize(t.Context(), bytes.NewReader(nil), io.Discard, nil, res, nil)
 		}},
 		{name: "ResizeFile", run: func(res *model.Resize) error {
-			return ResizeFile("missing.pdf", "", nil, res, nil)
+			return ResizeFile(t.Context(), "missing.pdf", "", nil, res, nil)
 		}},
 	}
 
@@ -138,7 +138,7 @@ func TestResizeConfigurationErrorsIncludeValidationContext(t *testing.T) {
 
 // TestResizeReadErrorIncludesPhaseContext verifies PDF preparation context.
 func TestResizeReadErrorIncludesPhaseContext(t *testing.T) {
-	err := Resize(bytes.NewReader(nil), io.Discard, nil, resizeTestConfiguration(), nil)
+	err := Resize(t.Context(), bytes.NewReader(nil), io.Discard, nil, resizeTestConfiguration(), nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -149,7 +149,7 @@ func TestResizeReadErrorIncludesPhaseContext(t *testing.T) {
 
 // TestResizePageSelectionErrorIncludesPhaseContext verifies page-selection context.
 func TestResizePageSelectionErrorIncludesPhaseContext(t *testing.T) {
-	err := Resize(openAPITestPDF(t, resizeTestInputFile()), io.Discard, []string{"foo"}, resizeTestConfiguration(), nil)
+	err := Resize(t.Context(), openAPITestPDF(t, resizeTestInputFile()), io.Discard, []string{"foo"}, resizeTestConfiguration(), nil)
 	if err == nil || !strings.Contains(err.Error(), "resize: parse page selection") {
 		t.Fatalf("expected page-selection context, got %v", err)
 	}
@@ -158,7 +158,10 @@ func TestResizePageSelectionErrorIncludesPhaseContext(t *testing.T) {
 // TestResizeWriteErrorIncludesPhaseContext verifies output-writing context and cause preservation.
 func TestResizeWriteErrorIncludesPhaseContext(t *testing.T) {
 	wantErr := errors.New("resize write failed")
-	err := Resize(openAPITestPDF(t, resizeTestInputFile()), failingWriter{err: wantErr}, []string{"1"}, resizeTestConfiguration(), nil)
+	err := Resize(
+		t.Context(), openAPITestPDF(t, resizeTestInputFile()), failingWriter{err: wantErr},
+		[]string{"1"}, resizeTestConfiguration(), nil,
+	)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -170,13 +173,13 @@ func TestResizeWriteErrorIncludesPhaseContext(t *testing.T) {
 // TestResizeFileIOErrorContext verifies file opening and creation context.
 func TestResizeFileIOErrorContext(t *testing.T) {
 	missingInput := filepath.Join(t.TempDir(), "missing.pdf")
-	err := ResizeFile(missingInput, "", nil, resizeTestConfiguration(), nil)
+	err := ResizeFile(t.Context(), missingInput, "", nil, resizeTestConfiguration(), nil)
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "resize: open input "+missingInput) {
 		t.Fatalf("expected input context, got %v", err)
 	}
 
 	missingOutput := filepath.Join(t.TempDir(), "missing", "out.pdf")
-	err = ResizeFile(resizeTestInputFile(), missingOutput, nil, resizeTestConfiguration(), nil)
+	err = ResizeFile(t.Context(), resizeTestInputFile(), missingOutput, nil, resizeTestConfiguration(), nil)
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "resize: create output") {
 		t.Fatalf("expected output context, got %v", err)
 	}
@@ -200,7 +203,7 @@ func TestResizeFileFailurePreservesExistingOutput(t *testing.T) {
 	if err := os.WriteFile(outFile, want, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	err := ResizeFile(resizeTestInputFile(), outFile, []string{"foo"}, resizeTestConfiguration(), nil)
+	err := ResizeFile(t.Context(), resizeTestInputFile(), outFile, []string{"foo"}, resizeTestConfiguration(), nil)
 	if err == nil || !strings.Contains(err.Error(), "resize: parse page selection") {
 		t.Fatalf("expected page-selection error, got %v", err)
 	}
@@ -219,7 +222,7 @@ func TestResizeFileSuccessReplacesExistingOutput(t *testing.T) {
 	if err := os.WriteFile(outFile, []byte("existing output"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := ResizeFile(resizeTestInputFile(), outFile, []string{"1"}, resizeTestConfiguration(), nil); err != nil {
+	if err := ResizeFile(t.Context(), resizeTestInputFile(), outFile, []string{"1"}, resizeTestConfiguration(), nil); err != nil {
 		t.Fatal(err)
 	}
 	b, err := os.ReadFile(outFile)

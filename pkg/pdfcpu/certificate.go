@@ -18,15 +18,18 @@ package pdfcpu
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/pkcs7"
 )
@@ -54,8 +57,11 @@ type certificatePoolCache struct {
 
 var trustedCertificatePool certificatePoolCache
 
-func addCertificateFileToPool(path string, certPool *x509.CertPool) error {
-	certs, err := LoadCertificatesFile(path)
+func addCertificateFileToPool(c context.Context, path string, certPool *x509.CertPool) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	certs, err := LoadCertificatesFile(c, path)
 	if err != nil {
 		if errors.Is(err, ErrUnsupportedCertificateFile) {
 			return nil
@@ -63,32 +69,44 @@ func addCertificateFileToPool(path string, certPool *x509.CertPool) error {
 		return fmt.Errorf("load certificate file %q: %w", path, err)
 	}
 	for _, cert := range certs {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		certPool.AddCert(cert)
 	}
 	return nil
 }
 
-func buildCertificatePool(dir string) (*x509.CertPool, error) {
+func buildCertificatePool(c context.Context, dir string) (*x509.CertPool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	certPool := x509.NewCertPool()
 	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if contextErr := contextutil.Check(c); contextErr != nil {
+			return contextErr
+		}
 		if err != nil {
 			return fmt.Errorf("access %q: %w", path, err)
 		}
 		if d.IsDir() {
 			return nil
 		}
-		return addCertificateFileToPool(path, certPool)
+		return addCertificateFileToPool(c, path, certPool)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("walk trusted certificate directory: %w", err)
 	}
-	return certPool, nil
+	return certPool, contextutil.Check(c)
 }
 
-func buildCurrentCertificatePool(dir string) (*x509.CertPool, uint64, error) {
+func buildCurrentCertificatePool(c context.Context, dir string) (*x509.CertPool, uint64, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, 0, err
+	}
 	for {
 		storeRevision := model.CertificateStoreRevision()
-		certPool, err := buildCertificatePool(dir)
+		certPool, err := buildCertificatePool(c, dir)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -98,9 +116,15 @@ func buildCurrentCertificatePool(dir string) (*x509.CertPool, uint64, error) {
 	}
 }
 
-func loadCertificatePool(dir string) (*x509.CertPool, error) {
+func loadCertificatePool(c context.Context, dir string) (*x509.CertPool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	trustedCertificatePool.Lock()
 	defer trustedCertificatePool.Unlock()
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 
 	storeRevision := model.CertificateStoreRevision()
 	if trustedCertificatePool.loaded &&
@@ -109,7 +133,7 @@ func loadCertificatePool(dir string) (*x509.CertPool, error) {
 		return trustedCertificatePool.pool, nil
 	}
 
-	certPool, storeRevision, err := buildCurrentCertificatePool(dir)
+	certPool, storeRevision, err := buildCurrentCertificatePool(c, dir)
 	if err != nil {
 		return nil, err
 	}
@@ -120,27 +144,35 @@ func loadCertificatePool(dir string) (*x509.CertPool, error) {
 	return certPool, nil
 }
 
-// CertificatePoolForConfiguration returns the local trust pool selected by conf.
+// CertificatePoolForConfiguration returns the local trust pool selected by conf and supports cancellation.
 // Stateless configurations receive an empty pool without filesystem access.
-func CertificatePoolForConfiguration(conf *model.Configuration) (*x509.CertPool, error) {
+func CertificatePoolForConfiguration(c context.Context, conf *model.Configuration) (*x509.CertPool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	dir, available := conf.TrustedCertificateStore()
 	if !available {
 		return x509.NewCertPool(), nil
 	}
-	return loadCertificatePool(dir)
+	return loadCertificatePool(c, dir)
 }
 
-// LoadCertificates loads and caches certificates from the configured local
-// certificate store for signature validation.
-// Failed loads are not cached and may be retried.
-func LoadCertificates() error {
-	certPool, err := loadCertificatePool(model.TrustedCertDir)
+// LoadCertificates loads and caches certificates from the configured local certificate store for signature validation
+// and supports cancellation. Failed loads are not cached and may be retried.
+func LoadCertificates(c context.Context) error {
+	certPool, err := loadCertificatePool(c, model.TrustedCertDir)
 	if err != nil {
 		return err
 	}
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	trustedCertificatePool.Lock()
+	defer trustedCertificatePool.Unlock()
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	model.UserCertPool = certPool
-	trustedCertificatePool.Unlock()
 	return nil
 }
 
@@ -158,10 +190,26 @@ func userCertificatePool() *x509.CertPool {
 	return model.UserCertPool
 }
 
-func loadSingleCertFile(filename string) (*x509.Certificate, error) {
-	bb, err := os.ReadFile(filename)
+func readCertificateFile(c context.Context, filename, operation string) ([]byte, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	f, err := os.Open(filename)
 	if err != nil {
-		return nil, fmt.Errorf("read certificate: %w", err)
+		return nil, fmt.Errorf("%s: %w", operation, err)
+	}
+	var buf bytes.Buffer
+	_, copyErr := io.Copy(&buf, contextReader{ctx: c, r: f})
+	if err := errors.Join(copyErr, f.Close()); err != nil {
+		return nil, fmt.Errorf("%s: %w", operation, err)
+	}
+	return buf.Bytes(), contextutil.Check(c)
+}
+
+func loadSingleCertFile(c context.Context, filename string) (*x509.Certificate, error) {
+	bb, err := readCertificateFile(c, filename, "read certificate")
+	if err != nil {
+		return nil, err
 	}
 	if len(bb) == 0 {
 		return nil, ErrNoCertificates
@@ -187,15 +235,18 @@ func loadSingleCertFile(filename string) (*x509.Certificate, error) {
 	return cert, nil
 }
 
-func loadCertsFromPEM(filename string) ([]*x509.Certificate, error) {
-	bb, err := os.ReadFile(filename)
+func loadCertsFromPEM(c context.Context, filename string) ([]*x509.Certificate, error) {
+	bb, err := readCertificateFile(c, filename, "read PEM certificates")
 	if err != nil {
-		return nil, fmt.Errorf("read PEM certificates: %w", err)
+		return nil, err
 	}
 
 	var certs []*x509.Certificate
 
 	for len(bb) > 0 {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		var block *pem.Block
 		block, bb = pem.Decode(bb)
 		if block == nil {
@@ -243,10 +294,10 @@ func decodePKCS7PEM(bb []byte) ([]byte, error) {
 	return block.Bytes, nil
 }
 
-func loadCertsFromP7C(filename string) ([]*x509.Certificate, error) {
-	bb, err := os.ReadFile(filename)
+func loadCertsFromP7C(c context.Context, filename string) ([]*x509.Certificate, error) {
+	bb, err := readCertificateFile(c, filename, "read PKCS#7 certificates")
 	if err != nil {
-		return nil, fmt.Errorf("read PKCS#7 certificates: %w", err)
+		return nil, err
 	}
 	if len(bb) == 0 {
 		return nil, ErrNoCertificates
@@ -273,19 +324,23 @@ func loadCertsFromP7C(filename string) ([]*x509.Certificate, error) {
 }
 
 // LoadCertificatesFile loads certificates from filename.
-func LoadCertificatesFile(filename string) ([]*x509.Certificate, error) {
+// LoadCertificatesFile supports cancellation.
+func LoadCertificatesFile(c context.Context, filename string) ([]*x509.Certificate, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	ext := strings.ToLower(filepath.Ext(filename))
 	switch ext {
 	case ".crt", ".cer":
-		cert, err := loadSingleCertFile(filename)
+		cert, err := loadSingleCertFile(c, filename)
 		if err != nil {
 			return nil, err
 		}
 		return []*x509.Certificate{cert}, nil
 	case ".p7c":
-		return loadCertsFromP7C(filename)
+		return loadCertsFromP7C(c, filename)
 	case ".pem":
-		return loadCertsFromPEM(filename)
+		return loadCertsFromPEM(c, filename)
 	default:
 		return nil, ErrUnsupportedCertificateFile
 	}
@@ -313,7 +368,12 @@ func saveCertsAsPEM(certs []*x509.Certificate, filename string, overwrite bool) 
 	return ok, nil
 }
 
-func saveCertsAsP7C(certs []*x509.Certificate, filename string, overwrite bool) (bool, error) {
+func saveCertsAsP7C(
+	c context.Context,
+	certs []*x509.Certificate,
+	filename string,
+	overwrite bool,
+) (bool, error) {
 	// TODO encodeBase64 bool (PEM)
 
 	if len(certs) == 0 {
@@ -326,6 +386,9 @@ func saveCertsAsP7C(certs []*x509.Certificate, filename string, overwrite bool) 
 	}
 
 	for i, cert := range certs {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
 		if err := p7.AddCertificate(cert); err != nil {
 			return false, fmt.Errorf("add PKCS#7 certificate %d: %w", i+1, err)
 		}
@@ -336,21 +399,33 @@ func saveCertsAsP7C(certs []*x509.Certificate, filename string, overwrite bool) 
 		return false, fmt.Errorf("encode PKCS#7 certificates: %w", err)
 	}
 
-	ok, err := Write(bytes.NewReader(bb), filename, overwrite)
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
+	if !overwrite {
+		return Write(bytes.NewReader(bb), filename, false)
+	}
+	err = WriteReader(c, filename, bytes.NewReader(bb))
 	if err != nil {
 		return false, fmt.Errorf("write PKCS#7 certificates: %w", err)
 	}
-	return ok, nil
+	return true, nil
 }
 
-// SaveCertificates saves certificates as a PKCS#7 container, atomically replacing outFile.
-func SaveCertificates(certs []*x509.Certificate, outFile string) error {
+// SaveCertificates saves certificates as a PKCS#7 container, atomically replaces outFile and supports cancellation.
+func SaveCertificates(c context.Context, certs []*x509.Certificate, outFile string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	for i, cert := range certs {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		if cert == nil {
 			return fmt.Errorf("certificate %d: %w", i+1, ErrMissingCertificate)
 		}
 	}
-	_, err := saveCertsAsP7C(certs, outFile, true)
+	_, err := saveCertsAsP7C(c, certs, outFile, true)
 	if err != nil {
 		return fmt.Errorf("save certificates: %w", err)
 	}

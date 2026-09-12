@@ -17,6 +17,9 @@ limitations under the License.
 package api
 
 import (
+	"context"
+
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -27,7 +30,10 @@ func createFontXRefTable() (*model.XRefTable, error) {
 	return pdfcpu.CreateXRefTableWithRootDict()
 }
 
-func addFontPageTree(xRefTable *model.XRefTable, rootDict types.Dict, p model.Page) error {
+func addFontPageTree(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, p model.Page) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	pagesDict := types.Dict(
 		map[string]types.Object{
 			"Type":     types.Name("Pages"),
@@ -41,7 +47,7 @@ func addFontPageTree(xRefTable *model.XRefTable, rootDict types.Dict, p model.Pa
 		return err
 	}
 
-	pageIndRef, err := createFontPageObject(xRefTable, *parentPageIndRef, p)
+	pageIndRef, err := createFontPageObject(c, xRefTable, *parentPageIndRef, p)
 	if err != nil {
 		return err
 	}
@@ -60,11 +66,7 @@ func createFontContentStream(xRefTable *model.XRefTable, b []byte) (*types.Indir
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createFontPageObject(
-	xRefTable *model.XRefTable,
-	parentPageIndRef types.IndirectRef,
-	p model.Page,
-) (*types.IndirectRef, error) {
+func createFontPageObject(c context.Context, xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, p model.Page) (*types.IndirectRef, error) {
 	pageDict := types.Dict(
 		map[string]types.Object{
 			"Type":   types.Name("Page"),
@@ -72,7 +74,7 @@ func createFontPageObject(
 		},
 	)
 
-	fontRes, err := pdffont.FontResources(xRefTable, p.Fm)
+	fontRes, err := pdffont.FontResources(c, xRefTable, p.Fm)
 	if err != nil {
 		return nil, err
 	}

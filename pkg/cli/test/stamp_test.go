@@ -38,18 +38,18 @@ func testAddWatermarks(t *testing.T, msg, inFile, outFile string, selectedPages 
 	)
 	switch mode {
 	case "text":
-		wm, err = pdfcpu.ParseTextWatermarkDetails(modeParm, desc, onTop, unit)
+		wm, err = pdfcpu.ParseTextWatermarkDetails(t.Context(), modeParm, desc, onTop, unit, nil)
 	case "image":
-		wm, err = pdfcpu.ParseImageWatermarkDetails(modeParm, desc, onTop, unit)
+		wm, err = pdfcpu.ParseImageWatermarkDetails(t.Context(), modeParm, desc, onTop, unit, nil)
 	case "pdf":
-		wm, err = pdfcpu.ParsePDFWatermarkDetails(modeParm, desc, onTop, unit)
+		wm, err = pdfcpu.ParsePDFWatermarkDetails(t.Context(), modeParm, desc, onTop, unit, nil)
 	}
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	cmd := cli.AddWatermarksCommand(inFile, outFile, selectedPages, wm, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	if err := validateFile(t, outFile, conf); err != nil {
@@ -154,46 +154,53 @@ func TestStampingLifecycle(t *testing.T) {
 	unit := types.POINTS
 
 	// Stamp all pages.
-	wm, err := pdfcpu.ParseTextWatermarkDetails("Demo", "", onTop, unit)
+	wm, err := pdfcpu.ParseTextWatermarkDetails(t.Context(), "Demo", "", onTop, unit, nil)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	cmd := cli.AddWatermarksCommand(inFile, outFile, nil, wm, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// // Update stamp on page 1.
-	wm, err = pdfcpu.ParseTextWatermarkDetails("Confidential", "", onTop, unit)
+	wm, err = pdfcpu.ParseTextWatermarkDetails(t.Context(), "Confidential", "", onTop, unit, nil)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	wm.Update = true
 	cmd = cli.AddWatermarksCommand(outFile, "", []string{"1"}, wm, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Add another stamp on top for all pages.
 	// This is a redish transparent footer.
-	wm, err = pdfcpu.ParseTextWatermarkDetails("Footer", "pos:bc, c:0.8 0 0, op:.6, rot:0", onTop, unit)
+	wm, err = pdfcpu.ParseTextWatermarkDetails(
+		t.Context(),
+		"Footer",
+		"pos:bc, c:0.8 0 0, op:.6, rot:0",
+		onTop,
+		unit,
+		nil,
+	)
 	if err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 	cmd = cli.AddWatermarksCommand(outFile, "", nil, wm, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Remove stamp on page 1.
 	cmd = cli.RemoveWatermarksCommand(outFile, "", []string{"1"}, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
 	// Remove all stamps.
 	cmd = cli.RemoveWatermarksCommand(outFile, "", nil, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 

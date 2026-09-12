@@ -17,6 +17,7 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -25,12 +26,25 @@ import (
 	"path/filepath"
 	"reflect"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/internal/fileutil"
 )
 
 type namedWriteCloser interface {
 	io.WriteCloser
 	Name() string
+}
+
+type contextReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (r contextReader) Read(p []byte) (int, error) {
+	if err := r.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return r.r.Read(p)
 }
 
 func removeStagedFile(path, tmpPath string, remove func(string) error) error {
@@ -151,12 +165,21 @@ func writeNewFile(rd io.Reader, filePath string) (bool, error) {
 	return true, nil
 }
 
-// WriteReader consumes r's content by writing it to a file at path.
-func WriteReader(path string, r io.Reader) error {
+// WriteReader consumes r's content by writing it transactionally to a file at path and supports cancellation.
+func WriteReader(c context.Context, path string, r io.Reader) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if isNilReader(r) {
 		return ErrMissingReader
 	}
-	return writeReader(path, r, createWriteReaderTemp, fileutil.ReplaceFile, os.Remove)
+	replace := func(oldName, newName string) error {
+		if err := c.Err(); err != nil {
+			return err
+		}
+		return fileutil.ReplaceFile(oldName, newName)
+	}
+	return writeReader(path, contextReader{ctx: c, r: r}, createWriteReaderTemp, replace, os.Remove)
 }
 
 // Write rd to filepath and respect overwrite.
@@ -165,7 +188,7 @@ func Write(rd io.Reader, filePath string, overwrite bool) (bool, error) {
 		return false, ErrMissingReader
 	}
 	if overwrite {
-		return true, WriteReader(filePath, rd)
+		return true, writeReader(filePath, rd, createWriteReaderTemp, fileutil.ReplaceFile, os.Remove)
 	}
 	return writeNewFile(rd, filePath)
 }

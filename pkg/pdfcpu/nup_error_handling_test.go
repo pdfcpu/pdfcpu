@@ -142,7 +142,7 @@ func TestNUpFromPDFReusesConfigurationWithoutLeakingDimensions(t *testing.T) {
 	}
 	for i, dim := range dims {
 		ctx := nUpPDFTestContext(t, dim, 1)
-		if err := NUpFromPDF(ctx, types.IntSet{1: true}, nup); err != nil {
+		if err := NUpFromPDF(t.Context(), ctx, types.IntSet{1: true}, nup); err != nil {
 			t.Fatalf("document %d: %v", i+1, err)
 		}
 		if nup.PageDim != nil {
@@ -160,7 +160,7 @@ func TestNUpFromPDFFailureDoesNotMutateConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := nUpPDFTestContext(t, types.Dim{Width: 200, Height: 300}, 1)
-	err = NUpFromPDF(ctx, types.IntSet{2: true}, nup)
+	err = NUpFromPDF(t.Context(), ctx, types.IntSet{2: true}, nup)
 	if !errors.Is(err, model.ErrPageNotFound) {
 		t.Fatalf("expected %v, got %v", model.ErrPageNotFound, err)
 	}
@@ -192,7 +192,7 @@ func TestNUpFromPDFPreservesExplicitPageDimensions(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := nUpPDFTestContext(t, types.Dim{Width: 200, Height: 300}, 1)
-			err := NUpFromPDF(ctx, tt.selectedPages, nup)
+			err := NUpFromPDF(t.Context(), ctx, tt.selectedPages, nup)
 			if tt.wantErr && !errors.Is(err, model.ErrPageNotFound) {
 				t.Fatalf("expected %v, got %v", model.ErrPageNotFound, err)
 			}
@@ -215,14 +215,16 @@ func TestNUpOperationsSynchronizeContextAndPageTreeCounts(t *testing.T) {
 	}{
 		{name: "one image", wantCount: 1, run: func(t *testing.T) *model.Context {
 			ctx, nup, pagesDict, pagesIndRef := nUpOperationTestContext(t, true)
-			if err := NUpFromOneImage(ctx, imageFile, nup, pagesDict, pagesIndRef); err != nil {
+			if err := NUpFromOneImage(t.Context(), ctx, imageFile, nup, pagesDict, pagesIndRef); err != nil {
 				t.Fatal(err)
 			}
 			return ctx
 		}},
 		{name: "multiple images", wantCount: 1, run: func(t *testing.T) *model.Context {
 			ctx, nup, pagesDict, pagesIndRef := nUpOperationTestContext(t, true)
-			if err := NUpFromMultipleImages(ctx, []string{imageFile, imageFile}, nup, pagesDict, pagesIndRef); err != nil {
+			if err := NUpFromMultipleImages(
+				t.Context(), ctx, []string{imageFile, imageFile}, nup, pagesDict, pagesIndRef,
+			); err != nil {
 				t.Fatal(err)
 			}
 			return ctx
@@ -233,7 +235,7 @@ func TestNUpOperationsSynchronizeContextAndPageTreeCounts(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := NUpFromPDF(ctx, types.IntSet{1: true, 2: true, 3: true, 4: true, 5: true}, nup); err != nil {
+			if err := NUpFromPDF(t.Context(), ctx, types.IntSet{1: true, 2: true, 3: true, 4: true, 5: true}, nup); err != nil {
 				t.Fatal(err)
 			}
 			return ctx
@@ -259,7 +261,7 @@ func TestNUpFromMultipleImagesFailureLeavesPageCountUncommitted(t *testing.T) {
 	missingImage := filepath.Join(t.TempDir(), "missing.jpg")
 	fileNames := []string{imageFile, imageFile, imageFile, imageFile, missingImage}
 
-	err := NUpFromMultipleImages(ctx, fileNames, nup, pagesDict, pagesIndRef)
+	err := NUpFromMultipleImages(t.Context(), ctx, fileNames, nup, pagesDict, pagesIndRef)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -278,10 +280,10 @@ func TestNUpImageOpenErrorIncludesSourceContext(t *testing.T) {
 		run  func(*model.Context, *model.NUp, types.Dict, *types.IndirectRef) error
 	}{
 		{name: "one", run: func(ctx *model.Context, nup *model.NUp, pagesDict types.Dict, pagesIndRef *types.IndirectRef) error {
-			return NUpFromOneImage(ctx, fileName, nup, pagesDict, pagesIndRef)
+			return NUpFromOneImage(t.Context(), ctx, fileName, nup, pagesDict, pagesIndRef)
 		}},
 		{name: "multiple", run: func(ctx *model.Context, nup *model.NUp, pagesDict types.Dict, pagesIndRef *types.IndirectRef) error {
-			return NUpFromMultipleImages(ctx, []string{fileName, fileName}, nup, pagesDict, pagesIndRef)
+			return NUpFromMultipleImages(t.Context(), ctx, []string{fileName, fileName}, nup, pagesDict, pagesIndRef)
 		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -305,10 +307,10 @@ func TestGridImageOpenErrorIncludesSourceContext(t *testing.T) {
 		run  func(*model.Context, *model.NUp, types.Dict, *types.IndirectRef) error
 	}{
 		{name: "one", run: func(ctx *model.Context, nup *model.NUp, pagesDict types.Dict, pagesIndRef *types.IndirectRef) error {
-			return GridFromOneImage(ctx, fileName, nup, pagesDict, pagesIndRef)
+			return GridFromOneImage(t.Context(), ctx, fileName, nup, pagesDict, pagesIndRef)
 		}},
 		{name: "multiple", run: func(ctx *model.Context, nup *model.NUp, pagesDict types.Dict, pagesIndRef *types.IndirectRef) error {
-			return GridFromMultipleImages(ctx, []string{fileName, fileName}, nup, pagesDict, pagesIndRef)
+			return GridFromMultipleImages(t.Context(), ctx, []string{fileName, fileName}, nup, pagesDict, pagesIndRef)
 		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -335,7 +337,7 @@ func TestNUpImageDecodeErrorIncludesSourceContext(t *testing.T) {
 	if err := os.WriteFile(fileName, []byte("not an image"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	err := NUpFromOneImage(ctx, fileName, nup, pagesDict, pagesIndRef)
+	err := NUpFromOneImage(t.Context(), ctx, fileName, nup, pagesDict, pagesIndRef)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -407,7 +409,7 @@ func TestNUpFromMultipleImagesRetryDoesNotMutatePageDimensions(t *testing.T) {
 	fileName := filepath.Join(t.TempDir(), "missing.png")
 
 	for attempt := 1; attempt <= 2; attempt++ {
-		err := NUpFromMultipleImages(ctx, []string{fileName, fileName}, nup, pagesDict, pagesIndRef)
+		err := NUpFromMultipleImages(t.Context(), ctx, []string{fileName, fileName}, nup, pagesDict, pagesIndRef)
 		if !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("attempt %d: expected %v, got %v", attempt, os.ErrNotExist, err)
 		}
@@ -419,7 +421,7 @@ func TestNUpFromMultipleImagesRetryDoesNotMutatePageDimensions(t *testing.T) {
 
 func TestNUpPagesTileErrorIncludesSourcePage(t *testing.T) {
 	ctx, nup, _, _ := nUpOperationTestContext(t, false)
-	err := NUpFromPDF(ctx, types.IntSet{1: true}, nup)
+	err := NUpFromPDF(t.Context(), ctx, types.IntSet{1: true}, nup)
 	if !errors.Is(err, model.ErrPageNotFound) {
 		t.Fatalf("expected %v, got %v", model.ErrPageNotFound, err)
 	}
@@ -431,7 +433,7 @@ func TestNUpPagesTileErrorIncludesSourcePage(t *testing.T) {
 func TestNUpPagesWrapErrorIncludesOutputPage(t *testing.T) {
 	ctx, nup, pagesDict, pagesIndRef := nUpOperationTestContext(t, false)
 	corruptNUpFreeList(ctx)
-	_, err := impositionPages("n-up", ctx, nil, nup, pagesDict, pagesIndRef)
+	_, err := impositionPages(t.Context(), "n-up", ctx, nil, nup, pagesDict, pagesIndRef)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -446,7 +448,7 @@ func TestNUpPagesWrapErrorIncludesOutputPage(t *testing.T) {
 func TestNUpFromPDFDimensionErrorPreservesPageNotFound(t *testing.T) {
 	ctx, nup, _, _ := nUpOperationTestContext(t, false)
 	nup.PageDim = nil
-	err := NUpFromPDF(ctx, nil, nup)
+	err := NUpFromPDF(t.Context(), ctx, nil, nup)
 	if !errors.Is(err, model.ErrPageNotFound) {
 		t.Fatalf("expected %v, got %v", model.ErrPageNotFound, err)
 	}
@@ -458,7 +460,7 @@ func TestNUpFromPDFDimensionErrorPreservesPageNotFound(t *testing.T) {
 func TestNUpFromPDFRootErrorIncludesPageTreeContext(t *testing.T) {
 	ctx, nup, _, _ := nUpOperationTestContext(t, false)
 	corruptNUpFreeList(ctx)
-	err := NUpFromPDF(ctx, nil, nup)
+	err := NUpFromPDF(t.Context(), ctx, nil, nup)
 	if err == nil || !strings.Contains(err.Error(), "n-up page tree: create root") {
 		t.Fatalf("expected page tree root context, got %v", err)
 	}
@@ -468,7 +470,7 @@ func TestNUpFromPDFCatalogErrorIncludesPageTreeContext(t *testing.T) {
 	ctx, nup, _, _ := nUpOperationTestContext(t, false)
 	ctx.Root = nil
 	ctx.RootDict = nil
-	err := NUpFromPDF(ctx, nil, nup)
+	err := NUpFromPDF(t.Context(), ctx, nil, nup)
 	if err == nil || !strings.Contains(err.Error(), "n-up page tree: access catalog") {
 		t.Fatalf("expected catalog context, got %v", err)
 	}

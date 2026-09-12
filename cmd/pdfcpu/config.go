@@ -301,7 +301,7 @@ func validateConfiguration(_ *cobra.Command, _ []string) error {
 	if conf == "disable" {
 		options = api.ConfigurationOptions{Mode: api.ConfigurationModeStateless}
 	}
-	loaded, err := api.LoadConfigurationWithOptions(options)
+	loaded, err := api.LoadConfiguration(options)
 	if err != nil {
 		return commandError(fmt.Errorf("validate configuration: %w", err))
 	}

@@ -145,6 +145,9 @@ var (
 	// ErrMissingConfiguration signals a missing pdfcpu configuration.
 	ErrMissingConfiguration = errors.New("missing configuration")
 
+	// ErrMissingContext signals a missing required Go context.
+	ErrMissingContext = pdfcpu.ErrMissingContext
+
 	// ErrMissingCutConfiguration signals a missing cut configuration.
 	ErrMissingCutConfiguration = errors.New("missing cut configuration")
 

@@ -64,13 +64,13 @@ func TestInsertPagesAcceptsValidPageConfiguration(t *testing.T) {
 		{
 			name: "InsertPages",
 			run: func(pageConf *pdfcpu.PageConfiguration) error {
-				return InsertPages(openAPITestPDF(t, inFile), io.Discard, []string{"1"}, false, pageConf, nil)
+				return InsertPages(t.Context(), openAPITestPDF(t, inFile), io.Discard, []string{"1"}, false, pageConf, nil)
 			},
 		},
 		{
 			name: "InsertPagesFile",
 			run: func(pageConf *pdfcpu.PageConfiguration) error {
-				return InsertPagesFile(inFile, filepath.Join(t.TempDir(), "out.pdf"), []string{"1"}, false, pageConf, nil)
+				return InsertPagesFile(t.Context(), inFile, filepath.Join(t.TempDir(), "out.pdf"), []string{"1"}, false, pageConf, nil)
 			},
 		},
 	}
@@ -122,13 +122,13 @@ func TestInsertPagesRejectsInvalidPageConfiguration(t *testing.T) {
 		{
 			name: "InsertPages",
 			run: func(pageConf *pdfcpu.PageConfiguration) error {
-				return InsertPages(bytes.NewReader(nil), io.Discard, nil, false, pageConf, nil)
+				return InsertPages(t.Context(), bytes.NewReader(nil), io.Discard, nil, false, pageConf, nil)
 			},
 		},
 		{
 			name: "InsertPagesFile",
 			run: func(pageConf *pdfcpu.PageConfiguration) error {
-				return InsertPagesFile("missing.pdf", "", nil, false, pageConf, nil)
+				return InsertPagesFile(t.Context(), "missing.pdf", "", nil, false, pageConf, nil)
 			},
 		},
 	}
@@ -164,35 +164,35 @@ func TestPageAPIMissingStreamArguments(t *testing.T) {
 		{
 			name: "insert pages missing reader",
 			fn: func() error {
-				return InsertPages(nil, io.Discard, nil, false, nil, nil)
+				return InsertPages(t.Context(), nil, io.Discard, nil, false, nil, nil)
 			},
 			want: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "insert pages missing writer",
 			fn: func() error {
-				return InsertPages(bytes.NewReader(nil), nil, nil, false, nil, nil)
+				return InsertPages(t.Context(), bytes.NewReader(nil), nil, nil, false, nil, nil)
 			},
 			want: ErrMissingPDFWriter,
 		},
 		{
 			name: "remove pages missing reader",
 			fn: func() error {
-				return RemovePages(nil, io.Discard, nil, nil)
+				return RemovePages(t.Context(), nil, io.Discard, nil, nil)
 			},
 			want: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "remove pages missing writer",
 			fn: func() error {
-				return RemovePages(bytes.NewReader(nil), nil, nil, nil)
+				return RemovePages(t.Context(), bytes.NewReader(nil), nil, nil, nil)
 			},
 			want: ErrMissingPDFWriter,
 		},
 		{
 			name: "page count missing reader",
 			fn: func() error {
-				_, err := PageCount(nil, nil)
+				_, err := PageCount(t.Context(), nil, nil)
 				return err
 			},
 			want: ErrMissingPDFReadSeeker,
@@ -200,7 +200,7 @@ func TestPageAPIMissingStreamArguments(t *testing.T) {
 		{
 			name: "page dimensions missing reader",
 			fn: func() error {
-				_, err := PageDims(nil, nil)
+				_, err := PageDims(t.Context(), nil, nil)
 				return err
 			},
 			want: ErrMissingPDFReadSeeker,
@@ -227,14 +227,14 @@ func TestPageAPISelectionErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "insert pages",
 			fn: func(selection []string) error {
-				return InsertPages(openAPITestPDF(t, inFile), io.Discard, selection, false, nil, nil)
+				return InsertPages(t.Context(), openAPITestPDF(t, inFile), io.Discard, selection, false, nil, nil)
 			},
 			want: "insert pages: parse page selection",
 		},
 		{
 			name: "remove pages",
 			fn: func(selection []string) error {
-				return RemovePages(openAPITestPDF(t, inFile), io.Discard, selection, nil)
+				return RemovePages(t.Context(), openAPITestPDF(t, inFile), io.Discard, selection, nil)
 			},
 			want: "remove pages: parse page selection",
 		},
@@ -286,7 +286,7 @@ func TestPageAPISelectionErrorsIncludePhaseContext(t *testing.T) {
 // TestRemovePagesRejectsRemovingEveryPage verifies an empty result is an explicit error.
 func TestRemovePagesRejectsRemovingEveryPage(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	err := RemovePages(openAPITestPDF(t, inFile), io.Discard, []string{"1-"}, nil)
+	err := RemovePages(t.Context(), openAPITestPDF(t, inFile), io.Discard, []string{"1-"}, nil)
 	if !errors.Is(err, pdfcpu.ErrMissingPageNumbers) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrMissingPageNumbers, err)
 	}
@@ -304,7 +304,7 @@ func TestRemovePagesFileEmptyResultPreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := RemovePagesFile(inFile, outFile, []string{"1-"}, nil)
+	err := RemovePagesFile(t.Context(), inFile, outFile, []string{"1-"}, nil)
 	if !errors.Is(err, pdfcpu.ErrMissingPageNumbers) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrMissingPageNumbers, err)
 	}
@@ -345,7 +345,7 @@ func TestRemovePagesFileEmptyResultPreservesInPlaceInput(t *testing.T) {
 				outFile = inFile
 			}
 
-			err := RemovePagesFile(inFile, outFile, []string{"1-"}, nil)
+			err := RemovePagesFile(t.Context(), inFile, outFile, []string{"1-"}, nil)
 			if !errors.Is(err, pdfcpu.ErrMissingPageNumbers) {
 				t.Fatalf("expected %v, got %v", pdfcpu.ErrMissingPageNumbers, err)
 			}
@@ -372,14 +372,14 @@ func TestPageAPIWriteErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "insert pages",
 			fn: func() error {
-				return InsertPages(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, []string{"1"}, false, nil, nil)
+				return InsertPages(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, []string{"1"}, false, nil, nil)
 			},
 			want: "insert pages: write output",
 		},
 		{
 			name: "remove pages",
 			fn: func() error {
-				return RemovePages(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, []string{"2"}, nil)
+				return RemovePages(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, []string{"2"}, nil)
 			},
 			want: "remove pages: write output",
 		},
@@ -407,26 +407,26 @@ func TestPageFileAPIMissingInput(t *testing.T) {
 		{
 			name: "insert pages",
 			fn: func() error {
-				return InsertPagesFile("", filepath.Join(t.TempDir(), "out.pdf"), nil, false, nil, nil)
+				return InsertPagesFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), nil, false, nil, nil)
 			},
 		},
 		{
 			name: "remove pages",
 			fn: func() error {
-				return RemovePagesFile("", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
+				return RemovePagesFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), nil, nil)
 			},
 		},
 		{
 			name: "page count",
 			fn: func() error {
-				_, err := PageCountFile("")
+				_, err := PageCountFile(t.Context(), "")
 				return err
 			},
 		},
 		{
 			name: "page dimensions",
 			fn: func() error {
-				_, err := PageDimsFile("")
+				_, err := PageDimsFile(t.Context(), "")
 				return err
 			},
 		},
@@ -454,21 +454,21 @@ func TestPageFileAPIErrorsIncludeFileContext(t *testing.T) {
 		{
 			name: "insert pages open input",
 			fn: func() error {
-				return InsertPagesFile(missingInput, "", nil, false, nil, nil)
+				return InsertPagesFile(t.Context(), missingInput, "", nil, false, nil, nil)
 			},
 			want: "insert pages: open input " + missingInput,
 		},
 		{
 			name: "remove pages open input",
 			fn: func() error {
-				return RemovePagesFile(missingInput, "", nil, nil)
+				return RemovePagesFile(t.Context(), missingInput, "", nil, nil)
 			},
 			want: "remove pages: open input " + missingInput,
 		},
 		{
 			name: "page count open input",
 			fn: func() error {
-				_, err := PageCountFile(missingInput)
+				_, err := PageCountFile(t.Context(), missingInput)
 				return err
 			},
 			want: "page count: open input " + missingInput,
@@ -476,7 +476,7 @@ func TestPageFileAPIErrorsIncludeFileContext(t *testing.T) {
 		{
 			name: "page dimensions open input",
 			fn: func() error {
-				_, err := PageDimsFile(missingInput)
+				_, err := PageDimsFile(t.Context(), missingInput)
 				return err
 			},
 			want: "page dimensions: open input " + missingInput,
@@ -484,14 +484,14 @@ func TestPageFileAPIErrorsIncludeFileContext(t *testing.T) {
 		{
 			name: "insert pages create output",
 			fn: func() error {
-				return InsertPagesFile(inFile, missingOutput, nil, false, nil, nil)
+				return InsertPagesFile(t.Context(), inFile, missingOutput, nil, false, nil, nil)
 			},
 			want: "insert pages: create output",
 		},
 		{
 			name: "remove pages create output",
 			fn: func() error {
-				return RemovePagesFile(inFile, missingOutput, nil, nil)
+				return RemovePagesFile(t.Context(), inFile, missingOutput, nil, nil)
 			},
 			want: "remove pages: create output",
 		},
@@ -523,14 +523,14 @@ func TestPageFileFailurePreservesExistingOutput(t *testing.T) {
 		{
 			name: "insert pages",
 			fn: func(outFile string) error {
-				return InsertPagesFile(inFile, outFile, []string{"foo"}, false, nil, nil)
+				return InsertPagesFile(t.Context(), inFile, outFile, []string{"foo"}, false, nil, nil)
 			},
 			want: "insert pages: parse page selection",
 		},
 		{
 			name: "remove pages",
 			fn: func(outFile string) error {
-				return RemovePagesFile(inFile, outFile, []string{"foo"}, nil)
+				return RemovePagesFile(t.Context(), inFile, outFile, []string{"foo"}, nil)
 			},
 			want: "remove pages: parse page selection",
 		},
@@ -561,7 +561,7 @@ func TestPageFileFailurePreservesExistingOutput(t *testing.T) {
 // TestPageFileSuccessReplacesExistingOutput verifies successful delayed replacement.
 func TestPageFileSuccessReplacesExistingOutput(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	inputPageCount, err := PageCountFile(inFile)
+	inputPageCount, err := PageCountFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -574,13 +574,13 @@ func TestPageFileSuccessReplacesExistingOutput(t *testing.T) {
 			name:      "insert pages",
 			pageDelta: 1,
 			fn: func(outFile string) error {
-				return InsertPagesFile(inFile, outFile, []string{"1"}, false, nil, nil)
+				return InsertPagesFile(t.Context(), inFile, outFile, []string{"1"}, false, nil, nil)
 			},
 		},
 		{
 			name: "remove pages",
 			fn: func(outFile string) error {
-				return RemovePagesFile(inFile, outFile, []string{"2"}, nil)
+				return RemovePagesFile(t.Context(), inFile, outFile, []string{"2"}, nil)
 			},
 		},
 	}
@@ -601,7 +601,7 @@ func TestPageFileSuccessReplacesExistingOutput(t *testing.T) {
 			if !bytes.HasPrefix(got, []byte("%PDF-")) {
 				t.Fatalf("expected replacement PDF, got %q", got)
 			}
-			pageCount, err := PageCountFile(outFile)
+			pageCount, err := PageCountFile(t.Context(), outFile)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -622,21 +622,21 @@ func TestPageAPIReadErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "insert pages",
 			fn: func() error {
-				return InsertPages(bytes.NewReader(nil), io.Discard, nil, false, nil, nil)
+				return InsertPages(t.Context(), bytes.NewReader(nil), io.Discard, nil, false, nil, nil)
 			},
 			want: "insert pages: prepare PDF context: read context",
 		},
 		{
 			name: "remove pages",
 			fn: func() error {
-				return RemovePages(bytes.NewReader(nil), io.Discard, nil, nil)
+				return RemovePages(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil)
 			},
 			want: "remove pages: prepare PDF context: read context",
 		},
 		{
 			name: "page count",
 			fn: func() error {
-				_, err := PageCount(bytes.NewReader(nil), nil)
+				_, err := PageCount(t.Context(), bytes.NewReader(nil), nil)
 				return err
 			},
 			want: "page count: read context",
@@ -644,7 +644,7 @@ func TestPageAPIReadErrorsIncludeOperationContext(t *testing.T) {
 		{
 			name: "page dimensions",
 			fn: func() error {
-				_, err := PageDims(bytes.NewReader(nil), nil)
+				_, err := PageDims(t.Context(), bytes.NewReader(nil), nil)
 				return err
 			},
 			want: "page dimensions: read context",

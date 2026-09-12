@@ -147,7 +147,7 @@ func encryptedXRefFixture(t *testing.T, tc encryptedXRefTestCase) ([]byte, []byt
 
 	source, content := encryptedXRefSourcePDF(t)
 	var encrypted bytes.Buffer
-	if err := Encrypt(bytes.NewReader(source), &encrypted, encryptedXRefConfig(tc)); err != nil {
+	if err := Encrypt(t.Context(), bytes.NewReader(source), &encrypted, encryptedXRefConfig(tc)); err != nil {
 		t.Fatal(err)
 	}
 	clean := encrypted.Bytes()
@@ -157,11 +157,11 @@ func encryptedXRefFixture(t *testing.T, tc encryptedXRefTestCase) ([]byte, []byt
 func readEncryptedXRefState(t *testing.T, bb []byte, userPW string) encryptedXRefState {
 	t.Helper()
 
-	ctx, err := ReadContext(bytes.NewReader(bb), encryptedXRefReadConfig(userPW))
+	ctx, err := ReadContext(t.Context(), bytes.NewReader(bb), encryptedXRefReadConfig(userPW))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ValidateContext(ctx); err != nil {
+	if err := ValidateContext(t.Context(), ctx); err != nil {
 		t.Fatal(err)
 	}
 	pageDict, _, _, err := ctx.PageDict(1, false)
@@ -216,7 +216,7 @@ func assertEncryptedXRefFile(t *testing.T, filename, userPW string, content []by
 
 func assertEncryptedMergeRejected(t *testing.T, filename, outFile string) {
 	t.Helper()
-	err := MergeCreateFile([]string{filename}, outFile, false, model.NewDefaultConfiguration())
+	err := MergeCreateFile(t.Context(), []string{filename}, outFile, false, model.NewDefaultConfiguration())
 	if !errors.Is(err, pdfcpu.ErrEncrypted) {
 		t.Fatalf("got %v, want ErrEncrypted", err)
 	}
@@ -241,21 +241,21 @@ func runEncryptedXRefReconstructionCase(t *testing.T, tc encryptedXRefTestCase) 
 	writeEncryptedXRefFixture(t, repairedFile, repaired)
 
 	optimizedFile := filepath.Join(dir, "optimized.pdf")
-	if err := OptimizeFile(repairedFile, optimizedFile, encryptedXRefReadConfig(tc.userPW)); err != nil {
+	if err := OptimizeFile(t.Context(), repairedFile, optimizedFile, encryptedXRefReadConfig(tc.userPW), nil); err != nil {
 		t.Fatal(err)
 	}
 	assertEncryptedXRefFile(t, optimizedFile, tc.userPW, content, true)
 
 	decryptedFile := filepath.Join(dir, "decrypted.pdf")
-	if err := DecryptFile(repairedFile, decryptedFile, encryptedXRefReadConfig(tc.userPW)); err != nil {
+	if err := DecryptFile(t.Context(), repairedFile, decryptedFile, encryptedXRefReadConfig(tc.userPW)); err != nil {
 		t.Fatal(err)
 	}
 	assertEncryptedXRefFile(t, decryptedFile, "", content, false)
-	if err := ValidateFile(decryptedFile, model.NewDefaultConfiguration()); err != nil {
+	if err := ValidateFile(t.Context(), decryptedFile, model.NewDefaultConfiguration(), nil); err != nil {
 		t.Fatal(err)
 	}
 	decryptedOptimizedFile := filepath.Join(dir, "decrypted-optimized.pdf")
-	if err := OptimizeFile(decryptedFile, decryptedOptimizedFile, model.NewDefaultConfiguration()); err != nil {
+	if err := OptimizeFile(t.Context(), decryptedFile, decryptedOptimizedFile, model.NewDefaultConfiguration(), nil); err != nil {
 		t.Fatal(err)
 	}
 	assertEncryptedXRefFile(t, decryptedOptimizedFile, "", content, false)
@@ -265,7 +265,7 @@ func runEncryptedXRefReconstructionCase(t *testing.T, tc encryptedXRefTestCase) 
 
 	if tc.userPW != "" {
 		conf := encryptedXRefReadConfig("wrong")
-		_, err := ReadContext(bytes.NewReader(repaired), conf)
+		_, err := ReadContext(t.Context(), bytes.NewReader(repaired), conf)
 		if !errors.Is(err, pdfcpu.ErrWrongPassword) {
 			t.Fatalf("got %v, want ErrWrongPassword", err)
 		}

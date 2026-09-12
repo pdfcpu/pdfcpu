@@ -278,7 +278,7 @@ func TestWordWrapCJK(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		gotLines, err := WordWrap(tc.Text, tc.FontName, tc.FontSize, tc.MaxWidthPoints)
+		gotLines, err := WordWrap(t.Context(), tc.Text, tc.FontName, tc.FontSize, tc.MaxWidthPoints)
 		if err != nil {
 			t.Errorf("[%s]: %s", tc.Desc, err)
 		}
@@ -315,7 +315,7 @@ func TestWordWrapPunctuationBoundary(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		lines, err := WordWrap(tc.Text, tc.FontName, tc.FontSize, tc.MaxWidthPoints)
+		lines, err := WordWrap(t.Context(), tc.Text, tc.FontName, tc.FontSize, tc.MaxWidthPoints)
 		if err != nil {
 			t.Errorf("[%s]: %s", tc.Desc, err)
 		}
@@ -379,7 +379,7 @@ func TestWordWrapExplicitNewline(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		gotLines, err := WordWrap(tc.Text, tc.FontName, tc.FontSize, tc.MaxWidthPoints)
+		gotLines, err := WordWrap(t.Context(), tc.Text, tc.FontName, tc.FontSize, tc.MaxWidthPoints)
 		if err != nil {
 			t.Errorf("[%s]: %s", tc.Desc, err)
 		}

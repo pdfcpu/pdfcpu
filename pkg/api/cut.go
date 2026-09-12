@@ -18,6 +18,7 @@ package api
 
 import (
 	"bufio"
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/internal/fileutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
@@ -127,25 +129,31 @@ func validatePosterConfiguration(cut *model.Cut) error {
 	return nil
 }
 
-func selectedCutPages(pageCount int, selectedPages []string, operation string) ([]int, error) {
+func selectedCutPages(c context.Context, pageCount int, selectedPages []string, operation string) ([]int, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	pages, err := PagesForSelection(pageCount, selectedPages, true)
 	if err != nil {
 		return nil, fmt.Errorf("%s: parse page selection: %w", operation, err)
 	}
-	return sortedPages(pages), nil
+	return selectedPageNumbers(c, pageCount, pages)
 }
 
-func prepareForCut(rs io.ReadSeeker, selectedPages []string, conf *model.Configuration, operation string) (*model.Context, []int, error) {
+func prepareForCut(c context.Context, rs io.ReadSeeker, selectedPages []string, conf *model.Configuration, operation string) (*model.Context, []int, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	if rs == nil {
 		return nil, nil, ErrMissingPDFReadSeeker
 	}
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("%s: %w", operation, err)
 	}
 
-	pages, err := selectedCutPages(ctx.PageCount, selectedPages, operation)
+	pages, err := selectedCutPages(c, ctx.PageCount, selectedPages, operation)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -162,7 +170,7 @@ type cutOutputFile interface {
 type cutOutputOperations struct {
 	stat          func(string) (os.FileInfo, error)
 	createTemp    func(string, string) (cutOutputFile, error)
-	writeAndFlush func(*model.Context, io.Writer) (error, error)
+	writeAndFlush func(context.Context, *model.Context, io.Writer) (error, error)
 	rename        func(string, string) error
 	remove        func(string) error
 }
@@ -197,12 +205,18 @@ func cutDestinationMode(outFile, operation string, ops cutOutputOperations) (os.
 	return 0, false, fmt.Errorf("%s: write output %s: stat destination: %w", operation, outFile, err)
 }
 
-func writeAndFlushCutContext(ctx *model.Context, w io.Writer) (error, error) {
+func writeAndFlushCutContext(c context.Context, ctx *model.Context, w io.Writer) (error, error) {
+	if err := contextutil.Check(c); err != nil {
+		return err, nil
+	}
 	if f, ok := w.(*os.File); ok {
 		ctx.Write.Fp = f
 	}
 	ctx.Write.Writer = bufio.NewWriter(w)
-	writeErr := pdfcpu.WriteContext(ctx)
+	writeErr := pdfcpu.WriteContext(c, ctx)
+	if err := contextutil.Check(c); err != nil {
+		return errors.Join(writeErr, err), nil
+	}
 	return writeErr, ctx.Write.Flush()
 }
 
@@ -220,9 +234,15 @@ func removeCutTemporaryOutput(tmpFile, operation, outFile string, ops cutOutputO
 	return nil
 }
 
-func writeCutOutputWith(ctx *model.Context, outFile, operation string, ops cutOutputOperations) (err error) {
+func writeCutOutputUsing(c context.Context, ctx *model.Context, outFile, operation string, ops cutOutputOperations) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	destinationMode, destinationExists, err := cutDestinationMode(outFile, operation, ops)
 	if err != nil {
+		return err
+	}
+	if err := contextutil.Check(c); err != nil {
 		return err
 	}
 	pattern := "." + filepath.Base(outFile) + ".tmp-*"
@@ -242,21 +262,29 @@ func writeCutOutputWith(ctx *model.Context, outFile, operation string, ops cutOu
 		}
 	}()
 	defer fault.Catch(&err)
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if destinationExists {
 		if err := f.Chmod(destinationMode); err != nil {
 			return fmt.Errorf("%s: write output %s: set temporary output permissions: %w", operation, outFile, err)
 		}
 	}
 
-	writeErr, flushErr := ops.writeAndFlush(ctx, f)
+	writeErr, flushErr := ops.writeAndFlush(c, ctx, f)
+	cancelErr := contextutil.Check(c)
 	closeErr := f.Close()
 	closed = true
 	err = errors.Join(
 		cutOutputPhaseError(writeErr, operation, outFile, "write"),
 		cutOutputPhaseError(flushErr, operation, outFile, "flush"),
 		cutOutputPhaseError(closeErr, operation, outFile, "close"),
+		cancelErr,
 	)
 	if err != nil {
+		return err
+	}
+	if err := contextutil.Check(c); err != nil {
 		return err
 	}
 	if err := ops.rename(f.Name(), outFile); err != nil {
@@ -266,12 +294,15 @@ func writeCutOutputWith(ctx *model.Context, outFile, operation string, ops cutOu
 	return nil
 }
 
-func writeCutOutput(ctx *model.Context, outFile, operation string) error {
-	return writeCutOutputWith(ctx, outFile, operation, defaultCutOutputOperations())
+func writeCutOutput(c context.Context, ctx *model.Context, outFile, operation string) error {
+	return writeCutOutputUsing(c, ctx, outFile, operation, defaultCutOutputOperations())
 }
 
-func writePosterPage(ctxSrc *model.Context, pageNr int, outDir, fileName string, cut *model.Cut, conf *model.Configuration) error {
-	ctxDest, err := pdfcpu.PosterPage(ctxSrc, pageNr, cut)
+func writePosterPage(c context.Context, ctxSrc *model.Context, pageNr int, outDir, fileName string, cut *model.Cut, conf *model.Configuration) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	ctxDest, err := pdfcpu.PosterPage(c, ctxSrc, pageNr, cut)
 	if err != nil {
 		return fmt.Errorf("poster: process page %d: %w", pageNr, err)
 	}
@@ -279,19 +310,34 @@ func writePosterPage(ctxSrc *model.Context, pageNr int, outDir, fileName string,
 	outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, pageNr))
 
 	if conf.PostProcessValidate {
-		if err = ValidateContext(ctxDest); err != nil {
+		if err = ValidateContext(c, ctxDest); err != nil {
 			return fmt.Errorf("poster: validate output page %d: %w", pageNr, err)
 		}
 	}
 
-	return writeCutOutput(ctxDest, outFile, "poster")
+	return writeCutOutput(c, ctxDest, outFile, "poster")
 }
 
-// Poster applies cut for selected pages of rs and generates corresponding poster tiles in outDir.
-// Each generated output is written atomically. Outputs completed for earlier pages remain if a later page fails.
-func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut *model.Cut, conf *model.Configuration) (err error) {
+func writePosterPages(c context.Context, ctxSrc *model.Context, pages []int, outDir, fileName string, cut *model.Cut, conf *model.Configuration) error {
+	for _, pageNr := range pages {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		if err := writePosterPage(c, ctxSrc, pageNr, outDir, fileName, cut, conf); err != nil {
+			return err
+		}
+	}
+	return contextutil.Check(c)
+}
+
+// Poster applies cut for selected pages of rs, writes poster tiles into outDir and supports cancellation.
+// Each generated output is written atomically. Outputs completed before cancellation remain in outDir.
+func Poster(c context.Context, rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut *model.Cut, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -304,27 +350,24 @@ func Poster(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, c
 	conf = operationConfiguration(conf, model.POSTER)
 	fileName = sanitizeFilenamePart(fileName, "poster")
 
-	ctxSrc, pages, err := prepareForCut(rs, selectedPages, conf, "poster")
+	ctxSrc, pages, err := prepareForCut(c, rs, selectedPages, conf, "poster")
 	if err != nil {
 		return err
 	}
 
 	if len(pages) == 0 {
-		return nil
+		return contextutil.Check(c)
 	}
 
-	for _, pageNr := range pages {
-		if err := writePosterPage(ctxSrc, pageNr, outDir, fileName, cut, conf); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return writePosterPages(c, ctxSrc, pages, outDir, fileName, cut, conf)
 }
 
-// PosterFile applies cut for selected pages of inFile and generates corresponding poster tiles in outDir.
-// Each generated output is written atomically. Outputs completed for earlier pages remain if a later page fails.
-func PosterFile(inFile, outDir, outFile string, selectedPages []string, cut *model.Cut, conf *model.Configuration) (err error) {
+// PosterFile applies cut for selected pages of inFile, writes poster tiles into outDir and supports
+// cancellation. Each generated output is written atomically. Outputs completed before cancellation remain in outDir.
+func PosterFile(c context.Context, inFile, outDir, outFile string, selectedPages []string, cut *model.Cut, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -345,30 +388,48 @@ func PosterFile(inFile, outDir, outFile string, selectedPages []string, cut *mod
 		outFile = strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 	}
 
-	return Poster(f, outDir, outFile, selectedPages, cut, conf)
+	return Poster(c, f, outDir, outFile, selectedPages, cut, conf)
 }
 
-func writeNDownPage(ctxSrc *model.Context, pageNr, n int, outDir, fileName string, cut *model.Cut, conf *model.Configuration) error {
-	ctxDest, err := pdfcpu.NDownPage(ctxSrc, pageNr, n, cut)
+func writeNDownPage(c context.Context, ctxSrc *model.Context, pageNr, n int, outDir, fileName string, cut *model.Cut, conf *model.Configuration) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	ctxDest, err := pdfcpu.NDownPage(c, ctxSrc, pageNr, n, cut)
 	if err != nil {
 		return fmt.Errorf("ndown: process page %d: %w", pageNr, err)
 	}
 
 	if conf.PostProcessValidate {
-		if err = ValidateContext(ctxDest); err != nil {
+		if err = ValidateContext(c, ctxDest); err != nil {
 			return fmt.Errorf("ndown: validate output page %d: %w", pageNr, err)
 		}
 	}
 
 	outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, pageNr))
-	return writeCutOutput(ctxDest, outFile, "ndown")
+	return writeCutOutput(c, ctxDest, outFile, "ndown")
 }
 
-// NDown applies n & cutConf for selected pages of rs and writes results to outDir.
-// Each generated output is written atomically. Outputs completed for earlier pages remain if a later page fails.
-func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n int, cut *model.Cut, conf *model.Configuration) (err error) {
+func writeNDownPages(c context.Context, ctxSrc *model.Context, pages []int, n int, outDir, fileName string, cut *model.Cut, conf *model.Configuration) error {
+	for _, pageNr := range pages {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		if err := writeNDownPage(c, ctxSrc, pageNr, n, outDir, fileName, cut, conf); err != nil {
+			return err
+		}
+	}
+	return contextutil.Check(c)
+}
+
+// NDown applies n & cutConf for selected pages of rs, writes results to outDir and supports cancellation.
+// Each generated output is written atomically. Outputs completed before cancellation remain in outDir.
+func NDown(c context.Context, rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n int, cut *model.Cut, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -381,27 +442,24 @@ func NDown(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, n 
 	conf = operationConfiguration(conf, model.NDOWN)
 	fileName = sanitizeFilenamePart(fileName, "ndown")
 
-	ctxSrc, pages, err := prepareForCut(rs, selectedPages, conf, "ndown")
+	ctxSrc, pages, err := prepareForCut(c, rs, selectedPages, conf, "ndown")
 	if err != nil {
 		return err
 	}
 
 	if len(pages) == 0 {
-		return nil
+		return contextutil.Check(c)
 	}
 
-	for _, pageNr := range pages {
-		if err := writeNDownPage(ctxSrc, pageNr, n, outDir, fileName, cut, conf); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return writeNDownPages(c, ctxSrc, pages, n, outDir, fileName, cut, conf)
 }
 
-// NDownFile applies n & cutConf for selected pages of inFile and writes results to outDir.
-// Each generated output is written atomically. Outputs completed for earlier pages remain if a later page fails.
-func NDownFile(inFile, outDir, outFile string, selectedPages []string, n int, cut *model.Cut, conf *model.Configuration) (err error) {
+// NDownFile applies n & cutConf for selected pages of inFile, writes results to outDir and supports
+// cancellation. Each generated output is written atomically. Outputs completed before cancellation remain in outDir.
+func NDownFile(c context.Context, inFile, outDir, outFile string, selectedPages []string, n int, cut *model.Cut, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -422,7 +480,7 @@ func NDownFile(inFile, outDir, outFile string, selectedPages []string, n int, cu
 		outFile = strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 	}
 
-	return NDown(f, outDir, outFile, selectedPages, n, cut, conf)
+	return NDown(c, f, outDir, outFile, selectedPages, n, cut, conf)
 }
 
 func normalizeCut(cut *model.Cut) {
@@ -437,27 +495,45 @@ func normalizeCut(cut *model.Cut) {
 	}
 }
 
-func writeCutPage(ctxSrc *model.Context, pageNr int, outDir, fileName string, cut *model.Cut, conf *model.Configuration) error {
-	ctxDest, err := pdfcpu.CutPage(ctxSrc, pageNr, cut)
+func writeCutPage(c context.Context, ctxSrc *model.Context, pageNr int, outDir, fileName string, cut *model.Cut, conf *model.Configuration) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	ctxDest, err := pdfcpu.CutPage(c, ctxSrc, pageNr, cut)
 	if err != nil {
 		return fmt.Errorf("cut: process page %d: %w", pageNr, err)
 	}
 
 	if conf.PostProcessValidate {
-		if err = ValidateContext(ctxDest); err != nil {
+		if err = ValidateContext(c, ctxDest); err != nil {
 			return fmt.Errorf("cut: validate output page %d: %w", pageNr, err)
 		}
 	}
 
 	outFile := filepath.Join(outDir, fmt.Sprintf("%s_page_%d.pdf", fileName, pageNr))
-	return writeCutOutput(ctxDest, outFile, "cut")
+	return writeCutOutput(c, ctxDest, outFile, "cut")
 }
 
-// Cut applies cutConf for selected pages of rs and writes results to outDir.
-// Each generated output is written atomically. Outputs completed for earlier pages remain if a later page fails.
-func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut *model.Cut, conf *model.Configuration) (err error) {
+func writeCutPages(c context.Context, ctxSrc *model.Context, pages []int, outDir, fileName string, cut *model.Cut, conf *model.Configuration) error {
+	for _, pageNr := range pages {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		if err := writeCutPage(c, ctxSrc, pageNr, outDir, fileName, cut, conf); err != nil {
+			return err
+		}
+	}
+	return contextutil.Check(c)
+}
+
+// Cut applies cutConf for selected pages of rs, writes results to outDir and supports cancellation.
+// Each generated output is written atomically. Outputs completed before cancellation remain in outDir.
+func Cut(c context.Context, rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut *model.Cut, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -471,27 +547,24 @@ func Cut(rs io.ReadSeeker, outDir, fileName string, selectedPages []string, cut 
 	conf = operationConfiguration(conf, model.CUT)
 	fileName = sanitizeFilenamePart(fileName, "cut")
 
-	ctxSrc, pages, err := prepareForCut(rs, selectedPages, conf, "cut")
+	ctxSrc, pages, err := prepareForCut(c, rs, selectedPages, conf, "cut")
 	if err != nil {
 		return err
 	}
 
 	if len(pages) == 0 {
-		return nil
+		return contextutil.Check(c)
 	}
 
-	for _, pageNr := range pages {
-		if err := writeCutPage(ctxSrc, pageNr, outDir, fileName, cut, conf); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return writeCutPages(c, ctxSrc, pages, outDir, fileName, cut, conf)
 }
 
-// CutFile applies cutConf for selected pages of inFile and writes results to outDir.
-// Each generated output is written atomically. Outputs completed for earlier pages remain if a later page fails.
-func CutFile(inFile, outDir, outFile string, selectedPages []string, cut *model.Cut, conf *model.Configuration) (err error) {
+// CutFile applies cutConf for selected pages of inFile, writes results to outDir and supports cancellation.
+// Each generated output is written atomically. Outputs completed before cancellation remain in outDir.
+func CutFile(c context.Context, inFile, outDir, outFile string, selectedPages []string, cut *model.Cut, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -512,5 +585,5 @@ func CutFile(inFile, outDir, outFile string, selectedPages []string, cut *model.
 		outFile = strings.TrimSuffix(filepath.Base(inFile), ".pdf")
 	}
 
-	return Cut(f, outDir, outFile, selectedPages, cut, conf)
+	return Cut(c, f, outDir, outFile, selectedPages, cut, conf)
 }

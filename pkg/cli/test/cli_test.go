@@ -16,6 +16,7 @@ limitations under the License.
 package test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -61,7 +63,14 @@ func TestMain(m *testing.M) {
 	resDir = filepath.Join(inDir, "resources")
 	samplesDir = filepath.Join("..", "..", "samples")
 
-	conf = api.LoadConfiguration()
+	var err error
+	conf, err = api.LoadConfiguration(api.ConfigurationOptions{Mode: api.ConfigurationModeAuto})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "load test configuration: %v\\n", err)
+		os.Exit(1)
+	}
+	// Font installation still uses the process-wide font directory.
+	font.UserFontDir, _ = conf.UserFontStore()
 
 	// Install test user fonts from pkg/testdata/fonts.
 	fonts, err := userFonts(filepath.Join(inDir, "fonts"))
@@ -70,7 +79,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	if err := api.InstallFonts(fonts); err != nil {
+	if err := api.InstallFonts(context.Background(), fonts); err != nil {
 		fmt.Printf("%v", err)
 		os.Exit(1)
 	}
@@ -137,7 +146,7 @@ func allPDFs(t *testing.T, dir string) []string {
 
 func validateFile(t *testing.T, fileName string, conf *model.Configuration) error {
 	t.Helper()
-	_, err := cli.Dispatch(cli.ValidateCommand([]string{fileName}, conf))
+	_, err := cli.Dispatch(t.Context(), cli.ValidateCommand([]string{fileName}, conf))
 	return err
 }
 
@@ -171,7 +180,7 @@ func TestValidateBatchWithStdinReturnsErrors(t *testing.T) {
 	w.Close()
 
 	missingFile := filepath.Join(outDir, "missing.pdf")
-	_, err = cli.Dispatch(cli.ValidateCommand([]string{"-", missingFile}, conf))
+	_, err = cli.Dispatch(t.Context(), cli.ValidateCommand([]string{"-", missingFile}, conf))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -210,7 +219,7 @@ func TestMultiInputListCommandsReturnErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := cli.Dispatch(tt.cmd)
+			_, err := cli.Dispatch(t.Context(), tt.cmd)
 			if err == nil {
 				t.Fatal("expected error")
 			}
@@ -230,7 +239,7 @@ func TestInfoCommand(t *testing.T) {
 	inFile := filepath.Join(inDir, "5116.DCT_Filter.pdf")
 
 	cmd := cli.InfoCommand([]string{inFile}, nil, true, true, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -245,14 +254,14 @@ func TestUnknownCommand(t *testing.T) {
 		InFile: &inFile,
 		Conf:   conf}
 
-	if _, err := cli.Dispatch(cmd); err == nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err == nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
 
 // TestDispatchRejectsNilCommand verifies nil commands fail before dispatch.
 func TestDispatchRejectsNilCommand(t *testing.T) {
-	if _, err := cli.Dispatch(nil); err == nil {
+	if _, err := cli.Dispatch(t.Context(), nil); err == nil {
 		t.Fatal("expected missing command error")
 	}
 }
@@ -267,7 +276,7 @@ func TestDispatchPreservesNilConfig(t *testing.T) {
 		InFile: &inFile,
 	}
 
-	if _, err := cli.Dispatch(cmd); err == nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err == nil {
 		t.Fatalf("%s: expected unknown command error\n", msg)
 	}
 	if cmd.Conf != nil {
@@ -291,7 +300,7 @@ func XTestSomeCommand(t *testing.T) {
 
 	cmd := cli.ValidateCommand([]string{inFile}, conf)
 
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }

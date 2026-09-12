@@ -29,7 +29,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-type cryptoCommandOperation func(*Command) ([]string, error)
+type cryptoCommandOperation = dispatchFunc
 
 func TestCryptoCommandsRejectMissingFields(t *testing.T) {
 	inFile, empty, fileOut := "in.pdf", "", ""
@@ -37,8 +37,8 @@ func TestCryptoCommandsRejectMissingFields(t *testing.T) {
 		name string
 		fn   cryptoCommandOperation
 	}{
-		{name: "encrypt", fn: Encrypt},
-		{name: "decrypt", fn: Decrypt},
+		{name: "encrypt", fn: encrypt},
+		{name: "decrypt", fn: decrypt},
 	}
 	tests := []struct {
 		name string
@@ -59,7 +59,7 @@ func TestCryptoCommandsRejectMissingFields(t *testing.T) {
 	for _, op := range operations {
 		for _, tt := range tests {
 			t.Run(op.name+" "+tt.name, func(t *testing.T) {
-				if _, err := op.fn(tt.cmd); !errors.Is(err, tt.want) {
+				if _, err := op.fn(t.Context(), tt.cmd); !errors.Is(err, tt.want) {
 					t.Fatalf("got %v, want %v", err, tt.want)
 				}
 			})
@@ -97,8 +97,8 @@ func TestCryptoCLIFileErrorsPreserveAPIContext(t *testing.T) {
 		name string
 		fn   cryptoCommandOperation
 	}{
-		{name: "encrypt", fn: Encrypt},
-		{name: "decrypt", fn: Decrypt},
+		{name: "encrypt", fn: encrypt},
+		{name: "decrypt", fn: decrypt},
 	}
 
 	for _, tt := range operations {
@@ -108,7 +108,7 @@ func TestCryptoCLIFileErrorsPreserveAPIContext(t *testing.T) {
 				OutFile: &outFile,
 				Conf:    model.NewDefaultConfiguration(),
 			}
-			_, err := tt.fn(cmd)
+			_, err := tt.fn(t.Context(), cmd)
 			if !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("got %v, want %v", err, os.ErrNotExist)
 			}
@@ -125,8 +125,8 @@ func TestCryptoCLIStreamingIOErrorsIncludeOperationContext(t *testing.T) {
 		name string
 		fn   cryptoCommandOperation
 	}{
-		{name: "encrypt", fn: Encrypt},
-		{name: "decrypt", fn: Decrypt},
+		{name: "encrypt", fn: encrypt},
+		{name: "decrypt", fn: decrypt},
 	}
 
 	for _, tt := range operations {
@@ -138,7 +138,7 @@ func TestCryptoCLIStreamingIOErrorsIncludeOperationContext(t *testing.T) {
 				OutFile: &outFile,
 				Conf:    model.NewDefaultConfiguration(),
 			}
-			_, err := tt.fn(cmd)
+			_, err := tt.fn(t.Context(), cmd)
 			if !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("got %v, want %v", err, os.ErrNotExist)
 			}
@@ -157,7 +157,7 @@ func TestCryptoCLIStreamingIOErrorsIncludeOperationContext(t *testing.T) {
 				OutFile: &outFile,
 				Conf:    model.NewDefaultConfiguration(),
 			}
-			_, err := tt.fn(cmd)
+			_, err := tt.fn(t.Context(), cmd)
 			if !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("got %v, want %v", err, os.ErrNotExist)
 			}
@@ -174,8 +174,8 @@ func TestCryptoCLIStreamingFailurePreservesExistingOutput(t *testing.T) {
 		name string
 		fn   cryptoCommandOperation
 	}{
-		{name: "encrypt", fn: Encrypt},
-		{name: "decrypt", fn: Decrypt},
+		{name: "encrypt", fn: encrypt},
+		{name: "decrypt", fn: decrypt},
 	}
 
 	for _, tt := range operations {
@@ -192,7 +192,7 @@ func TestCryptoCLIStreamingFailurePreservesExistingOutput(t *testing.T) {
 				OutFile: &outFile,
 				Conf:    model.NewDefaultConfiguration(),
 			}
-			_, err := tt.fn(cmd)
+			_, err := tt.fn(t.Context(), cmd)
 			if err == nil || !strings.Contains(err.Error(), tt.name+":") {
 				t.Fatalf("expected %s context, got %v", tt.name, err)
 			}
@@ -214,9 +214,9 @@ func TestSecurityMutationCLIStreamingIOErrorsIncludeOperationContext(t *testing.
 		fn        cryptoCommandOperation
 		passwords bool
 	}{
-		{name: "change user password", fn: ChangeUserPassword, passwords: true},
-		{name: "change owner password", fn: ChangeOwnerPassword, passwords: true},
-		{name: "set permissions", fn: SetPermissions},
+		{name: "change user password", fn: changeUserPassword, passwords: true},
+		{name: "change owner password", fn: changeOwnerPassword, passwords: true},
+		{name: "set permissions", fn: setPermissions},
 	}
 
 	for _, tt := range operations {
@@ -229,7 +229,7 @@ func TestSecurityMutationCLIStreamingIOErrorsIncludeOperationContext(t *testing.
 				model.NewDefaultConfiguration(),
 				tt.passwords,
 			)
-			_, err := tt.fn(cmd)
+			_, err := tt.fn(t.Context(), cmd)
 			if !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("got %v, want %v", err, os.ErrNotExist)
 			}
@@ -249,7 +249,7 @@ func TestSecurityMutationCLIStreamingIOErrorsIncludeOperationContext(t *testing.
 				model.NewDefaultConfiguration(),
 				tt.passwords,
 			)
-			_, err := tt.fn(cmd)
+			_, err := tt.fn(t.Context(), cmd)
 			if !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("got %v, want %v", err, os.ErrNotExist)
 			}
@@ -268,9 +268,9 @@ func TestSecurityMutationCLIStreamingFailurePreservesExistingOutput(t *testing.T
 		fn        cryptoCommandOperation
 		passwords bool
 	}{
-		{name: "change user password", fn: ChangeUserPassword, passwords: true},
-		{name: "change owner password", fn: ChangeOwnerPassword, passwords: true},
-		{name: "set permissions", fn: SetPermissions},
+		{name: "change user password", fn: changeUserPassword, passwords: true},
+		{name: "change owner password", fn: changeOwnerPassword, passwords: true},
+		{name: "set permissions", fn: setPermissions},
 	}
 
 	for _, tt := range operations {
@@ -288,7 +288,7 @@ func TestSecurityMutationCLIStreamingFailurePreservesExistingOutput(t *testing.T
 				model.NewDefaultConfiguration(),
 				tt.passwords,
 			)
-			_, err := tt.fn(cmd)
+			_, err := tt.fn(t.Context(), cmd)
 			if err == nil || !strings.Contains(err.Error(), tt.name+":") {
 				t.Fatalf("expected %q operation context, got %v", tt.name, err)
 			}
@@ -336,9 +336,9 @@ func TestSecurityMutationCommandsRejectMissingFields(t *testing.T) {
 		fn        cryptoCommandOperation
 		passwords bool
 	}{
-		{name: "change user password", fn: ChangeUserPassword, passwords: true},
-		{name: "change owner password", fn: ChangeOwnerPassword, passwords: true},
-		{name: "set permissions", fn: SetPermissions},
+		{name: "change user password", fn: changeUserPassword, passwords: true},
+		{name: "change owner password", fn: changeOwnerPassword, passwords: true},
+		{name: "set permissions", fn: setPermissions},
 	}
 	tests := []struct {
 		name string
@@ -383,7 +383,7 @@ func TestSecurityMutationCommandsRejectMissingFields(t *testing.T) {
 	for _, op := range operations {
 		for _, tt := range tests {
 			t.Run(op.name+" "+tt.name, func(t *testing.T) {
-				if _, err := op.fn(tt.cmd(op.passwords)); !errors.Is(err, tt.want) {
+				if _, err := op.fn(t.Context(), tt.cmd(op.passwords)); !errors.Is(err, tt.want) {
 					t.Fatalf("got %v, want %v", err, tt.want)
 				}
 			})
@@ -399,8 +399,8 @@ func TestPasswordChangeCommandsRejectMissingPasswordPointers(t *testing.T) {
 		name string
 		fn   cryptoCommandOperation
 	}{
-		{name: "change user password", fn: ChangeUserPassword},
-		{name: "change owner password", fn: ChangeOwnerPassword},
+		{name: "change user password", fn: changeUserPassword},
+		{name: "change owner password", fn: changeOwnerPassword},
 	}
 	tests := []struct {
 		name string
@@ -432,7 +432,7 @@ func TestPasswordChangeCommandsRejectMissingPasswordPointers(t *testing.T) {
 	for _, op := range operations {
 		for _, tt := range tests {
 			t.Run(op.name+" "+tt.name, func(t *testing.T) {
-				_, err := op.fn(tt.cmd)
+				_, err := op.fn(t.Context(), tt.cmd)
 				if err == nil || !strings.Contains(err.Error(), tt.want) {
 					t.Fatalf("expected %q, got %v", tt.want, err)
 				}
@@ -457,7 +457,7 @@ func TestListPermissionsRejectsMissingFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := ListPermissions(tt.cmd); !errors.Is(err, tt.want) {
+			if _, err := listPermissionsCommand(t.Context(), tt.cmd); !errors.Is(err, tt.want) {
 				t.Fatalf("got %v, want %v", err, tt.want)
 			}
 		})
@@ -480,7 +480,7 @@ func TestListPermissionsFileRejectsMissingFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := ListPermissionsFile(tt.inFiles, tt.conf); !errors.Is(err, tt.want) {
+			if _, err := ListPermissionsFile(t.Context(), tt.inFiles, tt.conf); !errors.Is(err, tt.want) {
 				t.Fatalf("got %v, want %v", err, tt.want)
 			}
 		})
@@ -502,7 +502,7 @@ func TestListPermissionsFileReportsCloseError(t *testing.T) {
 		closeListPermissionsInput = original
 	})
 
-	_, err := ListPermissionsFile([]string{inFile}, model.NewDefaultConfiguration())
+	_, err := ListPermissionsFile(t.Context(), []string{inFile}, model.NewDefaultConfiguration())
 	if !errors.Is(err, closeErr) {
 		t.Fatalf("got %v, want %v", err, closeErr)
 	}
@@ -530,7 +530,7 @@ func TestListPermissionsFileJoinsOperationAndCloseErrors(t *testing.T) {
 		closeListPermissionsInput = original
 	})
 
-	_, err := ListPermissionsFile([]string{inFile}, model.NewDefaultConfiguration())
+	_, err := ListPermissionsFile(t.Context(), []string{inFile}, model.NewDefaultConfiguration())
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) || !errors.Is(err, closeErr) {
 		t.Fatalf("expected operation and close causes, got %v", err)
 	}
@@ -551,7 +551,7 @@ func TestListPermissionsFileRetainsEachFilename(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := ListPermissionsFile(inFiles, model.NewDefaultConfiguration())
+	_, err := ListPermissionsFile(t.Context(), inFiles, model.NewDefaultConfiguration())
 	if !errors.Is(err, os.ErrNotExist) || !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected open and operation causes, got %v", err)
 	}
@@ -602,7 +602,7 @@ func TestListPermissionsMixedInputsPreserveCausesAndSourceLabels(t *testing.T) {
 				InFiles: inFiles,
 				Conf:    model.NewDefaultConfiguration(),
 			}
-			_, err := ListPermissions(cmd)
+			_, err := listPermissionsCommand(t.Context(), cmd)
 			for _, want := range []error{pdfcpu.ErrEmptyInput, pdfcpu.ErrCorruptHeader, closeErr} {
 				if !errors.Is(err, want) {
 					t.Fatalf("got %v, want cause %v", err, want)

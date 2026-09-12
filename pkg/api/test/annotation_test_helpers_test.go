@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"context"
 	"path/filepath"
 	"strings"
 	"time"
@@ -802,8 +803,8 @@ func createPrinterMarkAnnotation(xRefTable *model.XRefTable, pageIndRef types.In
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createXObjectForWaterMark(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
-	fIndRef, err := pdffont.EnsureFontDict(xRefTable, "Helvetica", "", "", false, nil)
+func createXObjectForWaterMark(testContext context.Context, xRefTable *model.XRefTable) (*types.IndirectRef, error) {
+	fIndRef, err := pdffont.EnsureFontDict(testContext, xRefTable, "Helvetica", "", "", false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -829,8 +830,8 @@ func createXObjectForWaterMark(xRefTable *model.XRefTable) (*types.IndirectRef, 
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createWaterMarkAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
-	ir, err := createXObjectForWaterMark(xRefTable)
+func createWaterMarkAnnotation(testContext context.Context, xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
+	ir, err := createXObjectForWaterMark(testContext, xRefTable)
 	if err != nil {
 		return nil, err
 	}
@@ -1153,8 +1154,8 @@ func createLinkAnnotationDictWithHideAction(xRefTable *model.XRefTable, pageIndR
 	return ir, nil
 }
 
-func createTrapNetAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
-	ir, err := pdffont.EnsureFontDict(xRefTable, "Helvetica", "", "", false, nil)
+func createTrapNetAnnotation(testContext context.Context, xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
+	ir, err := pdffont.EnsureFontDict(testContext, xRefTable, "Helvetica", "", "", false, nil)
 	if err != nil {
 		return nil, err
 	}

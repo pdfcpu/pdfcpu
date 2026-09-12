@@ -43,7 +43,7 @@ func createPDF(t *testing.T, msg, inFile, inFileJSON, outFile string, conf *mode
 	}
 
 	cmd := cli.CreateCommand(inFile, inFileJSON, outFile, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 

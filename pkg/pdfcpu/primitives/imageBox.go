@@ -93,7 +93,6 @@ func (ib *ImageBox) parseAnchor() (types.Anchor, error) {
 }
 
 func (ib *ImageBox) validate() error {
-
 	ib.x = ib.Position[0]
 	ib.y = ib.Position[1]
 
@@ -167,7 +166,6 @@ func (ib *ImageBox) missingPosition() bool {
 }
 
 func (ib *ImageBox) mergeIn(ib0 *ImageBox) {
-
 	if !ib.anchored && ib.missingPosition() {
 		ib.x = ib0.x
 		ib.y = ib0.y
@@ -320,7 +318,6 @@ func (ib *ImageBox) remoteResource(u *url.URL) (io.ReadCloser, error) {
 }
 
 func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int) (*model.ImageResource, error) {
-
 	f, err := ib.resource()
 	if err != nil || f == nil {
 		return nil, err
@@ -385,7 +382,6 @@ func (ib *ImageBox) imageResource(pageImages, images model.ImageMap, pageNr int)
 }
 
 func (ib *ImageBox) image(pageImages, images model.ImageMap, pageNr int) (int, int, string, error) {
-
 	img, ok := pageImages[ib.Src]
 	if ok {
 		return img.Width, img.Height, img.Res.ID, nil
@@ -408,7 +404,6 @@ func (ib *ImageBox) image(pageImages, images model.ImageMap, pageNr int) (int, i
 }
 
 func (ib *ImageBox) createLink(p *model.Page, pageNr int, r *types.Rectangle, m matrix.Matrix) {
-
 	p1 := m.Transform(types.Point{X: r.LL.X, Y: r.LL.Y})
 	p2 := m.Transform(types.Point{X: r.UR.X, Y: r.LL.X})
 	p3 := m.Transform(types.Point{X: r.UR.X, Y: r.UR.Y})
@@ -437,7 +432,6 @@ func (ib *ImageBox) createLink(p *model.Page, pageNr int, r *types.Rectangle, m 
 }
 
 func (ib *ImageBox) prepareMargin() (float64, float64, float64, float64, error) {
-
 	mTop, mRight, mBot, mLeft := 0., 0., 0., 0.
 
 	if ib.Margin != nil {
@@ -470,7 +464,6 @@ func (ib *ImageBox) prepareMargin() (float64, float64, float64, float64, error) 
 }
 
 func (ib *ImageBox) prepareBorder() (float64, *color.SimpleColor, types.LineJoinStyle, error) {
-
 	bWidth := 0.
 	var bCol *color.SimpleColor
 	bStyle := types.LJMiter
@@ -505,7 +498,6 @@ func (ib *ImageBox) prepareBorder() (float64, *color.SimpleColor, types.LineJoin
 }
 
 func (ib *ImageBox) preparePadding() (float64, float64, float64, float64, error) {
-
 	pTop, pRight, pBot, pLeft := 0., 0., 0., 0.
 
 	if ib.Padding != nil {
@@ -619,7 +611,6 @@ func (ib *ImageBox) calcTransform(
 }
 
 func (ib *ImageBox) render(p *model.Page, pageNr int, images model.ImageMap) error {
-
 	mTop, mRight, mBot, mLeft, err := ib.prepareMargin()
 	if err != nil {
 		return err
@@ -691,7 +682,6 @@ func (ib *ImageBox) render(p *model.Page, pageNr int, images model.ImageMap) err
 
 // RenderForFill renders ib during form filling.
 func (ib *ImageBox) RenderForFill(pdf *PDF, p *model.Page, pageNr int, imageMap model.ImageMap) error {
-
 	ib.pdf = pdf
 
 	if err := ib.validate(); err != nil {

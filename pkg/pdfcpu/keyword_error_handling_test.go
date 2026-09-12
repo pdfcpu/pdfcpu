@@ -37,7 +37,7 @@ func keywordOperationTestContext(t *testing.T) *model.Context {
 	}
 	defer f.Close()
 
-	ctx, err := Read(f, model.NewDefaultConfiguration())
+	ctx, err := Read(t.Context(), f, model.NewDefaultConfiguration())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestKeywordsAddPersistsDirectMetadata(t *testing.T) {
 		Raw:  keywordMetadataContent(),
 	})
 
-	if err := KeywordsAdd(ctx, []string{"new"}); err != nil {
+	if err := KeywordsAdd(t.Context(), ctx, []string{"new"}); err != nil {
 		t.Fatal(err)
 	}
 	rootDict, err := ctx.Catalog()
@@ -118,7 +118,7 @@ func TestKeywordsAddPersistsIndirectMetadata(t *testing.T) {
 		Raw:  keywordMetadataContent(),
 	})
 
-	if err := KeywordsAdd(ctx, []string{"new"}); err != nil {
+	if err := KeywordsAdd(t.Context(), ctx, []string{"new"}); err != nil {
 		t.Fatal(err)
 	}
 	entry, found := ctx.FindTableEntryForIndRef(indRef)
@@ -139,10 +139,10 @@ func TestKeywordMetadataDecodeErrorsPreserveCause(t *testing.T) {
 		run  func(*model.Context) error
 	}{
 		{name: "add", run: func(ctx *model.Context) error {
-			return KeywordsAdd(ctx, []string{"new"})
+			return KeywordsAdd(t.Context(), ctx, []string{"new"})
 		}},
 		{name: "remove all", run: func(ctx *model.Context) error {
-			_, err := KeywordsRemove(ctx, nil)
+			_, err := KeywordsRemove(t.Context(), ctx, nil)
 			return err
 		}},
 	}
@@ -180,7 +180,7 @@ func TestKeywordsAddReportsPreparationPhase(t *testing.T) {
 		}
 		ctx.Info = indRef
 
-		err = KeywordsAdd(ctx, []string{"keyword"})
+		err = KeywordsAdd(t.Context(), ctx, []string{"keyword"})
 		if err == nil || !strings.Contains(err.Error(), "Info dictionary: ensure") {
 			t.Fatalf("expected Info dictionary preparation context, got %v", err)
 		}
@@ -190,7 +190,7 @@ func TestKeywordsAddReportsPreparationPhase(t *testing.T) {
 		ctx := keywordOperationTestContext(t)
 		ctx.ID = types.Array{types.HexLiteral("one")}
 
-		err := KeywordsAdd(ctx, []string{"keyword"})
+		err := KeywordsAdd(t.Context(), ctx, []string{"keyword"})
 		if err == nil || !strings.Contains(err.Error(), "file ID: ensure") {
 			t.Fatalf("expected file ID preparation context, got %v", err)
 		}
@@ -204,7 +204,7 @@ func TestKeywordsAddReportsPreparationPhase(t *testing.T) {
 		ctx.Info = nil
 		ctx.ID = nil
 
-		err := KeywordsAdd(ctx, []string{"keyword"})
+		err := KeywordsAdd(t.Context(), ctx, []string{"keyword"})
 		if err == nil || !strings.Contains(err.Error(), "Info dictionary: missing") {
 			t.Fatalf("expected missing Info dictionary context, got %v", err)
 		}
@@ -229,7 +229,7 @@ func TestKeywordsRemoveAllReportsActualChange(t *testing.T) {
 		ctx.KeywordList = types.StringSet{}
 		ctx.CatalogXMPMeta = nil
 
-		removed, err := KeywordsRemove(ctx, nil)
+		removed, err := KeywordsRemove(t.Context(), ctx, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -240,18 +240,18 @@ func TestKeywordsRemoveAllReportsActualChange(t *testing.T) {
 
 	t.Run("clear list", func(t *testing.T) {
 		ctx := keywordOperationTestContext(t)
-		if err := KeywordsAdd(ctx, []string{"alpha", "beta"}); err != nil {
+		if err := KeywordsAdd(t.Context(), ctx, []string{"alpha", "beta"}); err != nil {
 			t.Fatal(err)
 		}
 
-		removed, err := KeywordsRemove(ctx, nil)
+		removed, err := KeywordsRemove(t.Context(), ctx, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !removed {
 			t.Fatal("expected keywords removed")
 		}
-		keywords, err := KeywordsList(ctx)
+		keywords, err := KeywordsList(t.Context(), ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -264,18 +264,18 @@ func TestKeywordsRemoveAllReportsActualChange(t *testing.T) {
 // TestKeywordsRemoveMatchesTrimmedInput verifies add and remove apply consistent whitespace semantics.
 func TestKeywordsRemoveMatchesTrimmedInput(t *testing.T) {
 	ctx := keywordOperationTestContext(t)
-	if err := KeywordsAdd(ctx, []string{"alpha"}); err != nil {
+	if err := KeywordsAdd(t.Context(), ctx, []string{"alpha"}); err != nil {
 		t.Fatal(err)
 	}
 
-	removed, err := KeywordsRemove(ctx, []string{" alpha "})
+	removed, err := KeywordsRemove(t.Context(), ctx, []string{" alpha "})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !removed {
 		t.Fatal("expected trimmed keyword match")
 	}
-	keywords, err := KeywordsList(ctx)
+	keywords, err := KeywordsList(t.Context(), ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,13 +293,14 @@ func TestKeywordsRemoveReportsInfoDictionaryContext(t *testing.T) {
 	}
 	ctx.Info = indRef
 
-	_, err = KeywordsRemove(ctx, []string{"keyword"})
+	_, err = KeywordsRemove(t.Context(), ctx, []string{"keyword"})
 	if err == nil || !strings.Contains(err.Error(), "Info dictionary") {
 		t.Fatalf("expected Info dictionary context, got %v", err)
 	}
 }
 
-// TestKeywordsRemoveReportsMissingMetadataStream verifies malformed metadata state returns an error instead of panicking.
+// TestKeywordsRemoveReportsMissingMetadataStream verifies malformed metadata state returns an error instead of
+// panicking.
 func TestKeywordsRemoveReportsMissingMetadataStream(t *testing.T) {
 	ctx := keywordOperationTestContext(t)
 	rootDict, err := ctx.Catalog()
@@ -309,7 +310,7 @@ func TestKeywordsRemoveReportsMissingMetadataStream(t *testing.T) {
 	rootDict["Metadata"] = *types.NewIndirectRef(999, 0)
 	ctx.CatalogXMPMeta = &model.XMPMeta{}
 
-	_, err = KeywordsRemove(ctx, nil)
+	_, err = KeywordsRemove(t.Context(), ctx, nil)
 	if err == nil || !strings.Contains(err.Error(), "catalog Metadata stream") {
 		t.Fatalf("expected metadata stream context, got %v", err)
 	}

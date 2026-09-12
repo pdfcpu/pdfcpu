@@ -17,11 +17,13 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -48,26 +50,32 @@ func closePageLayoutInput(err error, f *os.File, context string) error {
 	return errors.Join(err, closeFile(f, context))
 }
 
-// PageLayout returns rs's page layout.
-func PageLayout(rs io.ReadSeeker, conf *model.Configuration) (pl *model.PageLayout, err error) {
+// PageLayout returns rs's page layout and supports cancellation.
+func PageLayout(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (pl *model.PageLayout, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
 
 	conf = operationConfiguration(conf, model.LISTPAGELAYOUT)
 
-	ctx, err := ReadAndValidate(rs, conf)
+	ctx, err := ReadAndValidate(c, rs, conf)
 	if err != nil {
 		return nil, fmt.Errorf("list page layout: prepare PDF context: %w", err)
 	}
 
-	return ctx.PageLayout, nil
+	return ctx.PageLayout, contextutil.Check(c)
 }
 
-// PageLayoutFile returns inFile's page layout.
-func PageLayoutFile(inFile string, conf *model.Configuration) (pl *model.PageLayout, err error) {
+// PageLayoutFile returns inFile's page layout and supports cancellation.
+func PageLayoutFile(c context.Context, inFile string, conf *model.Configuration) (pl *model.PageLayout, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, ErrMissingPDFInput
 	}
@@ -80,20 +88,23 @@ func PageLayoutFile(inFile string, conf *model.Configuration) (pl *model.PageLay
 		err = closePageLayoutInput(err, f, "list page layout: close input")
 	}()
 
-	return PageLayout(f, conf)
+	return PageLayout(c, f, conf)
 }
 
-// ListPageLayout lists rs's page layout.
-func ListPageLayout(rs io.ReadSeeker, conf *model.Configuration) (ss []string, err error) {
+// ListPageLayout lists rs's page layout and supports cancellation.
+func ListPageLayout(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (ss []string, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
 
 	conf = operationConfiguration(conf, model.LISTPAGELAYOUT)
 
-	ctx, err := ReadAndValidate(rs, conf)
+	ctx, err := ReadAndValidate(c, rs, conf)
 	if err != nil {
 		return nil, fmt.Errorf("list page layout: prepare PDF context: %w", err)
 	}
@@ -105,8 +116,11 @@ func ListPageLayout(rs io.ReadSeeker, conf *model.Configuration) (ss []string, e
 	return []string{"No page layout set, PDF viewers will default to \"SinglePage\""}, nil
 }
 
-// ListPageLayoutFile lists inFile's page layout.
-func ListPageLayoutFile(inFile string, conf *model.Configuration) (ss []string, err error) {
+// ListPageLayoutFile lists inFile's page layout and supports cancellation.
+func ListPageLayoutFile(c context.Context, inFile string, conf *model.Configuration) (ss []string, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, ErrMissingPDFInput
 	}
@@ -119,13 +133,16 @@ func ListPageLayoutFile(inFile string, conf *model.Configuration) (ss []string, 
 		err = closePageLayoutInput(err, f, "list page layout: close input")
 	}()
 
-	return ListPageLayout(f, conf)
+	return ListPageLayout(c, f, conf)
 }
 
-// SetPageLayout sets rs's page layout and writes the result to w.
-func SetPageLayout(rs io.ReadSeeker, w io.Writer, val model.PageLayout, conf *model.Configuration) (err error) {
+// SetPageLayout sets rs's page layout, writes the result to w and supports cancellation.
+func SetPageLayout(c context.Context, rs io.ReadSeeker, w io.Writer, val model.PageLayout, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -140,24 +157,27 @@ func SetPageLayout(rs io.ReadSeeker, w io.Writer, val model.PageLayout, conf *mo
 
 	conf = operationConfiguration(conf, model.SETPAGELAYOUT)
 
-	ctx, err := ReadAndValidate(rs, conf)
+	ctx, err := ReadAndValidate(c, rs, conf)
 	if err != nil {
 		return fmt.Errorf("set page layout: prepare PDF context: %w", err)
 	}
 
 	ctx.RootDict["PageLayout"] = types.Name(val.String())
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("set page layout: write output: %w", err)
 	}
 	return nil
 }
 
-// SetPageLayoutFile sets inFile's page layout and writes the result to outFile.
-func SetPageLayoutFile(inFile, outFile string, val model.PageLayout, conf *model.Configuration) (err error) {
+// SetPageLayoutFile sets inFile's page layout, writes the result to outFile and supports cancellation.
+func SetPageLayoutFile(c context.Context, inFile, outFile string, val model.PageLayout, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -191,7 +211,10 @@ func SetPageLayoutFile(inFile, outFile string, val model.PageLayout, conf *model
 		err = staged.commit()
 	}()
 
-	if err = SetPageLayout(f1, f2, val, conf); err != nil {
+	if err = SetPageLayout(c, f1, f2, val, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 
@@ -200,11 +223,14 @@ func SetPageLayoutFile(inFile, outFile string, val model.PageLayout, conf *model
 	return nil
 }
 
-// ResetPageLayout resets rs's page layout and writes the result to w.
+// ResetPageLayout resets rs's page layout, writes the result to w and supports cancellation.
 // It is idempotent and writes output even when rs has no page layout.
-func ResetPageLayout(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err error) {
+func ResetPageLayout(c context.Context, rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -215,25 +241,28 @@ func ResetPageLayout(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (
 
 	conf = operationConfiguration(conf, model.RESETPAGELAYOUT)
 
-	ctx, err := ReadAndValidate(rs, conf)
+	ctx, err := ReadAndValidate(c, rs, conf)
 	if err != nil {
 		return fmt.Errorf("reset page layout: prepare PDF context: %w", err)
 	}
 
 	delete(ctx.RootDict, "PageLayout")
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("reset page layout: write output: %w", err)
 	}
 	return nil
 }
 
-// ResetPageLayoutFile resets inFile's page layout and writes the result to outFile.
+// ResetPageLayoutFile resets inFile's page layout, writes the result to outFile and supports cancellation.
 // It is idempotent and writes output even when inFile has no page layout.
-func ResetPageLayoutFile(inFile, outFile string, conf *model.Configuration) (err error) {
+func ResetPageLayoutFile(c context.Context, inFile, outFile string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -263,7 +292,10 @@ func ResetPageLayoutFile(inFile, outFile string, conf *model.Configuration) (err
 		err = staged.commit()
 	}()
 
-	if err = ResetPageLayout(f1, f2, conf); err != nil {
+	if err = ResetPageLayout(c, f1, f2, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 

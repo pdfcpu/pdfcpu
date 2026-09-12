@@ -49,7 +49,7 @@ func listPropertiesFile(t *testing.T, fileName string, conf *model.Configuration
 	}
 	defer f.Close()
 
-	properties, err := api.Properties(f, conf)
+	properties, err := api.Properties(t.Context(), f, conf)
 	if err != nil {
 		t.Fatalf("%s properties: %v\n", msg, err)
 	}
@@ -87,7 +87,7 @@ func catalogHasMetadata(t *testing.T, fileName string) bool {
 
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationRelaxed
-	ctx, err := api.ReadContext(f, conf)
+	ctx, err := api.ReadContext(t.Context(), f, conf)
 	if err != nil {
 		t.Fatalf("read context: %v\n", err)
 	}
@@ -104,7 +104,7 @@ func catalogHasMetadata(t *testing.T, fileName string) bool {
 func corruptCatalogMetadata(t *testing.T, fileName string) {
 	t.Helper()
 
-	ctx, err := api.ReadContextFile(fileName)
+	ctx, err := api.ReadContextFile(t.Context(), fileName)
 	if err != nil {
 		t.Fatalf("read context: %v\n", err)
 	}
@@ -138,7 +138,7 @@ func corruptCatalogMetadata(t *testing.T, fileName string) {
 	}
 	entry.Object = sd
 
-	if err = api.WriteContextFile(ctx, fileName); err != nil {
+	if err = api.WriteContextFile(t.Context(), ctx, fileName); err != nil {
 		t.Fatalf("write context: %v\n", err)
 	}
 }
@@ -148,7 +148,7 @@ func validateStrict(t *testing.T, fileName string) error {
 
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationStrict
-	return api.ValidateFile(fileName, conf)
+	return api.ValidateFile(t.Context(), fileName, conf, nil)
 }
 
 // TestProperties verifies properties.
@@ -164,19 +164,19 @@ func TestProperties(t *testing.T) {
 	listProperties(t, msg, fileName, nil)
 
 	properties := map[string]string{"name1": "value1", "nameÖ": "valueö", "cjkv": "你好"}
-	if err := api.AddPropertiesFile(fileName, "", properties, nil); err != nil {
+	if err := api.AddPropertiesFile(t.Context(), fileName, "", properties, nil); err != nil {
 		t.Fatalf("%s add properties: %v\n", msg, err)
 	}
 
 	listProperties(t, msg, fileName, []string{"cjkv = 你好", "name1 = value1", "nameÖ = valueö"})
 
-	if err := api.RemovePropertiesFile(fileName, "", []string{"nameÖ"}, nil); err != nil {
+	if err := api.RemovePropertiesFile(t.Context(), fileName, "", []string{"nameÖ"}, nil); err != nil {
 		t.Fatalf("%s remove 1 property: %v\n", msg, err)
 	}
 
 	listProperties(t, msg, fileName, []string{"cjkv = 你好", "name1 = value1"})
 
-	if err := api.RemovePropertiesFile(fileName, "", nil, nil); err != nil {
+	if err := api.RemovePropertiesFile(t.Context(), fileName, "", nil, nil); err != nil {
 		t.Fatalf("%s remove all properties: %v\n", msg, err)
 	}
 
@@ -198,7 +198,7 @@ func TestRemoveAllPropertiesRemovesCatalogMetadata(t *testing.T) {
 	}
 
 	properties := map[string]string{"issue": "1317"}
-	if err := api.AddPropertiesFile(fileName, "", properties, nil); err != nil {
+	if err := api.AddPropertiesFile(t.Context(), fileName, "", properties, nil); err != nil {
 		t.Fatalf("%s add properties: %v\n", msg, err)
 	}
 
@@ -207,7 +207,7 @@ func TestRemoveAllPropertiesRemovesCatalogMetadata(t *testing.T) {
 		t.Fatalf("%s: expected strict validation error\n", msg)
 	}
 
-	if err := api.RemovePropertiesFile(fileName, "", nil, nil); err != nil {
+	if err := api.RemovePropertiesFile(t.Context(), fileName, "", nil, nil); err != nil {
 		t.Fatalf("%s remove all properties: %v\n", msg, err)
 	}
 

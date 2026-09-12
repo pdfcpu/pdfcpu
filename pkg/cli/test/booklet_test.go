@@ -44,7 +44,7 @@ func testBooklet(t *testing.T, msg string, inFiles []string, outFile string, sel
 	}
 
 	cmd := cli.BookletCommand(inFiles, outFile, selectedPages, booklet, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 

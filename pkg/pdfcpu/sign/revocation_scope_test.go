@@ -59,6 +59,7 @@ func TestLeafRevocationDoesNotClaimParentAssessment(t *testing.T) {
 	conf.AllowedRevocationHosts = []string{revocationTestHost(t, server.URL)}
 
 	validateCertChains(
+		t.Context(),
 		[][]*x509.Certificate{{leaf, issuer}},
 		true,
 		roots,

@@ -184,17 +184,17 @@ func TestFormOperationsIdentifyAcroFormFieldsPhase(t *testing.T) {
 		name string
 		fn   func() error
 	}{
-		{name: "list", fn: func() error { _, _, err := FormFields(ctx); return err }},
-		{name: "export", fn: func() error { _, _, err := ExportForm(ctx.XRefTable, "source.pdf"); return err }},
-		{name: "remove", fn: func() error { _, err := RemoveFormFields(ctx, nil); return err }},
-		{name: "reset", fn: func() error { _, err := ResetFormFields(ctx, nil); return err }},
-		{name: "lock", fn: func() error { _, err := LockFormFields(ctx, nil); return err }},
-		{name: "unlock", fn: func() error { _, err := UnlockFormFields(ctx, nil); return err }},
+		{name: "list", fn: func() error { _, _, err := FormFields(t.Context(), ctx); return err }},
+		{name: "export", fn: func() error { _, _, err := ExportForm(t.Context(), ctx.XRefTable, "source.pdf"); return err }},
+		{name: "remove", fn: func() error { _, err := RemoveFormFields(t.Context(), ctx, nil); return err }},
+		{name: "reset", fn: func() error { _, err := ResetFormFields(t.Context(), ctx, nil); return err }},
+		{name: "lock", fn: func() error { _, err := LockFormFields(t.Context(), ctx, nil); return err }},
+		{name: "unlock", fn: func() error { _, err := UnlockFormFields(t.Context(), ctx, nil); return err }},
 		{name: "fill", fn: func() error {
 			fillDetails := func(string, string, FieldType, DataFormat) ([]string, bool, bool) {
 				return nil, false, false
 			}
-			_, _, err := FillForm(ctx, fillDetails, nil, JSON)
+			_, _, err := FillForm(t.Context(), ctx, fillDetails, nil, JSON)
 			return err
 		}},
 	}
@@ -211,7 +211,7 @@ func TestFormOperationsIdentifyAcroFormFieldsPhase(t *testing.T) {
 
 func TestListFormFieldsAddsCollectionPhase(t *testing.T) {
 	ctx := emptyFormContext(t)
-	_, err := ListFormFields(ctx)
+	_, err := ListFormFields(t.Context(), ctx)
 	if err == nil || !strings.Contains(err.Error(), "collect fields: AcroForm Fields") {
 		t.Fatalf("expected collection phase, got %v", err)
 	}
@@ -243,11 +243,11 @@ func TestIsFieldCallersDoNotRepeatWidgetIdentity(t *testing.T) {
 		}},
 		{name: "reset", fn: func() error {
 			ok := false
-			return resetPageFields(ctx, nil, wAnnots, nil, map[string]types.IndirectRef{}, &ok)
+			return resetPageFields(t.Context(), ctx, nil, wAnnots, nil, map[string]types.IndirectRef{}, &ok)
 		}},
 		{name: "lock", fn: func() error {
 			ok := false
-			return lockPageFields(ctx, nil, nil, wAnnots, map[string]types.IndirectRef{}, &ok)
+			return lockPageFields(t.Context(), ctx, nil, nil, wAnnots, map[string]types.IndirectRef{}, &ok)
 		}},
 		{name: "unlock", fn: func() error {
 			ok := false
@@ -255,7 +255,7 @@ func TestIsFieldCallersDoNotRepeatWidgetIdentity(t *testing.T) {
 		}},
 		{name: "fill", fn: func() error {
 			ok := false
-			return fillWidgetAnnots(ctx, nil, map[types.IndirectRef]bool{}, wAnnots, JSON, map[string]types.IndirectRef{}, fillDetails, &ok)
+			return fillWidgetAnnots(t.Context(), ctx, nil, map[types.IndirectRef]bool{}, wAnnots, JSON, map[string]types.IndirectRef{}, fillDetails, &ok)
 		}},
 	}
 
@@ -330,7 +330,7 @@ func TestLockAndUnlockPageFieldsUseOneBasedKidIndexes(t *testing.T) {
 		fn   func(*bool) error
 	}{
 		{name: "lock", fn: func(ok *bool) error {
-			return lockPageFields(ctx, nil, fields, wAnnots, map[string]types.IndirectRef{}, ok)
+			return lockPageFields(t.Context(), ctx, nil, fields, wAnnots, map[string]types.IndirectRef{}, ok)
 		}},
 		{name: "unlock", fn: func(ok *bool) error {
 			return unlockPageFields(ctx.XRefTable, nil, fields, wAnnots, ok)

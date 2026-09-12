@@ -18,10 +18,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime/debug"
+	"syscall"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -85,8 +88,22 @@ func printError(err error) {
 	}
 }
 
+func commandContext() (context.Context, context.CancelFunc) {
+	c, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	go restoreDefaultSignalHandling(c, stop)
+	return c, stop
+}
+
+func restoreDefaultSignalHandling(c context.Context, stop context.CancelFunc) {
+	<-c.Done()
+	stop()
+}
+
 func main() {
-	if err := Execute(); err != nil {
+	c, stop := commandContext()
+	defer stop()
+
+	if err := execute(c); err != nil {
 		printError(err)
 		os.Exit(1)
 	}

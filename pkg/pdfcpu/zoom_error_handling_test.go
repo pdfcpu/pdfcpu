@@ -54,7 +54,7 @@ func TestZoomProcessesSelectedPagesInOrder(t *testing.T) {
 	ctx := annotationTestContext(t)
 	selectedPages := types.IntSet{0: true, 2: true}
 	for range 200 {
-		err := Zoom(ctx, selectedPages, &model.Zoom{Factor: 0.5})
+		err := Zoom(t.Context(), ctx, selectedPages, &model.Zoom{Factor: 0.5})
 		if err == nil || !strings.HasPrefix(err.Error(), "page 0:") {
 			t.Fatalf("expected lowest selected page first, got %v", err)
 		}
@@ -64,7 +64,7 @@ func TestZoomProcessesSelectedPagesInOrder(t *testing.T) {
 // TestZoomPageErrorContext verifies page and content operation context.
 func TestZoomPageErrorContext(t *testing.T) {
 	ctx := annotationTestContext(t)
-	err := Zoom(ctx, types.IntSet{99: true}, &model.Zoom{Factor: 0.5})
+	err := Zoom(t.Context(), ctx, types.IntSet{99: true}, &model.Zoom{Factor: 0.5})
 	if err == nil || !strings.Contains(err.Error(), "page 99: page dictionary") {
 		t.Fatalf("expected page dictionary context, got %v", err)
 	}
@@ -72,13 +72,13 @@ func TestZoomPageErrorContext(t *testing.T) {
 	ctx = annotationTestContext(t)
 	d := annotationTestPageDict(t, ctx)
 	d["Contents"] = types.Integer(1)
-	err = Zoom(ctx, types.IntSet{1: true}, &model.Zoom{Factor: 0.5})
+	err = Zoom(t.Context(), ctx, types.IntSet{1: true}, &model.Zoom{Factor: 0.5})
 	if err == nil || !strings.Contains(err.Error(), "page 1: read page content") {
 		t.Fatalf("expected page content context, got %v", err)
 	}
 
 	ctx = annotationTestContext(t)
-	err = Zoom(ctx, types.IntSet{1: true}, &model.Zoom{HMargin: 10000})
+	err = Zoom(t.Context(), ctx, types.IntSet{1: true}, &model.Zoom{HMargin: 10000})
 	if err == nil || !strings.Contains(err.Error(), "page 1: derive factor and margins") {
 		t.Fatalf("expected margin context, got %v", err)
 	}
@@ -101,7 +101,7 @@ func TestZoomBlankPageCreatesContentForDecorations(t *testing.T) {
 			ctx := annotationTestContext(t)
 			d := annotationTestPageDict(t, ctx)
 			d.Delete("Contents")
-			if err := Zoom(ctx, types.IntSet{1: true}, tt.zoom); err != nil {
+			if err := Zoom(t.Context(), ctx, types.IntSet{1: true}, tt.zoom); err != nil {
 				t.Fatal(err)
 			}
 			contents, found := d.Find("Contents")
@@ -136,7 +136,7 @@ func TestZoomDecoratedBlankPageHonorsCropBoxOrigin(t *testing.T) {
 	d["CropBox"] = types.NewRectangle(10, 20, 210, 120).Array()
 	bgColor := color.LightGray
 	zoom := &model.Zoom{Factor: 0.5, Border: true, BgColor: &bgColor}
-	if err := Zoom(ctx, types.IntSet{1: true}, zoom); err != nil {
+	if err := Zoom(t.Context(), ctx, types.IntSet{1: true}, zoom); err != nil {
 		t.Fatal(err)
 	}
 	contents, found := d.Find("Contents")

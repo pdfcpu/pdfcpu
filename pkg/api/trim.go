@@ -17,22 +17,38 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"sort"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// Trim generates a trimmed version of rs
-// containing all selected pages and writes the result to w.
-func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Configuration) (err error) {
+func selectedPageNumbers(c context.Context, pageCount int, pages map[int]bool) ([]int, error) {
+	pageNrs := make([]int, 0, len(pages))
+	for pageNr := 1; pageNr <= pageCount; pageNr++ {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
+		if pages[pageNr] {
+			pageNrs = append(pageNrs, pageNr)
+		}
+	}
+	return pageNrs, nil
+}
+
+// Trim generates a trimmed version of rs, writes the result to w and supports cancellation.
+func Trim(c context.Context, rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -43,7 +59,7 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Con
 
 	conf = operationConfiguration(conf, model.TRIM)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("trim: %w", err)
 	}
@@ -53,41 +69,39 @@ func Trim(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Con
 		return fmt.Errorf("trim: parse page selection: %w", err)
 	}
 
-	if len(pages) == 0 {
+	pageNrs, err := selectedPageNumbers(c, ctx.PageCount, pages)
+	if err != nil {
+		return err
+	}
+	if len(pageNrs) == 0 {
 		return nil
 	}
 
-	var pageNrs []int
-	for k, v := range pages {
-		if v {
-			pageNrs = append(pageNrs, k)
-		}
-	}
-	sort.Ints(pageNrs)
-
-	ctxDest, err := pdfcpu.ExtractPages(ctx, pageNrs, false)
+	ctxDest, err := pdfcpu.ExtractPages(c, ctx, pageNrs, false)
 	if err != nil {
 		return fmt.Errorf("trim: extract pages: %w", err)
 	}
 
 	if conf.PostProcessValidate {
-		if err = ValidateContext(ctxDest); err != nil {
+		if err = ValidateContext(c, ctxDest); err != nil {
 			return fmt.Errorf("trim: validate output: %w", err)
 		}
 	}
 
-	if err = WriteContext(ctxDest, w); err != nil {
+	if err = WriteContext(c, ctxDest, w); err != nil {
 		return fmt.Errorf("trim: write output: %w", err)
 	}
 	return nil
 }
 
-// TrimFile generates a trimmed version of inFile
-// containing all selected pages and writes the result to outFile.
-func TrimFile(inFile, outFile string, selectedPages []string, conf *model.Configuration) (err error) {
+// TrimFile generates a trimmed version of inFile, writes the result to outFile and supports cancellation.
+func TrimFile(c context.Context, inFile, outFile string, selectedPages []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -117,7 +131,10 @@ func TrimFile(inFile, outFile string, selectedPages []string, conf *model.Config
 		err = staged.commit()
 	}()
 
-	if err = Trim(f1, f2, selectedPages, conf); err != nil {
+	if err = Trim(c, f1, f2, selectedPages, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 

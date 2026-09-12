@@ -18,6 +18,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"maps"
@@ -44,7 +45,6 @@ func TestPropertyCommandConstructorsCloneCallerData(t *testing.T) {
 	names := []string{"name"}
 	removeCmd := RemovePropertiesCommand("in.pdf", "out.pdf", names, nil)
 	names[0] = "changed"
-	names = append(names, "other")
 	if !slices.Equal(removeCmd.StringVals, []string{"name"}) {
 		t.Fatalf("remove command properties changed with caller slice: %v", removeCmd.StringVals)
 	}
@@ -60,27 +60,27 @@ func TestPropertyCommandArgumentErrors(t *testing.T) {
 		want error
 	}{
 		{name: "list command", run: func() error {
-			_, err := ListProperties(nil)
+			_, err := listPropertiesCommand(t.Context(), nil)
 			return err
 		}, want: ErrMissingCommand},
 		{name: "list input", run: func() error {
-			_, err := ListProperties(&Command{})
+			_, err := listPropertiesCommand(t.Context(), &Command{})
 			return err
 		}, want: api.ErrMissingPDFInput},
 		{name: "add input", run: func() error {
-			_, err := AddProperties(&Command{OutFile: &outFile})
+			_, err := addProperties(t.Context(), &Command{OutFile: &outFile})
 			return err
 		}, want: api.ErrMissingPDFInput},
 		{name: "add output", run: func() error {
-			_, err := AddProperties(&Command{InFile: &inFile})
+			_, err := addProperties(t.Context(), &Command{InFile: &inFile})
 			return err
 		}, want: api.ErrMissingPDFOutput},
 		{name: "remove input", run: func() error {
-			_, err := RemoveProperties(&Command{OutFile: &outFile})
+			_, err := removeProperties(t.Context(), &Command{OutFile: &outFile})
 			return err
 		}, want: api.ErrMissingPDFInput},
 		{name: "remove output", run: func() error {
-			_, err := RemoveProperties(&Command{InFile: &inFile})
+			_, err := removeProperties(t.Context(), &Command{InFile: &inFile})
 			return err
 		}, want: api.ErrMissingPDFOutput},
 	}
@@ -104,7 +104,7 @@ func TestPropertyCommandValidatesBeforeIO(t *testing.T) {
 		want string
 	}{
 		{name: "add name", run: func() error {
-			_, err := AddProperties(&Command{
+			_, err := addProperties(t.Context(), &Command{
 				InFile:    &inFile,
 				OutFile:   &outFile,
 				StringMap: map[string]string{"": "value"},
@@ -112,7 +112,7 @@ func TestPropertyCommandValidatesBeforeIO(t *testing.T) {
 			return err
 		}, want: "add properties: validate properties"},
 		{name: "add value", run: func() error {
-			_, err := AddProperties(&Command{
+			_, err := addProperties(t.Context(), &Command{
 				InFile:    &inFile,
 				OutFile:   &outFile,
 				StringMap: map[string]string{"name": ""},
@@ -120,7 +120,7 @@ func TestPropertyCommandValidatesBeforeIO(t *testing.T) {
 			return err
 		}, want: "add properties: validate properties"},
 		{name: "remove name", run: func() error {
-			_, err := RemoveProperties(&Command{
+			_, err := removeProperties(t.Context(), &Command{
 				InFile:     &inFile,
 				OutFile:    &outFile,
 				StringVals: []string{" "},
@@ -152,7 +152,7 @@ func TestPropertyCommandsRejectProtectedNamesBeforeIO(t *testing.T) {
 				run  func(string, string) error
 			}{
 				{name: "add file", run: func(inFile, outFile string) error {
-					_, err := AddProperties(&Command{
+					_, err := addProperties(t.Context(), &Command{
 						InFile:    &inFile,
 						OutFile:   &outFile,
 						StringMap: map[string]string{property: "value"},
@@ -160,7 +160,7 @@ func TestPropertyCommandsRejectProtectedNamesBeforeIO(t *testing.T) {
 					return err
 				}},
 				{name: "remove file", run: func(inFile, outFile string) error {
-					_, err := RemoveProperties(&Command{
+					_, err := removeProperties(t.Context(), &Command{
 						InFile:     &inFile,
 						OutFile:    &outFile,
 						StringVals: []string{property},
@@ -169,7 +169,7 @@ func TestPropertyCommandsRejectProtectedNamesBeforeIO(t *testing.T) {
 				}},
 				{name: "add stream", run: func(inFile, outFile string) error {
 					outFile = "-"
-					_, err := AddProperties(&Command{
+					_, err := addProperties(t.Context(), &Command{
 						InFile:    &inFile,
 						OutFile:   &outFile,
 						StringMap: map[string]string{property: "value"},
@@ -178,7 +178,7 @@ func TestPropertyCommandsRejectProtectedNamesBeforeIO(t *testing.T) {
 				}},
 				{name: "remove stream", run: func(inFile, outFile string) error {
 					outFile = "-"
-					_, err := RemoveProperties(&Command{
+					_, err := removeProperties(t.Context(), &Command{
 						InFile:     &inFile,
 						OutFile:    &outFile,
 						StringVals: []string{property},
@@ -207,12 +207,12 @@ func TestPropertyCommandsRejectProtectedNamesBeforeIO(t *testing.T) {
 
 // TestListPropertiesFileErrors verifies file lifecycle failures retain operation context.
 func TestListPropertiesFileErrors(t *testing.T) {
-	if _, err := ListPropertiesFile("", nil); !errors.Is(err, api.ErrMissingPDFInput) {
+	if _, err := ListPropertiesFile(t.Context(), "", nil); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
 
 	missing := filepath.Join(t.TempDir(), "missing.pdf")
-	if _, err := ListPropertiesFile(missing, nil); !errors.Is(err, os.ErrNotExist) ||
+	if _, err := ListPropertiesFile(t.Context(), missing, nil); !errors.Is(err, os.ErrNotExist) ||
 		!strings.Contains(err.Error(), "list properties: open input") {
 		t.Fatalf("expected contextual open error, got %v", err)
 	}
@@ -232,7 +232,7 @@ func TestListPropertiesFileReportsCloseError(t *testing.T) {
 		closeListPropertiesInput = original
 	})
 
-	_, err := ListPropertiesFile(inFile, nil)
+	_, err := ListPropertiesFile(t.Context(), inFile, nil)
 	if !errors.Is(err, os.ErrClosed) || !strings.Contains(err.Error(), "list properties: close input") {
 		t.Fatalf("expected contextual close error, got %v", err)
 	}
@@ -256,7 +256,7 @@ func TestListPropertiesFileJoinsOperationAndCloseErrors(t *testing.T) {
 		closeListPropertiesInput = original
 	})
 
-	_, err := ListPropertiesFile(inFile, nil)
+	_, err := ListPropertiesFile(t.Context(), inFile, nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) || !errors.Is(err, wantErr) {
 		t.Fatalf("expected operation and close causes, got %v", err)
 	}
@@ -274,11 +274,11 @@ func TestPropertyStreamingOpenErrorsUseExactOperation(t *testing.T) {
 		op   string
 	}{
 		{name: "add", run: func(cmd *Command) error {
-			_, err := AddProperties(cmd)
+			_, err := addProperties(t.Context(), cmd)
 			return err
 		}, op: "add properties"},
 		{name: "remove", run: func(cmd *Command) error {
-			_, err := RemoveProperties(cmd)
+			_, err := removeProperties(t.Context(), cmd)
 			return err
 		}, op: "remove properties"},
 	}
@@ -312,7 +312,7 @@ func TestRunPropertyStreamOperationPreservesOutput(t *testing.T) {
 	}
 	wantErr := errors.New("property operation failed")
 
-	err := runPropertyStreamOperation(inFile, outFile, "add properties", func(io.ReadSeeker, io.Writer) error {
+	err := runPropertyStreamOperation(t.Context(), inFile, outFile, "add properties", func(context.Context, io.ReadSeeker, io.Writer) error {
 		return wantErr
 	})
 	if !errors.Is(err, wantErr) {
@@ -336,7 +336,7 @@ func TestPropertyStreamingFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := AddProperties(AddPropertiesCommand("-", outFile, map[string]string{"name": "value"}, nil))
+	_, err := addProperties(t.Context(), AddPropertiesCommand("-", outFile, map[string]string{"name": "value"}, nil))
 	if err == nil {
 		t.Fatal("expected read failure")
 	}
@@ -354,7 +354,7 @@ func TestPropertyStreamingFailureRemovesNewOutput(t *testing.T) {
 	useStdin(t, "not a PDF")
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	_, err := RemoveProperties(RemovePropertiesCommand("-", outFile, nil, nil))
+	_, err := removeProperties(t.Context(), RemovePropertiesCommand("-", outFile, nil, nil))
 	if err == nil {
 		t.Fatal("expected read failure")
 	}
@@ -375,10 +375,10 @@ func TestPropertyStreamingSuccessReplacesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := AddProperties(AddPropertiesCommand("-", outFile, map[string]string{"name": "value"}, nil)); err != nil {
+	if _, err := addProperties(t.Context(), AddPropertiesCommand("-", outFile, map[string]string{"name": "value"}, nil)); err != nil {
 		t.Fatal(err)
 	}
-	properties, err := ListPropertiesFile(outFile, nil)
+	properties, err := ListPropertiesFile(t.Context(), outFile, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

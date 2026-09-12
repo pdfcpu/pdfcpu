@@ -17,6 +17,7 @@ limitations under the License.
 package sign
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/asn1"
 	"errors"
@@ -24,6 +25,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -158,9 +160,10 @@ func structuredTimestampTokenInfo(tstInfo *TSTInfo) *timestampTokenInfo {
 	}
 }
 
-// ValidatePKCS7Signatures validates signature integrity, reports available trust evidence and performs a best-effort
-// local assessment for supported PKCS#7 SubFilters.
+// ValidatePKCS7Signatures validates signature integrity, reports available trust evidence, performs a best-effort local
+// assessment for supported PKCS#7 SubFilters and supports cancellation.
 func ValidatePKCS7Signatures(
+	c context.Context,
 	ra io.ReaderAt,
 	sigDict types.Dict,
 	certified bool,
@@ -172,19 +175,12 @@ func ValidatePKCS7Signatures(
 	ctx *model.Context,
 ) error {
 	return validatePKCS7Signatures(
-		ra,
-		sigDict,
-		certified,
-		authoritative,
-		validateAll,
-		perms,
-		rootCerts,
-		result,
-		ctx,
+		c, ra, sigDict, certified, authoritative, validateAll, perms, rootCerts, result, ctx,
 	)
 }
 
 func validatePKCS7Signatures(
+	c context.Context,
 	ra io.ReaderAt,
 	sigDict types.Dict,
 	certified bool,
@@ -195,6 +191,9 @@ func validatePKCS7Signatures(
 	result *model.SignatureValidationResult,
 	ctx *model.Context,
 ) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if ctx.Configuration.Offline {
 		result.AddProblem("pdfcpu is offline, unable to perform certificate revocation checking")
 	}
@@ -221,8 +220,12 @@ func validatePKCS7Signatures(
 
 	var localAssessment localSignatureAssessment
 	for i, p7Signer := range p7.Signers {
+		if err := c.Err(); err != nil {
+			return err
+		}
 		signerAssessment := localSignatureAssessment{SignersProcessed: 1}
 		if err := verifyP7SignerWithContentType(
+			c,
 			p7Signer,
 			p7.Certificates,
 			rootCerts,
@@ -297,6 +300,7 @@ func signatureContents(sigDict types.Dict) ([]byte, error) {
 }
 
 func verifyP7Signer(
+	c context.Context,
 	p7Signer pkcs7.SignerInfo,
 	p7Certs []*x509.Certificate,
 	rootCerts *x509.CertPool,
@@ -310,6 +314,7 @@ func verifyP7Signer(
 	ctx *model.Context,
 ) error {
 	return verifyP7SignerWithContentType(
+		c,
 		p7Signer,
 		p7Certs,
 		rootCerts,
@@ -328,6 +333,7 @@ func verifyP7Signer(
 }
 
 func verifyP7SignerWithContentType(
+	c context.Context,
 	p7Signer pkcs7.SignerInfo,
 	p7Certs []*x509.Certificate,
 	rootCerts *x509.CertPool,
@@ -342,6 +348,9 @@ func verifyP7SignerWithContentType(
 	contentType asn1.ObjectIdentifier,
 	localAssessment *localSignatureAssessment,
 ) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if localAssessment == nil {
 		localAssessment = &localSignatureAssessment{}
 	}
@@ -375,6 +384,9 @@ func verifyP7SignerWithContentType(
 		return nil
 	}
 	localAssessment.SignatureAuthenticated = true
+	if err := c.Err(); err != nil {
+		return err
+	}
 
 	// The signature verifies with the public key in the identified certificate.
 	if !applyP7DigestEvidence(digestReason, digestErr, signer, result) {
@@ -434,6 +446,7 @@ func verifyP7SignerWithContentType(
 	}
 
 	assessment, err := assessCertificateEvidence(
+		c,
 		chains,
 		pathResolved,
 		rootCerts,

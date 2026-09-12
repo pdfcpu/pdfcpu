@@ -70,7 +70,7 @@ func TestImportImagesRejectsMalformedCommands(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := ImportImages(tt.cmd); !errors.Is(err, tt.want) {
+			if _, err := importImages(t.Context(), tt.cmd); !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
 		})
@@ -83,7 +83,7 @@ func TestImportImagesRejectsDuplicateStdinBeforeRead(t *testing.T) {
 	outFile := "-"
 	imp := api.DefaultImportConfig()
 	imp.PageDim = nil
-	_, err := ImportImages(&Command{
+	_, err := importImages(t.Context(), &Command{
 		InFiles: []string{"-", "-"},
 		OutFile: &outFile,
 		Import:  imp,
@@ -108,7 +108,7 @@ func TestImportImagesPreflightsConfigurationBeforeInputIO(t *testing.T) {
 	imp := api.DefaultImportConfig()
 	imp.PageDim = nil
 
-	_, err := ImportImages(&Command{
+	_, err := importImages(t.Context(), &Command{
 		InFiles: []string{filepath.Join(dir, "missing.png"), "-"},
 		OutFile: &outFile,
 		Import:  imp,
@@ -138,7 +138,7 @@ func TestImportImagesStdinLimitPlusOne(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
 	conf.Limits.MaxStreamBytes = 3
 
-	_, err := ImportImages(&Command{
+	_, err := importImages(t.Context(), &Command{
 		InFiles: []string{"-"},
 		OutFile: &outFile,
 		Import:  api.DefaultImportConfig(),
@@ -153,7 +153,7 @@ func TestImportImagesStdinLimitPlusOne(t *testing.T) {
 // TestImportImageReaderAcceptsExactStdinLimit verifies exact-limit input is retained in full.
 func TestImportImageReaderAcceptsExactStdinLimit(t *testing.T) {
 	setResourcesStdin(t, "123")
-	r, closer, err := importImageReader("-", 1, 3)
+	r, closer, err := importImageReader(t.Context(), "-", 1, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestImportImageReaderAcceptsExactStdinLimit(t *testing.T) {
 // TestReadImportImageStdinPreservesFailure verifies read causes remain discoverable.
 func TestReadImportImageStdinPreservesFailure(t *testing.T) {
 	wantErr := errors.New("stdin read failure")
-	_, err := readImportImageStdin(importImageFailingReader{err: wantErr}, 2, 10)
+	_, err := readImportImageStdin(t.Context(), importImageFailingReader{err: wantErr}, 2, 10)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -185,7 +185,7 @@ func TestReadImportImageStdinPreservesFailure(t *testing.T) {
 // TestImportImageReaderHandlesMaxInt64Limit verifies limit increment does not overflow.
 func TestImportImageReaderHandlesMaxInt64Limit(t *testing.T) {
 	setResourcesStdin(t, "x")
-	r, closer, err := importImageReader("-", 1, math.MaxInt64)
+	r, closer, err := importImageReader(t.Context(), "-", 1, math.MaxInt64)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +212,7 @@ func TestImportImagesRejectsOutputAliasBeforeSourceIO(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := ImportImages(&Command{
+	_, err := importImages(t.Context(), &Command{
 		InFiles: []string{missingImage, "-", imageFile},
 		OutFile: &imageFile,
 		Import:  api.DefaultImportConfig(),
@@ -270,7 +270,7 @@ func TestImportImagesStreamingRejectsOutputAliasesPreservingInput(t *testing.T) 
 				}
 			}
 
-			_, err := ImportImages(&Command{
+			_, err := importImages(t.Context(), &Command{
 				InFiles: []string{"-", imageFile},
 				OutFile: &outFile,
 				Import:  api.DefaultImportConfig(),
@@ -304,7 +304,7 @@ func TestImportImagesStreamingRejectsOutputAliasesPreservingInput(t *testing.T) 
 func TestImportImagesStreamingPreflightDoesNotCreateOutput(t *testing.T) {
 	source := setResourcesStdin(t, "not an image")
 	outFile := filepath.Join(t.TempDir(), "missing.png")
-	_, err := ImportImages(&Command{
+	_, err := importImages(t.Context(), &Command{
 		InFiles: []string{"-", outFile},
 		OutFile: &outFile,
 		Import:  api.DefaultImportConfig(),
@@ -330,7 +330,7 @@ func TestImportImagesSourceErrorsIncludeCLIContext(t *testing.T) {
 		setResourcesStdin(t, "image")
 		missing := filepath.Join(t.TempDir(), "missing.png")
 		outFile := "-"
-		_, err := ImportImages(&Command{
+		_, err := importImages(t.Context(), &Command{
 			InFiles: []string{"-", missing},
 			OutFile: &outFile,
 			Import:  api.DefaultImportConfig(),
@@ -347,7 +347,7 @@ func TestImportImagesSourceErrorsIncludeCLIContext(t *testing.T) {
 	t.Run("stdin", func(t *testing.T) {
 		setResourcesStdin(t, "")
 		outFile := "-"
-		_, err := ImportImages(&Command{
+		_, err := importImages(t.Context(), &Command{
 			InFiles: []string{"-"},
 			OutFile: &outFile,
 			Import:  api.DefaultImportConfig(),
@@ -386,7 +386,7 @@ func TestImportImagesStreamingOutputErrorsIncludeCLIContext(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
 		setResourcesStdin(t, "image")
 		outFile := filepath.Join(t.TempDir(), "missing", "out.pdf")
-		_, err := ImportImages(&Command{
+		_, err := importImages(t.Context(), &Command{
 			InFiles: []string{"-"},
 			OutFile: &outFile,
 			Import:  api.DefaultImportConfig(),
@@ -406,7 +406,7 @@ func TestImportImagesStreamingOutputErrorsIncludeCLIContext(t *testing.T) {
 		if err := os.Symlink(filepath.Base(outFile), outFile); err != nil {
 			t.Fatal(err)
 		}
-		_, err := ImportImages(&Command{
+		_, err := importImages(t.Context(), &Command{
 			InFiles: []string{"-"},
 			OutFile: &outFile,
 			Import:  api.DefaultImportConfig(),
@@ -421,7 +421,7 @@ func TestImportImagesStreamingOutputErrorsIncludeCLIContext(t *testing.T) {
 func TestImportImagesStreamingPreservesAPIContext(t *testing.T) {
 	setResourcesStdin(t, "not an image")
 	outFile := "-"
-	_, err := ImportImages(&Command{
+	_, err := importImages(t.Context(), &Command{
 		InFiles: []string{"-"},
 		OutFile: &outFile,
 		Import:  api.DefaultImportConfig(),
@@ -444,7 +444,7 @@ func TestImportImagesStreamingFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := ImportImages(&Command{
+	_, err := importImages(t.Context(), &Command{
 		InFiles: []string{"-"},
 		OutFile: &outFile,
 		Import:  api.DefaultImportConfig(),
@@ -464,7 +464,7 @@ func TestImportImagesStreamingFailurePreservesExistingOutput(t *testing.T) {
 // TestListImagesFileUsesAPIBoundary verifies per-file listing adds I/O context and preserves API errors.
 func TestListImagesFileUsesAPIBoundary(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "missing.pdf")
-	if _, err := listImagesFile(missing, nil, nil); err == nil || !strings.Contains(err.Error(), "list images: open input") {
+	if _, err := listImagesFile(t.Context(), missing, nil, nil); err == nil || !strings.Contains(err.Error(), "list images: open input") {
 		t.Fatalf("expected contextual open error, got %v", err)
 	}
 
@@ -472,7 +472,7 @@ func TestListImagesFileUsesAPIBoundary(t *testing.T) {
 	if err := os.WriteFile(inFile, nil, 0600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := listImagesFile(inFile, nil, nil)
+	_, err := listImagesFile(t.Context(), inFile, nil, nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -498,7 +498,7 @@ func TestListImagesRejectsMalformedCommands(t *testing.T) {
 			if tt.cmd == nil {
 				want = ErrMissingCommand
 			}
-			if _, err := ListImages(tt.cmd); !errors.Is(err, want) {
+			if _, err := listImages(t.Context(), tt.cmd); !errors.Is(err, want) {
 				t.Fatalf("expected %v, got %v", want, err)
 			}
 		})
@@ -507,14 +507,14 @@ func TestListImagesRejectsMalformedCommands(t *testing.T) {
 
 // TestListImagesFileRejectsEmptyInputSlice verifies direct file listing requires input.
 func TestListImagesFileRejectsEmptyInputSlice(t *testing.T) {
-	if _, err := ListImagesFile(nil, nil, nil); !errors.Is(err, api.ErrMissingPDFInput) {
+	if _, err := ListImagesFile(t.Context(), nil, nil, nil); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
 }
 
 // TestListImagesFileRejectsEmptyInputEntry verifies every direct listing input must be named.
 func TestListImagesFileRejectsEmptyInputEntry(t *testing.T) {
-	if _, err := ListImagesFile([]string{"input.pdf", ""}, nil, nil); !errors.Is(err, api.ErrMissingPDFInput) {
+	if _, err := ListImagesFile(t.Context(), []string{"input.pdf", ""}, nil, nil); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
 }
@@ -526,7 +526,7 @@ func TestListImagesFileDoesNotDuplicateFileNameContext(t *testing.T) {
 		filepath.Join(tmpDir, "missing1.pdf"),
 		filepath.Join(tmpDir, "missing2.pdf"),
 	}
-	_, err := ListImagesFile(inFiles, nil, nil)
+	_, err := ListImagesFile(t.Context(), inFiles, nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -546,7 +546,7 @@ func TestListImagesFileNamesPerFileProcessingError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	output, err := ListImagesFile([]string{validFile, invalidFile}, nil, nil)
+	output, err := ListImagesFile(t.Context(), []string{validFile, invalidFile}, nil, nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -566,7 +566,7 @@ func TestListImagesMixedFileAndStdinAttribution(t *testing.T) {
 	setResourcesStdin(t, "not a PDF")
 	validFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 
-	output, err := ListImages(&Command{InFiles: []string{validFile, "-"}})
+	output, err := listImages(t.Context(), &Command{InFiles: []string{validFile, "-"}})
 	if err == nil {
 		t.Fatal("expected stdin processing error")
 	}
@@ -584,7 +584,7 @@ func TestListImagesMixedFileAndStdinAttribution(t *testing.T) {
 // TestListImagesRejectsDuplicateStdinBeforeRead verifies stdin is not consumed for malformed input.
 func TestListImagesRejectsDuplicateStdinBeforeRead(t *testing.T) {
 	source := setResourcesStdin(t, "not a PDF")
-	_, err := ListImages(&Command{InFiles: []string{"-", "-"}})
+	_, err := listImages(t.Context(), &Command{InFiles: []string{"-", "-"}})
 	if err == nil || !strings.Contains(err.Error(), "list images: only one input may read from stdin") {
 		t.Fatalf("expected duplicate stdin error, got %v", err)
 	}
@@ -613,7 +613,7 @@ func TestUpdateImagesRejectsMalformedCommands(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := UpdateImages(tt.cmd)
+			_, err := updateImages(t.Context(), tt.cmd)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
@@ -624,7 +624,7 @@ func TestUpdateImagesRejectsMalformedCommands(t *testing.T) {
 // TestUpdateImagesRejectsSurplusInput verifies command validation requires exactly two inputs.
 func TestUpdateImagesRejectsSurplusInput(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	_, err := UpdateImages(&Command{
+	_, err := updateImages(t.Context(), &Command{
 		InFiles: []string{"input.pdf", "image.png", "surplus.png"},
 		OutFile: &outFile,
 	})
@@ -680,7 +680,7 @@ func TestUpdateImagesPreservesInvalidSelectors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := UpdateImages(&Command{
+			_, err := updateImages(t.Context(), &Command{
 				InFiles:   []string{"input.pdf", "image.png"},
 				OutFile:   &outFile,
 				IntVal:    tt.intVal,
@@ -714,7 +714,7 @@ func TestListImagesFileJoinsContextualCloseError(t *testing.T) {
 		closeListImagesInput = closeFile
 	})
 
-	_, err := listImagesFile(inFile, nil, nil)
+	_, err := listImagesFile(t.Context(), inFile, nil, nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -755,7 +755,7 @@ func TestListImagesFileClosesEachInputImmediately(t *testing.T) {
 	})
 
 	inFiles := []string{inFile, inFile, inFile, inFile}
-	if _, err := ListImagesFile(inFiles, nil, nil); err != nil {
+	if _, err := ListImagesFile(t.Context(), inFiles, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if maxActive != 1 {
@@ -798,7 +798,7 @@ func TestUpdateImagesMissingImagePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := UpdateImages(&Command{
+	_, err := updateImages(t.Context(), &Command{
 		InFiles: []string{"-", imageFile},
 		OutFile: &outFile,
 		IntVal:  1,
@@ -852,7 +852,7 @@ func TestUpdateImagesStreamingRejectsImageOutputAliases(t *testing.T) {
 				}
 			}
 
-			_, err := UpdateImages(&Command{
+			_, err := updateImages(t.Context(), &Command{
 				InFiles: []string{"-", imageFile},
 				OutFile: &outFile,
 				IntVal:  1,
@@ -914,7 +914,7 @@ func TestUpdateImagesStreamingFailurePreservesOutput(t *testing.T) {
 		OutFile: &outFile,
 		IntVal:  -1,
 	}
-	_, err = UpdateImages(cmd)
+	_, err = updateImages(t.Context(), cmd)
 	if !errors.Is(err, api.ErrInvalidImageSelection) {
 		t.Fatalf("expected %v, got %v", api.ErrInvalidImageSelection, err)
 	}

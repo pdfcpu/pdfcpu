@@ -66,7 +66,7 @@ func TestRemoveAttachmentIdentifiesValueGraphDeletionInMultiLevelTree(t *testing
 	)
 	ctx := &Context{XRefTable: xRefTable}
 
-	_, err := ctx.removeAttachment("target")
+	_, err := ctx.removeAttachment(t.Context(), "target")
 
 	requireNameTreeRemovalError(
 		t,

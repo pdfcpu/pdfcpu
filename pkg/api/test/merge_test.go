@@ -43,22 +43,22 @@ func TestMergeCreateNew(t *testing.T) {
 	// Bookmarks for the merged document will be created/preserved per default (see config.yaml)
 
 	outFile := filepath.Join(outDir, "out.pdf")
-	if err := api.MergeCreateFile(inFiles, outFile, false, nil); err != nil {
+	if err := api.MergeCreateFile(t.Context(), inFiles, outFile, false, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	// Insert an empty page between merged files.
 	outFile = filepath.Join(outDir, "outWithDivider.pdf")
 	dividerPage := true
-	if err := api.MergeCreateFile(inFiles, outFile, dividerPage, nil); err != nil {
+	if err := api.MergeCreateFile(t.Context(), inFiles, outFile, dividerPage, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -73,11 +73,11 @@ func TestMergeCreateZipped(t *testing.T) {
 	inFile2 := filepath.Join(inDir, "adobe_errata.pdf")
 	outFile := filepath.Join(outDir, "out.pdf")
 
-	if err := api.MergeCreateZipFile(inFile1, inFile2, outFile, nil); err != nil {
+	if err := api.MergeCreateZipFile(t.Context(), inFile1, inFile2, outFile, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -91,11 +91,11 @@ func TestMergeCreatePreserveBookmarks(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
 	conf.MergeBookmarkMode = model.MergeBookmarkModePreserve
 
-	if err := api.MergeCreateFile(inFiles, outFile, false, conf); err != nil {
+	if err := api.MergeCreateFile(t.Context(), inFiles, outFile, false, conf); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -105,7 +105,7 @@ func TestMergeCreatePreserveBookmarks(t *testing.T) {
 	}
 	defer f.Close()
 
-	bms, err := api.Bookmarks(f, conf)
+	bms, err := api.Bookmarks(t.Context(), f, conf)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -126,11 +126,11 @@ func TestMergeCreateDuplicateBookmarkDestinations(t *testing.T) {
 	inFiles := []string{inFile, inFile, inFile, inFile}
 	outFile := filepath.Join(outDir, "outDuplicateBookmarkDestinations.pdf")
 
-	if err := api.MergeCreateFile(inFiles, outFile, false, nil); err != nil {
+	if err := api.MergeCreateFile(t.Context(), inFiles, outFile, false, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -140,7 +140,7 @@ func TestMergeCreateDuplicateBookmarkDestinations(t *testing.T) {
 	}
 	defer f.Close()
 
-	bms, err := api.Bookmarks(f, nil)
+	bms, err := api.Bookmarks(t.Context(), f, nil)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -160,13 +160,13 @@ func TestMergeCreateDuplicateBookmarkDestinations(t *testing.T) {
 func writeOrphanWidgetFieldPDF(t *testing.T, inFile, outFile string) {
 	t.Helper()
 
-	ctx, err := api.ReadContextFile(inFile)
+	ctx, err := api.ReadContextFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatalf("ReadContextFile: %v", err)
 	}
 	ctx.RootDict.Delete("AcroForm")
 	ctx.XRefTable.Form = nil
-	if err := api.WriteContextFile(ctx, outFile); err != nil {
+	if err := api.WriteContextFile(t.Context(), ctx, outFile); err != nil {
 		t.Fatalf("WriteContextFile: %v", err)
 	}
 }
@@ -226,11 +226,11 @@ func TestMergeCreateRenamesOrphanWidgetFields(t *testing.T) {
 	writeOrphanWidgetFieldPDF(t, inFile, orphanFile)
 
 	outFile := filepath.Join(outDir, "outOrphanWidgetFields.pdf")
-	if err := api.MergeCreateFile([]string{orphanFile, orphanFile}, outFile, false, nil); err != nil {
+	if err := api.MergeCreateFile(t.Context(), []string{orphanFile, orphanFile}, outFile, false, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	ctx, err := api.ReadContextFile(outFile)
+	ctx, err := api.ReadContextFile(t.Context(), outFile)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -263,19 +263,19 @@ func TestMergeAppendNew(t *testing.T) {
 
 	// Bookmarks for the merged document will be created/preserved per default (see config.yaml)
 
-	if err := api.MergeAppendFile(inFiles, outFile, false, nil); err != nil {
+	if err := api.MergeAppendFile(t.Context(), inFiles, outFile, false, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	anotherFile := filepath.Join(inDir, "testRot.pdf")
-	err := api.MergeAppendFile([]string{anotherFile}, outFile, false, nil)
+	err := api.MergeAppendFile(t.Context(), []string{anotherFile}, outFile, false, nil)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -293,7 +293,7 @@ func TestMergeToBufNew(t *testing.T) {
 	inFiles = inFiles[1:]
 
 	buf := &bytes.Buffer{}
-	if err := api.Merge(destFile, inFiles, buf, nil, false); err != nil {
+	if err := api.Merge(t.Context(), destFile, inFiles, buf, nil, false); err != nil {
 		t.Fatalf("%s: merge: %v\n", msg, err)
 	}
 
@@ -301,7 +301,7 @@ func TestMergeToBufNew(t *testing.T) {
 		t.Fatalf("%s: write: %v\n", msg, err)
 	}
 
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -332,7 +332,7 @@ func TestMergeRaw(t *testing.T) {
 	rsc[1] = f1
 
 	buf := &bytes.Buffer{}
-	if err := api.MergeRaw(rsc, buf, false, nil); err != nil {
+	if err := api.MergeRaw(t.Context(), rsc, buf, false, nil); err != nil {
 		t.Fatalf("%s: merge: %v\n", msg, err)
 	}
 
@@ -340,7 +340,7 @@ func TestMergeRaw(t *testing.T) {
 		t.Fatalf("%s: write: %v\n", msg, err)
 	}
 
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

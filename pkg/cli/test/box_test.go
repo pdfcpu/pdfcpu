@@ -31,7 +31,7 @@ func TestListBoxesCommand(t *testing.T) {
 
 	// List all page boundaries for all pages.
 	cmd := cli.ListBoxesCommand(inFile, nil, nil, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -41,7 +41,7 @@ func TestListBoxesCommand(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 	cmd.PageBoundaries = pb
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -73,7 +73,7 @@ func TestCropCommand(t *testing.T) {
 		}
 
 		cmd := cli.CropCommand(inFile, outFile, nil, box, conf)
-		if _, err := cli.Dispatch(cmd); err != nil {
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 
@@ -104,7 +104,7 @@ func TestAddBoxesCommand(t *testing.T) {
 		}
 
 		cmd := cli.AddBoxesCommand(inFile, outFile, nil, pb, conf)
-		if _, err := cli.Dispatch(cmd); err != nil {
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 	}
@@ -121,7 +121,7 @@ func TestAddRemoveBoxesCommand(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 	cmd := cli.AddBoxesCommand(inFile, outFile, nil, pb, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -130,7 +130,7 @@ func TestAddRemoveBoxesCommand(t *testing.T) {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 	cmd = cli.RemoveBoxesCommand(inFile, outFile, nil, pb, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

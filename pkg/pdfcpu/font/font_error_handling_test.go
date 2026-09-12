@@ -17,6 +17,7 @@ limitations under the License.
 package font
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/gob"
 	"errors"
@@ -30,6 +31,37 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func fontDictionaryContextCalls(c context.Context) []func() error {
+	return []func() error{
+		func() error { _, err := CIDFontFile(c, nil, "Demo", false); return err },
+		func() error {
+			_, err := CIDFontDescriptor(c, nil, corefont.TTFLight{}, "Demo", "Demo", "", false)
+			return err
+		},
+		func() error { _, err := NewFontDescriptor(c, nil, corefont.TTFLight{}, "Demo", ""); return err },
+		func() error { return UpdateUserfont(c, nil, "Demo", model.FontResource{}) },
+		func() error { return UpdateUserfonts(c, nil, nil) },
+		func() error { _, err := CIDFontDict(c, nil, corefont.TTFLight{}, "Demo", "Demo", "", nil); return err },
+		func() error { _, err := EnsureFontDict(c, nil, "Demo", "", "", false, nil); return err },
+		func() error { _, err := FontResources(c, nil, nil); return err },
+	}
+}
+
+func TestFontDictionaryAPIsRejectNilAndCanceledContext(t *testing.T) {
+	for _, call := range fontDictionaryContextCalls(nil) {
+		if err := call(); !errors.Is(err, corefont.ErrMissingContext) {
+			t.Fatalf("nil context: got %v, want ErrMissingContext", err)
+		}
+	}
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	for _, call := range fontDictionaryContextCalls(c) {
+		if err := call(); !errors.Is(err, context.Canceled) {
+			t.Fatalf("canceled context: got %v, want context.Canceled", err)
+		}
+	}
+}
 
 func validTTFLight() corefont.TTFLight {
 	return corefont.TTFLight{
@@ -156,12 +188,12 @@ func installUpdateUserfontMetrics(t *testing.T) {
 		t.Fatal(err)
 	}
 	corefont.UserFontDir = dir
-	if err := corefont.ReloadUserFonts(); err != nil {
+	if err := corefont.ReloadUserFonts(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
 		corefont.UserFontDir = originalDir
-		if err := corefont.ReloadUserFonts(); err != nil {
+		if err := corefont.ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore user fonts: %v", err)
 		}
 	})
@@ -234,7 +266,7 @@ func TestUpdateUserfontRequiresUpdateReferences(t *testing.T) {
 				fontResource.CIDSet = nil
 			}
 			before := cloneXRefEntries(xRefTable.Table)
-			err := UpdateUserfont(xRefTable, "Demo", fontResource)
+			err := UpdateUserfont(t.Context(), xRefTable, "Demo", fontResource)
 			if err == nil {
 				t.Error("expected missing-reference error")
 				return
@@ -266,7 +298,7 @@ func TestUpdateUserfontUpdatesExistingObjectsInPlace(t *testing.T) {
 	xRefTable.Table[9].Object = types.Array{types.Integer(999)}
 	before := cloneXRefEntries(xRefTable.Table)
 
-	if err := UpdateUserfont(xRefTable, "Demo", fontResource); err != nil {
+	if err := UpdateUserfont(t.Context(), xRefTable, "Demo", fontResource); err != nil {
 		t.Fatal(err)
 	}
 	if len(xRefTable.Table) != len(before) {
@@ -293,7 +325,7 @@ func TestUpdateUserfontUpdatesExistingObjectsInPlace(t *testing.T) {
 
 func TestStatelessFontEmbeddingDoesNotUseGlobalRepository(t *testing.T) {
 	installUpdateUserfontMetrics(t)
-	if _, ok, err := corefont.UserFont("Demo"); err != nil || !ok {
+	if _, ok, err := corefont.UserFont(t.Context(), "Demo"); err != nil || !ok {
 		t.Fatalf("expected Demo in global font repository: available=%t, err=%v", ok, err)
 	}
 
@@ -306,11 +338,11 @@ func TestStatelessFontEmbeddingDoesNotUseGlobalRepository(t *testing.T) {
 		name string
 		fn   func() error
 	}{
-		{"font file", func() error { _, err := ttfFontFile(xRefTable, "Demo"); return err }},
-		{"subset font file", func() error { _, err := ttfSubFontFile(xRefTable, "Demo", nil); return err }},
-		{"update user font", func() error { return UpdateUserfont(xRefTable, "Demo", model.FontResource{}) }},
-		{"Type0 font dictionary", func() error { _, err := type0FontDict(xRefTable, "Demo", "", "", nil); return err }},
-		{"TrueType font dictionary", func() error { _, err := trueTypeFontDict(xRefTable, "Demo", ""); return err }},
+		{"font file", func() error { _, err := ttfFontFile(t.Context(), xRefTable, "Demo"); return err }},
+		{"subset font file", func() error { _, err := ttfSubFontFile(t.Context(), xRefTable, "Demo", nil); return err }},
+		{"update user font", func() error { return UpdateUserfont(t.Context(), xRefTable, "Demo", model.FontResource{}) }},
+		{"Type0 font dictionary", func() error { _, err := type0FontDict(t.Context(), xRefTable, "Demo", "", "", nil); return err }},
+		{"TrueType font dictionary", func() error { _, err := trueTypeFontDict(t.Context(), xRefTable, "Demo", ""); return err }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -401,7 +433,7 @@ func TestReferencedFontUpdatesUseCheckedObjectBoundary(t *testing.T) {
 			name:  "subset stream",
 			phase: "update subset stream",
 			fn: func(xRefTable *model.XRefTable) error {
-				_, err := ttfSubFontFile(xRefTable, "Demo", indRef)
+				_, err := ttfSubFontFile(t.Context(), xRefTable, "Demo", indRef)
 				return err
 			},
 		},
@@ -433,7 +465,7 @@ func TestReferencedFontUpdatesUseCheckedObjectBoundary(t *testing.T) {
 			name:  "Type0 font",
 			phase: "update Type0 font",
 			fn: func(xRefTable *model.XRefTable) error {
-				_, err := type0FontDict(xRefTable, "Demo", "", "", indRef)
+				_, err := type0FontDict(t.Context(), xRefTable, "Demo", "", "", indRef)
 				return err
 			},
 		},
@@ -467,26 +499,26 @@ func TestExportedFontConstructorsRejectNilXRef(t *testing.T) {
 		{"PDFDoc encoding", "create PDFDoc encoding", func() error { _, err := PDFDocEncoding(nil); return err }},
 		{"core font", "create core font dictionary", func() error { _, err := CoreFontDict(nil, "Helvetica"); return err }},
 		{"CID set", "update CID set", func() error { _, err := CIDSet(nil, ttf, "Demo", nil); return err }},
-		{"CID font file", "create CID font file", func() error { _, err := CIDFontFile(nil, "Demo", false); return err }},
+		{"CID font file", "create CID font file", func() error { _, err := CIDFontFile(t.Context(), nil, "Demo", false); return err }},
 		{"CID descriptor", "create CID font descriptor", func() error {
-			_, err := CIDFontDescriptor(nil, ttf, "Demo", "Demo", "", false)
+			_, err := CIDFontDescriptor(t.Context(), nil, ttf, "Demo", "Demo", "", false)
 			return err
 		}},
 		{"TrueType descriptor", "create TrueType font descriptor", func() error {
-			_, err := NewFontDescriptor(nil, ttf, "Demo", "")
+			_, err := NewFontDescriptor(t.Context(), nil, ttf, "Demo", "")
 			return err
 		}},
 		{"CID widths", "update CID widths", func() error { _, err := CIDWidths(nil, ttf, "Demo", false, nil); return err }},
 		{"TrueType widths", "create TrueType widths", func() error { _, err := Widths(nil, ttf, 0, 1); return err }},
 		{"CID font dictionary", "create CID font dictionary", func() error {
-			_, err := CIDFontDict(nil, ttf, "Demo", "Demo", "", nil)
+			_, err := CIDFontDict(t.Context(), nil, ttf, "Demo", "Demo", "", nil)
 			return err
 		}},
 		{"ensure font dictionary", "ensure font dictionary", func() error {
-			_, err := EnsureFontDict(nil, "Helvetica", "", "", false, nil)
+			_, err := EnsureFontDict(t.Context(), nil, "Helvetica", "", "", false, nil)
 			return err
 		}},
-		{"font resources", "create font resources", func() error { _, err := FontResources(nil, nil); return err }},
+		{"font resources", "create font resources", func() error { _, err := FontResources(t.Context(), nil, nil); return err }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -542,17 +574,17 @@ func TestPublicEmbeddingBoundariesValidateTTFLight(t *testing.T) {
 	}{
 		{"CID set", func() error { _, err := CIDSet(xRefTable, ttf, "Demo", nil); return err }},
 		{"CID descriptor", func() error {
-			_, err := CIDFontDescriptor(xRefTable, ttf, "Demo", "Demo", "", false)
+			_, err := CIDFontDescriptor(t.Context(), xRefTable, ttf, "Demo", "Demo", "", false)
 			return err
 		}},
 		{"TrueType descriptor", func() error {
-			_, err := NewFontDescriptor(xRefTable, ttf, "Demo", "")
+			_, err := NewFontDescriptor(t.Context(), xRefTable, ttf, "Demo", "")
 			return err
 		}},
 		{"CID widths", func() error { _, err := CIDWidths(xRefTable, ttf, "Demo", false, nil); return err }},
 		{"TrueType widths", func() error { _, err := Widths(xRefTable, ttf, 0, 1); return err }},
 		{"CID font dictionary", func() error {
-			_, err := CIDFontDict(xRefTable, ttf, "Demo", "Demo", "", nil)
+			_, err := CIDFontDict(t.Context(), xRefTable, ttf, "Demo", "Demo", "", nil)
 			return err
 		}},
 	}
@@ -594,7 +626,7 @@ func TestConstructorFailuresPreserveFontAndPhase(t *testing.T) {
 		fn    func() error
 	}{
 		{"descriptor", "create CID font descriptor", func() error {
-			_, err := CIDFontDescriptor(newBrokenXRef(), ttf, "Demo", "Demo", "", false)
+			_, err := CIDFontDescriptor(t.Context(), newBrokenXRef(), ttf, "Demo", "Demo", "", false)
 			return err
 		}},
 		{"widths", "create CID widths", func() error {
@@ -602,11 +634,11 @@ func TestConstructorFailuresPreserveFontAndPhase(t *testing.T) {
 			return err
 		}},
 		{"CID dictionary", "create CID font dictionary", func() error {
-			_, err := CIDFontDict(newBrokenXRef(), ttf, "Demo", "Demo", "", &cjk{})
+			_, err := CIDFontDict(t.Context(), newBrokenXRef(), ttf, "Demo", "Demo", "", &cjk{})
 			return err
 		}},
 		{"resources", "create font resources", func() error {
-			_, err := FontResources(newBrokenXRef(), model.FontMap{
+			_, err := FontResources(t.Context(), newBrokenXRef(), model.FontMap{
 				"Helvetica": {Res: model.Resource{ID: "F0"}},
 			})
 			return err

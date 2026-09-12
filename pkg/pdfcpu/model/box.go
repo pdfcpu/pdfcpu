@@ -17,11 +17,14 @@ limitations under the License.
 package model
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -811,7 +814,8 @@ func ParseBox(s string, u types.DisplayUnit) (*Box, error) {
 	// dim:30% 30%			... 0.3 x 0.3 relative width/height of parent box, anchored at center of parent box
 	// pos:tl, dim:30 30	... 0.3 x 0.3 relative width/height of parent box, anchored at top left corner of parent box
 	// pos:bl, off: 5 5, dim:30 30			...30 x 30 display units with offset 5/5, anchored at bottom left corner of parent box
-	// pos:bl, off: -5 -5, dim:.3 .3 rel 	...0.3 x 0.3 relative width/height and anchored at bottom left corner of parent box
+	// pos:bl, off: -5 -5, dim:.3 .3 rel
+	// 0.3 x 0.3 relative width/height and anchored at bottom left corner of parent box.
 
 	s = strings.TrimSpace(s)
 	if len(s) == 0 {
@@ -906,35 +910,53 @@ func (ctx *Context) addPageBoundaryString(i int, pb PageBoundaries, wantPB *Page
 	return append(ss, "")
 }
 
-// ListPageBoundaries lists page boundaries specified in wantPB for selected pages.
-func (ctx *Context) ListPageBoundaries(selectedPages types.IntSet, wantPB *PageBoundaries) ([]string, error) {
-	pbs, err := ctx.PageBoundaries(selectedPages)
+// ListPageBoundaries lists selected page boundaries and supports cancellation.
+func (ctx *Context) ListPageBoundaries(c context.Context, selectedPages types.IntSet, wantPB *PageBoundaries) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	if ctx == nil {
+		return nil, ErrMissingPDFContext
+	}
+	if ctx.XRefTable == nil {
+		return nil, ErrMissingXRefTable
+	}
+	pbs, err := ctx.PageBoundaries(c, selectedPages)
 	if err != nil {
 		return nil, err
 	}
 	ss := []string{}
 	for i, pb := range pbs {
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
 		if _, found := selectedPages[i+1]; !found {
 			continue
 		}
 		ss = append(ss, ctx.addPageBoundaryString(i, pb, wantPB)...)
 	}
 
-	return ss, nil
+	return ss, c.Err()
 }
 
-// RemovePageBoundaries removes page boundaries specified by pb for selected pages.
+// RemovePageBoundaries removes page boundaries specified by pb for selected pages and supports cancellation.
 // The media box is mandatory (inherited or not) and can't be removed.
 // A removed crop box defaults to the media box.
 // Removed trim/bleed/art boxes default to the crop box.
-func (ctx *Context) RemovePageBoundaries(selectedPages types.IntSet, pb *PageBoundaries) error {
-	for k, v := range selectedPages {
-		if !v {
-			continue
-		}
-		d, _, inhPAttrs, err := ctx.PageDict(k, false)
+func (ctx *Context) RemovePageBoundaries(c context.Context, selectedPages types.IntSet, pb *PageBoundaries) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if ctx == nil {
+		return ErrMissingPDFContext
+	}
+	if ctx.XRefTable == nil {
+		return ErrMissingXRefTable
+	}
+	return processPageBoundaries(c, selectedPages, func(pageNr int) error {
+		d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
 		if err != nil {
-			return fmt.Errorf("page %d: page dictionary: %w", k, err)
+			return fmt.Errorf("page %d: page dictionary: %w", pageNr, err)
 		}
 		if pb.Crop != nil {
 			if oldVal := d.Delete("CropBox"); oldVal == nil {
@@ -950,8 +972,8 @@ func (ctx *Context) RemovePageBoundaries(selectedPages types.IntSet, pb *PageBou
 		if pb.Art != nil {
 			d.Delete("ArtBox")
 		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func (ctx *Context) pageBoundary(d types.Dict, boxName string) (*types.Rectangle, error) {
@@ -1203,52 +1225,125 @@ func applyBoxAssignments(d types.Dict, pb *PageBoundaries, b *boxes) {
 	}
 }
 
-// AddPageBoundaries adds page boundaries specified by pb for selected pages.
-func (ctx *Context) AddPageBoundaries(selectedPages types.IntSet, pb *PageBoundaries) error {
-	for k, v := range selectedPages {
-		if !v {
-			continue
-		}
-		d, _, inhPAttrs, err := ctx.PageDict(k, false)
+// AddPageBoundaries adds page boundaries specified by pb for selected pages and supports cancellation.
+func (ctx *Context) AddPageBoundaries(c context.Context, selectedPages types.IntSet, pb *PageBoundaries) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if ctx == nil {
+		return ErrMissingPDFContext
+	}
+	if ctx.XRefTable == nil {
+		return ErrMissingXRefTable
+	}
+	return processPageBoundaries(c, selectedPages, func(pageNr int) error {
+		d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
 		if err != nil {
-			return fmt.Errorf("page %d: page dictionary: %w", k, err)
+			return fmt.Errorf("page %d: page dictionary: %w", pageNr, err)
 		}
 		mediaBox := inhPAttrs.MediaBox
 		cropBox := inhPAttrs.CropBox
 
 		trimBox, err := ctx.pageBoundary(d, "TrimBox")
 		if err != nil {
-			return fmt.Errorf("page %d: %w", k, err)
+			return fmt.Errorf("page %d: %w", pageNr, err)
 		}
 
 		bleedBox, err := ctx.pageBoundary(d, "BleedBox")
 		if err != nil {
-			return fmt.Errorf("page %d: %w", k, err)
+			return fmt.Errorf("page %d: %w", pageNr, err)
 		}
 
 		artBox, err := ctx.pageBoundary(d, "ArtBox")
 		if err != nil {
-			return fmt.Errorf("page %d: %w", k, err)
+			return fmt.Errorf("page %d: %w", pageNr, err)
 		}
 
 		boxes := &boxes{mediaBox: mediaBox, cropBox: cropBox, trimBox: trimBox, bleedBox: bleedBox, artBox: artBox}
 		applyBoxDefinitions(d, pb, boxes)
 		applyBoxAssignments(d, pb, boxes)
+		return nil
+	})
+}
+
+func processPageBoundaries(
+	c context.Context,
+	selectedPages types.IntSet,
+	process func(int) error,
+) error {
+	if c == nil {
+		return ErrMissingContext
 	}
+	pageNrs := make([]int, 0, len(selectedPages))
+	for pageNr, selected := range selectedPages {
+		if err := c.Err(); err != nil {
+			return err
+		}
+		if selected {
+			pageNrs = append(pageNrs, pageNr)
+		}
+	}
+	sort.Ints(pageNrs)
+
+	for _, pageNr := range pageNrs {
+		if err := c.Err(); err != nil {
+			return err
+		}
+		if err := process(pageNr); err != nil {
+			return err
+		}
+	}
+	return c.Err()
+}
+
+func cropPage(ctx *Context, pageNr int, b *Box) error {
+	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
+	if err != nil {
+		return fmt.Errorf("page %d: page dictionary: %w", pageNr, err)
+	}
+	ApplyBox("CropBox", b, d, inhPAttrs.MediaBox)
 	return nil
 }
 
-// Crop sets crop box for selected pages to b.
-func (ctx *Context) Crop(selectedPages types.IntSet, b *Box) error {
-	for k, v := range selectedPages {
-		if !v {
-			continue
+// Crop sets crop box for selected pages to b and supports cancellation.
+func (ctx *Context) Crop(c context.Context, selectedPages types.IntSet, b *Box) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if ctx == nil {
+		return ErrMissingPDFContext
+	}
+	if ctx.XRefTable == nil {
+		return ErrMissingXRefTable
+	}
+	return cropPagesWithContextUsing(c, ctx, selectedPages, b, cropPage)
+}
+
+func cropPagesWithContextUsing(
+	c context.Context,
+	ctx *Context,
+	selectedPages types.IntSet,
+	b *Box,
+	apply func(*Context, int, *Box) error,
+) error {
+	pageNrs := make([]int, 0, len(selectedPages))
+	for pageNr, selected := range selectedPages {
+		if err := c.Err(); err != nil {
+			return err
 		}
-		d, _, inhPAttrs, err := ctx.PageDict(k, false)
-		if err != nil {
-			return fmt.Errorf("page %d: page dictionary: %w", k, err)
+		if selected {
+			pageNrs = append(pageNrs, pageNr)
 		}
-		ApplyBox("CropBox", b, d, inhPAttrs.MediaBox)
+	}
+	sort.Ints(pageNrs)
+
+	for _, pageNr := range pageNrs {
+		if err := c.Err(); err != nil {
+			return err
+		}
+		if err := apply(ctx, pageNr, b); err != nil {
+			return err
+		}
 	}
 	return nil
 }

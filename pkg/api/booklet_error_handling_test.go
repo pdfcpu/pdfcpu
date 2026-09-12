@@ -70,7 +70,7 @@ func TestNUpValuesForBookletsReturnsCopy(t *testing.T) {
 }
 
 func TestBookletReadErrorIncludesPhaseContext(t *testing.T) {
-	err := Booklet(bytes.NewReader(nil), io.Discard, nil, nil, bookletTestConfiguration(t, false), nil)
+	err := Booklet(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil, bookletTestConfiguration(t, false), nil)
 	if !errors.Is(err, pdfcpu.ErrEmptyInput) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrEmptyInput, err)
 	}
@@ -83,7 +83,7 @@ func TestBookletReadErrorIncludesPhaseContext(t *testing.T) {
 }
 
 func TestBookletMalformedInputPreservesCause(t *testing.T) {
-	err := Booklet(bytes.NewReader([]byte("not a PDF")), io.Discard, nil, nil, bookletTestConfiguration(t, false), nil)
+	err := Booklet(t.Context(), bytes.NewReader([]byte("not a PDF")), io.Discard, nil, nil, bookletTestConfiguration(t, false), nil)
 	if !errors.Is(err, pdfcpu.ErrCorruptHeader) {
 		t.Fatalf("expected %v, got %v", pdfcpu.ErrCorruptHeader, err)
 	}
@@ -102,7 +102,7 @@ func TestBookletClosedInputPreservesCause(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = Booklet(f, io.Discard, nil, nil, bookletTestConfiguration(t, false), nil)
+	err = Booklet(t.Context(), f, io.Discard, nil, nil, bookletTestConfiguration(t, false), nil)
 	if !errors.Is(err, os.ErrClosed) {
 		t.Fatalf("expected %v, got %v", os.ErrClosed, err)
 	}
@@ -113,7 +113,7 @@ func TestBookletClosedInputPreservesCause(t *testing.T) {
 
 func TestBookletPageSelectionErrorIncludesPhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
-	err := Booklet(openAPITestPDF(t, inFile), io.Discard, nil, []string{"bogus"}, bookletTestConfiguration(t, false), nil)
+	err := Booklet(t.Context(), openAPITestPDF(t, inFile), io.Discard, nil, []string{"bogus"}, bookletTestConfiguration(t, false), nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -125,7 +125,7 @@ func TestBookletPageSelectionErrorIncludesPhaseContext(t *testing.T) {
 func TestBookletWriteErrorIncludesPhaseContext(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	wantErr := errors.New("write failed")
-	err := Booklet(openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil, nil, bookletTestConfiguration(t, false), nil)
+	err := Booklet(t.Context(), openAPITestPDF(t, inFile), failingWriter{err: wantErr}, nil, nil, bookletTestConfiguration(t, false), nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -136,7 +136,7 @@ func TestBookletWriteErrorIncludesPhaseContext(t *testing.T) {
 
 func TestBookletImageErrorIncludesPhaseContext(t *testing.T) {
 	missingImage := filepath.Join(t.TempDir(), "missing.png")
-	err := Booklet(bytes.NewReader(nil), io.Discard, []string{missingImage}, nil, bookletTestConfiguration(t, true), nil)
+	err := Booklet(t.Context(), bytes.NewReader(nil), io.Discard, []string{missingImage}, nil, bookletTestConfiguration(t, true), nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -148,7 +148,7 @@ func TestBookletImageErrorIncludesPhaseContext(t *testing.T) {
 func TestBookletFromImagesAcceptsNilPDFReader(t *testing.T) {
 	imageFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 	var out bytes.Buffer
-	err := Booklet(nil, &out, []string{imageFile}, nil, bookletTestConfiguration(t, true), nil)
+	err := Booklet(t.Context(), nil, &out, []string{imageFile}, nil, bookletTestConfiguration(t, true), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +160,7 @@ func TestBookletFromImagesAcceptsNilPDFReader(t *testing.T) {
 func TestBookletFromImagesDefaultsConfiguration(t *testing.T) {
 	imageFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 	nup := bookletTestConfiguration(t, true)
-	ctx, err := BookletFromImages(nil, []string{imageFile}, nup)
+	ctx, err := BookletFromImages(t.Context(), nil, []string{imageFile}, nup)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +218,7 @@ func TestBookletFromImagesRejectsInvalidConfiguration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := BookletFromImages(nil, []string{"unused"}, tt.nup())
+			_, err := BookletFromImages(t.Context(), nil, []string{"unused"}, tt.nup())
 			if err == nil {
 				t.Fatal("expected error")
 			}
@@ -238,14 +238,14 @@ func TestBookletEntryPointsRejectMissingConfiguration(t *testing.T) {
 		run  func() error
 	}{
 		{name: "images", run: func() error {
-			_, err := BookletFromImages(nil, []string{"unused"}, nil)
+			_, err := BookletFromImages(t.Context(), nil, []string{"unused"}, nil)
 			return err
 		}},
 		{name: "stream", run: func() error {
-			return Booklet(nil, io.Discard, nil, nil, nil, nil)
+			return Booklet(t.Context(), nil, io.Discard, nil, nil, nil, nil)
 		}},
 		{name: "file", run: func() error {
-			return BookletFile([]string{"unused"}, filepath.Join(t.TempDir(), "out.pdf"), nil, nil, nil)
+			return BookletFile(t.Context(), []string{"unused"}, filepath.Join(t.TempDir(), "out.pdf"), nil, nil, nil)
 		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -267,14 +267,14 @@ func TestBookletConfigurationErrorsIncludePhaseAndPreserveCause(t *testing.T) {
 		run  func(*model.NUp) error
 	}{
 		{name: "images", run: func(nup *model.NUp) error {
-			_, err := BookletFromImages(nil, []string{"unused"}, nup)
+			_, err := BookletFromImages(t.Context(), nil, []string{"unused"}, nup)
 			return err
 		}},
 		{name: "stream", run: func(nup *model.NUp) error {
-			return Booklet(nil, io.Discard, nil, nil, nup, nil)
+			return Booklet(t.Context(), nil, io.Discard, nil, nil, nup, nil)
 		}},
 		{name: "file", run: func(nup *model.NUp) error {
-			return BookletFile([]string{"unused"}, filepath.Join(t.TempDir(), "out.pdf"), nil, nup, nil)
+			return BookletFile(t.Context(), []string{"unused"}, filepath.Join(t.TempDir(), "out.pdf"), nil, nup, nil)
 		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -294,7 +294,7 @@ func TestBookletFileValidatesImageConfigurationBeforeAliasCheck(t *testing.T) {
 	nup.ImgInputFile = true
 	invalidPath := string([]byte{'i', 'n', 'v', 'a', 'l', 'i', 'd', 0})
 
-	err := BookletFile([]string{invalidPath}, filepath.Join(t.TempDir(), "out.pdf"), nil, nup, nil)
+	err := BookletFile(t.Context(), []string{invalidPath}, filepath.Join(t.TempDir(), "out.pdf"), nil, nup, nil)
 	if err == nil {
 		t.Fatal("expected configuration error")
 	}
@@ -320,7 +320,7 @@ func TestBookletFileErrorsIncludeFilePhaseContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := BookletFile([]string{tt.in}, tt.out, nil, bookletTestConfiguration(t, false), nil)
+			err := BookletFile(t.Context(), []string{tt.in}, tt.out, nil, bookletTestConfiguration(t, false), nil)
 			if !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 			}
@@ -334,7 +334,7 @@ func TestBookletFileErrorsIncludeFilePhaseContext(t *testing.T) {
 func TestBookletFileRemovesNewOutputOnFailure(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	err := BookletFile([]string{inFile}, outFile, []string{"bogus"}, bookletTestConfiguration(t, false), nil)
+	err := BookletFile(t.Context(), []string{inFile}, outFile, []string{"bogus"}, bookletTestConfiguration(t, false), nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -351,7 +351,7 @@ func TestBookletFilePreservesExistingOutputOnFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := BookletFile([]string{inFile}, outFile, []string{"bogus"}, bookletTestConfiguration(t, false), nil)
+	err := BookletFile(t.Context(), []string{inFile}, outFile, []string{"bogus"}, bookletTestConfiguration(t, false), nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -367,7 +367,7 @@ func TestBookletFilePreservesExistingOutputOnFailure(t *testing.T) {
 func TestBookletFileMissingFirstImageUsesIndexedContext(t *testing.T) {
 	missingImage := filepath.Join(t.TempDir(), "missing.png")
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	err := BookletFile([]string{missingImage}, outFile, nil, bookletTestConfiguration(t, true), nil)
+	err := BookletFile(t.Context(), []string{missingImage}, outFile, nil, bookletTestConfiguration(t, true), nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -392,7 +392,7 @@ func TestBookletFileMissingImageWithExistingOutputUsesImageOpenContext(t *testin
 		t.Fatal(err)
 	}
 
-	err := BookletFile([]string{missingImage}, outFile, nil, bookletTestConfiguration(t, true), nil)
+	err := BookletFile(t.Context(), []string{missingImage}, outFile, nil, bookletTestConfiguration(t, true), nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -426,7 +426,7 @@ func TestBookletFileRejectsImageOutputAliasing(t *testing.T) {
 
 	for i, outFile := range imageFiles {
 		t.Run(fmt.Sprintf("image_%d", i+1), func(t *testing.T) {
-			err := BookletFile(imageFiles, outFile, nil, bookletTestConfiguration(t, true), nil)
+			err := BookletFile(t.Context(), imageFiles, outFile, nil, bookletTestConfiguration(t, true), nil)
 			if !errors.Is(err, ErrBookletImageOutputConflict) {
 				t.Fatalf("expected %v, got %v", ErrBookletImageOutputConflict, err)
 			}
@@ -456,7 +456,7 @@ func TestBookletFileRejectsImageFilesystemAliases(t *testing.T) {
 		if err := os.Link(source, outFile); err != nil {
 			t.Fatal(err)
 		}
-		err := BookletFile([]string{source}, outFile, nil, bookletTestConfiguration(t, true), nil)
+		err := BookletFile(t.Context(), []string{source}, outFile, nil, bookletTestConfiguration(t, true), nil)
 		if !errors.Is(err, ErrBookletImageOutputConflict) {
 			t.Fatalf("expected %v, got %v", ErrBookletImageOutputConflict, err)
 		}
@@ -470,7 +470,7 @@ func TestBookletFileRejectsImageFilesystemAliases(t *testing.T) {
 			}
 			t.Fatal(err)
 		}
-		err := BookletFile([]string{source}, outFile, nil, bookletTestConfiguration(t, true), nil)
+		err := BookletFile(t.Context(), []string{source}, outFile, nil, bookletTestConfiguration(t, true), nil)
 		if !errors.Is(err, ErrBookletImageOutputConflict) {
 			t.Fatalf("expected %v, got %v", ErrBookletImageOutputConflict, err)
 		}
@@ -524,7 +524,7 @@ func TestBookletImageOutputAliasCheckPreservesFilesystemErrors(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			err := BookletFile([]string{tt.inFile}, tt.outFile, nil, bookletTestConfiguration(t, true), nil)
+			err := BookletFile(t.Context(), []string{tt.inFile}, tt.outFile, nil, bookletTestConfiguration(t, true), nil)
 			if err == nil {
 				t.Fatal("expected alias-check error")
 			}
@@ -579,10 +579,10 @@ func TestBookletFileSafelyReplacesInput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = BookletFile([]string{inOutFile}, inOutFile, nil, bookletTestConfiguration(t, false), nil); err != nil {
+	if err = BookletFile(t.Context(), []string{inOutFile}, inOutFile, nil, bookletTestConfiguration(t, false), nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = ReadContextFile(inOutFile); err != nil {
+	if _, err = ReadContextFile(t.Context(), inOutFile); err != nil {
 		t.Fatalf("expected valid replacement PDF: %v", err)
 	}
 }

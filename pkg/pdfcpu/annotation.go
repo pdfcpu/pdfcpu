@@ -17,6 +17,7 @@
 package pdfcpu
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -389,10 +391,16 @@ func Annotation(xRefTable *model.XRefTable, d types.Dict) (model.AnnotationRende
 	return ann, nil
 }
 
-// AnnotationsForSelectedPages annotations for selected pages.
-func AnnotationsForSelectedPages(ctx *model.Context, selectedPages types.IntSet) map[int]model.PgAnnots {
+// AnnotationsForSelectedPages returns annotations for selected pages and supports cancellation.
+func AnnotationsForSelectedPages(c context.Context, ctx *model.Context, selectedPages types.IntSet) (map[int]model.PgAnnots, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	var pageNrs []int
 	for k := range ctx.PageAnnots {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		pageNrs = append(pageNrs, k)
 	}
 	sort.Ints(pageNrs)
@@ -400,6 +408,9 @@ func AnnotationsForSelectedPages(ctx *model.Context, selectedPages types.IntSet)
 	m := map[int]model.PgAnnots{}
 
 	for _, i := range pageNrs {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 
 		if selectedPages != nil {
 			if _, found := selectedPages[i]; !found {
@@ -415,7 +426,7 @@ func AnnotationsForSelectedPages(ctx *model.Context, selectedPages types.IntSet)
 		m[i] = pageAnnots
 	}
 
-	return m
+	return m, contextutil.Check(c)
 }
 
 func prepareHeader(horSep *[]int, maxLen *AnnotListMaxLengths, customAnnot bool) string {
@@ -485,107 +496,104 @@ type AnnotationListEntry struct {
 	CustomTyp string     `json:"customType,omitempty"`
 }
 
-// ListAnnotations returns a formatted list of annotations.
-func ListAnnotations(annots map[int]model.PgAnnots) (int, []string, error) {
-	var (
-		j       int
-		pageNrs []int
+func annotationListMaxLengths(
+	c context.Context,
+	annots model.Annot,
+) (AnnotListMaxLengths, []int, error) {
+	maxLen := AnnotListMaxLengths{ID: 2, Content: len("Content"), Type: len("Type")}
+	objNrs := make([]int, 0, len(annots.Map))
+	for objNr, ann := range annots.Map {
+		if err := contextutil.Check(c); err != nil {
+			return maxLen, nil, err
+		}
+		objNrs = append(objNrs, objNr)
+		maxLen.ObjNr = max(maxLen.ObjNr, len(strconv.Itoa(objNr)))
+		maxLen.Rect = max(maxLen.Rect, len(ann.RectString()))
+		maxLen.ID = max(maxLen.ID, len(ann.ID()))
+		maxLen.Content = max(maxLen.Content, len(ann.ContentString()))
+		maxLen.Type = max(maxLen.Type, len(ann.CustomTypeString()))
+	}
+	sort.Ints(objNrs)
+	return maxLen, objNrs, nil
+}
+
+func annotationListLine(ann model.AnnotationRenderer, objNr int, maxLen AnnotListMaxLengths) string {
+	objNrString := strconv.Itoa(objNr)
+	fill1 := strings.Repeat(" ", maxLen.ObjNr-len(objNrString))
+	if maxLen.ObjNr < 4 {
+		fill1 += strings.Repeat(" ", 4-maxLen.ObjNr)
+	}
+	fill2 := strings.Repeat(" ", maxLen.ID-len(ann.ID()))
+	fill3 := strings.Repeat(" ", maxLen.Rect-len(ann.RectString()))
+	if ann.Type() != model.AnnCustom {
+		return fmt.Sprintf(
+			"     %s%d %s %s%s %s %s%s %s %s",
+			fill1, objNr, draw.VBar, fill2, ann.ID(), draw.VBar, fill3, ann.RectString(), draw.VBar, ann.ContentString(),
+		)
+	}
+	fill4 := strings.Repeat(" ", maxLen.Content-len(ann.ContentString()))
+	return fmt.Sprintf(
+		"     %s%d %s %s%s %s %s%s %s %s%s%s %s",
+		fill1, objNr, draw.VBar, fill2, ann.ID(), draw.VBar, fill3, ann.RectString(), draw.VBar, fill4,
+		ann.ContentString(), draw.VBar, ann.CustomTypeString(),
 	)
+}
+
+func appendAnnotationTypeList(
+	c context.Context,
+	ss []string,
+	annType string,
+	annots model.Annot,
+) ([]string, int, error) {
+	maxLen, objNrs, err := annotationListMaxLengths(c, annots)
+	if err != nil {
+		return nil, 0, err
+	}
+	horSep := []int{}
+	ss = append(ss, "", fmt.Sprintf("  %s:", annType))
+	ss = append(ss, prepareHeader(&horSep, &maxLen, annType == "Custom"), draw.HorSepLine(horSep))
+	for _, objNr := range objNrs {
+		if err := contextutil.Check(c); err != nil {
+			return nil, 0, err
+		}
+		ss = append(ss, annotationListLine(annots.Map[objNr], objNr, maxLen))
+	}
+	return ss, len(objNrs), nil
+}
+
+// ListAnnotations returns a formatted list of annotations and supports cancellation.
+func ListAnnotations(c context.Context, annots map[int]model.PgAnnots) (int, []string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, nil, err
+	}
+	var count int
 	ss := []string{}
-
-	for k := range annots {
-		pageNrs = append(pageNrs, k)
+	pageNrs, err := sortedAnnotationPages(c, annots)
+	if err != nil {
+		return 0, nil, err
 	}
-	sort.Ints(pageNrs)
-
-	for _, i := range pageNrs {
-
-		pageAnnots := annots[i]
-
-		var annTypes []string
-		for t := range pageAnnots {
-			annTypes = append(annTypes, model.AnnotTypeStrings[t])
+	for _, pageNr := range pageNrs {
+		if err := contextutil.Check(c); err != nil {
+			return 0, nil, err
 		}
-		sort.Strings(annTypes)
-
-		ss = append(ss, "")
-		ss = append(ss, fmt.Sprintf("Page %d:", i))
-
+		pageAnnots := annots[pageNr]
+		annTypes, err := sortedAnnotationTypeNames(c, pageAnnots)
+		if err != nil {
+			return 0, nil, err
+		}
+		ss = append(ss, "", fmt.Sprintf("Page %d:", pageNr))
 		for _, annType := range annTypes {
-			annots := pageAnnots[model.AnnotTypes[annType]]
-
-			var maxLen AnnotListMaxLengths
-			maxLen.ID = 2
-			maxLen.Content = len("Content")
-			maxLen.Type = len("Type")
-
-			var objNrs []int
-			for objNr, ann := range annots.Map {
-				objNrs = append(objNrs, objNr)
-				s := strconv.Itoa(objNr)
-				if len(s) > maxLen.ObjNr {
-					maxLen.ObjNr = len(s)
-				}
-				if len(ann.RectString()) > maxLen.Rect {
-					maxLen.Rect = len(ann.RectString())
-				}
-				if len(ann.ID()) > maxLen.ID {
-					maxLen.ID = len(ann.ID())
-				}
-				if len(ann.ContentString()) > maxLen.Content {
-					maxLen.Content = len(ann.ContentString())
-				}
-				if len(ann.CustomTypeString()) > maxLen.Type {
-					maxLen.Type = len(ann.CustomTypeString())
-				}
+			var n int
+			ss, n, err = appendAnnotationTypeList(
+				c, ss, annType, pageAnnots[model.AnnotTypes[annType]],
+			)
+			if err != nil {
+				return 0, nil, err
 			}
-			sort.Ints(objNrs)
-			ss = append(ss, "")
-			ss = append(ss, fmt.Sprintf("  %s:", annType))
-
-			horSep := []int{}
-
-			// Render header.
-			ss = append(ss, prepareHeader(&horSep, &maxLen, annType == "Custom"))
-
-			// Render separator.
-			ss = append(ss, draw.HorSepLine(horSep))
-
-			// Render content.
-			for _, objNr := range objNrs {
-				ann := annots.Map[objNr]
-
-				s := strconv.Itoa(objNr)
-				fill1 := strings.Repeat(" ", maxLen.ObjNr-len(s))
-				if maxLen.ObjNr < 4 {
-					fill1 += strings.Repeat(" ", 4-maxLen.ObjNr)
-				}
-
-				s = ann.ID()
-				fill2 := strings.Repeat(" ", maxLen.ID-len(s))
-				if maxLen.ID < 2 {
-					fill2 += strings.Repeat(" ", 2-maxLen.ID)
-				}
-
-				s = ann.RectString()
-				fill3 := strings.Repeat(" ", maxLen.Rect-len(s))
-
-				if ann.Type() != model.AnnCustom {
-					ss = append(ss, fmt.Sprintf("     %s%d %s %s%s %s %s%s %s %s",
-						fill1, objNr, draw.VBar, fill2, ann.ID(), draw.VBar, fill3, ann.RectString(), draw.VBar, ann.ContentString()))
-				} else {
-					s = ann.ContentString()
-					fill4 := strings.Repeat(" ", maxLen.Content-len(s))
-					ss = append(ss, fmt.Sprintf("     %s%d %s %s%s %s %s%s %s %s%s%s %s",
-						fill1, objNr, draw.VBar, fill2, ann.ID(), draw.VBar, fill3, ann.RectString(), draw.VBar, fill4, ann.ContentString(), draw.VBar, ann.CustomTypeString()))
-				}
-
-				j++
-			}
+			count += n
 		}
 	}
-
-	return j, append([]string{fmt.Sprintf("%d annotations available", j)}, ss...), nil
+	return count, append([]string{fmt.Sprintf("%d annotations available", count)}, ss...), contextutil.Check(c)
 }
 
 func annotationContent(ann model.AnnotationRenderer) *string {
@@ -623,67 +631,109 @@ func annotationJSONHeader() Header {
 	}
 }
 
-func sortedAnnotationObjNrs(annots model.Annot) []int {
+func sortedAnnotationObjNrs(c context.Context, annots model.Annot) ([]int, error) {
 	objNrs := make([]int, 0, len(annots.Map))
 	for objNr := range annots.Map {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		objNrs = append(objNrs, objNr)
 	}
 	sort.Ints(objNrs)
-	return objNrs
+	return objNrs, nil
 }
 
-func addAnnotationListEntries(list *AnnotationList, pageNr int, annType string, annots model.Annot) int {
-	objNrs := sortedAnnotationObjNrs(annots)
+func addAnnotationListEntries(
+	c context.Context,
+	list *AnnotationList,
+	pageNr int,
+	annType string,
+	annots model.Annot,
+) (int, error) {
+	objNrs, err := sortedAnnotationObjNrs(c, annots)
+	if err != nil {
+		return 0, err
+	}
 	for _, objNr := range objNrs {
+		if err := contextutil.Check(c); err != nil {
+			return 0, err
+		}
 		ann := annots.Map[objNr]
 		list.Annotations[pageNr] = append(list.Annotations[pageNr], annotationListEntry(annType, objNr, ann))
 	}
-	return len(objNrs)
+	return len(objNrs), nil
 }
 
-func annotationList(annots map[int]model.PgAnnots) (AnnotationList, int) {
+func annotationList(c context.Context, annots map[int]model.PgAnnots) (AnnotationList, int, error) {
 	var count int
 	list := AnnotationList{
 		Header:      annotationJSONHeader(),
 		Annotations: map[int][]AnnotationListEntry{},
 	}
 
-	for _, pageNr := range sortedAnnotationPages(annots) {
+	pageNrs, err := sortedAnnotationPages(c, annots)
+	if err != nil {
+		return list, 0, err
+	}
+	for _, pageNr := range pageNrs {
+		if err := contextutil.Check(c); err != nil {
+			return list, 0, err
+		}
 		pageAnnots := annots[pageNr]
-		for _, annType := range sortedAnnotationTypeNames(pageAnnots) {
-			count += addAnnotationListEntries(&list, pageNr, annType, pageAnnots[model.AnnotTypes[annType]])
+		annTypes, err := sortedAnnotationTypeNames(c, pageAnnots)
+		if err != nil {
+			return list, 0, err
+		}
+		for _, annType := range annTypes {
+			n, err := addAnnotationListEntries(c, &list, pageNr, annType, pageAnnots[model.AnnotTypes[annType]])
+			if err != nil {
+				return list, 0, err
+			}
+			count += n
 		}
 	}
 
-	return list, count
+	return list, count, contextutil.Check(c)
 }
 
-func sortedAnnotationPages(annots map[int]model.PgAnnots) []int {
+func sortedAnnotationPages(c context.Context, annots map[int]model.PgAnnots) ([]int, error) {
 	pageNrs := make([]int, 0, len(annots))
 	for k := range annots {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		pageNrs = append(pageNrs, k)
 	}
 	sort.Ints(pageNrs)
-	return pageNrs
+	return pageNrs, nil
 }
 
-func sortedAnnotationTypeNames(pageAnnots model.PgAnnots) []string {
+func sortedAnnotationTypeNames(c context.Context, pageAnnots model.PgAnnots) ([]string, error) {
 	annTypes := make([]string, 0, len(pageAnnots))
 	for t := range pageAnnots {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		annTypes = append(annTypes, model.AnnotTypeStrings[t])
 	}
 	sort.Strings(annTypes)
-	return annTypes
+	return annTypes, nil
 }
 
-// ListAnnotationsJSON returns a JSON-formatted list of annotations.
-func ListAnnotationsJSON(annots map[int]model.PgAnnots) (int, []string, error) {
-	list, count := annotationList(annots)
+// ListAnnotationsJSON returns a JSON-formatted list of annotations and supports cancellation.
+func ListAnnotationsJSON(c context.Context, annots map[int]model.PgAnnots) (int, []string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, nil, err
+	}
+	list, count, err := annotationList(c, annots)
+	if err != nil {
+		return 0, nil, err
+	}
 	bb, err := json.MarshalIndent(list, "", "\t")
 	if err != nil {
 		return 0, nil, err
 	}
-	return count, []string{string(bb)}, nil
+	return count, []string{string(bb)}, contextutil.Check(c)
 }
 
 func addAnnotationToDirectObj(
@@ -804,13 +854,7 @@ func cleanupAddedAnnotation(ctx *model.Context, pageNr, objNr int, annotIndRef *
 }
 
 // AddAnnotation adds ar to pageDict.
-func AddAnnotation(
-	ctx *model.Context,
-	pageDictIndRef *types.IndirectRef,
-	pageDict types.Dict,
-	pageNr int,
-	ar model.AnnotationRenderer,
-	incr bool) (*types.IndirectRef, types.Dict, error) {
+func AddAnnotation(ctx *model.Context, pageDictIndRef *types.IndirectRef, pageDict types.Dict, pageNr int, ar model.AnnotationRenderer, incr bool) (*types.IndirectRef, types.Dict, error) {
 	if err := validateAddAnnotationInput(ctx, pageDictIndRef, pageDict, pageNr, ar, incr); err != nil {
 		return nil, nil, err
 	}
@@ -1148,11 +1192,16 @@ func prepareRemoveAllAnnotations(ctx *model.Context, obj types.Object, pageNr in
 }
 
 func removeAllAnnotations(
+	c context.Context,
 	ctx *model.Context,
 	pageDict types.Dict,
 	pageDictObjNr,
 	pageNr int,
-	incr bool) (bool, error) {
+	incr bool,
+) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	obj, found := pageDict.Find("Annots")
 	if !found {
 		return false, nil
@@ -1175,6 +1224,9 @@ func removeAllAnnotations(
 	}
 
 	for _, o := range annots {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
 		if err := deleteAnnotationObject(ctx, o, pageNr); err != nil {
 			return false, err
 		}
@@ -1200,7 +1252,7 @@ func removeAllAnnotations(
 
 	ctx.EnsureVersionForWriting()
 
-	return true, nil
+	return true, contextutil.Check(c)
 }
 
 type annotationRemovalTarget struct {
@@ -1487,64 +1539,128 @@ func preflightSelectiveAnnotationRemoval(
 	return plan, nil
 }
 
-func applySelectiveAnnotationRemoval(
+func deleteAnnotationTargets(
+	c context.Context,
 	ctx *model.Context,
-	plan *annotationRemovalPlan,
-	objNrSet types.IntSet,
+	targets []annotationRemovalTarget,
 	pageNr int,
-	annots types.Array,
-	incr bool) (types.Array, bool, error) {
-	targets := plan.sortedTargets()
-	if len(targets) == 0 {
-		return annots, false, nil
-	}
+) error {
 	for _, target := range targets {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		if err := deleteAnnotationObject(ctx, target.indRef, pageNr); err != nil {
-			return nil, false, err
+			return err
 		}
 	}
+	return contextutil.Check(c)
+}
+
+func removeAnnotationTargetsFromCache(
+	c context.Context,
+	ctx *model.Context,
+	targets []annotationRemovalTarget,
+	pageNr int,
+	incr bool,
+) error {
 	for _, target := range targets {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		objNr := target.indRef.ObjectNumber.Value()
 		if err := removeAnnotationFromCache(ctx, pageNr, objNr); err != nil {
-			return nil, false, fmt.Errorf("page %d annotation obj#%d: remove from cache: %w", pageNr, objNr, err)
+			return fmt.Errorf("page %d annotation obj#%d: remove from cache: %w", pageNr, objNr, err)
 		}
 		if incr {
 			ctx.Write.IncrementWithObjNr(objNr)
 		}
 	}
-	for objNr := range plan.matchedObjNrSet {
-		delete(objNrSet, objNr)
-	}
+	return contextutil.Check(c)
+}
 
+func remainingAnnotations(
+	c context.Context,
+	annots types.Array,
+	targets []annotationRemovalTarget,
+) (types.Array, error) {
 	removed := make(map[int]bool, len(targets))
 	for _, target := range targets {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		removed[target.index] = true
 	}
 	result := make(types.Array, 0, len(annots)-len(targets))
 	for i, o := range annots {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		if !removed[i] {
 			result = append(result, o)
 		}
 	}
-	return result, true, nil
+	return result, contextutil.Check(c)
+}
+
+func applySelectiveAnnotationRemoval(
+	c context.Context,
+	ctx *model.Context,
+	plan *annotationRemovalPlan,
+	objNrSet types.IntSet,
+	pageNr int,
+	annots types.Array,
+	incr bool,
+) (types.Array, bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, false, err
+	}
+	targets := plan.sortedTargets()
+	if len(targets) == 0 {
+		return annots, false, nil
+	}
+	if err := deleteAnnotationTargets(c, ctx, targets, pageNr); err != nil {
+		return nil, false, err
+	}
+	if err := removeAnnotationTargetsFromCache(c, ctx, targets, pageNr, incr); err != nil {
+		return nil, false, err
+	}
+	for objNr := range plan.matchedObjNrSet {
+		if err := contextutil.Check(c); err != nil {
+			return nil, false, err
+		}
+		delete(objNrSet, objNr)
+	}
+
+	result, err := remainingAnnotations(c, annots, targets)
+	if err != nil {
+		return nil, false, err
+	}
+	return result, true, contextutil.Check(c)
 }
 
 func removeAnnotationsFromAnnots(
+	c context.Context,
 	ctx *model.Context,
 	annotTypes []model.AnnotationType,
 	ids []string,
 	objNrSet types.IntSet,
 	pageNr int,
 	annots types.Array,
-	incr bool) (types.Array, bool, error) {
+	incr bool,
+) (types.Array, bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, false, err
+	}
 	plan, err := preflightSelectiveAnnotationRemoval(ctx, annotTypes, ids, objNrSet, pageNr, annots)
 	if err != nil {
 		return nil, false, err
 	}
-	return applySelectiveAnnotationRemoval(ctx, plan, objNrSet, pageNr, annots, incr)
+	return applySelectiveAnnotationRemoval(c, ctx, plan, objNrSet, pageNr, annots, incr)
 }
 
-func removeAnnotationsFromIndAnnots(ctx *model.Context,
+func removeAnnotationsFromIndAnnots(
+	c context.Context,
+	ctx *model.Context,
 	annotTypes []model.AnnotationType,
 	ids []string,
 	objNrSet types.IntSet,
@@ -1553,7 +1669,11 @@ func removeAnnotationsFromIndAnnots(ctx *model.Context,
 	incr bool,
 	pageDict types.Dict,
 	pageDictObjNr int,
-	indRef types.IndirectRef) (bool, error) {
+	indRef types.IndirectRef,
+) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	objNr := indRef.ObjectNumber.Value()
 	genNr := indRef.GenerationNumber.Value()
 	entry, found := ctx.FindTableEntry(objNr, genNr)
@@ -1561,7 +1681,7 @@ func removeAnnotationsFromIndAnnots(ctx *model.Context,
 		return false, fmt.Errorf("page %d Annots obj#%d: missing xref table entry", pageNr, objNr)
 	}
 
-	ann, ok, err := removeAnnotationsFromAnnots(ctx, annotTypes, ids, objNrSet, pageNr, annots, incr)
+	ann, ok, err := removeAnnotationsFromAnnots(c, ctx, annotTypes, ids, objNrSet, pageNr, annots, incr)
 	if err != nil {
 		return false, fmt.Errorf("page %d Annots obj#%d: %w", pageNr, indRef.ObjectNumber.Value(), err)
 	}
@@ -1592,16 +1712,12 @@ func removeAnnotationsFromIndAnnots(ctx *model.Context,
 	return true, nil
 }
 
-// RemoveAnnotationsFromPageDict removes an annotation by annotType, id and obj# from pageDict.
-func RemoveAnnotationsFromPageDict(
-	ctx *model.Context,
-	annotTypes []model.AnnotationType,
-	ids []string,
-	objNrSet types.IntSet,
-	pageDict types.Dict,
-	pageDictObjNr,
-	pageNr int,
-	incr bool) (bool, error) {
+// RemoveAnnotationsFromPageDict removes an annotation by type, ID or object number from pageDict and supports
+// cancellation. On failure, ctx may contain partial changes and callers must discard it.
+func RemoveAnnotationsFromPageDict(c context.Context, ctx *model.Context, annotTypes []model.AnnotationType, ids []string, objNrSet types.IntSet, pageDict types.Dict, pageDictObjNr, pageNr int, incr bool) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	//fmt.Printf("ids:%v objNrSet:%v\n", ids, objNrSet)
 	if err := validateAnnotationOperationContext(ctx, incr); err != nil {
 		return false, err
@@ -1611,7 +1727,7 @@ func RemoveAnnotationsFromPageDict(
 	}
 
 	if len(annotTypes) == 0 && len(ids) == 0 && len(objNrSet) == 0 {
-		return removeAllAnnotations(ctx, pageDict, pageDictObjNr, pageNr, incr)
+		return removeAllAnnotations(c, ctx, pageDict, pageDictObjNr, pageNr, incr)
 	}
 
 	obj, found := pageDict.Find("Annots")
@@ -1625,7 +1741,7 @@ func RemoveAnnotationsFromPageDict(
 		if err != nil {
 			return false, err
 		}
-		ann, ok, err := removeAnnotationsFromAnnots(ctx, annotTypes, ids, objNrSet, pageNr, annots, incr)
+		ann, ok, err := removeAnnotationsFromAnnots(c, ctx, annotTypes, ids, objNrSet, pageNr, annots, incr)
 		if err != nil {
 			return false, fmt.Errorf("page %d Annots: %w", pageNr, err)
 		}
@@ -1651,7 +1767,9 @@ func RemoveAnnotationsFromPageDict(
 		return false, err
 	}
 
-	return removeAnnotationsFromIndAnnots(ctx, annotTypes, ids, objNrSet, pageNr, annots, incr, pageDict, pageDictObjNr, indRef)
+	return removeAnnotationsFromIndAnnots(
+		c, ctx, annotTypes, ids, objNrSet, pageNr, annots, incr, pageDict, pageDictObjNr, indRef,
+	)
 }
 
 func prepForRemoveAnnotations(ctx *model.Context, idsAndTypes []string, objNrs []int, incr bool) ([]model.AnnotationType, []string, types.IntSet, bool) {
@@ -1701,9 +1819,43 @@ func annotationRemovalCatalog(ctx *model.Context, removeAll bool) (types.Dict, e
 	return root, nil
 }
 
-// RemoveAnnotations removes annotations for selected pages by id, type or object number.
-// All annotations for selected pages are removed if neither idsAndTypes nor objNrs are provided.
-func RemoveAnnotations(ctx *model.Context, selectedPages types.IntSet, idsAndTypes []string, objNrs []int, incr bool) (bool, error) {
+func removeAnnotationsFromPage(
+	c context.Context,
+	ctx *model.Context,
+	annTypes []model.AnnotationType,
+	ids []string,
+	objNrSet types.IntSet,
+	pageNr int,
+	incr bool,
+) (bool, error) {
+	pageDictIndRef, d, err := pageDictForAnnotation(ctx, pageNr)
+	if err != nil {
+		return false, err
+	}
+	objNr := pageDictIndRef.ObjectNumber.Value()
+	ok, err := RemoveAnnotationsFromPageDict(
+		c, ctx, annTypes, ids, objNrSet, d, objNr, pageNr, incr,
+	)
+	if err != nil {
+		return false, fmt.Errorf("page %d: remove annotations: %w", pageNr, err)
+	}
+	return ok, contextutil.Check(c)
+}
+
+func annotationPageSelected(selectedPages types.IntSet, pageNr int) bool {
+	if selectedPages == nil {
+		return true
+	}
+	return selectedPages[pageNr]
+}
+
+// RemoveAnnotations removes annotations for selected pages by ID, type or object number and supports
+// cancellation. All annotations for selected pages are removed if neither idsAndTypes nor objNrs are provided.
+// On failure, ctx may contain partial changes and callers must discard it.
+func RemoveAnnotations(c context.Context, ctx *model.Context, selectedPages types.IntSet, idsAndTypes []string, objNrs []int, incr bool) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	if err := validateAnnotationOperationContext(ctx, incr); err != nil {
 		return false, err
 	}
@@ -1718,23 +1870,17 @@ func RemoveAnnotations(ctx *model.Context, selectedPages types.IntSet, idsAndTyp
 	var removed bool
 
 	for _, pageNr := range sortedPageNrsForAnnotsFromCache(ctx) {
-
-		if selectedPages != nil {
-			if _, found := selectedPages[pageNr]; !found {
-				continue
-			}
-		}
-
-		pageDictIndRef, d, err := pageDictForAnnotation(ctx, pageNr)
-		if err != nil {
+		if err := contextutil.Check(c); err != nil {
 			return false, err
 		}
 
-		objNr := pageDictIndRef.ObjectNumber.Value()
+		if !annotationPageSelected(selectedPages, pageNr) {
+			continue
+		}
 
-		ok, err := RemoveAnnotationsFromPageDict(ctx, annTypes, ids, objNrSet, d, objNr, pageNr, incr)
+		ok, err := removeAnnotationsFromPage(c, ctx, annTypes, ids, objNrSet, pageNr, incr)
 		if err != nil {
-			return false, fmt.Errorf("page %d: remove annotations: %w", pageNr, err)
+			return false, err
 		}
 		if ok {
 			removed = true
@@ -1753,5 +1899,5 @@ func RemoveAnnotations(ctx *model.Context, selectedPages types.IntSet, idsAndTyp
 		root.Delete("StructTreeRoot")
 	}
 
-	return removed, nil
+	return removed, contextutil.Check(c)
 }

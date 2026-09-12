@@ -70,7 +70,7 @@ func pdfWithUndecodableAttachment(t *testing.T, id string) []byte {
 	}
 
 	var buf bytes.Buffer
-	if err := WriteContext(ctx, &buf); err != nil {
+	if err := WriteContext(t.Context(), ctx, &buf); err != nil {
 		t.Fatal(err)
 	}
 	return buf.Bytes()
@@ -80,7 +80,7 @@ func TestExtractAttachmentsReportsUndecodableEmbeddedStream(t *testing.T) {
 	const id = "broken.bin"
 	pdf := pdfWithUndecodableAttachment(t, id)
 
-	_, err := ExtractAttachmentsRaw(bytes.NewReader(pdf), "", []string{id}, nil)
+	_, err := ExtractAttachmentsRaw(t.Context(), bytes.NewReader(pdf), "", []string{id}, nil)
 
 	if !errors.Is(err, zlib.ErrHeader) {
 		t.Fatalf("expected %v, got %v", zlib.ErrHeader, err)

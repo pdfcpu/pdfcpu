@@ -165,7 +165,7 @@ func TestReadAndRewriteDirectPDF20Info(t *testing.T) {
 			conf.PreserveInfoDict = true
 			conf.WriteObjectStream = false
 			conf.WriteXRefStream = false
-			ctx, err := Read(bytes.NewReader(directInfoPDF20(tt.headerVersion, tt.rootVersion)), conf)
+			ctx, err := Read(t.Context(), bytes.NewReader(directInfoPDF20(tt.headerVersion, tt.rootVersion)), conf)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -173,13 +173,13 @@ func TestReadAndRewriteDirectPDF20Info(t *testing.T) {
 
 			var output bytes.Buffer
 			ctx.Write.Writer = bufio.NewWriter(&output)
-			if err := WriteContext(ctx); err != nil {
+			if err := WriteContext(t.Context(), ctx); err != nil {
 				t.Fatal(err)
 			}
 			if !bytes.Contains(output.Bytes(), []byte("/Producer<FEFF88FD54C1540D>")) {
 				t.Fatal("rewritten output does not preserve Producer hex encoding")
 			}
-			rewritten, err := Read(bytes.NewReader(output.Bytes()), conf)
+			rewritten, err := Read(t.Context(), bytes.NewReader(output.Bytes()), conf)
 			if err != nil {
 				t.Fatal(err)
 			}

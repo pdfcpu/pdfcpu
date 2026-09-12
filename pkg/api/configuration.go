@@ -105,8 +105,8 @@ func resolveConfigurationSelection(root string) (string, ConfigurationSource, er
 	return root, ConfigurationSourceOSDefault, nil
 }
 
-// LoadConfigurationWithOptions loads an independent configuration using options.
-func LoadConfigurationWithOptions(options ConfigurationOptions) (*model.Configuration, error) {
+// LoadConfiguration loads an independent configuration using options.
+func LoadConfiguration(options ConfigurationOptions) (*model.Configuration, error) {
 	if err := validateConfigurationOptions(options); err != nil {
 		return nil, err
 	}
@@ -133,8 +133,8 @@ func LoadConfigurationWithOptions(options ConfigurationOptions) (*model.Configur
 	return conf, nil
 }
 
-// InitializeConfigurationWithOptions loads or initializes the selected configuration tree and reports whether
-// config.yml was created.
+// InitializeConfigurationWithOptions loads or initializes the selected configuration tree and
+// reports whether config.yml was created.
 func InitializeConfigurationWithOptions(options ConfigurationOptions) (*ConfigurationInitialization, error) {
 	if err := validateConfigurationOptions(options); err != nil {
 		return nil, err

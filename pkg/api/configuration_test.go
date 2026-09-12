@@ -62,11 +62,11 @@ func TestValidateConfigurationOptions(t *testing.T) {
 	}
 }
 
-func TestLoadConfigurationWithOptionsStatelessDoesNotDiscoverRoot(t *testing.T) {
+func TestLoadConfigurationStatelessDoesNotDiscoverRoot(t *testing.T) {
 	missingRoot := filepath.Join(t.TempDir(), "missing")
 	t.Setenv(configurationRootEnv, missingRoot)
 
-	conf, err := LoadConfigurationWithOptions(ConfigurationOptions{Mode: ConfigurationModeStateless})
+	conf, err := LoadConfiguration(ConfigurationOptions{Mode: ConfigurationModeStateless})
 	if err != nil {
 		t.Fatalf("load stateless configuration: %v", err)
 	}
@@ -78,12 +78,12 @@ func TestLoadConfigurationWithOptionsStatelessDoesNotDiscoverRoot(t *testing.T) 
 	}
 }
 
-func TestLoadConfigurationWithOptionsExplicitRoot(t *testing.T) {
+func TestLoadConfigurationExplicitRoot(t *testing.T) {
 	root := t.TempDir()
 	discoveredRoot := filepath.Join(t.TempDir(), "discovered")
 	t.Setenv(configurationRootEnv, discoveredRoot)
 
-	conf, err := LoadConfigurationWithOptions(ConfigurationOptions{Root: root})
+	conf, err := LoadConfiguration(ConfigurationOptions{Root: root})
 	if err != nil {
 		t.Fatalf("load automatic configuration: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestLoadConfigurationWithOptionsExplicitRoot(t *testing.T) {
 		t.Fatalf("explicit root did not take precedence: %v", err)
 	}
 
-	readOnly, err := LoadConfigurationWithOptions(ConfigurationOptions{
+	readOnly, err := LoadConfiguration(ConfigurationOptions{
 		Root: root,
 		Mode: ConfigurationModeReadOnly,
 	})
@@ -110,11 +110,11 @@ func TestLoadConfigurationWithOptionsExplicitRoot(t *testing.T) {
 	}
 }
 
-func TestLoadConfigurationWithOptionsUsesEnvironmentRoot(t *testing.T) {
+func TestLoadConfigurationUsesEnvironmentRoot(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv(configurationRootEnv, root)
 
-	conf, err := LoadConfigurationWithOptions(ConfigurationOptions{})
+	conf, err := LoadConfiguration(ConfigurationOptions{})
 	if err != nil {
 		t.Fatalf("load discovered configuration: %v", err)
 	}
@@ -160,9 +160,9 @@ func TestInitializeConfigurationWithOptionsRejectsNonAutomaticModes(t *testing.T
 	}
 }
 
-func TestLoadConfigurationWithOptionsReturnsIndependentConfigurations(t *testing.T) {
+func TestLoadConfigurationReturnsIndependentConfigurations(t *testing.T) {
 	root := t.TempDir()
-	if _, err := LoadConfigurationWithOptions(ConfigurationOptions{Root: root}); err != nil {
+	if _, err := LoadConfiguration(ConfigurationOptions{Root: root}); err != nil {
 		t.Fatalf("initialize configuration: %v", err)
 	}
 	path := filepath.Join(root, "pdfcpu", "config.yml")
@@ -179,11 +179,11 @@ func TestLoadConfigurationWithOptionsReturnsIndependentConfigurations(t *testing
 		t.Fatalf("write configuration: %v", err)
 	}
 
-	first, err := LoadConfigurationWithOptions(ConfigurationOptions{Root: root})
+	first, err := LoadConfiguration(ConfigurationOptions{Root: root})
 	if err != nil {
 		t.Fatalf("load first configuration: %v", err)
 	}
-	second, err := LoadConfigurationWithOptions(ConfigurationOptions{Root: root})
+	second, err := LoadConfiguration(ConfigurationOptions{Root: root})
 	if err != nil {
 		t.Fatalf("load second configuration: %v", err)
 	}
@@ -198,9 +198,9 @@ func TestLoadConfigurationWithOptionsReturnsIndependentConfigurations(t *testing
 	}
 }
 
-func TestLoadConfigurationWithOptionsReturnsOrdinaryErrors(t *testing.T) {
+func TestLoadConfigurationReturnsOrdinaryErrors(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "missing")
-	_, err := LoadConfigurationWithOptions(ConfigurationOptions{
+	_, err := LoadConfiguration(ConfigurationOptions{
 		Root: root,
 		Mode: ConfigurationModeReadOnly,
 	})
@@ -227,11 +227,11 @@ func replaceConfigurationSetting(t *testing.T, path, old, replacement string) {
 func TestResetConfigurationWithOptionsUsesExplicitRoot(t *testing.T) {
 	root := t.TempDir()
 	otherRoot := t.TempDir()
-	rootConf, err := LoadConfigurationWithOptions(ConfigurationOptions{Root: root})
+	rootConf, err := LoadConfiguration(ConfigurationOptions{Root: root})
 	if err != nil {
 		t.Fatalf("initialize selected root: %v", err)
 	}
-	otherConf, err := LoadConfigurationWithOptions(ConfigurationOptions{Root: otherRoot})
+	otherConf, err := LoadConfiguration(ConfigurationOptions{Root: otherRoot})
 	if err != nil {
 		t.Fatalf("initialize other root: %v", err)
 	}
@@ -261,7 +261,7 @@ func TestResetConfigurationWithOptionsUsesExplicitRoot(t *testing.T) {
 
 func TestResetConfigurationWithOptionsUsesEnvironmentRoot(t *testing.T) {
 	root := t.TempDir()
-	conf, err := LoadConfigurationWithOptions(ConfigurationOptions{Root: root})
+	conf, err := LoadConfiguration(ConfigurationOptions{Root: root})
 	if err != nil {
 		t.Fatalf("initialize configuration: %v", err)
 	}

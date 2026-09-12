@@ -34,7 +34,7 @@ func TestSplitCommand(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
 
 	cmd := cli.SplitCommand(inFile, outDir, span, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s span=%d %s: %v\n", msg, span, inFile, err)
 	}
 }
@@ -47,7 +47,7 @@ func TestSplitBySpanCommand(t *testing.T) {
 	span := 2
 
 	cmd := cli.SplitCommand(inFile, outDir, span, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s span=%d %s: %v\n", msg, span, inFile, err)
 	}
 }
@@ -61,7 +61,7 @@ func TestSplitByBookmarkCommand(t *testing.T) {
 	span := 0 // This means we are going to split by bookmarks.
 
 	cmd := cli.SplitCommand(inFile, outDir, span, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }
@@ -78,7 +78,7 @@ func TestSplitByPageNrCommand(t *testing.T) {
 	// Generate page section 50-last page
 
 	cmd := cli.SplitByPageNrCommand(inFile, outDir, []int{2, 10, 50}, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, inFile, err)
 	}
 }

@@ -18,6 +18,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	stdlog "log"
@@ -27,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
@@ -52,10 +54,10 @@ func TestRunCommandJoinsDispatchAndOutputErrors(t *testing.T) {
 	dispatchErr := errors.New("dispatch failed")
 	writeErr := errors.New("stdout failed")
 	w := &commandOutputErrorWriter{err: writeErr}
-	dispatch := func(*cli.Command) ([]string, error) {
+	dispatch := func(context.Context, *cli.Command) ([]string, error) {
 		return []string{"first", "second", "third"}, dispatchErr
 	}
-	err := runCommandWithOutput(&cli.Command{}, w, dispatch, false)
+	err := runCommandWithOutput(t.Context(), &cli.Command{}, w, dispatch, false)
 	if !errors.Is(err, dispatchErr) || !errors.Is(err, writeErr) {
 		t.Fatalf("expected joined dispatch and stdout errors, got %v", err)
 	}
@@ -142,17 +144,19 @@ func TestParseForGridUsesAPIBoundary(t *testing.T) {
 
 // TestHandleResizeCommandGuardsAndContext verifies resize command-handler boundaries.
 func TestHandleResizeCommandGuardsAndContext(t *testing.T) {
-	if err := handleResizeCommand(nil, nil); !errors.Is(err, api.ErrMissingConfiguration) {
+	if err := handleResizeCommand(t.Context(), nil, nil); !errors.Is(err, api.ErrMissingConfiguration) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingConfiguration, err)
 	}
 	conf := model.NewDefaultConfiguration()
-	if err := handleResizeCommand(conf, nil); !errors.Is(err, api.ErrMissingResizeConfiguration) {
+	if err := handleResizeCommand(t.Context(), conf, nil); !errors.Is(err, api.ErrMissingResizeConfiguration) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingResizeConfiguration, err)
 	}
-	if err := handleResizeCommand(conf, []string{"sc:.5"}); !errors.Is(err, api.ErrMissingPDFInput) {
+	if err := handleResizeCommand(
+		t.Context(), conf, []string{"sc:.5"},
+	); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
-	err := handleResizeCommand(conf, []string{"bad", "missing.pdf"})
+	err := handleResizeCommand(t.Context(), conf, []string{"bad", "missing.pdf"})
 	if err == nil || !strings.Contains(err.Error(), "resize: parse configuration") {
 		t.Fatalf("expected resize configuration context, got %v", err)
 	}
@@ -220,7 +224,9 @@ func TestParseForGridErrorsIncludeDimensionContext(t *testing.T) {
 }
 
 func TestHandleGridCommandAddsArgumentContext(t *testing.T) {
-	err := handleGridCommand(model.NewDefaultConfiguration(), []string{"out.pdf", "x", "3", "in.pdf"})
+	err := handleGridCommand(
+		t.Context(), model.NewDefaultConfiguration(), []string{"out.pdf", "x", "3", "in.pdf"},
+	)
 	if err == nil || !strings.Contains(err.Error(), `grid: parse arguments: parse grid rows "x"`) {
 		t.Fatalf("expected grid argument context, got %v", err)
 	}
@@ -271,7 +277,7 @@ func TestPrintErrorIncludesStackTraceWhenRequested(t *testing.T) {
 
 func TestHandleValidateCommandRejectsEmptyExpansion(t *testing.T) {
 	opts := &validateOptions{mode: "relaxed"}
-	err := handleValidateCommand(model.NewDefaultConfiguration(), []string{"missing.txt"}, opts)
+	err := handleValidateCommand(t.Context(), model.NewDefaultConfiguration(), []string{"missing.txt"}, opts)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -285,12 +291,494 @@ func TestHandleValidateCommandRejectsEmptyExpansion(t *testing.T) {
 
 func TestHandleValidateCommandReturnsExpansionError(t *testing.T) {
 	opts := &validateOptions{mode: "relaxed"}
-	err := handleValidateCommand(model.NewDefaultConfiguration(), []string{"[*"}, opts)
+	err := handleValidateCommand(t.Context(), model.NewDefaultConfiguration(), []string{"[*"}, opts)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 	if !strings.Contains(err.Error(), "validate: expand input") {
 		t.Fatalf("got %q", err.Error())
+	}
+}
+
+func TestHandleValidateCommandPropagatesContextCancellation(t *testing.T) {
+	inFile := filepath.Join("..", "..", "pkg", "testdata", "test.pdf")
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleValidateCommand(
+		ctx,
+		model.NewDefaultConfiguration(),
+		[]string{inFile},
+		&validateOptions{mode: "relaxed"},
+	)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleOptimizeCommandPropagatesContextCancellation(t *testing.T) {
+	inFile := filepath.Join("..", "..", "pkg", "testdata", "test.pdf")
+	outFile := filepath.Join(t.TempDir(), "out.pdf")
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleOptimizeCommand(
+		c,
+		model.NewDefaultConfiguration(),
+		[]string{inFile, outFile},
+		&optimizeCommandOptions{},
+	)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleMergeCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleMergeCommand(
+		c,
+		model.NewDefaultConfiguration(),
+		[]string{"out.pdf", "ignored.pdf"},
+		&mergeOptions{mode: "create"},
+	)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleSplitCommandPropagatesContextCancellation(t *testing.T) {
+	inFile := filepath.Join("..", "..", "pkg", "testdata", "test.pdf")
+	tests := []struct {
+		name string
+		mode string
+		args func(string) []string
+	}{
+		{"span", "span", func(outDir string) []string { return []string{inFile, outDir} }},
+		{"page", "page", func(outDir string) []string { return []string{inFile, outDir, "2"} }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, cancel := context.WithCancel(t.Context())
+			cancel()
+			err := handleSplitCommand(
+				c,
+				model.NewDefaultConfiguration(),
+				tt.args(t.TempDir()),
+				&splitOptions{mode: tt.mode},
+			)
+			if !errors.Is(err, context.Canceled) {
+				t.Fatalf("got %v, want context.Canceled", err)
+			}
+		})
+	}
+}
+
+func TestSplitCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := splitCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"ignored.pdf", "out"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleTrimCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleTrimCommand(c, model.NewDefaultConfiguration(), []string{"ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestTrimCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := trimCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleCollectCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleCollectCommand(c, model.NewDefaultConfiguration(), []string{"ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestCollectCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := collectCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleRotateCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleRotateCommand(c, model.NewDefaultConfiguration(), []string{"ignored.pdf", "90"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestRotateCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := rotateCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"ignored.pdf", "90"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleInsertPagesCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleInsertPagesCommand(
+		c, model.NewDefaultConfiguration(), []string{"ignored.pdf"}, &pagesInsertOptions{mode: "before"},
+	)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestInsertPagesCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd, _, err := pagesCmd().Find([]string{"insert"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleRemovePagesCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleRemovePagesCommand(c, model.NewDefaultConfiguration(), []string{"ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestRemovePagesCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd, _, err := pagesCmd().Find([]string{"remove"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleCropCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleCropCommand(c, model.NewDefaultConfiguration(), []string{"10", "ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestCropCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := cropCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"10", "ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleAddBoxesCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleAddBoxesCommand(c, model.NewDefaultConfiguration(), []string{"media:dim:100 100", "ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleListBoxesCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleListBoxesCommand(c, model.NewDefaultConfiguration(), []string{"ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestListBoxesCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd, _, err := boxesCmd().Find([]string{"list"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestAddBoxesCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd, _, err := boxesCmd().Find([]string{"add"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"media:dim:100 100", "ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleRemoveBoxesCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleRemoveBoxesCommand(c, model.NewDefaultConfiguration(), []string{"crop", "ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestRemoveBoxesCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd, _, err := boxesCmd().Find([]string{"remove"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"crop", "ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleZoomCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleZoomCommand(c, model.NewDefaultConfiguration(), []string{"factor:.5", "ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestZoomCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := zoomCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"factor:.5", "ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleResizeCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleResizeCommand(c, model.NewDefaultConfiguration(), []string{"sc:.5", "ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestResizeCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := resizeCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"sc:.5", "ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleNUpCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleNUpCommand(c, model.NewDefaultConfiguration(), []string{"out.pdf", "2", "ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestNUpCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := nupCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"out.pdf", "2", "ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleGridCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleGridCommand(c, model.NewDefaultConfiguration(), []string{"out.pdf", "2", "2", "ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestGridCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := gridCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"out.pdf", "2", "2", "ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleBookletCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleBookletCommand(c, model.NewDefaultConfiguration(), []string{"out.pdf", "2", "ignored.pdf"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestBookletCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := bookletCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"out.pdf", "2", "ignored.pdf"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandlePosterCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handlePosterCommand(
+		c, model.NewDefaultConfiguration(), []string{"dim:100 100", "ignored.pdf", "out"},
+	)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestPosterCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := posterCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"dim:100 100", "ignored.pdf", "out"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleNDownCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleNDownCommand(c, model.NewDefaultConfiguration(), []string{"2", "ignored.pdf", "out"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestNDownCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := ndownCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"2", "ignored.pdf", "out"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestHandleCutCommandPropagatesContextCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	err := handleCutCommand(c, model.NewDefaultConfiguration(), []string{"hor:.5", "ignored.pdf", "out"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestCutCommandUsesCobraContext(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	cmd := cutCmd()
+	cmd.SetContext(c)
+
+	if err := cmd.RunE(cmd, []string{"hor:.5", "ignored.pdf", "out"}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestExecuteRejectsNilContext(t *testing.T) {
+	if err := execute(nil); !errors.Is(err, cli.ErrMissingContext) {
+		t.Fatalf("got %v, want cli.ErrMissingContext", err)
+	}
+}
+
+func TestRestoreDefaultSignalHandlingAfterCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	restored := make(chan struct{})
+	go restoreDefaultSignalHandling(c, func() { close(restored) })
+
+	cancel()
+	select {
+	case <-restored:
+	case <-time.After(time.Second):
+		t.Fatal("default signal handling was not restored")
 	}
 }
 
@@ -329,6 +817,7 @@ func TestHandleValidateCommandStreamsFailuresInQuietMode(t *testing.T) {
 	var validationErr error
 	stderr := captureStderr(t, func() {
 		validationErr = handleValidateCommand(
+			t.Context(),
 			model.NewDefaultConfiguration(),
 			[]string{"missing1.pdf", "missing2.pdf"},
 			&validateOptions{mode: "relaxed"},
@@ -364,6 +853,7 @@ func TestHandleValidateCommandReportsProgressInQuietMode(t *testing.T) {
 	var validationErr error
 	stderr := captureStderr(t, func() {
 		validationErr = handleValidateCommand(
+			t.Context(),
 			model.NewDefaultConfiguration(),
 			[]string{"missing1.pdf", "missing2.pdf"},
 			&validateOptions{mode: "relaxed", progress: true},
@@ -424,6 +914,7 @@ func TestHandleValidateCommandQuietProgressForValidInput(t *testing.T) {
 			var validationErr error
 			stderr := captureStderr(t, func() {
 				validationErr = handleValidateCommand(
+					t.Context(),
 					model.NewDefaultConfiguration(),
 					[]string{inFile},
 					&validateOptions{mode: "relaxed", progress: tt.progress, optimize: tt.optimize},
@@ -453,6 +944,7 @@ func TestHandleValidateCommandRoutesNonQuietProgressThroughCommandOutput(t *test
 	var validationErr error
 	stderr := captureStderr(t, func() {
 		validationErr = handleValidateCommand(
+			t.Context(),
 			model.NewDefaultConfiguration(),
 			[]string{inFile},
 			&validateOptions{mode: "relaxed", progress: true},
@@ -492,6 +984,7 @@ func TestHandleValidateCommandReportsRecursiveProgressInTraversalOrder(t *testin
 	var validationErr error
 	stderr := captureStderr(t, func() {
 		validationErr = handleValidateCommand(
+			t.Context(),
 			model.NewDefaultConfiguration(),
 			[]string{filepath.Join(dir, "**", "*.pdf")},
 			&validateOptions{mode: "relaxed", progress: true},
@@ -520,7 +1013,12 @@ func TestSplitSpanRejectsExtraArgs(t *testing.T) {
 
 func TestHandleSplitCommandRejectsBookmarkExtraArgs(t *testing.T) {
 	opts := &splitOptions{mode: "bookmark"}
-	err := handleSplitCommand(model.NewDefaultConfiguration(), []string{"missing.pdf", t.TempDir(), "2"}, opts)
+	err := handleSplitCommand(
+		t.Context(),
+		model.NewDefaultConfiguration(),
+		[]string{"missing.pdf", t.TempDir(), "2"},
+		opts,
+	)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -530,7 +1028,9 @@ func TestHandleSplitCommandRejectsBookmarkExtraArgs(t *testing.T) {
 }
 
 func TestHandleExportBookmarksAcceptsStdout(t *testing.T) {
-	err := handleExportBookmarksCommand(model.NewDefaultConfiguration(), []string{"missing.pdf", "-"})
+	err := handleExportBookmarksCommand(
+		t.Context(), model.NewDefaultConfiguration(), []string{"missing.pdf", "-"},
+	)
 	if err == nil {
 		t.Fatal("expected error")
 	}

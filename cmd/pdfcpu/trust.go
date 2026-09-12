@@ -17,11 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -49,8 +51,8 @@ func certificatesCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List certificates",
 		Long:  usageLongCertificatesList,
-		RunE: wrapHandler(func(conf *model.Configuration, args []string) error {
-			return handleListCertificatesCommand(conf, args, listOpts)
+		RunE: wrapContextHandler(func(c context.Context, conf *model.Configuration, args []string) error {
+			return handleListCertificatesCommand(c, conf, args, listOpts)
 		}),
 	}
 	listCmd.Flags().BoolVarP(&listOpts.json, "json", "j", listOpts.json, "output JSON")
@@ -61,13 +63,13 @@ func certificatesCmd() *cobra.Command {
 			Use:   "inspect inFile",
 			Short: "Inspect certificates",
 			Args:  cobra.ExactArgs(1),
-			RunE:  wrapHandler(handleInspectCertificatesCommand),
+			RunE:  wrapContextHandler(handleInspectCertificatesCommand),
 		},
 		&cobra.Command{
 			Use:   "import inFile...",
 			Short: "Import certificates, replacing matching installed files",
 			Args:  cobra.MinimumNArgs(1),
-			RunE:  wrapHandler(handleImportCertificatesCommand),
+			RunE:  wrapContextHandler(handleImportCertificatesCommand),
 		},
 		&cobra.Command{
 			Use:   "reset",
@@ -84,7 +86,7 @@ func signaturesRemoveCmd() *cobra.Command {
 		Use:   "remove inFile [ outFile ]",
 		Short: "Remove signatures",
 		Args:  cobra.RangeArgs(1, 2),
-		RunE:  wrapHandler(handleRemoveSignaturesCommand),
+		RunE:  wrapContextHandler(handleRemoveSignaturesCommand),
 	}
 	cmd.Flags().BoolVar(&removeEncryption, "rmenc", false, "remove encryption")
 	return cmd
@@ -97,8 +99,8 @@ func signaturesValidateCmd() *cobra.Command {
 		Short: "Validate signature integrity",
 		Long:  usageLongSignaturesValidate,
 		Args:  cobra.ExactArgs(1),
-		RunE: wrapHandler(func(conf *model.Configuration, args []string) error {
-			return handleValidateSignaturesCommand(conf, args, opts)
+		RunE: wrapContextHandler(func(c context.Context, conf *model.Configuration, args []string) error {
+			return handleValidateSignaturesCommand(c, conf, args, opts)
 		}),
 	}
 	cmd.Flags().BoolVarP(&opts.all, "all", "a", opts.all, "validate all signatures")
@@ -131,12 +133,15 @@ func resetCertificates(conf *model.Configuration, args []string) error {
 	return nil
 }
 
-func handleListCertificatesCommand(conf *model.Configuration, args []string, opts *certificatesListOptions) error {
+func handleListCertificatesCommand(c context.Context, conf *model.Configuration, args []string, opts *certificatesListOptions) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if opts.json {
 		log.SetCLILogger(nil)
 	}
 
-	return runCommand(cli.ListCertificatesCommand(opts.json, conf))
+	return runCommand(c, cli.ListCertificatesCommand(opts.json, conf))
 }
 
 func isCertificateFile(fName string) bool {
@@ -148,10 +153,16 @@ func isCertificateFile(fName string) bool {
 	return false
 }
 
-func certificateFiles(args []string) ([]string, error) {
+func certificateFiles(c context.Context, args []string) ([]string, error) {
+	if c == nil {
+		return nil, cli.ErrMissingContext
+	}
 	var inFiles []string
 	for _, arg := range args {
-		files, err := certificateFilesForArg(arg)
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
+		files, err := certificateFilesForArg(c, arg)
 		if err != nil {
 			return nil, err
 		}
@@ -160,9 +171,12 @@ func certificateFiles(args []string) ([]string, error) {
 	return inFiles, nil
 }
 
-func certificateFilesForArg(arg string) ([]string, error) {
+func certificateFilesForArg(c context.Context, arg string) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if strings.Contains(arg, "*") {
-		return expandedCertificateFiles(arg)
+		return expandedCertificateFiles(c, arg)
 	}
 	if !isCertificateFile(arg) {
 		return nil, fmt.Errorf("%s - allowed extensions: .pem, .p7c, .cer, .crt", arg)
@@ -170,13 +184,19 @@ func certificateFilesForArg(arg string) ([]string, error) {
 	return []string{arg}, nil
 }
 
-func expandedCertificateFiles(arg string) ([]string, error) {
+func expandedCertificateFiles(c context.Context, arg string) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	matches, err := filepath.Glob(arg)
 	if err != nil {
 		return nil, err
 	}
 	var inFiles []string
 	for _, inFile := range matches {
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
 		if !isCertificateFile(inFile) {
 			fmt.Fprintf(os.Stderr, "skipping %s - allowed extensions: .pem, .p7c, .cer, .crt\n", inFile)
 			continue
@@ -186,35 +206,41 @@ func expandedCertificateFiles(arg string) ([]string, error) {
 	return inFiles, nil
 }
 
-func handleInspectCertificatesCommand(conf *model.Configuration, args []string) error {
-	inFiles, err := certificateFiles(args)
+func handleInspectCertificatesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	inFiles, err := certificateFiles(c, args)
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.InspectCertificatesCommand(inFiles, conf))
+	return runCommand(c, cli.InspectCertificatesCommand(inFiles, conf))
 }
 
-func handleImportCertificatesCommand(conf *model.Configuration, args []string) error {
-	inFiles, err := certificateFiles(args)
+func handleImportCertificatesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	inFiles, err := certificateFiles(c, args)
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.ImportCertificatesCommand(inFiles, conf))
+	return runCommand(c, cli.ImportCertificatesCommand(inFiles, conf))
 }
 
-func handleValidateSignaturesCommand(conf *model.Configuration, args []string, opts *signaturesValidateOptions) error {
+func handleValidateSignaturesCommand(c context.Context, conf *model.Configuration, args []string, opts *signaturesValidateOptions) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile := args[0]
 	if err := inputPDFArg(conf, inFile); err != nil {
 		return err
 	}
 
-	return runCommand(cli.ValidateSignaturesCommand(inFile, opts.all, opts.full, conf))
+	return runCommand(c, cli.ValidateSignaturesCommand(inFile, opts.all, opts.full, conf))
 }
 
-func handleRemoveSignaturesCommand(conf *model.Configuration, args []string) error {
+func handleRemoveSignaturesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile, outFile, err := inputOutputPDFArgs(conf, args)
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.RemoveSignaturesCommand(inFile, outFile, conf))
+	return runCommand(c, cli.RemoveSignaturesCommand(inFile, outFile, conf))
 }

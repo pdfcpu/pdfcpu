@@ -31,14 +31,14 @@ func TestTrim(t *testing.T) {
 	outFile := filepath.Join(outDir, fileName)
 
 	// Create a trimmed version of inFile containing odd page numbers only.
-	if err := api.TrimFile(inFile, outFile, []string{"odd"}, nil); err != nil {
+	if err := api.TrimFile(t.Context(), inFile, outFile, []string{"odd"}, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	// Create a trimmed version of inFile containing the first two pages only.
 	// If you want to modify the original file, pass an empty string for outFile.
 	inFile = outFile
-	if err := api.TrimFile(inFile, "", []string{"1-2"}, nil); err != nil {
+	if err := api.TrimFile(t.Context(), inFile, "", []string{"1-2"}, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

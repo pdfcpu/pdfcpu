@@ -17,16 +17,21 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// PropertiesAdd adds properties into the document info dict.
-func PropertiesAdd(ctx *model.Context, properties map[string]string) error {
-	if err := preparePropertiesInfo(ctx); err != nil {
+// PropertiesAdd adds properties into the document info dict and supports cancellation.
+func PropertiesAdd(c context.Context, ctx *model.Context, properties map[string]string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if err := preparePropertiesInfo(c, ctx); err != nil {
 		return err
 	}
 	d, err := ctx.DereferenceDict(*ctx.Info)
@@ -38,6 +43,9 @@ func PropertiesAdd(ctx *model.Context, properties map[string]string) error {
 	}
 
 	for k, v := range properties {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		s, err := types.EscapedUTF16String(v)
 		if err != nil {
 			return fmt.Errorf("Info dictionary property %q: encode value: %w", k, err)
@@ -46,10 +54,13 @@ func PropertiesAdd(ctx *model.Context, properties map[string]string) error {
 		ctx.Properties[k] = *s
 	}
 
-	return nil
+	return contextutil.Check(c)
 }
 
-func preparePropertiesInfo(ctx *model.Context) error {
+func preparePropertiesInfo(c context.Context, ctx *model.Context) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if ctx.XRefTable.Version() < model.V20 {
 		if err := ensureInfoDict(ctx); err != nil {
 			return fmt.Errorf("Info dictionary: ensure: %w", err)
@@ -61,15 +72,18 @@ func preparePropertiesInfo(ctx *model.Context) error {
 	if err := ensureFileID(ctx); err != nil {
 		return fmt.Errorf("file ID: ensure: %w", err)
 	}
-	return nil
+	return contextutil.Check(c)
 }
 
 // PropertiesRemove deletes specified document properties.
+// It supports cancellation and returns true if at least one property was removed.
 // If properties is empty, it removes all properties and catalog XMP metadata.
-// Returns true if at least one property was removed.
-func PropertiesRemove(ctx *model.Context, properties []string) (bool, error) {
+func PropertiesRemove(c context.Context, ctx *model.Context, properties []string) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	if len(properties) == 0 {
-		return removeAllProperties(ctx)
+		return removeAllProperties(c, ctx)
 	}
 
 	if ctx.Info == nil {
@@ -86,6 +100,9 @@ func PropertiesRemove(ctx *model.Context, properties []string) (bool, error) {
 
 	var removed bool
 	for _, k := range properties {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
 		_, ok := d[k]
 		if ok {
 			delete(d, k)
@@ -94,10 +111,13 @@ func PropertiesRemove(ctx *model.Context, properties []string) (bool, error) {
 		}
 	}
 
-	return removed, nil
+	return removed, contextutil.Check(c)
 }
 
-func removeAllProperties(ctx *model.Context) (bool, error) {
+func removeAllProperties(c context.Context, ctx *model.Context) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	var removed bool
 
 	if ctx.Info != nil {
@@ -109,6 +129,9 @@ func removeAllProperties(ctx *model.Context) (bool, error) {
 			return false, errors.New("Info dictionary: missing object")
 		}
 		for k := range ctx.Properties {
+			if err := contextutil.Check(c); err != nil {
+				return false, err
+			}
 			delete(d, types.EncodeName(k))
 			removed = true
 		}
@@ -125,5 +148,5 @@ func removeAllProperties(ctx *model.Context) (bool, error) {
 		removed = true
 	}
 
-	return removed, nil
+	return removed, contextutil.Check(c)
 }

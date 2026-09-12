@@ -17,6 +17,7 @@
 package primitives
 
 import (
+	"context"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -31,12 +32,12 @@ func useMissingGlobalFontDirectory(t *testing.T) {
 	t.Helper()
 	originalDir := corefont.UserFontDir
 	corefont.UserFontDir = filepath.Join(t.TempDir(), "missing")
-	if err := corefont.ReloadUserFonts(); err == nil {
+	if err := corefont.ReloadUserFonts(t.Context()); err == nil {
 		t.Fatal("expected missing global font directory error")
 	}
 	t.Cleanup(func() {
 		corefont.UserFontDir = originalDir
-		if err := corefont.ReloadUserFonts(); err != nil {
+		if err := corefont.ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore global font directory: %v", err)
 		}
 	})
@@ -54,7 +55,7 @@ func TestStatelessPrimitiveFontLookupsDoNotUseGlobalRepository(t *testing.T) {
 		"BaseFont": types.Name("Demo"),
 	})
 
-	fontName, _, _, err := FormFontDetails(ctx.XRefTable, *indRef)
+	fontName, _, _, err := FormFontDetails(t.Context(), ctx.XRefTable, *indRef)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,10 +63,10 @@ func TestStatelessPrimitiveFontLookupsDoNotUseGlobalRepository(t *testing.T) {
 		t.Fatalf("expected font name Demo, got %q", fontName)
 	}
 
-	if _, err := fontIndRef(ctx.XRefTable, "Demo", ""); !errors.Is(err, corefont.ErrUnknownFont) {
+	if _, err := fontIndRef(t.Context(), ctx.XRefTable, "Demo", ""); !errors.Is(err, corefont.ErrUnknownFont) {
 		t.Fatalf("expected %v from font reference creation, got %v", corefont.ErrUnknownFont, err)
 	}
-	pdf := &PDF{XRefTable: ctx.XRefTable}
+	pdf := &PDF{ctx: t.Context(), XRefTable: ctx.XRefTable}
 	if _, err := pdf.ensureFont("F0", "Demo", "", model.FontMap{"Demo": {}}); !errors.Is(err, corefont.ErrUnknownFont) {
 		t.Fatalf("expected %v from font creation, got %v", corefont.ErrUnknownFont, err)
 	}
@@ -80,7 +81,7 @@ func TestStatelessPrimitiveFontLookupsDoNotUseGlobalRepository(t *testing.T) {
 	}
 
 	fd := types.Dict{"F0": *indRef}
-	if _, _, _, _, _, err := fontAttrs(ctx, fd, "F0", "text", map[string]types.IndirectRef{}); !errors.Is(err, corefont.ErrUnknownFont) {
+	if _, _, _, _, _, err := fontAttrs(t.Context(), ctx, fd, "F0", "text", map[string]types.IndirectRef{}); !errors.Is(err, corefont.ErrUnknownFont) {
 		t.Fatalf("expected %v from replacement font creation, got %v", corefont.ErrUnknownFont, err)
 	}
 }
@@ -91,14 +92,14 @@ func TestFormFontValidationUsesStatelessRepository(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pdf := &PDF{XRefTable: ctx.XRefTable}
+	pdf := &PDF{ctx: t.Context(), XRefTable: ctx.XRefTable}
 
 	unsupported := &FormFont{pdf: pdf, Name: "Demo", Size: 12}
 	if err := unsupported.validate(); err == nil || !strings.Contains(err.Error(), "font Demo is unsupported") {
 		t.Fatalf("expected unsupported stateless font, got %v", err)
 	}
 	unsupported.Script = "Latn"
-	if err := unsupported.validateScriptSupport(ctx.XRefTable.FontRepository()); err == nil ||
+	if err := unsupported.validateScriptSupport(t.Context(), ctx.XRefTable.FontRepository()); err == nil ||
 		!strings.Contains(err.Error(), "userfont Demo not available") {
 		t.Fatalf("expected unavailable stateless user font, got %v", err)
 	}
@@ -123,7 +124,7 @@ func TestPDFValidateWrapsTopLevelPhase(t *testing.T) {
 		Conf:  model.NewDefaultConfiguration(),
 	}
 
-	err := pdf.Validate()
+	err := pdf.Validate(t.Context())
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -140,7 +141,7 @@ func TestPDFValidateWrapsPagePhase(t *testing.T) {
 		},
 	}
 
-	err := pdf.Validate()
+	err := pdf.Validate(t.Context())
 	if err == nil {
 		t.Fatal("expected error")
 	}

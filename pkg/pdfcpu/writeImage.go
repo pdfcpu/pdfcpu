@@ -517,7 +517,8 @@ func renderCalRGBToPNG(im *PDFImage) (io.Reader, string, error) {
 
 func renderICCBased(xRefTable *model.XRefTable, im *PDFImage, cs types.Array) (io.Reader, string, error) {
 	//  Any ICC profile >= ICC.1:2004:10 is sufficient for any PDF version <= 1.7
-	//  If the embedded ICC profile version is newer than the one used by the Reader, substitute with Alternate color space.
+	// If the embedded ICC profile version is newer than the one used by the Reader,
+	// substitute with Alternate color space.
 
 	iccProfileStream, err := dereferenceRequiredStreamDict(xRefTable, cs[1], "colorspace ICCBased profile")
 	if err != nil {
@@ -1112,5 +1113,6 @@ func WriteImage(xRefTable *model.XRefTable, fileName string, sd *types.StreamDic
 	if isNilReader(r) {
 		return "", fmt.Errorf("image obj#%d: %w", objNr, ErrMissingImageReader)
 	}
-	return fileName, WriteReader(fileName, r)
+	_, err = Write(r, fileName, true)
+	return fileName, err
 }

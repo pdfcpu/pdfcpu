@@ -41,7 +41,7 @@ func TestResizeByScaleFactor(t *testing.T) {
 	}
 
 	outFile := filepath.Join(samplesDir, "resize", "enlargeByScaleFactor.pdf")
-	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
+	if err := api.ResizeFile(t.Context(), inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
 
@@ -52,7 +52,7 @@ func TestResizeByScaleFactor(t *testing.T) {
 	}
 
 	outFile = filepath.Join(samplesDir, "resize", "shrinkByScaleFactor.pdf")
-	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
+	if err := api.ResizeFile(t.Context(), inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
 }
@@ -70,7 +70,7 @@ func TestResizeByWidthOrHeight(t *testing.T) {
 	}
 
 	outFile := filepath.Join(samplesDir, "resize", "resizeByWidth.pdf")
-	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
+	if err := api.ResizeFile(t.Context(), inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
 
@@ -81,7 +81,7 @@ func TestResizeByWidthOrHeight(t *testing.T) {
 	}
 
 	outFile = filepath.Join(samplesDir, "resize", "resizeByHeight.pdf")
-	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
+	if err := api.ResizeFile(t.Context(), inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
 }
@@ -99,7 +99,7 @@ func TestResizeToFormSize(t *testing.T) {
 	}
 
 	outFile := filepath.Join(samplesDir, "resize", "resizeToA3.pdf")
-	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
+	if err := api.ResizeFile(t.Context(), inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
 
@@ -110,7 +110,7 @@ func TestResizeToFormSize(t *testing.T) {
 	}
 
 	outFile = filepath.Join(samplesDir, "resize", "resizeToA4L.pdf")
-	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
+	if err := api.ResizeFile(t.Context(), inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
 }
@@ -129,7 +129,7 @@ func TestResizeToDimensions(t *testing.T) {
 	}
 
 	outFile := filepath.Join(samplesDir, "resize", "resizeToDimensionsKeep.pdf")
-	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
+	if err := api.ResizeFile(t.Context(), inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
 
@@ -141,7 +141,7 @@ func TestResizeToDimensions(t *testing.T) {
 	}
 
 	outFile = filepath.Join(samplesDir, "resize", "resizeToDimensionsEnforce.pdf")
-	if err := api.ResizeFile(inFile, outFile, nil, res, nil); err != nil {
+	if err := api.ResizeFile(t.Context(), inFile, outFile, nil, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
 }
@@ -189,7 +189,7 @@ func resizeAnnotationExpectedValues(ff []float64) []float64 {
 
 func resizeTestAnnotationDict(t *testing.T, fileName string) (*model.Context, types.Dict) {
 	t.Helper()
-	ctx, err := api.ReadContextFile(fileName)
+	ctx, err := api.ReadContextFile(t.Context(), fileName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +240,7 @@ func TestResizeAnnotationGeometry(t *testing.T) {
 		model.BSSolid,         // borderStyle
 	)
 
-	if err := api.AddAnnotationsFile(inFile, annotFile, []string{"1"}, ann, nil, false); err != nil {
+	if err := api.AddAnnotationsFile(t.Context(), inFile, annotFile, []string{"1"}, ann, nil, false); err != nil {
 		t.Fatalf("%s add annotation: %v\n", msg, err)
 	}
 
@@ -248,7 +248,7 @@ func TestResizeAnnotationGeometry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s invalid resize configuration: %v\n", msg, err)
 	}
-	if err := api.ResizeFile(annotFile, outFile, []string{"1"}, res, nil); err != nil {
+	if err := api.ResizeFile(t.Context(), annotFile, outFile, []string{"1"}, res, nil); err != nil {
 		t.Fatalf("%s resize: %v\n", msg, err)
 	}
 

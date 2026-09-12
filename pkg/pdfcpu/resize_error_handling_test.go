@@ -77,7 +77,7 @@ func TestResizeBlankPageUpdatesGeometryAndAnnotations(t *testing.T) {
 	ann := types.Dict{"Rect": types.Array{types.Integer(10), types.Integer(20), types.Integer(30), types.Integer(40)}}
 	d["Annots"] = types.Array{ann}
 
-	if err := Resize(ctx, types.IntSet{1: true}, &model.Resize{Scale: 0.5}); err != nil {
+	if err := Resize(t.Context(), ctx, types.IntSet{1: true}, &model.Resize{Scale: 0.5}); err != nil {
 		t.Fatal(err)
 	}
 	mediaBox := resizeTestRectangle(t, ctx, d["MediaBox"])
@@ -121,7 +121,7 @@ func TestResizeProcessesSelectedPagesInOrder(t *testing.T) {
 	ctx := annotationTestContext(t)
 	selectedPages := types.IntSet{0: true, 2: true}
 	for range 200 {
-		err := Resize(ctx, selectedPages, &model.Resize{Scale: 0.5})
+		err := Resize(t.Context(), ctx, selectedPages, &model.Resize{Scale: 0.5})
 		if err == nil || !strings.HasPrefix(err.Error(), "page 0:") {
 			t.Fatalf("expected lowest selected page first, got %v", err)
 		}
@@ -145,10 +145,14 @@ func TestResizeAnnotationErrorIncludesObjectIdentity(t *testing.T) {
 		want string
 	}{
 		{name: "annotation", run: func() error {
-			return resizePageAnnotations(ctx, types.Dict{"Annots": types.Array{*types.NewIndirectRef(77, 0)}}, matrix.IdentMatrix)
+			return resizePageAnnotations(
+				t.Context(), ctx, types.Dict{"Annots": types.Array{*types.NewIndirectRef(77, 0)}}, matrix.IdentMatrix,
+			)
 		}, want: "annotation 1 obj#77"},
 		{name: "Annots", run: func() error {
-			return resizePageAnnotations(ctx, types.Dict{"Annots": *types.NewIndirectRef(78, 0)}, matrix.IdentMatrix)
+			return resizePageAnnotations(
+				t.Context(), ctx, types.Dict{"Annots": *types.NewIndirectRef(78, 0)}, matrix.IdentMatrix,
+			)
 		}, want: "Annots obj#78"},
 		{name: "Rect", run: func() error {
 			return resizeAnnotationRect(ctx, types.Dict{"Rect": *types.NewIndirectRef(79, 0)}, matrix.IdentMatrix)
@@ -293,13 +297,13 @@ func TestResizeAnnotationEntryErrorContext(t *testing.T) {
 func TestResizePageAnnotationsErrorContext(t *testing.T) {
 	ctx := annotationTestContext(t)
 	d := types.Dict{"Annots": types.Array{types.Dict{}, types.Integer(1)}}
-	err := resizePageAnnotations(ctx, d, matrix.IdentMatrix)
+	err := resizePageAnnotations(t.Context(), ctx, d, matrix.IdentMatrix)
 	if err == nil || !strings.Contains(err.Error(), "annotation 2: dereference dictionary") {
 		t.Fatalf("expected annotation index context, got %v", err)
 	}
 
 	d = types.Dict{"Annots": types.Array{types.Dict{"Rect": types.Array{types.Integer(1)}}}}
-	err = resizePageAnnotations(ctx, d, matrix.IdentMatrix)
+	err = resizePageAnnotations(t.Context(), ctx, d, matrix.IdentMatrix)
 	if err == nil || !strings.Contains(err.Error(), "annotation 1: annotation Rect: invalid length 1") {
 		t.Fatalf("expected annotation entry context, got %v", err)
 	}
@@ -308,7 +312,7 @@ func TestResizePageAnnotationsErrorContext(t *testing.T) {
 // TestResizePageErrorContext verifies page and content operation context.
 func TestResizePageErrorContext(t *testing.T) {
 	ctx := annotationTestContext(t)
-	err := Resize(ctx, types.IntSet{99: true}, &model.Resize{Scale: 0.5})
+	err := Resize(t.Context(), ctx, types.IntSet{99: true}, &model.Resize{Scale: 0.5})
 	if err == nil || !strings.Contains(err.Error(), "page 99: page dictionary") {
 		t.Fatalf("expected page dictionary context, got %v", err)
 	}
@@ -316,7 +320,7 @@ func TestResizePageErrorContext(t *testing.T) {
 	ctx = annotationTestContext(t)
 	d := annotationTestPageDict(t, ctx)
 	d["Contents"] = types.Integer(1)
-	err = Resize(ctx, types.IntSet{1: true}, &model.Resize{Scale: 0.5})
+	err = Resize(t.Context(), ctx, types.IntSet{1: true}, &model.Resize{Scale: 0.5})
 	if err == nil || !strings.Contains(err.Error(), "page 1: read page content") {
 		t.Fatalf("expected page content context, got %v", err)
 	}
@@ -324,7 +328,7 @@ func TestResizePageErrorContext(t *testing.T) {
 	ctx = annotationTestContext(t)
 	d = annotationTestPageDict(t, ctx)
 	d["Annots"] = types.Integer(1)
-	err = Resize(ctx, types.IntSet{1: true}, &model.Resize{Scale: 0.5})
+	err = Resize(t.Context(), ctx, types.IntSet{1: true}, &model.Resize{Scale: 0.5})
 	if err == nil || !strings.Contains(err.Error(), "page 1: resize annotations: Annots: dereference array") {
 		t.Fatalf("expected page annotation context, got %v", err)
 	}

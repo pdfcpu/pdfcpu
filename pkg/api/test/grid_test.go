@@ -42,10 +42,10 @@ func testGrid(t *testing.T, msg string, inFiles []string, outFile string, select
 		}
 	}
 
-	if err := api.NUpFile(inFiles, outFile, selectedPages, nup, conf); err != nil {
+	if err := api.NUpFile(t.Context(), inFiles, outFile, selectedPages, nup, conf); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package font
 
 import (
+	"context"
 	"bytes"
 	"encoding/gob"
 	"errors"
@@ -86,17 +87,17 @@ func TestUserFontReturnsDetachedMetrics(t *testing.T) {
 	originalDir := UserFontDir
 	UserFontDir = t.TempDir()
 	writeUserFontMetric(t, UserFontDir, "Detached")
-	if err := ReloadUserFonts(); err != nil {
+	if err := ReloadUserFonts(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
 		UserFontDir = originalDir
-		if err := ReloadUserFonts(); err != nil {
+		if err := ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore user fonts: %v", err)
 		}
 	})
 
-	got, ok, err := UserFont("Detached")
+	got, ok, err := UserFont(t.Context(), "Detached")
 	if err != nil || !ok {
 		t.Fatalf("load detached font: ok=%t err=%v", ok, err)
 	}
@@ -105,7 +106,7 @@ func TestUserFontReturnsDetachedMetrics(t *testing.T) {
 	got.ToUnicode[0] = 'B'
 	got.Planes[0] = false
 
-	got, ok, err = UserFont("Detached")
+	got, ok, err = UserFont(t.Context(), "Detached")
 	if err != nil || !ok {
 		t.Fatalf("reload detached font: ok=%t err=%v", ok, err)
 	}
@@ -118,17 +119,17 @@ func TestReloadUserFontsRefreshesMetrics(t *testing.T) {
 	originalDir := UserFontDir
 	t.Cleanup(func() {
 		UserFontDir = originalDir
-		if err := ReloadUserFonts(); err != nil {
+		if err := ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore user fonts: %v", err)
 		}
 	})
 
 	UserFontDir = t.TempDir()
 	writeUserFontMetric(t, UserFontDir, "First")
-	if err := ReloadUserFonts(); err != nil {
+	if err := ReloadUserFonts(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	ok, err := IsUserFont("First")
+	ok, err := IsUserFont(t.Context(), "First")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,10 +138,10 @@ func TestReloadUserFontsRefreshesMetrics(t *testing.T) {
 	}
 
 	writeUserFontMetric(t, UserFontDir, "Second")
-	if err := ReloadUserFonts(); err != nil {
+	if err := ReloadUserFonts(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	ok, err = IsUserFont("Second")
+	ok, err = IsUserFont(t.Context(), "Second")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +167,7 @@ func TestReloadUserFontsReplacesMetricsAtomically(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(UserFontDir, "Malformed.gob"), []byte("not a gob"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := ReloadUserFonts(); err == nil {
+	if err := ReloadUserFonts(t.Context()); err == nil {
 		t.Fatal("expected malformed metrics error")
 	}
 
@@ -203,9 +204,9 @@ func TestInstalledGobReadersPreserveInvalidDataAndDecodeCause(t *testing.T) {
 		name string
 		fn   func() error
 	}{
-		{"load", func() error { return load(fileName, &TTFLight{}) }},
+		{"load", func() error { return load(fileName, &TTFLight{}, t.Context().Err) }},
 		{"Read", func() error {
-			_, err := Read("Broken")
+			_, err := Read(t.Context(), "Broken")
 			return err
 		}},
 		{"readGob", func() error { return readGob(fileName, &ttf{}) }},
@@ -240,9 +241,9 @@ func TestInstalledGobReadersEnforceSizeLimit(t *testing.T) {
 		name string
 		fn   func() error
 	}{
-		{"load", func() error { return load(fileName, &TTFLight{}) }},
+		{"load", func() error { return load(fileName, &TTFLight{}, t.Context().Err) }},
 		{"Read", func() error {
-			_, err := Read("Oversized")
+			_, err := Read(t.Context(), "Oversized")
 			return err
 		}},
 		{"readGob", func() error { return readGob(fileName, &ttf{}) }},
@@ -337,7 +338,7 @@ func TestGobDecodersWrapSemanticAndEmbeddedFontFailures(t *testing.T) {
 	if err := f.Close(); err != nil {
 		t.Fatal(err)
 	}
-	err = load(metricFile, &TTFLight{})
+	err = load(metricFile, &TTFLight{}, t.Context().Err)
 	if !errors.Is(err, ErrInvalidFontData) || !strings.Contains(err.Error(), "validate font metrics") {
 		t.Fatalf("expected wrapped semantic metrics error, got %v", err)
 	}
@@ -364,7 +365,7 @@ func TestGobDecodersWrapSemanticAndEmbeddedFontFailures(t *testing.T) {
 		fn   func() error
 	}{
 		{"Read", func() error {
-			_, err := Read("Broken")
+			_, err := Read(t.Context(), "Broken")
 			return err
 		}},
 		{"readGob", func() error { return readGob(installedFile, &ttf{}) }},
@@ -386,39 +387,39 @@ func TestUserFontMetricAccessorsReturnLoadErrors(t *testing.T) {
 	originalDir := UserFontDir
 	UserFontDir = filepath.Join(t.TempDir(), "missing")
 	wantErr := os.ErrNotExist
-	err := ReloadUserFonts()
+	err := ReloadUserFonts(t.Context())
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
 	t.Cleanup(func() {
 		UserFontDir = originalDir
-		if err := ReloadUserFonts(); err != nil {
+		if err := ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore user fonts: %v", err)
 		}
 	})
 
-	if _, err := UserFontNames(); !errors.Is(err, wantErr) {
+	if _, err := UserFontNames(t.Context()); !errors.Is(err, wantErr) {
 		t.Fatalf("expected names error %v, got %v", wantErr, err)
 	}
-	if _, err := UserFontNamesVerbose(); !errors.Is(err, wantErr) {
+	if _, err := UserFontNamesVerbose(t.Context()); !errors.Is(err, wantErr) {
 		t.Fatalf("expected verbose names error %v, got %v", wantErr, err)
 	}
-	if _, _, err := UserFont("Demo"); !errors.Is(err, wantErr) {
+	if _, _, err := UserFont(t.Context(), "Demo"); !errors.Is(err, wantErr) {
 		t.Fatalf("expected metric error %v, got %v", wantErr, err)
 	}
-	if _, err := IsUserFont("Demo"); !errors.Is(err, wantErr) {
+	if _, err := IsUserFont(t.Context(), "Demo"); !errors.Is(err, wantErr) {
 		t.Fatalf("expected predicate error %v, got %v", wantErr, err)
 	}
-	if _, err := BoundingBox("Demo"); !errors.Is(err, wantErr) {
+	if _, err := BoundingBox(t.Context(), "Demo"); !errors.Is(err, wantErr) {
 		t.Fatalf("expected bounding box error %v, got %v", wantErr, err)
 	}
-	if _, err := CharWidth("Demo", 'A'); !errors.Is(err, wantErr) {
+	if _, err := CharWidth(t.Context(), "Demo", 'A'); !errors.Is(err, wantErr) {
 		t.Fatalf("expected character width error %v, got %v", wantErr, err)
 	}
-	if _, err := TextWidth("Demo", "A", 12); !errors.Is(err, wantErr) {
+	if _, err := TextWidth(t.Context(), "Demo", "A", 12); !errors.Is(err, wantErr) {
 		t.Fatalf("expected text width error %v, got %v", wantErr, err)
 	}
-	if _, err := SupportedFont("Demo"); !errors.Is(err, wantErr) {
+	if _, err := SupportedFont(t.Context(), "Demo"); !errors.Is(err, wantErr) {
 		t.Fatalf("expected supported font error %v, got %v", wantErr, err)
 	}
 }
@@ -428,25 +429,25 @@ func TestCoreFontMetricAccessorsDoNotLoadUserFonts(t *testing.T) {
 	UserFontDir = filepath.Join(t.TempDir(), "missing")
 	t.Cleanup(func() {
 		UserFontDir = originalDir
-		if err := ReloadUserFonts(); err != nil {
+		if err := ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore user fonts: %v", err)
 		}
 	})
 
-	if _, err := BoundingBox("Helvetica"); err != nil {
+	if _, err := BoundingBox(t.Context(), "Helvetica"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := CharWidth("Helvetica", 'A'); err != nil {
+	if _, err := CharWidth(t.Context(), "Helvetica", 'A'); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := TextWidth("A", "Helvetica", 12); err != nil {
+	if _, err := TextWidth(t.Context(), "A", "Helvetica", 12); err != nil {
 		t.Fatal(err)
 	}
-	ok, err := SupportedFont("Helvetica")
+	ok, err := SupportedFont(t.Context(), "Helvetica")
 	if err != nil || !ok {
 		t.Fatalf("expected supported core font, ok=%t err=%v", ok, err)
 	}
-	ok, err = IsUserFont("Helvetica")
+	ok, err = IsUserFont(t.Context(), "Helvetica")
 	if err != nil || ok {
 		t.Fatalf("expected core font not to be a user font, ok=%t err=%v", ok, err)
 	}
@@ -455,20 +456,20 @@ func TestCoreFontMetricAccessorsDoNotLoadUserFonts(t *testing.T) {
 func TestMetricAccessorsPreserveUnknownFontSentinel(t *testing.T) {
 	originalDir := UserFontDir
 	UserFontDir = t.TempDir()
-	if err := ReloadUserFonts(); err != nil {
+	if err := ReloadUserFonts(t.Context()); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
 		UserFontDir = originalDir
-		if err := ReloadUserFonts(); err != nil {
+		if err := ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore user fonts: %v", err)
 		}
 	})
 
-	if _, err := BoundingBox("Missing"); !errors.Is(err, ErrUnknownFont) {
+	if _, err := BoundingBox(t.Context(), "Missing"); !errors.Is(err, ErrUnknownFont) {
 		t.Fatalf("expected %v, got %v", ErrUnknownFont, err)
 	}
-	if _, err := CharWidth("Missing", 'A'); !errors.Is(err, ErrUnknownFont) {
+	if _, err := CharWidth(t.Context(), "Missing", 'A'); !errors.Is(err, ErrUnknownFont) {
 		t.Fatalf("expected %v, got %v", ErrUnknownFont, err)
 	}
 }

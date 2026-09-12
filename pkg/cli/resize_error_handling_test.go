@@ -34,18 +34,18 @@ func cliResizeConfiguration() *model.Resize {
 
 // TestResizeRejectsMissingCommandFields verifies CLI resize boundary guards.
 func TestResizeRejectsMissingCommandFields(t *testing.T) {
-	if _, err := Resize(nil); !errors.Is(err, ErrMissingCommand) {
+	if _, err := resize(t.Context(), nil); !errors.Is(err, ErrMissingCommand) {
 		t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 	}
-	if _, err := Resize(&Command{}); !errors.Is(err, api.ErrMissingPDFInput) {
+	if _, err := resize(t.Context(), &Command{}); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
 	inFile := "-"
-	if _, err := Resize(&Command{InFile: &inFile}); !errors.Is(err, api.ErrMissingPDFOutput) {
+	if _, err := resize(t.Context(), &Command{InFile: &inFile}); !errors.Is(err, api.ErrMissingPDFOutput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFOutput, err)
 	}
 	outFile := "-"
-	if _, err := Resize(&Command{InFile: &inFile, OutFile: &outFile}); !errors.Is(err, api.ErrMissingResizeConfiguration) {
+	if _, err := resize(t.Context(), &Command{InFile: &inFile, OutFile: &outFile}); !errors.Is(err, api.ErrMissingResizeConfiguration) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingResizeConfiguration, err)
 	}
 }
@@ -54,7 +54,7 @@ func TestResizeRejectsMissingCommandFields(t *testing.T) {
 func TestResizeRejectsEmptyInputFile(t *testing.T) {
 	inFile := ""
 	outFile := "-"
-	_, err := Resize(&Command{InFile: &inFile, OutFile: &outFile, Resize: cliResizeConfiguration()})
+	_, err := resize(t.Context(), &Command{InFile: &inFile, OutFile: &outFile, Resize: cliResizeConfiguration()})
 	if !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
@@ -64,7 +64,7 @@ func TestResizeRejectsEmptyInputFile(t *testing.T) {
 func TestResizeStreamingIOErrorsIncludeOperationContext(t *testing.T) {
 	outFile := "-"
 	missingInput := filepath.Join(t.TempDir(), "missing.pdf")
-	_, err := Resize(&Command{InFile: &missingInput, OutFile: &outFile, Resize: cliResizeConfiguration()})
+	_, err := resize(t.Context(), &Command{InFile: &missingInput, OutFile: &outFile, Resize: cliResizeConfiguration()})
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "resize: open input "+missingInput) {
 		t.Fatalf("expected input context, got %v", err)
 	}
@@ -72,7 +72,7 @@ func TestResizeStreamingIOErrorsIncludeOperationContext(t *testing.T) {
 	pageStreamingStdin(t)
 	inFile := "-"
 	missingOutput := filepath.Join(t.TempDir(), "missing", "out.pdf")
-	_, err = Resize(&Command{InFile: &inFile, OutFile: &missingOutput, Resize: cliResizeConfiguration()})
+	_, err = resize(t.Context(), &Command{InFile: &inFile, OutFile: &missingOutput, Resize: cliResizeConfiguration()})
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "resize: create output "+missingOutput) {
 		t.Fatalf("expected output context, got %v", err)
 	}
@@ -86,7 +86,7 @@ func TestResizeStreamingFailurePreservesExistingOutput(t *testing.T) {
 	if err := os.WriteFile(outFile, want, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err := Resize(ResizeCommand("-", outFile, []string{"foo"}, cliResizeConfiguration(), nil))
+	_, err := resize(t.Context(), ResizeCommand("-", outFile, []string{"foo"}, cliResizeConfiguration(), nil))
 	if err == nil || !strings.Contains(err.Error(), "resize: parse page selection") {
 		t.Fatalf("expected page-selection error, got %v", err)
 	}

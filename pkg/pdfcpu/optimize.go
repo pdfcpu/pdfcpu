@@ -18,6 +18,7 @@ package pdfcpu
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -25,6 +26,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -352,11 +354,7 @@ func qualifiedRName(rNamePrefix, rName string) string {
 	return s
 }
 
-func newFontObject(
-	ctx *model.Context,
-	fontDict types.Dict,
-	resourceName, prefix, fontName string,
-) model.FontObject {
+func newFontObject(ctx *model.Context, fontDict types.Dict, resourceName, prefix, fontName string) model.FontObject {
 	// pdffont.Name has already resolved and validated Subtype for this dictionary.
 	subtype, _, _ := ctx.DereferenceNameEntry(fontDict, "Subtype")
 
@@ -825,8 +823,7 @@ func optimizeExtGStateResourcesDict(ctx *model.Context, rDict types.Dict, pageNr
 	return nil
 }
 
-func optimizeXObjectResource(ctx *model.Context, sd *types.StreamDict, rDict types.Dict, rNamePrefix, rName string,
-	qualifiedRName string, objNr, pageNr, pageObjNumber int, pageImages types.IntSet, vis []types.Object) error {
+func optimizeXObjectResource(ctx *model.Context, sd *types.StreamDict, rDict types.Dict, rNamePrefix, rName string, qualifiedRName string, objNr, pageNr, pageObjNumber int, pageImages types.IntSet, vis []types.Object) error {
 	subtype, _, err := ctx.DereferenceNameEntry(sd.Dict, "Subtype")
 	if err != nil {
 		return fmt.Errorf("XObject resource %s obj#%d: Subtype: %w", qualifiedRName, objNr, err)
@@ -1035,7 +1032,10 @@ func parseResourcesDict(ctx *model.Context, pageDict types.Dict, pageNr, pageObj
 	return nil
 }
 
-func parsePageTreeKid(ctx *model.Context, v types.Object, kidNr, pageNr int) (int, error) {
+func parsePageTreeKid(c context.Context, ctx *model.Context, v types.Object, kidNr, pageNr int) (int, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, err
+	}
 	if v == nil {
 		return pageNr, nil
 	}
@@ -1055,7 +1055,7 @@ func parsePageTreeKid(ctx *model.Context, v types.Object, kidNr, pageNr int) (in
 		return 0, fmt.Errorf("kid %d obj#%d: page node Type: %w", kidNr, ir.ObjectNumber.Value(), err)
 	}
 	if pageType.Value() == "Pages" {
-		pageNr, err = parsePagesDict(ctx, d, pageNr)
+		pageNr, err = parsePagesDict(c, ctx, d, pageNr)
 		if err != nil {
 			return 0, fmt.Errorf("kid %d pages obj#%d: %w", kidNr, ir.ObjectNumber.Value(), err)
 		}
@@ -1080,7 +1080,10 @@ func parsePageTreeKid(ctx *model.Context, v types.Object, kidNr, pageNr int) (in
 }
 
 // Iterate over all pages and optimize content & resources.
-func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNr int) (int, error) {
+func parsePagesDict(c context.Context, ctx *model.Context, pagesDict types.Dict, pageNr int) (int, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, err
+	}
 	// TODO Integrate resource consolidation based on content stream requirements.
 
 	_, found := pagesDict.Find("Count")
@@ -1105,7 +1108,7 @@ func parsePagesDict(ctx *model.Context, pagesDict types.Dict, pageNr int) (int, 
 	}
 
 	for i, v := range kids {
-		pageNr, err = parsePageTreeKid(ctx, v, i+1, pageNr)
+		pageNr, err = parsePageTreeKid(c, ctx, v, i+1, pageNr)
 		if err != nil {
 			return 0, err
 		}
@@ -1243,7 +1246,10 @@ func fixCorruptFontResDicts(ctx *model.Context) error {
 
 // Iterate over all pages and optimize resources.
 // Get rid of duplicate embedded fonts and images.
-func optimizeFontAndImages(ctx *model.Context) error {
+func optimizeFontAndImages(c context.Context, ctx *model.Context) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if log.OptimizeEnabled() {
 		log.Optimize.Println("optimizeFontAndImages begin")
 	}
@@ -1266,13 +1272,16 @@ func optimizeFontAndImages(ctx *model.Context) error {
 	ctx.Optimize.FormResourceCache = map[int]types.IntSet{}
 
 	// Iterate over page dicts and optimize resources.
-	_, err = parsePagesDict(ctx, pageTreeRootDict, 0)
+	_, err = parsePagesDict(c, ctx, pageTreeRootDict, 0)
 	if err != nil {
 		return fmt.Errorf("page tree: %w", err)
 	}
 
 	if err := fixCorruptFontResDicts(ctx); err != nil {
 		return fmt.Errorf("fix corrupt font resources: %w", err)
+	}
+	if err := contextutil.Check(c); err != nil {
+		return err
 	}
 
 	ctx.Optimize.ContentStreamCache = map[int]*types.StreamDict{}
@@ -1729,49 +1738,80 @@ func ensureDirectWidthForXObjs(ctx *model.Context) error {
 	return nil
 }
 
-// OptimizeXRefTable optimizes an xRefTable by locating and getting rid of redundant embedded fonts and images.
-func OptimizeXRefTable(ctx *model.Context) error {
+func optimizeContextError(c context.Context, ctx *model.Context) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if ctx == nil {
+		return ErrMissingPDFContext
+	}
+	if ctx.XRefTable == nil {
+		return ErrMissingXRefTable
+	}
+	return nil
+}
+
+func runOptimizationPhase(c context.Context, optimize func() error) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	return optimize()
+}
+
+func shouldOptimizeResourceDicts(ctx *model.Context) bool {
+	switch ctx.Cmd {
+	case model.VALIDATE, model.OPTIMIZE, model.LISTIMAGES, model.EXTRACTIMAGES, model.UPDATEIMAGES:
+		return ctx.Conf.OptimizeResourceDicts
+	}
+	return false
+}
+
+// OptimizeXRefTable optimizes an xRefTable by locating redundant embedded fonts and images and supports cancellation.
+func OptimizeXRefTable(c context.Context, ctx *model.Context) error {
+	if err := optimizeContextError(c, ctx); err != nil {
+		return err
+	}
 	if ctx.PageCount == 0 {
 		return nil
 	}
 
 	// Sometimes free objects are used although they are part of the free object list.
 	// Replace references to free xref table entries with a reference to a NULL object.
-	if err := fixReferencesToFreeObjects(ctx); err != nil {
+	if err := runOptimizationPhase(c, func() error { return fixReferencesToFreeObjects(ctx) }); err != nil {
 		return fmt.Errorf("fix references to free objects: %w", err)
 	}
 
-	if (ctx.Cmd == model.VALIDATE ||
-		ctx.Cmd == model.OPTIMIZE ||
-		ctx.Cmd == model.LISTIMAGES ||
-		ctx.Cmd == model.EXTRACTIMAGES ||
-		ctx.Cmd == model.UPDATEIMAGES) &&
-		ctx.Conf.OptimizeResourceDicts {
+	if shouldOptimizeResourceDicts(ctx) {
 		// Extra step with potential for performance hit when processing large files.
-		if err := optimizeResourceDicts(ctx); err != nil {
+		if err := runOptimizationPhase(c, func() error { return optimizeResourceDicts(ctx) }); err != nil {
 			return fmt.Errorf("optimize resources: %w", err)
 		}
 	}
 
 	// Get rid of duplicate embedded fonts and images.
-	if err := optimizeFontAndImages(ctx); err != nil {
+	if err := runOptimizationPhase(c, func() error { return optimizeFontAndImages(c, ctx) }); err != nil {
 		return fmt.Errorf("optimize fonts and images: %w", err)
 	}
 
-	if err := ensureDirectWidthForXObjs(ctx); err != nil {
+	if err := runOptimizationPhase(c, func() error { return ensureDirectWidthForXObjs(ctx) }); err != nil {
 		return fmt.Errorf("resolve image widths: %w", err)
 	}
 
 	// Get rid of PieceInfo dict from root.
-	if err := ctx.DeleteDictEntry(ctx.RootDict, "PieceInfo"); err != nil {
+	if err := runOptimizationPhase(c, func() error {
+		return ctx.DeleteDictEntry(ctx.RootDict, "PieceInfo")
+	}); err != nil {
 		return fmt.Errorf("delete root PieceInfo: %w", err)
 	}
 
 	// Calculate memory usage of binary content for stats.
 	if log.StatsEnabled() {
-		if err := calcBinarySizes(ctx); err != nil {
+		if err := runOptimizationPhase(c, func() error { return calcBinarySizes(ctx) }); err != nil {
 			return fmt.Errorf("calculate binary sizes: %w", err)
 		}
+	}
+	if err := contextutil.Check(c); err != nil {
+		return err
 	}
 
 	ctx.Optimized = true

@@ -37,7 +37,7 @@ func listBoxes(t *testing.T, fileName string, pb *model.PageBoundaries) ([]strin
 	}
 	defer f.Close()
 
-	ctx, err := api.ReadValidateAndOptimize(f, conf)
+	ctx, err := api.ReadValidateAndOptimize(t.Context(), f, conf, nil)
 	if err != nil {
 		t.Fatalf("%s ReadValidateAndOptimize: %v\n", msg, err)
 	}
@@ -47,7 +47,7 @@ func listBoxes(t *testing.T, fileName string, pb *model.PageBoundaries) ([]strin
 		pb.SelectAll()
 	}
 
-	return ctx.ListPageBoundaries(nil, pb)
+	return ctx.ListPageBoundaries(t.Context(), nil, pb)
 }
 
 // TestListBoxes verifies list boxes.
@@ -95,7 +95,7 @@ func TestCrop(t *testing.T) {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 
-		if err := api.CropFile(inFile, outFile, nil, box, nil); err != nil {
+		if err := api.CropFile(t.Context(), inFile, outFile, nil, box, nil); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 	}
@@ -126,7 +126,7 @@ func TestAddBoxes(t *testing.T) {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 
-		if err := api.AddBoxesFile(inFile, outFile, nil, pb, nil); err != nil {
+		if err := api.AddBoxesFile(t.Context(), inFile, outFile, nil, pb, nil); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 	}
@@ -142,7 +142,7 @@ func TestAddRemoveBoxes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err := api.AddBoxesFile(inFile, outFile, nil, pb, nil); err != nil {
+	if err := api.AddBoxesFile(t.Context(), inFile, outFile, nil, pb, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
@@ -150,7 +150,7 @@ func TestAddRemoveBoxes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
-	if err := api.RemoveBoxesFile(outFile, outFile, nil, pb, nil); err != nil {
+	if err := api.RemoveBoxesFile(t.Context(), outFile, outFile, nil, pb, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

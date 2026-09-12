@@ -36,7 +36,7 @@ func TestMergeCreateCommand(t *testing.T) {
 	outFile := filepath.Join(outDir, "test.pdf")
 
 	cmd := cli.MergeCreateCommand(inFiles, outFile, true, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -58,7 +58,7 @@ func TestMergeCreateZippedCommand(t *testing.T) {
 	outFile := filepath.Join(outDir, "out.pdf")
 
 	cmd := cli.MergeCreateZipCommand(inFiles, outFile, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 
@@ -73,7 +73,7 @@ func TestMergeCreateWithStdinIncludesSourceContext(t *testing.T) {
 	missingFile := filepath.Join(outDir, "missing.pdf")
 
 	cmd := cli.MergeCreateCommand([]string{missingFile, "-"}, outFile, false, conf)
-	if _, err := cli.Dispatch(cmd); err == nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err == nil {
 		t.Fatal("expected error")
 	} else if want := "merge source 0: read source"; !strings.Contains(err.Error(), want) {
 		t.Fatalf("expected %q in error, got %q", want, err.Error())
@@ -101,7 +101,7 @@ func TestMergeAppendCommand(t *testing.T) {
 	// Merge inFiles by concatenation in the order specified and write the result to outFile.
 	// If outFile already exists its content will be preserved and serves as the beginning of the merge result.
 	cmd := cli.MergeAppendCommand(inFiles, outFile, false, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: %v\n", msg, outFile, err)
 	}
 

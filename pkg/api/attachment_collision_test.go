@@ -33,7 +33,7 @@ func TestWriteAttachmentsRejectsSameRunOutputCollision(t *testing.T) {
 		{Reader: strings.NewReader("second"), ID: "attachment-2", FileName: "shared.txt"},
 	}
 
-	err := writeAttachments(outDir, aa)
+	err := writeAttachments(t.Context(), outDir, aa)
 
 	if !errors.Is(err, ErrAttachmentOutputCollision) {
 		t.Fatalf("expected %v, got %v", ErrAttachmentOutputCollision, err)

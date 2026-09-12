@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
@@ -60,70 +61,70 @@ func TestCryptoArgumentErrors(t *testing.T) {
 		{
 			name: "encrypt missing reader",
 			fn: func() error {
-				return Encrypt(nil, io.Discard, conf)
+				return Encrypt(t.Context(), nil, io.Discard, conf)
 			},
 			want: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "encrypt missing writer",
 			fn: func() error {
-				return Encrypt(bytes.NewReader(nil), nil, conf)
+				return Encrypt(t.Context(), bytes.NewReader(nil), nil, conf)
 			},
 			want: ErrMissingPDFWriter,
 		},
 		{
 			name: "encrypt missing configuration",
 			fn: func() error {
-				return Encrypt(bytes.NewReader(nil), io.Discard, nil)
+				return Encrypt(t.Context(), bytes.NewReader(nil), io.Discard, nil)
 			},
 			want: ErrMissingConfiguration,
 		},
 		{
 			name: "decrypt missing reader",
 			fn: func() error {
-				return Decrypt(nil, io.Discard, conf)
+				return Decrypt(t.Context(), nil, io.Discard, conf)
 			},
 			want: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "decrypt missing writer",
 			fn: func() error {
-				return Decrypt(bytes.NewReader(nil), nil, conf)
+				return Decrypt(t.Context(), bytes.NewReader(nil), nil, conf)
 			},
 			want: ErrMissingPDFWriter,
 		},
 		{
 			name: "decrypt missing configuration",
 			fn: func() error {
-				return Decrypt(bytes.NewReader(nil), io.Discard, nil)
+				return Decrypt(t.Context(), bytes.NewReader(nil), io.Discard, nil)
 			},
 			want: ErrMissingConfiguration,
 		},
 		{
 			name: "encrypt file missing configuration",
 			fn: func() error {
-				return EncryptFile("in.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return EncryptFile(t.Context(), "in.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			want: ErrMissingConfiguration,
 		},
 		{
 			name: "encrypt file missing input",
 			fn: func() error {
-				return EncryptFile("", filepath.Join(t.TempDir(), "out.pdf"), conf)
+				return EncryptFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), conf)
 			},
 			want: ErrMissingPDFInput,
 		},
 		{
 			name: "decrypt file missing configuration",
 			fn: func() error {
-				return DecryptFile("in.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return DecryptFile(t.Context(), "in.pdf", filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			want: ErrMissingConfiguration,
 		},
 		{
 			name: "decrypt file missing input",
 			fn: func() error {
-				return DecryptFile("", filepath.Join(t.TempDir(), "out.pdf"), conf)
+				return DecryptFile(t.Context(), "", filepath.Join(t.TempDir(), "out.pdf"), conf)
 			},
 			want: ErrMissingPDFInput,
 		},
@@ -143,7 +144,7 @@ func TestCryptoOperationContextPreservesReadError(t *testing.T) {
 	tests := []struct {
 		name string
 		op   string
-		fn   func(io.ReadSeeker, io.Writer, *model.Configuration) error
+		fn   func(context.Context, io.ReadSeeker, io.Writer, *model.Configuration) error
 	}{
 		{name: "encrypt", op: "encrypt:", fn: Encrypt},
 		{name: "decrypt", op: "decrypt:", fn: Decrypt},
@@ -151,7 +152,7 @@ func TestCryptoOperationContextPreservesReadError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.fn(&cryptoErrorReadSeeker{err: readErr}, io.Discard, model.NewDefaultConfiguration())
+			err := tt.fn(t.Context(), &cryptoErrorReadSeeker{err: readErr}, io.Discard, model.NewDefaultConfiguration())
 			if !errors.Is(err, readErr) {
 				t.Fatalf("got %v, want %v", err, readErr)
 			}
@@ -179,7 +180,7 @@ func encryptedCryptoTestFile(t *testing.T) (string, string) {
 	conf := model.NewDefaultConfiguration()
 	conf.UserPW = "user"
 	conf.OwnerPW = "owner"
-	if err := EncryptFile(inFile, outFile, conf); err != nil {
+	if err := EncryptFile(t.Context(), inFile, outFile, conf); err != nil {
 		t.Fatal(err)
 	}
 	return inFile, outFile
@@ -205,12 +206,12 @@ func TestCryptoFileOperationSentinels(t *testing.T) {
 		conf := model.NewDefaultConfiguration()
 		conf.UserPW = "user"
 		conf.OwnerPW = "owner"
-		err := EncryptFile(encryptedFile, filepath.Join(t.TempDir(), "out.pdf"), conf)
+		err := EncryptFile(t.Context(), encryptedFile, filepath.Join(t.TempDir(), "out.pdf"), conf)
 		requireCryptoError(t, err, pdfcpu.ErrEncrypted, "encrypt:", "encryption status")
 	})
 
 	t.Run("decrypt unencrypted", func(t *testing.T) {
-		err := DecryptFile(inFile, filepath.Join(t.TempDir(), "out.pdf"), model.NewDefaultConfiguration())
+		err := DecryptFile(t.Context(), inFile, filepath.Join(t.TempDir(), "out.pdf"), model.NewDefaultConfiguration())
 		requireCryptoError(t, err, pdfcpu.ErrNotEncrypted, "decrypt:", "encryption status")
 	})
 
@@ -225,7 +226,7 @@ func TestCryptoFileOperationSentinels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := model.NewDefaultConfiguration()
 			conf.UserPW = tt.upw
-			err := DecryptFile(encryptedFile, filepath.Join(t.TempDir(), "out.pdf"), conf)
+			err := DecryptFile(t.Context(), encryptedFile, filepath.Join(t.TempDir(), "out.pdf"), conf)
 			requireCryptoError(t, err, pdfcpu.ErrWrongPassword, "decrypt:", "encryption setup")
 			if count := strings.Count(err.Error(), "decrypt:"); count != 1 {
 				t.Fatalf("expected one decrypt label, got %d in %q", count, err)
@@ -249,7 +250,7 @@ func TestCryptoFileIOErrorContext(t *testing.T) {
 
 	tests := []struct {
 		name string
-		fn   func(string, string, *model.Configuration) error
+		fn   func(context.Context, string, string, *model.Configuration) error
 	}{
 		{name: "encrypt", fn: EncryptFile},
 		{name: "decrypt", fn: DecryptFile},
@@ -257,7 +258,7 @@ func TestCryptoFileIOErrorContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name+" open input", func(t *testing.T) {
-			err := tt.fn(missingInput, "", conf)
+			err := tt.fn(t.Context(), missingInput, "", conf)
 			if !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("got %v, want %v", err, os.ErrNotExist)
 			}
@@ -268,7 +269,7 @@ func TestCryptoFileIOErrorContext(t *testing.T) {
 		})
 
 		t.Run(tt.name+" create output", func(t *testing.T) {
-			err := tt.fn(inFile, missingOutput, conf)
+			err := tt.fn(t.Context(), inFile, missingOutput, conf)
 			if !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("got %v, want %v", err, os.ErrNotExist)
 			}
@@ -280,8 +281,8 @@ func TestCryptoFileIOErrorContext(t *testing.T) {
 	}
 }
 
-// TestProcessSecurityFilePreservesExistingOutputOnFailure verifies protected destinations survive operation failure.
-func TestProcessSecurityFilePreservesExistingOutputOnFailure(t *testing.T) {
+// TestEncryptFilePreservesExistingOutputOnFailure verifies protected destinations survive operation failure.
+func TestEncryptFilePreservesExistingOutputOnFailure(t *testing.T) {
 	dir := t.TempDir()
 	inFile := filepath.Join(dir, "in.pdf")
 	outFile := filepath.Join(dir, "out.pdf")
@@ -293,18 +294,9 @@ func TestProcessSecurityFilePreservesExistingOutputOnFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	operationErr := errors.New("encryption failed")
-	err := processSecurityFile(
-		inFile,
-		outFile,
-		model.NewDefaultConfiguration(),
-		"encrypt",
-		func(io.ReadSeeker, io.Writer, *model.Configuration) error {
-			return operationErr
-		},
-	)
-	if !errors.Is(err, operationErr) {
-		t.Fatalf("got %v, want %v", err, operationErr)
+	err := EncryptFile(t.Context(), inFile, outFile, model.NewDefaultConfiguration())
+	if err == nil {
+		t.Fatal("expected encryption failure")
 	}
 	gotOutput, err := os.ReadFile(outFile)
 	if err != nil {

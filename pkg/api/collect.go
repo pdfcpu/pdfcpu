@@ -17,20 +17,25 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// Collect creates a custom PDF page sequence for selected pages of rs and writes the result to w.
-func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Configuration) (err error) {
+// Collect creates a custom PDF page sequence for selected pages of rs, writes it to w and supports cancellation.
+func Collect(c context.Context, rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -41,7 +46,7 @@ func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.
 
 	conf = operationConfiguration(conf, model.COLLECT)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("collect: %w", err)
 	}
@@ -51,22 +56,29 @@ func Collect(rs io.ReadSeeker, w io.Writer, selectedPages []string, conf *model.
 		return fmt.Errorf("collect: parse page selection: %w", err)
 	}
 
-	ctxDest, err := pdfcpu.ExtractPages(ctx, pages, false)
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+
+	ctxDest, err := pdfcpu.ExtractPages(c, ctx, pages, false)
 	if err != nil {
 		return fmt.Errorf("collect: extract pages: %w", err)
 	}
 
-	if err = Write(ctxDest, w, conf); err != nil {
+	if err = Write(c, ctxDest, w, conf); err != nil {
 		return fmt.Errorf("collect: write output: %w", err)
 	}
 	return nil
 }
 
-// CollectFile creates a custom PDF page sequence for inFile and writes the result to outFile.
-func CollectFile(inFile, outFile string, selectedPages []string, conf *model.Configuration) (err error) {
+// CollectFile creates a custom PDF page sequence for inFile, writes the result to outFile and supports cancellation.
+func CollectFile(c context.Context, inFile, outFile string, selectedPages []string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -96,7 +108,10 @@ func CollectFile(inFile, outFile string, selectedPages []string, conf *model.Con
 		err = staged.commit()
 	}()
 
-	if err = Collect(f1, f2, selectedPages, conf); err != nil {
+	if err = Collect(c, f1, f2, selectedPages, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 

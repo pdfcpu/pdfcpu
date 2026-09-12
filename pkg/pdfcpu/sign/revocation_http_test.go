@@ -129,7 +129,7 @@ func TestRevocationDialContextDialsValidatedIP(t *testing.T) {
 		nil,
 	)
 
-	conn, err := dialContext(context.Background(), "tcp", "crl.example.com:443")
+	conn, err := dialContext(t.Context(), "tcp", "crl.example.com:443")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestRevocationDialContextBlocksPrivateDNS(t *testing.T) {
 		nil,
 	)
 
-	_, err := dialContext(context.Background(), "tcp", "pki.example.corp:80")
+	_, err := dialContext(t.Context(), "tcp", "pki.example.corp:80")
 	if err == nil || !strings.Contains(err.Error(), "disallowed address") {
 		t.Fatalf("expected disallowed address error, got %v", err)
 	}

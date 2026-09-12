@@ -50,6 +50,7 @@ func TestSignatureEvidenceContractFatalPositionalIO(t *testing.T) {
 	result := unknownSignatureResult()
 
 	err := ValidatePKCS7Signatures(
+		t.Context(),
 		signErrorReader{err: cause},
 		sigDict,
 		false,
@@ -78,6 +79,7 @@ func TestSignatureEvidenceContractCMSFailures(t *testing.T) {
 	t.Run("Malformed", func(t *testing.T) {
 		result := unknownSignatureResult()
 		err := ValidatePKCS7Signatures(
+			t.Context(),
 			bytes.NewReader(nil),
 			types.Dict{"Contents": types.HexLiteral("01")},
 			false,
@@ -99,6 +101,7 @@ func TestSignatureEvidenceContractCMSFailures(t *testing.T) {
 		result := unknownSignatureResult()
 
 		err := verifyP7Signer(
+			t.Context(),
 			p7Signer,
 			fixture.certs,
 			fixture.roots,
@@ -123,7 +126,7 @@ func TestSignatureEvidenceContractAbsentEvidence(t *testing.T) {
 	t.Run("RevocationIsNotGood", func(t *testing.T) {
 		issuer, _, cert := testCurrentCRLChain(t, "Evidence Contract Issuer")
 		cert.CRLDistributionPoints = []string{"https://crl.test/unavailable"}
-		details, err := processCurrentCRLs(cert, issuer, testCurrentCRLClient(nil))
+		details, err := processCurrentCRLs(t.Context(), cert, issuer, testCurrentCRLClient(nil))
 		if err == nil {
 			t.Fatal("expected incomplete revocation observation")
 		}
@@ -137,6 +140,7 @@ func TestSignatureEvidenceContractAbsentEvidence(t *testing.T) {
 		result := unknownSignatureResult()
 
 		validateCertChains(
+			t.Context(),
 			[][]*x509.Certificate{{nil}},
 			false,
 			x509.NewCertPool(),
@@ -159,6 +163,7 @@ func TestSignatureEvidenceContractAbsentEvidence(t *testing.T) {
 		fixture := signerPKCS7(t, 1)
 		result := unknownSignatureResult()
 		err := ValidatePKCS7Signatures(
+			t.Context(),
 			bytes.NewReader(nil),
 			types.Dict{"Contents": types.HexLiteral(hex.EncodeToString(fixture))},
 			false,
@@ -252,6 +257,7 @@ func TestSignatureEvidenceContractOperationalRevocationFailure(t *testing.T) {
 	conf.Offline = true
 
 	checkRevocation(
+		t.Context(),
 		cert,
 		issuer,
 		x509.NewCertPool(),
@@ -319,6 +325,7 @@ func TestSignatureEvidenceContractRevocationSourceFailuresAreUnknown(t *testing.
 			tt.setup(cert, conf)
 
 			checkRevocation(
+				t.Context(),
 				cert,
 				issuer,
 				x509.NewCertPool(),

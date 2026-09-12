@@ -1,28 +1,30 @@
 /*
-	Copyright 2021 The pdfcpu Authors.
+Copyright 2021 The pdfcpu Authors.
 
-	Licensed under the Apache License, Version 2.0 (the "License");
-	you may not use this file except in compliance with the License.
-	You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-		http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
-	Unless required by applicable law or agreed to in writing, software
-	distributed under the License is distributed on an "AS IS" BASIS,
-	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	See the License for the specific language governing permissions and
-	limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"math"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
@@ -95,7 +97,23 @@ func prepareBookletConfigurationForAPI(nup *model.NUp) error {
 	return wrapBookletConfigurationError(prepareBookletConfiguration(nup))
 }
 
-func bookletFromImages(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+func validateBookletInput(w io.Writer, imgFiles []string, nup *model.NUp) error {
+	if w == nil {
+		return ErrMissingPDFWriter
+	}
+	if nup == nil {
+		return ErrMissingBookletConfiguration
+	}
+	if nup.ImgInputFile && len(imgFiles) == 0 {
+		return ErrMissingImageInput
+	}
+	return prepareBookletConfigurationForAPI(nup)
+}
+
+func bookletFromImages(c context.Context, conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	ctx, err = pdfcpu.CreateContextWithXRefTable(conf, nup.PageDim)
 	if err != nil {
 		return nil, fmt.Errorf("booklet: create image context: %w", err)
@@ -112,16 +130,20 @@ func bookletFromImages(conf *model.Configuration, imageFileNames []string, nup *
 		return nil, fmt.Errorf("booklet: dereference image page tree: %w", err)
 	}
 
-	if err = pdfcpu.BookletFromImages(ctx, imageFileNames, nup, pagesDict, pagesIndRef); err != nil {
+	if err = pdfcpu.BookletFromImages(c, ctx, imageFileNames, nup, pagesDict, pagesIndRef); err != nil {
 		return ctx, fmt.Errorf("booklet: impose images: %w", err)
 	}
 	return ctx, nil
 }
 
-// BookletFromImages creates a booklet from images.
-func BookletFromImages(conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
+// BookletFromImages creates a booklet from images and supports cancellation.
+// On error, callers must discard any non-nil context returned with the error.
+func BookletFromImages(c context.Context, conf *model.Configuration, imageFileNames []string, nup *model.NUp) (ctx *model.Context, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if nup == nil {
 		return nil, ErrMissingBookletConfiguration
 	}
@@ -133,24 +155,17 @@ func BookletFromImages(conf *model.Configuration, imageFileNames []string, nup *
 	}
 	conf = operationConfiguration(conf, model.BOOKLET)
 
-	return bookletFromImages(conf, imageFileNames, nup)
+	return bookletFromImages(c, conf, imageFileNames, nup)
 }
 
-// Booklet arranges PDF pages on larger sheets of paper and writes the result to w.
-func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
+// Booklet arranges PDF pages on larger sheets, writes the result to w and supports cancellation.
+func Booklet(c context.Context, rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
-	if w == nil {
-		return ErrMissingPDFWriter
+	if err := contextutil.Check(c); err != nil {
+		return err
 	}
-
-	if nup == nil {
-		return ErrMissingBookletConfiguration
-	}
-	if nup.ImgInputFile && len(imgFiles) == 0 {
-		return ErrMissingImageInput
-	}
-	if err := prepareBookletConfigurationForAPI(nup); err != nil {
+	if err := validateBookletInput(w, imgFiles, nup); err != nil {
 		return err
 	}
 
@@ -164,7 +179,7 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 
 	if nup.ImgInputFile {
 
-		if ctx, err = bookletFromImages(conf, imgFiles, nup); err != nil {
+		if ctx, err = bookletFromImages(c, conf, imgFiles, nup); err != nil {
 			return err
 		}
 
@@ -173,7 +188,7 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 			return ErrMissingPDFReadSeeker
 		}
 
-		if ctx, err = ReadAndValidate(rs, conf); err != nil {
+		if ctx, err = ReadAndValidate(c, rs, conf); err != nil {
 			return fmt.Errorf("booklet: read and validate: %w", err)
 		}
 
@@ -181,13 +196,16 @@ func Booklet(rs io.ReadSeeker, w io.Writer, imgFiles, selectedPages []string, nu
 		if err != nil {
 			return fmt.Errorf("booklet: parse page selection: %w", err)
 		}
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 
-		if err = pdfcpu.BookletFromPDF(ctx, pages, nup); err != nil {
+		if err = pdfcpu.BookletFromPDF(c, ctx, pages, nup); err != nil {
 			return fmt.Errorf("booklet: impose pages: %w", err)
 		}
 	}
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("booklet: write output: %w", err)
 	}
 	return nil
@@ -205,8 +223,11 @@ func bookletImageOutputAliasesInputWith(
 	return outputAliasesInputWith(inFile, outFile, abs, stat)
 }
 
-func rejectBookletImageOutputAlias(inFiles []string, outFile string) error {
+func rejectBookletImageOutputAlias(c context.Context, inFiles []string, outFile string) error {
 	for i, inFile := range inFiles {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		aliases, err := bookletImageOutputAliasesInput(inFile, outFile)
 		if err != nil {
 			return fmt.Errorf("booklet image %d %q: check output alias: %w", i+1, inFile, err)
@@ -215,16 +236,24 @@ func rejectBookletImageOutputAlias(inFiles []string, outFile string) error {
 			return fmt.Errorf("booklet image %d %q: output aliases input: %w", i+1, inFile, ErrBookletImageOutputConflict)
 		}
 	}
-	return nil
+	return contextutil.Check(c)
 }
 
-// BookletFile rearranges PDF pages or images into a booklet layout and writes the result to outFile.
-func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
+func missingBookletInputError(nup *model.NUp) error {
+	if nup != nil && nup.ImgInputFile {
+		return ErrMissingImageInput
+	}
+	return ErrMissingPDFInput
+}
+
+// BookletFile rearranges PDF pages or images into a booklet layout,
+// writes the result to outFile and supports cancellation.
+func BookletFile(c context.Context, inFiles []string, outFile string, selectedPages []string, nup *model.NUp, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if len(inFiles) == 0 {
-		if nup != nil && nup.ImgInputFile {
-			return ErrMissingImageInput
-		}
-		return ErrMissingPDFInput
+		return missingBookletInputError(nup)
 	}
 	if outFile == "" {
 		return ErrMissingPDFOutput
@@ -236,20 +265,17 @@ func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *
 		return err
 	}
 	if nup.ImgInputFile {
-		if err := rejectBookletImageOutputAlias(inFiles, outFile); err != nil {
+		if err := rejectBookletImageOutputAlias(c, inFiles, outFile); err != nil {
 			return err
 		}
 	}
 
-	var f1, f2 *os.File
-	ok := false
-
+	var f1 *os.File
 	if !nup.ImgInputFile {
 		if f1, err = os.Open(inFiles[0]); err != nil {
 			return fmt.Errorf("booklet: open input %s: %w", inFiles[0], err)
 		}
 	}
-
 	staged, err := openStagedOutput(f1, inFiles[0], outFile, "booklet")
 	if err != nil {
 		return errors.Join(
@@ -257,8 +283,7 @@ func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *
 			closeFile(f1, "booklet: close input"),
 		)
 	}
-	f2 = staged.output.file
-
+	ok := false
 	defer func() {
 		if !ok {
 			err = staged.cleanup(err)
@@ -267,11 +292,12 @@ func BookletFile(inFiles []string, outFile string, selectedPages []string, nup *
 		err = staged.commit()
 	}()
 
-	if err = Booklet(f1, f2, inFiles, selectedPages, nup, conf); err != nil {
+	if err = Booklet(c, f1, staged.output.file, inFiles, selectedPages, nup, conf); err != nil {
 		return err
 	}
-
+	if err = contextutil.Check(c); err != nil {
+		return err
+	}
 	ok = true
-
 	return nil
 }

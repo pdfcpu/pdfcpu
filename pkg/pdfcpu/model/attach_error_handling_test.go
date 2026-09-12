@@ -48,21 +48,21 @@ func attachmentErrorContext() *Context {
 func TestListAttachmentsNilContext(t *testing.T) {
 	var ctx *Context
 
-	_, err := ctx.ListAttachments()
+	_, err := ctx.ListAttachments(t.Context())
 	if !errors.Is(err, ErrMissingPDFContext) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFContext, err)
 	}
 }
 
 func TestListAttachmentsMissingXRefTable(t *testing.T) {
-	_, err := (&Context{}).ListAttachments()
+	_, err := (&Context{}).ListAttachments(t.Context())
 	if !errors.Is(err, ErrMissingXRefTable) {
 		t.Fatalf("expected %v, got %v", ErrMissingXRefTable, err)
 	}
 }
 
 func TestListAttachmentsErrorsIncludeNameTreeAndFileSpecContext(t *testing.T) {
-	_, err := attachmentErrorContext().ListAttachments()
+	_, err := attachmentErrorContext().ListAttachments(t.Context())
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -74,7 +74,7 @@ func TestListAttachmentsErrorsIncludeNameTreeAndFileSpecContext(t *testing.T) {
 }
 
 func TestExtractAttachmentsErrorsIncludeNameTreeAndFileSpecContext(t *testing.T) {
-	_, err := attachmentErrorContext().ExtractAttachments(nil)
+	_, err := attachmentErrorContext().ExtractAttachments(t.Context(), nil)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -86,7 +86,7 @@ func TestExtractAttachmentsErrorsIncludeNameTreeAndFileSpecContext(t *testing.T)
 }
 
 func TestSearchAttachmentsErrorsIncludeNameTreeAndFileSpecContext(t *testing.T) {
-	_, _, err := attachmentErrorContext().SearchEmbeddedFilesNameTreeNodeByContent("missing")
+	_, _, err := attachmentErrorContext().SearchEmbeddedFilesNameTreeNodeByContent(t.Context(), "missing")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -102,7 +102,7 @@ func TestRemoveAttachmentsWithoutNameTreeIsNoOp(t *testing.T) {
 	xRefTable := newXRefTable(conf)
 	xRefTable.Valid = true
 
-	ok, err := (&Context{Configuration: conf, XRefTable: xRefTable}).RemoveAttachments(nil)
+	ok, err := (&Context{Configuration: conf, XRefTable: xRefTable}).RemoveAttachments(t.Context(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestFileSpecInfoRejectsMissingEmbeddedFileStream(t *testing.T) {
 	xRefTable.HeaderVersion = &version
 	d := types.Dict{"UF": types.StringLiteral("attachment.txt")}
 
-	_, _, _, _, err := fileSpecStreamDictInfo(xRefTable, "attachment", d, false)
+	_, _, _, _, err := fileSpecStreamDictInfo(t.Context(), xRefTable, "attachment", d, false)
 	if err == nil || !strings.Contains(err.Error(), `file spec "attachment": missing embedded file stream`) {
 		t.Fatalf("expected missing embedded file stream context, got %v", err)
 	}
@@ -157,7 +157,7 @@ func TestFileSpecModDatePreservesDereferenceCause(t *testing.T) {
 	xRefTable.Table[7] = NewXRefTableEntryGen0(lazy)
 	modDate := *types.NewIndirectRef(7, 0)
 
-	_, _, _, _, err := fileSpecStreamDictInfo(xRefTable, "attachment", modDateFileSpec(modDate), false)
+	_, _, _, _, err := fileSpecStreamDictInfo(t.Context(), xRefTable, "attachment", modDateFileSpec(modDate), false)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -175,7 +175,7 @@ func TestFileSpecModDatePreservesTextDecodingCause(t *testing.T) {
 		t.Fatal("expected text decoding error")
 	}
 
-	_, _, _, _, err := fileSpecStreamDictInfo(modDateTestXRefTable(), "attachment", modDateFileSpec(sl), false)
+	_, _, _, _, err := fileSpecStreamDictInfo(t.Context(), modDateTestXRefTable(), "attachment", modDateFileSpec(sl), false)
 	if err == nil {
 		t.Fatal("expected ModDate error")
 	}
@@ -206,6 +206,7 @@ func TestFileSpecModDateUsesStableSemanticErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, _, _, _, err := fileSpecStreamDictInfo(
+				t.Context(),
 				modDateTestXRefTable(),
 				"attachment",
 				modDateFileSpec(tt.modDate),
@@ -238,7 +239,7 @@ func TestAttachmentEmbeddedStreamCopyPreservesCauseAndID(t *testing.T) {
 		ID:     "invoice.csv",
 	}
 
-	_, err := modDateTestXRefTable().NewFileSpecDictForAttachment(a)
+	_, err := modDateTestXRefTable().NewFileSpecDictForAttachment(t.Context(), a)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}

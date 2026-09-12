@@ -18,6 +18,7 @@ limitations under the License.
 package form
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -25,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/mattn/go-runewidth"
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
@@ -1082,9 +1084,11 @@ func renderFields(ctx *model.Context, fs []Field, fm *FieldMeta) ([]string, erro
 	return ss, nil
 }
 
-// FormFields returns all form fields present in ctx.
-// maxWidth > 0 limits content for printing.
-func FormFields(ctx *model.Context) ([]Field, *FieldMeta, error) {
+// FormFields returns all form fields present in ctx and supports cancellation.
+func FormFields(c context.Context, ctx *model.Context) ([]Field, *FieldMeta, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	xRefTable := ctx.XRefTable
 
 	fields, err := Fields(xRefTable)
@@ -1099,14 +1103,14 @@ func FormFields(ctx *model.Context) ([]Field, *FieldMeta, error) {
 		return nil, nil, fmt.Errorf("field tree: %w", err)
 	}
 
-	return fs, fm, nil
+	return fs, fm, contextutil.Check(c)
 }
 
-// ListFormFields returns a list of all form fields present in ctx.
-func ListFormFields(ctx *model.Context) ([]string, error) {
+// ListFormFields returns a list of all form fields present in ctx and supports cancellation.
+func ListFormFields(c context.Context, ctx *model.Context) ([]string, error) {
 	// TODO Align output for Bangla, Hindi, Marathi.
 
-	fs, fm, err := FormFields(ctx)
+	fs, fm, err := FormFields(c, ctx)
 	if err != nil {
 		return nil, fmt.Errorf("collect fields: %w", err)
 	}
@@ -1115,7 +1119,7 @@ func ListFormFields(ctx *model.Context) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("render fields: %w", err)
 	}
-	return fields, nil
+	return fields, contextutil.Check(c)
 }
 
 func annotIndRefsDepth(xRefTable *model.XRefTable, fields types.Array, depth int, visit *model.FormFieldVisit) ([]types.IndirectRef, error) {
@@ -1410,8 +1414,45 @@ func deletePageAnnots(xRefTable *model.XRefTable, m map[types.IndirectRef]bool, 
 	return nil
 }
 
-// RemoveFormFields deletes all form fields with given ID or name from the form represented by xRefTable.
-func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
+func formFieldAnnotRefs(
+	c context.Context,
+	xRefTable *model.XRefTable,
+	indRefs []types.IndirectRef,
+) (map[types.IndirectRef]bool, error) {
+	m := map[types.IndirectRef]bool{}
+	for _, indRef := range indRefs {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
+		d, err := xRefTable.DereferenceDict(indRef)
+		if err != nil {
+			return nil, fmt.Errorf("field obj#%d: dereference: %w", indRef.ObjectNumber.Value(), err)
+		}
+		o, ok := d.Find("Kids")
+		if !ok {
+			m[indRef] = true
+			continue
+		}
+		kids, err := xRefTable.DereferenceArray(o)
+		if err != nil {
+			return nil, fmt.Errorf("field obj#%d: Kids: %w", indRef.ObjectNumber.Value(), err)
+		}
+		for i, o := range kids {
+			kidIndRef, err := indirectRef(o, fmt.Sprintf("field obj#%d Kids", indRef.ObjectNumber.Value()), i)
+			if err != nil {
+				return nil, err
+			}
+			m[kidIndRef] = true
+		}
+	}
+	return m, contextutil.Check(c)
+}
+
+// RemoveFormFields deletes selected form fields and supports cancellation.
+func RemoveFormFields(c context.Context, ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	xRefTable := ctx.XRefTable
 
 	fields, err := Fields(xRefTable)
@@ -1422,6 +1463,9 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 	indRefs, err := annotIndRefsForFields(xRefTable, fieldIDsOrNames, fields)
 	if err != nil {
 		return false, fmt.Errorf("resolve selected fields: %w", err)
+	}
+	if err := contextutil.Check(c); err != nil {
+		return false, err
 	}
 
 	indRefsClone := make([]types.IndirectRef, len(indRefs))
@@ -1444,28 +1488,9 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 
 	var ok bool
 
-	m := map[types.IndirectRef]bool{}
-	for _, indRef := range indRefs {
-		d, err := xRefTable.DereferenceDict(indRef)
-		if err != nil {
-			return false, fmt.Errorf("field obj#%d: dereference: %w", indRef.ObjectNumber.Value(), err)
-		}
-		o, ok := d.Find("Kids")
-		if !ok {
-			m[indRef] = true
-			continue
-		}
-		kids, err := xRefTable.DereferenceArray(o)
-		if err != nil {
-			return false, fmt.Errorf("field obj#%d: Kids: %w", indRef.ObjectNumber.Value(), err)
-		}
-		for i, o := range kids {
-			kidIndRef, err := indirectRef(o, fmt.Sprintf("field obj#%d Kids", indRef.ObjectNumber.Value()), i)
-			if err != nil {
-				return false, err
-			}
-			m[kidIndRef] = true
-		}
+	m, err := formFieldAnnotRefs(c, xRefTable, indRefs)
+	if err != nil {
+		return false, err
 	}
 
 	if err := deletePageAnnots(xRefTable, m, &ok); err != nil {
@@ -1483,7 +1508,7 @@ func RemoveFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 		xRefTable.Form["NeedAppearances"] = types.Boolean(true)
 	}
 
-	return ok, nil
+	return ok, contextutil.Check(c)
 }
 
 func resetBtn(xRefTable *model.XRefTable, d types.Dict) error {
@@ -1604,7 +1629,7 @@ func resetMultiListBox(xRefTable *model.XRefTable, d types.Dict, opts []string) 
 	return ind, nil
 }
 
-func resetCh(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRef) error {
+func resetCh(c context.Context, ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRef) error {
 	ff, _, err := ctx.XRefTable.DereferenceIntegerEntry(d, "Ff")
 	if err != nil {
 		return err
@@ -1633,7 +1658,7 @@ func resetCh(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 	}
 
 	if ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldCombo == 0 {
-		if err := primitives.EnsureListBoxAP(ctx, d, opts, ind, da, fonts); err != nil {
+		if err := primitives.EnsureListBoxAP(c, ctx, d, opts, ind, da, fonts); err != nil {
 			return fmt.Errorf("appearance: %w", err)
 		}
 	}
@@ -1641,7 +1666,7 @@ func resetCh(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 	return nil
 }
 
-func resetTx(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRef) error {
+func resetTx(c context.Context, ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRef) error {
 	var (
 		s   string
 		err error
@@ -1690,9 +1715,9 @@ func resetTx(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 			}
 
 			if isDate {
-				err = primitives.EnsureDateFieldAP(ctx, d, s, da, fonts)
+				err = primitives.EnsureDateFieldAP(c, ctx, d, s, da, fonts)
 			} else {
-				err = primitives.EnsureTextFieldAP(ctx, d, s, multiLine, comb, 0, da, fonts)
+				err = primitives.EnsureTextFieldAP(c, ctx, d, s, multiLine, comb, 0, da, fonts)
 			}
 
 			if err != nil {
@@ -1704,9 +1729,9 @@ func resetTx(ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRe
 	}
 
 	if isDate {
-		err = primitives.EnsureDateFieldAP(ctx, d, s, da, fonts)
+		err = primitives.EnsureDateFieldAP(c, ctx, d, s, da, fonts)
 	} else {
-		err = primitives.EnsureTextFieldAP(ctx, d, s, multiLine, comb, 0, da, fonts)
+		err = primitives.EnsureTextFieldAP(c, ctx, d, s, multiLine, comb, 0, da, fonts)
 	}
 	if err != nil {
 		return fmt.Errorf("appearance: %w", err)
@@ -1720,19 +1745,20 @@ func matchField(fi *fieldInfo, fieldIDsOrNames []string) bool {
 		types.MemberOf(fi.name, fieldIDsOrNames)
 }
 
-func resetField(ctx *model.Context, d types.Dict, ft string, fonts map[string]types.IndirectRef) error {
+func resetField(c context.Context, ctx *model.Context, d types.Dict, ft string, fonts map[string]types.IndirectRef) error {
 	switch ft {
 	case "Btn":
 		return resetBtn(ctx.XRefTable, d)
 	case "Ch":
-		return resetCh(ctx, d, fonts)
+		return resetCh(c, ctx, d, fonts)
 	case "Tx":
-		return resetTx(ctx, d, fonts)
+		return resetTx(c, ctx, d, fonts)
 	}
 	return nil
 }
 
 func resetPageFields(
+	c context.Context,
 	ctx *model.Context,
 	fieldIDsOrNames []string,
 	wAnnots model.Annot,
@@ -1781,7 +1807,7 @@ func resetPageFields(
 			}
 		}
 
-		if err = resetField(ctx, d, ft.Value(), fonts); err != nil {
+		if err = resetField(c, ctx, d, ft.Value(), fonts); err != nil {
 			return fmt.Errorf("field %s: %w", fi.id, err)
 		}
 
@@ -1791,8 +1817,11 @@ func resetPageFields(
 	return nil
 }
 
-// ResetFormFields clears or resets all form fields contained in fieldIDsOrNames to its default.
-func ResetFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
+// ResetFormFields clears or resets selected form fields and supports cancellation.
+func ResetFormFields(c context.Context, ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	xRefTable := ctx.XRefTable
 
 	fields, err := Fields(xRefTable)
@@ -1804,6 +1833,9 @@ func ResetFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error)
 	fonts := map[string]types.IndirectRef{}
 
 	for i := 1; i <= xRefTable.PageCount; i++ {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
 
 		pgAnnots := xRefTable.PageAnnots[i]
 		if len(pgAnnots) == 0 {
@@ -1815,12 +1847,12 @@ func ResetFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error)
 			continue
 		}
 
-		if err := resetPageFields(ctx, fieldIDsOrNames, wAnnots, fields, fonts, &ok); err != nil {
+		if err := resetPageFields(c, ctx, fieldIDsOrNames, wAnnots, fields, fonts, &ok); err != nil {
 			return false, fmt.Errorf("page %d: reset fields: %w", i, err)
 		}
 	}
 
-	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
+	if err := pdffont.UpdateUserfonts(c, ctx.XRefTable, fonts); err != nil {
 		return false, fmt.Errorf("form fonts: update: %w", err)
 	}
 
@@ -1831,7 +1863,7 @@ func ResetFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error)
 		xRefTable.Form["NeedAppearances"] = types.Boolean(true)
 	}
 
-	return ok, nil
+	return ok, contextutil.Check(c)
 }
 
 func textFieldFlags(ff *types.Integer) (bool, bool) {
@@ -1861,7 +1893,8 @@ func lockFormField(xRefTable *model.XRefTable, d types.Dict) error {
 	return nil
 }
 
-func ensureAP(ctx *model.Context, d types.Dict, fi *fieldInfo, fonts map[string]types.IndirectRef) error {
+func ensureAP(c context.Context, ctx *model.Context, d types.Dict, fi *fieldInfo,
+	fonts map[string]types.IndirectRef) error {
 	ft := fi.ft
 	if ft == nil {
 		var err error
@@ -1896,7 +1929,7 @@ func ensureAP(ctx *model.Context, d types.Dict, fi *fieldInfo, fonts map[string]
 				v = *s
 			}
 
-			if err := primitives.EnsureComboBoxAP(ctx, d, v, da, fonts); err != nil {
+			if err := primitives.EnsureComboBoxAP(c, ctx, d, v, da, fonts); err != nil {
 				return err
 			}
 
@@ -1907,6 +1940,7 @@ func ensureAP(ctx *model.Context, d types.Dict, fi *fieldInfo, fonts map[string]
 }
 
 func lockPageFields(
+	c context.Context,
 	ctx *model.Context,
 	fieldIDsOrNames []string,
 	fields types.Array,
@@ -1960,7 +1994,7 @@ func lockPageFields(
 			}
 		}
 
-		if err := ensureAP(ctx, d, fi, fonts); err != nil {
+		if err := ensureAP(c, ctx, d, fi, fonts); err != nil {
 			return fmt.Errorf("field %s: appearance: %w", fi.id, err)
 		}
 	}
@@ -1968,8 +2002,11 @@ func lockPageFields(
 	return nil
 }
 
-// LockFormFields turns all form fields contained in fieldIDsOrNames into read-only.
-func LockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
+// LockFormFields turns selected form fields into read-only fields and supports cancellation.
+func LockFormFields(c context.Context, ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	// Note: Not honoured by Apple Preview for Checkboxes, RadiobuttonGroups and ComboBoxes.
 
 	xRefTable := ctx.XRefTable
@@ -1983,6 +2020,9 @@ func LockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) 
 	fonts := map[string]types.IndirectRef{}
 
 	for i := 1; i <= xRefTable.PageCount; i++ {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
 
 		pgAnnots := xRefTable.PageAnnots[i]
 		if len(pgAnnots) == 0 {
@@ -1994,12 +2034,12 @@ func LockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) 
 			continue
 		}
 
-		if err := lockPageFields(ctx, fieldIDsOrNames, fields, wAnnots, fonts, &ok); err != nil {
+		if err := lockPageFields(c, ctx, fieldIDsOrNames, fields, wAnnots, fonts, &ok); err != nil {
 			return false, fmt.Errorf("page %d: lock fields: %w", i, err)
 		}
 	}
 
-	if err := pdffont.UpdateUserfonts(ctx.XRefTable, fonts); err != nil {
+	if err := pdffont.UpdateUserfonts(c, ctx.XRefTable, fonts); err != nil {
 		return false, fmt.Errorf("form fonts: update: %w", err)
 	}
 
@@ -2010,7 +2050,7 @@ func LockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) 
 		xRefTable.Form["NeedAppearances"] = types.Boolean(true)
 	}
 
-	return ok, nil
+	return ok, contextutil.Check(c)
 }
 
 func unlockFormField(xRefTable *model.XRefTable, d types.Dict) error {
@@ -2121,8 +2161,11 @@ func unlockPageFields(
 	return nil
 }
 
-// UnlockFormFields turns all form fields contained in fieldIDsOrNames writable.
-func UnlockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
+// UnlockFormFields turns selected form fields into writable fields and supports cancellation.
+func UnlockFormFields(c context.Context, ctx *model.Context, fieldIDsOrNames []string) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	xRefTable := ctx.XRefTable
 
 	fields, err := Fields(xRefTable)
@@ -2133,6 +2176,9 @@ func UnlockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 	var ok bool
 
 	for i := 1; i <= xRefTable.PageCount; i++ {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
 
 		pgAnnots := xRefTable.PageAnnots[i]
 		if len(pgAnnots) == 0 {
@@ -2156,5 +2202,5 @@ func UnlockFormFields(ctx *model.Context, fieldIDsOrNames []string) (bool, error
 		xRefTable.Form["NeedAppearances"] = types.Boolean(true)
 	}
 
-	return ok, nil
+	return ok, contextutil.Check(c)
 }

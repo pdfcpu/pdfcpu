@@ -17,10 +17,12 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -787,8 +789,8 @@ func validateRectilinearMeasureDict(xRefTable *model.XRefTable, d types.Dict, ow
 		return err
 	}
 
-	// CYX, number, optional, a factor that shall be used to convert the largest units along the y axis to the largest units
-	// along the x axis.
+	// CYX, number, optional, a factor that shall be used to convert the largest units along the y axis to the largest
+	// units along the x axis.
 	_, err = validateNumberEntry(xRefTable, d, ownerObjNr, dictName, "CYX", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
@@ -1377,10 +1379,13 @@ func pageTreeNodeEntryError(err error, objNr int, entryName string) error {
 	return model.WithValidationErrorObject(err, objNr)
 }
 
-func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr int, hasResources bool, mediaBoxArr types.Array, curPage *int, depth int, visit *model.PageTreeVisit) (types.Array, error) {
+func processPagesKids(c context.Context, xRefTable *model.XRefTable, kids types.Array, parentObjNr int, hasResources bool, mediaBoxArr types.Array, curPage *int, depth int, visit *model.PageTreeVisit) (types.Array, error) {
 	var a types.Array
 
 	for i, o := range kids {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 
 		if o == nil {
 			continue
@@ -1417,7 +1422,7 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr 
 		switch dictType {
 
 		case "Pages":
-			if err = validatePagesDictDepth(xRefTable, pageNodeDict, objNr, hasResources, mediaBoxArr, curPage, depth+1, visit); err != nil {
+			if err = validatePagesDictDepth(c, xRefTable, pageNodeDict, objNr, hasResources, mediaBoxArr, curPage, depth+1, visit); err != nil {
 				return nil, pageTreeKidError(err, objNr)
 			}
 
@@ -1447,7 +1452,10 @@ func processPagesKids(xRefTable *model.XRefTable, kids types.Array, parentObjNr 
 	return a, nil
 }
 
-func validatePagesDictDepth(xRefTable *model.XRefTable, d types.Dict, objNr int, hasResources bool, mediaBoxArr types.Array, curPage *int, depth int, visit *model.PageTreeVisit) error {
+func validatePagesDictDepth(c context.Context, xRefTable *model.XRefTable, d types.Dict, objNr int, hasResources bool, mediaBoxArr types.Array, curPage *int, depth int, visit *model.PageTreeVisit) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := xRefTable.CheckRecursionDepth("page tree", depth); err != nil {
 		return model.WithValidationErrorObject(err, objNr)
 	}
@@ -1482,16 +1490,18 @@ func validatePagesDictDepth(xRefTable *model.XRefTable, d types.Dict, objNr int,
 		return nil
 	}
 
-	d["Kids"], err = processPagesKids(xRefTable, kids, objNr, hasResources, mediaBoxArr, curPage, depth, visit)
+	d["Kids"], err = processPagesKids(c, xRefTable, kids, objNr, hasResources, mediaBoxArr, curPage, depth, visit)
 
 	return err
 }
 
-func validatePagesDict(xRefTable *model.XRefTable, d types.Dict, objNr int, hasResources bool, mediaBoxArr types.Array, curPage *int) error {
-	return validatePagesDictDepth(xRefTable, d, objNr, hasResources, mediaBoxArr, curPage, 0, model.NewPageTreeVisit())
+func validatePagesDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, objNr int, hasResources bool, mediaBoxArr types.Array, curPage *int) error {
+	return validatePagesDictDepth(
+		c, xRefTable, d, objNr, hasResources, mediaBoxArr, curPage, 0, model.NewPageTreeVisit(),
+	)
 }
 
-func repairPagesDict(xRefTable *model.XRefTable, obj types.Object, rootDict types.Dict, ownerObjNr int) (types.Dict, int, error) {
+func repairPagesDict(c context.Context, xRefTable *model.XRefTable, obj types.Object, rootDict types.Dict, ownerObjNr int) (types.Dict, int, error) {
 	d, err := xRefTable.DereferenceDict(obj)
 	if err != nil {
 		err = fmt.Errorf("page tree repair: dereference page root: %w", err)
@@ -1524,6 +1534,9 @@ func repairPagesDict(xRefTable *model.XRefTable, obj types.Object, rootDict type
 	}
 
 	for i := range kids {
+		if err := contextutil.Check(c); err != nil {
+			return nil, 0, err
+		}
 
 		o := kids[i]
 
@@ -1576,7 +1589,10 @@ func validateOrRepairPageTreeCount(xRefTable *model.XRefTable, pageRoot types.Di
 	return nil
 }
 
-func validatePages(xRefTable *model.XRefTable, rootDict types.Dict) (types.Dict, error) {
+func validatePages(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict) (types.Dict, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	rootObjNr := validationRootObjectNumber(xRefTable)
 	obj, found := rootDict.Find("Pages")
 	if !found {
@@ -1596,7 +1612,7 @@ func validatePages(xRefTable *model.XRefTable, rootDict types.Dict) (types.Dict,
 			err = errors.New("page tree root: entry \"Pages\" must be an indirect reference")
 			return nil, model.WithValidationErrorObject(err, rootObjNr)
 		}
-		pageRoot, objNr, err = repairPagesDict(xRefTable, obj, rootDict, rootObjNr)
+		pageRoot, objNr, err = repairPagesDict(c, xRefTable, obj, rootDict, rootObjNr)
 		if err != nil {
 			return nil, err
 		}
@@ -1642,7 +1658,7 @@ func validatePages(xRefTable *model.XRefTable, rootDict types.Dict) (types.Dict,
 	xRefTable.PageCount = i.Value()
 
 	pc := 0
-	err = validatePagesDict(xRefTable, pageRoot, objNr, false, nil, &pc)
+	err = validatePagesDict(c, xRefTable, pageRoot, objNr, false, nil, &pc)
 	if err != nil {
 		return nil, err
 	}

@@ -19,6 +19,7 @@ package create
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -36,7 +38,22 @@ import (
 // ErrMissingJSONReader signals a missing required JSON input reader.
 var ErrMissingJSONReader = errors.New("missing JSON reader")
 
-func ensureFontIndRef(xRefTable *model.XRefTable, fontName string, frPage model.FontResource, fonts model.FontMap) (*types.IndirectRef, error) {
+type contextReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (r contextReader) Read(p []byte) (int, error) {
+	if err := contextutil.Check(r.ctx); err != nil {
+		return 0, err
+	}
+	return r.r.Read(p)
+}
+
+func ensureFontIndRef(c context.Context, xRefTable *model.XRefTable, fontName string, frPage model.FontResource, fonts model.FontMap) (*types.IndirectRef, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	frGlobal, ok := fonts[fontName]
 	if !ok {
 		return nil, fmt.Errorf("missing global font: %s", fontName)
@@ -48,18 +65,18 @@ func ensureFontIndRef(xRefTable *model.XRefTable, fontName string, frPage model.
 			return nil, fmt.Errorf("multiple objstreams for font: %s detected", fontName)
 		}
 
-		userFont, err := xRefTable.FontRepository().IsUserFont(fontName)
+		userFont, err := xRefTable.FontRepository().IsUserFont(c, fontName)
 		if err != nil {
 			return nil, fmt.Errorf("font %s: load metrics: %w", fontName, err)
 		}
 		if userFont && frGlobal.FontFile != nil {
-			if err := pdffont.UpdateUserfont(xRefTable, fontName, frGlobal); err != nil {
+			if err := pdffont.UpdateUserfont(c, xRefTable, fontName, frGlobal); err != nil {
 				return nil, fmt.Errorf("font %s: update user font: %w", fontName, err)
 			}
 			frGlobal.FontFile = nil
 		}
 	} else {
-		ir, err := pdffont.EnsureFontDict(xRefTable, fontName, frPage.Lang, "", false, frPage.Res.IndRef)
+		ir, err := pdffont.EnsureFontDict(c, xRefTable, fontName, frPage.Lang, "", false, frPage.Res.IndRef)
 		if err != nil {
 			return nil, fmt.Errorf("font %s: ensure font dict: %w", fontName, err)
 		}
@@ -72,10 +89,13 @@ func ensureFontIndRef(xRefTable *model.XRefTable, fontName string, frPage model.
 	return frGlobal.Res.IndRef, nil
 }
 
-func addPageResources(xRefTable *model.XRefTable, d types.Dict, p model.Page, fonts model.FontMap) error {
+func addPageResources(c context.Context, xRefTable *model.XRefTable, d types.Dict, p model.Page, fonts model.FontMap) error {
 	fontRes := types.Dict{}
 	for fontName, frPage := range p.Fm {
-		ir, err := ensureFontIndRef(xRefTable, fontName, frPage, fonts)
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		ir, err := ensureFontIndRef(c, xRefTable, fontName, frPage, fonts)
 		if err != nil {
 			return fmt.Errorf("font resource %s: %w", frPage.Res.ID, err)
 		}
@@ -104,14 +124,17 @@ func addPageResources(xRefTable *model.XRefTable, d types.Dict, p model.Page, fo
 	return nil
 }
 
-func updatePageResources(xRefTable *model.XRefTable, d, resDict types.Dict, p model.Page, fonts model.FontMap) error {
+func updatePageResources(c context.Context, xRefTable *model.XRefTable, d, resDict types.Dict, p model.Page, fonts model.FontMap) error {
 	if len(p.Fm) > 0 {
 		fontRes, ok := resDict["Font"].(types.Dict)
 		if !ok {
 			fontRes = types.Dict{}
 		}
 		for fontName, frPage := range p.Fm {
-			ir, err := ensureFontIndRef(xRefTable, fontName, frPage, fonts)
+			if err := contextutil.Check(c); err != nil {
+				return err
+			}
+			ir, err := ensureFontIndRef(c, xRefTable, fontName, frPage, fonts)
 			if err != nil {
 				return fmt.Errorf("font resource %s: %w", frPage.Res.ID, err)
 			}
@@ -293,12 +316,11 @@ func mergeAnnotations(oldAnnots types.Array, ff []model.FieldAnnotation, m map[i
 	return arr, nil
 }
 
-// CreatePage generates a page dict for p.
-func CreatePage(
-	xRefTable *model.XRefTable,
-	parentPageIndRef types.IndirectRef,
-	p *model.Page,
-	fonts model.FontMap) (*types.IndirectRef, types.Dict, error) {
+// CreatePage generates a page dictionary for p and supports cancellation.
+func CreatePage(c context.Context, xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, p *model.Page, fonts model.FontMap) (*types.IndirectRef, types.Dict, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	pageDict := types.Dict(
 		map[string]types.Object{
 			"Type":     types.Name("Page"),
@@ -308,7 +330,7 @@ func CreatePage(
 		},
 	)
 
-	err := addPageResources(xRefTable, pageDict, *p, fonts)
+	err := addPageResources(c, xRefTable, pageDict, *p, fonts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("page resources: %w", err)
 	}
@@ -338,6 +360,9 @@ func CreatePage(
 	}
 
 	for i, la := range p.LinkAnnots {
+		if err := contextutil.Check(c); err != nil {
+			return nil, nil, err
+		}
 		d, err := la.RenderDict(xRefTable, pageDictIndRef)
 		if err != nil {
 			return nil, nil, fmt.Errorf("link annotation %d: render: %w", i+1, err)
@@ -351,14 +376,17 @@ func CreatePage(
 
 	pageDict["Annots"] = arr
 
-	return pageDictIndRef, pageDict, err
+	return pageDictIndRef, pageDict, contextutil.Check(c)
 }
 
-// UpdatePage updates the existing page dict d with content provided by p.
-func UpdatePage(xRefTable *model.XRefTable, dIndRef types.IndirectRef, d, res types.Dict, p *model.Page, fonts model.FontMap) error {
+// UpdatePage updates the existing page dictionary d with content provided by p and supports cancellation.
+func UpdatePage(c context.Context, xRefTable *model.XRefTable, dIndRef types.IndirectRef, d, res types.Dict, p *model.Page, fonts model.FontMap) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	// TODO Account for existing page rotation.
 
-	err := updatePageResources(xRefTable, d, res, *p, fonts)
+	err := updatePageResources(c, xRefTable, d, res, *p, fonts)
 	if err != nil {
 		return fmt.Errorf("page resources: %w", err)
 	}
@@ -387,6 +415,9 @@ func UpdatePage(xRefTable *model.XRefTable, dIndRef types.IndirectRef, d, res ty
 	}
 
 	for i, la := range p.LinkAnnots {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		d, err := la.RenderDict(xRefTable, &dIndRef)
 		if err != nil {
 			return fmt.Errorf("link annotation %d: render: %w", i+1, err)
@@ -400,10 +431,10 @@ func UpdatePage(xRefTable *model.XRefTable, dIndRef types.IndirectRef, d, res ty
 
 	d["Annots"] = arr
 
-	return nil
+	return contextutil.Check(c)
 }
 
-func cacheFormFieldIDs(ctx *model.Context, pdf *primitives.PDF) error {
+func cacheFormFieldIDs(c context.Context, ctx *model.Context, pdf *primitives.PDF) error {
 	if ctx.Form == nil {
 		return nil
 	}
@@ -419,6 +450,9 @@ func cacheFormFieldIDs(ctx *model.Context, pdf *primitives.PDF) error {
 	}
 
 	for i, ir := range arr {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		d, err := ctx.DereferenceDict(ir)
 		if err != nil {
 			return fmt.Errorf("form field %d: dereference dict: %w", i+1, err)
@@ -438,9 +472,12 @@ func cacheFormFieldIDs(ctx *model.Context, pdf *primitives.PDF) error {
 	return nil
 }
 
-func cacheResIDs(ctx *model.Context, pdf *primitives.PDF) error {
+func cacheResIDs(c context.Context, ctx *model.Context, pdf *primitives.PDF) error {
 	// Iterate over all pages of ctx and prepare a resIds []string for inherited "Font" and "XObject" resources.
 	for i := 1; i <= ctx.PageCount; i++ {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		_, _, inhPA, err := ctx.PageDict(i, true)
 		if err != nil {
 			return fmt.Errorf("page %d: collect inherited resources: %w", i, err)
@@ -455,7 +492,10 @@ func cacheResIDs(ctx *model.Context, pdf *primitives.PDF) error {
 	return nil
 }
 
-func parseFromJSON(ctx *model.Context, bb []byte) (*primitives.PDF, error) {
+func parseFromJSON(c context.Context, ctx *model.Context, bb []byte) (*primitives.PDF, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if !json.Valid(bb) {
 		return nil, fmt.Errorf("invalid JSON encoding detected")
 	}
@@ -478,6 +518,9 @@ func parseFromJSON(ctx *model.Context, bb []byte) (*primitives.PDF, error) {
 	if err := json.Unmarshal(bb, pdf); err != nil {
 		return nil, fmt.Errorf("decode JSON: %w", err)
 	}
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 
 	if pdf.Update() {
 
@@ -486,31 +529,32 @@ func parseFromJSON(ctx *model.Context, bb []byte) (*primitives.PDF, error) {
 		pdf.HasForm = found
 
 		if pdf.HasForm {
-			if err := cacheFormFieldIDs(ctx, pdf); err != nil {
+			if err := cacheFormFieldIDs(c, ctx, pdf); err != nil {
 				return nil, fmt.Errorf("cache form field IDs: %w", err)
 			}
 		}
 
-		if err := cacheResIDs(ctx, pdf); err != nil {
+		if err := cacheResIDs(c, ctx, pdf); err != nil {
 			return nil, fmt.Errorf("cache resource IDs: %w", err)
 		}
 
 	}
 
-	if err := pdf.Validate(); err != nil {
+	if err := pdf.Validate(c); err != nil {
 		return nil, fmt.Errorf("validate JSON model: %w", err)
 	}
 
-	return pdf, nil
+	return pdf, contextutil.Check(c)
 }
 
 func appendPage(
+	c context.Context,
 	ctx *model.Context,
 	pagesDictIndRef types.IndirectRef,
 	pagesDict types.Dict,
 	p *model.Page,
 	fonts model.FontMap) error {
-	ir, _, err := CreatePage(ctx.XRefTable, pagesDictIndRef, p, fonts)
+	ir, _, err := CreatePage(c, ctx.XRefTable, pagesDictIndRef, p, fonts)
 	if err != nil {
 		return fmt.Errorf("create page: %w", err)
 	}
@@ -528,7 +572,16 @@ func appendPage(
 	return nil
 }
 
-func updatePage(ctx *model.Context, pageNr int, p *model.Page, fonts model.FontMap) error {
+func updatePage(
+	c context.Context,
+	ctx *model.Context,
+	pageNr int,
+	p *model.Page,
+	fonts model.FontMap,
+) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	pageDict, pageDictIndRef, inhPAttrs, err := ctx.PageDict(pageNr, false)
 	if err != nil {
 		return fmt.Errorf("read page dict: %w", err)
@@ -540,11 +593,14 @@ func updatePage(ctx *model.Context, pageNr int, p *model.Page, fonts model.FontM
 		inhPAttrs.Resources = types.Dict{}
 	}
 
-	return UpdatePage(ctx.XRefTable, *pageDictIndRef, pageDict, inhPAttrs.Resources, p, fonts)
+	return UpdatePage(c, ctx.XRefTable, *pageDictIndRef, pageDict, inhPAttrs.Resources, p, fonts)
 }
 
-// UpdatePageTree merges new pages or updates existing pages into ctx.
-func UpdatePageTree(ctx *model.Context, pages []*model.Page, fontMap model.FontMap) (types.Array, model.FontMap, error) {
+// UpdatePageTree merges new pages or updates existing pages into ctx and supports cancellation.
+func UpdatePageTree(c context.Context, ctx *model.Context, pages []*model.Page, fontMap model.FontMap) (types.Array, model.FontMap, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	pageCount := ctx.PageCount
 
 	ir, err := ctx.Pages()
@@ -560,6 +616,9 @@ func UpdatePageTree(ctx *model.Context, pages []*model.Page, fontMap model.FontM
 	fields := types.Array{}
 
 	for i, p := range pages {
+		if err := contextutil.Check(c); err != nil {
+			return nil, nil, err
+		}
 
 		if p == nil {
 			continue
@@ -570,9 +629,9 @@ func UpdatePageTree(ctx *model.Context, pages []*model.Page, fontMap model.FontM
 		var err error
 
 		if pageNr > pageCount {
-			err = appendPage(ctx, *ir, d, p, fontMap)
+			err = appendPage(c, ctx, *ir, d, p, fontMap)
 		} else {
-			err = updatePage(ctx, pageNr, p, fontMap)
+			err = updatePage(c, ctx, pageNr, p, fontMap)
 		}
 
 		if err != nil {
@@ -582,13 +641,16 @@ func UpdatePageTree(ctx *model.Context, pages []*model.Page, fontMap model.FontM
 		fields = append(fields, p.Fields...)
 	}
 
-	return fields, fontMap, nil
+	return fields, fontMap, contextutil.Check(c)
 }
 
-func prepareFormFontResDict(ctx *model.Context, pdf *primitives.PDF, fonts model.FontMap) (types.Dict, error) {
+func prepareFormFontResDict(c context.Context, ctx *model.Context, pdf *primitives.PDF, fonts model.FontMap) (types.Dict, error) {
 	d := types.Dict{}
 
 	for id, f := range pdf.FormFonts {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 
 		if font.IsCoreFont(f.Name) {
 			frGlobal := fonts[f.Name]
@@ -596,7 +658,7 @@ func prepareFormFontResDict(ctx *model.Context, pdf *primitives.PDF, fonts model
 				d.Insert(id, *frGlobal.Res.IndRef)
 				continue
 			}
-			ir, err := pdffont.EnsureFontDict(ctx.XRefTable, f.Name, "", "", true, nil)
+			ir, err := pdffont.EnsureFontDict(c, ctx.XRefTable, f.Name, "", "", true, nil)
 			if err != nil {
 				return nil, fmt.Errorf("form font %s: ensure font dict: %w", id, err)
 			}
@@ -610,7 +672,7 @@ func prepareFormFontResDict(ctx *model.Context, pdf *primitives.PDF, fonts model
 			ir = frGlobal.Res.IndRef
 		}
 
-		ir, err := pdffont.EnsureFontDict(ctx.XRefTable, f.Name, f.Lang, f.Script, true, ir)
+		ir, err := pdffont.EnsureFontDict(c, ctx.XRefTable, f.Name, f.Lang, f.Script, true, ir)
 		if err != nil {
 			return nil, fmt.Errorf("form font %s: ensure font dict: %w", id, err)
 		}
@@ -622,6 +684,7 @@ func prepareFormFontResDict(ctx *model.Context, pdf *primitives.PDF, fonts model
 }
 
 func createForm(
+	c context.Context,
 	ctx *model.Context,
 	pdf *primitives.PDF,
 	fields types.Array,
@@ -629,7 +692,7 @@ func createForm(
 	d := types.Dict{"Fields": fields}
 
 	if len(pdf.FormFonts) > 0 {
-		d1, err := prepareFormFontResDict(ctx, pdf, fonts)
+		d1, err := prepareFormFontResDict(c, ctx, pdf, fonts)
 		if err != nil {
 			return fmt.Errorf("prepare font resources: %w", err)
 		}
@@ -642,6 +705,7 @@ func createForm(
 }
 
 func updateForm(
+	c context.Context,
 	ctx *model.Context,
 	pdf *primitives.PDF,
 	fields types.Array,
@@ -663,7 +727,7 @@ func updateForm(
 
 	o, found := d.Find("DR")
 	if !found {
-		d1, err := prepareFormFontResDict(ctx, pdf, fonts)
+		d1, err := prepareFormFontResDict(c, ctx, pdf, fonts)
 		if err != nil {
 			return fmt.Errorf("prepare font resources: %w", err)
 		}
@@ -686,7 +750,7 @@ func updateForm(
 		return fmt.Errorf("font resources: dereference dict: %w", err)
 	}
 
-	d1, err := prepareFormFontResDict(ctx, pdf, fonts)
+	d1, err := prepareFormFontResDict(c, ctx, pdf, fonts)
 	if err != nil {
 		return fmt.Errorf("prepare font resources: %w", err)
 	}
@@ -701,42 +765,52 @@ func updateForm(
 }
 
 func handleForm(
+	c context.Context,
 	ctx *model.Context,
 	pdf *primitives.PDF,
 	fields types.Array,
 	fonts model.FontMap) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	var err error
 	if pdf.Update() && pdf.HasForm {
-		err = updateForm(ctx, pdf, fields, fonts)
+		err = updateForm(c, ctx, pdf, fields, fonts)
 	} else {
-		err = createForm(ctx, pdf, fields, fonts)
+		err = createForm(c, ctx, pdf, fields, fonts)
 	}
 	if err != nil {
 		return fmt.Errorf("form fields: %w", err)
 	}
 
 	for fName, frGlobal := range fonts {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		userFont := false
 		var err error
 		if !strings.HasPrefix(fName, "cjk:") {
-			userFont, err = ctx.XRefTable.FontRepository().IsUserFont(fName)
+			userFont, err = ctx.XRefTable.FontRepository().IsUserFont(c, fName)
 			if err != nil {
 				return fmt.Errorf("font %s: load metrics: %w", fName, err)
 			}
 		}
 		if userFont {
-			_, err := pdffont.EnsureFontDict(ctx.XRefTable, fName, frGlobal.Lang, "", false, frGlobal.Res.IndRef)
+			_, err := pdffont.EnsureFontDict(c, ctx.XRefTable, fName, frGlobal.Lang, "", false, frGlobal.Res.IndRef)
 			if err != nil {
 				return fmt.Errorf("font %s: ensure user font dict: %w", fName, err)
 			}
 		}
 	}
 
-	return nil
+	return contextutil.Check(c)
 }
 
-// FromJSON generates PDF content into ctx as provided by rd.
-func FromJSON(ctx *model.Context, rd io.Reader) error {
+// FromJSON generates PDF content into ctx as provided by rd and supports cancellation.
+func FromJSON(c context.Context, ctx *model.Context, rd io.Reader) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if ctx == nil {
 		return model.ErrMissingPDFContext
 	}
@@ -747,30 +821,30 @@ func FromJSON(ctx *model.Context, rd io.Reader) error {
 		return ErrMissingJSONReader
 	}
 	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, rd); err != nil {
+	if _, err := io.Copy(&buf, contextReader{ctx: c, r: rd}); err != nil {
 		return fmt.Errorf("read JSON: %w", err)
 	}
 
-	pdf, err := parseFromJSON(ctx, buf.Bytes())
+	pdf, err := parseFromJSON(c, ctx, buf.Bytes())
 	if err != nil {
 		return fmt.Errorf("parse JSON: %w", err)
 	}
 
-	pages, fontMap, err := pdf.RenderPages()
+	pages, fontMap, err := pdf.RenderPages(c)
 	if err != nil {
 		return fmt.Errorf("render pages: %w", err)
 	}
 
-	fields, fonts, err := UpdatePageTree(ctx, pages, fontMap)
+	fields, fonts, err := UpdatePageTree(c, ctx, pages, fontMap)
 	if err != nil {
 		return fmt.Errorf("update page tree: %w", err)
 	}
 
 	if len(fields) > 0 {
-		if err := handleForm(ctx, pdf, fields, fonts); err != nil {
+		if err := handleForm(c, ctx, pdf, fields, fonts); err != nil {
 			return fmt.Errorf("update form: %w", err)
 		}
 	}
 
-	return nil
+	return contextutil.Check(c)
 }

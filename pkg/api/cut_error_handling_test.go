@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"math"
@@ -133,7 +134,7 @@ func TestCloneCutConfigurationDeepCopiesOwnedData(t *testing.T) {
 
 // TestSelectedCutPagesAreSorted verifies deterministic processing order for all cut operations.
 func TestSelectedCutPagesAreSorted(t *testing.T) {
-	got, err := selectedCutPages(5, []string{"5", "1", "3"}, "cut")
+	got, err := selectedCutPages(t.Context(), 5, []string{"5", "1", "3"}, "cut")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +160,7 @@ func TestCutAPIRejectsDuplicateCutPoints(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			want := snapshotCutConfiguration(tt.cut)
-			err := Cut(bytes.NewReader(nil), "", "", nil, tt.cut, nil)
+			err := Cut(t.Context(), bytes.NewReader(nil), "", "", nil, tt.cut, nil)
 			if !errors.Is(err, ErrInvalidCutConfiguration) {
 				t.Fatalf("expected %v, got %v", ErrInvalidCutConfiguration, err)
 			}
@@ -180,19 +181,19 @@ func TestCutAPIsPreserveCallerConfiguration(t *testing.T) {
 		file   runCutAPI
 	}{
 		{name: "cut", reader: func(t *testing.T, outDir string, cut *model.Cut) error {
-			return Cut(openAPITestPDF(t, cutErrorTestInput()), outDir, "out", []string{"1"}, cut, nil)
-		}, file: func(_ *testing.T, outDir string, cut *model.Cut) error {
-			return CutFile(cutErrorTestInput(), outDir, "out", []string{"1"}, cut, nil)
+			return Cut(t.Context(), openAPITestPDF(t, cutErrorTestInput()), outDir, "out", []string{"1"}, cut, nil)
+		}, file: func(t *testing.T, outDir string, cut *model.Cut) error {
+			return CutFile(t.Context(), cutErrorTestInput(), outDir, "out", []string{"1"}, cut, nil)
 		}},
 		{name: "ndown", reader: func(t *testing.T, outDir string, cut *model.Cut) error {
-			return NDown(openAPITestPDF(t, cutErrorTestInput()), outDir, "out", []string{"1"}, 2, cut, nil)
-		}, file: func(_ *testing.T, outDir string, cut *model.Cut) error {
-			return NDownFile(cutErrorTestInput(), outDir, "out", []string{"1"}, 2, cut, nil)
+			return NDown(t.Context(), openAPITestPDF(t, cutErrorTestInput()), outDir, "out", []string{"1"}, 2, cut, nil)
+		}, file: func(t *testing.T, outDir string, cut *model.Cut) error {
+			return NDownFile(t.Context(), cutErrorTestInput(), outDir, "out", []string{"1"}, 2, cut, nil)
 		}},
 		{name: "poster", reader: func(t *testing.T, outDir string, cut *model.Cut) error {
-			return Poster(openAPITestPDF(t, cutErrorTestInput()), outDir, "out", []string{"1"}, cut, nil)
-		}, file: func(_ *testing.T, outDir string, cut *model.Cut) error {
-			return PosterFile(cutErrorTestInput(), outDir, "out", []string{"1"}, cut, nil)
+			return Poster(t.Context(), openAPITestPDF(t, cutErrorTestInput()), outDir, "out", []string{"1"}, cut, nil)
+		}, file: func(t *testing.T, outDir string, cut *model.Cut) error {
+			return PosterFile(t.Context(), cutErrorTestInput(), outDir, "out", []string{"1"}, cut, nil)
 		}},
 	}
 
@@ -239,7 +240,7 @@ func TestWriteCutOutputJoinsPhaseAndCleanupFailures(t *testing.T) {
 			}
 			return f, nil
 		},
-		writeAndFlush: func(*model.Context, io.Writer) (error, error) {
+		writeAndFlush: func(context.Context, *model.Context, io.Writer) (error, error) {
 			return writeErr, flushErr
 		},
 		rename: func(string, string) error {
@@ -255,7 +256,7 @@ func TestWriteCutOutputJoinsPhaseAndCleanupFailures(t *testing.T) {
 		},
 	}
 
-	err := writeCutOutputWith(nil, outFile, "cut", ops)
+	err := writeCutOutputUsing(t.Context(), nil, outFile, "cut", ops)
 	for _, want := range []error{writeErr, flushErr, closeErr, cleanupErr} {
 		if !errors.Is(err, want) {
 			t.Fatalf("expected joined error %v, got %v", want, err)
@@ -278,7 +279,7 @@ func TestWriteCutOutputCleansUpAfterRenameFailure(t *testing.T) {
 	removeCalled := false
 	ops := cutOutputOperations{
 		createTemp: func(string, string) (cutOutputFile, error) { return f, nil },
-		writeAndFlush: func(*model.Context, io.Writer) (error, error) {
+		writeAndFlush: func(context.Context, *model.Context, io.Writer) (error, error) {
 			return nil, nil
 		},
 		rename: func(oldName, newName string) error {
@@ -296,7 +297,7 @@ func TestWriteCutOutputCleansUpAfterRenameFailure(t *testing.T) {
 		},
 	}
 
-	err := writeCutOutputWith(nil, outFile, "cut", ops)
+	err := writeCutOutputUsing(t.Context(), nil, outFile, "cut", ops)
 	for _, want := range []error{renameErr, cleanupErr} {
 		if !errors.Is(err, want) {
 			t.Fatalf("expected joined error %v, got %v", want, err)
@@ -318,7 +319,7 @@ func TestWriteCutOutputRecoversWritePanicBeforeCleanup(t *testing.T) {
 	renameCalled := false
 	ops := cutOutputOperations{
 		createTemp: func(string, string) (cutOutputFile, error) { return f, nil },
-		writeAndFlush: func(*model.Context, io.Writer) (error, error) {
+		writeAndFlush: func(context.Context, *model.Context, io.Writer) (error, error) {
 			fault.Fail("write output: %w", panicErr)
 			return nil, nil
 		},
@@ -332,7 +333,7 @@ func TestWriteCutOutputRecoversWritePanicBeforeCleanup(t *testing.T) {
 		},
 	}
 
-	err := writeCutOutputWith(nil, outFile, "cut", ops)
+	err := writeCutOutputUsing(t.Context(), nil, outFile, "cut", ops)
 	if err == nil {
 		t.Fatal("expected recovered panic error")
 	}
@@ -404,11 +405,11 @@ func TestWriteCutOutputAppliesDestinationPermissions(t *testing.T) {
 				}
 				return createCutTemporaryOutput(dir, pattern)
 			}
-			ops.writeAndFlush = func(_ *model.Context, w io.Writer) (error, error) {
+			ops.writeAndFlush = func(_ context.Context, _ *model.Context, w io.Writer) (error, error) {
 				_, err := w.Write([]byte("replacement"))
 				return err, nil
 			}
-			if err := writeCutOutputWith(nil, outFile, "cut", ops); err != nil {
+			if err := writeCutOutputUsing(t.Context(), nil, outFile, "cut", ops); err != nil {
 				t.Fatal(err)
 			}
 			info, err := os.Stat(outFile)
@@ -436,11 +437,11 @@ func TestWriteCutOutputSuccessfullyReplacesDestination(t *testing.T) {
 	}
 	replacement := []byte("replacement")
 	ops := defaultCutOutputOperations()
-	ops.writeAndFlush = func(_ *model.Context, w io.Writer) (error, error) {
+	ops.writeAndFlush = func(_ context.Context, _ *model.Context, w io.Writer) (error, error) {
 		_, err := w.Write(replacement)
 		return err, nil
 	}
-	if err := writeCutOutputWith(nil, outFile, "cut", ops); err != nil {
+	if err := writeCutOutputUsing(t.Context(), nil, outFile, "cut", ops); err != nil {
 		t.Fatal(err)
 	}
 	got, err := os.ReadFile(outFile)
@@ -503,7 +504,7 @@ func TestWriteCutOutputFailurePhases(t *testing.T) {
 					}
 					return f, nil
 				},
-				writeAndFlush: func(*model.Context, io.Writer) (error, error) {
+				writeAndFlush: func(context.Context, *model.Context, io.Writer) (error, error) {
 					return tt.writeErr, tt.flushErr
 				},
 				rename: func(string, string) error {
@@ -516,7 +517,7 @@ func TestWriteCutOutputFailurePhases(t *testing.T) {
 				},
 			}
 
-			err := writeCutOutputWith(nil, outFile, "cut", ops)
+			err := writeCutOutputUsing(t.Context(), nil, outFile, "cut", ops)
 			if err == nil || !strings.Contains(err.Error(), "cut: write output "+outFile+": "+tt.wantPhase) {
 				t.Fatalf("expected %q phase, got %v", tt.wantPhase, err)
 			}
@@ -560,7 +561,7 @@ func TestWriteCutOutputPreservesExistingDestination(t *testing.T) {
 				}
 				return &cutOutputOSFile{File: f, closeErr: tt.closeErr}, nil
 			}
-			ops.writeAndFlush = func(_ *model.Context, w io.Writer) (error, error) {
+			ops.writeAndFlush = func(_ context.Context, _ *model.Context, w io.Writer) (error, error) {
 				if _, err := w.Write([]byte("replacement output")); err != nil {
 					return err, nil
 				}
@@ -570,7 +571,7 @@ func TestWriteCutOutputPreservesExistingDestination(t *testing.T) {
 				ops.rename = func(string, string) error { return primaryErr }
 			}
 
-			err := writeCutOutputWith(nil, outFile, "cut", ops)
+			err := writeCutOutputUsing(t.Context(), nil, outFile, "cut", ops)
 			if !errors.Is(err, primaryErr) {
 				t.Fatalf("expected %v, got %v", primaryErr, err)
 			}
@@ -599,15 +600,15 @@ func TestCutAPIMissingArguments(t *testing.T) {
 		err  error
 		want error
 	}{
-		{name: "cut reader", err: Cut(nil, "", "", nil, validCutConfiguration(), nil), want: ErrMissingPDFReadSeeker},
-		{name: "ndown reader", err: NDown(nil, "", "", nil, 2, validNDownConfiguration(), nil), want: ErrMissingPDFReadSeeker},
-		{name: "poster reader", err: Poster(nil, "", "", nil, validPosterConfiguration(), nil), want: ErrMissingPDFReadSeeker},
-		{name: "cut configuration", err: Cut(bytes.NewReader(nil), "", "", nil, nil, nil), want: ErrMissingCutConfiguration},
-		{name: "ndown configuration", err: NDown(bytes.NewReader(nil), "", "", nil, 2, nil, nil), want: ErrMissingCutConfiguration},
-		{name: "poster configuration", err: Poster(bytes.NewReader(nil), "", "", nil, nil, nil), want: ErrMissingCutConfiguration},
-		{name: "cut input", err: CutFile("", "", "", nil, nil, nil), want: ErrMissingPDFInput},
-		{name: "ndown input", err: NDownFile("", "", "", nil, 2, nil, nil), want: ErrMissingPDFInput},
-		{name: "poster input", err: PosterFile("", "", "", nil, nil, nil), want: ErrMissingPDFInput},
+		{name: "cut reader", err: Cut(t.Context(), nil, "", "", nil, validCutConfiguration(), nil), want: ErrMissingPDFReadSeeker},
+		{name: "ndown reader", err: NDown(t.Context(), nil, "", "", nil, 2, validNDownConfiguration(), nil), want: ErrMissingPDFReadSeeker},
+		{name: "poster reader", err: Poster(t.Context(), nil, "", "", nil, validPosterConfiguration(), nil), want: ErrMissingPDFReadSeeker},
+		{name: "cut configuration", err: Cut(t.Context(), bytes.NewReader(nil), "", "", nil, nil, nil), want: ErrMissingCutConfiguration},
+		{name: "ndown configuration", err: NDown(t.Context(), bytes.NewReader(nil), "", "", nil, 2, nil, nil), want: ErrMissingCutConfiguration},
+		{name: "poster configuration", err: Poster(t.Context(), bytes.NewReader(nil), "", "", nil, nil, nil), want: ErrMissingCutConfiguration},
+		{name: "cut input", err: CutFile(t.Context(), "", "", "", nil, nil, nil), want: ErrMissingPDFInput},
+		{name: "ndown input", err: NDownFile(t.Context(), "", "", "", nil, 2, nil, nil), want: ErrMissingPDFInput},
+		{name: "poster input", err: PosterFile(t.Context(), "", "", "", nil, nil, nil), want: ErrMissingPDFInput},
 	}
 
 	for _, tt := range tests {
@@ -627,19 +628,19 @@ func TestCutAPIRejectsInvalidConfigurationsBeforeIO(t *testing.T) {
 		err  error
 		want string
 	}{
-		{name: "cut points missing", err: Cut(bytes.NewReader(nil), "", "", nil, &model.Cut{}, nil), want: "missing horizontal or vertical cut points"},
-		{name: "cut point NaN", err: Cut(bytes.NewReader(nil), "", "", nil, &model.Cut{Hor: []float64{math.NaN()}}, nil), want: "horizontal cut point 1"},
-		{name: "cut point infinity", err: Cut(bytes.NewReader(nil), "", "", nil, &model.Cut{Vert: []float64{math.Inf(1)}}, nil), want: "vertical cut point 1"},
-		{name: "cut margin", err: Cut(bytes.NewReader(nil), "", "", nil, &model.Cut{Hor: []float64{0.5}, Margin: -1}, nil), want: "margin"},
-		{name: "ndown value", err: NDown(bytes.NewReader(nil), "", "", nil, 5, validNDownConfiguration(), nil), want: "n-down value 5"},
-		{name: "ndown margin", err: NDown(bytes.NewReader(nil), "", "", nil, 2, &model.Cut{Margin: math.Inf(1)}, nil), want: "margin"},
-		{name: "poster source missing", err: Poster(bytes.NewReader(nil), "", "", nil, &model.Cut{}, nil), want: "missing dimensions or form size"},
-		{name: "poster scale", err: Poster(bytes.NewReader(nil), "", "", nil, &model.Cut{Scale: math.NaN(), PageDim: &types.Dim{Width: 100, Height: 100}, UserDim: true}, nil), want: "scale factor"},
-		{name: "poster dimensions missing", err: Poster(bytes.NewReader(nil), "", "", nil, &model.Cut{Scale: 1, UserDim: true}, nil), want: "missing dimensions"},
-		{name: "poster dimensions zero", err: Poster(bytes.NewReader(nil), "", "", nil, &model.Cut{Scale: 1, PageDim: &types.Dim{}, UserDim: true}, nil), want: "dimensions must be finite and > 0"},
-		{name: "cut file before open", err: CutFile(missingFile, "", "", nil, &model.Cut{}, nil), want: "missing horizontal or vertical cut points"},
-		{name: "ndown file before open", err: NDownFile(missingFile, "", "", nil, 5, validNDownConfiguration(), nil), want: "n-down value 5"},
-		{name: "poster file before open", err: PosterFile(missingFile, "", "", nil, &model.Cut{}, nil), want: "missing dimensions or form size"},
+		{name: "cut points missing", err: Cut(t.Context(), bytes.NewReader(nil), "", "", nil, &model.Cut{}, nil), want: "missing horizontal or vertical cut points"},
+		{name: "cut point NaN", err: Cut(t.Context(), bytes.NewReader(nil), "", "", nil, &model.Cut{Hor: []float64{math.NaN()}}, nil), want: "horizontal cut point 1"},
+		{name: "cut point infinity", err: Cut(t.Context(), bytes.NewReader(nil), "", "", nil, &model.Cut{Vert: []float64{math.Inf(1)}}, nil), want: "vertical cut point 1"},
+		{name: "cut margin", err: Cut(t.Context(), bytes.NewReader(nil), "", "", nil, &model.Cut{Hor: []float64{0.5}, Margin: -1}, nil), want: "margin"},
+		{name: "ndown value", err: NDown(t.Context(), bytes.NewReader(nil), "", "", nil, 5, validNDownConfiguration(), nil), want: "n-down value 5"},
+		{name: "ndown margin", err: NDown(t.Context(), bytes.NewReader(nil), "", "", nil, 2, &model.Cut{Margin: math.Inf(1)}, nil), want: "margin"},
+		{name: "poster source missing", err: Poster(t.Context(), bytes.NewReader(nil), "", "", nil, &model.Cut{}, nil), want: "missing dimensions or form size"},
+		{name: "poster scale", err: Poster(t.Context(), bytes.NewReader(nil), "", "", nil, &model.Cut{Scale: math.NaN(), PageDim: &types.Dim{Width: 100, Height: 100}, UserDim: true}, nil), want: "scale factor"},
+		{name: "poster dimensions missing", err: Poster(t.Context(), bytes.NewReader(nil), "", "", nil, &model.Cut{Scale: 1, UserDim: true}, nil), want: "missing dimensions"},
+		{name: "poster dimensions zero", err: Poster(t.Context(), bytes.NewReader(nil), "", "", nil, &model.Cut{Scale: 1, PageDim: &types.Dim{}, UserDim: true}, nil), want: "dimensions must be finite and > 0"},
+		{name: "cut file before open", err: CutFile(t.Context(), missingFile, "", "", nil, &model.Cut{}, nil), want: "missing horizontal or vertical cut points"},
+		{name: "ndown file before open", err: NDownFile(t.Context(), missingFile, "", "", nil, 5, validNDownConfiguration(), nil), want: "n-down value 5"},
+		{name: "poster file before open", err: PosterFile(t.Context(), missingFile, "", "", nil, &model.Cut{}, nil), want: "missing dimensions or form size"},
 	}
 
 	for _, tt := range tests {
@@ -667,9 +668,13 @@ func TestCutAPIReadErrorsIncludeOperationContext(t *testing.T) {
 		operation string
 		run       func() error
 	}{
-		{operation: "cut", run: func() error { return Cut(bytes.NewReader(nil), "", "", nil, validCutConfiguration(), nil) }},
-		{operation: "ndown", run: func() error { return NDown(bytes.NewReader(nil), "", "", nil, 2, validNDownConfiguration(), nil) }},
-		{operation: "poster", run: func() error { return Poster(bytes.NewReader(nil), "", "", nil, validPosterConfiguration(), nil) }},
+		{operation: "cut", run: func() error { return Cut(t.Context(), bytes.NewReader(nil), "", "", nil, validCutConfiguration(), nil) }},
+		{operation: "ndown", run: func() error {
+			return NDown(t.Context(), bytes.NewReader(nil), "", "", nil, 2, validNDownConfiguration(), nil)
+		}},
+		{operation: "poster", run: func() error {
+			return Poster(t.Context(), bytes.NewReader(nil), "", "", nil, validPosterConfiguration(), nil)
+		}},
 	}
 
 	for _, tt := range tests {
@@ -692,13 +697,13 @@ func TestCutAPIPageSelectionErrorsIncludeOperationContext(t *testing.T) {
 		run       func() error
 	}{
 		{operation: "cut", run: func() error {
-			return Cut(openAPITestPDF(t, cutErrorTestInput()), t.TempDir(), "out", []string{"foo"}, validCutConfiguration(), nil)
+			return Cut(t.Context(), openAPITestPDF(t, cutErrorTestInput()), t.TempDir(), "out", []string{"foo"}, validCutConfiguration(), nil)
 		}},
 		{operation: "ndown", run: func() error {
-			return NDown(openAPITestPDF(t, cutErrorTestInput()), t.TempDir(), "out", []string{"foo"}, 2, validNDownConfiguration(), nil)
+			return NDown(t.Context(), openAPITestPDF(t, cutErrorTestInput()), t.TempDir(), "out", []string{"foo"}, 2, validNDownConfiguration(), nil)
 		}},
 		{operation: "poster", run: func() error {
-			return Poster(openAPITestPDF(t, cutErrorTestInput()), t.TempDir(), "out", []string{"foo"}, validPosterConfiguration(), nil)
+			return Poster(t.Context(), openAPITestPDF(t, cutErrorTestInput()), t.TempDir(), "out", []string{"foo"}, validPosterConfiguration(), nil)
 		}},
 	}
 
@@ -714,7 +719,7 @@ func TestCutAPIPageSelectionErrorsIncludeOperationContext(t *testing.T) {
 
 // TestCutAPIPageAndWriteErrorsIncludeOperationContext verifies per-page phases.
 func TestCutAPIPageAndWriteErrorsIncludeOperationContext(t *testing.T) {
-	err := Poster(
+	err := Poster(t.Context(),
 		openAPITestPDF(t, cutErrorTestInput()),
 		t.TempDir(),
 		"out",
@@ -732,13 +737,13 @@ func TestCutAPIPageAndWriteErrorsIncludeOperationContext(t *testing.T) {
 		run       func() error
 	}{
 		{operation: "cut", run: func() error {
-			return Cut(openAPITestPDF(t, cutErrorTestInput()), missingDir, "out", []string{"1"}, validCutConfiguration(), nil)
+			return Cut(t.Context(), openAPITestPDF(t, cutErrorTestInput()), missingDir, "out", []string{"1"}, validCutConfiguration(), nil)
 		}},
 		{operation: "ndown", run: func() error {
-			return NDown(openAPITestPDF(t, cutErrorTestInput()), missingDir, "out", []string{"1"}, 2, validNDownConfiguration(), nil)
+			return NDown(t.Context(), openAPITestPDF(t, cutErrorTestInput()), missingDir, "out", []string{"1"}, 2, validNDownConfiguration(), nil)
 		}},
 		{operation: "poster", run: func() error {
-			return Poster(openAPITestPDF(t, cutErrorTestInput()), missingDir, "out", []string{"1"}, validPosterConfiguration(), nil)
+			return Poster(t.Context(), openAPITestPDF(t, cutErrorTestInput()), missingDir, "out", []string{"1"}, validPosterConfiguration(), nil)
 		}},
 	}
 
@@ -762,9 +767,13 @@ func TestCutAPIFileErrorsIncludeOperationAndInput(t *testing.T) {
 		operation string
 		run       func() error
 	}{
-		{operation: "cut", run: func() error { return CutFile(missingFile, "", "", nil, validCutConfiguration(), nil) }},
-		{operation: "ndown", run: func() error { return NDownFile(missingFile, "", "", nil, 2, validNDownConfiguration(), nil) }},
-		{operation: "poster", run: func() error { return PosterFile(missingFile, "", "", nil, validPosterConfiguration(), nil) }},
+		{operation: "cut", run: func() error { return CutFile(t.Context(), missingFile, "", "", nil, validCutConfiguration(), nil) }},
+		{operation: "ndown", run: func() error {
+			return NDownFile(t.Context(), missingFile, "", "", nil, 2, validNDownConfiguration(), nil)
+		}},
+		{operation: "poster", run: func() error {
+			return PosterFile(t.Context(), missingFile, "", "", nil, validPosterConfiguration(), nil)
+		}},
 	}
 
 	for _, tt := range tests {

@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -27,6 +28,7 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -61,7 +63,14 @@ func TestMain(m *testing.M) {
 	resDir = filepath.Join(inDir, "resources")
 	samplesDir = filepath.Join("..", "..", "samples")
 
-	conf = api.LoadConfiguration()
+	var err error
+	conf, err = api.LoadConfiguration(api.ConfigurationOptions{Mode: api.ConfigurationModeAuto})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "load test configuration: %v\\n", err)
+		os.Exit(1)
+	}
+	// Font installation still uses the process-wide font directory.
+	font.UserFontDir, _ = conf.UserFontStore()
 	if os.Getenv("GITHUB_ACTIONS") == "true" {
 		conf.Offline = true
 	}
@@ -74,7 +83,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	if err := api.InstallFonts(fonts); err != nil {
+	if err := api.InstallFonts(context.Background(), fonts); err != nil {
 		fmt.Printf("%v", err)
 		os.Exit(1)
 	}
@@ -124,13 +133,13 @@ func imageFileNames(t *testing.T, dir string) []string {
 // BenchmarkValidate benchmarks validate.
 func BenchmarkValidate(b *testing.B) {
 	msg := "BenchmarkValidate"
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
+
+	for b.Loop() {
 		f, err := os.Open(filepath.Join(inDir, "gobook.0.pdf"))
 		if err != nil {
 			b.Fatalf("%s: %v\n", msg, err)
 		}
-		if err = api.Validate(f, nil); err != nil {
+		if err = api.Validate(b.Context(), f, nil, nil); err != nil {
 			b.Fatalf("%s: %v\n", msg, err)
 		}
 		if err = f.Close(); err != nil {
@@ -168,7 +177,7 @@ func TestPageCount(t *testing.T) {
 	inFile := filepath.Join(inDir, fn)
 
 	// Retrieve page count for inFile.
-	gotPageCount, err := api.PageCountFile(inFile)
+	gotPageCount, err := api.PageCountFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
@@ -185,7 +194,7 @@ func TestPageDimensions(t *testing.T) {
 		inFile := filepath.Join(inDir, fn)
 
 		// Retrieve page dimensions for inFile.
-		if _, err := api.PageDimsFile(inFile); err != nil {
+		if _, err := api.PageDimsFile(t.Context(), inFile); err != nil {
 			t.Fatalf("%s: %v\n", msg, err)
 		}
 	}
@@ -199,7 +208,7 @@ func TestValidate(t *testing.T) {
 	//log.SetDefaultStatsLogger()
 
 	// Validate inFile.
-	if err := api.ValidateFile(inFile, nil); err != nil {
+	if err := api.ValidateFile(t.Context(), inFile, nil, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -211,7 +220,7 @@ func TestManipulateContext(t *testing.T) {
 	outFile := filepath.Join(outDir, "abc.pdf")
 
 	// Read a PDF Context from inFile.
-	ctx, err := api.ReadContextFile(inFile)
+	ctx, err := api.ReadContextFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatalf("%s: ReadContextFile %s: %v\n", msg, inFile, err)
 	}
@@ -219,16 +228,16 @@ func TestManipulateContext(t *testing.T) {
 	// Manipulate the PDF Context.
 	// Eg. Let's stamp all pages with pageCount and current timestamp.
 	text := fmt.Sprintf("Pages: %d \n Current time: %v", ctx.PageCount, time.Now())
-	wm, err := api.TextWatermark(text, "font:Times-Italic, scale:.9", true, false, types.POINTS)
+	wm, err := api.TextWatermark(t.Context(), text, "font:Times-Italic, scale:.9", true, false, types.POINTS, nil)
 	if err != nil {
 		t.Fatalf("%s: ParseTextWatermarkDetails: %v\n", msg, err)
 	}
-	if err := pdfcpu.AddWatermarks(ctx, nil, wm); err != nil {
+	if err := pdfcpu.AddWatermarks(t.Context(), ctx, nil, wm); err != nil {
 		t.Fatalf("%s: WatermarkContext: %v\n", msg, err)
 	}
 
 	// Write the manipulated PDF context to outFile.
-	if err := api.WriteContextFile(ctx, outFile); err != nil {
+	if err := api.WriteContextFile(t.Context(), ctx, outFile); err != nil {
 		t.Fatalf("%s: WriteContextFile %s: %v\n", msg, outFile, err)
 	}
 }
@@ -244,7 +253,7 @@ func TestInfo(t *testing.T) {
 	}
 	defer f.Close()
 
-	info, err := api.PDFInfo(f, inFile, nil, true, conf)
+	info, err := api.PDFInfo(t.Context(), f, inFile, nil, true, conf)
 	if err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}

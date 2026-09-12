@@ -44,7 +44,7 @@ func TestZoomRejectsMissingCommandFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := Zoom(tt.cmd); !errors.Is(err, tt.want) {
+			if _, err := zoom(t.Context(), tt.cmd); !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
 		})
@@ -64,7 +64,7 @@ func cliZoomConfiguration() *model.Zoom {
 func TestZoomStreamingIOErrorsIncludeOperationContext(t *testing.T) {
 	outFile := "-"
 	missingInput := filepath.Join(t.TempDir(), "missing.pdf")
-	_, err := Zoom(&Command{InFile: &missingInput, OutFile: &outFile, Zoom: cliZoomConfiguration()})
+	_, err := zoom(t.Context(), &Command{InFile: &missingInput, OutFile: &outFile, Zoom: cliZoomConfiguration()})
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "zoom: open input "+missingInput) {
 		t.Fatalf("expected input context, got %v", err)
 	}
@@ -72,7 +72,7 @@ func TestZoomStreamingIOErrorsIncludeOperationContext(t *testing.T) {
 	pageStreamingStdin(t)
 	inFile := "-"
 	missingOutput := filepath.Join(t.TempDir(), "missing", "out.pdf")
-	_, err = Zoom(&Command{InFile: &inFile, OutFile: &missingOutput, Zoom: cliZoomConfiguration()})
+	_, err = zoom(t.Context(), &Command{InFile: &inFile, OutFile: &missingOutput, Zoom: cliZoomConfiguration()})
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "zoom: create output "+missingOutput) {
 		t.Fatalf("expected output context, got %v", err)
 	}
@@ -103,7 +103,7 @@ func requireZoomOutput(t *testing.T, outFile string, want []byte) {
 func TestZoomStreamingPageSelectionFailurePreservesExistingOutput(t *testing.T) {
 	pageStreamingStdin(t)
 	outFile, want := zoomExistingOutput(t)
-	_, err := Zoom(ZoomCommand("-", outFile, []string{"foo"}, cliZoomConfiguration(), nil))
+	_, err := zoom(t.Context(), ZoomCommand("-", outFile, []string{"foo"}, cliZoomConfiguration(), nil))
 	if err == nil || !strings.Contains(err.Error(), "zoom: parse page selection") {
 		t.Fatalf("expected page-selection error, got %v", err)
 	}
@@ -114,7 +114,7 @@ func TestZoomStreamingPageSelectionFailurePreservesExistingOutput(t *testing.T) 
 func TestZoomStreamingReadFailurePreservesExistingOutput(t *testing.T) {
 	useStdin(t, "not a PDF")
 	outFile, want := zoomExistingOutput(t)
-	_, err := Zoom(ZoomCommand("-", outFile, nil, cliZoomConfiguration(), nil))
+	_, err := zoom(t.Context(), ZoomCommand("-", outFile, nil, cliZoomConfiguration(), nil))
 	if err == nil || !strings.Contains(err.Error(), "zoom: prepare PDF context") {
 		t.Fatalf("expected read error, got %v", err)
 	}
@@ -125,14 +125,14 @@ func TestZoomStreamingReadFailurePreservesExistingOutput(t *testing.T) {
 func TestZoomStreamingWriteFailurePreservesExistingOutput(t *testing.T) {
 	pageStreamingStdin(t)
 	outFile, want := zoomExistingOutput(t)
-	rs, w, finalize, err := streamInOutForOperation("-", outFile, "zoom")
+	rs, w, finalize, err := streamInOutForOperation(t.Context(), "-", outFile, "zoom")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := w.(*os.File).Close(); err != nil {
 		t.Fatal(err)
 	}
-	err = finalize(api.Zoom(rs, w, nil, cliZoomConfiguration(), nil))
+	err = finalize(api.Zoom(t.Context(), rs, w, nil, cliZoomConfiguration(), nil))
 	if !errors.Is(err, os.ErrClosed) || !strings.Contains(err.Error(), "zoom: write output") {
 		t.Fatalf("expected write error, got %v", err)
 	}

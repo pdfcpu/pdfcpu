@@ -27,8 +27,9 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func runPresentationCommand(command *Command) error {
-	_, err := Dispatch(command)
+func runPresentationCommand(t *testing.T, command *Command) error {
+	t.Helper()
+	_, err := Dispatch(t.Context(), command)
 	return err
 }
 
@@ -39,7 +40,7 @@ func TestOptimizationRendersTypedProgressStages(t *testing.T) {
 
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	outFile := filepath.Join(t.TempDir(), "optimized.pdf")
-	if err := runPresentationCommand(OptimizeCommand(inFile, outFile, nil)); err != nil {
+	if err := runPresentationCommand(t, OptimizeCommand(inFile, outFile, nil)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -185,7 +186,7 @@ func TestDocumentAndPageCommandsOwnPresentation(t *testing.T) {
 			log.SetCLILogger(stdlog.New(&output, "", 0))
 			t.Cleanup(func() { log.SetCLILogger(nil) })
 
-			if err := runPresentationCommand(tt.command); err == nil {
+			if err := runPresentationCommand(t, tt.command); err == nil {
 				t.Fatal("expected missing-input or invalid-configuration error")
 			}
 			for _, want := range tt.want {
@@ -251,7 +252,7 @@ func TestResourceAndContentCommandsOwnPresentation(t *testing.T) {
 			log.SetCLILogger(stdlog.New(&output, "", 0))
 			t.Cleanup(func() { log.SetCLILogger(nil) })
 
-			if err := runPresentationCommand(tt.command); err == nil {
+			if err := runPresentationCommand(t, tt.command); err == nil {
 				t.Fatal("expected missing-input error")
 			}
 			for _, want := range tt.want {
@@ -268,14 +269,14 @@ func TestOrdinaryResourceOutputUsesCommandResult(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "attachment.pdf")
 	attachment := "presentation_test.go"
 	log.SetCLILogger(nil)
-	if err := runPresentationCommand(AddAttachmentsCommand(inFile, outFile, []string{attachment}, nil)); err != nil {
+	if err := runPresentationCommand(t, AddAttachmentsCommand(inFile, outFile, []string{attachment}, nil)); err != nil {
 		t.Fatal(err)
 	}
 
 	var output bytes.Buffer
 	log.SetCLILogger(stdlog.New(&output, "", 0))
 	t.Cleanup(func() { log.SetCLILogger(nil) })
-	result, err := Dispatch(ListAttachmentsCommand(outFile, nil))
+	result, err := Dispatch(t.Context(), ListAttachmentsCommand(outFile, nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +296,7 @@ func TestOrdinaryPresentationIsQuiet(t *testing.T) {
 	cmd := TrimCommand(inFile, outFile, nil, nil)
 	cmd.ErrorOutput = &errorOutput
 
-	if err := runPresentationCommand(cmd); err == nil {
+	if err := runPresentationCommand(t, cmd); err == nil {
 		t.Fatal("expected missing-input error")
 	}
 	if errorOutput.Len() != 0 {
@@ -310,7 +311,7 @@ func TestResourcePresentationIsQuiet(t *testing.T) {
 	cmd := ExtractAttachmentsCommand(filepath.Join(dir, "missing.pdf"), dir, nil, nil)
 	cmd.ErrorOutput = &errorOutput
 
-	if err := runPresentationCommand(cmd); err == nil {
+	if err := runPresentationCommand(t, cmd); err == nil {
 		t.Fatal("expected missing-input error")
 	}
 	if errorOutput.Len() != 0 {
@@ -325,7 +326,7 @@ func TestPDFStdoutSuppressesPresentation(t *testing.T) {
 
 	inFile := filepath.Join(t.TempDir(), "missing.pdf")
 	cmd := ResizeCommand(inFile, "-", nil, &model.Resize{}, nil)
-	if err := runPresentationCommand(cmd); err == nil {
+	if err := runPresentationCommand(t, cmd); err == nil {
 		t.Fatal("expected missing-input error")
 	}
 	if output.Len() != 0 {
@@ -367,7 +368,7 @@ func TestResourcePDFStdoutSuppressesPresentation(t *testing.T) {
 			log.SetCLILogger(stdlog.New(&output, "", 0))
 			t.Cleanup(func() { log.SetCLILogger(nil) })
 
-			if err := runPresentationCommand(tt.command); err == nil {
+			if err := runPresentationCommand(t, tt.command); err == nil {
 				t.Fatal("expected missing-input error")
 			}
 			if output.Len() != 0 {

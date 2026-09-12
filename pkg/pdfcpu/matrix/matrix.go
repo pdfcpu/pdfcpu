@@ -39,9 +39,9 @@ var IdentMatrix = Matrix{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
 // Multiply calculates the product of two matrices.
 func (m Matrix) Multiply(n Matrix) Matrix {
 	var p Matrix
-	for i := 0; i < 3; i++ {
-		for j := 0; j < 3; j++ {
-			for k := 0; k < 3; k++ {
+	for i := range 3 {
+		for j := range 3 {
+			for k := range 3 {
 				p[i][j] += m[i][k] * n[k][j]
 			}
 		}

@@ -18,6 +18,7 @@ package sign
 
 import (
 	"bytes"
+	"context"
 	"crypto/dsa"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -32,6 +33,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/pkcs7"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -106,6 +108,7 @@ func finalizeLocalSignatureResult(
 }
 
 func assessCertificateEvidence(
+	c context.Context,
 	chains [][]*x509.Certificate,
 	pathResolved bool,
 	rootCerts *x509.CertPool,
@@ -113,9 +116,13 @@ func assessCertificateEvidence(
 	reason model.SignatureReason,
 	conf *model.Configuration,
 ) (certificateAssessment, error) {
+	if err := contextutil.Check(c); err != nil {
+		return certificateAssessment{}, err
+	}
 	signer := &model.Signer{}
 	result := &model.SignatureValidationResult{Reason: reason}
 	if err := validateCertChains(
+		c,
 		chains,
 		pathResolved,
 		rootCerts,
@@ -153,6 +160,7 @@ func applyCertificateAssessment(
 }
 
 func validateCertChains(
+	c context.Context,
 	chains [][]*x509.Certificate, // All chain paths for cert leading to a root CA.
 	pathResolved bool,
 	rootCerts *x509.CertPool,
@@ -162,6 +170,9 @@ func validateCertChains(
 	result *model.SignatureValidationResult,
 	conf *model.Configuration,
 ) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if len(chains) == 0 || len(chains[0]) == 0 {
 		signer.AddProblem("certificate chain: missing")
 		if result.Reason == model.SignatureReasonUnknown {
@@ -176,7 +187,11 @@ func validateCertChains(
 	chain := chains[0]
 
 	for i, cert := range chain {
+		if err := c.Err(); err != nil {
+			return err
+		}
 		certDetails, err := validateCertificateInChain(
+			c,
 			cert,
 			certificateIssuer(chain, i),
 			i,
@@ -200,6 +215,7 @@ func validateCertChains(
 }
 
 func validateCertificateInChain(
+	c context.Context,
 	cert, issuer *x509.Certificate,
 	certIndex int,
 	pathResolved bool,
@@ -209,6 +225,9 @@ func validateCertificateInChain(
 	result *model.SignatureValidationResult,
 	conf *model.Configuration,
 ) (*model.CertificateDetails, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	certDetails := &model.CertificateDetails{}
 	setLocalCertificatePathStatus(certDetails, pathResolved)
 	if cert == nil {
@@ -234,7 +253,11 @@ func validateCertificateInChain(
 	if certDetails.Expired && len(crls) == 0 && len(ocsps) == 0 {
 		return certDetails, nil
 	}
-	checkRevocation(cert, issuer, rootCerts, signer, certDetails, crls, ocsps, result, conf)
+	if err := checkRevocation(
+		c, cert, issuer, rootCerts, signer, certDetails, crls, ocsps, result, conf,
+	); err != nil {
+		return nil, err
+	}
 	return certDetails, nil
 }
 

@@ -79,14 +79,14 @@ func TestReadAndWatermarkHybridPDF(t *testing.T) {
 	in := minimalHybridPDF()
 	conf := hybridConf(true)
 
-	ctx, err := api.ReadContext(bytes.NewReader(in), conf)
+	ctx, err := api.ReadContext(t.Context(), bytes.NewReader(in), conf)
 	if err != nil {
 		t.Fatalf("read hybrid PDF: %v", err)
 	}
 	if !ctx.Read.Hybrid {
 		t.Fatal("expected hybrid PDF detection")
 	}
-	if err := api.ValidateContext(ctx); err != nil {
+	if err := api.ValidateContext(t.Context(), ctx); err != nil {
 		t.Fatalf("validate hybrid PDF: %v", err)
 	}
 
@@ -101,14 +101,14 @@ func TestReadAndWatermarkHybridPDF(t *testing.T) {
 		{"xref section", false, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			wm, err := api.TextWatermark("Issue1059", "pos:c", false, false, types.POINTS)
+			wm, err := api.TextWatermark(t.Context(), "Issue1059", "pos:c", false, false, types.POINTS, nil)
 			if err != nil {
 				t.Fatalf("text watermark: %v", err)
 			}
 
 			conf := hybridConf(tt.writeXRefStream)
 			var out bytes.Buffer
-			if err := api.AddWatermarks(bytes.NewReader(in), &out, nil, wm, conf); err != nil {
+			if err := api.AddWatermarks(t.Context(), bytes.NewReader(in), &out, nil, wm, conf); err != nil {
 				t.Fatalf("watermark hybrid PDF: %v", err)
 			}
 			validateWatermarkedHybridOutput(t, out.Bytes(), tt.wantXRefStream)
@@ -119,11 +119,11 @@ func TestReadAndWatermarkHybridPDF(t *testing.T) {
 func validateWatermarkedHybridOutput(t *testing.T, out []byte, wantXRefStream bool) {
 	t.Helper()
 
-	ctx, err := api.ReadContext(bytes.NewReader(out), hybridConf(true))
+	ctx, err := api.ReadContext(t.Context(), bytes.NewReader(out), hybridConf(true))
 	if err != nil {
 		t.Fatalf("read watermarked output: %v", err)
 	}
-	if err := api.ValidateContext(ctx); err != nil {
+	if err := api.ValidateContext(t.Context(), ctx); err != nil {
 		t.Fatalf("validate watermarked output: %v", err)
 	}
 	if ctx.Read.UsingXRefStreams != wantXRefStream {

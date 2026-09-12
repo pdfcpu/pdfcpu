@@ -25,7 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-type securityCommandExecutor func(*Command) ([]string, error)
+type securityCommandExecutor = dispatchFunc
 
 // TestSecurityExecutorsRejectNilCommand verifies every public security executor has a safe nil boundary.
 func TestSecurityExecutorsRejectNilCommand(t *testing.T) {
@@ -33,17 +33,17 @@ func TestSecurityExecutorsRejectNilCommand(t *testing.T) {
 		name string
 		run  securityCommandExecutor
 	}{
-		{"Encrypt", Encrypt},
-		{"Decrypt", Decrypt},
-		{"ChangeUserPassword", ChangeUserPassword},
-		{"ChangeOwnerPassword", ChangeOwnerPassword},
-		{"ListPermissions", ListPermissions},
-		{"SetPermissions", SetPermissions},
+		{"Encrypt", encrypt},
+		{"Decrypt", decrypt},
+		{"ChangeUserPassword", changeUserPassword},
+		{"ChangeOwnerPassword", changeOwnerPassword},
+		{"ListPermissions", listPermissionsCommand},
+		{"SetPermissions", setPermissions},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(nil)
+			_, err := tt.run(t.Context(), nil)
 			if !errors.Is(err, ErrMissingCommand) {
 				t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 			}
@@ -67,7 +67,7 @@ func TestDispatchRejectsIncompleteSecurityCommandsWithoutPanic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Dispatch(&Command{Mode: tt.mode})
+			_, err := Dispatch(t.Context(), &Command{Mode: tt.mode})
 			if !errors.Is(err, api.ErrMissingPDFInput) {
 				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 			}

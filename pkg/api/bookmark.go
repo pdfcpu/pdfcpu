@@ -17,11 +17,13 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -48,43 +50,52 @@ func closeBookmarkInput(err error, f *os.File, context string) error {
 	return errors.Join(err, closeFile(f, context))
 }
 
-// Bookmarks returns rs's bookmark hierarchy.
-func Bookmarks(rs io.ReadSeeker, conf *model.Configuration) (bms []pdfcpu.Bookmark, err error) {
+// Bookmarks returns rs's bookmark hierarchy and supports cancellation.
+func Bookmarks(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (bms []pdfcpu.Bookmark, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
 
 	conf = operationConfiguration(conf, model.LISTBOOKMARKS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return nil, bookmarkOpError("list bookmarks", err)
 	}
-	bms, err = pdfcpu.Bookmarks(ctx)
+	bms, err = pdfcpu.Bookmarks(c, ctx)
 	return bms, bookmarkOpError("list bookmarks", err)
 }
 
-// ListBookmarks returns a formatted list of rs's bookmarks.
-func ListBookmarks(rs io.ReadSeeker, conf *model.Configuration) (ss []string, err error) {
+// ListBookmarks returns a formatted list of rs's bookmarks and supports cancellation.
+func ListBookmarks(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (ss []string, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
 	conf = operationConfiguration(conf, model.LISTBOOKMARKS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return nil, bookmarkOpError("list bookmarks", err)
 	}
-	ss, err = pdfcpu.BookmarkList(ctx)
+	ss, err = pdfcpu.BookmarkList(c, ctx)
 	return ss, bookmarkOpError("list bookmarks", err)
 }
 
-// ListBookmarksFile returns a formatted list of inFile's bookmarks.
-func ListBookmarksFile(inFile string, conf *model.Configuration) (ss []string, err error) {
+// ListBookmarksFile returns a formatted list of inFile's bookmarks and supports cancellation.
+func ListBookmarksFile(c context.Context, inFile string, conf *model.Configuration) (ss []string, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, ErrMissingPDFInput
 	}
@@ -95,13 +106,16 @@ func ListBookmarksFile(inFile string, conf *model.Configuration) (ss []string, e
 	defer func() {
 		err = closeBookmarkInput(err, f, "list bookmarks: close input")
 	}()
-	return ListBookmarks(f, conf)
+	return ListBookmarks(c, f, conf)
 }
 
-// ExportBookmarksJSON extracts bookmark data from rs (originating from source) and writes the result to w.
-func ExportBookmarksJSON(rs io.ReadSeeker, w io.Writer, source string, conf *model.Configuration) (err error) {
+// ExportBookmarksJSON extracts bookmark data from rs, writes the result to w and supports cancellation.
+func ExportBookmarksJSON(c context.Context, rs io.ReadSeeker, w io.Writer, source string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -112,12 +126,12 @@ func ExportBookmarksJSON(rs io.ReadSeeker, w io.Writer, source string, conf *mod
 
 	conf = operationConfiguration(conf, model.EXPORTBOOKMARKS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return bookmarkSourceError("export bookmarks", source, err)
 	}
 
-	ok, err := pdfcpu.ExportBookmarksJSON(ctx, source, w)
+	ok, err := pdfcpu.ExportBookmarksJSON(c, ctx, source, w)
 	if err != nil {
 		return bookmarkSourceError("export bookmarks", source, err)
 	}
@@ -128,11 +142,14 @@ func ExportBookmarksJSON(rs io.ReadSeeker, w io.Writer, source string, conf *mod
 	return nil
 }
 
-// ExportBookmarksFile extracts bookmark data from inFilePDF and writes the result to outFileJSON.
-func ExportBookmarksFile(inFilePDF, outFileJSON string, conf *model.Configuration) (err error) {
+// ExportBookmarksFile extracts bookmark data from inFilePDF, writes it to outFileJSON and supports cancellation.
+func ExportBookmarksFile(c context.Context, inFilePDF, outFileJSON string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFilePDF == "" {
 		return ErrMissingPDFInput
 	}
@@ -162,7 +179,10 @@ func ExportBookmarksFile(inFilePDF, outFileJSON string, conf *model.Configuratio
 		err = staged.commit()
 	}()
 
-	if err = ExportBookmarksJSON(f1, f2, inFilePDF, conf); err != nil {
+	if err = ExportBookmarksJSON(c, f1, f2, inFilePDF, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 
@@ -171,10 +191,13 @@ func ExportBookmarksFile(inFilePDF, outFileJSON string, conf *model.Configuratio
 	return nil
 }
 
-// ImportBookmarks creates/replaces bookmarks in rs and writes the result to w.
-func ImportBookmarks(rs io.ReadSeeker, rd io.Reader, w io.Writer, replace bool, conf *model.Configuration) (err error) {
+// ImportBookmarks creates or replaces bookmarks in rs, writes the result to w and supports cancellation.
+func ImportBookmarks(c context.Context, rs io.ReadSeeker, rd io.Reader, w io.Writer, replace bool, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -189,12 +212,12 @@ func ImportBookmarks(rs io.ReadSeeker, rd io.Reader, w io.Writer, replace bool, 
 
 	conf = operationConfiguration(conf, model.IMPORTBOOKMARKS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return bookmarkOpError("import bookmarks", err)
 	}
 
-	ok, err := pdfcpu.ImportBookmarks(ctx, rd, replace)
+	ok, err := pdfcpu.ImportBookmarks(c, ctx, rd, replace)
 	if err != nil {
 		return bookmarkOpError("import bookmarks", err)
 	}
@@ -202,14 +225,17 @@ func ImportBookmarks(rs io.ReadSeeker, rd io.Reader, w io.Writer, replace bool, 
 		return bookmarkOpError("import bookmarks", ErrExistingBookmarks)
 	}
 
-	return bookmarkOpError("import bookmarks: write", WriteContext(ctx, w))
+	return bookmarkOpError("import bookmarks: write", WriteContext(c, ctx, w))
 }
 
-// ImportBookmarksFile creates/replaces bookmarks in inFilePDF and writes the result to outFilePDF.
-func ImportBookmarksFile(inFilePDF, inFileJSON, outFilePDF string, replace bool, conf *model.Configuration) (err error) {
+// ImportBookmarksFile creates or replaces bookmarks in inFilePDF, writes the result to outFilePDF and supports cancellation.
+func ImportBookmarksFile(c context.Context, inFilePDF, inFileJSON, outFilePDF string, replace bool, conf *model.Configuration) (err error) {
 	var f0, f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFilePDF == "" {
 		return ErrMissingPDFInput
 	}
@@ -253,7 +279,10 @@ func ImportBookmarksFile(inFilePDF, inFileJSON, outFilePDF string, replace bool,
 		err = staged.commit()
 	}()
 
-	if err = ImportBookmarks(f0, f1, f2, replace, conf); err != nil {
+	if err = ImportBookmarks(c, f0, f1, f2, replace, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 
@@ -262,10 +291,13 @@ func ImportBookmarksFile(inFilePDF, inFileJSON, outFilePDF string, replace bool,
 	return nil
 }
 
-// AddBookmarks adds bookmarks to the PDF context read from rs and writes the result to w.
-func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdfcpu.Bookmark, replace bool, conf *model.Configuration) (err error) {
+// AddBookmarks adds bookmarks to the PDF context read from rs, writes the result to w and supports cancellation.
+func AddBookmarks(c context.Context, rs io.ReadSeeker, w io.Writer, bms []pdfcpu.Bookmark, replace bool, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -280,23 +312,26 @@ func AddBookmarks(rs io.ReadSeeker, w io.Writer, bms []pdfcpu.Bookmark, replace 
 		return ErrMissingBookmarks
 	}
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return bookmarkOpError("add bookmarks", err)
 	}
 
-	if err := pdfcpu.AddBookmarks(ctx, bms, replace); err != nil {
+	if err := pdfcpu.AddBookmarks(c, ctx, bms, replace); err != nil {
 		return bookmarkOpError("add bookmarks", err)
 	}
 
-	return bookmarkOpError("add bookmarks: write", WriteContext(ctx, w))
+	return bookmarkOpError("add bookmarks: write", WriteContext(c, ctx, w))
 }
 
-// AddBookmarksFile adds bookmarks to the PDF context read from inFile and writes the result to outFile.
-func AddBookmarksFile(inFile, outFile string, bms []pdfcpu.Bookmark, replace bool, conf *model.Configuration) (err error) {
+// AddBookmarksFile adds bookmarks to the PDF context read from inFile, writes the result to outFile and supports cancellation.
+func AddBookmarksFile(c context.Context, inFile, outFile string, bms []pdfcpu.Bookmark, replace bool, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -326,7 +361,10 @@ func AddBookmarksFile(inFile, outFile string, bms []pdfcpu.Bookmark, replace boo
 		err = staged.commit()
 	}()
 
-	if err = AddBookmarks(f1, f2, bms, replace, conf); err != nil {
+	if err = AddBookmarks(c, f1, f2, bms, replace, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 
@@ -335,10 +373,13 @@ func AddBookmarksFile(inFile, outFile string, bms []pdfcpu.Bookmark, replace boo
 	return nil
 }
 
-// RemoveBookmarks deletes bookmarks from rs and writes the result to w.
-func RemoveBookmarks(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err error) {
+// RemoveBookmarks deletes bookmarks from rs, writes the result to w and supports cancellation.
+func RemoveBookmarks(c context.Context, rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -349,12 +390,12 @@ func RemoveBookmarks(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (
 
 	conf = operationConfiguration(conf, model.REMOVEBOOKMARKS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return bookmarkOpError("remove bookmarks", err)
 	}
 
-	ok, err := pdfcpu.RemoveBookmarks(ctx)
+	ok, err := pdfcpu.RemoveBookmarks(c, ctx)
 	if err != nil {
 		return bookmarkOpError("remove bookmarks", err)
 	}
@@ -362,14 +403,17 @@ func RemoveBookmarks(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (
 		return bookmarkOpError("remove bookmarks", ErrNoBookmarks)
 	}
 
-	return bookmarkOpError("remove bookmarks: write", WriteContext(ctx, w))
+	return bookmarkOpError("remove bookmarks: write", WriteContext(c, ctx, w))
 }
 
-// RemoveBookmarksFile deletes bookmarks from inFile and writes the result to outFile.
-func RemoveBookmarksFile(inFile, outFile string, conf *model.Configuration) (err error) {
+// RemoveBookmarksFile deletes bookmarks from inFile, writes the result to outFile and supports cancellation.
+func RemoveBookmarksFile(c context.Context, inFile, outFile string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -399,7 +443,10 @@ func RemoveBookmarksFile(inFile, outFile string, conf *model.Configuration) (err
 		err = staged.commit()
 	}()
 
-	if err = RemoveBookmarks(f1, f2, conf); err != nil {
+	if err = RemoveBookmarks(c, f1, f2, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 

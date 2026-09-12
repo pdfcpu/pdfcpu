@@ -17,6 +17,7 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"context"
 	"bytes"
 	"errors"
 	"io"
@@ -42,7 +43,7 @@ func (w stampFailingWriter) Write(_ []byte) (int, error) {
 
 // TestParseWatermarkDetailsPreservesScaleNumericCause verifies shared scale parsing wraps strconv errors.
 func TestParseWatermarkDetailsPreservesScaleNumericCause(t *testing.T) {
-	_, err := ParseTextWatermarkDetails("draft", "scalefactor:nope", true, types.POINTS)
+	_, err := ParseTextWatermarkDetails(t.Context(), "draft", "scalefactor:nope", true, types.POINTS, nil)
 	var numErr *strconv.NumError
 	if !errors.As(err, &numErr) {
 		t.Fatalf("expected strconv.NumError, got %v", err)
@@ -55,17 +56,18 @@ func TestParseWatermarkDetailsPreservesScaleNumericCause(t *testing.T) {
 func TestParseTextWatermarkDetailsUsesConfigurationFontRepository(t *testing.T) {
 	originalDir := corefont.UserFontDir
 	corefont.UserFontDir = filepath.Join(t.TempDir(), "missing")
-	if err := corefont.ReloadUserFonts(); err == nil {
+	if err := corefont.ReloadUserFonts(t.Context()); err == nil {
 		t.Fatal("expected missing global font directory error")
 	}
 	t.Cleanup(func() {
 		corefont.UserFontDir = originalDir
-		if err := corefont.ReloadUserFonts(); err != nil {
+		if err := corefont.ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore global font directory: %v", err)
 		}
 	})
 
-	_, err := ParseTextWatermarkDetailsWithConfiguration(
+	_, err := ParseTextWatermarkDetails(
+		t.Context(),
 		"draft",
 		"fontname:Demo",
 		false,
@@ -79,9 +81,9 @@ func TestParseTextWatermarkDetailsUsesConfigurationFontRepository(t *testing.T) 
 		t.Fatalf("stateless parser consulted global font directory: %v", err)
 	}
 
-	_, err = ParseTextWatermarkDetails("draft", "fontname:Demo", false, types.POINTS)
+	_, err = ParseTextWatermarkDetails(t.Context(), "draft", "fontname:Demo", false, types.POINTS, nil)
 	if err == nil || !strings.Contains(err.Error(), "load metrics") {
-		t.Fatalf("expected legacy parser to retain global repository behavior, got %v", err)
+		t.Fatalf("expected nil-configuration parser to retain global repository behavior, got %v", err)
 	}
 }
 
@@ -119,7 +121,7 @@ func TestAddWatermarksRejectsMissingInputs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := AddWatermarks(tt.ctx, nil, tt.wm)
+			err := AddWatermarks(t.Context(), tt.ctx, nil, tt.wm)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
@@ -129,7 +131,7 @@ func TestAddWatermarksRejectsMissingInputs(t *testing.T) {
 
 func TestAddWatermarksDocumentSetupErrorIncludesPhaseContext(t *testing.T) {
 	ctx := &model.Context{XRefTable: &model.XRefTable{}}
-	err := AddWatermarks(ctx, nil, model.DefaultWatermarkConfig())
+	err := AddWatermarks(t.Context(), ctx, nil, model.DefaultWatermarkConfig())
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -145,7 +147,7 @@ func TestAddWatermarksCorruptOptionalContentDoesNotPanic(t *testing.T) {
 	ctx := testOptimizeContext(t)
 	ctx.RootDict["OCProperties"] = types.Name("broken")
 
-	err := AddWatermarks(ctx, nil, model.DefaultWatermarkConfig())
+	err := AddWatermarks(t.Context(), ctx, nil, model.DefaultWatermarkConfig())
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -198,7 +200,7 @@ func TestAddWatermarksResourceErrorsIncludeWatermarkType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := AddWatermarks(testOptimizeContext(t), nil, tt.wm)
+			err := AddWatermarks(t.Context(), testOptimizeContext(t), nil, tt.wm)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
@@ -213,7 +215,7 @@ func TestAddWatermarksPageErrorIncludesDestinationPage(t *testing.T) {
 	ctx := testOptimizeContext(t)
 	ctx.PageCount = 1
 
-	err := AddWatermarks(ctx, nil, model.DefaultWatermarkConfig())
+	err := AddWatermarks(t.Context(), ctx, nil, model.DefaultWatermarkConfig())
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -231,7 +233,7 @@ func TestAddWatermarksRejectsInvalidDestinationStartPage(t *testing.T) {
 	wm := model.DefaultWatermarkConfig()
 	wm.PdfMultiStartPageNrDest = 0
 
-	err := AddWatermarks(ctx, nil, wm)
+	err := AddWatermarks(t.Context(), ctx, nil, wm)
 	if !errors.Is(err, ErrInvalidPageNumber) {
 		t.Fatalf("expected %v, got %v", ErrInvalidPageNumber, err)
 	}
@@ -291,7 +293,7 @@ func TestCreateFormRejectsIncompleteConfiguration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := createForm(ctx, 1, 1, tt.wm(), false)
+			err := createForm(t.Context(), ctx, 1, 1, tt.wm(), false)
 			if !errors.Is(err, ErrMissingWatermarkConfiguration) {
 				t.Fatalf("expected %v, got %v", ErrMissingWatermarkConfiguration, err)
 			}
@@ -328,14 +330,14 @@ func TestPDFFormContentPreservesWriterError(t *testing.T) {
 func TestAddWatermarksInitializesMissingCaches(t *testing.T) {
 	ctx := testOptimizeContext(t)
 	addOptimizeTestPage(t, ctx)
-	wm, err := ParseTextWatermarkDetails("draft", "", false, types.POINTS)
+	wm, err := ParseTextWatermarkDetails(t.Context(), "draft", "", false, types.POINTS, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	wm.FCache = nil
 	wm.Objs = nil
 
-	if err := AddWatermarks(ctx, nil, wm); err != nil {
+	if err := AddWatermarks(t.Context(), ctx, nil, wm); err != nil {
 		t.Fatal(err)
 	}
 	if wm.FCache == nil || wm.Objs == nil {
@@ -449,12 +451,12 @@ func TestAddWatermarksResourceDictionaryErrorIncludesPagePhase(t *testing.T) {
 	ctx := testOptimizeContext(t)
 	pageDict := addOptimizeTestPage(t, ctx)
 	pageDict["Resources"] = types.Dict{"ExtGState": types.Name("broken")}
-	wm, err := ParseTextWatermarkDetails("draft", "", false, types.POINTS)
+	wm, err := ParseTextWatermarkDetails(t.Context(), "draft", "", false, types.POINTS, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = AddWatermarks(ctx, nil, wm)
+	err = AddWatermarks(t.Context(), ctx, nil, wm)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -587,12 +589,12 @@ func TestAddWatermarksContentErrorIncludesPagePhase(t *testing.T) {
 	ctx := testOptimizeContext(t)
 	pageDict := addOptimizeTestPage(t, ctx)
 	pageDict["Contents"] = *types.NewIndirectRef(999, 0)
-	wm, err := ParseTextWatermarkDetails("draft", "", false, types.POINTS)
+	wm, err := ParseTextWatermarkDetails(t.Context(), "draft", "", false, types.POINTS, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = AddWatermarks(ctx, nil, wm)
+	err = AddWatermarks(t.Context(), ctx, nil, wm)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -613,7 +615,7 @@ func TestRemoveArtifactsRejectsUnsupportedFilter(t *testing.T) {
 		},
 	}
 
-	_, _, _, err := removeArtifacts(&sd, 1)
+	_, _, _, err := removeArtifacts(t.Context(), &sd, 1)
 	if !errors.Is(err, filter.ErrUnsupportedFilter) {
 		t.Fatalf("expected %v, got %v", filter.ErrUnsupportedFilter, err)
 	}
@@ -633,7 +635,7 @@ func TestRemoveArtifactsHandlesDirectAndMalformedContents(t *testing.T) {
 	}
 	resDict := types.Dict{"ExtGState": types.Dict{}, "XObject": types.Dict{}}
 
-	found, obj, err := removeArtifacts1(ctx, *sd, nil, resDict, 1)
+	found, obj, err := removeArtifacts1(t.Context(), ctx, *sd, nil, resDict, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -644,10 +646,10 @@ func TestRemoveArtifactsHandlesDirectAndMalformedContents(t *testing.T) {
 		t.Fatalf("expected direct stream dictionary, got %T", obj)
 	}
 
-	if found, _, err := removeArtifacts1(ctx, types.Array{}, nil, resDict, 1); err != nil || found {
+	if found, _, err := removeArtifacts1(t.Context(), ctx, types.Array{}, nil, resDict, 1); err != nil || found {
 		t.Fatalf("expected empty array to be ignored, found=%t err=%v", found, err)
 	}
-	_, _, err = removeArtifacts1(ctx, types.Array{types.Name("broken")}, nil, resDict, 1)
+	_, _, err = removeArtifacts1(t.Context(), ctx, types.Array{types.Name("broken")}, nil, resDict, 1)
 	if err == nil || !strings.Contains(err.Error(), "content array entry 1: expected indirect reference") {
 		t.Fatalf("expected malformed array context, got %v", err)
 	}
@@ -655,6 +657,7 @@ func TestRemoveArtifactsHandlesDirectAndMalformedContents(t *testing.T) {
 
 func TestRemoveArtifactsReportsMissingContentObject(t *testing.T) {
 	_, _, err := removeArtifacts1(
+		t.Context(),
 		testOptimizeContext(t),
 		types.Array{*types.NewIndirectRef(999, 0)},
 		nil,
@@ -671,13 +674,13 @@ func TestAddWatermarksUpdateErrorIncludesRemovalContext(t *testing.T) {
 	pageDict := addOptimizeTestPage(t, ctx)
 	pageDict["Resources"] = types.Dict{"ExtGState": types.Dict{}, "XObject": types.Dict{}}
 	pageDict["Contents"] = *types.NewIndirectRef(999, 0)
-	wm, err := ParseTextWatermarkDetails("draft", "", false, types.POINTS)
+	wm, err := ParseTextWatermarkDetails(t.Context(), "draft", "", false, types.POINTS, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	wm.Update = true
 
-	err = AddWatermarks(ctx, nil, wm)
+	err = AddWatermarks(t.Context(), ctx, nil, wm)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -706,13 +709,13 @@ func TestHandleLinkRejectsMissingPageState(t *testing.T) {
 func TestCreateFontResourceRejectsIncompleteState(t *testing.T) {
 	wm := model.DefaultWatermarkConfig()
 	wm.FontName = ""
-	err := createFontResForWM(testOptimizeContext(t), wm, map[string]types.IndirectRef{})
+	err := createFontResForWM(t.Context(), testOptimizeContext(t), wm, map[string]types.IndirectRef{})
 	if !errors.Is(err, ErrMissingWatermarkConfiguration) {
 		t.Fatalf("expected %v, got %v", ErrMissingWatermarkConfiguration, err)
 	}
 
 	wm.FontName = "CustomFont"
-	err = createFontResForWM(&model.Context{XRefTable: testOptimizeContext(t).XRefTable}, wm, map[string]types.IndirectRef{})
+	err = createFontResForWM(t.Context(), &model.Context{XRefTable: testOptimizeContext(t).XRefTable}, wm, map[string]types.IndirectRef{})
 	if !errors.Is(err, ErrMissingOptimizationContext) {
 		t.Fatalf("expected %v, got %v", ErrMissingOptimizationContext, err)
 	}
@@ -722,7 +725,7 @@ func TestCreateFontResourceRejectsIncompleteState(t *testing.T) {
 }
 
 func TestUpdateUserfontsPreservesFontContextAndCause(t *testing.T) {
-	if err := pdffont.UpdateUserfonts(nil, nil); !errors.Is(err, model.ErrMissingXRefTable) {
+	if err := pdffont.UpdateUserfonts(t.Context(), nil, nil); !errors.Is(err, model.ErrMissingXRefTable) {
 		t.Fatalf("expected %v, got %v", model.ErrMissingXRefTable, err)
 	}
 
@@ -732,7 +735,7 @@ func TestUpdateUserfontsPreservesFontContextAndCause(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx.UsedGIDs["CustomFont"] = map[uint16]bool{1: true}
-	err = pdffont.UpdateUserfonts(ctx.XRefTable, map[string]types.IndirectRef{"CustomFont": *indRef})
+	err = pdffont.UpdateUserfonts(t.Context(), ctx.XRefTable, map[string]types.IndirectRef{"CustomFont": *indRef})
 	if !errors.Is(err, pdffont.ErrCorruptFontDict) {
 		t.Fatalf("expected %v, got %v", pdffont.ErrCorruptFontDict, err)
 	}
@@ -748,7 +751,7 @@ func TestUpdateUserfontsPreservesFontContextAndCause(t *testing.T) {
 	ctx = testOptimizeContext(t)
 	ctx.UsedGIDs["Zulu"] = map[uint16]bool{1: true}
 	ctx.UsedGIDs["Alpha"] = map[uint16]bool{1: true}
-	err = pdffont.UpdateUserfonts(ctx.XRefTable, map[string]types.IndirectRef{
+	err = pdffont.UpdateUserfonts(t.Context(), ctx.XRefTable, map[string]types.IndirectRef{
 		"Zulu":  *types.NewIndirectRef(999, 0),
 		"Alpha": *types.NewIndirectRef(998, 0),
 	})
@@ -758,19 +761,19 @@ func TestUpdateUserfontsPreservesFontContextAndCause(t *testing.T) {
 }
 
 func TestAddWatermarkMapsRejectInvalidDirectInputs(t *testing.T) {
-	if err := AddWatermarksMap(nil, map[int]*model.Watermark{1: model.DefaultWatermarkConfig()}); !errors.Is(err, ErrMissingPDFContext) {
+	if err := AddWatermarksMap(t.Context(), nil, map[int]*model.Watermark{1: model.DefaultWatermarkConfig()}); !errors.Is(err, ErrMissingPDFContext) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFContext, err)
 	}
-	if err := AddWatermarksSliceMap(&model.Context{}, map[int][]*model.Watermark{1: {model.DefaultWatermarkConfig()}}); !errors.Is(err, ErrMissingXRefTable) {
+	if err := AddWatermarksSliceMap(t.Context(), &model.Context{}, map[int][]*model.Watermark{1: {model.DefaultWatermarkConfig()}}); !errors.Is(err, ErrMissingXRefTable) {
 		t.Fatalf("expected %v, got %v", ErrMissingXRefTable, err)
 	}
 
 	ctx := testOptimizeContext(t)
 	addOptimizeTestPage(t, ctx)
-	if err := AddWatermarksMap(ctx, nil); !errors.Is(err, ErrMissingWatermarks) {
+	if err := AddWatermarksMap(t.Context(), ctx, nil); !errors.Is(err, ErrMissingWatermarks) {
 		t.Fatalf("expected %v, got %v", ErrMissingWatermarks, err)
 	}
-	if err := AddWatermarksSliceMap(ctx, nil); !errors.Is(err, ErrMissingWatermarks) {
+	if err := AddWatermarksSliceMap(t.Context(), ctx, nil); !errors.Is(err, ErrMissingWatermarks) {
 		t.Fatalf("expected %v, got %v", ErrMissingWatermarks, err)
 	}
 	tests := []struct {
@@ -781,28 +784,28 @@ func TestAddWatermarkMapsRejectInvalidDirectInputs(t *testing.T) {
 	}{
 		{
 			name:    "map nil watermark",
-			fn:      func() error { return AddWatermarksMap(ctx, map[int]*model.Watermark{1: nil}) },
+			fn:      func() error { return AddWatermarksMap(t.Context(), ctx, map[int]*model.Watermark{1: nil}) },
 			wantErr: ErrMissingWatermarkConfiguration,
 			want:    "page 1",
 		},
 		{
 			name: "map invalid page",
 			fn: func() error {
-				return AddWatermarksMap(ctx, map[int]*model.Watermark{2: model.DefaultWatermarkConfig()})
+				return AddWatermarksMap(t.Context(), ctx, map[int]*model.Watermark{2: model.DefaultWatermarkConfig()})
 			},
 			wantErr: ErrInvalidPageNumber,
 			want:    "page 2",
 		},
 		{
 			name:    "slice map empty page",
-			fn:      func() error { return AddWatermarksSliceMap(ctx, map[int][]*model.Watermark{1: nil}) },
+			fn:      func() error { return AddWatermarksSliceMap(t.Context(), ctx, map[int][]*model.Watermark{1: nil}) },
 			wantErr: ErrMissingWatermarks,
 			want:    "page 1",
 		},
 		{
 			name: "slice map nil watermark",
 			fn: func() error {
-				return AddWatermarksSliceMap(ctx, map[int][]*model.Watermark{1: {model.DefaultWatermarkConfig(), nil}})
+				return AddWatermarksSliceMap(t.Context(), ctx, map[int][]*model.Watermark{1: {model.DefaultWatermarkConfig(), nil}})
 			},
 			wantErr: ErrMissingWatermarkConfiguration,
 			want:    "page 1, watermark 1",
@@ -871,7 +874,7 @@ func TestAddWatermarkMapsRejectInconsistentSharedSettings(t *testing.T) {
 		{
 			name: "map OnTop",
 			fn: func() error {
-				return AddWatermarksMap(ctx, map[int]*model.Watermark{
+				return AddWatermarksMap(t.Context(), ctx, map[int]*model.Watermark{
 					2: watermark(true, 1),
 					1: watermark(false, 1),
 				})
@@ -881,7 +884,7 @@ func TestAddWatermarkMapsRejectInconsistentSharedSettings(t *testing.T) {
 		{
 			name: "map opacity",
 			fn: func() error {
-				return AddWatermarksMap(ctx, map[int]*model.Watermark{
+				return AddWatermarksMap(t.Context(), ctx, map[int]*model.Watermark{
 					2: watermark(false, .5),
 					1: watermark(false, 1),
 				})
@@ -891,7 +894,7 @@ func TestAddWatermarkMapsRejectInconsistentSharedSettings(t *testing.T) {
 		{
 			name: "slice map opacity",
 			fn: func() error {
-				return AddWatermarksSliceMap(ctx, map[int][]*model.Watermark{
+				return AddWatermarksSliceMap(t.Context(), ctx, map[int][]*model.Watermark{
 					1: {watermark(false, 1), watermark(false, .5)},
 				})
 			},
@@ -913,7 +916,7 @@ func TestAddWatermarkMapsIncludeResourceIdentity(t *testing.T) {
 	imageWM.Mode = model.WMImage
 	ctx := testOptimizeContext(t)
 	addOptimizeTestPage(t, ctx)
-	err := AddWatermarksMap(ctx, map[int]*model.Watermark{1: imageWM})
+	err := AddWatermarksMap(t.Context(), ctx, map[int]*model.Watermark{1: imageWM})
 	if !errors.Is(err, ErrMissingImageReader) {
 		t.Fatalf("expected %v, got %v", ErrMissingImageReader, err)
 	}
@@ -927,7 +930,7 @@ func TestAddWatermarkMapsIncludeResourceIdentity(t *testing.T) {
 	imageWM.Mode = model.WMImage
 	ctx = testOptimizeContext(t)
 	addOptimizeTestPage(t, ctx)
-	err = AddWatermarksSliceMap(ctx, map[int][]*model.Watermark{1: {model.DefaultWatermarkConfig(), imageWM}})
+	err = AddWatermarksSliceMap(t.Context(), ctx, map[int][]*model.Watermark{1: {model.DefaultWatermarkConfig(), imageWM}})
 	if !errors.Is(err, ErrMissingImageReader) {
 		t.Fatalf("expected %v, got %v", ErrMissingImageReader, err)
 	}
@@ -937,10 +940,10 @@ func TestAddWatermarkMapsIncludeResourceIdentity(t *testing.T) {
 }
 
 func TestRemoveWatermarksRejectsMissingContext(t *testing.T) {
-	if err := RemoveWatermarks(nil, nil); !errors.Is(err, ErrMissingPDFContext) {
+	if err := RemoveWatermarks(t.Context(), nil, nil); !errors.Is(err, ErrMissingPDFContext) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFContext, err)
 	}
-	if err := RemoveWatermarks(&model.Context{}, nil); !errors.Is(err, ErrMissingXRefTable) {
+	if err := RemoveWatermarks(t.Context(), &model.Context{}, nil); !errors.Is(err, ErrMissingXRefTable) {
 		t.Fatalf("expected %v, got %v", ErrMissingXRefTable, err)
 	}
 }
@@ -1010,7 +1013,7 @@ func TestRemoveResourceEntryOnlyUnlinksPageNames(t *testing.T) {
 
 func TestRemoveWatermarksErrorsIncludeOperationAndPageContext(t *testing.T) {
 	t.Run("missing optional content", func(t *testing.T) {
-		err := RemoveWatermarks(testOptimizeContext(t), nil)
+		err := RemoveWatermarks(t.Context(), testOptimizeContext(t), nil)
 		if !errors.Is(err, errNoWatermark) {
 			t.Fatalf("expected %v, got %v", errNoWatermark, err)
 		}
@@ -1028,7 +1031,7 @@ func TestRemoveWatermarksErrorsIncludeOperationAndPageContext(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err := RemoveWatermarks(ctx, types.IntSet{1: true})
+		err := RemoveWatermarks(t.Context(), ctx, types.IntSet{1: true})
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -1043,7 +1046,7 @@ func TestRemoveWatermarksErrorsIncludeOperationAndPageContext(t *testing.T) {
 func TestRemovePageWatermarksUsesSortedPages(t *testing.T) {
 	ctx := testOptimizeContext(t)
 	ctx.PageCount = 2
-	err := removePageWatermarks(ctx, types.IntSet{2: true, 1: true})
+	err := removePageWatermarks(t.Context(), ctx, types.IntSet{2: true, 1: true})
 	if err == nil || !strings.Contains(err.Error(), "page 1") {
 		t.Fatalf("expected page 1 error, got %v", err)
 	}
@@ -1058,7 +1061,7 @@ func TestFindPageWatermarksHandlesMissingAndMalformedContents(t *testing.T) {
 	}
 
 	delete(pageDict, "Contents")
-	found, err := findPageWatermarks(ctx, pageRef)
+	found, err := findPageWatermarks(t.Context(), ctx, pageRef)
 	if err != nil || found {
 		t.Fatalf("expected contentless page to be ignored, found=%t err=%v", found, err)
 	}
@@ -1075,7 +1078,7 @@ func TestFindPageWatermarksHandlesMissingAndMalformedContents(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			pageDict["Contents"] = tt.obj
-			_, err := findPageWatermarks(ctx, pageRef)
+			_, err := findPageWatermarks(t.Context(), ctx, pageRef)
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("expected %q in %v", tt.want, err)
 			}
@@ -1099,7 +1102,7 @@ func TestFindPageWatermarksPreservesUnsupportedFilter(t *testing.T) {
 		},
 	}
 
-	_, err = findPageWatermarks(ctx, pageRef)
+	_, err = findPageWatermarks(t.Context(), ctx, pageRef)
 	if !errors.Is(err, filter.ErrUnsupportedFilter) {
 		t.Fatalf("expected %v, got %v", filter.ErrUnsupportedFilter, err)
 	}
@@ -1116,7 +1119,7 @@ func TestDetectWatermarksIncludesPageTreeObjectContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := DetectWatermarks(ctx)
+	err := DetectWatermarks(t.Context(), ctx)
 	if err == nil {
 		t.Fatal("expected error")
 	}

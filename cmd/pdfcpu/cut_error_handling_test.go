@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -42,7 +43,7 @@ func TestCutCLIHandlersRejectMissingConfigurationAndArguments(t *testing.T) {
 	preserveCutCLIFlags(t)
 	operations := []struct {
 		name string
-		run  func(*model.Configuration, []string) error
+		run  func(context.Context, *model.Configuration, []string) error
 	}{
 		{name: "poster", run: handlePosterCommand},
 		{name: "ndown", run: handleNDownCommand},
@@ -64,7 +65,7 @@ func TestCutCLIHandlersRejectMissingConfigurationAndArguments(t *testing.T) {
 		t.Run(operation.name, func(t *testing.T) {
 			for _, guard := range guards {
 				t.Run(guard.name, func(t *testing.T) {
-					err := operation.run(guard.conf, guard.args)
+					err := operation.run(t.Context(), guard.conf, guard.args)
 					if !errors.Is(err, guard.want) {
 						t.Fatalf("expected %v, got %v", guard.want, err)
 					}
@@ -109,22 +110,34 @@ func TestCutCLIInputAndOutputChecksIncludeOperationPhases(t *testing.T) {
 		want string
 	}{
 		{name: "poster input", run: func() error {
-			return handlePosterCommand(model.NewDefaultConfiguration(), []string{"dim:100 100", "in.txt", t.TempDir()})
+			return handlePosterCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"dim:100 100", "in.txt", t.TempDir()},
+			)
 		}, want: "poster: check input"},
 		{name: "ndown input", run: func() error {
-			return handleNDownCommand(model.NewDefaultConfiguration(), []string{"2", "in.txt", t.TempDir()})
+			return handleNDownCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"2", "in.txt", t.TempDir()},
+			)
 		}, want: "ndown: check input"},
 		{name: "cut input", run: func() error {
-			return handleCutCommand(model.NewDefaultConfiguration(), []string{"hor:.5", "in.txt", t.TempDir()})
+			return handleCutCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"hor:.5", "in.txt", t.TempDir()},
+			)
 		}, want: "cut: check input"},
 		{name: "poster output", run: func() error {
-			return handlePosterCommand(model.NewDefaultConfiguration(), []string{"dim:100 100", "in.pdf", outDir, outFile})
+			return handlePosterCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"dim:100 100", "in.pdf", outDir, outFile},
+			)
 		}, want: "poster: check output"},
 		{name: "ndown output", run: func() error {
-			return handleNDownCommand(model.NewDefaultConfiguration(), []string{"2", "in.pdf", outDir, outFile})
+			return handleNDownCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"2", "in.pdf", outDir, outFile},
+			)
 		}, want: "ndown: check output"},
 		{name: "cut output", run: func() error {
-			return handleCutCommand(model.NewDefaultConfiguration(), []string{"hor:.5", "in.pdf", outDir, outFile})
+			return handleCutCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"hor:.5", "in.pdf", outDir, outFile},
+			)
 		}, want: "cut: check output"},
 	}
 
@@ -147,16 +160,26 @@ func TestCutCLIConfigurationAndArgumentErrorsIncludeContext(t *testing.T) {
 		want string
 	}{
 		{name: "poster configuration", run: func() error {
-			return handlePosterCommand(model.NewDefaultConfiguration(), []string{"bad", "in.pdf", t.TempDir()})
+			return handlePosterCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"bad", "in.pdf", t.TempDir()},
+			)
 		}, want: "poster: parse configuration"},
 		{name: "cut configuration", run: func() error {
-			return handleCutCommand(model.NewDefaultConfiguration(), []string{"bad", "in.pdf", t.TempDir()})
+			return handleCutCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"bad", "in.pdf", t.TempDir()},
+			)
 		}, want: "cut: parse configuration"},
 		{name: "ndown value", run: func() error {
-			return handleNDownCommand(model.NewDefaultConfiguration(), []string{"description", "bad", "in.pdf", t.TempDir()})
+			return handleNDownCommand(
+				t.Context(),
+				model.NewDefaultConfiguration(),
+				[]string{"description", "bad", "in.pdf", t.TempDir()},
+			)
 		}, want: `ndown: parse arguments: parse n-down value "bad"`},
 		{name: "ndown configuration", run: func() error {
-			return handleNDownCommand(model.NewDefaultConfiguration(), []string{"5", "in.pdf", t.TempDir()})
+			return handleNDownCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"5", "in.pdf", t.TempDir()},
+			)
 		}, want: "ndown: parse arguments: parse configuration"},
 	}
 
@@ -180,13 +203,19 @@ func TestCutCLIPageSelectionErrorsIncludeContext(t *testing.T) {
 		want string
 	}{
 		{name: "poster", run: func() error {
-			return handlePosterCommand(model.NewDefaultConfiguration(), []string{"dim:100 100", "in.pdf", t.TempDir()})
+			return handlePosterCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"dim:100 100", "in.pdf", t.TempDir()},
+			)
 		}, want: "poster: parse page selection"},
 		{name: "ndown", run: func() error {
-			return handleNDownCommand(model.NewDefaultConfiguration(), []string{"2", "in.pdf", t.TempDir()})
+			return handleNDownCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"2", "in.pdf", t.TempDir()},
+			)
 		}, want: "ndown: parse page selection"},
 		{name: "cut", run: func() error {
-			return handleCutCommand(model.NewDefaultConfiguration(), []string{"hor:.5", "in.pdf", t.TempDir()})
+			return handleCutCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"hor:.5", "in.pdf", t.TempDir()},
+			)
 		}, want: "cut: parse page selection"},
 	}
 
@@ -209,13 +238,19 @@ func TestCutCLIUnitErrorsIncludeContext(t *testing.T) {
 		run       func() error
 	}{
 		{operation: "poster", run: func() error {
-			return handlePosterCommand(model.NewDefaultConfiguration(), []string{"config", "in.pdf", "out"})
+			return handlePosterCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"config", "in.pdf", "out"},
+			)
 		}},
 		{operation: "ndown", run: func() error {
-			return handleNDownCommand(model.NewDefaultConfiguration(), []string{"2", "in.pdf", "out"})
+			return handleNDownCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"2", "in.pdf", "out"},
+			)
 		}},
 		{operation: "cut", run: func() error {
-			return handleCutCommand(model.NewDefaultConfiguration(), []string{"config", "in.pdf", "out"})
+			return handleCutCommand(
+				t.Context(), model.NewDefaultConfiguration(), []string{"config", "in.pdf", "out"},
+			)
 		}},
 	}
 

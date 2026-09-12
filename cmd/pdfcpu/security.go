@@ -17,12 +17,14 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
@@ -42,7 +44,7 @@ func changeopwCmd() *cobra.Command {
 		Short: "Change owner password",
 		Long:  usageLongChangeOwnerPW,
 		Args:  cobra.RangeArgs(3, 4),
-		RunE:  wrapHandler(handleChangeOwnerPasswordCommand),
+		RunE:  wrapContextHandler(handleChangeOwnerPasswordCommand),
 	}
 
 	cmd.Flags().StringVar(&upw, "upw", "", "user password")
@@ -56,7 +58,7 @@ func changeupwCmd() *cobra.Command {
 		Short: "Change user password",
 		Long:  usageLongChangeUserPW,
 		Args:  cobra.RangeArgs(3, 4),
-		RunE:  wrapHandler(handleChangeUserPasswordCommand),
+		RunE:  wrapContextHandler(handleChangeUserPasswordCommand),
 	}
 
 	cmd.Flags().StringVar(&opw, "opw", "", "owner password")
@@ -70,7 +72,7 @@ func decryptCmd() *cobra.Command {
 		Short: "Remove password protection",
 		Long:  usageLongDecrypt,
 		Args:  cobra.RangeArgs(1, 2),
-		RunE:  wrapHandler(handleDecryptCommand),
+		RunE:  wrapContextHandler(handleDecryptCommand),
 	}
 	addPasswordFlags(cmd)
 
@@ -88,8 +90,8 @@ func encryptCmd() *cobra.Command {
 		Short: "Set password protection",
 		Long:  usageLongEncrypt,
 		Args:  cobra.RangeArgs(1, 2),
-		RunE: wrapHandler(func(conf *model.Configuration, args []string) error {
-			return handleEncryptCommand(conf, args, opts)
+		RunE: wrapContextHandler(func(c context.Context, conf *model.Configuration, args []string) error {
+			return handleEncryptCommand(c, conf, args, opts)
 		}),
 	}
 	addPasswordFlags(cmd)
@@ -113,7 +115,7 @@ func permissionsCmd() *cobra.Command {
 		Use:   "set inFile [ outFile ]",
 		Short: "Set permissions",
 		Args:  cobra.RangeArgs(1, 2),
-		RunE:  wrapHandler(handleSetPermissionsCommand),
+		RunE:  wrapContextHandler(handleSetPermissionsCommand),
 	}
 	setCmd.Flags().StringVar(&perm, "perm", "none", "user access permissions")
 
@@ -122,7 +124,7 @@ func permissionsCmd() *cobra.Command {
 			Use:   "list inFile...",
 			Short: "List permissions",
 			Args:  cobra.MinimumNArgs(1),
-			RunE:  wrapHandler(handleListPermissionsCommand),
+			RunE:  wrapContextHandler(handleListPermissionsCommand),
 		},
 		setCmd,
 	)
@@ -130,7 +132,10 @@ func permissionsCmd() *cobra.Command {
 	return cmd
 }
 
-func handleListPermissionsCommand(conf *model.Configuration, args []string) error {
+func handleListPermissionsCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -140,6 +145,9 @@ func handleListPermissionsCommand(conf *model.Configuration, args []string) erro
 
 	inFiles := []string{}
 	for i, arg := range args {
+		if err := c.Err(); err != nil {
+			return err
+		}
 		if arg == "" {
 			return fmt.Errorf("list permissions: input %d: %w", i+1, api.ErrMissingPDFInput)
 		}
@@ -152,6 +160,9 @@ func handleListPermissionsCommand(conf *model.Configuration, args []string) erro
 				return fmt.Errorf("list permissions: input pattern %q matched no files", arg)
 			}
 			for _, match := range matches {
+				if err := c.Err(); err != nil {
+					return err
+				}
 				if err := inputPDFArg(conf, match); err != nil {
 					return fmt.Errorf("list permissions: parse arguments: %w", err)
 				}
@@ -165,7 +176,7 @@ func handleListPermissionsCommand(conf *model.Configuration, args []string) erro
 		inFiles = append(inFiles, arg)
 	}
 
-	return runCommand(cli.ListPermissionsCommand(inFiles, conf))
+	return runCommand(c, cli.ListPermissionsCommand(inFiles, conf))
 }
 
 func permCompletion(permPrefix string) string {
@@ -221,7 +232,10 @@ func validatePerm(perm string) error {
 	return errors.New("perm unless number must be one of: all, none, print")
 }
 
-func handleSetPermissionsCommand(conf *model.Configuration, args []string) error {
+func handleSetPermissionsCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := validateSecurityCommandArgs("set permissions", conf, args, 1, 2); err != nil {
 		return err
 	}
@@ -242,10 +256,13 @@ func handleSetPermissionsCommand(conf *model.Configuration, args []string) error
 
 	configPerm(normalizedPerm, conf)
 
-	return runCommand(cli.SetPermissionsCommand(inFile, outFile, conf))
+	return runCommand(c, cli.SetPermissionsCommand(inFile, outFile, conf))
 }
 
-func handleDecryptCommand(conf *model.Configuration, args []string) error {
+func handleDecryptCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -256,7 +273,7 @@ func handleDecryptCommand(conf *model.Configuration, args []string) error {
 	if err != nil {
 		return fmt.Errorf("decrypt: parse arguments: %w", err)
 	}
-	return runCommand(cli.DecryptCommand(inFile, outFile, conf))
+	return runCommand(c, cli.DecryptCommand(inFile, outFile, conf))
 }
 
 func validateEncryptModeFlag(opts *encryptOptions) error {
@@ -300,7 +317,10 @@ func validateEncryptFlags(opts *encryptOptions) error {
 	return nil
 }
 
-func handleEncryptCommand(conf *model.Configuration, args []string, opts *encryptOptions) error {
+func handleEncryptCommand(c context.Context, conf *model.Configuration, args []string, opts *encryptOptions) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -340,7 +360,7 @@ func handleEncryptCommand(conf *model.Configuration, args []string, opts *encryp
 		return fmt.Errorf("encrypt: parse arguments: %w", err)
 	}
 
-	return runCommand(cli.EncryptCommand(inFile, outFile, conf))
+	return runCommand(c, cli.EncryptCommand(inFile, outFile, conf))
 }
 
 func validateCryptoCommandArgs(op string, args []string) error {
@@ -353,10 +373,13 @@ func validateCryptoCommandArgs(op string, args []string) error {
 	return nil
 }
 
-func handleChangeUserPasswordCommand(conf *model.Configuration, args []string) error {
+func handleChangeUserPasswordCommand(c context.Context, conf *model.Configuration, args []string) error {
 	const op = "change user password"
 
-	inFile, outFile, err := passwordChangePDFArgs(op, conf, args)
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	inFile, outFile, err := passwordChangeArgs(op, conf, args)
 	if err != nil {
 		return err
 	}
@@ -364,13 +387,16 @@ func handleChangeUserPasswordCommand(conf *model.Configuration, args []string) e
 	pwOld := args[1]
 	pwNew := args[2]
 
-	return runCommand(cli.ChangeUserPWCommand(inFile, outFile, &pwOld, &pwNew, conf))
+	return runCommand(c, cli.ChangeUserPWCommand(inFile, outFile, &pwOld, &pwNew, conf))
 }
 
-func handleChangeOwnerPasswordCommand(conf *model.Configuration, args []string) error {
+func handleChangeOwnerPasswordCommand(c context.Context, conf *model.Configuration, args []string) error {
 	const op = "change owner password"
 
-	inFile, outFile, err := passwordChangePDFArgs(op, conf, args)
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	inFile, outFile, err := passwordChangeArgs(op, conf, args)
 	if err != nil {
 		return err
 	}
@@ -381,15 +407,10 @@ func handleChangeOwnerPasswordCommand(conf *model.Configuration, args []string) 
 		return fmt.Errorf("%s: new owner password must not be empty: %w", op, pdfcpu.ErrOwnerPasswordRequired)
 	}
 
-	return runCommand(cli.ChangeOwnerPWCommand(inFile, outFile, &pwOld, &pwNew, conf))
+	return runCommand(c, cli.ChangeOwnerPWCommand(inFile, outFile, &pwOld, &pwNew, conf))
 }
 
-func validateSecurityCommandArgs(
-	op string,
-	conf *model.Configuration,
-	args []string,
-	minArgs, maxArgs int,
-) error {
+func validateSecurityCommandArgs(op string, conf *model.Configuration, args []string, minArgs, maxArgs int) error {
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -402,7 +423,7 @@ func validateSecurityCommandArgs(
 	return nil
 }
 
-func passwordChangePDFArgs(op string, conf *model.Configuration, args []string) (string, string, error) {
+func passwordChangeArgs(op string, conf *model.Configuration, args []string) (string, string, error) {
 	if err := validateSecurityCommandArgs(op, conf, args, 3, 4); err != nil {
 		return "", "", err
 	}

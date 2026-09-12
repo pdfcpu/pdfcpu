@@ -27,7 +27,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-type documentCommandExecutor func(*Command) ([]string, error)
+type documentCommandExecutor = dispatchFunc
 
 // TestDocumentExecutorsRejectNilCommand verifies every public document executor has a safe nil boundary.
 func TestDocumentExecutorsRejectNilCommand(t *testing.T) {
@@ -35,23 +35,23 @@ func TestDocumentExecutorsRejectNilCommand(t *testing.T) {
 		name string
 		run  documentCommandExecutor
 	}{
-		{"Validate", Validate},
-		{"Optimize", Optimize},
-		{"MergeCreate", MergeCreate},
-		{"MergeCreateZip", MergeCreateZip},
-		{"MergeAppend", MergeAppend},
-		{"Split", Split},
-		{"SplitByPageNr", SplitByPageNr},
-		{"Trim", Trim},
-		{"Collect", Collect},
-		{"ListInfo", ListInfo},
-		{"Dump", Dump},
-		{"Create", Create},
+		{"Validate", validateCommand},
+		{"Optimize", optimize},
+		{"MergeCreate", mergeCreate},
+		{"MergeCreateZip", mergeCreateZip},
+		{"MergeAppend", mergeAppend},
+		{"Split", split},
+		{"SplitByPageNr", splitByPageNr},
+		{"Trim", trim},
+		{"Collect", collect},
+		{"ListInfo", listInfoCommand},
+		{"Dump", dump},
+		{"Create", create},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(nil)
+			_, err := tt.run(t.Context(), nil)
 			if !errors.Is(err, ErrMissingCommand) {
 				t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 			}
@@ -72,30 +72,30 @@ func TestDocumentExecutorsRejectIncompleteCommand(t *testing.T) {
 		cmd  *Command
 		want error
 	}{
-		{"ValidateInput", Validate, &Command{}, api.ErrMissingPDFInput},
-		{"OptimizeInput", Optimize, &Command{}, api.ErrMissingPDFInput},
-		{"OptimizeOutput", Optimize, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"MergeCreateInput", MergeCreate, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"MergeCreateOutput", MergeCreate, &Command{InFiles: []string{inFile}}, api.ErrMissingPDFOutput},
-		{"MergeZipInputs", MergeCreateZip, &Command{InFiles: []string{inFile}, OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"MergeZipTooManyInputs", MergeCreateZip, &Command{
+		{"ValidateInput", validateCommand, &Command{}, api.ErrMissingPDFInput},
+		{"OptimizeInput", optimize, &Command{}, api.ErrMissingPDFInput},
+		{"OptimizeOutput", optimize, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"MergeCreateInput", mergeCreate, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"MergeCreateOutput", mergeCreate, &Command{InFiles: []string{inFile}}, api.ErrMissingPDFOutput},
+		{"MergeZipInputs", mergeCreateZip, &Command{InFiles: []string{inFile}, OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"MergeZipTooManyInputs", mergeCreateZip, &Command{
 			InFiles: []string{"one.pdf", "two.pdf", "three.pdf"},
 			OutFile: &outFile,
 		}, ErrInvalidCommandArguments},
-		{"MergeAppendInput", MergeAppend, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"SplitInput", Split, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
-		{"SplitOutput", Split, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"SplitByPageNumbers", SplitByPageNr, &Command{InFile: &inFile, OutDir: &outDir}, api.ErrMissingSplitPageNumbers},
-		{"TrimInput", Trim, &Command{OutFile: &empty}, api.ErrMissingPDFInput},
-		{"TrimOutput", Trim, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"CollectInput", Collect, &Command{OutFile: &empty}, api.ErrMissingPDFInput},
-		{"CollectOutput", Collect, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
-		{"ListInfoInput", ListInfo, &Command{}, api.ErrMissingPDFInput},
-		{"DumpValues", Dump, &Command{InFile: &inFile}, ErrInvalidCommandArguments},
-		{"CreateInputField", Create, &Command{InFileJSON: &jsonFile, OutFile: &outFile}, api.ErrMissingPDFInput},
-		{"CreateJSON", Create, &Command{InFile: &empty, OutFile: &outFile}, api.ErrMissingJSONInput},
-		{"CreateOutputField", Create, &Command{InFile: &inFile, InFileJSON: &jsonFile}, api.ErrMissingPDFOutput},
-		{"CreateInputOrOutput", Create, &Command{
+		{"MergeAppendInput", mergeAppend, &Command{OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"SplitInput", split, &Command{OutDir: &outDir}, api.ErrMissingPDFInput},
+		{"SplitOutput", split, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"SplitByPageNumbers", splitByPageNr, &Command{InFile: &inFile, OutDir: &outDir}, api.ErrMissingSplitPageNumbers},
+		{"TrimInput", trim, &Command{OutFile: &empty}, api.ErrMissingPDFInput},
+		{"TrimOutput", trim, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"CollectInput", collect, &Command{OutFile: &empty}, api.ErrMissingPDFInput},
+		{"CollectOutput", collect, &Command{InFile: &inFile}, api.ErrMissingPDFOutput},
+		{"ListInfoInput", listInfoCommand, &Command{}, api.ErrMissingPDFInput},
+		{"DumpValues", dump, &Command{InFile: &inFile}, ErrInvalidCommandArguments},
+		{"CreateInputField", create, &Command{InFileJSON: &jsonFile, OutFile: &outFile}, api.ErrMissingPDFInput},
+		{"CreateJSON", create, &Command{InFile: &empty, OutFile: &outFile}, api.ErrMissingJSONInput},
+		{"CreateOutputField", create, &Command{InFile: &inFile, InFileJSON: &jsonFile}, api.ErrMissingPDFOutput},
+		{"CreateInputOrOutput", create, &Command{
 			InFile:     &empty,
 			InFileJSON: &jsonFile,
 			OutFile:    &empty,
@@ -104,7 +104,7 @@ func TestDocumentExecutorsRejectIncompleteCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(tt.cmd)
+			_, err := tt.run(t.Context(), tt.cmd)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
@@ -136,7 +136,7 @@ func TestDispatchRejectsIncompleteDocumentCommandsWithoutPanic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Dispatch(tt.cmd)
+			_, err := Dispatch(t.Context(), tt.cmd)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}

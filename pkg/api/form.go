@@ -17,6 +17,8 @@
 package api
 
 import (
+	"bytes"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -27,6 +29,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/create"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/form"
@@ -35,22 +38,25 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// FormFields returns all form fields of rs.
-func FormFields(rs io.ReadSeeker, conf *model.Configuration) (fields []form.Field, err error) {
+// FormFields returns all form fields of rs and supports cancellation.
+func FormFields(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (fields []form.Field, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
 
 	conf = operationConfiguration(conf, model.LISTFORMFIELDS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return nil, fmt.Errorf("list form fields: %w", err)
 	}
 
-	fields, _, err = form.FormFields(ctx)
+	fields, _, err = form.FormFields(c, ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list form fields: collect fields: %w", err)
 	}
@@ -58,31 +64,37 @@ func FormFields(rs io.ReadSeeker, conf *model.Configuration) (fields []form.Fiel
 	return fields, nil
 }
 
-// ListFormFields returns a rendered list of all form fields in rs.
-func ListFormFields(rs io.ReadSeeker, conf *model.Configuration) (fields []string, err error) {
+// ListFormFields returns a rendered list of all form fields in rs and supports cancellation.
+func ListFormFields(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (fields []string, err error) {
 	defer fault.Catch(&err)
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
 
 	conf = operationConfiguration(conf, model.LISTFORMFIELDS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return nil, fmt.Errorf("list form fields: %w", err)
 	}
 
-	fields, err = form.ListFormFields(ctx)
+	fields, err = form.ListFormFields(c, ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list form fields: %w", err)
 	}
 	return fields, nil
 }
 
-// RemoveFormFields deletes form fields in rs and writes the result to w.
-func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
+// RemoveFormFields deletes form fields in rs, writes the result to w and supports cancellation.
+func RemoveFormFields(c context.Context, rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -97,12 +109,12 @@ func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 
 	conf = operationConfiguration(conf, model.REMOVEFORMFIELDS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("remove form fields: %w", err)
 	}
 
-	ok, err := form.RemoveFormFields(ctx, fieldIDsOrNames)
+	ok, err := form.RemoveFormFields(c, ctx, fieldIDsOrNames)
 	if err != nil {
 		return fmt.Errorf("remove form fields: update fields: %w", err)
 	}
@@ -110,15 +122,24 @@ func RemoveFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return fmt.Errorf("remove form fields: %w", ErrNoFormFieldsAffected)
 	}
 
-	if err := Write(ctx, w, conf); err != nil {
+	if err := Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("remove form fields: write output: %w", err)
 	}
 	return nil
 }
 
-type formFieldMutation func(io.ReadSeeker, io.Writer, []string, *model.Configuration) error
+type formFieldMutation func(
+	context.Context,
+	io.ReadSeeker,
+	io.Writer,
+	[]string,
+	*model.Configuration,
+) error
 
-func mutateFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration, operation string, mutate formFieldMutation) (err error) {
+func mutateFormFieldsFile(c context.Context, inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration, operation string, mutate formFieldMutation) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -154,22 +175,30 @@ func mutateFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf
 		err = staged.commit()
 	}()
 
-	if err = mutate(f1, f2, fieldIDsOrNames, conf); err != nil {
+	if err = mutate(c, f1, f2, fieldIDsOrNames, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 	ok = true
 	return nil
 }
 
-// RemoveFormFieldsFile deletes form fields in inFile and writes the result to outFile.
-func RemoveFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
-	return mutateFormFieldsFile(inFile, outFile, fieldIDsOrNames, conf, "remove form fields", RemoveFormFields)
+// RemoveFormFieldsFile deletes form fields in inFile, writes the result to outFile and supports cancellation.
+func RemoveFormFieldsFile(c context.Context, inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) error {
+	return mutateFormFieldsFile(
+		c, inFile, outFile, fieldIDsOrNames, conf, "remove form fields", RemoveFormFields,
+	)
 }
 
-// LockFormFields turns form fields in rs into read-only and writes the result to w.
-func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
+// LockFormFields turns form fields in rs into read-only, writes the result to w and supports cancellation.
+func LockFormFields(c context.Context, rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -184,12 +213,12 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, con
 
 	conf = operationConfiguration(conf, model.LOCKFORMFIELDS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("lock form fields: %w", err)
 	}
 
-	ok, err := form.LockFormFields(ctx, fieldIDsOrNames)
+	ok, err := form.LockFormFields(c, ctx, fieldIDsOrNames)
 	if err != nil {
 		return fmt.Errorf("lock form fields: update fields: %w", err)
 	}
@@ -197,21 +226,27 @@ func LockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, con
 		return fmt.Errorf("lock form fields: %w", ErrNoFormFieldsAffected)
 	}
 
-	if err := Write(ctx, w, conf); err != nil {
+	if err := Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("lock form fields: write output: %w", err)
 	}
 	return nil
 }
 
-// LockFormFieldsFile turns form fields of inFile into read-only and writes the result to outFile.
-func LockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
-	return mutateFormFieldsFile(inFile, outFile, fieldIDsOrNames, conf, "lock form fields", LockFormFields)
+// LockFormFieldsFile turns form fields of inFile into read-only, writes the result to outFile
+// and supports cancellation.
+func LockFormFieldsFile(c context.Context, inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) error {
+	return mutateFormFieldsFile(
+		c, inFile, outFile, fieldIDsOrNames, conf, "lock form fields", LockFormFields,
+	)
 }
 
-// UnlockFormFields makes form fields in rs writable and writes the result to w.
-func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
+// UnlockFormFields makes form fields in rs writable, writes the result to w and supports cancellation.
+func UnlockFormFields(c context.Context, rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -226,12 +261,12 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 
 	conf = operationConfiguration(conf, model.UNLOCKFORMFIELDS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("unlock form fields: %w", err)
 	}
 
-	ok, err := form.UnlockFormFields(ctx, fieldIDsOrNames)
+	ok, err := form.UnlockFormFields(c, ctx, fieldIDsOrNames)
 	if err != nil {
 		return fmt.Errorf("unlock form fields: update fields: %w", err)
 	}
@@ -239,21 +274,26 @@ func UnlockFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, c
 		return fmt.Errorf("unlock form fields: %w", ErrNoFormFieldsAffected)
 	}
 
-	if err := Write(ctx, w, conf); err != nil {
+	if err := Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("unlock form fields: write output: %w", err)
 	}
 	return nil
 }
 
-// UnlockFormFieldsFile makes form fields of inFile writable and writes the result to outFile.
-func UnlockFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
-	return mutateFormFieldsFile(inFile, outFile, fieldIDsOrNames, conf, "unlock form fields", UnlockFormFields)
+// UnlockFormFieldsFile makes form fields of inFile writable, writes the result to outFile and supports cancellation.
+func UnlockFormFieldsFile(c context.Context, inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) error {
+	return mutateFormFieldsFile(
+		c, inFile, outFile, fieldIDsOrNames, conf, "unlock form fields", UnlockFormFields,
+	)
 }
 
-// ResetFormFields resets form fields of rs and writes the result to w.
-func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
+// ResetFormFields resets form fields of rs, writes the result to w and supports cancellation.
+func ResetFormFields(c context.Context, rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -268,12 +308,12 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, co
 
 	conf = operationConfiguration(conf, model.RESETFORMFIELDS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("reset form fields: %w", err)
 	}
 
-	ok, err := form.ResetFormFields(ctx, fieldIDsOrNames)
+	ok, err := form.ResetFormFields(c, ctx, fieldIDsOrNames)
 	if err != nil {
 		return fmt.Errorf("reset form fields: update fields: %w", err)
 	}
@@ -281,33 +321,38 @@ func ResetFormFields(rs io.ReadSeeker, w io.Writer, fieldIDsOrNames []string, co
 		return fmt.Errorf("reset form fields: %w", ErrNoFormFieldsAffected)
 	}
 
-	if err := Write(ctx, w, conf); err != nil {
+	if err := Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("reset form fields: write output: %w", err)
 	}
 	return nil
 }
 
-// ResetFormFieldsFile resets form fields of inFile and writes the result to outFile.
-func ResetFormFieldsFile(inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) (err error) {
-	return mutateFormFieldsFile(inFile, outFile, fieldIDsOrNames, conf, "reset form fields", ResetFormFields)
+// ResetFormFieldsFile resets form fields of inFile, writes the result to outFile and supports cancellation.
+func ResetFormFieldsFile(c context.Context, inFile, outFile string, fieldIDsOrNames []string, conf *model.Configuration) error {
+	return mutateFormFieldsFile(
+		c, inFile, outFile, fieldIDsOrNames, conf, "reset form fields", ResetFormFields,
+	)
 }
 
-// ExportForm extracts form data originating from source from rs.
-func ExportForm(rs io.ReadSeeker, source string, conf *model.Configuration) (formGroup *form.FormGroup, err error) {
+// ExportForm extracts form data originating from source from rs and supports cancellation.
+func ExportForm(c context.Context, rs io.ReadSeeker, source string, conf *model.Configuration) (formGroup *form.FormGroup, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
 
 	conf = operationConfiguration(conf, model.EXPORTFORMFIELDS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return nil, fmt.Errorf("export form: %w", err)
 	}
 
-	formGroup, err = exportedFormGroup(ctx, source)
+	formGroup, err = exportedFormGroup(c, ctx, source)
 	if err != nil {
 		return nil, fmt.Errorf("export form: collect data: %w", err)
 	}
@@ -315,8 +360,8 @@ func ExportForm(rs io.ReadSeeker, source string, conf *model.Configuration) (for
 	return formGroup, nil
 }
 
-func exportedFormGroup(ctx *model.Context, source string) (*form.FormGroup, error) {
-	formGroup, ok, err := form.ExportForm(ctx.XRefTable, source)
+func exportedFormGroup(c context.Context, ctx *model.Context, source string) (*form.FormGroup, error) {
+	formGroup, ok, err := form.ExportForm(c, ctx.XRefTable, source)
 	if err != nil {
 		return nil, err
 	}
@@ -326,23 +371,29 @@ func exportedFormGroup(ctx *model.Context, source string) (*form.FormGroup, erro
 	return formGroup, nil
 }
 
-type formJSONExporter func(*model.XRefTable, string, io.Writer) (bool, error)
+type formJSONExporter func(context.Context, *model.XRefTable, string, io.Writer) (bool, error)
 
-func exportFormJSONResult(xRefTable *model.XRefTable, source string, w io.Writer, export formJSONExporter) error {
-	ok, err := export(xRefTable, source, w)
+func exportFormJSONResultUsing(c context.Context, xRefTable *model.XRefTable, source string, w io.Writer, export formJSONExporter) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	ok, err := export(c, xRefTable, source, w)
 	if err != nil {
 		return fmt.Errorf("export form: %w", err)
 	}
 	if !ok {
 		return fmt.Errorf("export form: collect data: %w", ErrNoFormFieldsAffected)
 	}
-	return nil
+	return contextutil.Check(c)
 }
 
-// ExportFormJSON extracts form data originating from source from rs and writes the result to w.
-func ExportFormJSON(rs io.ReadSeeker, w io.Writer, source string, conf *model.Configuration) (err error) {
+// ExportFormJSON extracts form data originating from source from rs, writes the result to w and supports cancellation.
+func ExportFormJSON(c context.Context, rs io.ReadSeeker, w io.Writer, source string, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -353,16 +404,19 @@ func ExportFormJSON(rs io.ReadSeeker, w io.Writer, source string, conf *model.Co
 
 	conf = operationConfiguration(conf, model.EXPORTFORMFIELDS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("export form: %w", err)
 	}
 
-	return exportFormJSONResult(ctx.XRefTable, source, w, form.ExportFormJSON)
+	return exportFormJSONResultUsing(c, ctx.XRefTable, source, w, form.ExportFormJSON)
 }
 
-// ExportFormFile extracts form data from inFilePDF and writes the result to outFileJSON.
-func ExportFormFile(inFilePDF, outFileJSON string, conf *model.Configuration) (err error) {
+// ExportFormFile extracts form data from inFilePDF, writes the result to outFileJSON and supports cancellation.
+func ExportFormFile(c context.Context, inFilePDF, outFileJSON string, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFilePDF == "" {
 		return ErrMissingPDFInput
 	}
@@ -394,7 +448,10 @@ func ExportFormFile(inFilePDF, outFileJSON string, conf *model.Configuration) (e
 		err = staged.commit()
 	}()
 
-	if err = ExportFormJSON(f1, f2, inFilePDF, conf); err != nil {
+	if err = ExportFormJSON(c, f1, f2, inFilePDF, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 
@@ -512,21 +569,28 @@ func validateOptionValues(f form.Form) error {
 	return nil
 }
 
-func fillPostProc(ctx *model.Context, pp []*model.Page) error {
-	if _, _, err := create.UpdatePageTree(ctx, pp, nil); err != nil {
+func fillPostProc(c context.Context, ctx *model.Context, pp []*model.Page) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if _, _, err := create.UpdatePageTree(c, ctx, pp, nil); err != nil {
 		return fmt.Errorf("fill form: update page tree: %w", err)
 	}
-	if err := ValidateContext(ctx); err != nil {
+	if err := ValidateContext(c, ctx); err != nil {
 		return fmt.Errorf("fill form: validate output: %w", err)
 	}
 	return nil
 }
 
-func formGroupFromReader(rd io.Reader) (*form.FormGroup, error) {
-	bb, err := io.ReadAll(rd)
-	if err != nil {
+func formGroupFromReader(c context.Context, rd io.Reader) (*form.FormGroup, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	if err := copyStream(c, &buf, rd); err != nil {
 		return nil, fmt.Errorf("fill form: read form data: %w", err)
 	}
+	bb := buf.Bytes()
 
 	formGroup := form.FormGroup{}
 	if err := json.Unmarshal(bb, &formGroup); err != nil {
@@ -549,10 +613,13 @@ func validatedFillForm(formGroup *form.FormGroup) (form.Form, error) {
 	return f, nil
 }
 
-// FillForm populates the form rs with data from rd and writes the result to w.
-func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configuration) (err error) {
+// FillForm populates the form rs with data from rd, writes the result to w and supports cancellation.
+func FillForm(c context.Context, rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -567,7 +634,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 
 	conf = operationConfiguration(conf, model.FILLFORMFIELDS)
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
 		return fmt.Errorf("fill form: %w", err)
 	}
@@ -575,7 +642,7 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 	// TODO not necessarily so
 	ctx.RemoveSignature()
 
-	formGroup, err := formGroupFromReader(rd)
+	formGroup, err := formGroupFromReader(c, rd)
 	if err != nil {
 		return err
 	}
@@ -584,8 +651,11 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 	if err != nil {
 		return err
 	}
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 
-	ok, pp, err := form.FillForm(ctx, form.FillDetails(&f, nil), f.Pages, form.JSON)
+	ok, pp, err := form.FillForm(c, ctx, form.FillDetails(&f, nil), f.Pages, form.JSON)
 	if err != nil {
 		return fmt.Errorf("fill form: fill fields: %w", err)
 	}
@@ -593,18 +663,22 @@ func FillForm(rs io.ReadSeeker, rd io.Reader, w io.Writer, conf *model.Configura
 		return fmt.Errorf("fill form: %w", ErrNoFormFieldsAffected)
 	}
 
-	if err := fillPostProc(ctx, pp); err != nil {
+	if err := fillPostProc(c, ctx, pp); err != nil {
 		return err
 	}
 
-	if err := Write(ctx, w, conf); err != nil {
+	if err := Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("fill form: write output: %w", err)
 	}
 	return nil
 }
 
-// FillFormFile populates the form inFilePDF with data from inFileJSON and writes the result to outFilePDF.
-func FillFormFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configuration) (err error) {
+// FillFormFile populates the form inFilePDF with data from inFileJSON,
+// writes the result to outFilePDF and supports cancellation.
+func FillFormFile(c context.Context, inFilePDF, inFileJSON, outFilePDF string, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFilePDF == "" {
 		return ErrMissingPDFInput
 	}
@@ -650,7 +724,10 @@ func FillFormFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configur
 		err = staged.commit()
 	}()
 
-	if err = FillForm(f1, f0, f2, conf); err != nil {
+	if err = FillForm(c, f1, f0, f2, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 
@@ -659,11 +736,15 @@ func FillFormFile(inFilePDF, inFileJSON, outFilePDF string, conf *model.Configur
 	return nil
 }
 
-func parseFormGroup(rd io.Reader) (*form.FormGroup, error) {
-	bb, err := io.ReadAll(rd)
-	if err != nil {
+func parseFormGroup(c context.Context, rd io.Reader) (*form.FormGroup, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	var buf bytes.Buffer
+	if err := copyStream(c, &buf, rd); err != nil {
 		return nil, fmt.Errorf("multi-fill form: read form data: %w", err)
 	}
+	bb := buf.Bytes()
 
 	formGroup := &form.FormGroup{}
 	if err := json.Unmarshal(bb, formGroup); err != nil {
@@ -678,19 +759,22 @@ func parseFormGroup(rd io.Reader) (*form.FormGroup, error) {
 
 // rollbackMultiFillOutputs removes the intermediate files belonging to the
 // multi-file form transaction. It is intentionally separate from stagedOutput.
-func rollbackMultiFillOutputs(outFiles []string) error {
+func rollbackMultiFillOutputs(c context.Context, outFiles []string) error {
 	var errs []error
 	for i, fileName := range outFiles {
-		context := fmt.Sprintf("multi-fill form: remove intermediate %d %s", i+1, fileName)
-		errs = append(errs, removeFile(fileName, context))
+		op := fmt.Sprintf("multi-fill form: remove intermediate %d %s", i+1, fileName)
+		errs = append(errs, removeFile(fileName, op))
 	}
-	return errors.Join(errs...)
+	return errors.Join(contextutil.Check(c), errors.Join(errs...))
 }
 
-func mergeForms(outDir, fileName string, outFiles []string, conf *model.Configuration) error {
+func mergeForms(c context.Context, outDir, fileName string, outFiles []string, conf *model.Configuration) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	fileName = sanitizeFilenamePart(fileName, "form")
 	outFile := filepath.Join(outDir, fileName+".pdf")
-	if err := MergeCreateFile(outFiles, outFile, false, conf); err != nil {
+	if err := MergeCreateFile(c, outFiles, outFile, false, conf); err != nil {
 		return fmt.Errorf("multi-fill form: merge outputs: %w", err)
 	}
 	return nil
@@ -723,84 +807,93 @@ func multiFillCSVOutputFile(outDir, fileName, requested string, recordNr int) st
 	return filepath.Join(outDir, outFile)
 }
 
-func multiFillPostProcess(ctx *model.Context, pp []*model.Page, context string, validate bool) error {
-	if _, _, err := create.UpdatePageTree(ctx, pp, nil); err != nil {
-		return fmt.Errorf("%s: update page tree: %w", context, err)
+func multiFillPostProcess(c context.Context, ctx *model.Context, pp []*model.Page, op string, validate bool) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if _, _, err := create.UpdatePageTree(c, ctx, pp, nil); err != nil {
+		return fmt.Errorf("%s: update page tree: %w", op, err)
 	}
 	if validate {
-		if err := ValidateContext(ctx); err != nil {
-			return fmt.Errorf("%s: validate output: %w", context, err)
+		if err := ValidateContext(c, ctx); err != nil {
+			return fmt.Errorf("%s: validate output: %w", op, err)
 		}
 	}
-	return nil
+	return contextutil.Check(c)
 }
 
-func writeMultiFillOutput(ctx *model.Context, outFile, context string) error {
-	return writeMultiFillOutputWith(ctx, outFile, context, WriteContext)
-}
+type formContextWriter func(context.Context, *model.Context, io.Writer) error
 
-func writeMultiFillOutputWith(ctx *model.Context, outFile, context string, writeContext func(*model.Context, io.Writer) error) error {
-	staged, err := openStagedOutput(nil, "", outFile, context)
+func writeMultiFillOutputUsing(c context.Context, ctx *model.Context, outFile, op string, writeContext formContextWriter) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	staged, err := openStagedOutput(nil, "", outFile, op)
 	if err != nil {
-		return fmt.Errorf("%s: create output %s: %w", context, outFile, err)
+		return fmt.Errorf("%s: create output %s: %w", op, outFile, err)
 	}
 
 	f := staged.output.file
-	staged.removeContext = context + ": remove temporary output"
-	staged.replaceContext = fmt.Sprintf("%s: replace output %s", context, outFile)
-	if err := writeContext(ctx, f); err != nil {
-		return staged.cleanup(fmt.Errorf("%s: write output %s: %w", context, outFile, err))
+	staged.removeContext = op + ": remove temporary output"
+	staged.replaceContext = fmt.Sprintf("%s: replace output %s", op, outFile)
+	if err := writeContext(c, ctx, f); err != nil {
+		return staged.cleanup(fmt.Errorf("%s: write output %s: %w", op, outFile, err))
+	}
+	if err := contextutil.Check(c); err != nil {
+		return staged.cleanup(err)
 	}
 	return staged.commit()
 }
 
-func multiFillJSONForm(inFilePDF string, f form.Form, outDir, fileName string, formNr int, conf *model.Configuration, writeContext func(*model.Context, io.Writer) error) (outFile string, err error) {
-	context := fmt.Sprintf("multi-fill form %d", formNr)
+func multiFillJSONForm(c context.Context, inFilePDF string, f form.Form, outDir, fileName string, formNr int, conf *model.Configuration, writeContext formContextWriter) (outFile string, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return "", err
+	}
+	op := fmt.Sprintf("multi-fill form %d", formNr)
 	if err := validateFormData(f); err != nil {
-		return "", fmt.Errorf("%s: validate form data: %w", context, err)
+		return "", fmt.Errorf("%s: validate form data: %w", op, err)
 	}
 	rs, err := os.Open(inFilePDF)
 	if err != nil {
-		return "", fmt.Errorf("%s: open input %s: %w", context, inFilePDF, err)
+		return "", fmt.Errorf("%s: open input %s: %w", op, inFilePDF, err)
 	}
 	defer func() {
-		err = errors.Join(err, closeFile(rs, context+": close input"))
+		err = errors.Join(err, closeFile(rs, op+": close input"))
 	}()
 
-	ctx, err := ReadValidateAndOptimize(rs, conf)
+	ctx, err := ReadValidateAndOptimize(c, rs, conf, nil)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", context, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	if err := validateOptionValues(f); err != nil {
-		return "", fmt.Errorf("%s: validate option values: %w", context, err)
+		return "", fmt.Errorf("%s: validate option values: %w", op, err)
+	}
+	if err := contextutil.Check(c); err != nil {
+		return "", err
 	}
 
-	ok, pp, err := form.FillForm(ctx, form.FillDetails(&f, nil), f.Pages, form.JSON)
+	ok, pp, err := form.FillForm(c, ctx, form.FillDetails(&f, nil), f.Pages, form.JSON)
 	if err != nil {
-		return "", fmt.Errorf("%s: fill fields: %w", context, err)
+		return "", fmt.Errorf("%s: fill fields: %w", op, err)
 	}
 	if !ok {
-		return "", fmt.Errorf("%s: %w", context, ErrNoFormFieldsAffected)
+		return "", fmt.Errorf("%s: %w", op, ErrNoFormFieldsAffected)
 	}
 
-	if err := multiFillPostProcess(ctx, pp, context, conf.PostProcessValidate); err != nil {
+	if err := multiFillPostProcess(c, ctx, pp, op, conf.PostProcessValidate); err != nil {
 		return "", err
 	}
 
 	outFile = multiFillJSONOutputFile(outDir, fileName, f.FileName, formNr)
-	if err := writeMultiFillOutputWith(ctx, outFile, context, writeContext); err != nil {
+	if err := writeMultiFillOutputUsing(c, ctx, outFile, op, writeContext); err != nil {
 		return "", err
 	}
 	return outFile, nil
 }
 
-func multiFillFormJSON(inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration) (err error) {
-	return multiFillFormJSONWith(inFilePDF, rd, outDir, fileName, merge, conf, WriteContext)
-}
-
-func multiFillFormJSONWith(inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration, writeContext func(*model.Context, io.Writer) error) (err error) {
-	formGroup, err := parseFormGroup(rd)
+func multiFillFormJSONUsing(c context.Context, inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration, writeContext formContextWriter) (err error) {
+	formGroup, err := parseFormGroup(c, rd)
 	if err != nil {
 		return err
 	}
@@ -808,12 +901,17 @@ func multiFillFormJSONWith(inFilePDF string, rd io.Reader, outDir, fileName stri
 	var outFiles []string
 	if merge {
 		defer func() {
-			err = errors.Join(err, rollbackMultiFillOutputs(outFiles))
+			err = errors.Join(err, rollbackMultiFillOutputs(c, outFiles))
 		}()
 	}
 
 	for i, f := range formGroup.Forms {
-		outFile, fillErr := multiFillJSONForm(inFilePDF, f, outDir, fileName, i+1, conf, writeContext)
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		outFile, fillErr := multiFillJSONForm(
+			c, inFilePDF, f, outDir, fileName, i+1, conf, writeContext,
+		)
 		if outFile != "" {
 			outFiles = append(outFiles, outFile)
 		}
@@ -823,12 +921,15 @@ func multiFillFormJSONWith(inFilePDF string, rd io.Reader, outDir, fileName stri
 	}
 
 	if merge {
-		return mergeForms(outDir, fileName, outFiles, conf)
+		return mergeForms(c, outDir, fileName, outFiles, conf)
 	}
-	return nil
+	return contextutil.Check(c)
 }
 
-func parseCSVLines(rd io.Reader) ([][]string, error) {
+func parseCSVLines(c context.Context, rd io.Reader) ([][]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	// Does NOT do any fieldtype checking!
 	// Don't use unless you know your form anatomy inside out!
 
@@ -842,7 +943,11 @@ func parseCSVLines(rd io.Reader) ([][]string, error) {
 	// Jane			Doe			1.1.2000	female
 	// Jacky		Doe			1.1.2000	non-binary
 
-	csvLines, err := csv.NewReader(rd).ReadAll()
+	var buf bytes.Buffer
+	if err := copyStream(c, &buf, rd); err != nil {
+		return nil, fmt.Errorf("multi-fill form: read CSV: %w", err)
+	}
+	csvLines, err := csv.NewReader(&buf).ReadAll()
 	if err != nil {
 		return nil, fmt.Errorf("multi-fill form: parse CSV: %w", errors.Join(ErrInvalidCSV, err))
 	}
@@ -856,6 +961,9 @@ func parseCSVLines(rd io.Reader) ([][]string, error) {
 		return nil, fmt.Errorf("multi-fill form: parse CSV: %w", ErrInvalidCSV)
 	}
 	for i, fieldName := range fieldNames {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		if fieldName == "" || fieldName == "*" {
 			return nil, fmt.Errorf("multi-fill form: parse CSV header column %d: %w", i+1, ErrInvalidCSV)
 		}
@@ -864,51 +972,53 @@ func parseCSVLines(rd io.Reader) ([][]string, error) {
 	return csvLines, nil
 }
 
-func multiFillCSVRecord(inFilePDF string, fieldNames, formRecord []string, outDir, fileName string, recordNr, rowNr int, conf *model.Configuration, writeContext func(*model.Context, io.Writer) error) (outFile string, err error) {
-	context := fmt.Sprintf("multi-fill CSV row %d", rowNr)
+func multiFillCSVRecord(c context.Context, inFilePDF string, fieldNames, formRecord []string, outDir, fileName string, recordNr, rowNr int, conf *model.Configuration, writeContext formContextWriter) (outFile string, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return "", err
+	}
+	op := fmt.Sprintf("multi-fill CSV row %d", rowNr)
 	f, err := os.Open(inFilePDF)
 	if err != nil {
-		return "", fmt.Errorf("%s: open input %s: %w", context, inFilePDF, err)
+		return "", fmt.Errorf("%s: open input %s: %w", op, inFilePDF, err)
 	}
 	defer func() {
-		err = errors.Join(err, closeFile(f, context+": close input"))
+		err = errors.Join(err, closeFile(f, op+": close input"))
 	}()
 
-	ctx, err := ReadValidateAndOptimize(f, conf)
+	ctx, err := ReadValidateAndOptimize(c, f, conf, nil)
 	if err != nil {
-		return "", fmt.Errorf("%s: %w", context, err)
+		return "", fmt.Errorf("%s: %w", op, err)
 	}
 
 	fieldMap, imgPageMap, requested, err := form.FieldMap(fieldNames, formRecord)
 	if err != nil {
-		return "", fmt.Errorf("%s: map fields: %w", context, errors.Join(ErrInvalidCSV, err))
+		return "", fmt.Errorf("%s: map fields: %w", op, errors.Join(ErrInvalidCSV, err))
+	}
+	if err := contextutil.Check(c); err != nil {
+		return "", err
 	}
 
-	ok, pp, err := form.FillForm(ctx, form.FillDetails(nil, fieldMap), imgPageMap, form.CSV)
+	ok, pp, err := form.FillForm(c, ctx, form.FillDetails(nil, fieldMap), imgPageMap, form.CSV)
 	if err != nil {
-		return "", fmt.Errorf("%s: fill fields: %w", context, err)
+		return "", fmt.Errorf("%s: fill fields: %w", op, err)
 	}
 	if !ok {
-		return "", fmt.Errorf("%s: %w", context, ErrNoFormFieldsAffected)
+		return "", fmt.Errorf("%s: %w", op, ErrNoFormFieldsAffected)
 	}
 
-	if err := multiFillPostProcess(ctx, pp, context, conf.PostProcessValidate); err != nil {
+	if err := multiFillPostProcess(c, ctx, pp, op, conf.PostProcessValidate); err != nil {
 		return "", err
 	}
 
 	outFile = multiFillCSVOutputFile(outDir, fileName, requested, recordNr)
-	if err := writeMultiFillOutputWith(ctx, outFile, context, writeContext); err != nil {
+	if err := writeMultiFillOutputUsing(c, ctx, outFile, op, writeContext); err != nil {
 		return "", err
 	}
 	return outFile, nil
 }
 
-func multiFillFormCSV(inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration) (err error) {
-	return multiFillFormCSVWith(inFilePDF, rd, outDir, fileName, merge, conf, WriteContext)
-}
-
-func multiFillFormCSVWith(inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration, writeContext func(*model.Context, io.Writer) error) (err error) {
-	csvLines, err := parseCSVLines(rd)
+func multiFillFormCSVUsing(c context.Context, inFilePDF string, rd io.Reader, outDir, fileName string, merge bool, conf *model.Configuration, writeContext formContextWriter) (err error) {
+	csvLines, err := parseCSVLines(c, rd)
 	if err != nil {
 		return err
 	}
@@ -917,12 +1027,17 @@ func multiFillFormCSVWith(inFilePDF string, rd io.Reader, outDir, fileName strin
 	var outFiles []string
 	if merge {
 		defer func() {
-			err = errors.Join(err, rollbackMultiFillOutputs(outFiles))
+			err = errors.Join(err, rollbackMultiFillOutputs(c, outFiles))
 		}()
 	}
 
 	for i, formRecord := range csvLines[1:] {
-		outFile, fillErr := multiFillCSVRecord(inFilePDF, fieldNames, formRecord, outDir, fileName, i+1, i+2, conf, writeContext)
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		outFile, fillErr := multiFillCSVRecord(
+			c, inFilePDF, fieldNames, formRecord, outDir, fileName, i+1, i+2, conf, writeContext,
+		)
 		if outFile != "" {
 			outFiles = append(outFiles, outFile)
 		}
@@ -932,13 +1047,17 @@ func multiFillFormCSVWith(inFilePDF string, rd io.Reader, outDir, fileName strin
 	}
 
 	if merge {
-		return mergeForms(outDir, fileName, outFiles, conf)
+		return mergeForms(c, outDir, fileName, outFiles, conf)
 	}
-	return nil
+	return contextutil.Check(c)
 }
 
-// MultiFillForm populates multiple instances of inFilePDF's form with data from rd and writes the result to outDir.
-func MultiFillForm(inFilePDF string, rd io.Reader, outDir, fileName string, format form.DataFormat, merge bool, conf *model.Configuration) error {
+// MultiFillForm populates multiple instances of inFilePDF's form with data from rd, writes the result to outDir
+// and supports cancellation.
+func MultiFillForm(c context.Context, inFilePDF string, rd io.Reader, outDir, fileName string, format form.DataFormat, merge bool, conf *model.Configuration) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFilePDF == "" {
 		return ErrMissingPDFInput
 	}
@@ -957,17 +1076,21 @@ func MultiFillForm(inFilePDF string, rd io.Reader, outDir, fileName string, form
 	fileName = sanitizeFilenamePart(fileName, "form")
 
 	if format == form.JSON {
-		return multiFillFormJSON(inFilePDF, rd, outDir, fileName, merge, conf)
+		return multiFillFormJSONUsing(c, inFilePDF, rd, outDir, fileName, merge, conf, WriteContext)
 	}
 
-	return multiFillFormCSV(inFilePDF, rd, outDir, fileName, merge, conf)
+	return multiFillFormCSVUsing(c, inFilePDF, rd, outDir, fileName, merge, conf, WriteContext)
 }
 
-// MultiFillFormFile populates multiple instances of inFilePDF's form with data from inFileData and writes the result to
-// outDir.
+// MultiFillFormFile populates multiple instances of inFilePDF's form with data from inFileData
+// and writes the result to outDir.
 // The output file will be written to outFilePDF with incrementing numerical suffix unless
 // the input JSON uses "filename" or the input CSV contains a @filename field.
-func MultiFillFormFile(inFilePDF, inFileData, outDir, outFilePDF string, merge bool, conf *model.Configuration) (err error) {
+// MultiFillFormFile supports cancellation.
+func MultiFillFormFile(c context.Context, inFilePDF, inFileData, outDir, outFilePDF string, merge bool, conf *model.Configuration) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFilePDF == "" {
 		return ErrMissingPDFInput
 	}
@@ -992,6 +1115,6 @@ func MultiFillFormFile(inFilePDF, inFileData, outDir, outFilePDF string, merge b
 
 	outFileBase := filepath.Base(outFilePDF)
 
-	err = MultiFillForm(inFilePDF, f, outDir, outFileBase, format, merge, conf)
+	err = MultiFillForm(c, inFilePDF, f, outDir, outFileBase, format, merge, conf)
 	return err
 }

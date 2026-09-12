@@ -174,16 +174,16 @@ func rewriteReporterInfo(t *testing.T, opts reporterInfoRewrite) []byte {
 
 	source := infoPreservationSourcePDF(opts.indirect)
 	if !opts.incremental {
-		ctx, err := ReadAndValidate(bytes.NewReader(source), conf)
+		ctx, err := ReadAndValidate(t.Context(), bytes.NewReader(source), conf)
 		if err != nil {
 			t.Fatal(err)
 		}
 		setReporterInfoObjects(t, ctx, opts.indirect)
-		if err := ValidateContext(ctx); err != nil {
+		if err := ValidateContext(t.Context(), ctx); err != nil {
 			t.Fatal(err)
 		}
 		var buf bytes.Buffer
-		if err := Write(ctx, &buf, conf); err != nil {
+		if err := Write(t.Context(), ctx, &buf, conf); err != nil {
 			t.Fatal(err)
 		}
 		return buf.Bytes()
@@ -200,19 +200,19 @@ func rewriteReporterInfo(t *testing.T, opts reporterInfoRewrite) []byte {
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		t.Fatal(err)
 	}
-	ctx, err := ReadAndValidate(f, conf)
+	ctx, err := ReadAndValidate(t.Context(), f, conf)
 	if err != nil {
 		t.Fatal(err)
 	}
 	objNrs := setReporterInfoObjects(t, ctx, opts.indirect)
-	if err := ValidateContext(ctx); err != nil {
+	if err := ValidateContext(t.Context(), ctx); err != nil {
 		t.Fatal(err)
 	}
 	ctx.Write.Increment = true
 	ctx.Write.Offset = ctx.Read.FileSize
 	ctx.Write.ObjNrs = append(ctx.Write.ObjNrs, objNrs...)
 	ctx.Write.ObjNrs = append(ctx.Write.ObjNrs, ctx.Info.ObjectNumber.Value())
-	if err := WriteIncr(ctx, f, conf); err != nil {
+	if err := WriteIncr(t.Context(), ctx, f, conf); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
@@ -249,7 +249,7 @@ func TestPreserveInfoDictReporterWorkflow(t *testing.T) {
 			})
 			conf := model.NewDefaultConfiguration()
 			conf.ValidationMode = tt.mode
-			ctx, err := ReadAndValidate(bytes.NewReader(output), conf)
+			ctx, err := ReadAndValidate(t.Context(), bytes.NewReader(output), conf)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -261,7 +261,7 @@ func TestPreserveInfoDictReporterWorkflow(t *testing.T) {
 // TestPreserveInfoDictDisabledRetainsStamping verifies backward-compatible default writer behavior.
 func TestPreserveInfoDictDisabledRetainsStamping(t *testing.T) {
 	output := rewriteReporterInfo(t, reporterInfoRewrite{mode: model.ValidationStrict})
-	ctx, err := ReadAndValidate(bytes.NewReader(output), model.NewDefaultConfiguration())
+	ctx, err := ReadAndValidate(t.Context(), bytes.NewReader(output), model.NewDefaultConfiguration())
 	if err != nil {
 		t.Fatal(err)
 	}

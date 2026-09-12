@@ -359,7 +359,6 @@ func (t *Table) validateColors() error {
 }
 
 func (t *Table) validate() error {
-
 	t.x = t.Position[0]
 	t.y = t.Position[1]
 
@@ -446,7 +445,6 @@ func (t *Table) mergeInAnchor(t0 *Table) {
 }
 
 func (t *Table) mergeIn(t0 *Table) {
-
 	t.mergeInAnchor(t0)
 
 	if t.Dx == 0 {
@@ -820,7 +818,9 @@ func (t *Table) renderValues(p *model.Page, pageNr int, fonts model.FontMap, col
 			x, y := ll(i, j)
 			r := types.RectForWidthAndHeight(x, y, colWidths[j], float64(t.LineHeight))
 
-			bb, err := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, t.colAnchors[j])
+			bb, err := model.WriteMultiLineAnchored(
+				pdf.ctx, pdf.XRefTable, p.Buf, r, nil, colTd, t.colAnchors[j],
+			)
 			if err != nil {
 				return fmt.Errorf("table cell row %d column %d: %w", i+1, j+1, err)
 			}
@@ -897,7 +897,7 @@ func (t *Table) renderHeader(p *model.Page, pageNr int, fonts model.FontMap, col
 			a = th.colAnchors[i]
 		}
 
-		bb, err := model.WriteMultiLineAnchored(pdf.XRefTable, p.Buf, r, nil, colTd, a)
+		bb, err := model.WriteMultiLineAnchored(pdf.ctx, pdf.XRefTable, p.Buf, r, nil, colTd, a)
 		if err != nil {
 			return fmt.Errorf("table header column %d: %w", i+1, err)
 		}
@@ -926,7 +926,6 @@ func (t *Table) rectForFill(r *types.Rectangle, bWidth float64) *types.Rectangle
 }
 
 func (t *Table) render(p *model.Page, pageNr int, fonts model.FontMap) error {
-
 	if err := t.calcFont(); err != nil {
 		return err
 	}

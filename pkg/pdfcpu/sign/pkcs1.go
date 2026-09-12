@@ -17,6 +17,7 @@ limitations under the License.
 package sign
 
 import (
+	"context"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha1" // #nosec G505 -- required to verify legacy adbe.x509.rsa_sha1 signatures.
@@ -27,15 +28,15 @@ import (
 	"io"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// ValidateX509RSASHA1Signature validates the legacy SubFilter adbe.x509.rsa_sha1 using best-effort local checks.
-//
-// Deprecated: This compatibility path verifies existing legacy PDF signatures only. It must not be used to create new
-// signatures.
+// ValidateX509RSASHA1Signature validates a legacy adbe.x509.rsa_sha1 signature and supports cancellation.
+// This compatibility path must not be used to create new signatures.
 func ValidateX509RSASHA1Signature(
+	c context.Context,
 	ra io.ReaderAt,
 	sigDict types.Dict,
 	certified bool,
@@ -46,6 +47,9 @@ func ValidateX509RSASHA1Signature(
 	result *model.SignatureValidationResult,
 	ctx *model.Context,
 ) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	localAssessment := localSignatureAssessment{}
 	if ctx.Configuration.Offline {
 		result.AddProblem("pdfcpu is offline, unable to perform certificate revocation checking")
@@ -95,6 +99,9 @@ func ValidateX509RSASHA1Signature(
 		markDocumentUnmodified(result)
 	}
 	localAssessment.ProfileValidated = true
+	if err := c.Err(); err != nil {
+		return err
+	}
 
 	// The signature verifies with the public key in the identified certificate.
 	// Document has not been modified since time of signing.
@@ -108,6 +115,7 @@ func ValidateX509RSASHA1Signature(
 	}
 
 	assessment, err := assessCertificateEvidence(
+		c,
 		chains,
 		pathResolved,
 		rootCerts,

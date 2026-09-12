@@ -37,7 +37,7 @@ func listKeywordsFile(t *testing.T, fileName string, conf *model.Configuration) 
 	}
 	defer f.Close()
 
-	return api.Keywords(f, conf)
+	return api.Keywords(t.Context(), f, conf)
 }
 
 func listKeywords(t *testing.T, msg, fileName string, want []string) []string {
@@ -74,23 +74,23 @@ func TestKeywords(t *testing.T) {
 	listKeywords(t, msg, fileName, nil)
 
 	keywords := []string{"Ö", "你好"}
-	if err := api.AddKeywordsFile(fileName, "", keywords, nil); err != nil {
+	if err := api.AddKeywordsFile(t.Context(), fileName, "", keywords, nil); err != nil {
 		t.Fatalf("%s add keywords: %v\n", msg, err)
 	}
 	listKeywords(t, msg, fileName, keywords)
 
 	keywords = []string{"world"}
-	if err := api.AddKeywordsFile(fileName, "", keywords, nil); err != nil {
+	if err := api.AddKeywordsFile(t.Context(), fileName, "", keywords, nil); err != nil {
 		t.Fatalf("%s add keywords: %v\n", msg, err)
 	}
 	listKeywords(t, msg, fileName, []string{"Ö", "你好", "world"})
 
-	if err := api.RemoveKeywordsFile(fileName, "", []string{"你好"}, nil); err != nil {
+	if err := api.RemoveKeywordsFile(t.Context(), fileName, "", []string{"你好"}, nil); err != nil {
 		t.Fatalf("%s remove 1 keyword: %v\n", msg, err)
 	}
 	listKeywords(t, msg, fileName, []string{"Ö", "world"})
 
-	if err := api.RemoveKeywordsFile(fileName, "", nil, nil); err != nil {
+	if err := api.RemoveKeywordsFile(t.Context(), fileName, "", nil, nil); err != nil {
 		t.Fatalf("%s remove all keywords: %v\n", msg, err)
 	}
 

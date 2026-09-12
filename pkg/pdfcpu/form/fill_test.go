@@ -17,6 +17,7 @@ limitations under the License.
 package form
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -33,12 +34,12 @@ func useMissingGlobalFontDirectory(t *testing.T) {
 	t.Helper()
 	originalDir := font.UserFontDir
 	font.UserFontDir = filepath.Join(t.TempDir(), "missing")
-	if err := font.ReloadUserFonts(); err == nil {
+	if err := font.ReloadUserFonts(t.Context()); err == nil {
 		t.Fatal("expected missing global font directory error")
 	}
 	t.Cleanup(func() {
 		font.UserFontDir = originalDir
-		if err := font.ReloadUserFonts(); err != nil {
+		if err := font.ReloadUserFonts(context.WithoutCancel(t.Context())); err != nil {
 			t.Errorf("restore global font directory: %v", err)
 		}
 	})
@@ -57,7 +58,7 @@ func TestSetupFillFontsUsesStatelessRepository(t *testing.T) {
 		"DR": types.Dict{"Font": types.Dict{"F0": *indRef}},
 	}
 
-	if err := setupFillFonts(ctx.XRefTable); err != nil {
+	if err := setupFillFonts(t.Context(), ctx.XRefTable); err != nil {
 		t.Fatal(err)
 	}
 	if got, ok := ctx.XRefTable.FillFonts["F0"]; !ok || got != *indRef {
@@ -164,7 +165,7 @@ func TestDictionaryEntryDecodeErrorsIncludeContext(t *testing.T) {
 			return resetBtn(ctx.XRefTable, types.Dict{"DV": badName})
 		}, entry: "entry DV", phase: "decode name"},
 		{name: "reset text default", fn: func() error {
-			return resetTx(ctx, types.Dict{"DV": badString}, map[string]types.IndirectRef{})
+			return resetTx(t.Context(), ctx, types.Dict{"DV": badString}, map[string]types.IndirectRef{})
 		}, entry: "entry DV", phase: "decode string"},
 	}
 
@@ -191,7 +192,7 @@ func TestResetTextDefaultDereferenceErrorIncludesContext(t *testing.T) {
 	ctx.XRefTable.Table[7] = model.NewXRefTableEntryGen0(lazy)
 	d := types.Dict{"DV": *types.NewIndirectRef(7, 0)}
 
-	err := resetTx(ctx, d, map[string]types.IndirectRef{})
+	err := resetTx(t.Context(), ctx, d, map[string]types.IndirectRef{})
 	if err == nil || !strings.Contains(err.Error(), "entry DV: dereference") {
 		t.Fatalf("expected default dereference context, got %v", err)
 	}
@@ -212,13 +213,13 @@ func TestCacheResourceDictRejectsWrongTypeWithoutPanic(t *testing.T) {
 
 func TestFillFormRejectsInvalidCallbacksAndFormats(t *testing.T) {
 	ctx := emptyFormContext(t)
-	if _, _, err := FillForm(ctx, nil, nil, JSON); err == nil || !strings.Contains(err.Error(), "missing fill details") {
+	if _, _, err := FillForm(t.Context(), ctx, nil, nil, JSON); err == nil || !strings.Contains(err.Error(), "missing fill details") {
 		t.Fatalf("expected missing fill details error, got %v", err)
 	}
 	fillDetails := func(string, string, FieldType, DataFormat) ([]string, bool, bool) {
 		return nil, false, false
 	}
-	if _, _, err := FillForm(ctx, fillDetails, nil, DataFormat(99)); err == nil || !strings.Contains(err.Error(), "unsupported data format") {
+	if _, _, err := FillForm(t.Context(), ctx, fillDetails, nil, DataFormat(99)); err == nil || !strings.Contains(err.Error(), "unsupported data format") {
 		t.Fatalf("expected unsupported data format error, got %v", err)
 	}
 }
@@ -330,16 +331,16 @@ func TestChildWidgetHelpersAddKidDereferenceContext(t *testing.T) {
 			return resetBtn(ctx.XRefTable, types.Dict{"Kids": badKids})
 		}},
 		{name: "reset text", fn: func() error {
-			return resetTx(ctx, types.Dict{"V": types.StringLiteral("old"), "Kids": badKids}, map[string]types.IndirectRef{})
+			return resetTx(t.Context(), ctx, types.Dict{"V": types.StringLiteral("old"), "Kids": badKids}, map[string]types.IndirectRef{})
 		}},
 		{name: "fill checkbox", fn: func() error {
 			return fillCheckBox(ctx, types.Dict{"V": types.Name("Off"), "Kids": badKids}, "7", "field", false, JSON, fillDetails, new(bool))
 		}},
 		{name: "fill date", fn: func() error {
-			return fillDateField(ctx, types.Dict{"Kids": badKids}, "7", "field", "", false, JSON, map[string]types.IndirectRef{}, fillDetails, new(bool))
+			return fillDateField(t.Context(), ctx, types.Dict{"Kids": badKids}, "7", "field", "", false, JSON, map[string]types.IndirectRef{}, fillDetails, new(bool))
 		}},
 		{name: "fill text", fn: func() error {
-			return fillTextField(ctx, types.Dict{"Kids": badKids}, "7", "field", "", false, JSON, map[string]types.IndirectRef{}, fillDetails, nil, new(bool))
+			return fillTextField(t.Context(), ctx, types.Dict{"Kids": badKids}, "7", "field", "", false, JSON, map[string]types.IndirectRef{}, fillDetails, nil, new(bool))
 		}},
 	}
 
@@ -374,16 +375,16 @@ func TestRootFillAppearanceErrorsIncludePhase(t *testing.T) {
 			return fillCheckBox(ctx, types.Dict{"V": types.Name("Off"), "AS": types.Name("Off")}, "7", "field", false, JSON, value("true", false), new(bool))
 		}},
 		{name: "combo box", fn: func() error {
-			return fillComboBox(ctx, invalidAppearance(), "7", "field", nil, false, JSON, map[string]types.IndirectRef{}, value("new", true), new(bool))
+			return fillComboBox(t.Context(), ctx, invalidAppearance(), "7", "field", nil, false, JSON, map[string]types.IndirectRef{}, value("new", true), new(bool))
 		}},
 		{name: "list box", fn: func() error {
-			return fillListBox(ctx, invalidAppearance(), "7", "field", []string{"one"}, false, JSON, map[string]types.IndirectRef{}, value("one", false), nil, new(bool))
+			return fillListBox(t.Context(), ctx, invalidAppearance(), "7", "field", []string{"one"}, false, JSON, map[string]types.IndirectRef{}, value("one", false), nil, new(bool))
 		}},
 		{name: "date field", fn: func() error {
-			return fillDateField(ctx, invalidAppearance(), "7", "field", "", false, JSON, map[string]types.IndirectRef{}, value("2026-07-14", false), new(bool))
+			return fillDateField(t.Context(), ctx, invalidAppearance(), "7", "field", "", false, JSON, map[string]types.IndirectRef{}, value("2026-07-14", false), new(bool))
 		}},
 		{name: "text field", fn: func() error {
-			return fillTextField(ctx, invalidAppearance(), "7", "field", "", false, JSON, map[string]types.IndirectRef{}, value("new", false), nil, new(bool))
+			return fillTextField(t.Context(), ctx, invalidAppearance(), "7", "field", "", false, JSON, map[string]types.IndirectRef{}, value("new", false), nil, new(bool))
 		}},
 	}
 
@@ -413,17 +414,17 @@ func TestRootResetAppearanceErrorsIncludePhase(t *testing.T) {
 		{name: "list box", fn: func() error {
 			d := invalidAppearance()
 			d["Ff"] = ff
-			return resetCh(ctx, d, map[string]types.IndirectRef{})
+			return resetCh(t.Context(), ctx, d, map[string]types.IndirectRef{})
 		}},
 		{name: "text field", fn: func() error {
 			d := invalidAppearance()
 			d["V"] = types.StringLiteral("old")
-			return resetTx(ctx, d, map[string]types.IndirectRef{})
+			return resetTx(t.Context(), ctx, d, map[string]types.IndirectRef{})
 		}},
 		{name: "date field", fn: func() error {
 			d := invalidAppearance()
 			d["DV"] = types.StringLiteral("2026-07-14")
-			return resetTx(ctx, d, map[string]types.IndirectRef{})
+			return resetTx(t.Context(), ctx, d, map[string]types.IndirectRef{})
 		}},
 	}
 
@@ -559,7 +560,7 @@ func TestDateStringEntryErrorsIncludeContext(t *testing.T) {
 
 func TestExportFormJSONRejectsNilWriter(t *testing.T) {
 	ctx := emptyFormContext(t)
-	if _, err := ExportFormJSON(ctx.XRefTable, "source.pdf", nil); !errors.Is(err, ErrMissingJSONWriter) {
+	if _, err := ExportFormJSON(t.Context(), ctx.XRefTable, "source.pdf", nil); !errors.Is(err, ErrMissingJSONWriter) {
 		t.Fatalf("expected %v, got %v", ErrMissingJSONWriter, err)
 	}
 }
@@ -567,7 +568,7 @@ func TestExportFormJSONRejectsNilWriter(t *testing.T) {
 func TestExportFormJSONReturnsFalseWhenNothingWasExported(t *testing.T) {
 	ctx := emptyFormContext(t)
 	ctx.XRefTable.Form = types.Dict{"Fields": types.Array{types.Dict{}}}
-	ok, err := ExportFormJSON(ctx.XRefTable, "source.pdf", io.Discard)
+	ok, err := ExportFormJSON(t.Context(), ctx.XRefTable, "source.pdf", io.Discard)
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
@@ -578,11 +579,11 @@ func TestExportFormJSONReturnsFalseWhenNothingWasExported(t *testing.T) {
 
 func TestExportFormJSONPreservesCollectionFailure(t *testing.T) {
 	wantErr := errors.New("collect form data")
-	export := func(*model.XRefTable, string) (*FormGroup, bool, error) {
+	export := func(context.Context, *model.XRefTable, string) (*FormGroup, bool, error) {
 		return nil, false, wantErr
 	}
 
-	_, err := exportFormJSON(nil, "source.pdf", io.Discard, export, json.MarshalIndent)
+	_, err := exportFormJSON(t.Context(), nil, "source.pdf", io.Discard, export, json.MarshalIndent)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -593,14 +594,14 @@ func TestExportFormJSONPreservesCollectionFailure(t *testing.T) {
 
 func TestExportFormJSONPreservesEncodingFailure(t *testing.T) {
 	wantErr := errors.New("encode form data")
-	export := func(*model.XRefTable, string) (*FormGroup, bool, error) {
+	export := func(context.Context, *model.XRefTable, string) (*FormGroup, bool, error) {
 		return &FormGroup{}, true, nil
 	}
 	marshal := func(any, string, string) ([]byte, error) {
 		return nil, wantErr
 	}
 
-	_, err := exportFormJSON(nil, "source.pdf", io.Discard, export, marshal)
+	_, err := exportFormJSON(t.Context(), nil, "source.pdf", io.Discard, export, marshal)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -611,7 +612,7 @@ func TestExportFormJSONPreservesEncodingFailure(t *testing.T) {
 
 func TestExportFormJSONPreservesWriteFailures(t *testing.T) {
 	wantErr := errors.New("write form data")
-	export := func(*model.XRefTable, string) (*FormGroup, bool, error) {
+	export := func(context.Context, *model.XRefTable, string) (*FormGroup, bool, error) {
 		return &FormGroup{}, true, nil
 	}
 
@@ -625,7 +626,7 @@ func TestExportFormJSONPreservesWriteFailures(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := exportFormJSON(nil, "source.pdf", tt.writer, export, json.MarshalIndent)
+			_, err := exportFormJSON(t.Context(), nil, "source.pdf", tt.writer, export, json.MarshalIndent)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}

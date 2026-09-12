@@ -18,6 +18,7 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
@@ -29,6 +30,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -44,18 +46,54 @@ func validateXRefTableContext(ctx *model.Context) error {
 	return nil
 }
 
-// XRefTable validates a PDF cross reference table obeying the validation mode.
-func XRefTable(ctx *model.Context) error {
+// XRefTable validates a PDF cross reference table and supports cancellation.
+func XRefTable(c context.Context, ctx *model.Context) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if err := validateXRefTableContext(ctx); err != nil {
+		return err
+	}
+	return validateXRefTable(c, ctx)
+}
+
+func validateDocumentInfoBeforeRoot(c context.Context, xRefTable *model.XRefTable) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
+	metaDataAuthoritative, err := metaDataModifiedAfterInfoDict(xRefTable)
+	if err != nil {
+		return false, fmt.Errorf("metadata/info order: %w", err)
+	}
+	if !metaDataAuthoritative {
+		return false, nil
+	}
+	if err := validateDocumentInfoObject(xRefTable); err != nil {
+		return false, fmt.Errorf("document info: %w", err)
+	}
+	return true, nil
+}
+
+func validateDocumentInfoAfterRoot(c context.Context, xRefTable *model.XRefTable, metaDataAuthoritative bool) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if metaDataAuthoritative {
+		return nil
+	}
+	if err := validateDocumentInfoObject(xRefTable); err != nil {
+		return fmt.Errorf("document info: %w", err)
+	}
+	return nil
+}
+
+func validateXRefTable(c context.Context, ctx *model.Context) error {
 	if log.InfoEnabled() {
 		log.Info.Println("validating")
 	}
 	if log.ValidateEnabled() {
 		log.Validate.Println("*** validateXRefTable begin ***")
 	}
-	if err := validateXRefTableContext(ctx); err != nil {
-		return err
-	}
-
 	xRefTable := ctx.XRefTable
 
 	rootDict, err := xRefTable.Catalog()
@@ -69,32 +107,19 @@ func XRefTable(ctx *model.Context) error {
 		return model.WithValidationErrorObject(err, validationRootObjectNumber(xRefTable))
 	}
 
-	metaDataAuthoritative, err := metaDataModifiedAfterInfoDict(xRefTable)
+	metaDataAuthoritative, err := validateDocumentInfoBeforeRoot(c, xRefTable)
 	if err != nil {
-		return fmt.Errorf("metadata/info order: %w", err)
-	}
-
-	if metaDataAuthoritative {
-		// if both info dict and catalog metadata present and metadata modification date after infodict modification date
-		// validate document information dictionary before catalog metadata.
-		err := validateDocumentInfoObject(xRefTable)
-		if err != nil {
-			return fmt.Errorf("document info: %w", err)
-		}
+		return err
 	}
 
 	// Validate root object(aka the document catalog) and page tree.
-	err = validateRootObject(ctx, rootDict)
+	err = validateRootObject(c, ctx, rootDict)
 	if err != nil {
 		return fmt.Errorf("catalog: %w", err)
 	}
 
-	if !metaDataAuthoritative {
-		// Validate document information dictionary after catalog metadata.
-		err = validateDocumentInfoObject(xRefTable)
-		if err != nil {
-			return fmt.Errorf("document info: %w", err)
-		}
+	if err = validateDocumentInfoAfterRoot(c, xRefTable, metaDataAuthoritative); err != nil {
+		return err
 	}
 
 	// Validate offspec additional streams as declared in pdf trailer.
@@ -103,6 +128,9 @@ func XRefTable(ctx *model.Context) error {
 	// 	return err
 	// }
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	xRefTable.Valid = true
 
 	if xRefTable.CustomExtensions && log.CLIEnabled() {
@@ -1452,7 +1480,74 @@ func checkForBrokenLinks(ctx *model.Context) error {
 	return nil
 }
 
-func validateRootObject(ctx *model.Context, rootDict types.Dict) (err error) {
+type rootEntryValidator struct {
+	name         string
+	validate     func(*model.XRefTable, types.Dict, bool, model.Version) error
+	required     bool
+	sinceVersion model.Version
+}
+
+func rootEntryValidators() []rootEntryValidator {
+	return []rootEntryValidator{
+		{"Extensions", validateExtensions, OPTIONAL, model.V17},
+		{"PageLabels", validatePageLabels, OPTIONAL, model.V13},
+		{"Names", validateNames, OPTIONAL, model.V11},
+		{"Dests", validateNamedDestinations, OPTIONAL, model.V11},
+		{"ViewerPreferences", validateViewerPreferences, OPTIONAL, model.V12},
+		{"PageLayout", validatePageLayout, OPTIONAL, model.V10},
+		{"PageMode", validatePageMode, OPTIONAL, model.V10},
+		{"Outlines", validateOutlines, OPTIONAL, model.V10},
+		{"Threads", validateThreads, OPTIONAL, model.V11},
+		{"OpenAction", validateOpenAction, OPTIONAL, model.V11},
+		{"AA", validateRootAdditionalActions, OPTIONAL, model.V14},
+		{"URI", validateURI, OPTIONAL, model.V11},
+		{"AcroForm", validateForm, OPTIONAL, model.V12},
+		{"Metadata", validateRootMetadata, OPTIONAL, model.V14},
+		{"StructTreeRoot", validateStructTree, OPTIONAL, model.V13},
+		{"MarkInfo", validateMarkInfo, OPTIONAL, model.V14},
+		{"Lang", validateLang, OPTIONAL, model.V10},
+		{"SpiderInfo", validateSpiderInfo, OPTIONAL, model.V13},
+		{"OutputIntents", validateOutputIntents, OPTIONAL, model.V14},
+		{"PieceInfo", validateRootPieceInfo, OPTIONAL, model.V14},
+		{"OCProperties", validateOCProperties, OPTIONAL, model.V15},
+		{"Perms", validatePermissions, OPTIONAL, model.V15},
+		{"Legal", validateLegal, OPTIONAL, model.V17},
+		{"Requirements", validateRequirements, OPTIONAL, model.V17},
+		{"Collection", validateCollection, OPTIONAL, model.V17},
+		{"NeedsRendering", validateNeedsRendering, OPTIONAL, model.V17},
+		{"DSS", validateDSS, OPTIONAL, model.V17},
+		{"AF", validateAF, OPTIONAL, model.V20},
+		{"DPartRoot", validateDPartRoot, OPTIONAL, model.V20},
+	}
+}
+
+func validateRootEntries(
+	c context.Context,
+	xRefTable *model.XRefTable,
+	rootDict types.Dict,
+	rootObjNr int,
+) error {
+	for _, validator := range rootEntryValidators() {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		if !validator.required && xRefTable.Version() < validator.sinceVersion {
+			continue
+		}
+		if err := validator.validate(xRefTable, rootDict, validator.required, validator.sinceVersion); err != nil {
+			err = fmt.Errorf("%s: %w", validator.name, err)
+			return model.WithValidationErrorObject(
+				err, validationEntryObjectNumber(rootObjNr, rootDict, validator.name),
+			)
+		}
+	}
+	return nil
+}
+
+func validateRootObject(c context.Context, ctx *model.Context, rootDict types.Dict) (err error) {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if log.ValidateEnabled() {
 		log.Validate.Println("*** validateRootObject begin ***")
 	}
@@ -1515,68 +1610,24 @@ func validateRootObject(ctx *model.Context, rootDict types.Dict) (err error) {
 	}
 
 	// Pages
-	rootPageNodeDict, err := validatePages(xRefTable, rootDict)
+	rootPageNodeDict, err := validatePages(c, xRefTable, rootDict)
 	if err != nil {
 		return fmt.Errorf("pages: %w", err)
 	}
 
-	for _, f := range []struct {
-		name         string
-		validate     func(xRefTable *model.XRefTable, d types.Dict, required bool, sinceVersion model.Version) (err error)
-		required     bool
-		sinceVersion model.Version
-	}{
-		//{validateRootVersion, OPTIONAL, model.V14}, Note: moved up
-		{"Extensions", validateExtensions, OPTIONAL, model.V17},
-		{"PageLabels", validatePageLabels, OPTIONAL, model.V13},
-		{"Names", validateNames, OPTIONAL, model.V11}, //model.V12},
-		{"Dests", validateNamedDestinations, OPTIONAL, model.V11},
-		{"ViewerPreferences", validateViewerPreferences, OPTIONAL, model.V12},
-		{"PageLayout", validatePageLayout, OPTIONAL, model.V10},
-		{"PageMode", validatePageMode, OPTIONAL, model.V10},
-		{"Outlines", validateOutlines, OPTIONAL, model.V10},
-		{"Threads", validateThreads, OPTIONAL, model.V11},
-		{"OpenAction", validateOpenAction, OPTIONAL, model.V11},
-		{"AA", validateRootAdditionalActions, OPTIONAL, model.V14},
-		{"URI", validateURI, OPTIONAL, model.V11},
-		{"AcroForm", validateForm, OPTIONAL, model.V12},
-		{"Metadata", validateRootMetadata, OPTIONAL, model.V14},
-		{"StructTreeRoot", validateStructTree, OPTIONAL, model.V13},
-		{"MarkInfo", validateMarkInfo, OPTIONAL, model.V14},
-		{"Lang", validateLang, OPTIONAL, model.V10},
-		{"SpiderInfo", validateSpiderInfo, OPTIONAL, model.V13},
-		{"OutputIntents", validateOutputIntents, OPTIONAL, model.V14},
-		{"PieceInfo", validateRootPieceInfo, OPTIONAL, model.V14},
-		{"OCProperties", validateOCProperties, OPTIONAL, model.V15},
-		{"Perms", validatePermissions, OPTIONAL, model.V15},
-		{"Legal", validateLegal, OPTIONAL, model.V17},
-		{"Requirements", validateRequirements, OPTIONAL, model.V17},
-		{"Collection", validateCollection, OPTIONAL, model.V17},
-		{"NeedsRendering", validateNeedsRendering, OPTIONAL, model.V17},
-		{"DSS", validateDSS, OPTIONAL, model.V17},
-		{"AF", validateAF, OPTIONAL, model.V20},
-		{"DPartRoot", validateDPartRoot, OPTIONAL, model.V20},
-	} {
-		if !f.required && xRefTable.Version() < f.sinceVersion {
-			// Ignore optional fields if currentVersion < sinceVersion
-			// This is really a workaround for explicitly extending relaxed validation.
-			continue
-		}
-		err = f.validate(xRefTable, rootDict, f.required, f.sinceVersion)
-		if err != nil {
-			err = fmt.Errorf("%s: %w", f.name, err)
-			return model.WithValidationErrorObject(
-				err, validationEntryObjectNumber(rootObjNr, rootDict, f.name),
-			)
-		}
+	if err = validateRootEntries(c, xRefTable, rootDict, rootObjNr); err != nil {
+		return err
 	}
 
 	// Validate remainder of annotations after AcroForm validation only.
-	if _, err = validatePagesAnnotations(xRefTable, rootPageNodeDict, 0); err != nil {
+	if _, err = validatePagesAnnotations(c, xRefTable, rootPageNodeDict, 0); err != nil {
 		return fmt.Errorf("page annotations: %w", err)
 	}
 
 	// Validate form fields against page annotations.
+	if err = contextutil.Check(c); err != nil {
+		return err
+	}
 	if xRefTable.Form != nil {
 		if err := validateFormFieldsAgainstPageAnnotations(xRefTable); err != nil {
 			return fmt.Errorf("form fields/page annotations: %w", err)
@@ -1584,6 +1635,9 @@ func validateRootObject(ctx *model.Context, rootDict types.Dict) (err error) {
 	}
 
 	// Validate links.
+	if err = contextutil.Check(c); err != nil {
+		return err
+	}
 	if err = checkForBrokenLinks(ctx); err == nil {
 		if log.ValidateEnabled() {
 			log.Validate.Println("*** validateRootObject end ***")

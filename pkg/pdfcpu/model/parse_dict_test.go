@@ -23,7 +23,7 @@ import (
 )
 
 func doTestParseDictOK(parseString string, t *testing.T) {
-	_, err := ParseObject(&parseString)
+	_, err := ParseObject(t.Context(), &parseString, 0)
 	if err != nil {
 		t.Errorf("parseDict failed: <%v>\n", err)
 		return
@@ -32,7 +32,7 @@ func doTestParseDictOK(parseString string, t *testing.T) {
 
 func doTestParseDictFail(parseString string, t *testing.T) {
 	s := parseString
-	o, err := ParseObject(&parseString)
+	o, err := ParseObject(t.Context(), &parseString, 0)
 	if err == nil {
 		t.Errorf("parseDict should have returned an error for %s\n%v\n", s, o)
 	}

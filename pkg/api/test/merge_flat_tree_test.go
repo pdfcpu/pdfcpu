@@ -76,14 +76,14 @@ func mergePageTreeInputs(
 		inFiles[i] = inFile
 	}
 
-	if err := api.MergeCreateFile(inFiles, outFile, dividerPage, nil); err != nil {
+	if err := api.MergeCreateFile(t.Context(), inFiles, outFile, dividerPage, nil); err != nil {
 		t.Fatalf("MergeCreateFile: %v", err)
 	}
-	if err := api.ValidateFile(outFile, conf); err != nil {
+	if err := api.ValidateFile(t.Context(), outFile, conf, nil); err != nil {
 		t.Fatalf("ValidateFile: %v", err)
 	}
 
-	ctx, err := api.ReadContextFile(outFile)
+	ctx, err := api.ReadContextFile(t.Context(), outFile)
 	if err != nil {
 		t.Fatalf("ReadContextFile: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestMergePreservesInheritedPageAttrs(t *testing.T) {
 	const inputCount = 3
 
 	inFile := filepath.Join(inDir, "BuildingWebappsWithGo.pdf")
-	srcCtx, err := api.ReadContextFile(inFile)
+	srcCtx, err := api.ReadContextFile(t.Context(), inFile)
 	if err != nil {
 		t.Fatal(err)
 	}

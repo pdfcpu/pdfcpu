@@ -18,6 +18,7 @@ package sign
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/dsa"
 	"crypto/ecdh"
@@ -272,6 +273,7 @@ func TestCertificateAuthorityObservationsDoNotResolvePath(t *testing.T) {
 	result := unknownSignatureResult()
 
 	validateCertChains(
+		t.Context(),
 		[][]*x509.Certificate{{root}},
 		false,
 		x509.NewCertPool(),
@@ -301,6 +303,7 @@ func TestFallbackCAEntriesDoNotOverwritePathFailure(t *testing.T) {
 	result := &model.SignatureValidationResult{Reason: model.SignatureReasonCertNotTrusted}
 
 	validateCertChains(
+		t.Context(),
 		[][]*x509.Certificate{{leaf, root}},
 		false,
 		x509.NewCertPool(),
@@ -361,6 +364,7 @@ func requireTimestampEvidence(
 }
 
 type exportedValidationFunc func(
+	context.Context,
 	io.ReaderAt,
 	types.Dict,
 	bool,
@@ -378,9 +382,9 @@ var (
 	_ exportedValidationFunc = ValidateX509RSASHA1Signature
 )
 
-// TestExportedValidatorSignaturesRemainCompatible locks down the service-free
-// PKCS#7, DTS, and legacy PKCS#1 entry points.
-func TestExportedValidatorSignaturesRemainCompatible(t *testing.T) {
+// TestExportedValidatorSignaturesRequireContext locks down the context-aware PKCS#7, DTS, and legacy PKCS#1 entry
+// points.
+func TestExportedValidatorSignaturesRequireContext(t *testing.T) {
 	validators := []exportedValidationFunc{
 		ValidatePKCS7Signatures,
 		ValidateDTS,
@@ -869,6 +873,7 @@ func TestVerifyP7SignerSignatureProblemHasNoTrailingNewline(t *testing.T) {
 	ctx := &model.Context{Configuration: model.NewDefaultConfiguration()}
 
 	verifyP7Signer(
+		t.Context(),
 		p7Signer,
 		p7.Certificates,
 		x509.NewCertPool(),
@@ -906,6 +911,7 @@ func TestVerifyP7SignerValidBranch(t *testing.T) {
 	}
 
 	verifyP7Signer(
+		t.Context(),
 		fixture.signer,
 		fixture.certs,
 		fixture.roots,
@@ -1019,6 +1025,7 @@ func TestPAdESBaselineBClassification(t *testing.T) {
 			assessment := localSignatureAssessment{}
 
 			if err := verifyP7SignerWithContentType(
+				t.Context(),
 				fixture.signer,
 				fixture.certs,
 				fixture.roots,
@@ -1315,6 +1322,7 @@ func TestVerifyP7SignerStopsAfterDigestFailure(t *testing.T) {
 	}
 
 	verifyP7Signer(
+		t.Context(),
 		fixture.signer,
 		fixture.certs,
 		fixture.roots,
@@ -1358,6 +1366,7 @@ func TestVerifyP7SignerUsesFallbackChainAsEvidence(t *testing.T) {
 	}
 
 	verifyP7Signer(
+		t.Context(),
 		fixture.signer,
 		fixture.certs,
 		x509.NewCertPool(),
@@ -1402,6 +1411,7 @@ func TestVerifyP7SignerReportsClaimedTimeAfterDTS(t *testing.T) {
 	}
 
 	verifyP7Signer(
+		t.Context(),
 		fixture.signer,
 		fixture.certs,
 		fixture.roots,
@@ -1451,6 +1461,7 @@ func TestVerifyP7SignerRetainsMultipleProblems(t *testing.T) {
 	}
 
 	verifyP7Signer(
+		t.Context(),
 		fixture.signer,
 		fixture.certs,
 		x509.NewCertPool(),
@@ -1505,6 +1516,7 @@ func TestVerifyP7SignerMissingCertificateIsCertificateEvidence(t *testing.T) {
 	}
 
 	verifyP7Signer(
+		t.Context(),
 		fixture.signer,
 		nil,
 		fixture.roots,
@@ -1540,6 +1552,7 @@ func TestVerifyP7SignerLaterCertificateEvidencePreservesInvalidStatus(t *testing
 	}
 
 	verifyP7Signer(
+		t.Context(),
 		forged,
 		fixture.certs,
 		fixture.roots,
@@ -1554,6 +1567,7 @@ func TestVerifyP7SignerLaterCertificateEvidencePreservesInvalidStatus(t *testing
 		fixture.ctx,
 	)
 	verifyP7Signer(
+		t.Context(),
 		fixture.signer,
 		nil,
 		fixture.roots,
@@ -1624,6 +1638,7 @@ func TestVerifyP7SignerMultipleEvidencePrecedence(t *testing.T) {
 			}
 
 			verifyP7Signer(
+				t.Context(),
 				first,
 				fixture.certs,
 				fixture.roots,
@@ -1638,6 +1653,7 @@ func TestVerifyP7SignerMultipleEvidencePrecedence(t *testing.T) {
 				fixture.ctx,
 			)
 			verifyP7Signer(
+				t.Context(),
 				fixture.signer,
 				nil,
 				fixture.roots,
@@ -1686,6 +1702,7 @@ func TestVerifyP7SignerUnsupportedPublicKeyIsUnsupportedEvidence(t *testing.T) {
 	}
 
 	verifyP7Signer(
+		t.Context(),
 		fixture.signer,
 		[]*x509.Certificate{&unsupported},
 		fixture.roots,
@@ -1724,6 +1741,7 @@ func TestVerifyP7SignerUnsupportedSignatureAlgorithmIsUnsupportedEvidence(t *tes
 	}
 
 	verifyP7Signer(
+		t.Context(),
 		signerInfo,
 		fixture.certs,
 		fixture.roots,
@@ -1762,6 +1780,7 @@ func TestVerifyP7SignerReportsMissingSignerIdentifierEvidence(t *testing.T) {
 	}
 
 	verifyP7Signer(
+		t.Context(),
 		p7Signer,
 		fixture.certs,
 		fixture.roots,
@@ -1958,6 +1977,7 @@ func TestP7AuthenticationFailureRetainsUnknownDocumentIntegrity(t *testing.T) {
 			}
 
 			if err := verifyP7Signer(
+				t.Context(),
 				p7Signer,
 				fixture.certs,
 				fixture.roots,
@@ -2039,6 +2059,7 @@ func TestValidateDTSReportsMissingTimestampInfo(t *testing.T) {
 	sigDict := types.Dict{"Contents": types.HexLiteral(hex.EncodeToString(fixture))}
 
 	err := ValidateDTS(
+		t.Context(),
 		bytes.NewReader(nil),
 		sigDict,
 		false,
@@ -2078,6 +2099,7 @@ func TestValidateDTSClassifiesMalformedPKCS7(t *testing.T) {
 	sigDict := types.Dict{"Contents": types.HexLiteral("01")}
 
 	err := ValidateDTS(
+		t.Context(),
 		bytes.NewReader(nil),
 		sigDict,
 		false,
@@ -2116,6 +2138,7 @@ func TestValidateDTSRejectsMultipleSigners(t *testing.T) {
 	sigDict := types.Dict{"Contents": types.HexLiteral(hex.EncodeToString(fixture))}
 
 	err := ValidateDTS(
+		t.Context(),
 		bytes.NewReader(nil),
 		sigDict,
 		false,
@@ -2395,6 +2418,7 @@ func TestValidateDTSCertRejectsExpiredCertificate(t *testing.T) {
 	}
 
 	pathValidated, err := validateDTSCert(
+		t.Context(),
 		cert,
 		[]*x509.Certificate{cert},
 		roots,
@@ -2606,6 +2630,7 @@ func requireP1ValidationProblem(t *testing.T, sigDict types.Dict, want string) {
 	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
 	ctx := &model.Context{Configuration: model.NewDefaultConfiguration()}
 	err := ValidateX509RSASHA1Signature(
+		t.Context(),
 		bytes.NewReader(nil),
 		sigDict,
 		false,
@@ -2673,6 +2698,7 @@ func TestValidateX509RSASHA1SignatureRequiresRevocationConclusion(t *testing.T) 
 	ctx := &model.Context{Configuration: model.NewDefaultConfiguration()}
 
 	err = ValidateX509RSASHA1Signature(
+		t.Context(),
 		bytes.NewReader(file),
 		sigDict,
 		false,
@@ -2838,6 +2864,7 @@ func TestNormalizedLegacyCertificateAndOCSPWording(t *testing.T) {
 	}
 
 	_, err = checkCertViaOCSP(
+		t.Context(),
 		&x509.Certificate{},
 		&x509.Certificate{},
 		x509.NewCertPool(),
@@ -2849,6 +2876,7 @@ func TestNormalizedLegacyCertificateAndOCSPWording(t *testing.T) {
 	}
 
 	_, err = checkCertViaOCSP(
+		t.Context(),
 		&x509.Certificate{},
 		&x509.Certificate{},
 		x509.NewCertPool(),
@@ -3206,7 +3234,7 @@ func TestCurrentOCSPRejectsResponseForDifferentCertificate(t *testing.T) {
 	)
 	certA.OCSPServer = []string{"https://ocsp.test"}
 
-	_, err := processCurrentOCSPResponses(certA, issuer, testOCSPHTTPClient(bb))
+	_, err := processCurrentOCSPResponses(t.Context(), certA, issuer, testOCSPHTTPClient(bb))
 	if err == nil || !strings.Contains(err.Error(), "OCSP: parse response for certificate") {
 		t.Fatalf("certificate-mismatched OCSP response: got %v", err)
 	}
@@ -3233,7 +3261,7 @@ func TestCurrentOCSPRecordsIssuerAuthenticationEvidence(t *testing.T) {
 	)
 	cert.OCSPServer = []string{"https://ocsp.test"}
 
-	details, err := processCurrentOCSPResponses(cert, issuer, testOCSPHTTPClient(bb))
+	details, err := processCurrentOCSPResponses(t.Context(), cert, issuer, testOCSPHTTPClient(bb))
 	if err != nil {
 		t.Fatalf("current OCSP response: %v", err)
 	}
@@ -3260,6 +3288,7 @@ func TestCheckCertViaOCSPRetainsInconclusiveArchivedEvidenceOffline(t *testing.T
 	)
 
 	details, err := checkCertViaOCSP(
+		t.Context(),
 		cert,
 		issuer,
 		x509.NewCertPool(),
@@ -3280,6 +3309,7 @@ func TestCheckCertViaOCSPRetainsInconclusiveArchivedEvidenceOffline(t *testing.T
 func TestCheckCertViaOCSPOfflineRetainsArchivedFailure(t *testing.T) {
 	issuer, _, cert := testOCSPIssuerAndCertificate(t, "Certificate")
 	_, err := checkCertViaOCSP(
+		t.Context(),
 		cert,
 		issuer,
 		x509.NewCertPool(),
@@ -3540,6 +3570,7 @@ func TestCurrentOCSPExhaustsResponderURLs(t *testing.T) {
 	)
 
 	details, err := processCurrentOCSPResponses(
+		t.Context(),
 		cert,
 		issuer,
 		testCurrentCRLClient(map[string][]byte{
@@ -3714,7 +3745,7 @@ func TestCurrentCRLNoApplicableEvidenceIsUnknown(t *testing.T) {
 	now := time.Now()
 	bb := testCurrentCRL(t, issuer, issuerKey, now.Add(-2*time.Hour), now.Add(-time.Hour), nil)
 
-	details, err := processCurrentCRLs(cert, issuer, testCurrentCRLClient(map[string][]byte{url: bb}))
+	details, err := processCurrentCRLs(t.Context(), cert, issuer, testCurrentCRLClient(map[string][]byte{url: bb}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3737,7 +3768,7 @@ func TestCurrentCRLIssuerMismatchRecordsEntriesWithoutConclusion(t *testing.T) {
 	entry := x509.RevocationListEntry{SerialNumber: cert.SerialNumber, RevocationTime: now.Add(-time.Minute)}
 	bb := testCurrentCRL(t, otherIssuer, otherKey, now.Add(-time.Hour), now.Add(time.Hour), []x509.RevocationListEntry{entry})
 
-	details, err := processCurrentCRLs(cert, issuer, testCurrentCRLClient(map[string][]byte{url: bb}))
+	details, err := processCurrentCRLs(t.Context(), cert, issuer, testCurrentCRLClient(map[string][]byte{url: bb}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3761,7 +3792,7 @@ func TestCurrentCRLBadSignatureRecordsEntriesWithoutConclusion(t *testing.T) {
 	entry := x509.RevocationListEntry{SerialNumber: cert.SerialNumber, RevocationTime: now.Add(-time.Minute)}
 	bb := testCurrentCRL(t, impostor, impostorKey, now.Add(-time.Hour), now.Add(time.Hour), []x509.RevocationListEntry{entry})
 
-	details, err := processCurrentCRLs(cert, issuer, testCurrentCRLClient(map[string][]byte{url: bb}))
+	details, err := processCurrentCRLs(t.Context(), cert, issuer, testCurrentCRLClient(map[string][]byte{url: bb}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3783,7 +3814,7 @@ func TestCurrentCRLAuthenticatedRevocationConcludes(t *testing.T) {
 	entry := x509.RevocationListEntry{SerialNumber: cert.SerialNumber, RevocationTime: now.Add(-time.Minute)}
 	bb := testCurrentCRL(t, issuer, issuerKey, now.Add(-time.Hour), now.Add(time.Hour), []x509.RevocationListEntry{entry})
 
-	details, err := processCurrentCRLs(cert, issuer, testCurrentCRLClient(map[string][]byte{url: bb}))
+	details, err := processCurrentCRLs(t.Context(), cert, issuer, testCurrentCRLClient(map[string][]byte{url: bb}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3799,7 +3830,7 @@ func TestCurrentCRLAuthenticatedRevocationConcludes(t *testing.T) {
 // produce a good status.
 func TestCurrentCRLNilEvidenceIsUnknown(t *testing.T) {
 	issuer, _, cert := testCurrentCRLChain(t, "Current CRL Issuer")
-	details, err := processCurrentCRLs(cert, issuer, testCurrentCRLClient(nil))
+	details, err := processCurrentCRLs(t.Context(), cert, issuer, testCurrentCRLClient(nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -3833,7 +3864,7 @@ func TestCurrentCRLRetainsMultipleDistributionPointFailures(t *testing.T) {
 		"https://crl.test/second",
 	}
 
-	details, err := processCurrentCRLs(cert, issuer, testCurrentCRLClient(nil))
+	details, err := processCurrentCRLs(t.Context(), cert, issuer, testCurrentCRLClient(nil))
 	if err == nil {
 		t.Fatal("expected joined distribution-point failures")
 	}
@@ -4083,6 +4114,7 @@ func TestValidatePKCS1ReportsTrailingASN1Data(t *testing.T) {
 	}
 
 	err = ValidateX509RSASHA1Signature(
+		t.Context(),
 		bytes.NewReader(nil),
 		types.Dict{
 			"Cert":     types.Array{types.HexLiteral(hex.EncodeToString(der))},
@@ -5235,6 +5267,7 @@ func TestPKCS1SignedDataIOFailureIsFatal(t *testing.T) {
 	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
 
 	err = ValidateX509RSASHA1Signature(
+		t.Context(),
 		signErrorReader{err: cause},
 		sigDict,
 		false,
@@ -5268,6 +5301,7 @@ func TestPKCS7SignedDataFailureUsesReadPhase(t *testing.T) {
 	}
 	result := &model.SignatureValidationResult{}
 	err := ValidatePKCS7Signatures(
+		t.Context(),
 		bytes.NewReader(nil),
 		sigDict,
 		false,
@@ -5307,6 +5341,7 @@ func TestPKCS7SignedDataIOFailureIsFatal(t *testing.T) {
 	result := &model.SignatureValidationResult{}
 
 	err := ValidatePKCS7Signatures(
+		t.Context(),
 		signErrorReader{err: cause},
 		sigDict,
 		false,
@@ -5474,6 +5509,7 @@ func TestHandleDSSRetainsIndependentObservations(t *testing.T) {
 // TestNormalizedCRLWording verifies stable CRL phase terminology.
 func TestNormalizedCRLWording(t *testing.T) {
 	_, err := checkCertAgainstCRL(
+		t.Context(),
 		&x509.Certificate{},
 		nil,
 		x509.NewCertPool(),
@@ -5485,6 +5521,7 @@ func TestNormalizedCRLWording(t *testing.T) {
 	}
 
 	_, err = checkCertAgainstCRL(
+		t.Context(),
 		&x509.Certificate{},
 		nil,
 		x509.NewCertPool(),
@@ -5510,7 +5547,7 @@ func TestCertPoolSubjectsCannotRecoverIssuerCertificate(t *testing.T) {
 		t.Fatal("CertPool.Subjects unexpectedly exposed a complete certificate")
 	}
 
-	_, err := checkCertViaOCSP(leaf, nil, roots, nil, &model.Configuration{})
+	_, err := checkCertViaOCSP(t.Context(), leaf, nil, roots, nil, &model.Configuration{})
 	if want := "OCSP: certificate issuer unavailable"; err == nil || !strings.Contains(err.Error(), want) {
 		t.Fatalf("missing chain issuer: got %v, want %q", err, want)
 	}
@@ -5525,6 +5562,7 @@ func TestCheckCertViaOCSPMissingIssuerDoesNotPanic(t *testing.T) {
 	}()
 
 	_, err := checkCertViaOCSP(
+		t.Context(),
 		&x509.Certificate{},
 		nil,
 		x509.NewCertPool(),
@@ -5540,6 +5578,7 @@ func TestCheckCertViaOCSPMissingIssuerDoesNotPanic(t *testing.T) {
 func TestMissingOCSPIssuerFallsBackToCRL(t *testing.T) {
 	signer := &model.Signer{}
 	_, err := checkCertificateRevocation(
+		t.Context(),
 		&x509.Certificate{},
 		nil,
 		x509.NewCertPool(),
@@ -5819,6 +5858,7 @@ func TestLocalCertificateAssessmentReproducesCurrentBehavior(t *testing.T) {
 	signer := &model.Signer{}
 	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
 	assessment, err := assessCertificateEvidence(
+		t.Context(),
 		nil,
 		false,
 		x509.NewCertPool(),
@@ -5858,6 +5898,7 @@ func TestLocalCertificateAssessmentDoesNotRecordHistoricalValidationTime(t *test
 	root, _ := testCertChain(t, "Root CA", "Alice Signer")
 
 	assessment, err := assessCertificateEvidence(
+		t.Context(),
 		[][]*x509.Certificate{{root}},
 		false,
 		x509.NewCertPool(),
@@ -5893,6 +5934,7 @@ func TestLocalCertificatePathBehaviorCharacterization(t *testing.T) {
 		t.Fatal(err)
 	}
 	assessment, err := assessCertificateEvidence(
+		t.Context(),
 		chains,
 		true,
 		roots,
@@ -5939,6 +5981,7 @@ func TestLocalCRLBehaviorCharacterization(t *testing.T) {
 	)
 
 	details, err := processCurrentCRLs(
+		t.Context(),
 		cert,
 		issuer,
 		testCurrentCRLClient(map[string][]byte{url: bb}),
@@ -5968,6 +6011,7 @@ func TestLocalOCSPBehaviorCharacterization(t *testing.T) {
 	)
 
 	details, err := checkCertViaOCSP(
+		t.Context(),
 		cert,
 		issuer,
 		x509.NewCertPool(),
@@ -6037,7 +6081,7 @@ func TestValidateCertChainsReportsMissingChain(t *testing.T) {
 			signer := &model.Signer{}
 			result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
 
-			validateCertChains(tt.chains, false, x509.NewCertPool(), signer, nil, nil, result, nil)
+			validateCertChains(t.Context(), tt.chains, false, x509.NewCertPool(), signer, nil, nil, result, nil)
 
 			if result.Reason != model.SignatureReasonCertInvalid {
 				t.Fatalf("got reason %s, want %s", result.Reason, model.SignatureReasonCertInvalid)
@@ -6055,6 +6099,7 @@ func TestValidateCertChainsReportsNilCertificate(t *testing.T) {
 	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
 
 	validateCertChains(
+		t.Context(),
 		[][]*x509.Certificate{{nil}},
 		false,
 		x509.NewCertPool(),
@@ -6085,6 +6130,7 @@ func TestValidateCertChainsOwnsCertificateDetails(t *testing.T) {
 	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
 
 	validateCertChains(
+		t.Context(),
 		[][]*x509.Certificate{{root}},
 		false,
 		x509.NewCertPool(),
@@ -6119,6 +6165,7 @@ func TestValidateCertChainsReportsPublicKeyContext(t *testing.T) {
 	result := unknownSignatureResult()
 
 	err = validateCertChains(
+		t.Context(),
 		[][]*x509.Certificate{{cert}},
 		false,
 		x509.NewCertPool(),
@@ -6193,6 +6240,7 @@ func TestValidateCertChainsClassifiesMalformedSupportedPublicKey(t *testing.T) {
 	result := unknownSignatureResult()
 
 	if err := validateCertChains(
+		t.Context(),
 		[][]*x509.Certificate{{cert}},
 		false,
 		x509.NewCertPool(),
@@ -6255,6 +6303,7 @@ func TestValidateCertChainsReportsSelfSignedVerificationEvidence(t *testing.T) {
 	result := &model.SignatureValidationResult{Reason: model.SignatureReasonUnknown}
 
 	validateCertChains(
+		t.Context(),
 		[][]*x509.Certificate{{&cert}},
 		false,
 		x509.NewCertPool(),
@@ -6290,6 +6339,7 @@ func TestValidateCertChainsReportsRevocationCertificateContext(t *testing.T) {
 	conf.Offline = true
 
 	validateCertChains(
+		t.Context(),
 		[][]*x509.Certificate{{leaf, root}},
 		false,
 		x509.NewCertPool(),

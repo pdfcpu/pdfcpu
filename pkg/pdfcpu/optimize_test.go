@@ -17,6 +17,8 @@
 package pdfcpu
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -24,6 +26,21 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func TestOptimizeXRefTableRejectsNilContext(t *testing.T) {
+	if err := OptimizeXRefTable(nil, nil); !errors.Is(err, model.ErrMissingContext) {
+		t.Fatalf("got %v, want model.ErrMissingContext", err)
+	}
+}
+
+func TestOptimizeXRefTableReturnsCancellation(t *testing.T) {
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if err := OptimizeXRefTable(c, nil); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
 
 func testOptimizeContext(t *testing.T) *model.Context {
 	t.Helper()
@@ -239,7 +256,7 @@ func TestOptimizeXRefTableResourceErrorIncludesDeepPageContext(t *testing.T) {
 		},
 	}
 
-	err = OptimizeXRefTable(ctx)
+	err = OptimizeXRefTable(t.Context(), ctx)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -276,7 +293,7 @@ func TestOptimizeXRefTableSkipsUnclassifiableXObject(t *testing.T) {
 		},
 	}
 
-	if err := OptimizeXRefTable(ctx); err != nil {
+	if err := OptimizeXRefTable(t.Context(), ctx); err != nil {
 		t.Fatal(err)
 	}
 	if subtype := sd.Subtype(); subtype != nil {
@@ -316,7 +333,7 @@ func TestOptimizeXRefTableContentErrorIncludesDeepPageContext(t *testing.T) {
 	pageDict := addOptimizeTestPage(t, ctx)
 	pageDict["Contents"] = types.Name("broken")
 
-	err := OptimizeXRefTable(ctx)
+	err := OptimizeXRefTable(t.Context(), ctx)
 	if err == nil {
 		t.Fatal("expected error")
 	}

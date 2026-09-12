@@ -149,7 +149,7 @@ func configurationTreeSnapshot(t *testing.T, root string) map[string]configurati
 
 func certificateFileSubjects(t *testing.T, path string) map[string]struct{} {
 	t.Helper()
-	certificates, err := pdfcpu.LoadCertificatesFile(path)
+	certificates, err := pdfcpu.LoadCertificatesFile(t.Context(), path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +162,7 @@ func certificateFileSubjects(t *testing.T, path string) map[string]struct{} {
 
 func configurationCertificateSubjects(t *testing.T, conf *model.Configuration) map[string]struct{} {
 	t.Helper()
-	pool, err := pdfcpu.CertificatePoolForConfiguration(conf)
+	pool, err := pdfcpu.CertificatePoolForConfiguration(t.Context(), conf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func configurationCertificateSubjects(t *testing.T, conf *model.Configuration) m
 func requireConfigurationFont(t *testing.T, conf *model.Configuration, name string, want bool) {
 	t.Helper()
 	repository := (&model.XRefTable{Conf: conf}).FontRepository()
-	got, err := repository.IsUserFont(name)
+	got, err := repository.IsUserFont(t.Context(), name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,14 +185,7 @@ func requireConfigurationFont(t *testing.T, conf *model.Configuration, name stri
 	}
 }
 
-func requireReadOnlyConfiguration(
-	t *testing.T,
-	root string,
-	conf *model.Configuration,
-	validationMode int,
-	fontName, otherFontName string,
-	certificateSubjects map[string]struct{},
-) {
+func requireReadOnlyConfiguration(t *testing.T, root string, conf *model.Configuration, validationMode int, fontName, otherFontName string, certificateSubjects map[string]struct{}) {
 	t.Helper()
 	configDir := filepath.Join(root, "pdfcpu")
 	if conf.Path != filepath.Join(configDir, "config.yml") {
@@ -218,7 +211,7 @@ func requireReadOnlyConfiguration(
 
 func loadReadOnlyConfiguration(t *testing.T, root string) *model.Configuration {
 	t.Helper()
-	conf, err := api.LoadConfigurationWithOptions(api.ConfigurationOptions{
+	conf, err := api.LoadConfiguration(api.ConfigurationOptions{
 		Root: root,
 		Mode: api.ConfigurationModeReadOnly,
 	})
@@ -228,7 +221,7 @@ func loadReadOnlyConfiguration(t *testing.T, root string) *model.Configuration {
 	return conf
 }
 
-func TestLoadConfigurationWithOptionsIsolatesReadOnlyRoots(t *testing.T) {
+func TestLoadConfigurationIsolatesReadOnlyRoots(t *testing.T) {
 	rootA := t.TempDir()
 	rootB := t.TempDir()
 	fontA := prepareReadOnlyConfigurationRoot(

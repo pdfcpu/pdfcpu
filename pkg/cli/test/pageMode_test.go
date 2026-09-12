@@ -34,7 +34,7 @@ func TestPageMode(t *testing.T) {
 	outFile := filepath.Join(outDir, "test.pdf")
 
 	cmd := cli.ListPageModeCommand(inFile, conf)
-	ss, err := cli.Dispatch(cmd)
+	ss, err := cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s %s: list pageMode: %v\n", msg, inFile, err)
 	}
@@ -43,12 +43,12 @@ func TestPageMode(t *testing.T) {
 	}
 
 	cmd = cli.SetPageModeCommand(inFile, outFile, pageMode, nil)
-	if _, err = cli.Dispatch(cmd); err != nil {
+	if _, err = cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: set pageMode: %v\n", msg, outFile, err)
 	}
 
 	cmd = cli.ListPageModeCommand(outFile, conf)
-	ss, err = cli.Dispatch(cmd)
+	ss, err = cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s %s: list pageMode: %v\n", msg, outFile, err)
 	}
@@ -60,12 +60,12 @@ func TestPageMode(t *testing.T) {
 	}
 
 	cmd = cli.ResetPageModeCommand(outFile, "", nil)
-	if _, err = cli.Dispatch(cmd); err != nil {
+	if _, err = cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s %s: reset pageMode: %v\n", msg, outFile, err)
 	}
 
 	cmd = cli.ListPageModeCommand(outFile, conf)
-	ss, err = cli.Dispatch(cmd)
+	ss, err = cli.Dispatch(t.Context(), cmd)
 	if err != nil {
 		t.Fatalf("%s %s: list pageMode: %v\n", msg, outFile, err)
 	}

@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/zlib"
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -33,6 +34,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -1236,58 +1238,79 @@ func objStr(entry *XRefTableEntry, objNr int) string {
 	return fmt.Sprintf("%5d:   offset=nil generation=%d %s \n%s\n", objNr, *entry.Generation, typeStr, entry.Object)
 }
 
-// DumpObject writes object objNr to stdout using mode for stream output formatting.
-func (xRefTable *XRefTable) DumpObject(objNr, mode int) {
+func dumpDecodedStream(c context.Context, sd types.StreamDict, objNr, mode int) (string, error) {
+	err := sd.Decode()
+	if ctxErr := c.Err(); ctxErr != nil {
+		return "", ctxErr
+	}
+	if err == filter.ErrUnsupportedFilter {
+		return "stream filter unsupported!", nil
+	}
+	if err != nil {
+		return "decoding problem encountered!", nil
+	}
+
+	s := "decoded stream content (length = %d)\n%s\n"
+	s1 := ""
+	switch mode {
+	case 1:
+		sc := bufio.NewScanner(bytes.NewReader(sd.Content))
+		sc.Split(scan.Lines)
+		for sc.Scan() {
+			if err := c.Err(); err != nil {
+				return "", err
+			}
+			s1 += sc.Text() + "\n"
+		}
+		if err := sc.Err(); err != nil {
+			return "", fmt.Errorf("dump object %d: scan decoded stream: %w", objNr, err)
+		}
+	case 2:
+		s1 = hex.Dump(sd.Content)
+	}
+
+	return fmt.Sprintf(s, len(sd.Content), s1), nil
+}
+
+// DumpObject writes object objNr to stdout using mode for stream output formatting and supports cancellation.
+func (xRefTable *XRefTable) DumpObject(c context.Context, objNr, mode int) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	// mode
 	//  0 .. silent / obj only
 	//  1 .. ascii
 	//  2 .. hex
 	entry := xRefTable.Table[objNr]
 	if entry == nil || entry.Free || entry.Compressed || entry.Object == nil {
+		if err := c.Err(); err != nil {
+			return err
+		}
 		fmt.Println(":(")
-		return
+		return nil
 	}
 
 	str := objStr(entry, objNr)
 
 	if mode > 0 {
-		sd, ok := entry.Object.(types.StreamDict)
-		if ok {
-
-			err := sd.Decode()
-			if err == filter.ErrUnsupportedFilter {
-				str += "stream filter unsupported!"
-				fmt.Println(str)
-				return
-			}
+		if sd, ok := entry.Object.(types.StreamDict); ok {
+			s, err := dumpDecodedStream(c, sd, objNr, mode)
 			if err != nil {
-				str += "decoding problem encountered!"
-				fmt.Println(str)
-				return
+				return err
 			}
-
-			s := "decoded stream content (length = %d)\n%s\n"
-			s1 := ""
-			switch mode {
-			case 1:
-				sc := bufio.NewScanner(bytes.NewReader(sd.Content))
-				sc.Split(scan.Lines)
-				for sc.Scan() {
-					s1 += sc.Text() + "\n"
-				}
-				str += fmt.Sprintf(s, len(sd.Content), s1)
-			case 2:
-				str += fmt.Sprintf(s, len(sd.Content), hex.Dump(sd.Content))
-			}
+			str += s
 		}
 
-		osd, ok := entry.Object.(types.ObjectStreamDict)
-		if ok {
+		if osd, ok := entry.Object.(types.ObjectStreamDict); ok {
 			str += fmt.Sprintf("object stream count:%d size of objectarray:%d\n", osd.ObjCount, len(osd.ObjArray))
 		}
 	}
 
+	if err := c.Err(); err != nil {
+		return err
+	}
 	fmt.Println(str)
+	return nil
 }
 
 func (xRefTable *XRefTable) list(logStr []string) []string {
@@ -2714,6 +2737,7 @@ func (xRefTable *XRefTable) collectMediaBoxAndCropBox(d types.Dict, inhMediaBox,
 }
 
 func (xRefTable *XRefTable) collectPageBoundariesForPageTreeKids(
+	c context.Context,
 	parentObjNr int,
 	kids types.Array,
 	inhMediaBox, inhCropBox **types.Rectangle,
@@ -2725,6 +2749,9 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTreeKids(
 	visit *PageTreeVisit) error {
 	// Iterate over page tree.
 	for childIndex, o := range kids {
+		if err := c.Err(); err != nil {
+			return err
+		}
 		if o == nil {
 			return fmt.Errorf("page tree obj#%d: kid %d: nil object", parentObjNr, childIndex+1)
 		}
@@ -2756,7 +2783,9 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTreeKids(
 
 		switch pageType.Value() {
 		case "Pages":
-			if err = xRefTable.collectPageBoundariesForPageTree(&indRef, inhMediaBox, inhCropBox, pb, r, p, selectedPages, depth+1, visit); err != nil {
+			if err = xRefTable.collectPageBoundariesForPageTree(
+				c, &indRef, inhMediaBox, inhCropBox, pb, r, p, selectedPages, depth+1, visit,
+			); err != nil {
 				return err
 			}
 
@@ -2766,7 +2795,9 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTreeKids(
 				_, collect = selectedPages[(*p)+1]
 			}
 			if collect {
-				if err = xRefTable.collectPageBoundariesForPageTree(&indRef, inhMediaBox, inhCropBox, pb, r, p, selectedPages, depth+1, visit); err != nil {
+				if err = xRefTable.collectPageBoundariesForPageTree(
+					c, &indRef, inhMediaBox, inhCropBox, pb, r, p, selectedPages, depth+1, visit,
+				); err != nil {
 					return err
 				}
 			}
@@ -2817,6 +2848,7 @@ func (xRefTable *XRefTable) pageTreeNodeRotation(d types.Dict, objNr, inherited 
 }
 
 func (xRefTable *XRefTable) collectPageBoundariesForPageTree(
+	c context.Context,
 	root *types.IndirectRef,
 	inhMediaBox, inhCropBox **types.Rectangle,
 	pb []PageBoundaries,
@@ -2879,12 +2911,17 @@ func (xRefTable *XRefTable) collectPageBoundariesForPageTree(
 	}
 
 	return xRefTable.collectPageBoundariesForPageTreeKids(
-		objNr, kids, inhMediaBox, inhCropBox, pb, r, p, selectedPages, depth, visit)
+		c, objNr, kids, inhMediaBox, inhCropBox, pb, r, p, selectedPages, depth, visit)
 }
 
-// PageBoundaries returns a sorted slice with page boundaries
-// for all pages sorted ascending by page number.
-func (xRefTable *XRefTable) PageBoundaries(selectedPages types.IntSet) ([]PageBoundaries, error) {
+// PageBoundaries returns page boundaries sorted by page number and supports cancellation.
+func (xRefTable *XRefTable) PageBoundaries(c context.Context, selectedPages types.IntSet) ([]PageBoundaries, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	if xRefTable == nil {
+		return nil, ErrMissingXRefTable
+	}
 	// if err := xRefTable.EnsurePageCount(); err != nil {
 	// 	return nil, err
 	// }
@@ -2902,22 +2939,29 @@ func (xRefTable *XRefTable) PageBoundaries(selectedPages types.IntSet) ([]PageBo
 	mb := &types.Rectangle{}
 	cb := &types.Rectangle{}
 	pbs := make([]PageBoundaries, xRefTable.PageCount)
-	if err := xRefTable.collectPageBoundariesForPageTree(root, &mb, &cb, pbs, 0, &i, selectedPages, 0, NewPageTreeVisit()); err != nil {
+	if err := xRefTable.collectPageBoundariesForPageTree(
+		c, root, &mb, &cb, pbs, 0, &i, selectedPages, 0, NewPageTreeVisit(),
+	); err != nil {
 		return nil, fmt.Errorf("page tree: %w", err)
 	}
 	return pbs, nil
 }
 
-// PageDims returns a sorted slice with effective media box dimensions
-// for all pages sorted ascending by page number.
-func (xRefTable *XRefTable) PageDims() ([]types.Dim, error) {
-	pbs, err := xRefTable.PageBoundaries(nil)
+// PageDims returns effective media box dimensions sorted by page number and supports cancellation.
+func (xRefTable *XRefTable) PageDims(c context.Context) ([]types.Dim, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	pbs, err := xRefTable.PageBoundaries(c, nil)
 	if err != nil {
 		return nil, fmt.Errorf("page boundaries: %w", err)
 	}
 
 	dims := make([]types.Dim, len(pbs))
 	for i, pb := range pbs {
+		if err := c.Err(); err != nil {
+			return nil, err
+		}
 		d := pb.MediaBox().Dimensions()
 		if pb.Rot%180 != 0 {
 			d.Width, d.Height = d.Height, d.Width
@@ -2925,7 +2969,7 @@ func (xRefTable *XRefTable) PageDims() ([]types.Dim, error) {
 		dims[i] = d
 	}
 
-	return dims, nil
+	return dims, c.Err()
 }
 
 // EmptyPage creates an empty page with parentIndRef, mediaBox and optional object number objNr.
@@ -3013,6 +3057,7 @@ func (xRefTable *XRefTable) emptyPage(parent *types.IndirectRef, d types.Dict, d
 }
 
 type blankPageInsertion struct {
+	c             context.Context
 	parent        *types.IndirectRef
 	pAttrs        *InheritedPageAttrs
 	p             *int
@@ -3024,6 +3069,9 @@ type blankPageInsertion struct {
 }
 
 func (xRefTable *XRefTable) appendBlankPageForPage(a *types.Array, ir types.IndirectRef, pageNodeDict types.Dict, ctx blankPageInsertion) (int, error) {
+	if err := ctx.c.Err(); err != nil {
+		return 0, err
+	}
 	i := 0
 	(*ctx.p)++
 	if !ctx.before {
@@ -3071,7 +3119,9 @@ func (xRefTable *XRefTable) appendBlankPagesForKid(a *types.Array, o types.Objec
 
 	switch pageType.Value() {
 	case "Pages":
-		j, err := xRefTable.insertBlankPagesDepth(&ir, ctx.pAttrs, ctx.p, ctx.selectedPages, ctx.dim, ctx.before, ctx.depth+1, ctx.visit)
+		j, err := xRefTable.insertBlankPagesDepth(
+			ctx.c, &ir, ctx.pAttrs, ctx.p, ctx.selectedPages, ctx.dim, ctx.before, ctx.depth+1, ctx.visit,
+		)
 		if err != nil {
 			return 0, err
 		}
@@ -3085,14 +3135,43 @@ func (xRefTable *XRefTable) appendBlankPagesForKid(a *types.Array, o types.Objec
 	return 0, fmt.Errorf("page tree kid obj#%d: unsupported Type %q", ir.ObjectNumber.Value(), pageType.Value())
 }
 
+func processPageTreeKids(
+	c context.Context,
+	objNr int,
+	kids types.Array,
+	process func(types.Object) (int, error),
+) (int, error) {
+	i := 0
+	for childIndex, o := range kids {
+		if err := c.Err(); err != nil {
+			return 0, err
+		}
+		if o == nil {
+			return 0, fmt.Errorf("page tree obj#%d: kid %d: nil object", objNr, childIndex+1)
+		}
+		j, err := process(o)
+		if err != nil {
+			return 0, fmt.Errorf("page tree obj#%d: kid %d: %w", objNr, childIndex+1, err)
+		}
+		i += j
+	}
+	return i, nil
+}
+
 func (xRefTable *XRefTable) insertBlankPagesDepth(
+	c context.Context,
 	parent *types.IndirectRef,
 	pAttrs *InheritedPageAttrs,
-	p *int, selectedPages types.IntSet,
+	p *int,
+	selectedPages types.IntSet,
 	dim *types.Dim,
 	before bool,
 	depth int,
-	visit *PageTreeVisit) (int, error) {
+	visit *PageTreeVisit,
+) (int, error) {
+	if err := c.Err(); err != nil {
+		return 0, err
+	}
 	if err := xRefTable.CheckRecursionDepth("page tree", depth); err != nil {
 		return 0, err
 	}
@@ -3124,19 +3203,13 @@ func (xRefTable *XRefTable) insertBlankPagesDepth(
 		return 0, fmt.Errorf("page tree obj#%d: Kids: expected array, got %T", objNr, o)
 	}
 
-	i := 0
 	a := types.Array{}
-	ctx := blankPageInsertion{parent, pAttrs, p, selectedPages, dim, before, depth, visit}
-
-	for childIndex, o := range kids {
-		if o == nil {
-			return 0, fmt.Errorf("page tree obj#%d: kid %d: nil object", objNr, childIndex+1)
-		}
-		j, err := xRefTable.appendBlankPagesForKid(&a, o, ctx)
-		if err != nil {
-			return 0, fmt.Errorf("page tree obj#%d: kid %d: %w", objNr, childIndex+1, err)
-		}
-		i += j
+	ctx := blankPageInsertion{c, parent, pAttrs, p, selectedPages, dim, before, depth, visit}
+	i, err := processPageTreeKids(c, objNr, kids, func(o types.Object) (int, error) {
+		return xRefTable.appendBlankPagesForKid(&a, o, ctx)
+	})
+	if err != nil {
+		return 0, err
 	}
 
 	d.Update("Kids", a)
@@ -3145,17 +3218,11 @@ func (xRefTable *XRefTable) insertBlankPagesDepth(
 	return i, nil
 }
 
-func (xRefTable *XRefTable) insertBlankPages(
-	parent *types.IndirectRef,
-	pAttrs *InheritedPageAttrs,
-	p *int, selectedPages types.IntSet,
-	dim *types.Dim,
-	before bool) (int, error) {
-	return xRefTable.insertBlankPagesDepth(parent, pAttrs, p, selectedPages, dim, before, 0, NewPageTreeVisit())
-}
-
-// InsertBlankPages inserts a blank page before or after each selected page.
-func (xRefTable *XRefTable) InsertBlankPages(pages types.IntSet, dim *types.Dim, before bool) error {
+// InsertBlankPages inserts a blank page before or after each selected page and supports cancellation.
+func (xRefTable *XRefTable) InsertBlankPages(c context.Context, pages types.IntSet, dim *types.Dim, before bool) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	root, err := xRefTable.Pages()
 	if err != nil {
 		return fmt.Errorf("pages root: %w", err)
@@ -3167,7 +3234,9 @@ func (xRefTable *XRefTable) InsertBlankPages(pages types.IntSet, dim *types.Dim,
 	var inhPAttrs InheritedPageAttrs
 	p := 0
 
-	if _, err = xRefTable.insertBlankPages(root, &inhPAttrs, &p, pages, dim, before); err != nil {
+	if _, err = xRefTable.insertBlankPagesDepth(
+		c, root, &inhPAttrs, &p, pages, dim, before, 0, NewPageTreeVisit(),
+	); err != nil {
 		return fmt.Errorf("page tree: %w", err)
 	}
 	return nil

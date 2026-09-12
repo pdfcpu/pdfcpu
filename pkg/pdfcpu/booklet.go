@@ -1,23 +1,24 @@
 /*
-	Copyright 2021 The pdfcpu Authors.
+Copyright 2021 The pdfcpu Authors.
 
-	Licensed under the Apache License, Version 2.0 (the "License");
-	you may not use this file except in compliance with the License.
-	You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-		http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
-	Unless required by applicable law or agreed to in writing, software
-	distributed under the License is distributed on an "AS IS" BASIS,
-	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	See the License for the specific language governing permissions and
-	limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
 package pdfcpu
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -129,7 +131,8 @@ func nup2OutputPageNr(inputPageNr, inputPageCount int, pageNumbers []int, _ *mod
 func get4upPos(pos int, isLandscape bool) (out int) {
 	if isLandscape {
 		switch pos % 4 {
-		// landscape short-edge binding page ordering is rotated 90 degrees anti-clockwise from the portrait ordering on the back sides of the pages to make duplexing work
+		// Landscape short-edge binding page ordering is rotated 90 degrees anti-clockwise from the portrait ordering on
+		// the back sides of the pages to make duplexing work.
 		// from portrait to lanscape map {0 => 3, 1 => 2, 2 => 1, 3 => 0}
 		case 0:
 			return 3
@@ -147,7 +150,8 @@ func get4upPos(pos int, isLandscape bool) (out int) {
 func nup4OutputPageNr(inputPageNr int, pageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
 	switch nup.BookletType {
 	case model.Booklet:
-		// simple booklets are collated by collecting the top of the sheet, then the bottom, then the top of the next sheet, and so on.
+		// Simple booklets are collated by collecting the top of the sheet, then the bottom, then the top of the next
+		// sheet, and so on.
 		// this is conceptually easier for collation without specialized tools.
 		if nup.IsTopFoldBinding() {
 			return nup4BasicTopFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
@@ -155,7 +159,8 @@ func nup4OutputPageNr(inputPageNr int, pageCount int, pageNumbers []int, nup *mo
 			return nup4BasicSideFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
 		}
 	case model.BookletAdvanced:
-		// advanced booklets have a different collation pattern: collect the top of each sheet and then the bottom of each sheet.
+		// Advanced booklets have a different collation pattern: collect the top of each sheet and then the bottom of
+		// each sheet.
 		// this allows printers to fold the sheets twice and then cut along one of the folds.
 		return nup4AdvancedSideFoldOutputPageNr(inputPageNr, pageCount, pageNumbers, nup)
 	}
@@ -310,7 +315,8 @@ func nupLRTBOutputPageNr(positionNumber int, inputPageCount int, pageNumbers []i
 
 func nup8OutputPageNr(portraitPositionNumber int, inputPageCount int, pageNumbers []int, nup *model.NUp) (int, bool) {
 	// 8up sheet has four rows and two columns
-	// but the spreads are NOT across the two columns - instead the spreads are rotated 90deg to fit in a portrait orientation on the sheet
+	// But the spreads are NOT across the two columns - instead the spreads are rotated 90deg to fit in a portrait
+	// orientation on the sheet.
 	// rather than coding up an entire new imposition, we're going to use the left-down-top-bottom imposition as a base
 	// and the rotate the spreads (ie reorder) to fit on the sheet
 
@@ -372,7 +378,8 @@ func nupPerfectBound(positionNumber int, inputPageCount int, pageNumbers []int, 
 		p = bookletSheetNumber*twoN + 2*((positionNumber-N)%twoN) + 2
 		if N == 4 || N == 6 || N == 8 {
 			if N == 4 && nup.PageDim.Landscape() { // landscape pages on portrait sheets
-				// flip top and bottom rows to account for landscape rotation and the page handling flip (short edge flip, no duplex)
+				// Flip top and bottom rows to account for landscape rotation and the page handling flip (short edge flip,
+				// no duplex).
 				if positionNumber%N < 2 { // top side
 					p += 4
 				} else { // bottom side
@@ -393,8 +400,11 @@ func nupPerfectBound(positionNumber int, inputPageCount int, pageNumbers []int, 
 	return getPageNumber(pageNumbers, p-1), rotate // p is one-indexed and we want zero-indexed
 }
 
-func getBookletOrdering(pages types.IntSet, nup *model.NUp) []model.BookletPage {
-	pageNumbers := sortSelectedPages(pages)
+func getBookletOrdering(c context.Context, pages types.IntSet, nup *model.NUp) ([]model.BookletPage, error) {
+	pageNumbers, err := sortSelectedPages(c, pages)
+	if err != nil {
+		return nil, err
+	}
 	pageCount := len(pageNumbers)
 
 	// A sheet of paper consists of 2 consecutive output pages.
@@ -412,6 +422,9 @@ func getBookletOrdering(pages types.IntSet, nup *model.NUp) []model.BookletPage 
 		nPagesPerSignature := nup.FolioSize * 4
 		nSignaturesInBooklet := int(math.Ceil(float64(pageCount) / float64(nPagesPerSignature)))
 		for j := 0; j < nSignaturesInBooklet; j++ {
+			if err := contextutil.Check(c); err != nil {
+				return nil, err
+			}
 			start := j * nPagesPerSignature
 			stop := (j + 1) * nPagesPerSignature
 			if stop > len(pageNumbers) {
@@ -419,14 +432,21 @@ func getBookletOrdering(pages types.IntSet, nup *model.NUp) []model.BookletPage 
 				stop = len(pageNumbers)
 				nPagesPerSignature = pageCount - start
 			}
-			bookletPages = append(bookletPages, getBookletPageOrdering(nup, pageNumbers[start:stop], nPagesPerSignature)...)
+			pages, err := getBookletPageOrdering(c, nup, pageNumbers[start:stop], nPagesPerSignature)
+			if err != nil {
+				return nil, err
+			}
+			bookletPages = append(bookletPages, pages...)
 		}
-		return bookletPages
+		return bookletPages, contextutil.Check(c)
 	}
-	return getBookletPageOrdering(nup, pageNumbers, pageCount)
+	return getBookletPageOrdering(c, nup, pageNumbers, pageCount)
 }
 
-func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) []model.BookletPage {
+func getBookletPageOrdering(c context.Context, nup *model.NUp, pageNumbers []int, pageCount int) ([]model.BookletPage, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	bookletPages := make([]model.BookletPage, pageCount)
 
 	var pageNumberFn pageNumberFunction
@@ -451,11 +471,14 @@ func getBookletPageOrdering(nup *model.NUp, pageNumbers []int, pageCount int) []
 	}
 
 	for i := range pageCount {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		pageNr, rotate := pageNumberFn(i, pageCount, pageNumbers, nup)
 		bookletPages[i].Number = pageNr
 		bookletPages[i].Rotate = rotate
 	}
-	return bookletPages
+	return bookletPages, contextutil.Check(c)
 }
 
 func wrapBookletOutputPageError(pageNr int, err error) error {
@@ -469,19 +492,11 @@ func wrapBookletImageError(imageNr int, fileName, phase string, err error) error
 	return fmt.Errorf("booklet image %d %q: %s: %w", imageNr, fileName, phase, err)
 }
 
-func loadBookletImageResource(
-	xRefTable *model.XRefTable,
-	imageNr int,
-	fileName string) (imgIndRef *types.IndirectRef, w, h int, err error) {
-	return loadBookletImageResourceWith(xRefTable, imageNr, fileName, model.CreateImageResource)
+func loadBookletImageResource(c context.Context, xRefTable *model.XRefTable, imageNr int, fileName string) (imgIndRef *types.IndirectRef, w, h int, err error) {
+	return loadImageResource(c, "booklet", xRefTable, imageNr, fileName)
 }
 
-func loadBookletImageResourceWith(
-	xRefTable *model.XRefTable,
-	imageNr int,
-	fileName string,
-	createImageResource func(*model.XRefTable, io.Reader) (*types.IndirectRef, int, int, error),
-) (imgIndRef *types.IndirectRef, w, h int, err error) {
+func loadBookletImageResourceWith(xRefTable *model.XRefTable, imageNr int, fileName string, createImageResource func(*model.XRefTable, io.Reader) (*types.IndirectRef, int, int, error)) (imgIndRef *types.IndirectRef, w, h int, err error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, 0, 0, wrapBookletImageError(imageNr, fileName, "open", err)
@@ -497,22 +512,29 @@ func loadBookletImageResourceWith(
 	return imgIndRef, w, h, err
 }
 
-func bookletPages(
-	ctx *model.Context,
-	selectedPages types.IntSet,
-	nup *model.NUp,
-	pagesDict types.Dict,
-	pagesIndRef *types.IndirectRef) (int, error) {
+func bookletPages(c context.Context, ctx *model.Context, selectedPages types.IntSet, nup *model.NUp, pagesDict types.Dict, pagesIndRef *types.IndirectRef) (int, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, err
+	}
 	var buf bytes.Buffer
 	formsResDict := types.NewDict()
 	rr := nup.RectsForGrid()
 	outputPageNr := 1
 
-	for i, bp := range getBookletOrdering(selectedPages, nup) {
+	bookletOrdering, err := getBookletOrdering(c, selectedPages, nup)
+	if err != nil {
+		return 0, err
+	}
+	for i, bp := range bookletOrdering {
+		if err := contextutil.Check(c); err != nil {
+			return 0, err
+		}
 
 		if i > 0 && i%len(rr) == 0 {
 			// Wrap complete page.
-			if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
+			if err := wrapUpPageForOperation(
+				c, "n-up", ctx, nup, formsResDict, buf, pagesDict, pagesIndRef,
+			); err != nil {
 				return 0, wrapBookletOutputPageError(outputPageNr, err)
 			}
 			outputPageNr++
@@ -533,10 +555,15 @@ func bookletPages(
 		if err := ctx.NUpTilePDFBytesForPDF(bp.Number, formsResDict, &buf, rDest, nup, bp.Rotate); err != nil {
 			return 0, fmt.Errorf("booklet page imposition: %w", err)
 		}
+		if err := contextutil.Check(c); err != nil {
+			return 0, err
+		}
 	}
 
 	// Wrap incomplete booklet page.
-	if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
+	if err := wrapUpPageForOperation(
+		c, "n-up", ctx, nup, formsResDict, buf, pagesDict, pagesIndRef,
+	); err != nil {
 		return 0, wrapBookletOutputPageError(outputPageNr, err)
 	}
 	return outputPageNr, nil
@@ -553,15 +580,27 @@ func bookletImageNUp(nup *model.NUp) *model.NUp {
 	return &operationNUp
 }
 
-// BookletFromImages creates a booklet version of the image sequence represented by fileNames.
-func BookletFromImages(ctx *model.Context, fileNames []string, nup *model.NUp, pagesDict types.Dict, pagesIndRef *types.IndirectRef) error {
-	nup = bookletImageNUp(nup)
-
-	// The order of images in fileNames corresponds to a desired booklet page sequence.
+func bookletImageOrdering(c context.Context, fileCount int, nup *model.NUp) ([]model.BookletPage, error) {
 	selectedPages := types.IntSet{}
-	for i := 1; i <= len(fileNames); i++ {
+	for i := 1; i <= fileCount; i++ {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		selectedPages[i] = true
 	}
+	return getBookletOrdering(c, selectedPages, nup)
+}
+
+// BookletFromImages creates a booklet version of the image sequence represented by fileNames.
+// On failure, ctx may contain partial objects or page-tree changes and its PageCount remains unchanged.
+func BookletFromImages(c context.Context, ctx *model.Context, fileNames []string, nup *model.NUp, pagesDict types.Dict, pagesIndRef *types.IndirectRef) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if err := requireContextWithXRefTable(ctx); err != nil {
+		return fmt.Errorf("booklet: source context: %w", err)
+	}
+	nup = bookletImageNUp(nup)
 
 	xRefTable := ctx.XRefTable
 	formsResDict := types.NewDict()
@@ -569,12 +608,22 @@ func BookletFromImages(ctx *model.Context, fileNames []string, nup *model.NUp, p
 	rr := nup.RectsForGrid()
 	outputPageNr := 1
 
-	for i, bp := range getBookletOrdering(selectedPages, nup) {
+	// The order of images in fileNames corresponds to a desired booklet page sequence.
+	bookletOrdering, err := bookletImageOrdering(c, len(fileNames), nup)
+	if err != nil {
+		return err
+	}
+	for i, bp := range bookletOrdering {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 
 		if i > 0 && i%len(rr) == 0 {
 
 			// Wrap complete page.
-			if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
+			if err := wrapUpPageForOperation(
+				c, "n-up", ctx, nup, formsResDict, buf, pagesDict, pagesIndRef,
+			); err != nil {
 				return wrapBookletOutputPageError(outputPageNr, err)
 			}
 
@@ -594,7 +643,7 @@ func BookletFromImages(ctx *model.Context, fileNames []string, nup *model.NUp, p
 		}
 
 		fileName := fileNames[bp.Number-1]
-		imgIndRef, w, h, err := loadBookletImageResource(xRefTable, bp.Number, fileName)
+		imgIndRef, w, h, err := loadBookletImageResource(c, xRefTable, bp.Number, fileName)
 		if err != nil {
 			return err
 		}
@@ -612,14 +661,23 @@ func BookletFromImages(ctx *model.Context, fileNames []string, nup *model.NUp, p
 	}
 
 	// Wrap incomplete booklet page.
-	if err := wrapUpPage(ctx, nup, formsResDict, buf, pagesDict, pagesIndRef); err != nil {
+	if err := wrapUpPageForOperation(
+		c, "n-up", ctx, nup, formsResDict, buf, pagesDict, pagesIndRef,
+	); err != nil {
 		return wrapBookletOutputPageError(outputPageNr, err)
 	}
-	return nil
+	return contextutil.Check(c)
 }
 
 // BookletFromPDF creates a booklet version of the PDF represented by xRefTable.
-func BookletFromPDF(ctx *model.Context, selectedPages types.IntSet, nup *model.NUp) error {
+// On failure, the original page tree and PageCount remain authoritative; ctx may contain orphaned partial output objects.
+func BookletFromPDF(c context.Context, ctx *model.Context, selectedPages types.IntSet, nup *model.NUp) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if err := requireContextWithXRefTable(ctx); err != nil {
+		return fmt.Errorf("booklet: source context: %w", err)
+	}
 	n := int(nup.Grid.Width * nup.Grid.Height)
 	if !(n == 2 || n == 4 || n == 6 || n == 8) {
 		return fmt.Errorf("booklet must have n={2,4,6,8} pages per sheet, got %d", n)
@@ -648,7 +706,7 @@ func BookletFromPDF(ctx *model.Context, selectedPages types.IntSet, nup *model.N
 
 	nup.PageDim = &types.Dim{Width: mb.Width(), Height: mb.Height()}
 
-	pageCount, err := bookletPages(ctx, selectedPages, nup, pagesDict, pagesIndRef)
+	pageCount, err := bookletPages(c, ctx, selectedPages, nup, pagesDict, pagesIndRef)
 	if err != nil {
 		return err
 	}
@@ -658,9 +716,15 @@ func BookletFromPDF(ctx *model.Context, selectedPages types.IntSet, nup *model.N
 	if err != nil {
 		return fmt.Errorf("booklet page tree: access catalog: %w", err)
 	}
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 
 	rootDict.Update("Pages", *pagesIndRef)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	ctx.PageCount = pageCount
 
 	return nil

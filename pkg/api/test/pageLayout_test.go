@@ -36,7 +36,7 @@ func TestPageLayout(t *testing.T) {
 
 	pageLayout := model.PageLayoutTwoColumnLeft
 
-	pl, err := api.PageLayoutFile(inFile, nil)
+	pl, err := api.PageLayoutFile(t.Context(), inFile, nil)
 	if err != nil {
 		t.Fatalf("%s %s: list pageLayout: %v\n", msg, inFile, err)
 	}
@@ -44,11 +44,11 @@ func TestPageLayout(t *testing.T) {
 		t.Fatalf("%s %s: list pageLayout, unexpected: %s\n", msg, inFile, pl)
 	}
 
-	if err := api.SetPageLayoutFile(inFile, "", pageLayout, nil); err != nil {
+	if err := api.SetPageLayoutFile(t.Context(), inFile, "", pageLayout, nil); err != nil {
 		t.Fatalf("%s %s: set pageLayout: %v\n", msg, inFile, err)
 	}
 
-	pl, err = api.PageLayoutFile(inFile, nil)
+	pl, err = api.PageLayoutFile(t.Context(), inFile, nil)
 	if err != nil {
 		t.Fatalf("%s %s: list pageLayout: %v\n", msg, inFile, err)
 	}
@@ -59,11 +59,11 @@ func TestPageLayout(t *testing.T) {
 		t.Fatalf("%s %s: list pageLayout, want:%s, got:%s\n", msg, inFile, pageLayout.String(), pl.String())
 	}
 
-	if err := api.ResetPageLayoutFile(inFile, "", nil); err != nil {
+	if err := api.ResetPageLayoutFile(t.Context(), inFile, "", nil); err != nil {
 		t.Fatalf("%s %s: reset pageLayout: %v\n", msg, inFile, err)
 	}
 
-	pl, err = api.PageLayoutFile(inFile, nil)
+	pl, err = api.PageLayoutFile(t.Context(), inFile, nil)
 	if err != nil {
 		t.Fatalf("%s %s: list page layout: %v\n", msg, inFile, err)
 	}
@@ -85,10 +85,10 @@ func TestPageLayoutOneColumnStream(t *testing.T) {
 	})
 
 	var out bytes.Buffer
-	if err := api.SetPageLayout(f, &out, model.PageLayoutOneColumn, nil); err != nil {
+	if err := api.SetPageLayout(t.Context(), f, &out, model.PageLayoutOneColumn, nil); err != nil {
 		t.Fatalf("set OneColumn page layout: %v", err)
 	}
-	ss, err := api.ListPageLayout(bytes.NewReader(out.Bytes()), nil)
+	ss, err := api.ListPageLayout(t.Context(), bytes.NewReader(out.Bytes()), nil)
 	if err != nil {
 		t.Fatalf("list OneColumn page layout: %v", err)
 	}
@@ -110,10 +110,10 @@ func TestPageLayoutOneColumnFile(t *testing.T) {
 	}
 	outFile := filepath.Join(dir, "out.pdf")
 
-	if err := api.SetPageLayoutFile(inFile, outFile, model.PageLayoutOneColumn, nil); err != nil {
+	if err := api.SetPageLayoutFile(t.Context(), inFile, outFile, model.PageLayoutOneColumn, nil); err != nil {
 		t.Fatalf("set OneColumn page layout: %v", err)
 	}
-	ss, err := api.ListPageLayoutFile(outFile, nil)
+	ss, err := api.ListPageLayoutFile(t.Context(), outFile, nil)
 	if err != nil {
 		t.Fatalf("list OneColumn page layout: %v", err)
 	}

@@ -18,12 +18,14 @@ package pdfcpu
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"math"
 	"sort"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/draw"
@@ -234,7 +236,10 @@ func resizeAnnotation(ctx *model.Context, d types.Dict, m matrix.Matrix) error {
 	return resizeAnnotationQuadPoints(ctx, d, m)
 }
 
-func resizePageAnnotations(ctx *model.Context, d types.Dict, m matrix.Matrix) error {
+func resizePageAnnotations(c context.Context, ctx *model.Context, d types.Dict, m matrix.Matrix) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	obj, found := d.Find("Annots")
 	if !found || obj == nil {
 		return nil
@@ -245,6 +250,9 @@ func resizePageAnnotations(ctx *model.Context, d types.Dict, m matrix.Matrix) er
 	}
 
 	for i, o := range arr {
+		if err := c.Err(); err != nil {
+			return err
+		}
 		d, err := ctx.DereferenceDict(o)
 		if err != nil {
 			return fmt.Errorf("%s: dereference dictionary: %w", resizeObjectContext(fmt.Sprintf("annotation %d", i+1), o), err)
@@ -260,7 +268,7 @@ func resizePageAnnotations(ctx *model.Context, d types.Dict, m matrix.Matrix) er
 	return nil
 }
 
-func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
+func resizePage(c context.Context, ctx *model.Context, pageNr int, res *model.Resize) error {
 	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
 	if err != nil {
 		return fmt.Errorf("page dictionary: %w", err)
@@ -322,8 +330,11 @@ func resizePage(ctx *model.Context, pageNr int, res *model.Resize) error {
 	if err := sd.Encode(); err != nil {
 		return fmt.Errorf("encode content stream: %w", err)
 	}
+	if err := c.Err(); err != nil {
+		return err
+	}
 
-	if err := resizePageAnnotations(ctx, d, m); err != nil {
+	if err := resizePageAnnotations(c, ctx, d, m); err != nil {
 		return fmt.Errorf("resize annotations: %w", err)
 	}
 
@@ -360,16 +371,38 @@ func resizePageNumbers(pageCount int, selectedPages types.IntSet) []int {
 	return pageNrs
 }
 
-// Resize resizes selectedPages using res.
-func Resize(ctx *model.Context, selectedPages types.IntSet, res *model.Resize) error {
+// Resize resizes selectedPages using res and supports cancellation.
+func Resize(c context.Context, ctx *model.Context, selectedPages types.IntSet, res *model.Resize) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if err := requireContextWithXRefTable(ctx); err != nil {
+		return fmt.Errorf("resize: source context: %w", err)
+	}
+	return resizeUsing(c, ctx, selectedPages, res, resizePage)
+}
+
+func resizeUsing(
+	c context.Context,
+	ctx *model.Context,
+	selectedPages types.IntSet,
+	res *model.Resize,
+	apply func(context.Context, *model.Context, int, *model.Resize) error,
+) error {
 	if log.DebugEnabled() {
 		log.Debug.Printf("Resize:\n%s\n", res)
 	}
 
 	for _, pageNr := range resizePageNumbers(ctx.PageCount, selectedPages) {
-		if err := resizePage(ctx, pageNr, res); err != nil {
+		if err := c.Err(); err != nil {
+			return err
+		}
+		if err := apply(c, ctx, pageNr, res); err != nil {
 			return fmt.Errorf("page %d: %w", pageNr, err)
 		}
+	}
+	if err := c.Err(); err != nil {
+		return err
 	}
 
 	ctx.EnsureVersionForWriting()

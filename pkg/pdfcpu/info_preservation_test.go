@@ -68,7 +68,7 @@ func writeInfoContext(t *testing.T, ctx *model.Context) []byte {
 	t.Helper()
 	var buf bytes.Buffer
 	ctx.Write.Writer = bufio.NewWriter(&buf)
-	if err := WriteContext(ctx); err != nil {
+	if err := WriteContext(t.Context(), ctx); err != nil {
 		t.Fatal(err)
 	}
 	return buf.Bytes()

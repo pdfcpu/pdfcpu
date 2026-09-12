@@ -111,6 +111,7 @@ func TestCAdESBaselineBFullValidationFlow(t *testing.T) {
 			result.Details.SubFilter = tt.subFilter
 
 			err := ValidatePKCS7Signatures(
+				t.Context(),
 				bytes.NewReader(fixture.input),
 				fixture.sigDict,
 				false,

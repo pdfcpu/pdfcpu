@@ -18,6 +18,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,29 +26,33 @@ import (
 	"os"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// ViewerPreferences returns rs's viewer preferences.
-func ViewerPreferences(rs io.ReadSeeker, conf *model.Configuration) (vp *model.ViewerPreferences, v *model.Version, err error) {
+// ViewerPreferences returns rs's viewer preferences and supports cancellation.
+func ViewerPreferences(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (vp *model.ViewerPreferences, v *model.Version, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	if rs == nil {
 		return nil, nil, ErrMissingPDFReadSeeker
 	}
 
 	conf = operationConfiguration(conf, model.LISTVIEWERPREFERENCES)
 
-	ctx, err := ReadAndValidate(rs, conf)
+	ctx, err := ReadAndValidate(c, rs, conf)
 	if err != nil {
 		return nil, nil, fmt.Errorf("list viewer preferences: prepare PDF context: %w", err)
 	}
 
 	version := ctx.XRefTable.Version()
 
-	return ctx.ViewerPref, &version, nil
+	return ctx.ViewerPref, &version, contextutil.Check(c)
 }
 
 func viewerPreferencesForListing(vp *model.ViewerPreferences, version model.Version, all bool) (*model.ViewerPreferences, error) {
@@ -62,7 +67,10 @@ func viewerPreferencesForListing(vp *model.ViewerPreferences, version model.Vers
 	return vp, nil
 }
 
-func marshalViewerPreferencesJSON(vp *model.ViewerPreferences) (string, error) {
+func marshalViewerPreferencesJSON(c context.Context, vp *model.ViewerPreferences) (string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return "", err
+	}
 	s := struct {
 		Header     pdfcpu.Header            `json:"header"`
 		ViewerPref *model.ViewerPreferences `json:"viewerPreferences"`
@@ -75,11 +83,14 @@ func marshalViewerPreferencesJSON(vp *model.ViewerPreferences) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("list viewer preferences: encode JSON: %w", err)
 	}
-	return string(bb), nil
+	return string(bb), contextutil.Check(c)
 }
 
-// ViewerPreferencesFile returns inFile's viewer preferences.
-func ViewerPreferencesFile(inFile string, all bool, conf *model.Configuration) (vp *model.ViewerPreferences, err error) {
+// ViewerPreferencesFile returns inFile's viewer preferences and supports cancellation.
+func ViewerPreferencesFile(c context.Context, inFile string, all bool, conf *model.Configuration) (vp *model.ViewerPreferences, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, ErrMissingPDFInput
 	}
@@ -92,7 +103,7 @@ func ViewerPreferencesFile(inFile string, all bool, conf *model.Configuration) (
 		err = closeViewerPreferencesInput(err, f, "list viewer preferences: close input")
 	}()
 
-	vp, version, err := ViewerPreferences(f, conf)
+	vp, version, err := ViewerPreferences(c, f, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -111,17 +122,20 @@ func closeViewerPreferencesInput(err error, f *os.File, context string) error {
 	return closeErr
 }
 
-// ListViewerPreferences returns rs's viewer preferences.
-func ListViewerPreferences(rs io.ReadSeeker, all bool, conf *model.Configuration) (ss []string, err error) {
+// ListViewerPreferences returns rs's viewer preferences and supports cancellation.
+func ListViewerPreferences(c context.Context, rs io.ReadSeeker, all bool, conf *model.Configuration) (ss []string, err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if rs == nil {
 		return nil, ErrMissingPDFReadSeeker
 	}
 
 	conf = operationConfiguration(conf, model.LISTVIEWERPREFERENCES)
 
-	ctx, err := ReadAndValidate(rs, conf)
+	ctx, err := ReadAndValidate(c, rs, conf)
 	if err != nil {
 		return nil, fmt.Errorf("list viewer preferences: prepare PDF context: %w", err)
 	}
@@ -133,12 +147,15 @@ func ListViewerPreferences(rs io.ReadSeeker, all bool, conf *model.Configuration
 	if vp == nil {
 		return []string{"No viewer preferences available."}, nil
 	}
-	return vp.List(), nil
+	return vp.List(), contextutil.Check(c)
 }
 
-// ListViewerPreferencesJSON returns rs's viewer preferences in JSON.
-func ListViewerPreferencesJSON(rs io.ReadSeeker, all bool, conf *model.Configuration) ([]string, error) {
-	vp, version, err := ViewerPreferences(rs, conf)
+// ListViewerPreferencesJSON returns rs's viewer preferences in JSON and supports cancellation.
+func ListViewerPreferencesJSON(c context.Context, rs io.ReadSeeker, all bool, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	vp, version, err := ViewerPreferences(c, rs, conf)
 	if err != nil {
 		return nil, err
 	}
@@ -148,15 +165,18 @@ func ListViewerPreferencesJSON(rs io.ReadSeeker, all bool, conf *model.Configura
 		return nil, err
 	}
 
-	s, err := marshalViewerPreferencesJSON(vp)
+	s, err := marshalViewerPreferencesJSON(c, vp)
 	if err != nil {
 		return nil, err
 	}
 	return []string{s}, nil
 }
 
-// ListViewerPreferencesFileJSON lists inFile's viewer preferences in JSON.
-func ListViewerPreferencesFileJSON(inFile string, all bool, conf *model.Configuration) (ss []string, err error) {
+// ListViewerPreferencesFileJSON lists inFile's viewer preferences in JSON and supports cancellation.
+func ListViewerPreferencesFileJSON(c context.Context, inFile string, all bool, conf *model.Configuration) (ss []string, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, ErrMissingPDFInput
 	}
@@ -169,17 +189,20 @@ func ListViewerPreferencesFileJSON(inFile string, all bool, conf *model.Configur
 		err = closeViewerPreferencesInput(err, f, "list viewer preferences: close input")
 	}()
 
-	return ListViewerPreferencesJSON(f, all, conf)
+	return ListViewerPreferencesJSON(c, f, all, conf)
 }
 
-// ListViewerPreferencesFile lists inFile's viewer preferences.
-func ListViewerPreferencesFile(inFile string, all, json bool, conf *model.Configuration) (ss []string, err error) {
+// ListViewerPreferencesFile lists inFile's viewer preferences and supports cancellation.
+func ListViewerPreferencesFile(c context.Context, inFile string, all, json bool, conf *model.Configuration) (ss []string, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if inFile == "" {
 		return nil, ErrMissingPDFInput
 	}
 
 	if json {
-		return ListViewerPreferencesFileJSON(inFile, all, conf)
+		return ListViewerPreferencesFileJSON(c, inFile, all, conf)
 	}
 
 	f, err := os.Open(inFile)
@@ -190,13 +213,17 @@ func ListViewerPreferencesFile(inFile string, all, json bool, conf *model.Config
 		err = closeViewerPreferencesInput(err, f, "list viewer preferences: close input")
 	}()
 
-	return ListViewerPreferences(f, all, conf)
+	return ListViewerPreferences(c, f, all, conf)
 }
 
-// SetViewerPreferences sets rs's viewer preferences and writes the result to w.
-func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferences, conf *model.Configuration) (err error) {
+// SetViewerPreferences sets rs's viewer preferences,
+// writes the result to w and supports cancellation.
+func SetViewerPreferences(c context.Context, rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferences, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -207,7 +234,7 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 
 	conf = operationConfiguration(conf, model.SETVIEWERPREFERENCES)
 
-	ctx, err := ReadAndValidate(rs, conf)
+	ctx, err := ReadAndValidate(c, rs, conf)
 	if err != nil {
 		return fmt.Errorf("set viewer preferences: prepare PDF context: %w", err)
 	}
@@ -226,14 +253,18 @@ func SetViewerPreferences(rs io.ReadSeeker, w io.Writer, vp model.ViewerPreferen
 
 	ctx.XRefTable.BindViewerPreferences()
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("set viewer preferences: write output: %w", err)
 	}
 	return nil
 }
 
-// SetViewerPreferencesFromJSONBytes sets rs's viewer preferences corresponding to jsonBytes and writes the result to w.
-func SetViewerPreferencesFromJSONBytes(rs io.ReadSeeker, w io.Writer, jsonBytes []byte, conf *model.Configuration) error {
+// SetViewerPreferencesFromJSONBytes sets rs's viewer preferences corresponding to jsonBytes,
+// writes the result to w and supports cancellation.
+func SetViewerPreferencesFromJSONBytes(c context.Context, rs io.ReadSeeker, w io.Writer, jsonBytes []byte, conf *model.Configuration) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -247,11 +278,18 @@ func SetViewerPreferencesFromJSONBytes(rs io.ReadSeeker, w io.Writer, jsonBytes 
 		return fmt.Errorf("set viewer preferences: decode JSON: %w", errors.Join(ErrInvalidJSON, err))
 	}
 
-	return SetViewerPreferences(rs, w, vp, conf)
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	return SetViewerPreferences(c, rs, w, vp, conf)
 }
 
-// SetViewerPreferencesFromJSONReader sets rs's viewer preferences corresponding to rd and writes the result to w.
-func SetViewerPreferencesFromJSONReader(rs io.ReadSeeker, w io.Writer, rd io.Reader, conf *model.Configuration) error {
+// SetViewerPreferencesFromJSONReader sets rs's viewer preferences corresponding to rd,
+// writes the result to w and supports cancellation.
+func SetViewerPreferencesFromJSONReader(c context.Context, rs io.ReadSeeker, w io.Writer, rd io.Reader, conf *model.Configuration) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -265,18 +303,22 @@ func SetViewerPreferencesFromJSONReader(rs io.ReadSeeker, w io.Writer, rd io.Rea
 	}
 
 	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, rd); err != nil {
+	if err := copyStream(c, &buf, rd); err != nil {
 		return fmt.Errorf("set viewer preferences: read JSON: %w", err)
 	}
 
-	return SetViewerPreferencesFromJSONBytes(rs, w, buf.Bytes(), conf)
+	return SetViewerPreferencesFromJSONBytes(c, rs, w, buf.Bytes(), conf)
 }
 
-// SetViewerPreferencesFile sets inFile's viewer preferences and writes the result to outFile.
-func SetViewerPreferencesFile(inFile, outFile string, vp model.ViewerPreferences, conf *model.Configuration) (err error) {
+// SetViewerPreferencesFile sets inFile's viewer preferences,
+// writes the result to outFile and supports cancellation.
+func SetViewerPreferencesFile(c context.Context, inFile, outFile string, vp model.ViewerPreferences, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -306,7 +348,10 @@ func SetViewerPreferencesFile(inFile, outFile string, vp model.ViewerPreferences
 		err = staged.commit()
 	}()
 
-	if err = SetViewerPreferences(f1, f2, vp, conf); err != nil {
+	if err = SetViewerPreferences(c, f1, f2, vp, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 
@@ -315,11 +360,15 @@ func SetViewerPreferencesFile(inFile, outFile string, vp model.ViewerPreferences
 	return nil
 }
 
-// SetViewerPreferencesFileFromJSONBytes sets inFile's viewer preferences corresponding to jsonBytes and writes the result to outFile.
-func SetViewerPreferencesFileFromJSONBytes(inFile, outFile string, jsonBytes []byte, conf *model.Configuration) (err error) {
+// SetViewerPreferencesFileFromJSONBytes sets inFile's viewer preferences corresponding to jsonBytes,
+// writes the result to outFile and supports cancellation.
+func SetViewerPreferencesFileFromJSONBytes(c context.Context, inFile, outFile string, jsonBytes []byte, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -349,7 +398,10 @@ func SetViewerPreferencesFileFromJSONBytes(inFile, outFile string, jsonBytes []b
 		err = staged.commit()
 	}()
 
-	if err = SetViewerPreferencesFromJSONBytes(f1, f2, jsonBytes, conf); err != nil {
+	if err = SetViewerPreferencesFromJSONBytes(c, f1, f2, jsonBytes, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 
@@ -358,8 +410,33 @@ func SetViewerPreferencesFileFromJSONBytes(inFile, outFile string, jsonBytes []b
 	return nil
 }
 
-// SetViewerPreferencesFileFromJSONFile sets inFile's viewer preferences corresponding to inFileJSON and writes the result to outFile.
-func SetViewerPreferencesFileFromJSONFile(inFilePDF, outFilePDF, inFileJSON string, conf *model.Configuration) error {
+func readViewerPreferencesJSON(c context.Context, fileName string) (bb []byte, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+
+	f, err := os.Open(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("set viewer preferences: read JSON %s: %w", fileName, err)
+	}
+	defer func() {
+		err = errors.Join(err, closeFile(f, "set viewer preferences: close JSON input"))
+	}()
+
+	var buf bytes.Buffer
+	if err := copyStream(c, &buf, f); err != nil {
+		return nil, fmt.Errorf("set viewer preferences: read JSON %s: %w", fileName, err)
+	}
+
+	return buf.Bytes(), contextutil.Check(c)
+}
+
+// SetViewerPreferencesFileFromJSONFile sets inFile's viewer preferences corresponding to inFileJSON,
+// writes the result to outFile and supports cancellation.
+func SetViewerPreferencesFileFromJSONFile(c context.Context, inFilePDF, outFilePDF, inFileJSON string, conf *model.Configuration) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFilePDF == "" {
 		return ErrMissingPDFInput
 	}
@@ -368,19 +445,22 @@ func SetViewerPreferencesFileFromJSONFile(inFilePDF, outFilePDF, inFileJSON stri
 		return ErrMissingJSONInput
 	}
 
-	bb, err := os.ReadFile(inFileJSON)
+	bb, err := readViewerPreferencesJSON(c, inFileJSON)
 	if err != nil {
-		return fmt.Errorf("set viewer preferences: read JSON %s: %w", inFileJSON, err)
+		return err
 	}
 
-	return SetViewerPreferencesFileFromJSONBytes(inFilePDF, outFilePDF, bb, conf)
+	return SetViewerPreferencesFileFromJSONBytes(c, inFilePDF, outFilePDF, bb, conf)
 }
 
 // ResetViewerPreferences resets rs's viewer preferences and writes the result to w.
 // If rs has no viewer preferences, it still writes the unchanged PDF and returns success.
-func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err error) {
+func ResetViewerPreferences(c context.Context, rs io.ReadSeeker, w io.Writer, conf *model.Configuration) (err error) {
 	defer fault.Catch(&err)
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if rs == nil {
 		return ErrMissingPDFReadSeeker
 	}
@@ -391,7 +471,7 @@ func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configura
 
 	conf = operationConfiguration(conf, model.RESETVIEWERPREFERENCES)
 
-	ctx, err := ReadAndValidate(rs, conf)
+	ctx, err := ReadAndValidate(c, rs, conf)
 	if err != nil {
 		return fmt.Errorf("reset viewer preferences: prepare PDF context: %w", err)
 	}
@@ -400,7 +480,7 @@ func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configura
 		delete(ctx.RootDict, "ViewerPreferences")
 	}
 
-	if err = Write(ctx, w, conf); err != nil {
+	if err = Write(c, ctx, w, conf); err != nil {
 		return fmt.Errorf("reset viewer preferences: write output: %w", err)
 	}
 	return nil
@@ -408,10 +488,13 @@ func ResetViewerPreferences(rs io.ReadSeeker, w io.Writer, conf *model.Configura
 
 // ResetViewerPreferencesFile resets inFile's viewer preferences and writes the result to outFile.
 // If inFile has no viewer preferences, it still writes the unchanged PDF and returns success.
-func ResetViewerPreferencesFile(inFile, outFile string, conf *model.Configuration) (err error) {
+func ResetViewerPreferencesFile(c context.Context, inFile, outFile string, conf *model.Configuration) (err error) {
 	var f1, f2 *os.File
 	ok := false
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if inFile == "" {
 		return ErrMissingPDFInput
 	}
@@ -441,7 +524,10 @@ func ResetViewerPreferencesFile(inFile, outFile string, conf *model.Configuratio
 		err = staged.commit()
 	}()
 
-	if err = ResetViewerPreferences(f1, f2, conf); err != nil {
+	if err = ResetViewerPreferences(c, f1, f2, conf); err != nil {
+		return err
+	}
+	if err = contextutil.Check(c); err != nil {
 		return err
 	}
 

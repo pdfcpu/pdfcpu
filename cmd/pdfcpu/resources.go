@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -24,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -43,18 +45,18 @@ func fontsCmd() *cobra.Command {
 			Use:   "list",
 			Short: "List supported fonts",
 			Args:  cobra.NoArgs,
-			RunE:  wrapHandler(handleListFontsCommand),
+			RunE:  wrapContextHandler(handleListFontsCommand),
 		},
 		&cobra.Command{
 			Use:   "install fontFiles...",
 			Short: "Install fonts",
 			Args:  cobra.MinimumNArgs(1),
-			RunE:  wrapHandler(handleInstallFontsCommand),
+			RunE:  wrapContextHandler(handleInstallFontsCommand),
 		},
 		&cobra.Command{
 			Use:   "cheatsheet [fontNames...]",
 			Short: "Create font cheat sheets",
-			RunE:  wrapHandler(handleCreateCheatSheetFontsCommand),
+			RunE:  wrapContextHandler(handleCreateCheatSheetFontsCommand),
 		},
 	)
 
@@ -73,7 +75,7 @@ func imagesCmd() *cobra.Command {
 		Use:   "list inFile...",
 		Short: "List images",
 		Args:  cobra.MinimumNArgs(1),
-		RunE:  wrapHandler(handleListImagesCommand),
+		RunE:  wrapContextHandler(handleListImagesCommand),
 	}
 	addSelectedPagesFlag(list)
 
@@ -81,7 +83,7 @@ func imagesCmd() *cobra.Command {
 		Use:   "extract inFile outDir",
 		Short: "Extract images",
 		Args:  cobra.ExactArgs(2),
-		RunE:  wrapHandler(handleExtractImagesCommand),
+		RunE:  wrapContextHandler(handleExtractImagesCommand),
 	}
 	addSelectedPagesFlag(extract)
 
@@ -89,7 +91,7 @@ func imagesCmd() *cobra.Command {
 		Use:   "update inFile imageFile [ outFile ] [ objNr | (pageNr Id) ]",
 		Short: "Update images",
 		Args:  cobra.RangeArgs(2, 5),
-		RunE:  wrapHandler(handleUpdateImagesCommand),
+		RunE:  wrapContextHandler(handleUpdateImagesCommand),
 	}
 
 	cmd.AddCommand(list, extract, update)
@@ -103,7 +105,7 @@ func importCmd() *cobra.Command {
 		Short: "Import/convert images to PDF",
 		Long:  usageLongImportImages,
 		Args:  cobra.MinimumNArgs(2),
-		RunE:  wrapHandler(handleImportImagesCommand),
+		RunE:  wrapContextHandler(handleImportImagesCommand),
 	}
 	addUnitFlag(cmd)
 
@@ -154,15 +156,21 @@ func expandedImageFileNames(arg string) ([]string, error) {
 	return matches, nil
 }
 
-func defaultImageImportCommand(conf *model.Configuration, args []string) error {
+func defaultImageImportCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	imageFileNames, err := parseArgsForImageFileNames(args, 1)
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.ImportImagesCommand(imageFileNames, args[0], api.DefaultImportConfig(), conf))
+	return runCommand(c, cli.ImportImagesCommand(imageFileNames, args[0], api.DefaultImportConfig(), conf))
 }
 
-func describedImageImportCommand(conf *model.Configuration, args []string) error {
+func describedImageImportCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	imp, err := api.Import(args[0], conf.Unit)
 	if err != nil {
 		return err
@@ -181,41 +189,53 @@ func describedImageImportCommand(conf *model.Configuration, args []string) error
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.ImportImagesCommand(imageFileNames, outFile, imp, conf))
+	return runCommand(c, cli.ImportImagesCommand(imageFileNames, outFile, imp, conf))
 }
 
-func handleImportImagesCommand(conf *model.Configuration, args []string) error {
+func handleImportImagesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := configureDisplayUnit(conf); err != nil {
 		return err
 	}
 	var outFile string
 	outFile = args[0]
 	if hasPDFExtension(outFile) || outFile == "-" {
-		return defaultImageImportCommand(conf, args)
+		return defaultImageImportCommand(c, conf, args)
 	}
-	return describedImageImportCommand(conf, args)
+	return describedImageImportCommand(c, conf, args)
 }
 
-func handleListFontsCommand(conf *model.Configuration, args []string) error {
-	return runCommand(cli.ListFontsCommand(conf))
+func handleListFontsCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	return runCommand(c, cli.ListFontsCommand(conf))
 }
 
-func handleInstallFontsCommand(conf *model.Configuration, args []string) error {
+func handleInstallFontsCommand(c context.Context, conf *model.Configuration, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("install fonts: %w", api.ErrMissingFontInput)
 	}
-	return runCommand(cli.InstallFontsCommand(args, conf))
+	return runCommand(c, cli.InstallFontsCommand(args, conf))
 }
 
-func handleCreateCheatSheetFontsCommand(conf *model.Configuration, args []string) error {
+func handleCreateCheatSheetFontsCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := validateNoEmptyArgs(args, "font name"); err != nil {
 		return err
 	}
-	return runCommand(cli.CreateCheatSheetsFontsCommand(args, conf))
+	return runCommand(c, cli.CreateCheatSheetsFontsCommand(args, conf))
 }
 
-func handleListImagesCommand(conf *model.Configuration, args []string) error {
-	inFiles, err := infoInputFiles(conf, args)
+func handleListImagesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	inFiles, err := infoInputFiles(c, conf, args)
 	if err != nil {
 		return err
 	}
@@ -224,10 +244,13 @@ func handleListImagesCommand(conf *model.Configuration, args []string) error {
 		return err
 	}
 
-	return runCommand(cli.ListImagesCommand(inFiles, selectedPages, conf))
+	return runCommand(c, cli.ListImagesCommand(inFiles, selectedPages, conf))
 }
 
-func handleExtractImagesCommand(conf *model.Configuration, args []string) error {
+func handleExtractImagesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	// See also handleExtractCommand
 	inFile := args[0]
 	if err := inputPDFArg(conf, inFile); err != nil {
@@ -243,10 +266,13 @@ func handleExtractImagesCommand(conf *model.Configuration, args []string) error 
 		return err
 	}
 
-	return runCommand(cli.ExtractImagesCommand(inFile, outDir, pages, conf))
+	return runCommand(c, cli.ExtractImagesCommand(inFile, outDir, pages, conf))
 }
 
-func handleUpdateImagesCommand(conf *model.Configuration, args []string) error {
+func handleUpdateImagesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile := args[0]
 	if err := inputPDFArg(conf, inFile); err != nil {
 		return err
@@ -262,7 +288,7 @@ func handleUpdateImagesCommand(conf *model.Configuration, args []string) error {
 		return err
 	}
 
-	return runCommand(cli.UpdateImagesCommand(inFile, imageFile, outFile, objNrOrPageNr, id, conf))
+	return runCommand(c, cli.UpdateImagesCommand(inFile, imageFile, outFile, objNrOrPageNr, id, conf))
 }
 
 func updateImageArgs(args []string) (string, int, string, error) {
@@ -312,25 +338,25 @@ func attachmentsCmd() *cobra.Command {
 			Use:   "list inFile",
 			Short: "List attachments",
 			Args:  cobra.ExactArgs(1),
-			RunE:  wrapHandler(handleListAttachmentsCommand),
+			RunE:  wrapContextHandler(handleListAttachmentsCommand),
 		},
 		&cobra.Command{
 			Use:   "add inFile file [ , desc ]...",
 			Short: "Add attachments",
 			Args:  cobra.MinimumNArgs(2),
-			RunE:  wrapHandler(handleAddAttachmentsCommand),
+			RunE:  wrapContextHandler(handleAddAttachmentsCommand),
 		},
 		&cobra.Command{
 			Use:   "remove inFile [ file... ]",
 			Short: "Remove attachments",
 			Args:  cobra.MinimumNArgs(1),
-			RunE:  wrapHandler(handleRemoveAttachmentsCommand),
+			RunE:  wrapContextHandler(handleRemoveAttachmentsCommand),
 		},
 		&cobra.Command{
 			Use:   "extract inFile outDir [ file... ]",
 			Short: "Extract attachments",
 			Args:  cobra.MinimumNArgs(2),
-			RunE:  wrapHandler(handleExtractAttachmentsCommand),
+			RunE:  wrapContextHandler(handleExtractAttachmentsCommand),
 		},
 	)
 
@@ -350,25 +376,25 @@ func portfolioCmd() *cobra.Command {
 			Use:   "list inFile",
 			Short: "List portfolio entries",
 			Args:  cobra.ExactArgs(1),
-			RunE:  wrapHandler(handleListAttachmentsCommand),
+			RunE:  wrapContextHandler(handleListAttachmentsCommand),
 		},
 		&cobra.Command{
 			Use:   "add inFile file [ , desc ]...",
 			Short: "Add portfolio entries",
 			Args:  cobra.MinimumNArgs(2),
-			RunE:  wrapHandler(handleAddAttachmentsPortfolioCommand),
+			RunE:  wrapContextHandler(handleAddAttachmentsPortfolioCommand),
 		},
 		&cobra.Command{
 			Use:   "remove inFile [ file... ]",
 			Short: "Remove portfolio entries",
 			Args:  cobra.MinimumNArgs(1),
-			RunE:  wrapHandler(handleRemoveAttachmentsCommand),
+			RunE:  wrapContextHandler(handleRemoveAttachmentsCommand),
 		},
 		&cobra.Command{
 			Use:   "extract inFile outDir [ file... ]",
 			Short: "Extract portfolio entries",
 			Args:  cobra.MinimumNArgs(2),
-			RunE:  wrapHandler(handleExtractAttachmentsCommand),
+			RunE:  wrapContextHandler(handleExtractAttachmentsCommand),
 		},
 	)
 
@@ -421,7 +447,10 @@ func attachmentFiles(args []string, expandGlobs bool, op string) ([]string, erro
 	return fileNames, nil
 }
 
-func handleListAttachmentsCommand(conf *model.Configuration, args []string) error {
+func handleListAttachmentsCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -432,10 +461,13 @@ func handleListAttachmentsCommand(conf *model.Configuration, args []string) erro
 	if err := inputPDFArg(conf, inFile); err != nil {
 		return fmt.Errorf("list attachments: validate input: %w", err)
 	}
-	return runCommand(cli.ListAttachmentsCommand(inFile, conf))
+	return runCommand(c, cli.ListAttachmentsCommand(inFile, conf))
 }
 
-func handleAddAttachmentsCommand(conf *model.Configuration, args []string) error {
+func handleAddAttachmentsCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -453,10 +485,13 @@ func handleAddAttachmentsCommand(conf *model.Configuration, args []string) error
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.AddAttachmentsCommand(inFile, stdoutForStdin(inFile), fileNames, conf))
+	return runCommand(c, cli.AddAttachmentsCommand(inFile, stdoutForStdin(inFile), fileNames, conf))
 }
 
-func handleAddAttachmentsPortfolioCommand(conf *model.Configuration, args []string) error {
+func handleAddAttachmentsPortfolioCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -474,10 +509,13 @@ func handleAddAttachmentsPortfolioCommand(conf *model.Configuration, args []stri
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.AddAttachmentsPortfolioCommand(inFile, stdoutForStdin(inFile), fileNames, conf))
+	return runCommand(c, cli.AddAttachmentsPortfolioCommand(inFile, stdoutForStdin(inFile), fileNames, conf))
 }
 
-func handleRemoveAttachmentsCommand(conf *model.Configuration, args []string) error {
+func handleRemoveAttachmentsCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -491,10 +529,13 @@ func handleRemoveAttachmentsCommand(conf *model.Configuration, args []string) er
 	if err := validateNoEmptyArgs(args[1:], "attachment filename"); err != nil {
 		return fmt.Errorf("remove attachments: validate attachment filenames: %w", err)
 	}
-	return runCommand(cli.RemoveAttachmentsCommand(inFile, stdoutForStdin(inFile), args[1:], conf))
+	return runCommand(c, cli.RemoveAttachmentsCommand(inFile, stdoutForStdin(inFile), args[1:], conf))
 }
 
-func handleExtractAttachmentsCommand(conf *model.Configuration, args []string) error {
+func handleExtractAttachmentsCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if conf == nil {
 		return api.ErrMissingConfiguration
 	}
@@ -515,7 +556,7 @@ func handleExtractAttachmentsCommand(conf *model.Configuration, args []string) e
 	if err := ensureOutputDirEmpty(outDir); err != nil {
 		return fmt.Errorf("extract attachments: prepare output directory: %w", err)
 	}
-	return runCommand(cli.ExtractAttachmentsCommand(inFile, outDir, args[2:], conf))
+	return runCommand(c, cli.ExtractAttachmentsCommand(inFile, outDir, args[2:], conf))
 }
 func keywordsCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -530,19 +571,19 @@ func keywordsCmd() *cobra.Command {
 			Use:   "list inFile",
 			Short: "List keywords",
 			Args:  cobra.ExactArgs(1),
-			RunE:  wrapHandler(handleListKeywordsCommand),
+			RunE:  wrapContextHandler(handleListKeywordsCommand),
 		},
 		&cobra.Command{
 			Use:   "add inFile [ outFile ] keyword...",
 			Short: "Add keywords",
 			Args:  cobra.MinimumNArgs(2),
-			RunE:  wrapHandler(handleAddKeywordsCommand),
+			RunE:  wrapContextHandler(handleAddKeywordsCommand),
 		},
 		&cobra.Command{
 			Use:   "remove inFile [ outFile ] [ keyword... ]",
 			Short: "Remove keywords",
 			Args:  cobra.MinimumNArgs(1),
-			RunE:  wrapHandler(handleRemoveKeywordsCommand),
+			RunE:  wrapContextHandler(handleRemoveKeywordsCommand),
 		},
 	)
 
@@ -562,19 +603,19 @@ func propertiesCmd() *cobra.Command {
 			Use:   "list inFile",
 			Short: "List properties",
 			Args:  cobra.ExactArgs(1),
-			RunE:  wrapHandler(handleListPropertiesCommand),
+			RunE:  wrapContextHandler(handleListPropertiesCommand),
 		},
 		&cobra.Command{
 			Use:   "add inFile [ outFile ] nameValuePair...",
 			Short: "Add properties",
 			Args:  cobra.MinimumNArgs(2),
-			RunE:  wrapHandler(handleAddPropertiesCommand),
+			RunE:  wrapContextHandler(handleAddPropertiesCommand),
 		},
 		&cobra.Command{
 			Use:   "remove inFile [ outFile ] [ name... ]",
 			Short: "Remove properties",
 			Args:  cobra.MinimumNArgs(1),
-			RunE:  wrapHandler(handleRemovePropertiesCommand),
+			RunE:  wrapContextHandler(handleRemovePropertiesCommand),
 		},
 	)
 
@@ -600,16 +641,22 @@ func metadataArgs(conf *model.Configuration, args []string) (string, string, []s
 	return inFile, outFile, args[start:], nil
 }
 
-func handleListKeywordsCommand(conf *model.Configuration, args []string) error {
+func handleListKeywordsCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile := args[0]
 	if err := inputPDFArg(conf, inFile); err != nil {
 		return err
 	}
 
-	return runCommand(cli.ListKeywordsCommand(inFile, conf))
+	return runCommand(c, cli.ListKeywordsCommand(inFile, conf))
 }
 
-func handleAddKeywordsCommand(conf *model.Configuration, args []string) error {
+func handleAddKeywordsCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile, outFile, keywords, err := metadataArgs(conf, args)
 	if err != nil {
 		return err
@@ -617,10 +664,13 @@ func handleAddKeywordsCommand(conf *model.Configuration, args []string) error {
 	if err := validateNoEmptyArgs(keywords, "keyword"); err != nil {
 		return err
 	}
-	return runCommand(cli.AddKeywordsCommand(inFile, outFile, keywords, conf))
+	return runCommand(c, cli.AddKeywordsCommand(inFile, outFile, keywords, conf))
 }
 
-func handleRemoveKeywordsCommand(conf *model.Configuration, args []string) error {
+func handleRemoveKeywordsCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile, outFile, keywords, err := metadataArgs(conf, args)
 	if err != nil {
 		return err
@@ -628,16 +678,19 @@ func handleRemoveKeywordsCommand(conf *model.Configuration, args []string) error
 	if err := validateNoEmptyArgs(keywords, "keyword"); err != nil {
 		return err
 	}
-	return runCommand(cli.RemoveKeywordsCommand(inFile, outFile, keywords, conf))
+	return runCommand(c, cli.RemoveKeywordsCommand(inFile, outFile, keywords, conf))
 }
 
-func handleListPropertiesCommand(conf *model.Configuration, args []string) error {
+func handleListPropertiesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile := args[0]
 	if err := inputPDFArg(conf, inFile); err != nil {
 		return err
 	}
 
-	return runCommand(cli.ListPropertiesCommand(inFile, conf))
+	return runCommand(c, cli.ListPropertiesCommand(inFile, conf))
 }
 
 func parsePropertyAssignment(arg string) (string, string, error) {
@@ -671,7 +724,10 @@ func properties(args []string) (map[string]string, error) {
 	return properties, nil
 }
 
-func handleAddPropertiesCommand(conf *model.Configuration, args []string) error {
+func handleAddPropertiesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile, outFile, propertyArgs, err := metadataArgs(conf, args)
 	if err != nil {
 		return err
@@ -680,7 +736,7 @@ func handleAddPropertiesCommand(conf *model.Configuration, args []string) error 
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.AddPropertiesCommand(inFile, outFile, properties, conf))
+	return runCommand(c, cli.AddPropertiesCommand(inFile, outFile, properties, conf))
 }
 
 func propertyKeys(args []string) ([]string, error) {
@@ -698,7 +754,10 @@ func propertyKeys(args []string) ([]string, error) {
 	return keys, nil
 }
 
-func handleRemovePropertiesCommand(conf *model.Configuration, args []string) error {
+func handleRemovePropertiesCommand(c context.Context, conf *model.Configuration, args []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	inFile, outFile, keyArgs, err := metadataArgs(conf, args)
 	if err != nil {
 		return err
@@ -707,5 +766,5 @@ func handleRemovePropertiesCommand(conf *model.Configuration, args []string) err
 	if err != nil {
 		return err
 	}
-	return runCommand(cli.RemovePropertiesCommand(inFile, outFile, keys, conf))
+	return runCommand(c, cli.RemovePropertiesCommand(inFile, outFile, keys, conf))
 }

@@ -102,6 +102,7 @@ func importImageConstructionError(
 		}
 	}()
 	_, err = NewPagesForImage(
+		t.Context(),
 		xRefTable,
 		bytes.NewReader(imageOperationPNG(t, 1, 1)),
 		parentIndRef,
@@ -167,6 +168,7 @@ func TestNewPagesForImageReportsImageResourcePhase(t *testing.T) {
 	ctx.XRefTable.Table[0].Offset = &missingObjectOffset
 
 	_, err := NewPagesForImage(
+		t.Context(),
 		ctx.XRefTable,
 		bytes.NewReader(imageOperationPNG(t, 1, 1)),
 		pagesIndRef,
@@ -184,6 +186,7 @@ func TestNewPagesForImageReportsImageResourcePhase(t *testing.T) {
 func TestNewPagesForImageDecodeErrorContext(t *testing.T) {
 	ctx, pagesIndRef := newImportImageContext(t)
 	_, err := NewPagesForImage(
+		t.Context(),
 		ctx.XRefTable,
 		bytes.NewReader(nil),
 		pagesIndRef,

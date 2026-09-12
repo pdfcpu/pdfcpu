@@ -34,7 +34,7 @@ func TestInfoNilGuards(t *testing.T) {
 		{
 			name: "info missing context",
 			fn: func() error {
-				_, err := Info(nil, "", nil, false)
+				_, err := Info(t.Context(), nil, "", nil, false)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -42,19 +42,19 @@ func TestInfoNilGuards(t *testing.T) {
 		{
 			name: "list info missing info",
 			fn: func() error {
-				_, err := ListInfo(nil, nil, false)
+				_, err := ListInfo(t.Context(), nil, nil, false)
 				return err
 			},
 			wantErr: ErrMissingPDFInfo,
 		},
 		{
 			name:    "detect watermarks missing context",
-			fn:      func() error { return DetectWatermarks(nil) },
+			fn:      func() error { return DetectWatermarks(t.Context(), nil) },
 			wantErr: ErrMissingPDFContext,
 		},
 		{
 			name:    "detect page tree watermarks missing context",
-			fn:      func() error { return DetectPageTreeWatermarks(nil) },
+			fn:      func() error { return DetectPageTreeWatermarks(t.Context(), nil) },
 			wantErr: ErrMissingPDFContext,
 		},
 	}
@@ -76,7 +76,7 @@ func TestInfoPageBoundaryErrorsIncludePageTreeContext(t *testing.T) {
 	}
 	ctx.RootDict["Pages"] = *types.NewIndirectRef(999, 0)
 
-	_, err = Info(ctx, "broken.pdf", nil, false)
+	_, err = Info(t.Context(), ctx, "broken.pdf", nil, false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -95,7 +95,7 @@ func TestDetectWatermarksErrorsIncludeOptionalContentAndPageTreeContext(t *testi
 		}
 		ctx.RootDict["OCProperties"] = *types.NewIndirectRef(999, 0)
 
-		err = DetectWatermarks(ctx)
+		err = DetectWatermarks(t.Context(), ctx)
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -113,7 +113,7 @@ func TestDetectWatermarksErrorsIncludeOptionalContentAndPageTreeContext(t *testi
 		}
 		ctx.RootDict = types.Dict{}
 
-		err = DetectPageTreeWatermarks(ctx)
+		err = DetectPageTreeWatermarks(t.Context(), ctx)
 		if err == nil {
 			t.Fatal("expected error")
 		}

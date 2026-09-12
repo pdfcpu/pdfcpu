@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -500,7 +501,7 @@ func TestUpdateFileTransactionPreservesInput(t *testing.T) {
 				t.Fatal(err)
 			}
 			failure := errors.New("partial update failed")
-			err := updateFileTransaction(path, "test", func(f *os.File) error {
+			err := updateFileTransaction(t.Context(), path, "test", func(_ context.Context, f *os.File) error {
 				bb, err := io.ReadAll(f)
 				if err != nil || string(bb) != "original" {
 					t.Fatalf("staged input: %q, %v", bb, err)
@@ -556,11 +557,11 @@ func TestPatchFileTransaction(t *testing.T) {
 	if err := os.WriteFile(path, []byte("original"), 0640); err != nil {
 		t.Fatal(err)
 	}
-	if err := PatchFile(path, []byte("XX"), 2); err != nil {
+	if err := PatchFile(t.Context(), path, []byte("XX"), 2); err != nil {
 		t.Fatal(err)
 	}
 	requireFileContent(t, path, "orXXinal", "patched")
-	if err := PatchFile(path, []byte("bad"), -1); err == nil {
+	if err := PatchFile(t.Context(), path, []byte("bad"), -1); err == nil {
 		t.Fatal("expected invalid offset error")
 	}
 	requireFileContent(t, path, "orXXinal", "failed patch")

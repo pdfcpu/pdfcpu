@@ -54,7 +54,7 @@ func readKeywordTestFile(t *testing.T, fileName string) []string {
 	}
 	defer f.Close()
 
-	keywords, err := Keywords(f, nil)
+	keywords, err := Keywords(t.Context(), f, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,15 +69,15 @@ func TestKeywordAPIArgumentErrors(t *testing.T) {
 		want error
 	}{
 		{name: "list reader", err: func() error {
-			_, err := Keywords(nil, nil)
+			_, err := Keywords(t.Context(), nil, nil)
 			return err
 		}(), want: ErrMissingPDFReadSeeker},
-		{name: "add reader", err: AddKeywords(nil, io.Discard, nil, nil), want: ErrMissingPDFReadSeeker},
-		{name: "add writer", err: AddKeywords(bytes.NewReader(nil), nil, nil, nil), want: ErrMissingPDFWriter},
-		{name: "remove reader", err: RemoveKeywords(nil, io.Discard, nil, nil), want: ErrMissingPDFReadSeeker},
-		{name: "remove writer", err: RemoveKeywords(bytes.NewReader(nil), nil, nil, nil), want: ErrMissingPDFWriter},
-		{name: "add file input", err: AddKeywordsFile("", "", nil, nil), want: ErrMissingPDFInput},
-		{name: "remove file input", err: RemoveKeywordsFile("", "", nil, nil), want: ErrMissingPDFInput},
+		{name: "add reader", err: AddKeywords(t.Context(), nil, io.Discard, nil, nil), want: ErrMissingPDFReadSeeker},
+		{name: "add writer", err: AddKeywords(t.Context(), bytes.NewReader(nil), nil, nil, nil), want: ErrMissingPDFWriter},
+		{name: "remove reader", err: RemoveKeywords(t.Context(), nil, io.Discard, nil, nil), want: ErrMissingPDFReadSeeker},
+		{name: "remove writer", err: RemoveKeywords(t.Context(), bytes.NewReader(nil), nil, nil, nil), want: ErrMissingPDFWriter},
+		{name: "add file input", err: AddKeywordsFile(t.Context(), "", "", nil, nil), want: ErrMissingPDFInput},
+		{name: "remove file input", err: RemoveKeywordsFile(t.Context(), "", "", nil, nil), want: ErrMissingPDFInput},
 	}
 
 	for _, tt := range tests {
@@ -92,6 +92,7 @@ func TestKeywordAPIArgumentErrors(t *testing.T) {
 // TestRemoveKeywordsNoMatchPreservesSentinel verifies callers can detect a no-op removal.
 func TestRemoveKeywordsNoMatchPreservesSentinel(t *testing.T) {
 	err := RemoveKeywords(
+		t.Context(),
 		openAPITestPDF(t, keywordTestInputFile()),
 		io.Discard,
 		[]string{"pdfcpu-keyword-that-does-not-exist"},
@@ -113,16 +114,16 @@ func TestKeywordAPIValidatesKeywordsBeforeReading(t *testing.T) {
 		want string
 	}{
 		{name: "add stream", run: func(_ string) error {
-			return AddKeywords(bytes.NewReader(nil), io.Discard, []string{" "}, nil)
+			return AddKeywords(t.Context(), bytes.NewReader(nil), io.Discard, []string{" "}, nil)
 		}, want: "add keywords: validate keywords"},
 		{name: "remove stream", run: func(_ string) error {
-			return RemoveKeywords(bytes.NewReader(nil), io.Discard, []string{" "}, nil)
+			return RemoveKeywords(t.Context(), bytes.NewReader(nil), io.Discard, []string{" "}, nil)
 		}, want: "remove keywords: validate keywords"},
 		{name: "add file", run: func(inFile string) error {
-			return AddKeywordsFile(inFile, filepath.Join(t.TempDir(), "out.pdf"), []string{" "}, nil)
+			return AddKeywordsFile(t.Context(), inFile, filepath.Join(t.TempDir(), "out.pdf"), []string{" "}, nil)
 		}, want: "add keywords: validate keywords"},
 		{name: "remove file", run: func(inFile string) error {
-			return RemoveKeywordsFile(inFile, filepath.Join(t.TempDir(), "out.pdf"), []string{" "}, nil)
+			return RemoveKeywordsFile(t.Context(), inFile, filepath.Join(t.TempDir(), "out.pdf"), []string{" "}, nil)
 		}, want: "remove keywords: validate keywords"},
 	}
 
@@ -147,11 +148,11 @@ func TestKeywordAPIPrepareContextErrors(t *testing.T) {
 		want string
 	}{
 		{name: "list", err: func() error {
-			_, err := Keywords(bytes.NewReader(nil), nil)
+			_, err := Keywords(t.Context(), bytes.NewReader(nil), nil)
 			return err
 		}(), want: "list keywords: prepare PDF context"},
-		{name: "add", err: AddKeywords(bytes.NewReader(nil), io.Discard, nil, nil), want: "add keywords: prepare PDF context"},
-		{name: "remove", err: RemoveKeywords(bytes.NewReader(nil), io.Discard, nil, nil), want: "remove keywords: prepare PDF context"},
+		{name: "add", err: AddKeywords(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil), want: "add keywords: prepare PDF context"},
+		{name: "remove", err: RemoveKeywords(t.Context(), bytes.NewReader(nil), io.Discard, nil, nil), want: "remove keywords: prepare PDF context"},
 	}
 
 	for _, tt := range tests {
@@ -167,6 +168,7 @@ func TestKeywordAPIPrepareContextErrors(t *testing.T) {
 func TestAddKeywordsWriteErrorPreservesCause(t *testing.T) {
 	want := errors.New("keyword writer failed")
 	err := AddKeywords(
+		t.Context(),
 		openAPITestPDF(t, keywordTestInputFile()),
 		failingWriter{err: want},
 		[]string{"keyword"},
@@ -188,10 +190,10 @@ func TestKeywordFileOpenAndCreateErrors(t *testing.T) {
 		err  error
 		want string
 	}{
-		{name: "add open", err: AddKeywordsFile(missing, "", nil, nil), want: "add keywords: open input"},
-		{name: "remove open", err: RemoveKeywordsFile(missing, "", nil, nil), want: "remove keywords: open input"},
-		{name: "add create", err: AddKeywordsFile(keywordTestInputFile(), filepath.Join(t.TempDir(), "missing", "out.pdf"), nil, nil), want: "add keywords: create output"},
-		{name: "remove create", err: RemoveKeywordsFile(keywordTestInputFile(), filepath.Join(t.TempDir(), "missing", "out.pdf"), nil, nil), want: "remove keywords: create output"},
+		{name: "add open", err: AddKeywordsFile(t.Context(), missing, "", nil, nil), want: "add keywords: open input"},
+		{name: "remove open", err: RemoveKeywordsFile(t.Context(), missing, "", nil, nil), want: "remove keywords: open input"},
+		{name: "add create", err: AddKeywordsFile(t.Context(), keywordTestInputFile(), filepath.Join(t.TempDir(), "missing", "out.pdf"), nil, nil), want: "add keywords: create output"},
+		{name: "remove create", err: RemoveKeywordsFile(t.Context(), keywordTestInputFile(), filepath.Join(t.TempDir(), "missing", "out.pdf"), nil, nil), want: "remove keywords: create output"},
 	}
 
 	for _, tt := range tests {
@@ -219,7 +221,7 @@ func TestKeywordFileFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := AddKeywordsFile(inFile, outFile, []string{"keyword"}, nil)
+	err := AddKeywordsFile(t.Context(), inFile, outFile, []string{"keyword"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "add keywords: prepare PDF context") {
 		t.Fatalf("expected prepare-context error, got %v", err)
 	}
@@ -238,7 +240,7 @@ func TestKeywordFileSuccessReplacesExistingOutput(t *testing.T) {
 	if err := os.WriteFile(outFile, []byte("existing output"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := AddKeywordsFile(keywordTestInputFile(), outFile, []string{"keyword"}, nil); err != nil {
+	if err := AddKeywordsFile(t.Context(), keywordTestInputFile(), outFile, []string{"keyword"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	b, err := os.ReadFile(outFile)
@@ -259,7 +261,7 @@ func TestKeywordFileFailureRemovesNewOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := AddKeywordsFile(inFile, outFile, []string{"keyword"}, nil)
+	err := AddKeywordsFile(t.Context(), inFile, outFile, []string{"keyword"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "add keywords: prepare PDF context") {
 		t.Fatalf("expected prepare-context error, got %v", err)
 	}
@@ -271,7 +273,7 @@ func TestKeywordFileFailureRemovesNewOutput(t *testing.T) {
 // TestAddKeywordsFileReplacesInput verifies successful in-place finalization.
 func TestAddKeywordsFileReplacesInput(t *testing.T) {
 	inFile := copyKeywordTestInput(t)
-	if err := AddKeywordsFile(inFile, "", []string{"keyword"}, nil); err != nil {
+	if err := AddKeywordsFile(t.Context(), inFile, "", []string{"keyword"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if keywords := readKeywordTestFile(t, inFile); !slices.Contains(keywords, "keyword") {
@@ -282,7 +284,7 @@ func TestAddKeywordsFileReplacesInput(t *testing.T) {
 // TestRemoveKeywordsFileReplacesExistingOutput verifies successful delayed replacement for removal.
 func TestRemoveKeywordsFileReplacesExistingOutput(t *testing.T) {
 	inFile := copyKeywordTestInput(t)
-	if err := AddKeywordsFile(inFile, "", []string{"keyword"}, nil); err != nil {
+	if err := AddKeywordsFile(t.Context(), inFile, "", []string{"keyword"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
@@ -290,7 +292,7 @@ func TestRemoveKeywordsFileReplacesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := RemoveKeywordsFile(inFile, outFile, []string{"keyword"}, nil); err != nil {
+	if err := RemoveKeywordsFile(t.Context(), inFile, outFile, []string{"keyword"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if keywords := readKeywordTestFile(t, outFile); slices.Contains(keywords, "keyword") {
@@ -305,7 +307,7 @@ func TestKeywordFileAliasDoesNotOverwriteInput(t *testing.T) {
 	if err := os.Link(inFile, outFile); err != nil {
 		t.Fatal(err)
 	}
-	if err := AddKeywordsFile(inFile, outFile, []string{"keyword"}, nil); err != nil {
+	if err := AddKeywordsFile(t.Context(), inFile, outFile, []string{"keyword"}, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -325,7 +327,7 @@ func TestAddKeywordsDoesNotMutateCallerSlice(t *testing.T) {
 	keywords := []string{" alpha ", "beta"}
 	want := slices.Clone(keywords)
 	var out bytes.Buffer
-	if err := AddKeywords(openAPITestPDF(t, keywordTestInputFile()), &out, keywords, nil); err != nil {
+	if err := AddKeywords(t.Context(), openAPITestPDF(t, keywordTestInputFile()), &out, keywords, nil); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Equal(keywords, want) {

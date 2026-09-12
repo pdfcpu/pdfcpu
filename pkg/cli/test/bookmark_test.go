@@ -30,7 +30,7 @@ func TestListBookmarks(t *testing.T) {
 	inFile := filepath.Join(inDir, "bookmarks", "bookmarkTree.pdf")
 
 	cmd := cli.ListBookmarksCommand(inFile, conf)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -42,7 +42,7 @@ func TestExportBookmarks(t *testing.T) {
 	outFile := filepath.Join(outDir, "bookmarkTree.json")
 
 	cmd := cli.ExportBookmarksCommand(inFile, outFile, nil)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }
@@ -55,17 +55,17 @@ func TestImportBookmarks(t *testing.T) {
 	outFile := filepath.Join(outDir, "bookmarkTreeImported.pdf")
 
 	exportCmd := cli.ExportBookmarksCommand(inFile, inFileJSON, nil)
-	if _, err := cli.Dispatch(exportCmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), exportCmd); err != nil {
 		t.Fatalf("%s export bookmarks: %v\n", msg, err)
 	}
 
 	replace := true
 	cmd := cli.ImportBookmarksCommand(inFile, inFileJSON, outFile, replace, nil)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
-	if err := api.ImportBookmarksFile(inFile, inFileJSON, outFile, replace, nil); err != nil {
+	if err := api.ImportBookmarksFile(t.Context(), inFile, inFileJSON, outFile, replace, nil); err != nil {
 		t.Fatalf("%s importBookmarks: %v\n", msg, err)
 	}
 
@@ -81,7 +81,7 @@ func TestRemoveBookmarks(t *testing.T) {
 	outFile := filepath.Join(outDir, "bookmarkTreeNoBookmarks.pdf")
 
 	cmd := cli.RemoveBookmarksCommand(inFile, outFile, nil)
-	if _, err := cli.Dispatch(cmd); err != nil {
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 

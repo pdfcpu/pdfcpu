@@ -33,7 +33,7 @@ func TestWriteAttachmentPreservesExistingOutputPermissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := writeAttachmentToPath(fileName, model.Attachment{Reader: strings.NewReader("replacement")})
+	err := writeAttachmentToPath(t.Context(), fileName, model.Attachment{Reader: strings.NewReader("replacement")})
 	if err != nil {
 		t.Fatal(err)
 	}

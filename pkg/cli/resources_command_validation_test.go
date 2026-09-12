@@ -25,7 +25,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-type resourceCommandExecutor func(*Command) ([]string, error)
+type resourceCommandExecutor = dispatchFunc
 
 // TestResourceExecutorsRejectNilCommand verifies every public resource executor has a safe nil boundary.
 func TestResourceExecutorsRejectNilCommand(t *testing.T) {
@@ -33,27 +33,27 @@ func TestResourceExecutorsRejectNilCommand(t *testing.T) {
 		name string
 		run  resourceCommandExecutor
 	}{
-		{"ImportImages", ImportImages},
-		{"CreateCheatSheetsFonts", CreateCheatSheetsFonts},
-		{"ListFonts", ListFonts},
-		{"InstallFonts", InstallFonts},
-		{"ListImages", ListImages},
-		{"UpdateImages", UpdateImages},
-		{"ListAttachments", ListAttachments},
-		{"AddAttachments", AddAttachments},
-		{"RemoveAttachments", RemoveAttachments},
-		{"ExtractAttachments", ExtractAttachments},
-		{"ListKeywords", ListKeywords},
-		{"AddKeywords", AddKeywords},
-		{"RemoveKeywords", RemoveKeywords},
-		{"ListProperties", ListProperties},
-		{"AddProperties", AddProperties},
-		{"RemoveProperties", RemoveProperties},
+		{"ImportImages", importImages},
+		{"CreateCheatSheetsFonts", createCheatSheetsFonts},
+		{"ListFonts", listFonts},
+		{"InstallFonts", installFonts},
+		{"ListImages", listImages},
+		{"UpdateImages", updateImages},
+		{"ListAttachments", listAttachmentsCommand},
+		{"AddAttachments", addAttachments},
+		{"RemoveAttachments", removeAttachments},
+		{"ExtractAttachments", extractAttachments},
+		{"ListKeywords", listKeywords},
+		{"AddKeywords", addKeywords},
+		{"RemoveKeywords", removeKeywords},
+		{"ListProperties", listPropertiesCommand},
+		{"AddProperties", addProperties},
+		{"RemoveProperties", removeProperties},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := tt.run(nil)
+			_, err := tt.run(t.Context(), nil)
 			if !errors.Is(err, ErrMissingCommand) {
 				t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 			}
@@ -87,7 +87,7 @@ func TestDispatchRejectsIncompleteResourceCommandsWithoutPanic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Dispatch(&Command{Mode: tt.mode})
+			_, err := Dispatch(t.Context(), &Command{Mode: tt.mode})
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("expected %v, got %v", tt.want, err)
 			}
@@ -109,7 +109,7 @@ func TestValidateFontsCommandRejectsInappropriateModes(t *testing.T) {
 }
 
 func TestInstallFontsExecutorPreservesAPICause(t *testing.T) {
-	_, err := InstallFonts(&Command{Mode: model.INSTALLFONTS})
+	_, err := installFonts(t.Context(), &Command{Mode: model.INSTALLFONTS})
 	if !errors.Is(err, api.ErrMissingFontInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingFontInput, err)
 	}

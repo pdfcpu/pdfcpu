@@ -17,12 +17,14 @@ limitations under the License.
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/internal/fileutil"
 )
 
@@ -105,10 +107,7 @@ type stagedOutput struct {
 	operations     fileOperations
 }
 
-func newStagedOutput(
-	input, output *os.File,
-	temporaryFile, inFile, outFile, replaceOut, operation string,
-) stagedOutput {
+func newStagedOutput(input, output *os.File, temporaryFile, inFile, outFile, replaceOut, operation string) stagedOutput {
 	destination := replaceOut
 	replaceContext := operation + ": replace output"
 	if destination == "" && (outFile == "" || inFile == outFile) {
@@ -130,11 +129,7 @@ func openStagedOutput(input *os.File, inFile, outFile, operation string) (staged
 	return openStagedOutputWithOperations(input, inFile, outFile, operation, defaultFileOperations())
 }
 
-func openStagedOutputWithOperations(
-	input *os.File,
-	inFile, outFile, operation string,
-	ops fileOperations,
-) (stagedOutput, error) {
+func openStagedOutputWithOperations(input *os.File, inFile, outFile, operation string, ops fileOperations) (stagedOutput, error) {
 	target := inFile
 	replaceOut := ""
 	if outFile != "" && inFile != outFile {
@@ -223,11 +218,7 @@ func outputAliasesInput(inFile, outFile string) (bool, error) {
 	return outputAliasesInputWith(inFile, outFile, filepath.Abs, os.Stat)
 }
 
-func outputAliasesInputWith(
-	inFile, outFile string,
-	abs func(string) (string, error),
-	stat func(string) (os.FileInfo, error),
-) (bool, error) {
+func outputAliasesInputWith(inFile, outFile string, abs func(string) (string, error), stat func(string) (os.FileInfo, error)) (bool, error) {
 	inAbs, err := abs(inFile)
 	if err != nil {
 		return false, fmt.Errorf("resolve input path: %w", err)
@@ -256,8 +247,35 @@ func outputAliasesInputWith(
 	return os.SameFile(inInfo, outInfo), nil
 }
 
-// updateFileTransaction applies an update to a private copy before replacing the input file.
-func updateFileTransaction(fileName, operation string, update func(*os.File) error) error {
+func copyStream(c context.Context, dst io.Writer, src io.Reader) error {
+	buf := make([]byte, 32*1024)
+	for {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		n, readErr := src.Read(buf)
+		if n > 0 {
+			written, err := dst.Write(buf[:n])
+			if err != nil {
+				return err
+			}
+			if written != n {
+				return io.ErrShortWrite
+			}
+		}
+		if errors.Is(readErr, io.EOF) {
+			return contextutil.Check(c)
+		}
+		if readErr != nil {
+			return readErr
+		}
+	}
+}
+
+func updateFileTransaction(c context.Context, fileName, operation string, update func(context.Context, *os.File) error) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	input, err := os.Open(fileName)
 	if err != nil {
 		return fmt.Errorf("%s: open input %s: %w", operation, fileName, err)
@@ -269,13 +287,19 @@ func updateFileTransaction(fileName, operation string, update func(*os.File) err
 			closeFile(input, operation+": close input"),
 		)
 	}
-	if _, err := io.Copy(staged.output.file, input); err != nil {
+	if err := copyStream(c, staged.output.file, input); err != nil {
 		return staged.cleanup(fmt.Errorf("%s: copy input: %w", operation, err))
 	}
 	if _, err := staged.output.file.Seek(0, io.SeekStart); err != nil {
 		return staged.cleanup(fmt.Errorf("%s: rewind output: %w", operation, err))
 	}
-	if err := update(staged.output.file); err != nil {
+	if err := contextutil.Check(c); err != nil {
+		return staged.cleanup(err)
+	}
+	if err := update(c, staged.output.file); err != nil {
+		return staged.cleanup(err)
+	}
+	if err := contextutil.Check(c); err != nil {
 		return staged.cleanup(err)
 	}
 	return staged.commit()

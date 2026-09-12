@@ -18,6 +18,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -42,13 +43,13 @@ func (w validationErrorWriter) Write([]byte) (int, error) {
 func TestValidateSingleValidFile(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 
-	if _, err := Validate(ValidateCommand([]string{inFile}, nil)); err != nil {
+	if _, err := validateCommand(t.Context(), ValidateCommand([]string{inFile}, nil)); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestValidateSingleMissingFilePreservesNotExist(t *testing.T) {
-	_, err := Validate(ValidateCommand([]string{"missing.pdf"}, nil))
+	_, err := validateCommand(t.Context(), ValidateCommand([]string{"missing.pdf"}, nil))
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -57,7 +58,7 @@ func TestValidateSingleMissingFilePreservesNotExist(t *testing.T) {
 func TestValidateMultipleFilesReturnsJoinedErrorsWithoutReporter(t *testing.T) {
 	inFiles := []string{"missing1.pdf", "missing2.pdf"}
 
-	_, err := Validate(ValidateCommand(inFiles, nil))
+	_, err := validateCommand(t.Context(), ValidateCommand(inFiles, nil))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -78,7 +79,7 @@ func TestValidateMultipleFilesStreamsFailuresAndContinues(t *testing.T) {
 	var errorOutput bytes.Buffer
 	cmd.ErrorOutput = &errorOutput
 
-	_, err := Validate(cmd)
+	_, err := validateCommand(t.Context(), cmd)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -110,7 +111,7 @@ func TestValidateProgressPrecedesEachInput(t *testing.T) {
 	cmd.BoolVal1 = true
 	cmd.ErrorOutput = &errorOutput
 
-	_, err := Validate(cmd)
+	_, err := validateCommand(t.Context(), cmd)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -134,7 +135,7 @@ func TestValidateProgressLabelsStandardInput(t *testing.T) {
 	cmd.BoolVal1 = true
 	cmd.ErrorOutput = &errorOutput
 
-	if _, err := Validate(cmd); err == nil {
+	if _, err := validateCommand(t.Context(), cmd); err == nil {
 		t.Fatal("expected error")
 	}
 	if got, want := errorOutput.String(), "validating(mode=relaxed) stdin ...\n"; got != want {
@@ -149,7 +150,7 @@ func TestValidateProgressWriterFailurePreservesCause(t *testing.T) {
 	cmd.BoolVal1 = true
 	cmd.ErrorOutput = validationErrorWriter{err: wantErr}
 
-	_, err := Validate(cmd)
+	_, err := validateCommand(t.Context(), cmd)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -161,7 +162,7 @@ func TestValidateProgressWriterFailurePreservesCause(t *testing.T) {
 func TestDumpMissingFilePreservesNotExist(t *testing.T) {
 	cmd := DumpCommand("missing.pdf", []int{0, 0}, nil)
 
-	_, err := Dump(cmd)
+	_, err := dump(t.Context(), cmd)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
@@ -175,7 +176,7 @@ func TestInfoReportsRelaxedValidationWithoutChangingJSON(t *testing.T) {
 	cmd := InfoCommand([]string{input, input}, nil, false, true, conf)
 	cmd.ErrorOutput = &notice
 
-	out, err := ListInfo(cmd)
+	out, err := listInfoCommand(t.Context(), cmd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +198,7 @@ func TestDumpReportsRelaxedValidationWithoutChangingConfiguration(t *testing.T) 
 	cmd := DumpCommand("missing.pdf", []int{0, 0}, conf)
 	cmd.ErrorOutput = &notice
 
-	if _, err := Dump(cmd); !errors.Is(err, os.ErrNotExist) {
+	if _, err := dump(t.Context(), cmd); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected not exist error, got %v", err)
 	}
 	if got, want := notice.String(), "dump: using relaxed validation\n"; got != want {
@@ -219,7 +220,7 @@ func TestOptimizeCLIPlumbingErrorsIncludePhaseContext(t *testing.T) {
 			name: "read stdin",
 			fn: func(t *testing.T) error {
 				withStdinFile(t, "")
-				_, err := Optimize(OptimizeCommand("-", "-", nil))
+				_, err := optimize(t.Context(), OptimizeCommand("-", "-", nil))
 				return err
 			},
 			want: "optimize: read stdin",
@@ -227,7 +228,7 @@ func TestOptimizeCLIPlumbingErrorsIncludePhaseContext(t *testing.T) {
 		{
 			name: "open input",
 			fn: func(t *testing.T) error {
-				_, err := Optimize(OptimizeCommand("missing.pdf", "-", nil))
+				_, err := optimize(t.Context(), OptimizeCommand("missing.pdf", "-", nil))
 				return err
 			},
 			wantErr: os.ErrNotExist,
@@ -238,7 +239,7 @@ func TestOptimizeCLIPlumbingErrorsIncludePhaseContext(t *testing.T) {
 			fn: func(t *testing.T) error {
 				withStdinFile(t, "not a pdf")
 				outFile := filepath.Join(t.TempDir(), "missing-dir", "out.pdf")
-				_, err := Optimize(OptimizeCommand("-", outFile, nil))
+				_, err := optimize(t.Context(), OptimizeCommand("-", outFile, nil))
 				return err
 			},
 			wantErr: os.ErrNotExist,
@@ -265,7 +266,7 @@ func TestOptimizeCLIPlumbingErrorsIncludePhaseContext(t *testing.T) {
 func TestTrimStreamSetupErrorsIncludePhaseContext(t *testing.T) {
 	withStdinFile(t, "")
 
-	_, err := Trim(TrimCommand("-", "-", []string{"1"}, nil))
+	_, err := trim(t.Context(), TrimCommand("-", "-", []string{"1"}, nil))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -305,7 +306,7 @@ func TestMergeCreateRawRemovesOutputOnFailure(t *testing.T) {
 	inFile := filepath.Join("..", "samples", "create", "primitives", "textAndAlignment.pdf")
 	cmd := MergeCreateCommand([]string{"-", inFile}, outFile, false, nil)
 
-	_, err := MergeCreate(cmd)
+	_, err := mergeCreate(t.Context(), cmd)
 	if err == nil {
 		t.Fatal("expected merge failure")
 	}
@@ -329,6 +330,7 @@ func TestListInfoFileJSONClosesEachInputBeforeNext(t *testing.T) {
 
 	var previous *os.File
 	process := func(
+		_ context.Context,
 		rs io.ReadSeeker,
 		_ string,
 		_ []string,
@@ -345,7 +347,7 @@ func TestListInfoFileJSONClosesEachInputBeforeNext(t *testing.T) {
 	}
 
 	for _, fileName := range files {
-		if _, err := listInfoFileJSON(fileName, nil, false, nil, process); err != nil {
+		if _, err := listInfoFileJSON(t.Context(), fileName, nil, false, nil, process); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -363,6 +365,7 @@ func TestListInfoFileJSONJoinsProcessAndCloseFailures(t *testing.T) {
 	}
 	processErr := errors.New("process input")
 	process := func(
+		_ context.Context,
 		rs io.ReadSeeker,
 		_ string,
 		_ []string,
@@ -375,7 +378,7 @@ func TestListInfoFileJSONJoinsProcessAndCloseFailures(t *testing.T) {
 		return nil, processErr
 	}
 
-	_, err := listInfoFileJSON(fileName, nil, false, nil, process)
+	_, err := listInfoFileJSON(t.Context(), fileName, nil, false, nil, process)
 	if !errors.Is(err, processErr) || !errors.Is(err, os.ErrClosed) {
 		t.Fatalf("expected process and close failures, got %v", err)
 	}

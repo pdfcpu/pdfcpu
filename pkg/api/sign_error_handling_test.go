@@ -18,12 +18,12 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/hex"
 	"errors"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,7 +60,10 @@ func TestSignatureStatsRetainsMultiSignatureIncrements(t *testing.T) {
 		{Signature: model.Signature{Type: model.SigTypeUR, Signed: true}},
 		{Signature: model.Signature{Type: model.SigTypeDTS, Signed: true, Visible: true}},
 	}
-	got := signatureStats(results)
+	got, err := signatureStats(t.Context(), results)
+	if err != nil {
+		t.Fatal(err)
+	}
 	want := model.SignatureStats{
 		FormSigned:        2,
 		FormSignedVisible: 1,
@@ -97,7 +100,11 @@ func TestDigestAndModelUseStoredSignatureText(t *testing.T) {
 				Status:    model.SignatureStatusUnknown,
 				Reason:    model.SignatureReasonCertNotTrusted,
 			}
-			apiOutput := strings.Join(digest([]*model.SignatureValidationResult{result}, false), "\n")
+			lines, err := digest(t.Context(), []*model.SignatureValidationResult{result}, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			apiOutput := strings.Join(lines, "\n")
 			modelOutput := result.String()
 			for name, output := range map[string]string{
 				"API":   apiOutput,
@@ -111,7 +118,11 @@ func TestDigestAndModelUseStoredSignatureText(t *testing.T) {
 
 			result.Reason = model.SignatureReasonInternal
 			result.Problems = []string{problem}
-			apiOutput = strings.Join(digest([]*model.SignatureValidationResult{result}, false), "\n")
+			lines, err = digest(t.Context(), []*model.SignatureValidationResult{result}, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			apiOutput = strings.Join(lines, "\n")
 			if !strings.Contains(apiOutput, "Reason: "+problem) {
 				t.Fatalf("API digest rewrote stored Problem:\n%s", apiOutput)
 			}
@@ -141,7 +152,11 @@ func TestCompactDigestPreservesDetailedEvidenceText(t *testing.T) {
 			Reason:    tt.reason,
 			Problems:  []string{tt.problem},
 		}
-		got := strings.Join(digest([]*model.SignatureValidationResult{result}, false), "\n")
+		lines, err := digest(t.Context(), []*model.SignatureValidationResult{result}, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := strings.Join(lines, "\n")
 		want := "\n" +
 			"1 form signature (invisible, signed)\n" +
 			"   Status: validity of the signature is unknown\n" +
@@ -151,7 +166,11 @@ func TestCompactDigestPreservesDetailedEvidenceText(t *testing.T) {
 			t.Errorf("compact output:\ngot:\n%q\nwant:\n%q", got, want)
 		}
 
-		full := strings.Join(digest([]*model.SignatureValidationResult{result}, true), "\n")
+		lines, err = digest(t.Context(), []*model.SignatureValidationResult{result}, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		full := strings.Join(lines, "\n")
 		if !strings.Contains(full, "Reason: "+tt.reason.String()) ||
 			!strings.Contains(full, "Problems: "+tt.problem) {
 			t.Errorf("full output did not separate structured reason and Problem:\n%s", full)
@@ -242,7 +261,7 @@ func rawSignatureEvidence(t *testing.T, pdf []byte) (*model.SignatureValidationR
 	t.Helper()
 	conf := model.NewDefaultConfiguration()
 	conf.Offline = true
-	results, err := ValidateSignaturesRaw(bytes.NewReader(pdf), false, conf)
+	results, err := ValidateSignaturesRaw(t.Context(), bytes.NewReader(pdf), false, conf)
 	if err != nil {
 		t.Fatalf("expected reportable signature evidence, got fatal error %v", err)
 	}
@@ -269,7 +288,7 @@ func TestSignAPIMissingArgumentsPreserveSentinels(t *testing.T) {
 		{
 			name: "validate signatures input",
 			err: func() error {
-				_, err := ValidateSignatures("", false, nil)
+				_, err := ValidateSignatures(t.Context(), "", false, nil)
 				return err
 			}(),
 			want: ErrMissingPDFInput,
@@ -277,24 +296,24 @@ func TestSignAPIMissingArgumentsPreserveSentinels(t *testing.T) {
 		{
 			name: "validate signatures file input",
 			err: func() error {
-				_, err := ValidateSignaturesFile("", false, false, nil)
+				_, err := ValidateSignaturesFile(t.Context(), "", false, false, nil)
 				return err
 			}(),
 			want: ErrMissingPDFInput,
 		},
 		{
 			name: "remove signatures reader",
-			err:  RemoveSignatures(nil, io.Discard, nil),
+			err:  RemoveSignatures(t.Context(), nil, io.Discard, nil),
 			want: ErrMissingPDFReadSeeker,
 		},
 		{
 			name: "remove signatures writer",
-			err:  RemoveSignatures(bytes.NewReader(nil), nil, nil),
+			err:  RemoveSignatures(t.Context(), bytes.NewReader(nil), nil, nil),
 			want: ErrMissingPDFWriter,
 		},
 		{
 			name: "remove signatures file input",
-			err:  RemoveSignaturesFile("", "", nil),
+			err:  RemoveSignaturesFile(t.Context(), "", "", nil),
 			want: ErrMissingPDFInput,
 		},
 	}
@@ -308,7 +327,7 @@ func TestSignAPIMissingArgumentsPreserveSentinels(t *testing.T) {
 
 // TestValidateSignaturesRawRejectsMissingInput verifies the stream API preserves its missing-reader sentinel.
 func TestValidateSignaturesRawRejectsMissingInput(t *testing.T) {
-	_, err := ValidateSignaturesRaw(nil, false, nil)
+	_, err := ValidateSignaturesRaw(t.Context(), nil, false, nil)
 	if !errors.Is(err, ErrMissingPDFReadSeeker) {
 		t.Fatalf("expected %v, got %v", ErrMissingPDFReadSeeker, err)
 	}
@@ -316,7 +335,7 @@ func TestValidateSignaturesRawRejectsMissingInput(t *testing.T) {
 
 // TestValidateSignaturesRawRejectsMalformedInput verifies every stream preparation phase is retained.
 func TestValidateSignaturesRawRejectsMalformedInput(t *testing.T) {
-	_, err := ValidateSignaturesRaw(bytes.NewReader([]byte("not a PDF")), false, nil)
+	_, err := ValidateSignaturesRaw(t.Context(), bytes.NewReader([]byte("not a PDF")), false, nil)
 	if err == nil {
 		t.Fatal("expected malformed stream failure")
 	}
@@ -331,7 +350,7 @@ func TestValidateSignaturesRawRejectsMalformedInput(t *testing.T) {
 func TestValidateSignaturesRawStructuralFailurePreservesCause(t *testing.T) {
 	cause := errors.New("structural read failure")
 
-	results, err := ValidateSignaturesRaw(signErrorReadSeekerAt{err: cause}, false, nil)
+	results, err := ValidateSignaturesRaw(t.Context(), signErrorReadSeekerAt{err: cause}, false, nil)
 	if results != nil {
 		t.Fatalf("got results %v, want nil", results)
 	}
@@ -361,7 +380,7 @@ func TestValidateSignaturesRawUnsignedPDFPrecedesTrustPool(t *testing.T) {
 		pdfcpu.InvalidateCertificatePool()
 	})
 
-	_, err = ValidateSignaturesRaw(bytes.NewReader(bb), false, nil)
+	_, err = ValidateSignaturesRaw(t.Context(), bytes.NewReader(bb), false, nil)
 	if !errors.Is(err, ErrNoSignatures) {
 		t.Fatalf("expected %v, got %v", ErrNoSignatures, err)
 	}
@@ -378,12 +397,12 @@ func TestValidateSignaturesRawUnsignedPDFSkipsDomainOperation(t *testing.T) {
 		t.Fatal(err)
 	}
 	called := false
-	operation := func(io.ReaderAt, *model.Context, bool, *x509.CertPool) ([]*model.SignatureValidationResult, error) {
+	operation := func(context.Context, io.ReaderAt, *model.Context, bool, *x509.CertPool) ([]*model.SignatureValidationResult, error) {
 		called = true
 		return nil, errors.New("unexpected domain operation")
 	}
 
-	results, err := validateSignaturesRaw(bytes.NewReader(bb), false, nil, operation)
+	results, err := validateSignaturesRawUsing(t.Context(), bytes.NewReader(bb), false, nil, operation)
 	if results != nil {
 		t.Fatalf("got results %v, want nil", results)
 	}
@@ -411,6 +430,7 @@ func TestValidateSignaturesRawStatelessUsesEmptyTrustPool(t *testing.T) {
 
 	called := false
 	operation := func(
+		_ context.Context,
 		_ io.ReaderAt,
 		_ *model.Context,
 		_ bool,
@@ -423,7 +443,7 @@ func TestValidateSignaturesRawStatelessUsesEmptyTrustPool(t *testing.T) {
 		return []*model.SignatureValidationResult{{}}, nil
 	}
 
-	results, err := validateSignaturesRaw(
+	results, err := validateSignaturesRawUsing(t.Context(),
 		bytes.NewReader(signedPDFBytes(t)),
 		false,
 		model.NewStatelessConfiguration(),
@@ -439,7 +459,7 @@ func TestValidateSignaturesRawStatelessUsesEmptyTrustPool(t *testing.T) {
 
 // TestValidateSignaturesRawRecoversPanics verifies the stream API returns recovered boundary failures.
 func TestValidateSignaturesRawRecoversPanics(t *testing.T) {
-	_, err := ValidateSignaturesRaw(signPanicReadSeekerAt{}, false, nil)
+	_, err := ValidateSignaturesRaw(t.Context(), signPanicReadSeekerAt{}, false, nil)
 	if err == nil {
 		t.Fatal("expected recovered stream failure")
 	}
@@ -451,7 +471,7 @@ func TestValidateSignaturesRawRecoversPanics(t *testing.T) {
 // TestValidateSignaturesRawReadsSignedBytesReader verifies the raw operation does not depend on *os.File.
 func TestValidateSignaturesRawReadsSignedBytesReader(t *testing.T) {
 	rs := bytes.NewReader(signedPDFBytes(t))
-	results, err := ValidateSignaturesRaw(rs, false, nil)
+	results, err := ValidateSignaturesRaw(t.Context(), rs, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -469,7 +489,7 @@ func TestValidateSignaturesRawPreservesSignedDataReadFailure(t *testing.T) {
 		err:    cause,
 	}
 
-	_, err := ValidateSignaturesRaw(rs, false, nil)
+	_, err := ValidateSignaturesRaw(t.Context(), rs, false, nil)
 	if err == nil {
 		t.Fatal("expected fatal signed-data read error")
 	}
@@ -493,6 +513,7 @@ func TestValidateSignaturesRawInitializesOperationState(t *testing.T) {
 
 	called := false
 	operation := func(
+		_ context.Context,
 		_ io.ReaderAt,
 		ctx *model.Context,
 		all bool,
@@ -511,7 +532,7 @@ func TestValidateSignaturesRawInitializesOperationState(t *testing.T) {
 		return []*model.SignatureValidationResult{{}}, nil
 	}
 
-	results, err := validateSignaturesRaw(bytes.NewReader(bb), true, nil, operation)
+	results, err := validateSignaturesRawUsing(t.Context(), bytes.NewReader(bb), true, nil, operation)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -643,7 +664,7 @@ func TestValidateSignaturesRawReportsDigestMismatchEvidence(t *testing.T) {
 // TestValidateSignaturesRawDomainErrorPreservesCauseAndPhase verifies API-domain boundary wrapping.
 func TestValidateSignaturesRawDomainErrorPreservesCauseAndPhase(t *testing.T) {
 	cause := errors.New("domain signature failure")
-	operation := func(io.ReaderAt, *model.Context, bool, *x509.CertPool) ([]*model.SignatureValidationResult, error) {
+	operation := func(context.Context, io.ReaderAt, *model.Context, bool, *x509.CertPool) ([]*model.SignatureValidationResult, error) {
 		return nil, cause
 	}
 
@@ -653,73 +674,11 @@ func TestValidateSignaturesRawDomainErrorPreservesCauseAndPhase(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = validateSignaturesRaw(bytes.NewReader(bb), false, nil, operation)
+	_, err = validateSignaturesRawUsing(t.Context(), bytes.NewReader(bb), false, nil, operation)
 	if !errors.Is(err, cause) {
 		t.Fatalf("expected %v, got %v", cause, err)
 	}
 	if want := "validate signatures: verify signatures"; !strings.Contains(err.Error(), want) {
-		t.Fatalf("expected %q, got %q", want, err)
-	}
-}
-
-// TestValidateSignaturesFileLifecycleJoinsOperationAndCloseErrors verifies production cleanup preserves both failures.
-func TestValidateSignaturesFileLifecycleJoinsOperationAndCloseErrors(t *testing.T) {
-	cause := errors.New("domain signature failure")
-	operation := func(
-		ra io.ReaderAt,
-		_ *model.Context,
-		_ bool,
-		_ *x509.CertPool,
-	) ([]*model.SignatureValidationResult, error) {
-		f, ok := ra.(*os.File)
-		if !ok {
-			return nil, errors.New("domain input is not *os.File")
-		}
-		if err := f.Close(); err != nil {
-			return nil, err
-		}
-		return nil, cause
-	}
-
-	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
-	_, err := validateSignaturesFile(inFile, false, nil, operation)
-	for _, want := range []error{cause, fs.ErrClosed} {
-		if !errors.Is(err, want) {
-			t.Errorf("expected joined cause %v, got %v", want, err)
-		}
-	}
-	for _, want := range []string{"validate signatures: verify signatures", "validate signatures: close input"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("expected %q, got %q", want, err)
-		}
-	}
-}
-
-// TestValidateSignaturesFileLifecycleReturnsCloseErrorAfterSuccess verifies cleanup failure changes a successful result.
-func TestValidateSignaturesFileLifecycleReturnsCloseErrorAfterSuccess(t *testing.T) {
-	wantResults := []*model.SignatureValidationResult{{}}
-	operation := func(
-		ra io.ReaderAt,
-		_ *model.Context,
-		_ bool,
-		_ *x509.CertPool,
-	) ([]*model.SignatureValidationResult, error) {
-		f, ok := ra.(*os.File)
-		if !ok {
-			return nil, errors.New("domain input is not *os.File")
-		}
-		if err := f.Close(); err != nil {
-			return nil, err
-		}
-		return wantResults, nil
-	}
-
-	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
-	results, err := validateSignaturesFile(inFile, false, nil, operation)
-	if !errors.Is(err, fs.ErrClosed) {
-		t.Fatalf("expected close failure %v, got results %v and error %v", fs.ErrClosed, results, err)
-	}
-	if want := "validate signatures: close input"; !strings.Contains(err.Error(), want) {
 		t.Fatalf("expected %q, got %q", want, err)
 	}
 }
@@ -755,7 +714,7 @@ func TestValidateSignaturesPDFErrorsPrecedeTrustPoolError(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		_, err := ValidateSignatures(tt.inFile, false, nil)
+		_, err := ValidateSignatures(t.Context(), tt.inFile, false, nil)
 		if !errors.Is(err, tt.want) {
 			t.Errorf("%s: expected %v, got %v", tt.name, tt.want, err)
 			continue
@@ -781,7 +740,7 @@ func TestValidateSignaturesTrustPoolErrorContext(t *testing.T) {
 	})
 
 	inFile := filepath.Join("..", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
-	_, err := ValidateSignatures(inFile, false, conf)
+	_, err := ValidateSignatures(t.Context(), inFile, false, conf)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -801,7 +760,7 @@ func TestSignAPIOpenErrorsPreserveCauseAndContext(t *testing.T) {
 		{
 			name: "validate signatures",
 			call: func() error {
-				_, err := ValidateSignatures(missing, false, nil)
+				_, err := ValidateSignatures(t.Context(), missing, false, nil)
 				return err
 			},
 			want: "validate signatures: open input " + missing,
@@ -809,7 +768,7 @@ func TestSignAPIOpenErrorsPreserveCauseAndContext(t *testing.T) {
 		{
 			name: "remove signatures",
 			call: func() error {
-				return RemoveSignaturesFile(missing, "", nil)
+				return RemoveSignaturesFile(t.Context(), missing, "", nil)
 			},
 			want: "remove signatures: open input " + missing,
 		},
@@ -835,7 +794,7 @@ func TestSignAPIMalformedPDFErrorsIncludeOperationAndReadPhase(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, validateErr := ValidateSignatures(inFile, false, nil)
+	_, validateErr := ValidateSignatures(t.Context(), inFile, false, nil)
 	if validateErr == nil {
 		t.Fatal("expected signature-validation failure")
 	}
@@ -843,7 +802,7 @@ func TestSignAPIMalformedPDFErrorsIncludeOperationAndReadPhase(t *testing.T) {
 		t.Errorf("validate signatures: expected %q, got %q", want, validateErr)
 	}
 
-	_, validateFileErr := ValidateSignaturesFile(inFile, false, false, nil)
+	_, validateFileErr := ValidateSignaturesFile(t.Context(), inFile, false, false, nil)
 	if validateFileErr == nil {
 		t.Fatal("expected signature-validation file failure")
 	}
@@ -851,7 +810,7 @@ func TestSignAPIMalformedPDFErrorsIncludeOperationAndReadPhase(t *testing.T) {
 		t.Errorf("validate signatures file: expected %q, got %q", want, validateFileErr)
 	}
 
-	removeErr := RemoveSignatures(bytes.NewReader([]byte("not a PDF")), io.Discard, nil)
+	removeErr := RemoveSignatures(t.Context(), bytes.NewReader([]byte("not a PDF")), io.Discard, nil)
 	if removeErr == nil {
 		t.Fatal("expected signature-removal failure")
 	}
@@ -877,7 +836,7 @@ func TestRemoveSignaturesWriteErrorPreservesCauseAndContext(t *testing.T) {
 	}()
 
 	cause := errors.New("write failed")
-	err = RemoveSignatures(f, signErrorWriter{err: cause}, nil)
+	err = RemoveSignatures(t.Context(), f, signErrorWriter{err: cause}, nil)
 	if !errors.Is(err, cause) {
 		t.Fatalf("expected %v, got %v", cause, err)
 	}
@@ -896,7 +855,7 @@ func TestRemoveSignaturesFileCreateOutputErrorPreservesCauseAndContext(t *testin
 	}
 	outFile := filepath.Join(t.TempDir(), "missing", "out.pdf")
 
-	err := RemoveSignaturesFile(inFile, outFile, nil)
+	err := RemoveSignaturesFile(t.Context(), inFile, outFile, nil)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -916,7 +875,7 @@ func TestSignAPINoSignaturesPreservesSentinelAndOperation(t *testing.T) {
 		{
 			name: "validate signatures",
 			call: func() error {
-				_, err := ValidateSignatures(inFile, false, nil)
+				_, err := ValidateSignatures(t.Context(), inFile, false, nil)
 				return err
 			},
 			want: "validate signatures",
@@ -924,7 +883,7 @@ func TestSignAPINoSignaturesPreservesSentinelAndOperation(t *testing.T) {
 		{
 			name: "remove signatures",
 			call: func() error {
-				return RemoveSignaturesFile(inFile, filepath.Join(t.TempDir(), "out.pdf"), nil)
+				return RemoveSignaturesFile(t.Context(), inFile, filepath.Join(t.TempDir(), "out.pdf"), nil)
 			},
 			want: "remove signatures",
 		},
@@ -955,7 +914,7 @@ func TestRemoveSignaturesFileFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := RemoveSignaturesFile(inFile, outFile, nil)
+	err := RemoveSignaturesFile(t.Context(), inFile, outFile, nil)
 	if err == nil {
 		t.Fatal("expected signature-removal failure")
 	}

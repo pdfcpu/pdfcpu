@@ -152,7 +152,7 @@ func (hb *HorizontalBand) renderAnchoredTextBox(
 		td.ShowBackground, td.ShowTextBB, td.BackgroundCol = true, true, *bgCol
 	}
 
-	_, err = model.WriteMultiLineAnchored(hb.pdf.XRefTable, p.Buf, r, nil, td, a)
+	_, err = model.WriteMultiLineAnchored(hb.pdf.ctx, hb.pdf.XRefTable, p.Buf, r, nil, td, a)
 	return err
 }
 

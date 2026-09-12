@@ -31,14 +31,14 @@ func TestRotate(t *testing.T) {
 	outFile := filepath.Join(outDir, fileName)
 
 	// Rotate all pages of inFile, clockwise by 90 degrees and write the result to outFile.
-	if err := api.RotateFile(inFile, outFile, 90, nil, nil); err != nil {
+	if err := api.RotateFile(t.Context(), inFile, outFile, 90, nil, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 
 	// Rotate the first page of inFile by 180 degrees.
 	// If you want to modify the original file, pass an empty string for outFile.
 	inFile = outFile
-	if err := api.RotateFile(inFile, "", 180, []string{"1"}, nil); err != nil {
+	if err := api.RotateFile(t.Context(), inFile, "", 180, []string{"1"}, nil); err != nil {
 		t.Fatalf("%s: %v\n", msg, err)
 	}
 }

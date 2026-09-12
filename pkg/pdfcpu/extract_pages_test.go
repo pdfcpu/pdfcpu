@@ -17,6 +17,7 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -26,6 +27,24 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func TestExtractPagesReturnsCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if _, err := ExtractPages(ctx, nil, nil, false); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func TestAddPagesReturnsCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	if err := AddPages(ctx, nil, nil, nil, false); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
 
 func appendExtractionTestPage(t *testing.T, ctx *model.Context) types.IndirectRef {
 	t.Helper()
@@ -440,7 +459,7 @@ func TestExtractPagesPreservesTextFieldParent(t *testing.T) {
 	parentBefore = parentBefore.Clone().(types.Dict)
 	widgetBefore = widgetBefore.Clone().(types.Dict)
 
-	ctxDest, err := ExtractPages(ctxSrc, []int{1}, false)
+	ctxDest, err := ExtractPages(t.Context(), ctxSrc, []int{1}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -464,7 +483,7 @@ func TestExtractPagesPreservesTextFieldParent(t *testing.T) {
 
 // TestExtractPagesPrunesUnselectedWidgets verifies extraction rebuilds Kids from widgets on selected pages only.
 func TestExtractPagesPrunesUnselectedWidgets(t *testing.T) {
-	ctxDest, err := ExtractPages(multiPageTextFieldExtractionContext(t), []int{1}, false)
+	ctxDest, err := ExtractPages(t.Context(), multiPageTextFieldExtractionContext(t), []int{1}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -487,7 +506,7 @@ func TestExtractPagesPreservesNestedButtonField(t *testing.T) {
 	}
 	buttonBefore = buttonBefore.Clone().(types.Dict)
 
-	ctxDest, err := ExtractPages(ctxSrc, []int{1}, false)
+	ctxDest, err := ExtractPages(t.Context(), ctxSrc, []int{1}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -504,7 +523,7 @@ func TestExtractPagesPreservesNestedButtonField(t *testing.T) {
 
 // TestExtractPagesPreservesCombinedFieldWidget verifies a terminal field/widget remains a top-level form field.
 func TestExtractPagesPreservesCombinedFieldWidget(t *testing.T) {
-	ctxDest, err := ExtractPages(combinedFieldWidgetExtractionContext(t), []int{1}, false)
+	ctxDest, err := ExtractPages(t.Context(), combinedFieldWidgetExtractionContext(t), []int{1}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -530,7 +549,7 @@ func TestExtractPagesPreservesCombinedFieldWidget(t *testing.T) {
 
 // TestExtractPagesPreservesCombinedCheckbox verifies extraction retains a combined checkbox field/widget.
 func TestExtractPagesPreservesCombinedCheckbox(t *testing.T) {
-	ctxDest, err := ExtractPages(checkboxExtractionContext(t), []int{1}, false)
+	ctxDest, err := ExtractPages(t.Context(), checkboxExtractionContext(t), []int{1}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -551,7 +570,7 @@ func TestExtractPagesPreservesCombinedCheckbox(t *testing.T) {
 
 // TestExtractPagesPreservesRadioButtonGroup verifies extraction retains radio flags, values, kids, and parent links.
 func TestExtractPagesPreservesRadioButtonGroup(t *testing.T) {
-	ctxDest, err := ExtractPages(radioButtonExtractionContext(t), []int{1}, false)
+	ctxDest, err := ExtractPages(t.Context(), radioButtonExtractionContext(t), []int{1}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -627,7 +646,7 @@ func TestExtractPagesRejectsInvalidInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := ExtractPages(tt.ctx, tt.pageNrs, false)
+			_, err := ExtractPages(t.Context(), tt.ctx, tt.pageNrs, false)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
@@ -638,7 +657,7 @@ func TestExtractPagesRejectsInvalidInput(t *testing.T) {
 func TestExtractPagesAddPagesErrorsIncludePageContext(t *testing.T) {
 	ctx := &model.Context{XRefTable: &model.XRefTable{PageCount: 1}}
 
-	_, err := ExtractPages(ctx, []int{1}, false)
+	_, err := ExtractPages(t.Context(), ctx, []int{1}, false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -674,7 +693,7 @@ func TestAddPagesRejectsMissingContexts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := AddPages(tt.src, tt.dest, []int{1}, false)
+			err := AddPages(t.Context(), tt.src, tt.dest, []int{1}, false)
 			if !errors.Is(err, ErrMissingPDFContext) {
 				t.Fatalf("expected %v, got %v", ErrMissingPDFContext, err)
 			}
@@ -696,7 +715,7 @@ func TestAddPagesRejectsMissingDestinationPageTree(t *testing.T) {
 	}
 	dest.RootDict.Delete("Pages")
 
-	err = AddPages(src, dest, []int{1}, false)
+	err = AddPages(t.Context(), src, dest, []int{1}, false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -719,21 +738,30 @@ func TestAddPagesInternalGuardsPreventPanics(t *testing.T) {
 		{
 			name: "missing page tree dict",
 			fn: func() error {
-				return addPages(ctx, ctx, []int{1}, false, *types.NewIndirectRef(1, 0), nil, &types.Array{}, &types.Array{}, map[int]int{})
+				return addPages(
+					t.Context(), ctx, ctx, []int{1}, false, *types.NewIndirectRef(1, 0), nil,
+					&types.Array{}, &types.Array{}, map[int]int{},
+				)
 			},
 			want: "missing destination page tree dict",
 		},
 		{
 			name: "missing source fields",
 			fn: func() error {
-				return addPages(ctx, ctx, []int{1}, false, *types.NewIndirectRef(1, 0), types.Dict{}, nil, &types.Array{}, map[int]int{})
+				return addPages(
+					t.Context(), ctx, ctx, []int{1}, false, *types.NewIndirectRef(1, 0), types.Dict{}, nil,
+					&types.Array{}, map[int]int{},
+				)
 			},
 			want: "missing source form fields",
 		},
 		{
 			name: "missing migration map",
 			fn: func() error {
-				return addPages(ctx, ctx, []int{1}, false, *types.NewIndirectRef(1, 0), types.Dict{}, &types.Array{}, &types.Array{}, nil)
+				return addPages(
+					t.Context(), ctx, ctx, []int{1}, false, *types.NewIndirectRef(1, 0), types.Dict{},
+					&types.Array{}, &types.Array{}, nil,
+				)
 			},
 			want: "missing migration map",
 		},
@@ -768,7 +796,7 @@ func TestMigratePageDictErrorsIncludeEntryContext(t *testing.T) {
 		"Annots": types.Integer(1),
 	}
 
-	err = migratePageDict(d, *types.NewIndirectRef(1, 0), ctx, ctx, map[int]int{}, newFormFieldSelection())
+	err = migratePageDict(t.Context(), d, *types.NewIndirectRef(1, 0), ctx, ctx, map[int]int{}, newFormFieldSelection())
 	if err == nil {
 		t.Fatal("expected error")
 	}

@@ -18,6 +18,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	stdlog "log"
 	"testing"
@@ -33,10 +34,10 @@ func TestInstallFontsCommandRendersStructuredWarnings(t *testing.T) {
 	t.Cleanup(func() { log.SetCLILogger(nil) })
 
 	warning := errors.New("temporary backup retained")
-	install := func([]string) (api.FontInstallResult, error) {
+	install := func(context.Context, []string) (api.FontInstallResult, error) {
 		return api.FontInstallResult{Warnings: []error{warning}}, nil
 	}
-	if _, err := installFontsCommand(InstallFontsCommand([]string{"Demo.ttf"}, nil), install); err != nil {
+	if _, err := installFontsCommand(t.Context(), InstallFontsCommand([]string{"Demo.ttf"}, nil), install); err != nil {
 		t.Fatal(err)
 	}
 	want := "installing to " + font.UserFontDir + "...\nwarning: " + warning.Error() + "\n"
@@ -51,10 +52,10 @@ func TestCreateCheatSheetsFontsCommandRendersPublishedPaths(t *testing.T) {
 	t.Cleanup(func() { log.SetCLILogger(nil) })
 
 	wantErr := errors.New("published output cleanup failed")
-	create := func([]string) (api.FontCheatSheetResult, error) {
+	create := func(context.Context, []string) (api.FontCheatSheetResult, error) {
 		return api.FontCheatSheetResult{Paths: []string{"Demo_BMP.pdf", "Demo_SMP.pdf"}}, wantErr
 	}
-	_, err := createCheatSheetsFontsCommand(CreateCheatSheetsFontsCommand([]string{"Demo"}, nil), create)
+	_, err := createCheatSheetsFontsCommand(t.Context(), CreateCheatSheetsFontsCommand([]string{"Demo"}, nil), create)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -66,17 +67,17 @@ func TestCreateCheatSheetsFontsCommandRendersPublishedPaths(t *testing.T) {
 
 func TestFontStructuredPresentationHonorsQuietMode(t *testing.T) {
 	log.SetCLILogger(nil)
-	install := func([]string) (api.FontInstallResult, error) {
+	install := func(context.Context, []string) (api.FontInstallResult, error) {
 		return api.FontInstallResult{Warnings: []error{errors.New("cleanup warning")}}, nil
 	}
-	if _, err := installFontsCommand(InstallFontsCommand([]string{"Demo.ttf"}, nil), install); err != nil {
+	if _, err := installFontsCommand(t.Context(), InstallFontsCommand([]string{"Demo.ttf"}, nil), install); err != nil {
 		t.Fatal(err)
 	}
 
-	create := func([]string) (api.FontCheatSheetResult, error) {
+	create := func(context.Context, []string) (api.FontCheatSheetResult, error) {
 		return api.FontCheatSheetResult{Paths: []string{"Demo_BMP.pdf"}}, nil
 	}
-	if _, err := createCheatSheetsFontsCommand(CreateCheatSheetsFontsCommand([]string{"Demo"}, nil), create); err != nil {
+	if _, err := createCheatSheetsFontsCommand(t.Context(), CreateCheatSheetsFontsCommand([]string{"Demo"}, nil), create); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -56,7 +56,7 @@ func TestExtractImageResolvesIndirectBooleanEntries(t *testing.T) {
 	sd.Insert("ImageMask", ir)
 	sd.Insert("Interpolate", ir)
 
-	img, err := ExtractImage(ctx, sd, false, "Im0", 7, true)
+	img, err := ExtractImage(t.Context(), ctx, sd, false, "Im0", 7, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestExtractImageResolvesIndirectIntegerEntries(t *testing.T) {
 	sd.Insert("Height", *types.NewIndirectRef(10, 0))
 	sd.Insert("BitsPerComponent", *types.NewIndirectRef(11, 0))
 
-	img, err := ExtractImage(ctx, sd, false, "Im0", 7, true)
+	img, err := ExtractImage(t.Context(), ctx, sd, false, "Im0", 7, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ func TestExtractImageBooleanErrorsIncludeContext(t *testing.T) {
 			sd := booleanImageStreamDict()
 			sd.Insert(key, *types.NewIndirectRef(9, 0))
 
-			_, err := ExtractImage(ctx, sd, false, "Im0", 7, true)
+			_, err := ExtractImage(t.Context(), ctx, sd, false, "Im0", 7, true)
 			if err == nil {
 				t.Fatal("expected error")
 			}
@@ -244,7 +244,7 @@ func TestExtractFunctionsRejectMissingInput(t *testing.T) {
 		{
 			name: "extract image missing context",
 			fn: func() error {
-				_, err := ExtractImage(nil, emptyStreamDict(), false, "", 1, true)
+				_, err := ExtractImage(t.Context(), nil, emptyStreamDict(), false, "", 1, true)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -252,7 +252,7 @@ func TestExtractFunctionsRejectMissingInput(t *testing.T) {
 		{
 			name: "extract page images missing optimization context",
 			fn: func() error {
-				_, err := ExtractPageImages(ctx, 1, true)
+				_, err := ExtractPageImages(t.Context(), ctx, 1, true)
 				return err
 			},
 			wantErr: ErrMissingOptimizationContext,
@@ -260,7 +260,7 @@ func TestExtractFunctionsRejectMissingInput(t *testing.T) {
 		{
 			name: "extract font missing context",
 			fn: func() error {
-				_, err := ExtractFont(nil, model.FontObject{}, 1)
+				_, err := ExtractFont(t.Context(), nil, model.FontObject{}, 1)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -268,7 +268,7 @@ func TestExtractFunctionsRejectMissingInput(t *testing.T) {
 		{
 			name: "extract page fonts missing optimization context",
 			fn: func() error {
-				_, err := ExtractPageFonts(ctx, 1, nil, nil)
+				_, err := ExtractPageFonts(t.Context(), ctx, 1, nil, nil)
 				return err
 			},
 			wantErr: ErrMissingOptimizationContext,
@@ -276,7 +276,7 @@ func TestExtractFunctionsRejectMissingInput(t *testing.T) {
 		{
 			name: "extract form fonts missing optimization context",
 			fn: func() error {
-				_, err := ExtractFormFonts(ctx)
+				_, err := ExtractFormFonts(t.Context(), ctx)
 				return err
 			},
 			wantErr: ErrMissingOptimizationContext,
@@ -284,7 +284,7 @@ func TestExtractFunctionsRejectMissingInput(t *testing.T) {
 		{
 			name: "extract page content missing context",
 			fn: func() error {
-				_, err := ExtractPageContent(nil, 1)
+				_, err := ExtractPageContent(t.Context(), nil, 1)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -292,7 +292,7 @@ func TestExtractFunctionsRejectMissingInput(t *testing.T) {
 		{
 			name: "extract metadata missing context",
 			fn: func() error {
-				_, err := ExtractMetadata(nil)
+				_, err := ExtractMetadata(t.Context(), nil)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -311,7 +311,7 @@ func TestExtractFunctionsRejectMissingInput(t *testing.T) {
 
 // TestExtractImageRejectsNilStream verifies the corresponding behavior.
 func TestExtractImageRejectsNilStream(t *testing.T) {
-	_, err := ExtractImage(nil, nil, false, "", 1, true)
+	_, err := ExtractImage(t.Context(), nil, nil, false, "", 1, true)
 	if !errors.Is(err, ErrMissingStreamDict) {
 		t.Fatalf("expected %v, got %v", ErrMissingStreamDict, err)
 	}
@@ -335,7 +335,11 @@ func TestObjNrsRejectMissingOptimizationContext(t *testing.T) {
 	if objNrs := ImageObjNrs(ctx, 1); len(objNrs) != 0 {
 		t.Fatalf("expected no image objects, got %v", objNrs)
 	}
-	if objNrs := FontObjNrs(ctx, 1); len(objNrs) != 0 {
+	objNrs, err := FontObjNrs(t.Context(), ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(objNrs) != 0 {
 		t.Fatalf("expected no font objects, got %v", objNrs)
 	}
 }
@@ -353,7 +357,11 @@ func TestExtractionObjectNumbersAreSorted(t *testing.T) {
 	if got, want := ImageObjNrs(ctx, 1), []int{2, 9}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("image object numbers: got %v, want %v", got, want)
 	}
-	if got, want := FontObjNrs(ctx, 1), []int{3, 8}; !reflect.DeepEqual(got, want) {
+	got, err := FontObjNrs(t.Context(), ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []int{3, 8}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("font object numbers: got %v, want %v", got, want)
 	}
 }
@@ -367,7 +375,7 @@ func TestExtractMetadataProcessesParentObjectsInOrder(t *testing.T) {
 		91: model.NewXRefTableEntryGen0(types.StreamDict{Dict: types.Dict{}, Raw: []byte("nine")}),
 	}}}
 
-	metadata, err := ExtractMetadata(ctx)
+	metadata, err := ExtractMetadata(t.Context(), ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -396,7 +404,7 @@ func TestExtractionSelectsDeterministicFirstError(t *testing.T) {
 						PageImages: []types.IntSet{{9: true, 2: true}},
 					},
 				}
-				_, err := ExtractPageImages(ctx, 1, true)
+				_, err := ExtractPageImages(t.Context(), ctx, 1, true)
 				return err
 			},
 		},
@@ -410,7 +418,7 @@ func TestExtractionSelectsDeterministicFirstError(t *testing.T) {
 						PageFonts: []types.IntSet{{8: true, 3: true}},
 					},
 				}
-				_, err := ExtractPageFonts(ctx, 1, nil, nil)
+				_, err := ExtractPageFonts(t.Context(), ctx, 1, nil, nil)
 				return err
 			},
 		},
@@ -424,7 +432,7 @@ func TestExtractionSelectsDeterministicFirstError(t *testing.T) {
 						FormFontObjects: map[int]*model.FontObject{9: nil, 2: nil},
 					},
 				}
-				_, err := ExtractFormFonts(ctx)
+				_, err := ExtractFormFonts(t.Context(), ctx)
 				return err
 			},
 		},
@@ -436,7 +444,7 @@ func TestExtractionSelectsDeterministicFirstError(t *testing.T) {
 					3: model.NewXRefTableEntryGen0(types.Dict{"Metadata": types.StreamDict{Dict: types.Dict{}}}),
 					9: model.NewXRefTableEntryGen0(types.Dict{"Metadata": types.StreamDict{Dict: types.Dict{}}}),
 				}}}
-				_, err := ExtractMetadata(ctx)
+				_, err := ExtractMetadata(t.Context(), ctx)
 				return err
 			},
 		},
@@ -473,7 +481,7 @@ func TestUnsupportedExtractionResourcesReturnSentinel(t *testing.T) {
 			fn: func() error {
 				ctx := &model.Context{XRefTable: &model.XRefTable{}}
 				sd := &types.StreamDict{Dict: types.Dict{}, FilterPipeline: []types.PDFFilter{{Name: "Unsupported"}}}
-				_, err := ExtractImage(ctx, sd, false, "Im0", 7, false)
+				_, err := ExtractImage(t.Context(), ctx, sd, false, "Im0", 7, false)
 				return err
 			},
 		},
@@ -491,7 +499,7 @@ func TestUnsupportedExtractionResourcesReturnSentinel(t *testing.T) {
 					},
 					Raw: []byte{0},
 				}
-				_, err := ExtractImage(ctx, sd, false, "Im0", 7, false)
+				_, err := ExtractImage(t.Context(), ctx, sd, false, "Im0", 7, false)
 				return err
 			},
 		},
@@ -507,7 +515,7 @@ func TestUnsupportedExtractionResourcesReturnSentinel(t *testing.T) {
 						"FontDescriptor": types.Dict{"FontFile": *types.NewIndirectRef(80, 0)},
 					},
 				}
-				_, err := ExtractFont(ctx, fontObject, 8)
+				_, err := ExtractFont(t.Context(), ctx, fontObject, 8)
 				return err
 			},
 		},
@@ -524,7 +532,7 @@ func TestUnsupportedExtractionResourcesReturnSentinel(t *testing.T) {
 						FilterPipeline: unsupportedPipeline,
 					}),
 				}}}
-				_, err := ExtractMetadata(ctx)
+				_, err := ExtractMetadata(t.Context(), ctx)
 				return err
 			},
 		},
@@ -563,12 +571,12 @@ func TestExtractMetadataUnsupportedResourcePolicyControlsContinuation(t *testing
 		}
 	}
 
-	_, err := ExtractMetadata(newContext(model.UnsupportedResourceSkip))
+	_, err := ExtractMetadata(t.Context(), newContext(model.UnsupportedResourceSkip))
 	if !errors.Is(err, ErrUnsupportedResource) || !strings.Contains(err.Error(), "metadata parent obj#9: metadata obj#90") {
 		t.Fatalf("skip policy must report all unsupported resources, got %v", err)
 	}
 
-	_, err = ExtractMetadata(newContext(model.UnsupportedResourceFail))
+	_, err = ExtractMetadata(t.Context(), newContext(model.UnsupportedResourceFail))
 	if !errors.Is(err, ErrUnsupportedResource) {
 		t.Fatalf("fail policy must preserve %v, got %v", ErrUnsupportedResource, err)
 	}
@@ -624,7 +632,7 @@ func TestExtractPageImagesUnsupportedResourcePolicyControlsContinuation(t *testi
 				},
 			},
 		}
-		_, err := ExtractPageImages(ctx, 1, false)
+		_, err := ExtractPageImages(t.Context(), ctx, 1, false)
 		return err
 	}
 
@@ -641,7 +649,8 @@ func unsupportedFontObject(name string, fileObjNr int) *model.FontObject {
 	}
 }
 
-// TestExtractPageFontsUnsupportedResourcePolicyControlsContinuation verifies page-font skip and fail extraction behavior.
+// TestExtractPageFontsUnsupportedResourcePolicyControlsContinuation verifies page-font skip and fail extraction
+// behavior.
 func TestExtractPageFontsUnsupportedResourcePolicyControlsContinuation(t *testing.T) {
 	extract := func(policy model.UnsupportedResourcePolicy) error {
 		ctx := &model.Context{
@@ -655,14 +664,15 @@ func TestExtractPageFontsUnsupportedResourcePolicyControlsContinuation(t *testin
 				},
 			},
 		}
-		_, err := ExtractPageFonts(ctx, 1, nil, nil)
+		_, err := ExtractPageFonts(t.Context(), ctx, 1, nil, nil)
 		return err
 	}
 
 	assertUnsupportedResourcePolicyContinuation(t, "font \"SecondFont\" obj#9", extract)
 }
 
-// TestExtractFormFontsUnsupportedResourcePolicyControlsContinuation verifies form-font skip and fail extraction behavior.
+// TestExtractFormFontsUnsupportedResourcePolicyControlsContinuation verifies form-font skip and fail extraction
+// behavior.
 func TestExtractFormFontsUnsupportedResourcePolicyControlsContinuation(t *testing.T) {
 	extract := func(policy model.UnsupportedResourcePolicy) error {
 		ctx := &model.Context{
@@ -675,7 +685,7 @@ func TestExtractFormFontsUnsupportedResourcePolicyControlsContinuation(t *testin
 				},
 			},
 		}
-		_, err := ExtractFormFonts(ctx)
+		_, err := ExtractFormFonts(t.Context(), ctx)
 		return err
 	}
 
@@ -709,7 +719,7 @@ func TestExtractPageImagesUsesOneBasedResourceNames(t *testing.T) {
 		},
 	}
 
-	images, err := ExtractPageImages(ctx, 2, true)
+	images, err := ExtractPageImages(t.Context(), ctx, 2, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -723,7 +733,7 @@ func TestExtractMetadataRejectsDirectMetadataStream(t *testing.T) {
 	ctx := &model.Context{XRefTable: &model.XRefTable{}}
 	d := types.Dict{"Metadata": types.StreamDict{Dict: types.Dict{}}}
 
-	_, err := extractMetadataFromDict(ctx, d, 1)
+	_, err := extractMetadataFromDict(t.Context(), ctx, d, 1)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -742,7 +752,7 @@ func TestExtractPageImagesThumbnailErrorsIncludePageContext(t *testing.T) {
 		Optimize: &model.OptimizationContext{},
 	}
 
-	_, err := ExtractPageImages(ctx, 1, true)
+	_, err := ExtractPageImages(t.Context(), ctx, 1, true)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -762,7 +772,7 @@ func TestExtractFormFontsErrorsIncludeObjectContext(t *testing.T) {
 		},
 	}
 
-	_, err := ExtractFormFonts(ctx)
+	_, err := ExtractFormFonts(t.Context(), ctx)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -775,7 +785,7 @@ func TestExtractFormFontsErrorsIncludeObjectContext(t *testing.T) {
 func TestExtractPageContentErrorsIncludePageContext(t *testing.T) {
 	ctx := &model.Context{XRefTable: &model.XRefTable{PageCount: 1}}
 
-	_, err := ExtractPageContent(ctx, 1)
+	_, err := ExtractPageContent(t.Context(), ctx, 1)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -794,7 +804,7 @@ func TestExtractMetadataErrorsIncludeParentObjectContext(t *testing.T) {
 		},
 	}
 
-	_, err := ExtractMetadata(ctx)
+	_, err := ExtractMetadata(t.Context(), ctx)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -883,7 +893,7 @@ func TestExtractFontDescriptorErrorsIncludeObjectContext(t *testing.T) {
 		FontDict: types.Dict{"FontDescriptor": *types.NewIndirectRef(7, 0)},
 	}
 
-	_, err := ExtractFont(ctx, fontObject, 9)
+	_, err := ExtractFont(t.Context(), ctx, fontObject, 9)
 	if err == nil {
 		t.Fatal("expected error")
 	}

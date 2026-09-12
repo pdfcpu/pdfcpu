@@ -32,14 +32,14 @@ import (
 
 // TestRotateRejectsMissingCommandFields verifies rotate command boundary guards.
 func TestRotateRejectsMissingCommandFields(t *testing.T) {
-	if _, err := Rotate(nil); !errors.Is(err, ErrMissingCommand) {
+	if _, err := rotate(t.Context(), nil); !errors.Is(err, ErrMissingCommand) {
 		t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 	}
-	if _, err := Rotate(&Command{}); !errors.Is(err, api.ErrMissingPDFInput) {
+	if _, err := rotate(t.Context(), &Command{}); !errors.Is(err, api.ErrMissingPDFInput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 	}
 	inFile := "-"
-	if _, err := Rotate(&Command{InFile: &inFile}); !errors.Is(err, api.ErrMissingPDFOutput) {
+	if _, err := rotate(t.Context(), &Command{InFile: &inFile}); !errors.Is(err, api.ErrMissingPDFOutput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFOutput, err)
 	}
 }
@@ -48,31 +48,31 @@ func TestRotateRejectsMissingCommandFields(t *testing.T) {
 func TestInsertRemovePagesRejectMissingCommandFields(t *testing.T) {
 	operations := []struct {
 		name string
-		fn   func(*Command) ([]string, error)
+		fn   dispatchFunc
 	}{
-		{name: "insert pages", fn: InsertPages},
-		{name: "remove pages", fn: RemovePages},
+		{name: "insert pages", fn: insertPages},
+		{name: "remove pages", fn: removePages},
 	}
 
 	for _, tt := range operations {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := tt.fn(nil); !errors.Is(err, ErrMissingCommand) {
+			if _, err := tt.fn(t.Context(), nil); !errors.Is(err, ErrMissingCommand) {
 				t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 			}
-			if _, err := tt.fn(&Command{}); !errors.Is(err, api.ErrMissingPDFInput) {
+			if _, err := tt.fn(t.Context(), &Command{}); !errors.Is(err, api.ErrMissingPDFInput) {
 				t.Fatalf("expected %v, got %v", api.ErrMissingPDFInput, err)
 			}
 			empty := ""
 			fileOut := filepath.Join(t.TempDir(), "out.pdf")
-			if _, err := tt.fn(&Command{InFile: &empty, OutFile: &fileOut}); !errors.Is(err, api.ErrMissingPDFInput) {
+			if _, err := tt.fn(t.Context(), &Command{InFile: &empty, OutFile: &fileOut}); !errors.Is(err, api.ErrMissingPDFInput) {
 				t.Fatalf("file route: expected %v, got %v", api.ErrMissingPDFInput, err)
 			}
 			streamOut := "-"
-			if _, err := tt.fn(&Command{InFile: &empty, OutFile: &streamOut}); !errors.Is(err, api.ErrMissingPDFInput) {
+			if _, err := tt.fn(t.Context(), &Command{InFile: &empty, OutFile: &streamOut}); !errors.Is(err, api.ErrMissingPDFInput) {
 				t.Fatalf("streaming route: expected %v, got %v", api.ErrMissingPDFInput, err)
 			}
 			inFile := "-"
-			if _, err := tt.fn(&Command{InFile: &inFile}); !errors.Is(err, api.ErrMissingPDFOutput) {
+			if _, err := tt.fn(t.Context(), &Command{InFile: &inFile}); !errors.Is(err, api.ErrMissingPDFOutput) {
 				t.Fatalf("expected %v, got %v", api.ErrMissingPDFOutput, err)
 			}
 		})
@@ -83,10 +83,10 @@ func TestInsertRemovePagesRejectMissingCommandFields(t *testing.T) {
 func TestInsertRemovePagesAllowEmptyOutput(t *testing.T) {
 	operations := []struct {
 		name string
-		fn   func(*Command) ([]string, error)
+		fn   dispatchFunc
 	}{
-		{name: "insert pages", fn: InsertPages},
-		{name: "remove pages", fn: RemovePages},
+		{name: "insert pages", fn: insertPages},
+		{name: "remove pages", fn: removePages},
 	}
 
 	for _, tt := range operations {
@@ -94,7 +94,7 @@ func TestInsertRemovePagesAllowEmptyOutput(t *testing.T) {
 			t.Run("file", func(t *testing.T) {
 				inFile := filepath.Join(t.TempDir(), "missing.pdf")
 				outFile := ""
-				_, err := tt.fn(&Command{InFile: &inFile, OutFile: &outFile})
+				_, err := tt.fn(t.Context(), &Command{InFile: &inFile, OutFile: &outFile})
 				if errors.Is(err, api.ErrMissingPDFOutput) {
 					t.Fatalf("empty output must remain valid: %v", err)
 				}
@@ -116,7 +116,7 @@ func TestInsertRemovePagesAllowEmptyOutput(t *testing.T) {
 				})
 
 				inFile, outFile := "-", ""
-				_, err = tt.fn(&Command{InFile: &inFile, OutFile: &outFile})
+				_, err = tt.fn(t.Context(), &Command{InFile: &inFile, OutFile: &outFile})
 				if errors.Is(err, api.ErrMissingPDFOutput) {
 					t.Fatalf("empty output must remain valid: %v", err)
 				}
@@ -132,11 +132,11 @@ func TestInsertRemovePagesAllowEmptyOutput(t *testing.T) {
 func TestInsertRemovePagesStreamingFailurePreservesExistingOutput(t *testing.T) {
 	operations := []struct {
 		name string
-		fn   func(*Command) ([]string, error)
+		fn   dispatchFunc
 		want string
 	}{
-		{name: "insert pages", fn: InsertPages, want: "insert pages: parse page selection"},
-		{name: "remove pages", fn: RemovePages, want: "remove pages: parse page selection"},
+		{name: "insert pages", fn: insertPages, want: "insert pages: parse page selection"},
+		{name: "remove pages", fn: removePages, want: "remove pages: parse page selection"},
 	}
 
 	for _, tt := range operations {
@@ -148,7 +148,7 @@ func TestInsertRemovePagesStreamingFailurePreservesExistingOutput(t *testing.T) 
 				t.Fatal(err)
 			}
 			inFile := "-"
-			_, err := tt.fn(&Command{
+			_, err := tt.fn(t.Context(), &Command{
 				InFile:        &inFile,
 				OutFile:       &outFile,
 				PageSelection: []string{"foo"},
@@ -201,7 +201,7 @@ func TestRotateStreamingFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := Rotate(RotateCommand("-", outFile, 90, []string{"foo"}, nil))
+	_, err := rotate(t.Context(), RotateCommand("-", outFile, 90, []string{"foo"}, nil))
 	if err == nil || !strings.Contains(err.Error(), "rotate: parse page selection") {
 		t.Fatalf("expected rotate page-selection error, got %v", err)
 	}
@@ -218,7 +218,7 @@ func TestRotateStreamingFailurePreservesExistingOutput(t *testing.T) {
 func TestRotateStreamingIOErrorsIncludeOperationContext(t *testing.T) {
 	outFile := "-"
 	missingInput := filepath.Join(t.TempDir(), "missing.pdf")
-	_, err := Rotate(&Command{InFile: &missingInput, OutFile: &outFile, IntVal: 90})
+	_, err := rotate(t.Context(), &Command{InFile: &missingInput, OutFile: &outFile, IntVal: 90})
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "rotate: open input "+missingInput) {
 		t.Fatalf("expected rotate input context, got %v", err)
 	}
@@ -226,7 +226,7 @@ func TestRotateStreamingIOErrorsIncludeOperationContext(t *testing.T) {
 	pageStreamingStdin(t)
 	inFile := "-"
 	missingOutput := filepath.Join(t.TempDir(), "missing", "out.pdf")
-	_, err = Rotate(&Command{InFile: &inFile, OutFile: &missingOutput, IntVal: 90})
+	_, err = rotate(t.Context(), &Command{InFile: &inFile, OutFile: &missingOutput, IntVal: 90})
 	if !errors.Is(err, os.ErrNotExist) || !strings.Contains(err.Error(), "rotate: create output "+missingOutput) {
 		t.Fatalf("expected rotate output context, got %v", err)
 	}
@@ -271,7 +271,7 @@ func TestNUpImageStdoutDoesNotOpenPDFInput(t *testing.T) {
 	cmd := NUpCommand([]string{missingImage}, "-", nil, nup, nil)
 	defer log.SetDefaultCLILogger()
 
-	_, err = NUp(cmd)
+	_, err = nUp(t.Context(), cmd)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -284,38 +284,38 @@ func TestNUpImageStdoutDoesNotOpenPDFInput(t *testing.T) {
 }
 
 func TestNUpRejectsMissingCommandFields(t *testing.T) {
-	_, err := NUp(nil)
+	_, err := nUp(t.Context(), nil)
 	if !errors.Is(err, ErrMissingCommand) {
 		t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 	}
 
 	cmd := &Command{}
-	_, err = NUp(cmd)
+	_, err = nUp(t.Context(), cmd)
 	if !errors.Is(err, api.ErrMissingPDFOutput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFOutput, err)
 	}
 
 	cmd = NUpCommand([]string{"-"}, "-", nil, nil, nil)
-	_, err = NUp(cmd)
+	_, err = nUp(t.Context(), cmd)
 	if !errors.Is(err, api.ErrMissingNUpConfiguration) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingNUpConfiguration, err)
 	}
 }
 
 func TestGridRejectsMissingCommandFields(t *testing.T) {
-	_, err := Grid(nil)
+	_, err := grid(t.Context(), nil)
 	if !errors.Is(err, ErrMissingCommand) {
 		t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 	}
 
 	cmd := &Command{}
-	_, err = Grid(cmd)
+	_, err = grid(t.Context(), cmd)
 	if !errors.Is(err, api.ErrMissingPDFOutput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFOutput, err)
 	}
 
 	cmd = GridCommand([]string{"-"}, "-", nil, nil, nil)
-	_, err = Dispatch(cmd)
+	_, err = Dispatch(t.Context(), cmd)
 	if !errors.Is(err, api.ErrMissingGridConfiguration) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingGridConfiguration, err)
 	}
@@ -327,19 +327,19 @@ func TestBoxCommandsRejectMissingFields(t *testing.T) {
 		run  func(*Command) error
 	}{
 		{name: "list", run: func(cmd *Command) error {
-			_, err := ListBoxes(cmd)
+			_, err := listBoxes(t.Context(), cmd)
 			return err
 		}},
 		{name: "add", run: func(cmd *Command) error {
-			_, err := AddBoxes(cmd)
+			_, err := addBoxes(t.Context(), cmd)
 			return err
 		}},
 		{name: "remove", run: func(cmd *Command) error {
-			_, err := RemoveBoxes(cmd)
+			_, err := removeBoxes(t.Context(), cmd)
 			return err
 		}},
 		{name: "crop", run: func(cmd *Command) error {
-			_, err := Crop(cmd)
+			_, err := crop(t.Context(), cmd)
 			return err
 		}},
 	} {
@@ -361,15 +361,15 @@ func TestBoxCommandsRejectMissingFields(t *testing.T) {
 		want error
 	}{
 		{name: "add output", run: func(cmd *Command) error {
-			_, err := AddBoxes(cmd)
+			_, err := addBoxes(t.Context(), cmd)
 			return err
 		}, want: api.ErrMissingPDFOutput},
 		{name: "remove output", run: func(cmd *Command) error {
-			_, err := RemoveBoxes(cmd)
+			_, err := removeBoxes(t.Context(), cmd)
 			return err
 		}, want: api.ErrMissingPDFOutput},
 		{name: "crop output", run: func(cmd *Command) error {
-			_, err := Crop(cmd)
+			_, err := crop(t.Context(), cmd)
 			return err
 		}, want: api.ErrMissingPDFOutput},
 	} {
@@ -386,15 +386,15 @@ func TestBoxCommandsRejectMissingFields(t *testing.T) {
 		want error
 	}{
 		{name: "add boundaries", run: func(cmd *Command) error {
-			_, err := AddBoxes(cmd)
+			_, err := addBoxes(t.Context(), cmd)
 			return err
 		}, want: api.ErrMissingPageBoundaries},
 		{name: "remove boundaries", run: func(cmd *Command) error {
-			_, err := RemoveBoxes(cmd)
+			_, err := removeBoxes(t.Context(), cmd)
 			return err
 		}, want: api.ErrMissingPageBoundaries},
 		{name: "crop box", run: func(cmd *Command) error {
-			_, err := Crop(cmd)
+			_, err := crop(t.Context(), cmd)
 			return err
 		}, want: api.ErrMissingBoxConfiguration},
 	}
@@ -419,19 +419,19 @@ func TestBoxFileCommandsUseAPIContext(t *testing.T) {
 		want string
 	}{
 		{name: "list", run: func() error {
-			_, err := ListBoxes(ListBoxesCommand(inFile, nil, nil, nil))
+			_, err := listBoxes(t.Context(), ListBoxesCommand(inFile, nil, nil, nil))
 			return err
 		}, want: "list boxes: open input"},
 		{name: "add", run: func() error {
-			_, err := AddBoxes(AddBoxesCommand(inFile, outFile, nil, pb, nil))
+			_, err := addBoxes(t.Context(), AddBoxesCommand(inFile, outFile, nil, pb, nil))
 			return err
 		}, want: "add boxes: open input"},
 		{name: "remove", run: func() error {
-			_, err := RemoveBoxes(RemoveBoxesCommand(inFile, outFile, nil, pb, nil))
+			_, err := removeBoxes(t.Context(), RemoveBoxesCommand(inFile, outFile, nil, pb, nil))
 			return err
 		}, want: "remove boxes: open input"},
 		{name: "crop", run: func() error {
-			_, err := Crop(CropCommand(inFile, outFile, nil, b, nil))
+			_, err := crop(t.Context(), CropCommand(inFile, outFile, nil, b, nil))
 			return err
 		}, want: "crop: open input"},
 	}
@@ -457,16 +457,16 @@ func TestBoxCommandsUseAPIPageBoundaryValidation(t *testing.T) {
 		want string
 	}{
 		{name: "empty add", run: func(outFile string) error {
-			_, err := AddBoxes(AddBoxesCommand(inFile, outFile, nil, &model.PageBoundaries{}, nil))
+			_, err := addBoxes(t.Context(), AddBoxesCommand(inFile, outFile, nil, &model.PageBoundaries{}, nil))
 			return err
 		}, want: "add boxes: validate page boundaries: empty request"},
 		{name: "empty remove", run: func(outFile string) error {
-			_, err := RemoveBoxes(RemoveBoxesCommand(inFile, outFile, nil, &model.PageBoundaries{}, nil))
+			_, err := removeBoxes(t.Context(), RemoveBoxesCommand(inFile, outFile, nil, &model.PageBoundaries{}, nil))
 			return err
 		}, want: "remove boxes: validate page boundaries: empty request"},
 		{name: "remove MediaBox", run: func(outFile string) error {
 			pb := &model.PageBoundaries{Media: &model.Box{}}
-			_, err := RemoveBoxes(RemoveBoxesCommand(inFile, outFile, nil, pb, nil))
+			_, err := removeBoxes(t.Context(), RemoveBoxesCommand(inFile, outFile, nil, pb, nil))
 			return err
 		}, want: "remove boxes: validate page boundaries: MediaBox removal"},
 	}
@@ -514,7 +514,7 @@ func TestGridFileOutputDelegatesToAPIFileLayer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = Dispatch(GridCommand([]string{imageFile}, imageFile, nil, nup, nil))
+	_, err = Dispatch(t.Context(), GridCommand([]string{imageFile}, imageFile, nil, nup, nil))
 	if !errors.Is(err, api.ErrGridImageOutputConflict) {
 		t.Fatalf("expected %v, got %v", api.ErrGridImageOutputConflict, err)
 	}
@@ -538,7 +538,7 @@ func TestGridImageStdoutDoesNotOpenPDFInput(t *testing.T) {
 	missingImage := filepath.Join(t.TempDir(), "missing.png")
 	defer log.SetDefaultCLILogger()
 
-	_, err = Dispatch(GridCommand([]string{missingImage}, "-", nil, nup, nil))
+	_, err = Dispatch(t.Context(), GridCommand([]string{missingImage}, "-", nil, nup, nil))
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -563,10 +563,10 @@ func TestGridPDFStdin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err = Dispatch(GridCommand([]string{"-"}, outFile, nil, nup, nil)); err != nil {
+	if _, err = Dispatch(t.Context(), GridCommand([]string{"-"}, outFile, nil, nup, nil)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = api.ReadContextFile(outFile); err != nil {
+	if _, err = api.ReadContextFile(t.Context(), outFile); err != nil {
 		t.Fatalf("expected valid grid output: %v", err)
 	}
 }
@@ -589,7 +589,7 @@ func TestGridImageStdout(t *testing.T) {
 		t.Fatal(err)
 	}
 	inFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
-	_, gridErr := Dispatch(GridCommand([]string{inFile}, "-", nil, nup, nil))
+	_, gridErr := Dispatch(t.Context(), GridCommand([]string{inFile}, "-", nil, nup, nil))
 	os.Stdout = stdout
 	if gridErr != nil {
 		t.Fatal(gridErr)
@@ -597,7 +597,7 @@ func TestGridImageStdout(t *testing.T) {
 	if err := out.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := api.ReadContextFile(out.Name()); err != nil {
+	if _, err := api.ReadContextFile(t.Context(), out.Name()); err != nil {
 		t.Fatalf("expected valid stdout grid: %v", err)
 	}
 }
@@ -616,7 +616,7 @@ func TestNUpRejectsMissingInputs(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, err = NUp(NUpCommand(nil, "-", nil, nup, nil))
+			_, err = nUp(t.Context(), NUpCommand(nil, "-", nil, nup, nil))
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
@@ -640,7 +640,7 @@ func TestNUpFileOutputDelegatesToAPIFileLayer(t *testing.T) {
 		}
 	}
 
-	_, err = NUp(NUpCommand(imageFiles, imageFiles[1], nil, nup, nil))
+	_, err = nUp(t.Context(), NUpCommand(imageFiles, imageFiles[1], nil, nup, nil))
 	if !errors.Is(err, api.ErrNUpImageOutputConflict) {
 		t.Fatalf("expected API file-layer sentinel %v, got %v", api.ErrNUpImageOutputConflict, err)
 	}
@@ -661,7 +661,7 @@ func TestNUpMissingPDFInput(t *testing.T) {
 	inFile := filepath.Join(t.TempDir(), "missing.pdf")
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	_, err = NUp(NUpCommand([]string{inFile}, outFile, nil, nup, nil))
+	_, err = nUp(t.Context(), NUpCommand([]string{inFile}, outFile, nil, nup, nil))
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -688,7 +688,7 @@ func TestNUpStdinReadFailure(t *testing.T) {
 	t.Cleanup(func() { os.Stdin = stdin })
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	_, err = NUp(NUpCommand([]string{"-"}, outFile, nil, nup, nil))
+	_, err = nUp(t.Context(), NUpCommand([]string{"-"}, outFile, nil, nup, nil))
 	if !errors.Is(err, os.ErrClosed) {
 		t.Fatalf("expected %v, got %v", os.ErrClosed, err)
 	}
@@ -710,7 +710,7 @@ func TestNUpStdinRewindFailure(t *testing.T) {
 	t.Cleanup(func() { rewindTemporaryInputFile = rewind })
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	_, err = NUp(NUpCommand([]string{"-"}, outFile, nil, nup, nil))
+	_, err = nUp(t.Context(), NUpCommand([]string{"-"}, outFile, nil, nup, nil))
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -728,7 +728,7 @@ func TestNUpStreamOutputCreationFailure(t *testing.T) {
 	useStdin(t, "%PDF-1.7\n")
 	outFile := filepath.Join(t.TempDir(), "missing", "out.pdf")
 
-	_, err = NUp(NUpCommand([]string{"-"}, outFile, nil, nup, nil))
+	_, err = nUp(t.Context(), NUpCommand([]string{"-"}, outFile, nil, nup, nil))
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -766,7 +766,7 @@ func TestNUpStdoutWriterFailure(t *testing.T) {
 		log.SetDefaultCLILogger()
 	})
 	inFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
-	_, nUpErr := NUp(NUpCommand([]string{inFile}, "-", nil, nup, nil))
+	_, nUpErr := nUp(t.Context(), NUpCommand([]string{inFile}, "-", nil, nup, nil))
 	os.Stdout = stdout
 
 	if !errors.Is(nUpErr, pipeErr) {
@@ -789,7 +789,7 @@ func TestNUpStreamFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = NUp(NUpCommand([]string{"-"}, outFile, nil, nup, nil))
+	_, err = nUp(t.Context(), NUpCommand([]string{"-"}, outFile, nil, nup, nil))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -804,7 +804,7 @@ func TestNUpStreamFailurePreservesExistingOutput(t *testing.T) {
 
 func TestNUpOutputCloseFailurePreservesPrimaryError(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	_, w, finalize, err := streamInOutForOperation("", outFile, "n-up")
+	_, w, finalize, err := streamInOutForOperation(t.Context(), "", outFile, "n-up")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -828,7 +828,7 @@ func TestNUpOutputCloseFailurePreservesPrimaryError(t *testing.T) {
 
 func TestNUpPartialOutputCleanup(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	_, w, finalize, err := streamInOutForOperation("", outFile, "n-up")
+	_, w, finalize, err := streamInOutForOperation(t.Context(), "", outFile, "n-up")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -853,7 +853,7 @@ func TestBookletImageStdoutDoesNotOpenPDFInput(t *testing.T) {
 	cmd := BookletCommand([]string{missingImage}, "-", nil, nup, nil)
 	defer log.SetDefaultCLILogger()
 
-	_, err = Booklet(cmd)
+	_, err = booklet(t.Context(), cmd)
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -867,20 +867,20 @@ func TestBookletImageStdoutDoesNotOpenPDFInput(t *testing.T) {
 
 func TestBookletStreamRejectsMissingConfiguration(t *testing.T) {
 	cmd := BookletCommand([]string{"-"}, "-", nil, nil, nil)
-	_, err := Booklet(cmd)
+	_, err := booklet(t.Context(), cmd)
 	if !errors.Is(err, api.ErrMissingBookletConfiguration) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingBookletConfiguration, err)
 	}
 }
 
 func TestBookletRejectsMissingCommandFields(t *testing.T) {
-	_, err := Booklet(nil)
+	_, err := booklet(t.Context(), nil)
 	if !errors.Is(err, ErrMissingCommand) {
 		t.Fatalf("expected %v, got %v", ErrMissingCommand, err)
 	}
 
 	cmd := &Command{}
-	_, err = Booklet(cmd)
+	_, err = booklet(t.Context(), cmd)
 	if !errors.Is(err, api.ErrMissingPDFOutput) {
 		t.Fatalf("expected %v, got %v", api.ErrMissingPDFOutput, err)
 	}
@@ -902,7 +902,7 @@ func TestBookletFileOutputDelegatesToAPIFileLayer(t *testing.T) {
 		}
 	}
 
-	_, err = Booklet(BookletCommand(imageFiles, imageFiles[1], nil, nup, nil))
+	_, err = booklet(t.Context(), BookletCommand(imageFiles, imageFiles[1], nil, nup, nil))
 	if !errors.Is(err, api.ErrBookletImageOutputConflict) {
 		t.Fatalf("expected API file-layer sentinel %v, got %v", api.ErrBookletImageOutputConflict, err)
 	}
@@ -923,7 +923,7 @@ func TestBookletMissingPDFInput(t *testing.T) {
 	inFile := filepath.Join(t.TempDir(), "missing.pdf")
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	_, err = Booklet(BookletCommand([]string{inFile}, outFile, nil, nup, nil))
+	_, err = booklet(t.Context(), BookletCommand([]string{inFile}, outFile, nil, nup, nil))
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -950,7 +950,7 @@ func TestBookletMissingImages(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			outFile := filepath.Join(t.TempDir(), "out.pdf")
-			_, err := Booklet(BookletCommand(tt.inFiles, outFile, nil, nup, nil))
+			_, err := booklet(t.Context(), BookletCommand(tt.inFiles, outFile, nil, nup, nil))
 			if !errors.Is(err, os.ErrNotExist) {
 				t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 			}
@@ -982,7 +982,7 @@ func TestBookletStdinReadFailure(t *testing.T) {
 	t.Cleanup(func() { os.Stdin = stdin })
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	_, err = Booklet(BookletCommand([]string{"-"}, outFile, nil, nup, nil))
+	_, err = booklet(t.Context(), BookletCommand([]string{"-"}, outFile, nil, nup, nil))
 	if !errors.Is(err, os.ErrClosed) {
 		t.Fatalf("expected %v, got %v", os.ErrClosed, err)
 	}
@@ -1004,7 +1004,7 @@ func TestBookletStdinRewindFailure(t *testing.T) {
 	t.Cleanup(func() { rewindTemporaryInputFile = rewind })
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
 
-	_, err = Booklet(BookletCommand([]string{"-"}, outFile, nil, nup, nil))
+	_, err = booklet(t.Context(), BookletCommand([]string{"-"}, outFile, nil, nup, nil))
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -1022,7 +1022,7 @@ func TestBookletOutputCreationFailure(t *testing.T) {
 	inFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
 	outFile := filepath.Join(t.TempDir(), "missing", "out.pdf")
 
-	_, err = Booklet(BookletCommand([]string{inFile}, outFile, nil, nup, nil))
+	_, err = booklet(t.Context(), BookletCommand([]string{inFile}, outFile, nil, nup, nil))
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}
@@ -1060,7 +1060,7 @@ func TestBookletStdoutWriterFailure(t *testing.T) {
 		log.SetDefaultCLILogger()
 	})
 	inFile := filepath.Join("..", "testdata", "image-fixtures", "any.jpg")
-	_, bookletErr := Booklet(BookletCommand([]string{inFile}, "-", nil, nup, nil))
+	_, bookletErr := booklet(t.Context(), BookletCommand([]string{inFile}, "-", nil, nup, nil))
 	os.Stdout = stdout
 
 	if !errors.Is(bookletErr, pipeErr) {
@@ -1073,7 +1073,7 @@ func TestBookletStdoutWriterFailure(t *testing.T) {
 
 func TestBookletOutputCloseFailurePreservesPrimaryError(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	_, w, finalize, err := streamInOutForOperation("", outFile, "booklet")
+	_, w, finalize, err := streamInOutForOperation(t.Context(), "", outFile, "booklet")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1097,7 +1097,7 @@ func TestBookletOutputCloseFailurePreservesPrimaryError(t *testing.T) {
 
 func TestBookletPartialOutputCleanup(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	_, w, finalize, err := streamInOutForOperation("", outFile, "booklet")
+	_, w, finalize, err := streamInOutForOperation(t.Context(), "", outFile, "booklet")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1128,7 +1128,7 @@ func TestBookletFailurePreservesExistingOutput(t *testing.T) {
 		filepath.Join(t.TempDir(), "missing.jpg"),
 	}
 
-	_, err = Booklet(BookletCommand(inFiles, outFile, nil, nup, nil))
+	_, err = booklet(t.Context(), BookletCommand(inFiles, outFile, nil, nup, nil))
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("expected %v, got %v", os.ErrNotExist, err)
 	}

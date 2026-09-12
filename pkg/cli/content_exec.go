@@ -17,24 +17,18 @@ limitations under the License.
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
-
-func runContentStreamOperation(inFile, outFile, op string, fn func(io.ReadSeeker, io.Writer) error) error {
-	rs, w, finalize, err := streamInOutForOperation(inFile, outFile, op)
-	if err != nil {
-		return err
-	}
-	return finalize(fn(rs, w))
-}
 
 func validateWatermarkCommand(cmd *Command, operation string, requireWatermark bool) error {
 	requirements := commandRequirements{
@@ -51,62 +45,74 @@ func validateWatermarkCommand(cmd *Command, operation string, requireWatermark b
 	return nil
 }
 
-// AddWatermarks adds watermarks or stamps to selected pages of inFile and writes the result to outFile.
-func AddWatermarks(cmd *Command) ([]string, error) {
+func addWatermarks(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateWatermarkCommand(cmd, "add watermarks", true); err != nil {
 		return nil, err
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.AddWatermarksFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Watermark, cmd.Conf)
+		return nil, api.AddWatermarksFile(
+			c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Watermark, cmd.Conf,
+		)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "add watermarks")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "add watermarks")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.AddWatermarks(rs, w, cmd.PageSelection, cmd.Watermark, cmd.Conf))
+	return nil, finalize(api.AddWatermarks(c, rs, w, cmd.PageSelection, cmd.Watermark, cmd.Conf))
 }
 
-// RemoveWatermarks removes watermarks or stamps from selected pages of inFile and writes the result to outFile.
-func RemoveWatermarks(cmd *Command) ([]string, error) {
+func removeWatermarks(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if err := validateWatermarkCommand(cmd, "remove watermarks", false); err != nil {
 		return nil, err
 	}
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
-		return nil, api.RemoveWatermarksFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
+		return nil, api.RemoveWatermarksFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "remove watermarks")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "remove watermarks")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.RemoveWatermarks(rs, w, cmd.PageSelection, cmd.Conf))
+	return nil, finalize(api.RemoveWatermarks(c, rs, w, cmd.PageSelection, cmd.Conf))
 }
 
-func listAnnotations(rs io.ReadSeeker, selectedPages []string, json bool, conf *model.Configuration) (int, []string, error) {
+func listAnnotations(c context.Context, rs io.ReadSeeker, selectedPages []string, json bool, conf *model.Configuration) (int, []string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, nil, err
+	}
 	if json {
 		log.SetCLILogger(nil)
 	}
-	annots, err := api.Annotations(rs, selectedPages, conf)
+	annots, err := api.Annotations(c, rs, selectedPages, conf)
 	if err != nil {
 		return 0, nil, err
 	}
 	if json {
-		return pdfcpu.ListAnnotationsJSON(annots)
+		return pdfcpu.ListAnnotationsJSON(c, annots)
 	}
 
-	return pdfcpu.ListAnnotations(annots)
+	return pdfcpu.ListAnnotations(c, annots)
 }
 
 func closeListAnnotationsInput(f *os.File, err error) error {
 	return errors.Join(err, closeStreamFile(f, "list annotations: close input"))
 }
 
-func listAnnotationsFile(inFile string, selectedPages []string, json bool, conf *model.Configuration) (count int, ss []string, err error) {
+func listAnnotationsFile(c context.Context, inFile string, selectedPages []string, json bool, conf *model.Configuration) (count int, ss []string, err error) {
 	const op = "list annotations"
 
+	if err := contextutil.Check(c); err != nil {
+		return 0, nil, err
+	}
 	f, err := os.Open(inFile)
 	if err != nil {
 		return 0, nil, fmt.Errorf("%s: open input %s: %w", op, inFile, err)
@@ -115,44 +121,54 @@ func listAnnotationsFile(inFile string, selectedPages []string, json bool, conf 
 		err = closeListAnnotationsInput(f, err)
 	}()
 
-	return listAnnotations(f, selectedPages, json, conf)
+	return listAnnotations(c, f, selectedPages, json, conf)
 }
 
-// ListAnnotationsFile returns a list of page annotations of inFile.
-func ListAnnotationsFile(inFile string, selectedPages []string, conf *model.Configuration) (int, []string, error) {
+// ListAnnotationsFile returns a list of page annotations of inFile and supports cancellation.
+func ListAnnotationsFile(c context.Context, inFile string, selectedPages []string, conf *model.Configuration) (int, []string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, nil, err
+	}
 	if inFile == "" {
 		return 0, nil, commandValidationError("list annotations", api.ErrMissingPDFInput)
 	}
-	return listAnnotationsFile(inFile, selectedPages, false, conf)
+	return listAnnotationsFile(c, inFile, selectedPages, false, conf)
 }
 
-// ListAnnotationsJSONFile returns a JSON list of page annotations of inFile.
-func ListAnnotationsJSONFile(inFile string, selectedPages []string, conf *model.Configuration) (int, []string, error) {
+// ListAnnotationsJSONFile returns a JSON list of page annotations of inFile and supports cancellation.
+func ListAnnotationsJSONFile(c context.Context, inFile string, selectedPages []string, conf *model.Configuration) (int, []string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, nil, err
+	}
 	if inFile == "" {
 		return 0, nil, commandValidationError("list annotations", api.ErrMissingPDFInput)
 	}
-	return listAnnotationsFile(inFile, selectedPages, true, conf)
+	return listAnnotationsFile(c, inFile, selectedPages, true, conf)
 }
 
-// ListAnnotations returns inFile's page annotations.
-func ListAnnotations(cmd *Command) ([]string, error) {
+func listAnnotationsForCommand(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "list annotations")
 	if err != nil {
 		return nil, err
 	}
 	if inFile == "-" {
-		return withStdinReadSeeker("list annotations", func(rs io.ReadSeeker) ([]string, error) {
-			_, ss, err := listAnnotations(rs, cmd.PageSelection, cmd.BoolVal1, cmd.Conf)
+		return withStdinReadSeeker(c, "list annotations", func(rs io.ReadSeeker) ([]string, error) {
+			_, ss, err := listAnnotations(c, rs, cmd.PageSelection, cmd.BoolVal1, cmd.Conf)
 			return ss, err
 		})
 	}
 
-	_, ss, err := listAnnotationsFile(inFile, cmd.PageSelection, cmd.BoolVal1, cmd.Conf)
+	_, ss, err := listAnnotationsFile(c, inFile, cmd.PageSelection, cmd.BoolVal1, cmd.Conf)
 	return ss, err
 }
 
-// RemoveAnnotations deletes annotations from inFile's page tree and writes the result to outFile.
-func RemoveAnnotations(cmd *Command) ([]string, error) {
+func removeAnnotations(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	requirements := commandRequirements{
 		operation: "remove annotations",
 		inFile:    commandStringRequiredNonEmpty,
@@ -164,39 +180,49 @@ func RemoveAnnotations(cmd *Command) ([]string, error) {
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile != "-" && *cmd.OutFile != "-" {
 		incr := false // No incremental writing on cli.
-		return nil, api.RemoveAnnotationsFile(*cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.StringVals, cmd.IntVals, cmd.Conf, incr)
+		return nil, api.RemoveAnnotationsFile(
+			c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.StringVals, cmd.IntVals, cmd.Conf, incr,
+		)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(*cmd.InFile, *cmd.OutFile, "remove annotations")
+	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "remove annotations")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.RemoveAnnotations(rs, w, cmd.PageSelection, cmd.StringVals, cmd.IntVals, cmd.Conf))
+	return nil, finalize(api.RemoveAnnotations(
+		c, rs, w, cmd.PageSelection, cmd.StringVals, cmd.IntVals, cmd.Conf,
+	))
 }
 
-// ListBookmarksFile returns inFile's bookmarks.
-// Deprecated: use api.ListBookmarksFile.
-func ListBookmarksFile(inFile string, conf *model.Configuration) ([]string, error) {
-	return api.ListBookmarksFile(inFile, conf)
+// ListBookmarksFile returns inFile's bookmarks and supports cancellation.
+func ListBookmarksFile(c context.Context, inFile string, conf *model.Configuration) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	return api.ListBookmarksFile(c, inFile, conf)
 }
 
-// ListBookmarks returns inFile's bookmarks.
-func ListBookmarks(cmd *Command) ([]string, error) {
+func listBookmarks(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "list bookmarks")
 	if err != nil {
 		return nil, err
 	}
 	if inFile == "-" {
-		return withStdinReadSeeker("list bookmarks", func(rs io.ReadSeeker) ([]string, error) {
-			return api.ListBookmarks(rs, cmd.Conf)
+		return withStdinReadSeeker(c, "list bookmarks", func(rs io.ReadSeeker) ([]string, error) {
+			return api.ListBookmarks(c, rs, cmd.Conf)
 		})
 	}
 
-	return api.ListBookmarksFile(inFile, cmd.Conf)
+	return api.ListBookmarksFile(c, inFile, cmd.Conf)
 }
 
-// ExportBookmarks exports inFile's bookmarks to outFileJSON.
-func ExportBookmarks(cmd *Command) ([]string, error) {
+func exportBookmarks(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	requirements := commandRequirements{
 		operation:   "export bookmarks",
 		inFile:      commandStringRequiredNonEmpty,
@@ -209,10 +235,10 @@ func ExportBookmarks(cmd *Command) ([]string, error) {
 	outFileJSON := *cmd.OutFileJSON
 	reportOutputPath(outFileJSON)
 	if inFile != "-" && outFileJSON != "-" {
-		return nil, api.ExportBookmarksFile(inFile, outFileJSON, cmd.Conf)
+		return nil, api.ExportBookmarksFile(c, inFile, outFileJSON, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(inFile, outFileJSON, "export bookmarks")
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFileJSON, "export bookmarks")
 	if err != nil {
 		return nil, err
 	}
@@ -222,11 +248,13 @@ func ExportBookmarks(cmd *Command) ([]string, error) {
 		source = "stdin"
 	}
 
-	return nil, finalize(api.ExportBookmarksJSON(rs, w, source, cmd.Conf))
+	return nil, finalize(api.ExportBookmarksJSON(c, rs, w, source, cmd.Conf))
 }
 
-// ImportBookmarks creates or replaces inFile's bookmarks using inFileJSON and writes the result to outFile.
-func ImportBookmarks(cmd *Command) ([]string, error) {
+func importBookmarks(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	requirements := commandRequirements{
 		operation:  "import bookmarks",
 		inFile:     commandStringRequiredNonEmpty,
@@ -240,7 +268,7 @@ func ImportBookmarks(cmd *Command) ([]string, error) {
 	outFile := optionalCommandString(cmd.OutFile)
 	reportCommandOutputPath(cmd)
 	if inFile != "-" && outFile != "-" {
-		return nil, api.ImportBookmarksFile(inFile, inFileJSON, outFile, cmd.BoolVal1, cmd.Conf)
+		return nil, api.ImportBookmarksFile(c, inFile, inFileJSON, outFile, cmd.BoolVal1, cmd.Conf)
 	}
 
 	f, err := os.Open(inFileJSON)
@@ -248,19 +276,21 @@ func ImportBookmarks(cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(inFile, outFile, "import bookmarks")
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "import bookmarks")
 	if err != nil {
 		_ = f.Close()
 		return nil, err
 	}
 
-	opErr := api.ImportBookmarks(rs, f, w, cmd.BoolVal1, cmd.Conf)
+	opErr := api.ImportBookmarks(c, rs, f, w, cmd.BoolVal1, cmd.Conf)
 	opErr = errors.Join(opErr, closeStreamFile(f, "import bookmarks: close JSON input"))
 	return nil, finalize(opErr)
 }
 
-// RemoveBookmarks removes bookmarks from inFile.
-func RemoveBookmarks(cmd *Command) ([]string, error) {
+func removeBookmarks(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "remove bookmarks")
 	if err != nil {
 		return nil, err
@@ -268,34 +298,38 @@ func RemoveBookmarks(cmd *Command) ([]string, error) {
 	outFile := optionalCommandString(cmd.OutFile)
 	reportCommandOutputPath(cmd)
 	if inFile != "-" && outFile != "-" {
-		return nil, api.RemoveBookmarksFile(inFile, outFile, cmd.Conf)
+		return nil, api.RemoveBookmarksFile(c, inFile, outFile, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(inFile, outFile, "remove bookmarks")
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "remove bookmarks")
 	if err != nil {
 		return nil, err
 	}
-	return nil, finalize(api.RemoveBookmarks(rs, w, cmd.Conf))
+	return nil, finalize(api.RemoveBookmarks(c, rs, w, cmd.Conf))
 }
 
-// ListPageLayout returns inFile's page layout.
-func ListPageLayout(cmd *Command) ([]string, error) {
+func listPageLayout(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "list page layout")
 	if err != nil {
 		return nil, err
 	}
 
 	if inFile == "-" {
-		return withStdinReadSeeker("list page layout", func(rs io.ReadSeeker) ([]string, error) {
-			return api.ListPageLayout(rs, cmd.Conf)
+		return withStdinReadSeeker(c, "list page layout", func(rs io.ReadSeeker) ([]string, error) {
+			return api.ListPageLayout(c, rs, cmd.Conf)
 		})
 	}
 
-	return api.ListPageLayoutFile(inFile, cmd.Conf)
+	return api.ListPageLayoutFile(c, inFile, cmd.Conf)
 }
 
-// SetPageLayout sets inFile's page layout.
-func SetPageLayout(cmd *Command) ([]string, error) {
+func setPageLayout(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "set page layout")
 	if err != nil {
 		return nil, err
@@ -307,52 +341,62 @@ func SetPageLayout(cmd *Command) ([]string, error) {
 	}
 
 	outFile := optionalCommandString(cmd.OutFile)
+	reportCommandOutputPath(cmd)
 	if inFile != "-" && outFile != "-" {
-		return nil, api.SetPageLayoutFile(inFile, outFile, *pageLayout, cmd.Conf)
+		return nil, api.SetPageLayoutFile(c, inFile, outFile, *pageLayout, cmd.Conf)
 	}
 
-	err = runContentStreamOperation(inFile, outFile, "set page layout", func(rs io.ReadSeeker, w io.Writer) error {
-		return api.SetPageLayout(rs, w, *pageLayout, cmd.Conf)
-	})
-	return nil, err
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "set page layout")
+	if err != nil {
+		return nil, err
+	}
+	return nil, finalize(api.SetPageLayout(c, rs, w, *pageLayout, cmd.Conf))
 }
 
-// ResetPageLayout resets inFile's page layout.
-func ResetPageLayout(cmd *Command) ([]string, error) {
+func resetPageLayout(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "reset page layout")
 	if err != nil {
 		return nil, err
 	}
 
 	outFile := optionalCommandString(cmd.OutFile)
+	reportCommandOutputPath(cmd)
 	if inFile != "-" && outFile != "-" {
-		return nil, api.ResetPageLayoutFile(inFile, outFile, cmd.Conf)
+		return nil, api.ResetPageLayoutFile(c, inFile, outFile, cmd.Conf)
 	}
 
-	err = runContentStreamOperation(inFile, outFile, "reset page layout", func(rs io.ReadSeeker, w io.Writer) error {
-		return api.ResetPageLayout(rs, w, cmd.Conf)
-	})
-	return nil, err
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "reset page layout")
+	if err != nil {
+		return nil, err
+	}
+	return nil, finalize(api.ResetPageLayout(c, rs, w, cmd.Conf))
 }
 
-// ListPageMode returns inFile's page mode.
-func ListPageMode(cmd *Command) ([]string, error) {
+func listPageMode(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "list page mode")
 	if err != nil {
 		return nil, err
 	}
 
 	if inFile == "-" {
-		return withStdinReadSeeker("list page mode", func(rs io.ReadSeeker) ([]string, error) {
-			return api.ListPageMode(rs, cmd.Conf)
+		return withStdinReadSeeker(c, "list page mode", func(rs io.ReadSeeker) ([]string, error) {
+			return api.ListPageMode(c, rs, cmd.Conf)
 		})
 	}
 
-	return api.ListPageModeFile(inFile, cmd.Conf)
+	return api.ListPageModeFile(c, inFile, cmd.Conf)
 }
 
-// SetPageMode sets inFile's page mode.
-func SetPageMode(cmd *Command) ([]string, error) {
+func setPageMode(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "set page mode")
 	if err != nil {
 		return nil, err
@@ -364,96 +408,118 @@ func SetPageMode(cmd *Command) ([]string, error) {
 	}
 
 	outFile := optionalCommandString(cmd.OutFile)
+	reportCommandOutputPath(cmd)
 	if inFile != "-" && outFile != "-" {
-		return nil, api.SetPageModeFile(inFile, outFile, *pageMode, cmd.Conf)
+		return nil, api.SetPageModeFile(c, inFile, outFile, *pageMode, cmd.Conf)
 	}
 
-	err = runContentStreamOperation(inFile, outFile, "set page mode", func(rs io.ReadSeeker, w io.Writer) error {
-		return api.SetPageMode(rs, w, *pageMode, cmd.Conf)
-	})
-	return nil, err
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "set page mode")
+	if err != nil {
+		return nil, err
+	}
+	return nil, finalize(api.SetPageMode(c, rs, w, *pageMode, cmd.Conf))
 }
 
-// ResetPageMode resets inFile's page mode.
-func ResetPageMode(cmd *Command) ([]string, error) {
+func resetPageMode(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "reset page mode")
 	if err != nil {
 		return nil, err
 	}
 
 	outFile := optionalCommandString(cmd.OutFile)
+	reportCommandOutputPath(cmd)
 	if inFile != "-" && outFile != "-" {
-		return nil, api.ResetPageModeFile(inFile, outFile, cmd.Conf)
+		return nil, api.ResetPageModeFile(c, inFile, outFile, cmd.Conf)
 	}
 
-	err = runContentStreamOperation(inFile, outFile, "reset page mode", func(rs io.ReadSeeker, w io.Writer) error {
-		return api.ResetPageMode(rs, w, cmd.Conf)
-	})
-	return nil, err
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "reset page mode")
+	if err != nil {
+		return nil, err
+	}
+	return nil, finalize(api.ResetPageMode(c, rs, w, cmd.Conf))
 }
 
-// ListViewerPreferences returns inFile's viewer preferences.
-func ListViewerPreferences(cmd *Command) ([]string, error) {
+func listViewerPreferences(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "list viewer preferences")
 	if err != nil {
 		return nil, err
 	}
 
 	if inFile == "-" {
-		return withStdinReadSeeker("list viewer preferences", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, "list viewer preferences", func(rs io.ReadSeeker) ([]string, error) {
 			if !cmd.BoolVal2 {
-				return api.ListViewerPreferences(rs, cmd.BoolVal1, cmd.Conf)
+				return api.ListViewerPreferences(c, rs, cmd.BoolVal1, cmd.Conf)
 			}
-			return api.ListViewerPreferencesJSON(rs, cmd.BoolVal1, cmd.Conf)
+			return api.ListViewerPreferencesJSON(c, rs, cmd.BoolVal1, cmd.Conf)
 		})
 	}
 
-	return api.ListViewerPreferencesFile(inFile, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
+	return api.ListViewerPreferencesFile(c, inFile, cmd.BoolVal1, cmd.BoolVal2, cmd.Conf)
 }
 
-// SetViewerPreferences sets inFile's viewer preferences.
-func SetViewerPreferences(cmd *Command) ([]string, error) {
+func setViewerPreferences(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "set viewer preferences")
 	if err != nil {
 		return nil, err
 	}
 	outFile := optionalCommandString(cmd.OutFile)
 	jsonInput := optionalCommandString(cmd.InFileJSON)
+	reportCommandOutputPath(cmd)
 	if inFile != "-" && outFile != "-" {
 		if jsonInput != "" {
-			return nil, api.SetViewerPreferencesFileFromJSONFile(inFile, outFile, jsonInput, cmd.Conf)
+			return nil, api.SetViewerPreferencesFileFromJSONFile(c, inFile, outFile, jsonInput, cmd.Conf)
 		}
-		return nil, api.SetViewerPreferencesFileFromJSONBytes(inFile, outFile, []byte(cmd.StringVal), cmd.Conf)
+		return nil, api.SetViewerPreferencesFileFromJSONBytes(
+			c, inFile, outFile, []byte(cmd.StringVal), cmd.Conf,
+		)
 	}
 
-	var jsonBytes []byte
-	if jsonInput != "" {
-		jsonBytes, err = os.ReadFile(jsonInput)
-		if err != nil {
-			return nil, fmt.Errorf("set viewer preferences: read JSON %s: %w", jsonInput, err)
-		}
-	} else {
-		jsonBytes = []byte(cmd.StringVal)
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "set viewer preferences")
+	if err != nil {
+		return nil, err
 	}
-	err = runContentStreamOperation(inFile, outFile, "set viewer preferences", func(rs io.ReadSeeker, w io.Writer) error {
-		return api.SetViewerPreferencesFromJSONBytes(rs, w, jsonBytes, cmd.Conf)
-	})
-	return nil, err
+
+	if jsonInput != "" {
+		f, err := os.Open(jsonInput)
+		if err != nil {
+			return nil, finalize(fmt.Errorf("set viewer preferences: read JSON %s: %w", jsonInput, err))
+		}
+		err = api.SetViewerPreferencesFromJSONReader(c, rs, w, f, cmd.Conf)
+		err = errors.Join(err, closeStreamFile(f, "set viewer preferences: close JSON input"))
+		return nil, finalize(err)
+	}
+
+	return nil, finalize(api.SetViewerPreferencesFromJSONBytes(
+		c, rs, w, []byte(cmd.StringVal), cmd.Conf,
+	))
 }
 
-// ResetViewerPreferences resets inFile's viewer preferences.
-func ResetViewerPreferences(cmd *Command) ([]string, error) {
+func resetViewerPreferences(c context.Context, cmd *Command) ([]string, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	inFile, err := validatedCommandInFile(cmd, "reset viewer preferences")
 	if err != nil {
 		return nil, err
 	}
 	outFile := optionalCommandString(cmd.OutFile)
+	reportCommandOutputPath(cmd)
 	if inFile != "-" && outFile != "-" {
-		return nil, api.ResetViewerPreferencesFile(inFile, outFile, cmd.Conf)
+		return nil, api.ResetViewerPreferencesFile(c, inFile, outFile, cmd.Conf)
 	}
 
-	err = runContentStreamOperation(inFile, outFile, "reset viewer preferences", func(rs io.ReadSeeker, w io.Writer) error {
-		return api.ResetViewerPreferences(rs, w, cmd.Conf)
-	})
-	return nil, err
+	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "reset viewer preferences")
+	if err != nil {
+		return nil, err
+	}
+	return nil, finalize(api.ResetViewerPreferences(c, rs, w, cmd.Conf))
 }

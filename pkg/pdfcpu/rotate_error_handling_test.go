@@ -66,7 +66,7 @@ func TestRotatePagesComposesRotationValues(t *testing.T) {
 			ctx := annotationTestContext(t)
 			d := annotationTestPageDict(t, ctx)
 			d["Rotate"] = types.Integer(tt.current)
-			if err := RotatePages(ctx, types.IntSet{1: true}, tt.delta); err != nil {
+			if err := RotatePages(t.Context(), ctx, types.IntSet{1: true}, tt.delta); err != nil {
 				t.Fatal(err)
 			}
 			got := d.IntEntry("Rotate")
@@ -90,7 +90,7 @@ func TestRotatePagesComposesRotationValues(t *testing.T) {
 // TestRotatePagesErrorIncludesPageContext verifies page dictionary error context.
 func TestRotatePagesErrorIncludesPageContext(t *testing.T) {
 	ctx := &model.Context{XRefTable: &model.XRefTable{PageCount: 1}}
-	err := RotatePages(ctx, types.IntSet{1: true}, 90)
+	err := RotatePages(t.Context(), ctx, types.IntSet{1: true}, 90)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -104,7 +104,7 @@ func TestRotatePagesErrorIncludesPageContext(t *testing.T) {
 // TestRotatePagesPreservesPageNotFound verifies page-not-found sentinel preservation.
 func TestRotatePagesPreservesPageNotFound(t *testing.T) {
 	ctx := &model.Context{XRefTable: &model.XRefTable{PageCount: 1}}
-	err := RotatePages(ctx, types.IntSet{2: true}, 90)
+	err := RotatePages(t.Context(), ctx, types.IntSet{2: true}, 90)
 	if !errors.Is(err, model.ErrPageNotFound) {
 		t.Fatalf("expected %v, got %v", model.ErrPageNotFound, err)
 	}
