@@ -90,19 +90,19 @@ func TestRemovePagesDropsNamedDestsForRemovedPages(t *testing.T) {
 		t.Fatalf("%s locate dests: %v\n", msg, err)
 	}
 
-	_, keptPage, _, err := ctx.PageDict(1, false)
+	_, keptPage, _, err := ctx.PageDict(t.Context(), 1, false)
 	if err != nil {
 		t.Fatalf("%s page 1: %v\n", msg, err)
 	}
-	_, removedPage, _, err := ctx.PageDict(ctx.PageCount, false)
+	_, removedPage, _, err := ctx.PageDict(t.Context(), ctx.PageCount, false)
 	if err != nil {
 		t.Fatalf("%s page %d: %v\n", msg, ctx.PageCount, err)
 	}
 
-	if err := ctx.Names["Dests"].Add(ctx.XRefTable, "kept", destArray(*keptPage), nil, nil); err != nil {
+	if err := ctx.Names["Dests"].Add(t.Context(), ctx.XRefTable, "kept", destArray(*keptPage), nil, nil); err != nil {
 		t.Fatalf("%s add kept dest: %v\n", msg, err)
 	}
-	if err := ctx.Names["Dests"].Add(ctx.XRefTable, "removed", destArray(*removedPage), nil, nil); err != nil {
+	if err := ctx.Names["Dests"].Add(t.Context(), ctx.XRefTable, "removed", destArray(*removedPage), nil, nil); err != nil {
 		t.Fatalf("%s add removed dest: %v\n", msg, err)
 	}
 
@@ -111,10 +111,10 @@ func TestRemovePagesDropsNamedDestsForRemovedPages(t *testing.T) {
 		t.Fatalf("%s extract: %v\n", msg, err)
 	}
 
-	if _, err := ctxNew.DereferenceDestArray("kept"); err != nil {
+	if _, err := ctxNew.DereferenceDestArray(t.Context(), "kept"); err != nil {
 		t.Fatalf("%s kept dest: %v\n", msg, err)
 	}
-	if _, ok := ctxNew.Names["Dests"].Value("removed"); ok {
+	if _, ok, err := ctxNew.Names["Dests"].Value(t.Context(), "removed"); err != nil || ok {
 		t.Fatalf("%s removed page destination still present\n", msg)
 	}
 

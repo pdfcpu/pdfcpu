@@ -353,7 +353,7 @@ func TestAddRemoveAnnotationsByObjNr(t *testing.T) {
 	}
 
 	// Add link annotation to all pages.
-	ok, err := pdfcpu.AddAnnotations(ctx, allPages, linkAnn, false)
+	ok, err := pdfcpu.AddAnnotations(t.Context(), ctx, allPages, linkAnn, false)
 	if err != nil || !ok {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
@@ -533,7 +533,7 @@ func TestAddAnnotationsLowLevel(t *testing.T) {
 	m[1] = anns
 
 	// Add 2 annotations to page 1.
-	if ok, err := pdfcpu.AddAnnotationsMap(ctx, m, false); err != nil || !ok {
+	if ok, err := pdfcpu.AddAnnotationsMap(t.Context(), ctx, m, false); err != nil || !ok {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
 
@@ -687,7 +687,7 @@ func TestAddAnnotations(t *testing.T) {
 	m[1] = anns
 
 	// Add 7 annotations to page 1.
-	if ok, err := pdfcpu.AddAnnotationsMap(ctx, m, false); err != nil || !ok {
+	if ok, err := pdfcpu.AddAnnotationsMap(t.Context(), ctx, m, false); err != nil || !ok {
 		t.Fatalf("%s add: %v\n", msg, err)
 	}
 
@@ -718,7 +718,7 @@ func TestPopupAnnotation(t *testing.T) {
 	}
 
 	// Add Markup annotation.
-	parentIndRef, textAnnotDict, err := pdfcpu.AddAnnotationToPage(ctx, pageNr, textAnn, incr)
+	parentIndRef, textAnnotDict, err := pdfcpu.AddAnnotationToPage(t.Context(), ctx, pageNr, textAnn, incr)
 	if err != nil {
 		t.Fatalf("%s Add Text AnnotationToPage: %v\n", msg, err)
 	}
@@ -740,7 +740,7 @@ func TestPopupAnnotation(t *testing.T) {
 	)
 
 	// Add Popup annotation.
-	popupIndRef, _, err := pdfcpu.AddAnnotationToPage(ctx, pageNr, popupAnn, incr)
+	popupIndRef, _, err := pdfcpu.AddAnnotationToPage(t.Context(), ctx, pageNr, popupAnn, incr)
 	if err != nil {
 		t.Fatalf("%s Add Popup AnnotationToPage: %v\n", msg, err)
 	}

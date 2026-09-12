@@ -146,7 +146,7 @@ func outlineItemTitle(s string) string {
 	return sb.String()
 }
 
-func destArray(ctx *model.Context, dest types.Object) (types.Array, error) {
+func destArray(c context.Context, ctx *model.Context, dest types.Object) (types.Array, error) {
 	objNr := 0
 	if ir, ok := dest.(types.IndirectRef); ok {
 		objNr = ir.ObjectNumber.Value()
@@ -165,19 +165,19 @@ func destArray(ctx *model.Context, dest types.Object) (types.Array, error) {
 
 	switch dest := dest.(type) {
 	case types.Name:
-		return ctx.DereferenceDestArray(dest.Value())
+		return ctx.DereferenceDestArray(c, dest.Value())
 	case types.StringLiteral:
 		s, err := types.StringLiteralToString(dest)
 		if err != nil {
 			return nil, err
 		}
-		return ctx.DereferenceDestArray(s)
+		return ctx.DereferenceDestArray(c, s)
 	case types.HexLiteral:
 		s, err := types.HexLiteralToString(dest)
 		if err != nil {
 			return nil, err
 		}
-		return ctx.DereferenceDestArray(s)
+		return ctx.DereferenceDestArray(c, s)
 	case types.Array:
 		return dest, nil
 	}
@@ -186,12 +186,12 @@ func destArray(ctx *model.Context, dest types.Object) (types.Array, error) {
 }
 
 // PageNrFromDestination returns the page number of a destination.
-func PageNrFromDestination(ctx *model.Context, dest types.Object) (int, error) {
+func PageNrFromDestination(c context.Context, ctx *model.Context, dest types.Object) (int, error) {
 	if err := validateBookmarkContext(ctx); err != nil {
 		return 0, err
 	}
 
-	arr, err := destArray(ctx, dest)
+	arr, err := destArray(c, ctx, dest)
 	if err != nil {
 		if ctx.XRefTable.ValidationMode == model.ValidationRelaxed {
 			return 0, nil
@@ -214,7 +214,7 @@ func PageNrFromDestination(ctx *model.Context, dest types.Object) (int, error) {
 		if i, ok := o.(types.Integer); ok {
 			return i.Value(), nil
 		}
-		return ctx.PageNumber(ir.ObjectNumber.Value())
+		return ctx.PageNumber(c, ir.ObjectNumber.Value())
 	}
 
 	return 0, fmt.Errorf("resolve destination page: unable to extract page number from %v", dest)
@@ -367,7 +367,7 @@ func bookmarksForOutlineItem(
 			return nil, fmt.Errorf("outline item %s destination: %w", *ir, err)
 		}
 
-		pageFrom, err := PageNrFromDestination(ctx, obj)
+		pageFrom, err := PageNrFromDestination(c, ctx, obj)
 		if err != nil {
 			return nil, fmt.Errorf("outline item %s destination page: %w", *ir, err)
 		}
@@ -593,7 +593,7 @@ func bmDict(
 	if err := contextutil.Check(c); err != nil {
 		return nil, err
 	}
-	_, pageIndRef, _, err := ctx.PageDict(bm.PageFrom, false)
+	_, pageIndRef, _, err := ctx.PageDict(c, bm.PageFrom, false)
 	if err != nil {
 		return nil, fmt.Errorf("bookmark %q page %d: page dict: %w", bm.Title, bm.PageFrom, err)
 	}
@@ -618,7 +618,7 @@ func bmDict(
 	)
 
 	m := model.NameMap{bm.Title: []types.Dict{d}}
-	if err := ctx.Names["Dests"].Add(ctx.XRefTable, bm.Title, o, m, []string{"D", "Dest"}); err != nil {
+	if err := ctx.Names["Dests"].Add(c, ctx.XRefTable, bm.Title, o, m, []string{"D", "Dest"}); err != nil {
 		return nil, fmt.Errorf("bookmark %q: add named destination: %w", bm.Title, err)
 	}
 
@@ -737,10 +737,10 @@ func createOutlineItemDict(
 	return createOutlineItemDictDepth(c, ctx, bms, parent, parentPageNr, 0)
 }
 
-func cleanupDestinations(ctx *model.Context, dNamesEmpty bool) error {
+func cleanupDestinations(c context.Context, ctx *model.Context, dNamesEmpty bool) error {
 	if dNamesEmpty {
 		delete(ctx.Names, "Dests")
-		if err := ctx.RemoveNameTree("Dests"); err != nil {
+		if err := ctx.RemoveNameTree(c, "Dests"); err != nil {
 			return fmt.Errorf("remove destinations name tree: %w", err)
 		}
 	}
@@ -752,14 +752,14 @@ func cleanupDestinations(ctx *model.Context, dNamesEmpty bool) error {
 	return nil
 }
 
-func removeDest(ctx *model.Context, name string) (bool, bool, error) {
+func removeDest(c context.Context, ctx *model.Context, name string) (bool, bool, error) {
 	var (
 		dNamesEmpty, ok bool
 		err             error
 	)
 	if dNames := ctx.Names["Dests"]; dNames != nil {
 		// Remove destName from dest nametree.
-		dNamesEmpty, ok, err = dNames.Remove(ctx.XRefTable, name)
+		dNamesEmpty, ok, err = dNames.Remove(c, ctx.XRefTable, name)
 		if err != nil {
 			return false, false, fmt.Errorf("remove destination %q from name tree: %w", name, err)
 		}
@@ -803,7 +803,7 @@ func removeNamedDestForOutlineItem(
 		return false, false, nil
 	}
 
-	dNamesEmpty, ok, err := removeDest(ctx, s)
+	dNamesEmpty, ok, err := removeDest(c, ctx, s)
 	if err != nil {
 		return false, false, fmt.Errorf("bookmark destination %s: %w", *ir, err)
 	}
@@ -869,7 +869,7 @@ func removeNamedDests(
 		dNamesEmpty = dNamesEmpty1
 	}
 
-	if err := cleanupDestinations(ctx, dNamesEmpty); err != nil {
+	if err := cleanupDestinations(c, ctx, dNamesEmpty); err != nil {
 		return fmt.Errorf("cleanup bookmark destinations: %w", err)
 	}
 	return nil

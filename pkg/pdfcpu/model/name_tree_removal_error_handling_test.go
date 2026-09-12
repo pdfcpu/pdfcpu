@@ -86,7 +86,7 @@ func TestRemoveIdentifiesChildNodeDeletionInMultiLevelTree(t *testing.T) {
 		types.NewDict(),
 	)
 
-	_, _, err := tree.Remove(xRefTable, "target")
+	_, _, err := tree.Remove(t.Context(), xRefTable, "target")
 
 	requireNameTreeRemovalError(t, err, `name tree key "target"`, "delete child node", "obj #92")
 }
@@ -99,7 +99,7 @@ func TestRemoveIdentifiesParentNodeDeletionInMultiLevelTree(t *testing.T) {
 		types.Dict{"Broken": *types.NewIndirectRef(93, 0)},
 	)
 
-	_, _, err := tree.Remove(xRefTable, "target")
+	_, _, err := tree.Remove(t.Context(), xRefTable, "target")
 
 	requireNameTreeRemovalError(t, err, `name tree key "target"`, "delete parent node", "obj #93")
 }

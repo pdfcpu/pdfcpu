@@ -829,7 +829,7 @@ func TestDispatchUsesOperationOwnedConfiguration(t *testing.T) {
 	cmd := &Command{Mode: mode, StringVal: "caller", Conf: conf}
 
 	var executionCommand *Command
-	dispatchTable[mode] = func(_ context.Context, exec *Command) ([]string, error) {
+	dispatchTable[mode] = func(c context.Context, exec *Command) ([]string, error) {
 		executionCommand = exec
 		exec.StringVal = "execution"
 		*exec.Conf.UserPWNew = "execution-user"

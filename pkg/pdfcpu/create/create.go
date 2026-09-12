@@ -363,7 +363,7 @@ func CreatePage(c context.Context, xRefTable *model.XRefTable, parentPageIndRef 
 		if err := contextutil.Check(c); err != nil {
 			return nil, nil, err
 		}
-		d, err := la.RenderDict(xRefTable, pageDictIndRef)
+		d, err := la.RenderDict(c, xRefTable, pageDictIndRef)
 		if err != nil {
 			return nil, nil, fmt.Errorf("link annotation %d: render: %w", i+1, err)
 		}
@@ -418,7 +418,7 @@ func UpdatePage(c context.Context, xRefTable *model.XRefTable, dIndRef types.Ind
 		if err := contextutil.Check(c); err != nil {
 			return err
 		}
-		d, err := la.RenderDict(xRefTable, &dIndRef)
+		d, err := la.RenderDict(c, xRefTable, &dIndRef)
 		if err != nil {
 			return fmt.Errorf("link annotation %d: render: %w", i+1, err)
 		}
@@ -478,7 +478,7 @@ func cacheResIDs(c context.Context, ctx *model.Context, pdf *primitives.PDF) err
 		if err := contextutil.Check(c); err != nil {
 			return err
 		}
-		_, _, inhPA, err := ctx.PageDict(i, true)
+		_, _, inhPA, err := ctx.PageDict(c, i, true)
 		if err != nil {
 			return fmt.Errorf("page %d: collect inherited resources: %w", i, err)
 		}
@@ -582,7 +582,7 @@ func updatePage(
 	if err := contextutil.Check(c); err != nil {
 		return err
 	}
-	pageDict, pageDictIndRef, inhPAttrs, err := ctx.PageDict(pageNr, false)
+	pageDict, pageDictIndRef, inhPAttrs, err := ctx.PageDict(c, pageNr, false)
 	if err != nil {
 		return fmt.Errorf("read page dict: %w", err)
 	}

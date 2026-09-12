@@ -102,19 +102,19 @@ func imageBoxRedirect(req *http.Request, via []*http.Request) error {
 }
 
 func imageBoxDialContext(dialer *net.Dialer) func(context.Context, string, string) (net.Conn, error) {
-	return func(ctx context.Context, network, addr string) (net.Conn, error) {
+	return func(c context.Context, network, addr string) (net.Conn, error) {
 		host, port, err := net.SplitHostPort(addr)
 		if err != nil {
 			return nil, err
 		}
-		ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+		ips, err := net.DefaultResolver.LookupIPAddr(c, host)
 		if err != nil {
 			return nil, err
 		}
 		if err := rejectImageBoxIPs(host, ips); err != nil {
 			return nil, err
 		}
-		return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+		return dialer.DialContext(c, network, net.JoinHostPort(ips[0].IP.String(), port))
 	}
 }
 

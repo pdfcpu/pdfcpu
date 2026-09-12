@@ -88,12 +88,12 @@ func (in *temporaryInput) finalize(op string, opErr error) error {
 	return errors.Join(opErr, closeErr, removeErr)
 }
 
-func readSeekerFromStdin(ctx context.Context, op string) (*temporaryInput, error) {
-	return readSeekerFromReader(ctx, op, os.Stdin)
+func readSeekerFromStdin(c context.Context, op string) (*temporaryInput, error) {
+	return readSeekerFromReader(c, op, os.Stdin)
 }
 
-func readSeekerFromReader(ctx context.Context, op string, r io.Reader) (*temporaryInput, error) {
-	if err := contextutil.Check(ctx); err != nil {
+func readSeekerFromReader(c context.Context, op string, r io.Reader) (*temporaryInput, error) {
+	if err := contextutil.Check(c); err != nil {
 		return nil, err
 	}
 	f, err := createTemporaryInputFile("", "pdfcpu-stdin-*.pdf")
@@ -102,7 +102,7 @@ func readSeekerFromReader(ctx context.Context, op string, r io.Reader) (*tempora
 	}
 	in := &temporaryInput{file: f, path: f.Name(), remove: os.Remove}
 
-	n, copyErr := io.Copy(f, contextReader{ctx: ctx, r: r})
+	n, copyErr := io.Copy(f, contextReader{ctx: c, r: r})
 	if copyErr != nil {
 		return nil, in.finalize(op, fmt.Errorf("%s: read stdin: %w", op, copyErr))
 	}
@@ -115,9 +115,9 @@ func readSeekerFromReader(ctx context.Context, op string, r io.Reader) (*tempora
 	return in, nil
 }
 
-func withStdinReadSeeker[T any](ctx context.Context, op string, fn func(io.ReadSeeker) (T, error)) (T, error) {
+func withStdinReadSeeker[T any](c context.Context, op string, fn func(io.ReadSeeker) (T, error)) (T, error) {
 	var zero T
-	in, err := readSeekerFromStdin(ctx, op)
+	in, err := readSeekerFromStdin(c, op)
 	if err != nil {
 		return zero, err
 	}
@@ -198,8 +198,8 @@ func createStreamOutput(fileName string) (*os.File, string, string, error) {
 	return f, f.Name(), fileName, nil
 }
 
-func streamInOutForOperation(ctx context.Context, inFile, outFile, op string) (io.ReadSeeker, io.Writer, func(error) error, error) {
-	if err := contextutil.Check(ctx); err != nil {
+func streamInOutForOperation(c context.Context, inFile, outFile, op string) (io.ReadSeeker, io.Writer, func(error) error, error) {
+	if err := contextutil.Check(c); err != nil {
 		return nil, nil, nil, err
 	}
 	if inFile == "-" && outFile == "" {
@@ -210,7 +210,7 @@ func streamInOutForOperation(ctx context.Context, inFile, outFile, op string) (i
 	finalizer := &streamInOutFinalizer{}
 	if inFile != "" {
 		if inFile == "-" {
-			in, err := readSeekerFromStdin(ctx, op)
+			in, err := readSeekerFromStdin(c, op)
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -229,7 +229,7 @@ func streamInOutForOperation(ctx context.Context, inFile, outFile, op string) (i
 	if outFile == "-" {
 		log.SetCLILogger(nil)
 		return rs, os.Stdout, func(err error) error {
-			return finalizer.finalize(op, errors.Join(err, ctx.Err()))
+			return finalizer.finalize(op, errors.Join(err, c.Err()))
 		}, nil
 	}
 
@@ -242,6 +242,6 @@ func streamInOutForOperation(ctx context.Context, inFile, outFile, op string) (i
 	finalizer.outFile = tmpFile
 	finalizer.replaceOut = replaceOut
 	return rs, f, func(err error) error {
-		return finalizer.finalize(op, errors.Join(err, ctx.Err()))
+		return finalizer.finalize(op, errors.Join(err, c.Err()))
 	}, nil
 }

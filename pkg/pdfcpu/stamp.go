@@ -910,7 +910,7 @@ func createPDFRes(c context.Context, ctx, otherCtx *model.Context, pageNrSrc, pa
 
 	// Locate page dict & resource dict of PDF stamp.
 	consolidateRes := true
-	d, _, inhPAttrs, err := otherXRefTable.PageDict(pageNrSrc, consolidateRes)
+	d, _, inhPAttrs, err := otherXRefTable.PageDict(c, pageNrSrc, consolidateRes)
 	if err != nil {
 		return fmt.Errorf("source page dictionary: %w", err)
 	}
@@ -1896,7 +1896,7 @@ func viewPort(a *model.InheritedPageAttrs) *types.Rectangle {
 	return visibleRegion
 }
 
-func handleLink(ctx *model.Context, pageIndRef *types.IndirectRef, d types.Dict, pageNr int, wm model.Watermark) error {
+func handleLink(c context.Context, ctx *model.Context, pageIndRef *types.IndirectRef, d types.Dict, pageNr int, wm model.Watermark) error {
 	if !wm.OnTop || wm.URL == "" {
 		return nil
 	}
@@ -1922,7 +1922,7 @@ func handleLink(ctx *model.Context, pageIndRef *types.IndirectRef, d types.Dict,
 		model.BSSolid,                       // borderStyle
 	)
 
-	if _, _, err := AddAnnotation(ctx, pageIndRef, d, pageNr, ann, false); err != nil {
+	if _, _, err := AddAnnotation(c, ctx, pageIndRef, d, pageNr, ann, false); err != nil {
 		return fmt.Errorf("annotation: %w", err)
 	}
 	return nil
@@ -1973,8 +1973,8 @@ func updatePageWatermark(c context.Context, ctx *model.Context, pageNr int, upda
 	return nil
 }
 
-func pageWatermarkContext(ctx *model.Context, pageNr int) (types.Dict, *types.IndirectRef, *model.InheritedPageAttrs, error) {
-	d, pageIndRef, attrs, err := ctx.PageDict(pageNr, false)
+func pageWatermarkContext(c context.Context, ctx *model.Context, pageNr int) (types.Dict, *types.IndirectRef, *model.InheritedPageAttrs, error) {
+	d, pageIndRef, attrs, err := ctx.PageDict(c, pageNr, false)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("page dictionary: %w", err)
 	}
@@ -2026,7 +2026,7 @@ func addPageWatermark(c context.Context, ctx *model.Context, pageNr int, wm mode
 		return err
 	}
 
-	d, pageIndRef, inhPAttrs, err := pageWatermarkContext(ctx, pageNr)
+	d, pageIndRef, inhPAttrs, err := pageWatermarkContext(c, ctx, pageNr)
 	if err != nil {
 		return err
 	}
@@ -2055,7 +2055,7 @@ func addPageWatermark(c context.Context, ctx *model.Context, pageNr int, wm mode
 		return err
 	}
 
-	if err := handleLink(ctx, pageIndRef, d, pageNr, wm); err != nil {
+	if err := handleLink(c, ctx, pageIndRef, d, pageNr, wm); err != nil {
 		return fmt.Errorf("add link: %w", err)
 	}
 	return contextutil.Check(c)
@@ -2474,9 +2474,9 @@ func removeArtifactsFromPage(c context.Context, ctx *model.Context, sd *types.St
 	return true, contextutil.Check(c)
 }
 
-func locatePageContentAndResourceDict(ctx *model.Context, pageNr int) (types.Object, *types.IndirectRef, types.Dict, error) {
+func locatePageContentAndResourceDict(c context.Context, ctx *model.Context, pageNr int) (types.Object, *types.IndirectRef, types.Dict, error) {
 	consolidateRes := false
-	d, pageDictIndRef, _, err := ctx.PageDict(pageNr, consolidateRes)
+	d, pageDictIndRef, _, err := ctx.PageDict(c, pageNr, consolidateRes)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("page dictionary: %w", err)
 	}
@@ -2577,7 +2577,7 @@ func removePageWatermark(c context.Context, ctx *model.Context, pageNr int) (boo
 	if err := contextutil.Check(c); err != nil {
 		return false, err
 	}
-	o, pageDictIndRef, resDict, err := locatePageContentAndResourceDict(ctx, pageNr)
+	o, pageDictIndRef, resDict, err := locatePageContentAndResourceDict(c, ctx, pageNr)
 	if err != nil {
 		return false, err
 	}
@@ -2597,7 +2597,7 @@ func removePageWatermark(c context.Context, ctx *model.Context, pageNr int) (boo
 		return false, fmt.Errorf("remove page artifacts: %w", err)
 	}
 	if found && entry == nil {
-		d, _, _, err := ctx.PageDict(pageNr, false)
+		d, _, _, err := ctx.PageDict(c, pageNr, false)
 		if err != nil {
 			return false, fmt.Errorf("store direct content stream: page dictionary: %w", err)
 		}

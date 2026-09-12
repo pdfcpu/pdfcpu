@@ -1072,7 +1072,7 @@ func NewTextField(c context.Context, ctx *model.Context, d types.Dict, v string,
 func renderTextFieldAP(c context.Context, ctx *model.Context, d types.Dict, v string, multiLine, comb bool, maxLen int,
 	da *string, fonts map[string]types.IndirectRef) error {
 	if ap := d.DictEntry("AP"); ap != nil {
-		if err := ctx.DeleteObject(ap); err != nil {
+		if err := ctx.DeleteObject(c, ap); err != nil {
 			return err
 		}
 	}

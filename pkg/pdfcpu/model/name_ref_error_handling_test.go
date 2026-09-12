@@ -47,7 +47,7 @@ func TestUpdateNameRefPreservesStringParsingError(t *testing.T) {
 		"Dest": sl,
 	}
 
-	err := updateNameRef(newXRefTable(NewDefaultConfiguration()), d, []string{"Dest"}, "old", "new")
+	err := updateNameRef(t.Context(), newXRefTable(NewDefaultConfiguration()), d, []string{"Dest"}, "old", "new")
 
 	root := err
 	for errors.Unwrap(root) != nil {
@@ -64,7 +64,7 @@ func TestUpdateNameRefPreservesHexParsingError(t *testing.T) {
 		"Dest": types.HexLiteral("zz"),
 	}
 
-	err := updateNameRef(newXRefTable(NewDefaultConfiguration()), d, []string{"Dest"}, "old", "new")
+	err := updateNameRef(t.Context(), newXRefTable(NewDefaultConfiguration()), d, []string{"Dest"}, "old", "new")
 
 	var invalidByte hex.InvalidByteError
 	if !errors.As(err, &invalidByte) {
@@ -78,7 +78,7 @@ func TestUpdateNameRefMismatchIncludesEntryAndKeys(t *testing.T) {
 		"Dest": types.StringLiteral("different"),
 	}
 
-	err := updateNameRef(newXRefTable(NewDefaultConfiguration()), d, []string{"Dest"}, "old", "new")
+	err := updateNameRef(t.Context(), newXRefTable(NewDefaultConfiguration()), d, []string{"Dest"}, "old", "new")
 
 	requireNameRefUpdateContext(t, err)
 }
@@ -91,7 +91,7 @@ func TestInsertUniqueIntoLeafUsesDuplicateKeySentinel(t *testing.T) {
 		Names: []entry{{k: "old", v: types.StringLiteral("value")}},
 	}
 
-	duplicate, err := n.insertUniqueIntoLeaf(
+	duplicate, err := n.insertUniqueIntoLeaf(t.Context(),
 		newXRefTable(NewDefaultConfiguration()),
 		"old",
 		types.StringLiteral("replacement"),
@@ -105,7 +105,7 @@ func TestInsertUniqueIntoLeafUsesDuplicateKeySentinel(t *testing.T) {
 	if duplicate {
 		t.Fatal("expected duplicate key to be renamed")
 	}
-	if _, found := n.Value("old\x01"); !found {
+	if _, found, err := n.Value(t.Context(), "old\x01"); err != nil || !found {
 		t.Fatal("expected renamed name-tree key")
 	}
 	s, err := d.StringOrHexLiteralEntry("Dest")

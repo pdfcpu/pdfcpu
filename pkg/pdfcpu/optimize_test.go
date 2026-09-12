@@ -100,7 +100,7 @@ func addOptimizeTestPage(t *testing.T, ctx *model.Context) types.Dict {
 	}
 	ctx.PageCount = 1
 
-	pageDict, _, _, err := ctx.PageDict(1, false)
+	pageDict, _, _, err := ctx.PageDict(t.Context(), 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +203,7 @@ func TestHandleDuplicateImageObjectUsesStreamHashes(t *testing.T) {
 			},
 			Raw: raw,
 		}
-		originalObjNr, alreadyDuplicate, err := handleDuplicateImageObject(ctx, sd, "Im", objNr, 0)
+		originalObjNr, alreadyDuplicate, err := handleDuplicateImageObject(t.Context(), ctx, sd, "Im", objNr, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -225,7 +225,7 @@ func TestHandleDuplicateImageObjectUsesStreamHashes(t *testing.T) {
 		},
 		Raw: []byte("first"),
 	}
-	originalObjNr, alreadyDuplicate, err := handleDuplicateImageObject(ctx, duplicate, "Im3", 3, 0)
+	originalObjNr, alreadyDuplicate, err := handleDuplicateImageObject(t.Context(), ctx, duplicate, "Im3", 3, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +318,7 @@ func TestOptimizeSMaskResourcesSkipsUnclassifiableXObject(t *testing.T) {
 		"G": *ir,
 	}
 
-	if err := optimizeSMaskResources(sMask, nil, "", ctx, types.Dict{}, 0, types.IntSet{}, 1); err != nil {
+	if err := optimizeSMaskResources(t.Context(), sMask, nil, "", ctx, types.Dict{}, 0, types.IntSet{}, 1); err != nil {
 		t.Fatal(err)
 	}
 	if len(ctx.Optimize.ImageObjects) != 0 {

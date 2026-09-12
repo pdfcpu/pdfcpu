@@ -303,7 +303,7 @@ func TestDecryptDictSelectsLowestKey(t *testing.T) {
 			"Zulu":  types.HexLiteral("invalid-zulu"),
 			"Alpha": types.HexLiteral("invalid-alpha"),
 		}
-		err := decryptDict(d, 1, 0, []byte("key"), false, 2)
+		err := decryptDict(t.Context(), d, 1, 0, []byte("key"), false, 2)
 		if err == nil || !strings.Contains(err.Error(), "entry Alpha") {
 			t.Fatalf("expected Alpha decryption error, got %v", err)
 		}

@@ -88,30 +88,30 @@ type validationModeOperation struct {
 	run  func(*model.Configuration) error
 }
 
-func configuredValidationModeOperations(testContext context.Context) []validationModeOperation {
+func configuredValidationModeOperations(c context.Context) []validationModeOperation {
 	return []validationModeOperation{
 		{"bookmarks", func(conf *model.Configuration) error {
-			_, err := Bookmarks(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, err := Bookmarks(c, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 		{"keywords", func(conf *model.Configuration) error {
-			_, err := Keywords(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, err := Keywords(c, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 		{"properties", func(conf *model.Configuration) error {
-			_, err := Properties(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, err := Properties(c, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 		{"page layout", func(conf *model.Configuration) error {
-			_, err := PageLayout(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, err := PageLayout(c, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 		{"page mode", func(conf *model.Configuration) error {
-			_, err := PageMode(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, err := PageMode(c, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 		{"viewer preferences", func(conf *model.Configuration) error {
-			_, _, err := ViewerPreferences(testContext, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
+			_, _, err := ViewerPreferences(c, bytes.NewReader(relaxedOnlyValidationTestPDF()), conf)
 			return err
 		}},
 	}

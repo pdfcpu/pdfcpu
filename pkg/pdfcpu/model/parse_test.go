@@ -115,12 +115,12 @@ func TestPageTreeLookupRejectsRecursionDepth(t *testing.T) {
 	attrs := InheritedPageAttrs{}
 	pageCount := 0
 
-	_, _, err := xRefTable.processPageTreeForPageDictDepth(ir, &attrs, &pageCount, 1, false, maxDepth+1, NewPageTreeVisit())
+	_, _, err := xRefTable.processPageTreeForPageDictDepth(t.Context(), ir, &attrs, &pageCount, 1, false, maxDepth+1, NewPageTreeVisit())
 	if !errors.Is(err, ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
 
-	_, err = xRefTable.processPageTreeForPageNumberDepth(ir, &pageCount, 1, maxDepth+1, NewPageTreeVisit())
+	_, err = xRefTable.processPageTreeForPageNumberDepth(t.Context(), ir, &pageCount, 1, maxDepth+1, NewPageTreeVisit())
 	if !errors.Is(err, ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
@@ -140,7 +140,7 @@ func TestPageDictRejectsUnresolvedPage(t *testing.T) {
 	xRefTable.RootDict = types.Dict{"Pages": *pages}
 	xRefTable.PageCount = 1
 
-	d, indRef, attrs, err := xRefTable.PageDict(1, false)
+	d, indRef, attrs, err := xRefTable.PageDict(t.Context(), 1, false)
 	if err == nil {
 		t.Fatal("expected unresolved page error")
 	}
@@ -162,7 +162,7 @@ func TestPageTreeMutationRejectsRecursionDepth(t *testing.T) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
 
-	_, err = xRefTable.insertPagesDepth(ir, &pageCount, nil, maxDepth+1, NewPageTreeVisit())
+	_, err = xRefTable.insertPagesDepth(t.Context(), ir, &pageCount, nil, maxDepth+1, NewPageTreeVisit())
 	if !errors.Is(err, ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
@@ -182,7 +182,7 @@ func TestPageTreeRejectsCycle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = xRefTable.processPageTreeForPageNumber(ir, &pageCount, 1)
+	_, err = xRefTable.processPageTreeForPageNumber(t.Context(), ir, &pageCount, 1)
 	if !errors.Is(err, ErrPageTreeCycle) {
 		t.Fatalf("got %v, want ErrPageTreeCycle", err)
 	}
@@ -208,7 +208,7 @@ func TestPageTreeRejectsDuplicateNode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := xRefTable.processPageTreeForPageNumber(root, &pageCount, 1)
+	_, err := xRefTable.processPageTreeForPageNumber(t.Context(), root, &pageCount, 1)
 	if !errors.Is(err, ErrPageTreeDuplicate) {
 		t.Fatalf("got %v, want ErrPageTreeDuplicate", err)
 	}
@@ -230,12 +230,12 @@ func TestPageTreeOperationsRejectChildMissingType(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := xRefTable.processPageTreeForPageNumber(root, &pageCount, 1)
+	_, err := xRefTable.processPageTreeForPageNumber(t.Context(), root, &pageCount, 1)
 	if err == nil || !strings.Contains(err.Error(), "page tree kid obj#2: missing dict type") {
 		t.Fatalf("got %v, want missing page node Type error", err)
 	}
 
-	_, err = xRefTable.insertPagesDepth(root, &pageCount, nil, 0, NewPageTreeVisit())
+	_, err = xRefTable.insertPagesDepth(t.Context(), root, &pageCount, nil, 0, NewPageTreeVisit())
 	if err == nil || !strings.Contains(err.Error(), "page tree kid obj#2: missing dict type") {
 		t.Fatalf("got %v, want missing page node Type error", err)
 	}

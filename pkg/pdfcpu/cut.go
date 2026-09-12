@@ -288,7 +288,7 @@ func prepForCut(c context.Context, ctxSrc *model.Context, pageNr int) (
 		return nil, nil, nil, nil, nil, nil, fmt.Errorf("destination page tree obj#%d: dereference dictionary: %w", pagesIndRef.ObjectNumber.Value(), err)
 	}
 
-	d, _, inhPAttrs, err := ctxSrc.PageDict(pageNr, false)
+	d, _, inhPAttrs, err := ctxSrc.PageDict(c, pageNr, false)
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, fmt.Errorf("source page dictionary: %w", err)
 	}

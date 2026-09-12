@@ -173,7 +173,7 @@ func TestSignatureCLIPreservesPositionalReadCause(t *testing.T) {
 	}
 	cause := errors.New("storage unavailable")
 	operation := func(
-		_ context.Context,
+		c context.Context,
 		_ string,
 		all, _ bool,
 		conf *model.Configuration,

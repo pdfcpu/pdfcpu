@@ -803,8 +803,8 @@ func createPrinterMarkAnnotation(xRefTable *model.XRefTable, pageIndRef types.In
 	return xRefTable.IndRefForNewObject(d)
 }
 
-func createXObjectForWaterMark(testContext context.Context, xRefTable *model.XRefTable) (*types.IndirectRef, error) {
-	fIndRef, err := pdffont.EnsureFontDict(testContext, xRefTable, "Helvetica", "", "", false, nil)
+func createXObjectForWaterMark(c context.Context, xRefTable *model.XRefTable) (*types.IndirectRef, error) {
+	fIndRef, err := pdffont.EnsureFontDict(c, xRefTable, "Helvetica", "", "", false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -830,8 +830,8 @@ func createXObjectForWaterMark(testContext context.Context, xRefTable *model.XRe
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createWaterMarkAnnotation(testContext context.Context, xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
-	ir, err := createXObjectForWaterMark(testContext, xRefTable)
+func createWaterMarkAnnotation(c context.Context, xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
+	ir, err := createXObjectForWaterMark(c, xRefTable)
 	if err != nil {
 		return nil, err
 	}
@@ -1154,8 +1154,8 @@ func createLinkAnnotationDictWithHideAction(xRefTable *model.XRefTable, pageIndR
 	return ir, nil
 }
 
-func createTrapNetAnnotation(testContext context.Context, xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
-	ir, err := pdffont.EnsureFontDict(testContext, xRefTable, "Helvetica", "", "", false, nil)
+func createTrapNetAnnotation(c context.Context, xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
+	ir, err := pdffont.EnsureFontDict(c, xRefTable, "Helvetica", "", "", false, nil)
 	if err != nil {
 		return nil, err
 	}

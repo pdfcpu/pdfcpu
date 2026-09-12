@@ -17,6 +17,7 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -32,7 +33,7 @@ type failingAnnotationRenderer struct {
 	err error
 }
 
-func (a failingAnnotationRenderer) RenderDict(*model.XRefTable, *types.IndirectRef) (types.Dict, error) {
+func (a failingAnnotationRenderer) RenderDict(context.Context, *model.XRefTable, *types.IndirectRef) (types.Dict, error) {
 	return nil, a.err
 }
 
@@ -78,7 +79,7 @@ func annotationTestRendererWithID(id string) model.LinkAnnotation {
 func annotationTestPageDictIndRef(t *testing.T, ctx *model.Context) *types.IndirectRef {
 	t.Helper()
 
-	pageDictIndRef, err := ctx.PageDictIndRef(1)
+	pageDictIndRef, err := ctx.PageDictIndRef(t.Context(), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +145,7 @@ func annotationTestAddPair(
 			annotationTestRendererWithID("second"),
 		},
 	}
-	if ok, err := AddAnnotationsMap(ctx, annotations, false); err != nil || !ok {
+	if ok, err := AddAnnotationsMap(t.Context(), ctx, annotations, false); err != nil || !ok {
 		t.Fatalf("add annotations: ok=%t err=%v", ok, err)
 	}
 	o, found := pageDict.Find("Annots")
@@ -206,7 +207,7 @@ func annotationTestAddSingle(
 
 	pageDict.Delete("Annots")
 	ctx.PageAnnots = map[int]model.PgAnnots{}
-	if ok, err := AddAnnotations(ctx, types.IntSet{1: true}, annotationTestRendererWithID(id), false); err != nil || !ok {
+	if ok, err := AddAnnotations(t.Context(), ctx, types.IntSet{1: true}, annotationTestRendererWithID(id), false); err != nil || !ok {
 		t.Fatalf("add annotation: ok=%t err=%v", ok, err)
 	}
 	o, found := pageDict.Find("Annots")
@@ -277,7 +278,7 @@ func TestAnnotationOperationsRejectMissingInput(t *testing.T) {
 		{
 			name: "add annotation missing context",
 			fn: func() error {
-				_, _, err := AddAnnotation(nil, nil, nil, 1, ann, false)
+				_, _, err := AddAnnotation(t.Context(), nil, nil, nil, 1, ann, false)
 				return err
 			},
 			wantErr: ErrMissingPDFContext,
@@ -285,7 +286,7 @@ func TestAnnotationOperationsRejectMissingInput(t *testing.T) {
 		{
 			name: "add annotations missing xref table",
 			fn: func() error {
-				_, err := AddAnnotations(&model.Context{}, types.IntSet{1: true}, ann, false)
+				_, err := AddAnnotations(t.Context(), &model.Context{}, types.IntSet{1: true}, ann, false)
 				return err
 			},
 			wantErr: ErrMissingXRefTable,
@@ -293,7 +294,7 @@ func TestAnnotationOperationsRejectMissingInput(t *testing.T) {
 		{
 			name: "add annotations missing annotation",
 			fn: func() error {
-				_, err := AddAnnotations(ctx, types.IntSet{1: true}, nil, false)
+				_, err := AddAnnotations(t.Context(), ctx, types.IntSet{1: true}, nil, false)
 				return err
 			},
 			wantErr: ErrMissingAnnotation,
@@ -303,7 +304,7 @@ func TestAnnotationOperationsRejectMissingInput(t *testing.T) {
 			fn: func() error {
 				incrCtx := annotationTestContext(t)
 				incrCtx.Read = nil
-				_, err := AddAnnotations(incrCtx, types.IntSet{1: true}, ann, true)
+				_, err := AddAnnotations(t.Context(), incrCtx, types.IntSet{1: true}, ann, true)
 				return err
 			},
 			wantErr: ErrMissingReadContext,
@@ -314,7 +315,7 @@ func TestAnnotationOperationsRejectMissingInput(t *testing.T) {
 				incrCtx := annotationTestContext(t)
 				incrCtx.Write = nil
 				pageDictIndRef := annotationTestPageDictIndRef(t, incrCtx)
-				_, _, err := AddAnnotation(incrCtx, pageDictIndRef, annotationTestPageDict(t, incrCtx), 1, ann, true)
+				_, _, err := AddAnnotation(t.Context(), incrCtx, pageDictIndRef, annotationTestPageDict(t, incrCtx), 1, ann, true)
 				return err
 			},
 			wantErr: ErrMissingWriteContext,
@@ -322,7 +323,7 @@ func TestAnnotationOperationsRejectMissingInput(t *testing.T) {
 		{
 			name: "add annotations invalid page",
 			fn: func() error {
-				_, err := AddAnnotations(ctx, types.IntSet{0: true}, ann, false)
+				_, err := AddAnnotations(t.Context(), ctx, types.IntSet{0: true}, ann, false)
 				return err
 			},
 			wantErr: ErrInvalidPageNumber,
@@ -383,7 +384,7 @@ func TestAddAnnotationsWrapsRendererErrorWithPageContext(t *testing.T) {
 		err:            wantErr,
 	}
 
-	_, err := AddAnnotations(ctx, types.IntSet{1: true}, ann, false)
+	_, err := AddAnnotations(t.Context(), ctx, types.IntSet{1: true}, ann, false)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected %v, got %v", wantErr, err)
 	}
@@ -398,7 +399,7 @@ func TestAddAnnotationsReportsInvalidAnnotsEntry(t *testing.T) {
 	ctx := annotationTestContext(t)
 	annotationTestPageDict(t, ctx)["Annots"] = types.Integer(1)
 
-	_, err := AddAnnotations(ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
+	_, err := AddAnnotations(t.Context(), ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -412,7 +413,7 @@ func TestAddAnnotationsCleansCacheOnAnnotsFailure(t *testing.T) {
 	annotationTestPageDict(t, ctx)["Annots"] = types.Integer(1)
 	ctx.PageAnnots = map[int]model.PgAnnots{}
 
-	_, err := AddAnnotations(ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
+	_, err := AddAnnotations(t.Context(), ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -425,7 +426,7 @@ func TestAddAnnotationsReportsIndirectAnnotsDereference(t *testing.T) {
 	ctx := annotationTestContext(t)
 	annotationTestPageDict(t, ctx)["Annots"] = *types.NewIndirectRef(999, 0)
 
-	_, err := AddAnnotations(ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
+	_, err := AddAnnotations(t.Context(), ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -444,7 +445,7 @@ func TestAddAnnotationsInitializesNilCacheMap(t *testing.T) {
 		}
 	}()
 
-	ok, err := AddAnnotations(ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
+	ok, err := AddAnnotations(t.Context(), ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
 	if err != nil {
 		t.Fatalf("add annotation: %v", err)
 	}
@@ -458,7 +459,7 @@ func TestAddAnnotationsInitializesNilPageAnnots(t *testing.T) {
 	annotationTestPageDict(t, ctx).Delete("Annots")
 	ctx.PageAnnots = nil
 
-	ok, err := AddAnnotations(ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
+	ok, err := AddAnnotations(t.Context(), ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
 	if err != nil {
 		t.Fatalf("add annotation: %v", err)
 	}
@@ -487,7 +488,7 @@ func TestAddAnnotationCleansAllocatedObjectOnCacheFailure(t *testing.T) {
 	}
 
 	pageDictIndRef := annotationTestPageDictIndRef(t, ctx)
-	_, _, err = AddAnnotation(ctx, pageDictIndRef, pageDict, 1, annotationTestRenderer(), false)
+	_, _, err = AddAnnotation(t.Context(), ctx, pageDictIndRef, pageDict, 1, annotationTestRenderer(), false)
 	if err == nil || !strings.Contains(err.Error(), "cache") {
 		t.Fatalf("expected cache insertion error, got %v", err)
 	}
@@ -525,7 +526,7 @@ func TestAddAnnotationsPreflightPreventsMutation(t *testing.T) {
 		{
 			name: "invalid later page",
 			add: func(ctx *model.Context) error {
-				_, err := AddAnnotations(ctx, types.IntSet{1: true, 2: true}, annotationTestRenderer(), true)
+				_, err := AddAnnotations(t.Context(), ctx, types.IntSet{1: true, 2: true}, annotationTestRenderer(), true)
 				return err
 			},
 			wantErr: ErrInvalidPageNumber,
@@ -534,7 +535,7 @@ func TestAddAnnotationsPreflightPreventsMutation(t *testing.T) {
 			name: "invalid later renderer",
 			add: func(ctx *model.Context) error {
 				m := map[int][]model.AnnotationRenderer{1: {annotationTestRenderer(), nil}}
-				_, err := AddAnnotationsMap(ctx, m, true)
+				_, err := AddAnnotationsMap(t.Context(), ctx, m, true)
 				return err
 			},
 			wantErr: ErrMissingAnnotation,
@@ -566,7 +567,7 @@ func TestAddAnnotationsMapReturnsDeterministicPageError(t *testing.T) {
 	}
 
 	for i := 0; i < 25; i++ {
-		_, err := AddAnnotationsMap(ctx, m, false)
+		_, err := AddAnnotationsMap(t.Context(), ctx, m, false)
 		if !errors.Is(err, ErrInvalidPageNumber) || !strings.Contains(err.Error(), "page 0") {
 			t.Fatalf("iteration %d: expected page 0 error, got %v", i, err)
 		}
@@ -820,7 +821,7 @@ func TestRemoveLastDirectAnnotationDeletesAnnotsEntry(t *testing.T) {
 	annotationTestPageDict(t, ctx).Delete("Annots")
 	ctx.PageAnnots = map[int]model.PgAnnots{}
 
-	ok, err := AddAnnotations(ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
+	ok, err := AddAnnotations(t.Context(), ctx, types.IntSet{1: true}, annotationTestRenderer(), false)
 	if err != nil {
 		t.Fatalf("add annotation: %v", err)
 	}

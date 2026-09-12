@@ -330,7 +330,7 @@ func TestListInfoFileJSONClosesEachInputBeforeNext(t *testing.T) {
 
 	var previous *os.File
 	process := func(
-		_ context.Context,
+		c context.Context,
 		rs io.ReadSeeker,
 		_ string,
 		_ []string,
@@ -365,7 +365,7 @@ func TestListInfoFileJSONJoinsProcessAndCloseFailures(t *testing.T) {
 	}
 	processErr := errors.New("process input")
 	process := func(
-		_ context.Context,
+		c context.Context,
 		rs io.ReadSeeker,
 		_ string,
 		_ []string,

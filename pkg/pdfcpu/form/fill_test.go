@@ -281,7 +281,7 @@ func TestInheritedValueDereferencesIndirectString(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	value, err := getV(ctx.XRefTable, types.Dict{"V": *ir})
+	value, err := getV(t.Context(), ctx.XRefTable, types.Dict{"V": *ir})
 	if err != nil {
 		t.Fatal(err)
 	}

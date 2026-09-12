@@ -65,7 +65,7 @@ func resizeTestRectangle(t *testing.T, ctx *model.Context, o types.Object) *type
 // TestResizeBlankPageUpdatesGeometryAndAnnotations verifies blank pages are fully resized.
 func TestResizeBlankPageUpdatesGeometryAndAnnotations(t *testing.T) {
 	ctx := annotationTestContext(t)
-	d, _, attrs, err := ctx.PageDict(1, false)
+	d, _, attrs, err := ctx.PageDict(t.Context(), 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}

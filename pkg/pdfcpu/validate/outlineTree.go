@@ -17,9 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -57,7 +59,7 @@ func validateOutlineItemDictParent(xRefTable *model.XRefTable, d types.Dict, dic
 	return nil
 }
 
-func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
+func validateOutlineItemDict(c context.Context, xRefTable *model.XRefTable, d types.Dict) error {
 	dictName := "outlineItemDict"
 
 	// Title, required, text string
@@ -108,7 +110,7 @@ func validateOutlineItemDict(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	if destName != "" {
-		if _, err = xRefTable.DereferenceDestArray(destName); err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+		if _, err = xRefTable.DereferenceDestArray(c, destName); err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
 			model.ShowDigestedSpecViolation("outlineItemDict: unable to resolve destination entry")
 			return nil
 		}
@@ -125,7 +127,7 @@ func outlineItemContext(err error, objNumber int) string {
 	return "outline item"
 }
 
-func handleOutlineItemDict(xRefTable *model.XRefTable, ir types.IndirectRef, objNumber int) (d types.Dict, err error) {
+func handleOutlineItemDict(c context.Context, xRefTable *model.XRefTable, ir types.IndirectRef, objNumber int) (d types.Dict, err error) {
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNumber)
 	}()
@@ -138,7 +140,7 @@ func handleOutlineItemDict(xRefTable *model.XRefTable, ir types.IndirectRef, obj
 		return nil, errors.New("outline item: missing dict")
 	}
 
-	if err = validateOutlineItemDict(xRefTable, d); err != nil {
+	if err = validateOutlineItemDict(c, xRefTable, d); err != nil {
 		return nil, fmt.Errorf("%s: %w", outlineItemContext(err, objNumber), err)
 	}
 
@@ -219,12 +221,12 @@ func outlineCountValue(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int)
 	return *count, nil
 }
 
-func validateOutlineTree(xRefTable *model.XRefTable, first, last *types.IndirectRef, m map[int]bool, fixed *bool) (int, int, error) {
-	return validateOutlineTreeDepth(xRefTable, first, last, m, fixed, 0)
+func validateOutlineTree(c context.Context, xRefTable *model.XRefTable, first, last *types.IndirectRef, m map[int]bool, fixed *bool) (int, int, error) {
+	return validateOutlineTreeDepth(c, xRefTable, first, last, m, fixed, 0)
 }
 
-func validateOutlineTreeDepth(xRefTable *model.XRefTable, first, last *types.IndirectRef, m map[int]bool, fixed *bool, depth int) (int, int, error) {
-	if err := xRefTable.CheckRecursionDepth("outline tree", depth); err != nil {
+func validateOutlineTreeDepth(c context.Context, xRefTable *model.XRefTable, first, last *types.IndirectRef, m map[int]bool, fixed *bool, depth int) (int, int, error) {
+	if err := checkValidationTree(c, xRefTable, "outline tree", depth); err != nil {
 		objNr := 0
 		if first != nil {
 			objNr = first.ObjectNumber.Value()
@@ -242,10 +244,13 @@ func validateOutlineTreeDepth(xRefTable *model.XRefTable, first, last *types.Ind
 
 	// Process linked list of outline items.
 	for ir := first; ir != nil; ir = d.IndirectRefEntry("Next") {
+		if err := contextutil.Check(c); err != nil {
+			return 0, 0, err
+		}
 		objNr = ir.ObjectNumber.Value()
 		total++
 
-		d, err = handleOutlineItemDict(xRefTable, *ir, objNr)
+		d, err = handleOutlineItemDict(c, xRefTable, *ir, objNr)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -263,28 +268,23 @@ func validateOutlineTreeDepth(xRefTable *model.XRefTable, first, last *types.Ind
 			return 0, 0, model.WithValidationErrorObject(err, objNr)
 		}
 		if ok {
-			if count != 0 {
-				if xRefTable.ValidationMode == model.ValidationStrict {
-					err = errors.New("outline item: leaf Count must be 0")
-					return 0, 0, model.WithValidationErrorObject(err, objNr)
-				}
-				delete(d, "Count")
-				*fixed = true
+			if err := validateOutlineLeafCount(xRefTable, d, count, fixed); err != nil {
+				return 0, 0, model.WithValidationErrorObject(err, objNr)
 			}
 			continue
 		}
 
-		if err := scanAndFixOutlineItems(xRefTable, firstChild, lastChild, m, fixed); err != nil {
+		if err := scanAndFixOutlineItems(c, xRefTable, firstChild, lastChild, m, fixed); err != nil {
 			return 0, 0, fmt.Errorf("outline item obj#%d: scan children: %w", objNr, err)
 		}
 
-		c, visc, err := validateOutlineTreeDepth(xRefTable, firstChild, lastChild, m, fixed, depth+1)
+		childCount, visc, err := validateOutlineTreeDepth(c, xRefTable, firstChild, lastChild, m, fixed, depth+1)
 		if err != nil {
 			context := fmt.Sprintf("outline item obj#%d: validate children", objNr)
 			return 0, 0, model.WrapRecursionError(context, err)
 		}
 
-		if err := evalOutlineCount(xRefTable, d, c, visc, count, &total, &visible, fixed); err != nil {
+		if err := evalOutlineCount(xRefTable, d, childCount, visc, count, &total, &visible, fixed); err != nil {
 			err = fmt.Errorf("outline item: %w", err)
 			return 0, 0, model.WithValidationErrorObject(err, objNr)
 		}
@@ -338,9 +338,12 @@ func validateOutlineCount(xRefTable *model.XRefTable, total, visible int, count 
 	return nil
 }
 
-func firstOfRemainder(xRefTable *model.XRefTable, last *types.IndirectRef, duplObjNr, oneBeforeDuplObj int) (int, types.Dict, error) {
+func firstOfRemainder(c context.Context, xRefTable *model.XRefTable, last *types.IndirectRef, duplObjNr, oneBeforeDuplObj int) (int, types.Dict, error) {
 	// Starting with the last node, go back until we hit duplObjNr or oneBeforeDuplObj
 	for ir := last; ir != nil; {
+		if err := contextutil.Check(c); err != nil {
+			return 0, nil, err
+		}
 		objNr := ir.ObjectNumber.Value()
 		d, err := xRefTable.DereferenceDict(*ir)
 		if err != nil {
@@ -371,8 +374,8 @@ func firstOfRemainder(xRefTable *model.XRefTable, last *types.IndirectRef, duplO
 	return 0, nil, nil
 }
 
-func removeDuplFirst(xRefTable *model.XRefTable, first, last *types.IndirectRef, duplObjNr, oneBeforeDuplObj int) error {
-	nextObjNr, nextDict, err := firstOfRemainder(xRefTable, last, duplObjNr, oneBeforeDuplObj)
+func removeDuplFirst(c context.Context, xRefTable *model.XRefTable, first, last *types.IndirectRef, duplObjNr, oneBeforeDuplObj int) error {
+	nextObjNr, nextDict, err := firstOfRemainder(c, xRefTable, last, duplObjNr, oneBeforeDuplObj)
 	if err != nil {
 		return err
 	}
@@ -401,13 +404,9 @@ func handleCorruptDict(xRefTable *model.XRefTable) error {
 	return ErrBookmarksRepair
 }
 
-func handleDuplicate(
-	xRefTable *model.XRefTable,
-	ir, first, last *types.IndirectRef,
-	prevDict types.Dict,
-	objNr, prevObjNr int) error {
+func handleDuplicate(c context.Context, xRefTable *model.XRefTable, ir, first, last *types.IndirectRef, prevDict types.Dict, objNr, prevObjNr int) error {
 	if ir == first {
-		return removeDuplFirst(xRefTable, first, last, objNr, prevObjNr)
+		return removeDuplFirst(c, xRefTable, first, last, objNr, prevObjNr)
 	}
 
 	if ir == last {
@@ -416,7 +415,10 @@ func handleDuplicate(
 		return nil
 	}
 
-	nextObjNr, _, _ := firstOfRemainder(xRefTable, last, objNr, prevObjNr)
+	nextObjNr, _, err := firstOfRemainder(c, xRefTable, last, objNr, prevObjNr)
+	if err != nil {
+		return err
+	}
 	if nextObjNr == 0 {
 		return ErrBookmarksRepair
 	}
@@ -431,12 +433,15 @@ func handleDuplicate(
 	return nil
 }
 
-func scanAndFixOutlineItems(xRefTable *model.XRefTable, first, last *types.IndirectRef, seen map[int]bool, fixed *bool) error {
+func scanAndFixOutlineItems(c context.Context, xRefTable *model.XRefTable, first, last *types.IndirectRef, seen map[int]bool, fixed *bool) error {
 	visited := map[int]bool{}
 	var prevDict types.Dict
 	var prevObjNr int
 
 	for ir := first; ir != nil; {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		objNr := ir.ObjectNumber.Value()
 
 		if visited[objNr] {
@@ -464,7 +469,7 @@ func scanAndFixOutlineItems(xRefTable *model.XRefTable, first, last *types.Indir
 
 		if seen[objNr] {
 			*fixed = true
-			err = handleDuplicate(xRefTable, ir, first, last, prevDict, objNr, prevObjNr)
+			err = handleDuplicate(c, xRefTable, ir, first, last, prevDict, objNr, prevObjNr)
 			return model.WithValidationErrorObject(err, objNr)
 		}
 
@@ -474,6 +479,18 @@ func scanAndFixOutlineItems(xRefTable *model.XRefTable, first, last *types.Indir
 		ir = dict.IndirectRefEntry("Next")
 	}
 
+	return nil
+}
+
+func validateOutlineLeafCount(xRefTable *model.XRefTable, d types.Dict, count int, fixed *bool) error {
+	if count == 0 {
+		return nil
+	}
+	if xRefTable.ValidationMode == model.ValidationStrict {
+		return errors.New("outline item: leaf Count must be 0")
+	}
+	delete(d, "Count")
+	*fixed = true
 	return nil
 }
 
@@ -524,11 +541,11 @@ func handleCorruptOutlineItems(xRefTable *model.XRefTable, rootDict types.Dict) 
 	model.ShowSkipped("bookmarks")
 }
 
-func scanAndFixOutlines(xRefTable *model.XRefTable, rootDict types.Dict, first, last *types.IndirectRef, count *int) error {
+func scanAndFixOutlines(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, first, last *types.IndirectRef, count *int) error {
 	m := map[int]bool{}
 	var fixed bool
 
-	err := scanAndFixOutlineItems(xRefTable, first, last, m, &fixed)
+	err := scanAndFixOutlineItems(c, xRefTable, first, last, m, &fixed)
 	if err != nil {
 		if errors.Is(err, ErrBookmarksRepair) && xRefTable.ValidationMode == model.ValidationRelaxed {
 			handleCorruptOutlineItems(xRefTable, rootDict)
@@ -537,7 +554,7 @@ func scanAndFixOutlines(xRefTable *model.XRefTable, rootDict types.Dict, first, 
 		return fmt.Errorf("outline item list: scan: %w", err)
 	}
 
-	total, visible, err := validateOutlineTree(xRefTable, first, last, m, &fixed)
+	total, visible, err := validateOutlineTree(c, xRefTable, first, last, m, &fixed)
 	if err != nil {
 		if errors.Is(err, ErrBookmarksRepair) && xRefTable.ValidationMode == model.ValidationRelaxed {
 			handleCorruptOutlineItems(xRefTable, rootDict)
@@ -557,7 +574,7 @@ func scanAndFixOutlines(xRefTable *model.XRefTable, rootDict types.Dict, first, 
 	return nil
 }
 
-func validateOutlines(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+func validateOutlines(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 12.3.3 Document Outline
 
 	ir, err := validateIndRefEntry(xRefTable, rootDict, 0, "rootDict", "Outlines", required, sinceVersion)
@@ -586,5 +603,5 @@ func validateOutlines(xRefTable *model.XRefTable, rootDict types.Dict, required 
 		return nil
 	}
 
-	return scanAndFixOutlines(xRefTable, rootDict, first, last, count)
+	return scanAndFixOutlines(c, xRefTable, rootDict, first, last, count)
 }

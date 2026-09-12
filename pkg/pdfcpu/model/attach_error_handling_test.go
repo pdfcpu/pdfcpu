@@ -149,7 +149,7 @@ func TestFileSpecModDatePreservesDereferenceCause(t *testing.T) {
 	osd := &types.ObjectStreamDict{
 		StreamDict: types.StreamDict{Content: []byte("ModDate")},
 	}
-	lazy := types.NewLazyObjectStreamObject(osd, 0, -1, func(_ context.Context, _ string) (types.Object, error) {
+	lazy := types.NewLazyObjectStreamObject(osd, 0, -1, func(c context.Context, _ string) (types.Object, error) {
 		return nil, wantErr
 	})
 

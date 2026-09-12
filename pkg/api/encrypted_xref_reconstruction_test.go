@@ -164,7 +164,7 @@ func readEncryptedXRefState(t *testing.T, bb []byte, userPW string) encryptedXRe
 	if err := ValidateContext(t.Context(), ctx); err != nil {
 		t.Fatal(err)
 	}
-	pageDict, _, _, err := ctx.PageDict(1, false)
+	pageDict, _, _, err := ctx.PageDict(t.Context(), 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}

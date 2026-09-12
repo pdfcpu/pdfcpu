@@ -41,10 +41,10 @@ const (
 	JSON
 )
 
-func cacheResIDs(ctx *model.Context, pdf *primitives.PDF) error {
+func cacheResIDs(c context.Context, ctx *model.Context, pdf *primitives.PDF) error {
 	// Iterate over all pages of ctx and prepare a resIds []string for inherited "Font" and "XObject" resources.
 	for i := 1; i <= ctx.PageCount; i++ {
-		_, _, inhPA, err := ctx.PageDict(i, true)
+		_, _, inhPA, err := ctx.PageDict(c, i, true)
 		if err != nil {
 			return fmt.Errorf("page %d: page dictionary: %w", i, err)
 		}
@@ -73,7 +73,7 @@ func cacheResourceDict(resources types.Dict, name string, pageNr int, cache map[
 	return nil
 }
 
-func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error) {
+func addImages(c context.Context, ctx *model.Context, pages map[string]*Page) ([]*model.Page, error) {
 	pdf := &primitives.PDF{
 		FieldIDs:      types.StringSet{},
 		Fields:        types.Array{},
@@ -92,7 +92,7 @@ func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error
 		Timeout:       ctx.Timeout,
 	}
 
-	if err := cacheResIDs(ctx, pdf); err != nil {
+	if err := cacheResIDs(c, ctx, pdf); err != nil {
 		return nil, fmt.Errorf("cache page resources: %w", err)
 	}
 
@@ -125,7 +125,7 @@ func addImages(ctx *model.Context, pages map[string]*Page) ([]*model.Page, error
 
 		pageNr := i + 1
 
-		_, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
+		_, _, inhPAttrs, err := ctx.PageDict(c, pageNr, false)
 		if err != nil {
 			return nil, fmt.Errorf("page %d: page dictionary: %w", pageNr, err)
 		}
@@ -1090,7 +1090,7 @@ func fillTx(
 		return err
 	}
 
-	vOld, err := getV(ctx.XRefTable, d)
+	vOld, err := getV(c, ctx.XRefTable, d)
 	if err != nil {
 		return err
 	}
@@ -1140,7 +1140,7 @@ func fillWidgetAnnots(
 			return err
 		}
 
-		found, fi, err := isField(ctx.XRefTable, indRef, fields)
+		found, fi, err := isField(c, ctx.XRefTable, indRef, fields)
 		if err != nil {
 			return fmt.Errorf("resolve field: %w", err)
 		}
@@ -1270,7 +1270,7 @@ func FillForm(c context.Context, ctx *model.Context, fillDetails func(id, name s
 	var pages []*model.Page
 
 	if len(imgs) > 0 {
-		if pages, err = addImages(ctx, imgs); err != nil {
+		if pages, err = addImages(c, ctx, imgs); err != nil {
 			return false, nil, fmt.Errorf("form images: %w", err)
 		}
 	}

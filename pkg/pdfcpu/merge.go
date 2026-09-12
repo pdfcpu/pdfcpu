@@ -714,7 +714,10 @@ func mergeInFields(ctxDest *model.Context, arrFieldsSrc, arrFieldsDest types.Arr
 	return nil
 }
 
-func fieldWidgetObjNrs(ctx *model.Context, fields types.Array, m types.IntSet) error {
+func fieldWidgetObjNrs(c context.Context, ctx *model.Context, fields types.Array, m types.IntSet) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if ctx == nil {
 		return errors.New("field widget object numbers: missing context")
 	}
@@ -723,6 +726,9 @@ func fieldWidgetObjNrs(ctx *model.Context, fields types.Array, m types.IntSet) e
 	}
 
 	for _, obj := range fields {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		ir, ok := obj.(types.IndirectRef)
 		if !ok {
 			continue
@@ -737,7 +743,7 @@ func fieldWidgetObjNrs(ctx *model.Context, fields types.Array, m types.IntSet) e
 			return fmt.Errorf("field widget object numbers: dereference kids: %w", err)
 		}
 		if len(kids) > 0 {
-			if err := fieldWidgetObjNrs(ctx, kids, m); err != nil {
+			if err := fieldWidgetObjNrs(c, ctx, kids, m); err != nil {
 				return fmt.Errorf("field widget object numbers: kids: %w", err)
 			}
 		}
@@ -745,7 +751,7 @@ func fieldWidgetObjNrs(ctx *model.Context, fields types.Array, m types.IntSet) e
 	return nil
 }
 
-func sourceFieldWidgetObjNrs(ctx *model.Context) (types.IntSet, error) {
+func sourceFieldWidgetObjNrs(c context.Context, ctx *model.Context) (types.IntSet, error) {
 	if ctx == nil {
 		return nil, errors.New("source field widget object numbers: missing context")
 	}
@@ -762,7 +768,7 @@ func sourceFieldWidgetObjNrs(ctx *model.Context) (types.IntSet, error) {
 	if err != nil {
 		return nil, fmt.Errorf("source field widget object numbers: dereference fields: %w", err)
 	}
-	if err := fieldWidgetObjNrs(ctx, fields, m); err != nil {
+	if err := fieldWidgetObjNrs(c, ctx, fields, m); err != nil {
 		return nil, fmt.Errorf("source field widget object numbers: collect fields: %w", err)
 	}
 	return m, nil
@@ -787,12 +793,15 @@ func renameOrphanWidgetField(ctx *model.Context, d types.Dict, namespace string)
 	return nil
 }
 
-func renameSourceOrphanWidgetFields(ctx *model.Context, namespace string) error {
-	fieldWidgets, err := sourceFieldWidgetObjNrs(ctx)
+func renameSourceOrphanWidgetFields(c context.Context, ctx *model.Context, namespace string) error {
+	fieldWidgets, err := sourceFieldWidgetObjNrs(c, ctx)
 	if err != nil {
 		return fmt.Errorf("rename orphan widget fields: source widget fields: %w", err)
 	}
 	for objNr, entry := range ctx.Table {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		if entry.Free || fieldWidgets[objNr] {
 			continue
 		}
@@ -840,7 +849,7 @@ func mergeDests(ctxSource, ctxDest *model.Context) error {
 	return nil
 }
 
-func mergeNames(ctxSrc, ctxDest *model.Context) error {
+func mergeNames(c context.Context, ctxSrc, ctxDest *model.Context) error {
 	rootDictSrc, rootDictDest, err := rootDicts(ctxSrc, ctxDest)
 	if err != nil {
 		return fmt.Errorf("root dicts: %w", err)
@@ -865,7 +874,7 @@ func mergeNames(ctxSrc, ctxDest *model.Context) error {
 	for id, namesSrc := range ctxSrc.Names {
 		if namesDest, ok := ctxDest.Names[id]; ok {
 			// Merge src tree into dest tree including collision detection.
-			if err := namesDest.AddTree(ctxDest.XRefTable, namesSrc, ctxSrc.NameRefs[id], []string{"D", "Dest"}); err != nil {
+			if err := namesDest.AddTree(c, ctxDest.XRefTable, namesSrc, ctxSrc.NameRefs[id], []string{"D", "Dest"}); err != nil {
 				return fmt.Errorf("name tree %s: %w", id, err)
 			}
 			continue
@@ -1098,7 +1107,7 @@ func patchObjects(s types.IntSet, lookup map[int]int) types.IntSet {
 	return t
 }
 
-func patchNameTree(n *model.Node, lookup map[int]int) error {
+func patchNameTree(c context.Context, n *model.Node, lookup map[int]int) error {
 	if n == nil {
 		return nil
 	}
@@ -1111,7 +1120,7 @@ func patchNameTree(n *model.Node, lookup map[int]int) error {
 		return nil
 	}
 
-	return n.Process(nil, patchValues)
+	return n.Process(c, nil, patchValues)
 }
 
 func validatePatchSourceContexts(ctxSrc, ctxDest *model.Context) error {
@@ -1194,7 +1203,7 @@ func remapSourceXRefTable(ctxSrc *model.Context, lookup map[int]int) {
 	ctxSrc.Table = m
 }
 
-func patchSourceCaches(ctxSrc *model.Context, lookup map[int]int) error {
+func patchSourceCaches(c context.Context, ctxSrc *model.Context, lookup map[int]int) error {
 	if ctxSrc.Optimize == nil {
 		return errors.New("patch source object numbers: missing source optimization context")
 	}
@@ -1211,14 +1220,14 @@ func patchSourceCaches(ctxSrc *model.Context, lookup map[int]int) error {
 
 	// Patch cached name trees.
 	for id, v := range ctxSrc.Names {
-		if err := patchNameTree(v, lookup); err != nil {
+		if err := patchNameTree(c, v, lookup); err != nil {
 			return fmt.Errorf("patch source object numbers: name tree %s: %w", id, err)
 		}
 	}
 	return nil
 }
 
-func patchSourceObjectNumbers(ctxSrc, ctxDest *model.Context) error {
+func patchSourceObjectNumbers(c context.Context, ctxSrc, ctxDest *model.Context) error {
 	if err := validatePatchSourceContexts(ctxSrc, ctxDest); err != nil {
 		return err
 	}
@@ -1243,7 +1252,7 @@ func patchSourceObjectNumbers(ctxSrc, ctxDest *model.Context) error {
 		return err
 	}
 	remapSourceXRefTable(ctxSrc, lookup)
-	if err := patchSourceCaches(ctxSrc, lookup); err != nil {
+	if err := patchSourceCaches(c, ctxSrc, lookup); err != nil {
 		return err
 	}
 
@@ -1437,7 +1446,7 @@ func appendSourcePageTreeToDestPageTree(c context.Context, ctxSrc, ctxDest *mode
 	return nil
 }
 
-func zipSourcePageTreeIntoDestPageTree(ctxSrc, ctxDest *model.Context) error {
+func zipSourcePageTreeIntoDestPageTree(c context.Context, ctxSrc, ctxDest *model.Context) error {
 	if log.DebugEnabled() {
 		log.Debug.Println("zipSourcePageTreeIntoDestPageTree begin")
 	}
@@ -1457,13 +1466,13 @@ func zipSourcePageTreeIntoDestPageTree(ctxSrc, ctxDest *model.Context) error {
 
 	// Process dest page tree recursively and weave in src pages
 	p := 0
-	if ctxDest.PageCount, err = ctxDest.InsertPages(rootPageIndRef, &p, ctxSrc); err != nil {
+	if ctxDest.PageCount, err = ctxDest.InsertPages(c, rootPageIndRef, &p, ctxSrc); err != nil {
 		return fmt.Errorf("zip page tree: insert source pages: %w", err)
 	}
 
 	if appendFromPageNr > 0 {
 		// append remaining src pages
-		if ctxDest.PageCount, err = ctxDest.AppendPages(rootPageIndRef, appendFromPageNr, ctxSrc); err != nil {
+		if ctxDest.PageCount, err = ctxDest.AppendPages(c, rootPageIndRef, appendFromPageNr, ctxSrc); err != nil {
 			return fmt.Errorf("zip page tree: append remaining source pages: %w", err)
 		}
 	}
@@ -1571,7 +1580,7 @@ func mergeConfiguredOutlines(c context.Context, fName string, origDestPageCount 
 
 func mergeSourcePageTree(c context.Context, ctxSrc, ctxDest *model.Context, zip, dividerPage bool) error {
 	if zip {
-		if err := zipSourcePageTreeIntoDestPageTree(ctxSrc, ctxDest); err != nil {
+		if err := zipSourcePageTreeIntoDestPageTree(c, ctxSrc, ctxDest); err != nil {
 			return fmt.Errorf("zip source pages: %w", err)
 		}
 		return nil
@@ -1628,11 +1637,11 @@ func MergeXRefTables(c context.Context, fName string, ctxSrc, ctxDest *model.Con
 
 	origDestPageCount := ctxDest.PageCount
 
-	if err = runMergePhase(c, func() error { return patchSourceObjectNumbers(ctxSrc, ctxDest) }); err != nil {
+	if err = runMergePhase(c, func() error { return patchSourceObjectNumbers(c, ctxSrc, ctxDest) }); err != nil {
 		return fmt.Errorf("merge: patch source object numbers: %w", err)
 	}
 	if err = runMergePhase(c, func() error {
-		return renameSourceOrphanWidgetFields(ctxSrc, fmt.Sprintf("%d", origDestPageCount))
+		return renameSourceOrphanWidgetFields(c, ctxSrc, fmt.Sprintf("%d", origDestPageCount))
 	}); err != nil {
 		return fmt.Errorf("merge forms: rename orphan widgets: %w", err)
 	}
@@ -1658,7 +1667,7 @@ func MergeXRefTables(c context.Context, fName string, ctxSrc, ctxDest *model.Con
 		return fmt.Errorf("merge dests: %w", err)
 	}
 
-	if err = runMergePhase(c, func() error { return mergeNames(ctxSrc, ctxDest) }); err != nil {
+	if err = runMergePhase(c, func() error { return mergeNames(c, ctxSrc, ctxDest) }); err != nil {
 		return fmt.Errorf("merge names: %w", err)
 	}
 

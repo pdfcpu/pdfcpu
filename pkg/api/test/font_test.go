@@ -32,7 +32,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func writeCoreFontDemoContent(testContext context.Context, xRefTable *model.XRefTable, p model.Page, fontName string) error {
+func writeCoreFontDemoContent(c context.Context, xRefTable *model.XRefTable, p model.Page, fontName string) error {
 	baseFontName := "Helvetica"
 	baseFontSize := 24
 	baseFontKey := p.Fm.EnsureKey(baseFontName)
@@ -64,7 +64,7 @@ func writeCoreFontDemoContent(testContext context.Context, xRefTable *model.XRef
 	}
 	td.X, td.Y, td.Text = p.MediaBox.Width()/2, 500, s
 	td.StrokeCol, td.FillCol = color.NewSimpleColor(0x77bdbd), color.NewSimpleColor(0xab6f30)
-	if _, err := model.WriteMultiLine(testContext, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
+	if _, err := model.WriteMultiLine(c, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
 		return fmt.Errorf("render core font heading: %w", err)
 	}
 
@@ -72,7 +72,7 @@ func writeCoreFontDemoContent(testContext context.Context, xRefTable *model.XRef
 		s = fmt.Sprintf("#%02X", i)
 		td.X, td.Y, td.Text, td.FontSize = float64(70+i*30), 427, s, 14
 		td.StrokeCol, td.FillCol = color.Black, color.SimpleColor{B: .8}
-		if _, err := model.WriteMultiLine(testContext, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
+		if _, err := model.WriteMultiLine(c, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
 			return fmt.Errorf("render core font column label %d: %w", i, err)
 		}
 	}
@@ -82,7 +82,7 @@ func writeCoreFontDemoContent(testContext context.Context, xRefTable *model.XRef
 		td.X, td.Y, td.Text = 41, float64(403-j*30), s
 		td.StrokeCol, td.FillCol = color.Black, color.SimpleColor{B: .8}
 		td.FontName, td.FontKey, td.FontSize = baseFontName, baseFontKey, 14
-		if _, err := model.WriteMultiLine(testContext, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
+		if _, err := model.WriteMultiLine(c, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
 			return fmt.Errorf("render core font row label %d: %w", j, err)
 		}
 		for i := 0; i < 16; i++ {
@@ -91,7 +91,7 @@ func writeCoreFontDemoContent(testContext context.Context, xRefTable *model.XRef
 			td.X, td.Y, td.Text = float64(70+i*30), float64(400-j*30), s
 			td.StrokeCol, td.FillCol = color.Black, color.Black
 			td.FontName, td.FontKey, td.FontSize = fontName, fontKey, float64(fontSize)
-			if _, err := model.WriteMultiLine(testContext, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
+			if _, err := model.WriteMultiLine(c, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
 				return fmt.Errorf("render core font byte 0x%02X: %w", b, err)
 			}
 		}
@@ -99,10 +99,10 @@ func writeCoreFontDemoContent(testContext context.Context, xRefTable *model.XRef
 	return nil
 }
 
-func createCoreFontDemoPage(testContext context.Context, xRefTable *model.XRefTable, w, h int, fontName string) (model.Page, error) {
+func createCoreFontDemoPage(c context.Context, xRefTable *model.XRefTable, w, h int, fontName string) (model.Page, error) {
 	mediaBox := types.RectForDim(float64(w), float64(h))
 	p := model.NewPageWithBg(mediaBox, color.NewSimpleColor(0xbeded9))
-	if err := writeCoreFontDemoContent(testContext, xRefTable, p, fontName); err != nil {
+	if err := writeCoreFontDemoContent(c, xRefTable, p, fontName); err != nil {
 		return model.Page{}, fmt.Errorf("render core font demo page for %s: %w", fontName, err)
 	}
 	return p, nil

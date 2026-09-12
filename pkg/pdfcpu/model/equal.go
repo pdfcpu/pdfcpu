@@ -18,12 +18,14 @@ package model
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"maps"
 	"slices"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -34,39 +36,31 @@ func appendPair(pairs []int, a, b int) []int {
 	return append(pairs, a, b)
 }
 
-func containsPair(pairs []int, a, b int) bool {
+func containsPair(c context.Context, pairs []int, a, b int) (bool, error) {
 	if a > b {
 		a, b = b, a
 	}
 	for i := 0; i+1 < len(pairs); i += 2 {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
 		if pairs[i] == a && pairs[i+1] == b {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 // EqualObjects returns true if two objects are equal in the context of xrefTable.
 // An object and an indirect reference to it are treated as equal.
-// Objects may be object trees.
-func EqualObjects(o1, o2 types.Object, xRefTable *XRefTable, pairs []int) (ok bool, err error) {
-	ir1, ok := o1.(types.IndirectRef)
-	if ok {
-		ir2, ok := o2.(types.IndirectRef)
-		if ok {
-			if ir1 == ir2 {
-				return true, nil
-			}
-			objNr1, objNr2 := ir1.ObjectNumber.Value(), ir2.ObjectNumber.Value()
-			if len(pairs) > 0 {
-				if containsPair(pairs, objNr1, objNr2) {
-					return true, nil
-				}
-			} else {
-				pairs = make([]int, 0, 6)
-			}
-			pairs = appendPair(pairs, objNr1, objNr2)
-		}
+// Objects may be object trees. Comparison stops when c is canceled or its deadline expires.
+func EqualObjects(c context.Context, o1, o2 types.Object, xRefTable *XRefTable, pairs []int) (ok bool, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
+	pairs, ok, err = equalObjectReferences(c, o1, o2, pairs)
+	if err != nil || ok {
+		return ok, err
 	}
 
 	o1, err = xRefTable.Dereference(o1)
@@ -96,15 +90,15 @@ func EqualObjects(o1, o2 types.Object, xRefTable *XRefTable, pairs []int) (ok bo
 		ok = o1 == o2
 
 	case types.Dict:
-		ok, err = equalDicts(o1.(types.Dict), o2.(types.Dict), xRefTable, pairs)
+		ok, err = equalDicts(c, o1.(types.Dict), o2.(types.Dict), xRefTable, pairs)
 
 	case types.StreamDict:
 		sd1 := o1.(types.StreamDict)
 		sd2 := o2.(types.StreamDict)
-		ok, err = equalStreamDicts(&sd1, &sd2, xRefTable, pairs)
+		ok, err = equalStreamDicts(c, &sd1, &sd2, xRefTable, pairs)
 
 	case types.Array:
-		ok, err = equalArrays(o1.(types.Array), o2.(types.Array), xRefTable, pairs)
+		ok, err = equalArrays(c, o1.(types.Array), o2.(types.Array), xRefTable, pairs)
 
 	default:
 		err = fmt.Errorf("unhandled compare for type %s", o1Type)
@@ -113,13 +107,33 @@ func EqualObjects(o1, o2 types.Object, xRefTable *XRefTable, pairs []int) (ok bo
 	return ok, err
 }
 
-func equalArrays(a1, a2 types.Array, xRefTable *XRefTable, pairs []int) (bool, error) {
+func equalObjectReferences(c context.Context, o1, o2 types.Object, pairs []int) ([]int, bool, error) {
+	ir1, ok1 := o1.(types.IndirectRef)
+	ir2, ok2 := o2.(types.IndirectRef)
+	if !ok1 || !ok2 {
+		return pairs, false, nil
+	}
+	if ir1 == ir2 {
+		return pairs, true, nil
+	}
+	a, b := ir1.ObjectNumber.Value(), ir2.ObjectNumber.Value()
+	found, err := containsPair(c, pairs, a, b)
+	if err != nil || found {
+		return pairs, found, err
+	}
+	return appendPair(pairs, a, b), false, nil
+}
+
+func equalArrays(c context.Context, a1, a2 types.Array, xRefTable *XRefTable, pairs []int) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	if len(a1) != len(a2) {
 		return false, nil
 	}
 
 	for i, o1 := range a1 {
-		ok, err := EqualObjects(o1, a2[i], xRefTable, pairs)
+		ok, err := EqualObjects(c, o1, a2[i], xRefTable, pairs)
 		if err != nil {
 			return false, err
 		}
@@ -132,8 +146,8 @@ func equalArrays(a1, a2 types.Array, xRefTable *XRefTable, pairs []int) (bool, e
 }
 
 // equalStreamDicts returns true if two stream dicts are equal and contain the same bytes.
-func equalStreamDicts(sd1, sd2 *types.StreamDict, xRefTable *XRefTable, pairs []int) (bool, error) {
-	ok, err := equalDicts(sd1.Dict, sd2.Dict, xRefTable, pairs)
+func equalStreamDicts(c context.Context, sd1, sd2 *types.StreamDict, xRefTable *XRefTable, pairs []int) (bool, error) {
+	ok, err := equalDicts(c, sd1.Dict, sd2.Dict, xRefTable, pairs)
 	if err != nil {
 		return false, err
 	}
@@ -146,7 +160,27 @@ func equalStreamDicts(sd1, sd2 *types.StreamDict, xRefTable *XRefTable, pairs []
 		return false, errors.New("stream dict not loaded")
 	}
 
-	return bytes.Equal(sd1.Raw, sd2.Raw), nil
+	return equalStreamBytes(c, sd1.Raw, sd2.Raw)
+}
+
+func equalStreamBytes(c context.Context, a, b []byte) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
+	if len(a) != len(b) {
+		return false, nil
+	}
+	const chunkSize = 64 * 1024
+	for start := 0; start < len(a); start += chunkSize {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
+		end := start + min(chunkSize, len(a)-start)
+		if !bytes.Equal(a[start:end], b[start:end]) {
+			return false, nil
+		}
+	}
+	return true, contextutil.Check(c)
 }
 
 func equalFontNames(v1, v2 types.Object, xRefTable *XRefTable) (bool, error) {
@@ -203,7 +237,10 @@ func fontNameEntry(fontDicts bool, key string) bool {
 	return key == "BaseFont" || key == "FontName" || key == "Name"
 }
 
-func equalDicts(d1, d2 types.Dict, xRefTable *XRefTable, pairs []int) (bool, error) {
+func equalDicts(c context.Context, d1, d2 types.Dict, xRefTable *XRefTable, pairs []int) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	if d1.Len() != d2.Len() {
 		return false, nil
 	}
@@ -214,6 +251,9 @@ func equalDicts(d1, d2 types.Dict, xRefTable *XRefTable, pairs []int) (bool, err
 	}
 
 	for _, key := range slices.Sorted(maps.Keys(d1)) {
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
 		v1 := d1[key]
 
 		v2, found := d2[key]
@@ -235,7 +275,7 @@ func equalDicts(d1, d2 types.Dict, xRefTable *XRefTable, pairs []int) (bool, err
 			continue
 		}
 
-		ok, err := EqualObjects(v1, v2, xRefTable, pairs)
+		ok, err := EqualObjects(c, v1, v2, xRefTable, pairs)
 		if err != nil {
 			return false, fmt.Errorf("dict entry %s: %w", key, err)
 		}

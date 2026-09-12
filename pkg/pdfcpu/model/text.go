@@ -930,9 +930,9 @@ func cjkTextWidth(c context.Context, repo *font.Repository, text, fontName strin
 	return width, nil
 }
 
-func wrapCJKRune(cxt context.Context, repo *font.Repository, ss *[]string, line, space, word, fontName string, r rune, fontSize, maxWidthPoints float64) (string, string, string, error) {
+func wrapCJKRune(c context.Context, repo *font.Repository, ss *[]string, line, space, word, fontName string, r rune, fontSize, maxWidthPoints float64) (string, string, string, error) {
 	next := string(r)
-	width, err := cjkTextWidth(cxt, repo, line+space+word+next, fontName, fontSize)
+	width, err := cjkTextWidth(c, repo, line+space+word+next, fontName, fontSize)
 	if err != nil {
 		return line, space, word, err
 	}
@@ -940,7 +940,7 @@ func wrapCJKRune(cxt context.Context, repo *font.Repository, ss *[]string, line,
 		return line, space, word + next, nil
 	}
 
-	width, err = cjkTextWidth(cxt, repo, word+next, fontName, fontSize)
+	width, err = cjkTextWidth(c, repo, word+next, fontName, fontSize)
 	if err != nil {
 		return line, space, word, err
 	}
@@ -948,7 +948,7 @@ func wrapCJKRune(cxt context.Context, repo *font.Repository, ss *[]string, line,
 		return line, space, word + next, nil
 	}
 
-	width, err = cjkTextWidth(cxt, repo, word, fontName, fontSize)
+	width, err = cjkTextWidth(c, repo, word, fontName, fontSize)
 	if err != nil {
 		return line, space, word, err
 	}
@@ -956,7 +956,7 @@ func wrapCJKRune(cxt context.Context, repo *font.Repository, ss *[]string, line,
 		*ss = append(*ss, line)
 	}
 	if width > maxWidthPoints {
-		if err := wrapLine(cxt, repo, ss, "", "", word, fontName, fontSize, maxWidthPoints); err != nil {
+		if err := wrapLine(c, repo, ss, "", "", word, fontName, fontSize, maxWidthPoints); err != nil {
 			return line, space, word, err
 		}
 	} else {
@@ -974,25 +974,25 @@ const (
 	wrapInSpace
 )
 
-func wrapTextRune(cxt context.Context, repo *font.Repository, ss *[]string, line, space, word, fontName string, r rune, fontSize, maxWidthPoints float64) (string, string, string, textWrapState, error) {
+func wrapTextRune(c context.Context, repo *font.Repository, ss *[]string, line, space, word, fontName string, r rune, fontSize, maxWidthPoints float64) (string, string, string, textWrapState, error) {
 	if unicode.IsSpace(r) {
-		line, space, err := wrapWord(cxt, repo, ss, line, space, word, string(r), fontName, fontSize, maxWidthPoints)
+		line, space, err := wrapWord(c, repo, ss, line, space, word, string(r), fontName, fontSize, maxWidthPoints)
 		return line, space, word, wrapInSpace, err
 	}
 	if len(word) > 0 && canBreakAfterChar(lastRune(word)) && canBreakBeforeChar(r) {
-		line, space, word, err := wrapCJKRune(cxt, repo, ss, line, space, word, fontName, r, fontSize, maxWidthPoints)
+		line, space, word, err := wrapCJKRune(c, repo, ss, line, space, word, fontName, r, fontSize, maxWidthPoints)
 		return line, space, word, wrapInWord, err
 	}
 	return line, space, word + string(r), wrapInWord, nil
 }
 
-func wrap(cxt context.Context, repo *font.Repository, lines []string, fontName string, fontSize, maxWidthPoints float64) ([]string, error) {
+func wrap(c context.Context, repo *font.Repository, lines []string, fontName string, fontSize, maxWidthPoints float64) ([]string, error) {
 	var wrapState textWrapState
 
 	var ss []string
 
 	for lineIndex, s := range lines {
-		if err := contextutil.Check(cxt); err != nil {
+		if err := contextutil.Check(c); err != nil {
 			return nil, err
 		}
 
@@ -1000,48 +1000,48 @@ func wrap(cxt context.Context, repo *font.Repository, lines []string, fontName s
 
 		wrapState = wrapBeginLine
 
-		for _, c := range s {
+		for _, char := range s {
 
 			switch wrapState {
 
 			case wrapBeginLine:
-				if unicode.IsSpace(c) {
-					line = string(c)
+				if unicode.IsSpace(char) {
+					line = string(char)
 					wrapState = wrapLeadingSpace
 				} else {
-					word = string(c)
+					word = string(char)
 					wrapState = wrapInWord
 				}
 
 			case wrapLeadingSpace:
-				if unicode.IsSpace(c) {
-					line += string(c)
+				if unicode.IsSpace(char) {
+					line += string(char)
 				} else {
-					word = string(c)
+					word = string(char)
 					wrapState = wrapInWord
 				}
 
 			case wrapInWord:
 				var err error
 				line, space, word, wrapState, err = wrapTextRune(
-					cxt, repo, &ss, line, space, word, fontName, c, fontSize, maxWidthPoints,
+					c, repo, &ss, line, space, word, fontName, char, fontSize, maxWidthPoints,
 				)
 				if err != nil {
 					return nil, fmt.Errorf("line %d: %w", lineIndex+1, err)
 				}
 
 			case wrapInSpace:
-				if unicode.IsSpace(c) {
-					space += string(c)
+				if unicode.IsSpace(char) {
+					space += string(char)
 				} else {
-					word = string(c)
+					word = string(char)
 					wrapState = wrapInWord
 				}
 			}
 		}
 
 		if wrapState == wrapInWord {
-			if err := wrapLine(cxt, repo, &ss, line, space, word, fontName, fontSize, maxWidthPoints); err != nil {
+			if err := wrapLine(c, repo, &ss, line, space, word, fontName, fontSize, maxWidthPoints); err != nil {
 				return nil, fmt.Errorf("line %d: %w", lineIndex+1, err)
 			}
 		}

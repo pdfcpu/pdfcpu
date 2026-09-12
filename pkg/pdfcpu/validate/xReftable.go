@@ -61,7 +61,7 @@ func validateDocumentInfoBeforeRoot(c context.Context, xRefTable *model.XRefTabl
 	if err := contextutil.Check(c); err != nil {
 		return false, err
 	}
-	metaDataAuthoritative, err := metaDataModifiedAfterInfoDict(xRefTable)
+	metaDataAuthoritative, err := metaDataModifiedAfterInfoDict(c, xRefTable)
 	if err != nil {
 		return false, fmt.Errorf("metadata/info order: %w", err)
 	}
@@ -144,9 +144,9 @@ func validateXRefTable(c context.Context, ctx *model.Context) error {
 	return nil
 }
 
-func fixInfoDict(xRefTable *model.XRefTable, rootDict types.Dict) error {
+func fixInfoDict(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict) error {
 	indRef := rootDict.IndirectRefEntry("Metadata")
-	ok, err := model.EqualObjects(*indRef, *xRefTable.Info, xRefTable, nil)
+	ok, err := model.EqualObjects(c, *indRef, *xRefTable.Info, xRefTable, nil)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func fixInfoDict(xRefTable *model.XRefTable, rootDict types.Dict) error {
 	return nil
 }
 
-func metaDataModifiedAfterInfoDict(xRefTable *model.XRefTable) (bool, error) {
+func metaDataModifiedAfterInfoDict(c context.Context, xRefTable *model.XRefTable) (bool, error) {
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {
 		return false, err
@@ -171,7 +171,7 @@ func metaDataModifiedAfterInfoDict(xRefTable *model.XRefTable) (bool, error) {
 	if xmpMeta != nil {
 		xRefTable.CatalogXMPMeta = xmpMeta
 		if xRefTable.Info != nil {
-			if err := fixInfoDict(xRefTable, rootDict); err != nil {
+			if err := fixInfoDict(c, xRefTable, rootDict); err != nil {
 				return false, err
 			}
 		}
@@ -359,7 +359,7 @@ func validateExtensions(xRefTable *model.XRefTable, rootDict types.Dict, require
 	return nil
 }
 
-func validatePageLabels(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+func validatePageLabels(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// optional since PDF 1.3
 	// => 7.9.7 Number Trees, 12.4.2 Page Labels
 
@@ -387,12 +387,12 @@ func validatePageLabels(xRefTable *model.XRefTable, rootDict types.Dict, require
 		return model.WithValidationErrorObject(err, ir.ObjectNumber.Value())
 	}
 
-	_, _, err = validateNumberTree(xRefTable, "PageLabel", d, ir.ObjectNumber.Value(), true, false)
+	_, _, err = validateNumberTree(c, xRefTable, "PageLabel", d, ir.ObjectNumber.Value(), true, false)
 
 	return err
 }
 
-func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+func validateNames(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 7.7.4 Name Dictionary
 
 	rootObjNr := validationRootObjectNumber(xRefTable)
@@ -436,7 +436,7 @@ func validateNames(xRefTable *model.XRefTable, rootDict types.Dict, required boo
 			continue
 		}
 
-		_, _, tree, err := validateNameTree(xRefTable, treeName, d, treeObjNr, true)
+		_, _, tree, err := validateNameTree(c, xRefTable, treeName, d, treeObjNr, true)
 		if err != nil {
 			return err
 		}
@@ -1487,23 +1487,29 @@ type rootEntryValidator struct {
 	sinceVersion model.Version
 }
 
-func rootEntryValidators() []rootEntryValidator {
+func bindRootContext(c context.Context, validate func(context.Context, *model.XRefTable, types.Dict, bool, model.Version) error) func(*model.XRefTable, types.Dict, bool, model.Version) error {
+	return func(x *model.XRefTable, d types.Dict, required bool, version model.Version) error {
+		return validate(c, x, d, required, version)
+	}
+}
+
+func rootEntryValidators(c context.Context) []rootEntryValidator {
 	return []rootEntryValidator{
 		{"Extensions", validateExtensions, OPTIONAL, model.V17},
-		{"PageLabels", validatePageLabels, OPTIONAL, model.V13},
-		{"Names", validateNames, OPTIONAL, model.V11},
+		{"PageLabels", bindRootContext(c, validatePageLabels), OPTIONAL, model.V13},
+		{"Names", bindRootContext(c, validateNames), OPTIONAL, model.V11},
 		{"Dests", validateNamedDestinations, OPTIONAL, model.V11},
 		{"ViewerPreferences", validateViewerPreferences, OPTIONAL, model.V12},
 		{"PageLayout", validatePageLayout, OPTIONAL, model.V10},
 		{"PageMode", validatePageMode, OPTIONAL, model.V10},
-		{"Outlines", validateOutlines, OPTIONAL, model.V10},
+		{"Outlines", bindRootContext(c, validateOutlines), OPTIONAL, model.V10},
 		{"Threads", validateThreads, OPTIONAL, model.V11},
 		{"OpenAction", validateOpenAction, OPTIONAL, model.V11},
 		{"AA", validateRootAdditionalActions, OPTIONAL, model.V14},
 		{"URI", validateURI, OPTIONAL, model.V11},
 		{"AcroForm", validateForm, OPTIONAL, model.V12},
 		{"Metadata", validateRootMetadata, OPTIONAL, model.V14},
-		{"StructTreeRoot", validateStructTree, OPTIONAL, model.V13},
+		{"StructTreeRoot", bindRootContext(c, validateStructTree), OPTIONAL, model.V13},
 		{"MarkInfo", validateMarkInfo, OPTIONAL, model.V14},
 		{"Lang", validateLang, OPTIONAL, model.V10},
 		{"SpiderInfo", validateSpiderInfo, OPTIONAL, model.V13},
@@ -1527,7 +1533,7 @@ func validateRootEntries(
 	rootDict types.Dict,
 	rootObjNr int,
 ) error {
-	for _, validator := range rootEntryValidators() {
+	for _, validator := range rootEntryValidators(c) {
 		if err := contextutil.Check(c); err != nil {
 			return err
 		}

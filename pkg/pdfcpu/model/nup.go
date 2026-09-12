@@ -18,6 +18,7 @@ package model
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -317,27 +318,14 @@ func ContentBytesForPageRotation(rot int, w, h float64) []byte {
 }
 
 // NUpTilePDFBytesForPDF applies n-up tiles from PDF.
-func (ctx *Context) NUpTilePDFBytesForPDF(
-	pageNr int,
-	formsResDict types.Dict,
-	buf *bytes.Buffer,
-	rDest *types.Rectangle,
-	nup *NUp,
-	rotate bool) error {
-	return ctx.TilePDFBytesForImposition("n-up", pageNr, formsResDict, buf, rDest, nup, rotate)
+func (ctx *Context) NUpTilePDFBytesForPDF(c context.Context, pageNr int, formsResDict types.Dict, buf *bytes.Buffer, rDest *types.Rectangle, nup *NUp, rotate bool) error {
+	return ctx.TilePDFBytesForImposition(c, "n-up", pageNr, formsResDict, buf, rDest, nup, rotate)
 }
 
 // TilePDFBytesForImposition applies page imposition tiles from PDF.
-func (ctx *Context) TilePDFBytesForImposition(
-	operation string,
-	pageNr int,
-	formsResDict types.Dict,
-	buf *bytes.Buffer,
-	rDest *types.Rectangle,
-	nup *NUp,
-	rotate bool) error {
+func (ctx *Context) TilePDFBytesForImposition(c context.Context, operation string, pageNr int, formsResDict types.Dict, buf *bytes.Buffer, rDest *types.Rectangle, nup *NUp, rotate bool) error {
 	consolidateRes := true
-	d, _, inhPAttrs, err := ctx.PageDict(pageNr, consolidateRes)
+	d, _, inhPAttrs, err := ctx.PageDict(c, pageNr, consolidateRes)
 	if err != nil {
 		return fmt.Errorf("%s source page %d: resolve page dictionary: %w", operation, pageNr, err)
 	}

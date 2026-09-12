@@ -20,6 +20,7 @@ package pdfcpu
 
 import (
 	"bytes"
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/md5"
@@ -40,6 +41,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -1746,8 +1748,8 @@ func applyRC4CipherBytes(b []byte, objNr, genNr int, key []byte, needAES bool) (
 	return b, nil
 }
 
-func encrypt(m map[string]types.Object, k string, v types.Object, objNr, genNr int, key []byte, needAES bool, r int) error {
-	s, err := encryptDeepObject(v, objNr, genNr, key, needAES, r)
+func encrypt(c context.Context, m map[string]types.Object, k string, v types.Object, objNr, genNr int, key []byte, needAES bool, r int) error {
+	s, err := encryptDeepObject(c, v, objNr, genNr, key, needAES, r)
 	if err != nil {
 		return err
 	}
@@ -1759,7 +1761,10 @@ func encrypt(m map[string]types.Object, k string, v types.Object, objNr, genNr i
 	return nil
 }
 
-func encryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int) error {
+func encryptDict(c context.Context, d types.Dict, objNr, genNr int, key []byte, needAES bool, r int) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	isSig := false
 	ft := d["FT"]
 	if ft == nil {
@@ -1771,10 +1776,13 @@ func encryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int
 		}
 	}
 	for k, v := range d {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		if isSig && k == "Contents" {
 			continue
 		}
-		err := encrypt(d, k, v, objNr, genNr, key, needAES, r)
+		err := encrypt(c, d, k, v, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return err
 		}
@@ -1863,8 +1871,12 @@ func decryptHexLiteral(hl types.HexLiteral, objNr, genNr int, key []byte, needAE
 	return &hl, nil
 }
 
-// EncryptDeepObject recurses over non trivial PDF objects and encrypts all strings encountered.
-func encryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES bool, r int) (types.Object, error) {
+// encryptDeepObject encrypts strings in direct object trees and supports cancellation.
+// Cancellation may leave the object tree partially encrypted.
+func encryptDeepObject(c context.Context, objIn types.Object, objNr, genNr int, key []byte, needAES bool, r int) (types.Object, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	_, ok := objIn.(types.IndirectRef)
 	if ok {
 		return nil, nil
@@ -1873,20 +1885,20 @@ func encryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES
 	switch obj := objIn.(type) {
 
 	case types.StreamDict:
-		err := encryptDict(obj.Dict, objNr, genNr, key, needAES, r)
+		err := encryptDict(c, obj.Dict, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
 
 	case types.Dict:
-		err := encryptDict(obj, objNr, genNr, key, needAES, r)
+		err := encryptDict(c, obj, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
 
 	case types.Array:
 		for i, v := range obj {
-			s, err := encryptDeepObject(v, objNr, genNr, key, needAES, r)
+			s, err := encryptDeepObject(c, v, objNr, genNr, key, needAES, r)
 			if err != nil {
 				return nil, err
 			}
@@ -1900,23 +1912,26 @@ func encryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES
 		if err != nil {
 			return nil, err
 		}
-		return *sl, nil
+		return *sl, contextutil.Check(c)
 
 	case types.HexLiteral:
 		hl, err := encryptHexLiteral(obj, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
-		return *hl, nil
+		return *hl, contextutil.Check(c)
 
 	default:
 
 	}
 
-	return nil, nil
+	return nil, contextutil.Check(c)
 }
 
-func decryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int) error {
+func decryptDict(c context.Context, d types.Dict, objNr, genNr int, key []byte, needAES bool, r int) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	isSig := false
 	ft := d["FT"]
 	if ft == nil {
@@ -1928,10 +1943,13 @@ func decryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int
 		}
 	}
 	for _, k := range slices.Sorted(maps.Keys(d)) {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		if isSig && k == "Contents" {
 			continue
 		}
-		s, err := decryptDeepObject(d[k], objNr, genNr, key, needAES, r)
+		s, err := decryptDeepObject(c, d[k], objNr, genNr, key, needAES, r)
 		if err != nil {
 			return fmt.Errorf("decrypt dict entry %s: %w", k, err)
 		}
@@ -1942,7 +1960,12 @@ func decryptDict(d types.Dict, objNr, genNr int, key []byte, needAES bool, r int
 	return nil
 }
 
-func decryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES bool, r int) (types.Object, error) {
+// decryptDeepObject decrypts strings in direct object trees and supports cancellation.
+// Cancellation may leave the object tree partially decrypted.
+func decryptDeepObject(c context.Context, objIn types.Object, objNr, genNr int, key []byte, needAES bool, r int) (types.Object, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	_, ok := objIn.(types.IndirectRef)
 	if ok {
 		return nil, nil
@@ -1951,13 +1974,13 @@ func decryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES
 	switch obj := objIn.(type) {
 
 	case types.Dict:
-		if err := decryptDict(obj, objNr, genNr, key, needAES, r); err != nil {
+		if err := decryptDict(c, obj, objNr, genNr, key, needAES, r); err != nil {
 			return nil, err
 		}
 
 	case types.Array:
 		for i, v := range obj {
-			s, err := decryptDeepObject(v, objNr, genNr, key, needAES, r)
+			s, err := decryptDeepObject(c, v, objNr, genNr, key, needAES, r)
 			if err != nil {
 				return nil, err
 			}
@@ -1971,20 +1994,20 @@ func decryptDeepObject(objIn types.Object, objNr, genNr int, key []byte, needAES
 		if err != nil {
 			return nil, err
 		}
-		return *sl, nil
+		return *sl, contextutil.Check(c)
 
 	case types.HexLiteral:
 		hl, err := decryptHexLiteral(obj, objNr, genNr, key, needAES, r)
 		if err != nil {
 			return nil, err
 		}
-		return *hl, nil
+		return *hl, contextutil.Check(c)
 
 	default:
 
 	}
 
-	return nil, nil
+	return nil, contextutil.Check(c)
 }
 
 // EncryptStream encrypts a stream buffer using RC4 or AES.

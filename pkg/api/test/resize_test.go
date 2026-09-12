@@ -193,7 +193,7 @@ func resizeTestAnnotationDict(t *testing.T, fileName string) (*model.Context, ty
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, _, _, err := ctx.PageDict(1, false)
+	d, _, _, err := ctx.PageDict(t.Context(), 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}

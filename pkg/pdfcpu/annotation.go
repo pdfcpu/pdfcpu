@@ -120,12 +120,12 @@ func dereferenceAnnotsArray(ctx *model.Context, indRef types.IndirectRef, pageNr
 	return annotsArrayFromObject(o, pageNr)
 }
 
-func pageDictForAnnotation(ctx *model.Context, pageNr int) (*types.IndirectRef, types.Dict, error) {
+func pageDictForAnnotation(c context.Context, ctx *model.Context, pageNr int) (*types.IndirectRef, types.Dict, error) {
 	if err := validateAnnotationPage(ctx, pageNr); err != nil {
 		return nil, nil, err
 	}
 
-	pageDictIndRef, err := ctx.PageDictIndRef(pageNr)
+	pageDictIndRef, err := ctx.PageDictIndRef(c, pageNr)
 	if err != nil {
 		return nil, nil, fmt.Errorf("page %d: page dict indirect reference: %w", pageNr, err)
 	}
@@ -185,7 +185,7 @@ func stripAnnotationBackReferences(d types.Dict) {
 	d.Delete("Parent")
 }
 
-func deleteAnnotationObject(ctx *model.Context, o types.Object, pageNr int) error {
+func deleteAnnotationObject(c context.Context, ctx *model.Context, o types.Object, pageNr int) error {
 	switch obj := o.(type) {
 	case types.IndirectRef:
 		objNr := obj.ObjectNumber.Value()
@@ -194,16 +194,16 @@ func deleteAnnotationObject(ctx *model.Context, o types.Object, pageNr int) erro
 			return fmt.Errorf("page %d annotation obj#%d: dereference before delete: %w", pageNr, objNr, err)
 		}
 		stripAnnotationBackReferences(d)
-		if err := ctx.DeleteObject(obj); err != nil {
+		if err := ctx.DeleteObject(c, obj); err != nil {
 			return fmt.Errorf("page %d annotation obj#%d: delete object: %w", pageNr, objNr, err)
 		}
 	case types.Dict:
 		stripAnnotationBackReferences(obj)
-		if err := ctx.DeleteObject(obj); err != nil {
+		if err := ctx.DeleteObject(c, obj); err != nil {
 			return fmt.Errorf("page %d annotation: delete object: %w", pageNr, err)
 		}
 	default:
-		if err := ctx.DeleteObject(obj); err != nil {
+		if err := ctx.DeleteObject(c, obj); err != nil {
 			return fmt.Errorf("page %d annotation: delete object: %w", pageNr, err)
 		}
 	}
@@ -243,8 +243,8 @@ func findAnnotByObjNr(objNr int, annots types.Array) (int, error) {
 	return -1, nil
 }
 
-func createAnnot(ctx *model.Context, ar model.AnnotationRenderer, pageIndRef *types.IndirectRef) (*types.IndirectRef, types.Dict, error) {
-	d, err := ar.RenderDict(ctx.XRefTable, pageIndRef)
+func createAnnot(c context.Context, ctx *model.Context, ar model.AnnotationRenderer, pageIndRef *types.IndirectRef) (*types.IndirectRef, types.Dict, error) {
+	d, err := ar.RenderDict(c, ctx.XRefTable, pageIndRef)
 	if err != nil {
 		return nil, nil, fmt.Errorf("render annotation dict: %w", err)
 	}
@@ -846,21 +846,24 @@ func addAnnotationToIndirectAnnots(
 	return nil
 }
 
-func cleanupAddedAnnotation(ctx *model.Context, pageNr, objNr int, annotIndRef *types.IndirectRef) error {
+func cleanupAddedAnnotation(c context.Context, ctx *model.Context, pageNr, objNr int, annotIndRef *types.IndirectRef) error {
 	return errors.Join(
 		removeAnnotationFromCache(ctx, pageNr, objNr),
-		deleteAnnotationObject(ctx, *annotIndRef, pageNr),
+		deleteAnnotationObject(c, ctx, *annotIndRef, pageNr),
 	)
 }
 
 // AddAnnotation adds ar to pageDict.
-func AddAnnotation(ctx *model.Context, pageDictIndRef *types.IndirectRef, pageDict types.Dict, pageNr int, ar model.AnnotationRenderer, incr bool) (*types.IndirectRef, types.Dict, error) {
+func AddAnnotation(c context.Context, ctx *model.Context, pageDictIndRef *types.IndirectRef, pageDict types.Dict, pageNr int, ar model.AnnotationRenderer, incr bool) (*types.IndirectRef, types.Dict, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	if err := validateAddAnnotationInput(ctx, pageDictIndRef, pageDict, pageNr, ar, incr); err != nil {
 		return nil, nil, err
 	}
 
 	// Create xreftable entry for annotation.
-	annotIndRef, d, err := createAnnot(ctx, ar, pageDictIndRef)
+	annotIndRef, d, err := createAnnot(c, ctx, ar, pageDictIndRef)
 	if err != nil {
 		return nil, nil, fmt.Errorf("page %d: create annotation: %w", pageNr, err)
 	}
@@ -869,7 +872,8 @@ func AddAnnotation(ctx *model.Context, pageDictIndRef *types.IndirectRef, pageDi
 	err = addAnnotationToCache(ctx, ar, pageNr, annotIndRef.ObjectNumber.Value())
 	if err != nil {
 		cacheErr := fmt.Errorf("page %d annotation obj#%d: cache: %w", pageNr, annotIndRef.ObjectNumber.Value(), err)
-		cleanupErr := deleteAnnotationObject(ctx, *annotIndRef, pageNr)
+		// Rollback must finish even if the operation was canceled.
+		cleanupErr := deleteAnnotationObject(context.WithoutCancel(c), ctx, *annotIndRef, pageNr)
 		return nil, nil, errors.Join(cacheErr, cleanupErr)
 	}
 
@@ -879,26 +883,29 @@ func AddAnnotation(ctx *model.Context, pageDictIndRef *types.IndirectRef, pageDi
 	}
 
 	if err := addAnnotationToPageAnnots(ctx, annotIndRef, pageDictIndRef, pageDict, pageNr, ar, incr); err != nil {
-		cleanupErr := cleanupAddedAnnotation(ctx, pageNr, annotIndRef.ObjectNumber.Value(), annotIndRef)
+		cleanupErr := cleanupAddedAnnotation(context.WithoutCancel(c), ctx, pageNr, annotIndRef.ObjectNumber.Value(), annotIndRef)
 		return nil, nil, errors.Join(err, cleanupErr)
 	}
 	return annotIndRef, d, nil
 }
 
 // AddAnnotationToPage adds annotation to page.
-func AddAnnotationToPage(ctx *model.Context, pageNr int, ar model.AnnotationRenderer, incr bool) (*types.IndirectRef, types.Dict, error) {
+func AddAnnotationToPage(c context.Context, ctx *model.Context, pageNr int, ar model.AnnotationRenderer, incr bool) (*types.IndirectRef, types.Dict, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	if err := validateAnnotationOperationContext(ctx, incr); err != nil {
 		return nil, nil, err
 	}
 	if err := validateAnnotationRenderer(ar); err != nil {
 		return nil, nil, err
 	}
-	pageDictIndRef, d, err := pageDictForAnnotation(ctx, pageNr)
+	pageDictIndRef, d, err := pageDictForAnnotation(c, ctx, pageNr)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return AddAnnotation(ctx, pageDictIndRef, d, pageNr, ar, incr)
+	return AddAnnotation(c, ctx, pageDictIndRef, d, pageNr, ar, incr)
 }
 
 type annotationAddPage struct {
@@ -919,8 +926,8 @@ func selectedAnnotationPageNrs(selectedPages types.IntSet) []int {
 	return pageNrs
 }
 
-func prepareAnnotationAddPage(ctx *model.Context, pageNr int, annots []model.AnnotationRenderer) (annotationAddPage, error) {
-	pageDictIndRef, pageDict, err := pageDictForAnnotation(ctx, pageNr)
+func prepareAnnotationAddPage(c context.Context, ctx *model.Context, pageNr int, annots []model.AnnotationRenderer) (annotationAddPage, error) {
+	pageDictIndRef, pageDict, err := pageDictForAnnotation(c, ctx, pageNr)
 	if err != nil {
 		return annotationAddPage{}, err
 	}
@@ -932,11 +939,11 @@ func prepareAnnotationAddPage(ctx *model.Context, pageNr int, annots []model.Ann
 	return annotationAddPage{pageNr: pageNr, pageDictIndRef: pageDictIndRef, pageDict: pageDict, annots: annots}, nil
 }
 
-func prepareAnnotationAddPages(ctx *model.Context, selectedPages types.IntSet, ar model.AnnotationRenderer) ([]annotationAddPage, error) {
+func prepareAnnotationAddPages(c context.Context, ctx *model.Context, selectedPages types.IntSet, ar model.AnnotationRenderer) ([]annotationAddPage, error) {
 	pageNrs := selectedAnnotationPageNrs(selectedPages)
 	pages := make([]annotationAddPage, 0, len(pageNrs))
 	for _, pageNr := range pageNrs {
-		page, err := prepareAnnotationAddPage(ctx, pageNr, []model.AnnotationRenderer{ar})
+		page, err := prepareAnnotationAddPage(c, ctx, pageNr, []model.AnnotationRenderer{ar})
 		if err != nil {
 			return nil, err
 		}
@@ -945,7 +952,7 @@ func prepareAnnotationAddPages(ctx *model.Context, selectedPages types.IntSet, a
 	return pages, nil
 }
 
-func prepareAnnotationAddMap(ctx *model.Context, m map[int][]model.AnnotationRenderer) ([]annotationAddPage, error) {
+func prepareAnnotationAddMap(c context.Context, ctx *model.Context, m map[int][]model.AnnotationRenderer) ([]annotationAddPage, error) {
 	pageNrs := make([]int, 0, len(m))
 	for pageNr := range m {
 		pageNrs = append(pageNrs, pageNr)
@@ -954,7 +961,7 @@ func prepareAnnotationAddMap(ctx *model.Context, m map[int][]model.AnnotationRen
 
 	pages := make([]annotationAddPage, 0, len(pageNrs))
 	for _, pageNr := range pageNrs {
-		page, err := prepareAnnotationAddPage(ctx, pageNr, m[pageNr])
+		page, err := prepareAnnotationAddPage(c, ctx, pageNr, m[pageNr])
 		if err != nil {
 			return nil, err
 		}
@@ -963,11 +970,11 @@ func prepareAnnotationAddMap(ctx *model.Context, m map[int][]model.AnnotationRen
 	return pages, nil
 }
 
-func applyAnnotationAddPages(ctx *model.Context, pages []annotationAddPage, incr bool) (bool, error) {
+func applyAnnotationAddPages(c context.Context, ctx *model.Context, pages []annotationAddPage, incr bool) (bool, error) {
 	var added bool
 	for _, page := range pages {
 		for i, annot := range page.annots {
-			indRef, _, err := AddAnnotation(ctx, page.pageDictIndRef, page.pageDict, page.pageNr, annot, incr)
+			indRef, _, err := AddAnnotation(c, ctx, page.pageDictIndRef, page.pageDict, page.pageNr, annot, incr)
 			if err != nil {
 				return false, fmt.Errorf("page %d annotation %d: %w", page.pageNr, i+1, err)
 			}
@@ -978,14 +985,17 @@ func applyAnnotationAddPages(ctx *model.Context, pages []annotationAddPage, incr
 }
 
 // AddAnnotations adds ar to selected pages.
-func AddAnnotations(ctx *model.Context, selectedPages types.IntSet, ar model.AnnotationRenderer, incr bool) (bool, error) {
+func AddAnnotations(c context.Context, ctx *model.Context, selectedPages types.IntSet, ar model.AnnotationRenderer, incr bool) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	if err := validateAnnotationOperationContext(ctx, incr); err != nil {
 		return false, err
 	}
 	if err := validateAnnotationRenderer(ar); err != nil {
 		return false, err
 	}
-	pages, err := prepareAnnotationAddPages(ctx, selectedPages, ar)
+	pages, err := prepareAnnotationAddPages(c, ctx, selectedPages, ar)
 	if err != nil {
 		return false, err
 	}
@@ -995,15 +1005,18 @@ func AddAnnotations(ctx *model.Context, selectedPages types.IntSet, ar model.Ann
 		ctx.Write.Increment = true
 		ctx.Write.Offset = ctx.Read.FileSize
 	}
-	return applyAnnotationAddPages(ctx, pages, incr)
+	return applyAnnotationAddPages(c, ctx, pages, incr)
 }
 
 // AddAnnotationsMap adds annotations in m to corresponding pages.
-func AddAnnotationsMap(ctx *model.Context, m map[int][]model.AnnotationRenderer, incr bool) (bool, error) {
+func AddAnnotationsMap(c context.Context, ctx *model.Context, m map[int][]model.AnnotationRenderer, incr bool) (bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
 	if err := validateAnnotationOperationContext(ctx, incr); err != nil {
 		return false, err
 	}
-	pages, err := prepareAnnotationAddMap(ctx, m)
+	pages, err := prepareAnnotationAddMap(c, ctx, m)
 	if err != nil {
 		return false, err
 	}
@@ -1013,7 +1026,7 @@ func AddAnnotationsMap(ctx *model.Context, m map[int][]model.AnnotationRenderer,
 		ctx.Write.Increment = true
 		ctx.Write.Offset = ctx.Read.FileSize
 	}
-	return applyAnnotationAddPages(ctx, pages, incr)
+	return applyAnnotationAddPages(c, ctx, pages, incr)
 }
 
 func validateAnnotationObjectForRemoval(ctx *model.Context, o types.Object, pageNr, index int) error {
@@ -1227,7 +1240,7 @@ func removeAllAnnotations(
 		if err := contextutil.Check(c); err != nil {
 			return false, err
 		}
-		if err := deleteAnnotationObject(ctx, o, pageNr); err != nil {
+		if err := deleteAnnotationObject(c, ctx, o, pageNr); err != nil {
 			return false, err
 		}
 		ir, ok := o.(types.IndirectRef)
@@ -1549,7 +1562,7 @@ func deleteAnnotationTargets(
 		if err := contextutil.Check(c); err != nil {
 			return err
 		}
-		if err := deleteAnnotationObject(ctx, target.indRef, pageNr); err != nil {
+		if err := deleteAnnotationObject(c, ctx, target.indRef, pageNr); err != nil {
 			return err
 		}
 	}
@@ -1698,7 +1711,7 @@ func removeAnnotationsFromIndAnnots(
 
 	if len(ann) == 0 {
 		pageDict.Delete("Annots")
-		if err := ctx.DeleteObject(indRef); err != nil {
+		if err := ctx.DeleteObject(c, indRef); err != nil {
 			return false, fmt.Errorf("page %d Annots obj#%d: delete object: %w", pageNr, objNr, err)
 		}
 		if incr {
@@ -1828,7 +1841,7 @@ func removeAnnotationsFromPage(
 	pageNr int,
 	incr bool,
 ) (bool, error) {
-	pageDictIndRef, d, err := pageDictForAnnotation(ctx, pageNr)
+	pageDictIndRef, d, err := pageDictForAnnotation(c, ctx, pageNr)
 	if err != nil {
 		return false, err
 	}

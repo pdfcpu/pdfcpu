@@ -114,7 +114,7 @@ func TestValidateRevocationIPs(t *testing.T) {
 // TestRevocationDialContextDialsValidatedIP verifies DNS is not repeated after policy validation.
 func TestRevocationDialContextDialsValidatedIP(t *testing.T) {
 	var target string
-	dial := func(_ context.Context, _, addr string) (net.Conn, error) {
+	dial := func(c context.Context, _, addr string) (net.Conn, error) {
 		target = addr
 		client, server := net.Pipe()
 		t.Cleanup(func() {

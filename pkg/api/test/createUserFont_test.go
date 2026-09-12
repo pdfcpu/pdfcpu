@@ -462,7 +462,7 @@ var langSamples = []sample{
 	{"Roboto-Regular", "Vietnamese", sampleVietnamese, false},
 }
 
-func renderArticle(testContext context.Context, xRefTable *model.XRefTable, p model.Page, row, col, lang int) {
+func renderArticle(c context.Context, xRefTable *model.XRefTable, p model.Page, row, col, lang int) {
 	mediaBox := p.MediaBox
 	w := mediaBox.Width() / 6
 	h := mediaBox.Height() / 5
@@ -501,7 +501,7 @@ func renderArticle(testContext context.Context, xRefTable *model.XRefTable, p mo
 		HairCross:      false,
 	}
 
-	model.WriteColumnAnchored(testContext, xRefTable, buf, mediaBox, region, td, types.TopLeft, 0)
+	model.WriteColumnAnchored(c, xRefTable, buf, mediaBox, region, td, types.TopLeft, 0)
 
 	fontName = sample.fontName
 	k = p.Fm.EnsureKey(fontName)
@@ -535,17 +535,17 @@ func renderArticle(testContext context.Context, xRefTable *model.XRefTable, p mo
 	}
 
 	if sample.lang == "Japanese" {
-		model.WriteColumn(testContext, xRefTable, buf, mediaBox, region, td, mediaBox.Width()*.9)
+		model.WriteColumn(c, xRefTable, buf, mediaBox, region, td, mediaBox.Width()*.9)
 		return
 	}
 
 	if sample.lang == "Thai" {
 		td.HAlign = types.AlignLeft
-		model.WriteColumn(testContext, xRefTable, buf, mediaBox, region, td, mediaBox.Width()*.9)
+		model.WriteColumn(c, xRefTable, buf, mediaBox, region, td, mediaBox.Width()*.9)
 		return
 	}
 
-	model.WriteMultiLine(testContext, xRefTable, buf, mediaBox, region, td)
+	model.WriteMultiLine(c, xRefTable, buf, mediaBox, region, td)
 }
 
 // TestUserFonts verifies user fonts.

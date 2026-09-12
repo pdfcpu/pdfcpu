@@ -441,7 +441,7 @@ func sigDictPDFString(ctx *model.Context, d types.Dict, objNr, genNr int) (strin
 	return strings.Join(s, ""), nil
 }
 
-func writeDictObject(ctx *model.Context, objNr, genNr int, d types.Dict) error {
+func writeDictObject(c context.Context, ctx *model.Context, objNr, genNr int, d types.Dict) error {
 	ok, err := writeToObjectStream(ctx, objNr, genNr)
 	if err != nil {
 		return err
@@ -452,7 +452,7 @@ func writeDictObject(ctx *model.Context, objNr, genNr int, d types.Dict) error {
 	}
 
 	if ctx.EncKey != nil {
-		_, err := encryptDeepObject(d, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
+		_, err := encryptDeepObject(c, d, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return err
 		}
@@ -469,7 +469,7 @@ func writeDictObject(ctx *model.Context, objNr, genNr int, d types.Dict) error {
 	return writeObject(ctx, objNr, genNr, s)
 }
 
-func writeArrayObject(ctx *model.Context, objNumber, genNumber int, a types.Array) error {
+func writeArrayObject(c context.Context, ctx *model.Context, objNumber, genNumber int, a types.Array) error {
 	ok, err := writeToObjectStream(ctx, objNumber, genNumber)
 	if err != nil {
 		return err
@@ -480,7 +480,7 @@ func writeArrayObject(ctx *model.Context, objNumber, genNumber int, a types.Arra
 	}
 
 	if ctx.EncKey != nil {
-		if _, err := encryptDeepObject(a, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
+		if _, err := encryptDeepObject(c, a, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
 			return err
 		}
 	}
@@ -709,7 +709,7 @@ func writeDeepDict(c context.Context, ctx *model.Context, d types.Dict, objNr, g
 		}
 	}
 
-	if err := writeDictObject(ctx, objNr, genNr, d); err != nil {
+	if err := writeDictObject(c, ctx, objNr, genNr, d); err != nil {
 		return err
 	}
 
@@ -734,7 +734,7 @@ func writeDeepStreamDict(c context.Context, ctx *model.Context, sd *types.Stream
 		return err
 	}
 	if ctx.EncKey != nil {
-		if _, err := encryptDeepObject(*sd, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
+		if _, err := encryptDeepObject(c, *sd, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
 			return err
 		}
 	}
@@ -759,7 +759,7 @@ func writeDeepArray(c context.Context, ctx *model.Context, a types.Array, objNr,
 	if err := contextutil.Check(c); err != nil {
 		return err
 	}
-	if err := writeArrayObject(ctx, objNr, genNr, a); err != nil {
+	if err := writeArrayObject(c, ctx, objNr, genNr, a); err != nil {
 		return err
 	}
 
@@ -952,13 +952,13 @@ func writeFlatObject(c context.Context, ctx *model.Context, objNr int) error {
 	switch o := o.(type) {
 
 	case types.Dict:
-		err = writeDictObject(ctx, objNr, genNr, o)
+		err = writeDictObject(c, ctx, objNr, genNr, o)
 
 	case types.StreamDict:
 		err = writeDeepStreamDict(c, ctx, &o, objNr, genNr)
 
 	case types.Array:
-		err = writeArrayObject(ctx, objNr, genNr, o)
+		err = writeArrayObject(c, ctx, objNr, genNr, o)
 
 	case types.Integer:
 		err = writeIntegerObject(ctx, objNr, genNr, o)

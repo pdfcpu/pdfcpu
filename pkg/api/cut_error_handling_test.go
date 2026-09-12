@@ -405,7 +405,7 @@ func TestWriteCutOutputAppliesDestinationPermissions(t *testing.T) {
 				}
 				return createCutTemporaryOutput(dir, pattern)
 			}
-			ops.writeAndFlush = func(_ context.Context, _ *model.Context, w io.Writer) (error, error) {
+			ops.writeAndFlush = func(c context.Context, _ *model.Context, w io.Writer) (error, error) {
 				_, err := w.Write([]byte("replacement"))
 				return err, nil
 			}
@@ -437,7 +437,7 @@ func TestWriteCutOutputSuccessfullyReplacesDestination(t *testing.T) {
 	}
 	replacement := []byte("replacement")
 	ops := defaultCutOutputOperations()
-	ops.writeAndFlush = func(_ context.Context, _ *model.Context, w io.Writer) (error, error) {
+	ops.writeAndFlush = func(c context.Context, _ *model.Context, w io.Writer) (error, error) {
 		_, err := w.Write(replacement)
 		return err, nil
 	}
@@ -561,7 +561,7 @@ func TestWriteCutOutputPreservesExistingDestination(t *testing.T) {
 				}
 				return &cutOutputOSFile{File: f, closeErr: tt.closeErr}, nil
 			}
-			ops.writeAndFlush = func(_ context.Context, _ *model.Context, w io.Writer) (error, error) {
+			ops.writeAndFlush = func(c context.Context, _ *model.Context, w io.Writer) (error, error) {
 				if _, err := w.Write([]byte("replacement output")); err != nil {
 					return err, nil
 				}

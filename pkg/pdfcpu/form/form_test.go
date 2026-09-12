@@ -38,22 +38,22 @@ func TestFormFieldHelpersRejectRecursionDepth(t *testing.T) {
 	id, name := "", ""
 	fields := types.Array{}
 
-	_, err = fullyQualifiedFieldNameDepth(xRefTable, ir, fields, &id, &name, maxDepth+1, model.NewFormFieldVisit())
+	_, err = fullyQualifiedFieldNameDepth(t.Context(), xRefTable, ir, fields, &id, &name, maxDepth+1, model.NewFormFieldVisit())
 	if !errors.Is(err, model.ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
 
-	_, err = annotIndRefsDepth(xRefTable, fields, maxDepth+1, model.NewFormFieldVisit())
+	_, err = annotIndRefsDepth(t.Context(), xRefTable, fields, maxDepth+1, model.NewFormFieldVisit())
 	if !errors.Is(err, model.ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
 
-	_, err = annotIndRefForFieldDepth(xRefTable, fields, "1.2", maxDepth+1, model.NewFormFieldVisit())
+	_, err = annotIndRefForFieldDepth(t.Context(), xRefTable, fields, "1.2", maxDepth+1, model.NewFormFieldVisit())
 	if !errors.Is(err, model.ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
 
-	err = removeFormFieldsDepth(xRefTable, nil, &fields, maxDepth+1, model.NewFormFieldVisit())
+	err = removeFormFieldsDepth(t.Context(), xRefTable, nil, &fields, maxDepth+1, model.NewFormFieldVisit())
 	if !errors.Is(err, model.ErrMaxRecursionDepthExceeded) {
 		t.Fatalf("got %v, want ErrMaxRecursionDepthExceeded", err)
 	}
@@ -147,23 +147,23 @@ func TestFormFieldHelpersRejectCycle(t *testing.T) {
 	ir := fields[0].(types.IndirectRef)
 	id, name := "", ""
 
-	_, err := fullyQualifiedFieldNameDepth(xRefTable, ir, fields, &id, &name, 0, model.NewFormFieldVisit())
+	_, err := fullyQualifiedFieldNameDepth(t.Context(), xRefTable, ir, fields, &id, &name, 0, model.NewFormFieldVisit())
 	if !errors.Is(err, model.ErrFormFieldCycle) {
 		t.Fatalf("got %v, want ErrFormFieldCycle", err)
 	}
 
-	_, err = annotIndRefsDepth(xRefTable, fields, 0, model.NewFormFieldVisit())
+	_, err = annotIndRefsDepth(t.Context(), xRefTable, fields, 0, model.NewFormFieldVisit())
 	if !errors.Is(err, model.ErrFormFieldCycle) {
 		t.Fatalf("got %v, want ErrFormFieldCycle", err)
 	}
 
-	_, err = annotIndRefForFieldDepth(xRefTable, fields, "1.1.2", 0, model.NewFormFieldVisit())
+	_, err = annotIndRefForFieldDepth(t.Context(), xRefTable, fields, "1.1.2", 0, model.NewFormFieldVisit())
 	if !errors.Is(err, model.ErrFormFieldCycle) {
 		t.Fatalf("got %v, want ErrFormFieldCycle", err)
 	}
 
 	indRefs := []types.IndirectRef{ir}
-	err = removeFormFieldsDepth(xRefTable, &indRefs, &fields, 0, model.NewFormFieldVisit())
+	err = removeFormFieldsDepth(t.Context(), xRefTable, &indRefs, &fields, 0, model.NewFormFieldVisit())
 	if !errors.Is(err, model.ErrFormFieldCycle) {
 		t.Fatalf("got %v, want ErrFormFieldCycle", err)
 	}
@@ -239,7 +239,7 @@ func TestIsFieldCallersDoNotRepeatWidgetIdentity(t *testing.T) {
 	}{
 		{name: "collect", fn: func() error {
 			fields := []Field{}
-			return collectPageFields(ctx.XRefTable, wAnnots, nil, 1, &FieldMeta{}, &fields, 0)
+			return collectPageFields(t.Context(), ctx.XRefTable, wAnnots, nil, 1, &FieldMeta{}, &fields, 0)
 		}},
 		{name: "reset", fn: func() error {
 			ok := false
@@ -251,7 +251,7 @@ func TestIsFieldCallersDoNotRepeatWidgetIdentity(t *testing.T) {
 		}},
 		{name: "unlock", fn: func() error {
 			ok := false
-			return unlockPageFields(ctx.XRefTable, nil, nil, wAnnots, &ok)
+			return unlockPageFields(t.Context(), ctx.XRefTable, nil, nil, wAnnots, &ok)
 		}},
 		{name: "fill", fn: func() error {
 			ok := false
@@ -298,7 +298,7 @@ func TestCollectButtonFieldIdentityAppearsOnce(t *testing.T) {
 			wAnnots := model.Annot{IndRefs: &indRefs}
 			collected := []Field{}
 
-			err = collectPageFields(ctx.XRefTable, wAnnots, fields, 1, &FieldMeta{}, &collected, 0)
+			err = collectPageFields(t.Context(), ctx.XRefTable, wAnnots, fields, 1, &FieldMeta{}, &collected, 0)
 			want := fmt.Sprintf("field 7: entry=%s", tt.entry)
 			if err == nil || !strings.Contains(err.Error(), want) {
 				t.Fatalf("expected %q, got %v", want, err)
@@ -333,7 +333,7 @@ func TestLockAndUnlockPageFieldsUseOneBasedKidIndexes(t *testing.T) {
 			return lockPageFields(t.Context(), ctx, nil, fields, wAnnots, map[string]types.IndirectRef{}, ok)
 		}},
 		{name: "unlock", fn: func(ok *bool) error {
-			return unlockPageFields(ctx.XRefTable, nil, fields, wAnnots, ok)
+			return unlockPageFields(t.Context(), ctx.XRefTable, nil, fields, wAnnots, ok)
 		}},
 	}
 
@@ -356,19 +356,19 @@ func TestFormTreeWalkersRejectDirectObjectsWithoutPanic(t *testing.T) {
 		fn   func() error
 	}{
 		{name: "collect annotations", fn: func() error {
-			_, err := annotIndRefs(ctx.XRefTable, fields)
+			_, err := annotIndRefs(t.Context(), ctx.XRefTable, fields)
 			return err
 		}},
 		{name: "resolve field", fn: func() error {
-			_, err := annotIndRefForField(ctx.XRefTable, fields, "1")
+			_, err := annotIndRefForField(t.Context(), ctx.XRefTable, fields, "1")
 			return err
 		}},
 		{name: "remove field", fn: func() error {
 			indRefs := []types.IndirectRef{*types.NewIndirectRef(1, 0)}
-			return removeFormFields(ctx.XRefTable, &indRefs, &fields)
+			return removeFormFields(t.Context(), ctx.XRefTable, &indRefs, &fields)
 		}},
 		{name: "resolve page annotations", fn: func() error {
-			_, err := fieldsForAnnots(ctx.XRefTable, fields, nil)
+			_, err := fieldsForAnnots(t.Context(), ctx.XRefTable, fields, nil)
 			return err
 		}},
 	}

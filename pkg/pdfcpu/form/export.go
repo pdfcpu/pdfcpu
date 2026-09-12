@@ -497,16 +497,16 @@ func extractDateFormat(xRefTable *model.XRefTable, d types.Dict) (*primitives.Da
 	return nil, nil
 }
 
-func extractDateField(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, df *primitives.DateFormat, locked bool) (*DateField, error) {
+func extractDateField(c context.Context, xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, df *primitives.DateFormat, locked bool) (*DateField, error) {
 	dfield := &DateField{Pages: []int{page}, ID: id, Name: name, AltName: altName, Format: df.Ext, Locked: locked}
 
-	v, err := getV(xRefTable, d)
+	v, err := getV(c, xRefTable, d)
 	if err != nil {
 		return nil, err
 	}
 	dfield.Value = v
 
-	dv, err := getDV(xRefTable, d)
+	dv, err := getDV(c, xRefTable, d)
 	if err != nil {
 		return nil, err
 	}
@@ -515,7 +515,7 @@ func extractDateField(xRefTable *model.XRefTable, page int, d types.Dict, id, na
 	return dfield, nil
 }
 
-func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, ff *types.Integer, locked bool) (*TextField, error) {
+func extractTextField(c context.Context, xRefTable *model.XRefTable, page int, d types.Dict, id, name, altName string, ff *types.Integer, locked bool) (*TextField, error) {
 	multiLine := ff != nil && uint(primitives.FieldFlags(ff.Value()))&uint(primitives.FieldMultiline) > 0
 
 	maxLen := 0
@@ -529,13 +529,13 @@ func extractTextField(xRefTable *model.XRefTable, page int, d types.Dict, id, na
 
 	tf := &TextField{Pages: []int{page}, ID: id, Name: name, AltName: altName, Multiline: multiLine, MaxLen: maxLen, Locked: locked}
 
-	v, err := getV(xRefTable, d)
+	v, err := getV(c, xRefTable, d)
 	if err != nil {
 		return nil, err
 	}
 	tf.Value = v
 
-	dv, err := getDV(xRefTable, d)
+	dv, err := getDV(c, xRefTable, d)
 	if err != nil {
 		return nil, err
 	}
@@ -600,17 +600,20 @@ func header(xRefTable *model.XRefTable, source string) Header {
 	return h
 }
 
-func fieldsForAnnots(xRefTable *model.XRefTable, annots, fields types.Array) (map[string]fieldInfo, error) {
+func fieldsForAnnots(c context.Context, xRefTable *model.XRefTable, annots, fields types.Array) (map[string]fieldInfo, error) {
 	m := map[string]fieldInfo{}
 	var prevId string
 
 	for i, v := range annots {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 		indRef, err := indirectRef(v, "page Annots", i)
 		if err != nil {
 			return nil, err
 		}
 
-		ok, fi, err := isField(xRefTable, indRef, fields)
+		ok, fi, err := isField(c, xRefTable, indRef, fields)
 		if err != nil {
 			return nil, err
 		}
@@ -724,15 +727,7 @@ func exportCh(
 	return nil
 }
 
-func exportTx(
-	xRefTable *model.XRefTable,
-	i int,
-	form *Form,
-	d types.Dict,
-	id, name, altName string,
-	ff *types.Integer,
-	locked bool,
-	ok *bool) error {
+func exportTx(c context.Context, xRefTable *model.XRefTable, i int, form *Form, d types.Dict, id, name, altName string, ff *types.Integer, locked bool, ok *bool) error {
 	df, err := extractDateFormat(xRefTable, d)
 	if err != nil {
 		return err
@@ -747,7 +742,7 @@ func exportTx(
 			}
 		}
 
-		df, err := extractDateField(xRefTable, i, d, id, name, altName, df, locked)
+		df, err := extractDateField(c, xRefTable, i, d, id, name, altName, df, locked)
 		if err != nil {
 			return err
 		}
@@ -764,7 +759,7 @@ func exportTx(
 		}
 	}
 
-	tf, err := extractTextField(xRefTable, i, d, id, name, altName, ff, locked)
+	tf, err := extractTextField(c, xRefTable, i, d, id, name, altName, ff, locked)
 	if err != nil {
 		return err
 	}
@@ -774,7 +769,7 @@ func exportTx(
 	return nil
 }
 
-func exportPageField(ft string, xRefTable *model.XRefTable, i int, form *Form, d types.Dict, id, name, altName string, locked bool, ok *bool, ff *types.Integer) error {
+func exportPageField(c context.Context, ft string, xRefTable *model.XRefTable, i int, form *Form, d types.Dict, id, name, altName string, locked bool, ok *bool, ff *types.Integer) error {
 	var err error
 
 	switch ft {
@@ -783,15 +778,17 @@ func exportPageField(ft string, xRefTable *model.XRefTable, i int, form *Form, d
 	case "Ch":
 		err = exportCh(xRefTable, i, form, d, id, name, altName, locked, ok)
 	case "Tx":
-		err = exportTx(xRefTable, i, form, d, id, name, altName, ff, locked, ok)
+		err = exportTx(c, xRefTable, i, form, d, id, name, altName, ff, locked, ok)
 	}
 
 	return err
 }
 
-func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[string]fieldInfo, ok *bool) error {
+func exportPageFields(c context.Context, xRefTable *model.XRefTable, i int, form *Form, m map[string]fieldInfo, ok *bool) error {
 	for id, fi := range m {
-
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		name := fi.name
 
 		d, err := xRefTable.DereferenceDict(*fi.indRef)
@@ -829,12 +826,10 @@ func exportPageFields(xRefTable *model.XRefTable, i int, form *Form, m map[strin
 			return fmt.Errorf("field %s: entry TU: %w", id, err)
 		}
 		if found {
-			if s != nil {
-				altName = *s
-			}
+			altName = *s
 		}
 
-		if err := exportPageField(ft.Value(), xRefTable, i, form, d, id, name, altName, locked, ok, ff); err != nil {
+		if err := exportPageField(c, ft.Value(), xRefTable, i, form, d, id, name, altName, locked, ok, ff); err != nil {
 			return fmt.Errorf("field %s: %w", id, err)
 		}
 	}
@@ -864,7 +859,7 @@ func ExportForm(c context.Context, xRefTable *model.XRefTable, source string) (*
 			return nil, false, err
 		}
 
-		d, _, _, err := xRefTable.PageDict(i, false)
+		d, _, _, err := xRefTable.PageDict(c, i, false)
 		if err != nil {
 			return nil, false, fmt.Errorf("page %d: page dictionary: %w", i, err)
 		}
@@ -879,12 +874,12 @@ func ExportForm(c context.Context, xRefTable *model.XRefTable, source string) (*
 			return nil, false, fmt.Errorf("page %d: Annots: %w", i, err)
 		}
 
-		m, err := fieldsForAnnots(xRefTable, arr, fields)
+		m, err := fieldsForAnnots(c, xRefTable, arr, fields)
 		if err != nil {
 			return nil, false, fmt.Errorf("page %d: resolve fields: %w", i, err)
 		}
 
-		if err := exportPageFields(xRefTable, i, &form, m, &ok); err != nil {
+		if err := exportPageFields(c, xRefTable, i, &form, m, &ok); err != nil {
 			return nil, false, fmt.Errorf("page %d: export fields: %w", i, err)
 		}
 	}

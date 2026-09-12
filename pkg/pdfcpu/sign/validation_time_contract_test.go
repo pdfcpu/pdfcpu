@@ -412,7 +412,7 @@ func requireDTSGenTimeNotUsedForRevocation(t *testing.T, cert, issuer *x509.Cert
 	}
 }
 
-func assessRevocationWithoutTimestamp(testContext context.Context, cert, issuer *x509.Certificate, crls, ocsps [][]byte, preferred int) (*model.CertificateDetails, *model.SignatureValidationResult) {
+func assessRevocationWithoutTimestamp(c context.Context, cert, issuer *x509.Certificate, crls, ocsps [][]byte, preferred int) (*model.CertificateDetails, *model.SignatureValidationResult) {
 	signer := &model.Signer{}
 	certDetails := &model.CertificateDetails{}
 	result := unknownSignatureResult()
@@ -421,7 +421,7 @@ func assessRevocationWithoutTimestamp(testContext context.Context, cert, issuer 
 	conf.PreferredCertRevocationChecker = preferred
 
 	checkRevocation(
-		testContext,
+		c,
 		cert,
 		issuer,
 		x509.NewCertPool(),

@@ -775,7 +775,7 @@ func impositionPages(c context.Context, operation string, ctx *model.Context, se
 			continue
 		}
 
-		if err := ctx.TilePDFBytesForImposition(operation, pageNr, formsResDict, &buf, rDest, nup, false); err != nil {
+		if err := ctx.TilePDFBytesForImposition(c, operation, pageNr, formsResDict, &buf, rDest, nup, false); err != nil {
 			return 0, fmt.Errorf("%s page imposition: %w", operation, err)
 		}
 		if err := contextutil.Check(c); err != nil {
@@ -906,12 +906,12 @@ func fromMultipleImages(c context.Context, operation string, ctx *model.Context,
 	return nil
 }
 
-func impositionPDFConfiguration(operation string, ctx *model.Context, nup *model.NUp) (*model.NUp, *types.Rectangle, error) {
+func impositionPDFConfiguration(c context.Context, operation string, ctx *model.Context, nup *model.NUp) (*model.NUp, *types.Rectangle, error) {
 	operationNUp := *nup
 	var mb *types.Rectangle
 	if nup.PageDim == nil {
 		consolidateRes := false
-		d, _, inhPAttrs, err := ctx.PageDict(1, consolidateRes)
+		d, _, inhPAttrs, err := ctx.PageDict(c, 1, consolidateRes)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%s page tree: derive dimensions from source page 1: %w", operation, err)
 		}
@@ -972,7 +972,7 @@ func fromPDF(c context.Context, operation string, ctx *model.Context, selectedPa
 	if err := contextutil.Check(c); err != nil {
 		return err
 	}
-	nup, mb, err := impositionPDFConfiguration(operation, ctx, nup)
+	nup, mb, err := impositionPDFConfiguration(c, operation, ctx, nup)
 	if err != nil {
 		return err
 	}

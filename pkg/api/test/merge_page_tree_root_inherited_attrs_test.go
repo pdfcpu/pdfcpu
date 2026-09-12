@@ -86,7 +86,7 @@ func TestMergePageTreeInheritedAttrsIsolated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, destAttrs, err := ctxDest.PageDict(1, false)
+	_, _, destAttrs, err := ctxDest.PageDict(t.Context(), 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestMergePageTreeInheritedAttrsIsolated(t *testing.T) {
 		t.Fatalf("destination page rotation: got %d, want 90", destAttrs.Rotate)
 	}
 
-	_, _, srcAttrs, err := ctxDest.PageDict(destPageCount+1, false)
+	_, _, srcAttrs, err := ctxDest.PageDict(t.Context(), destPageCount+1, false)
 	if err != nil {
 		t.Fatal(err)
 	}

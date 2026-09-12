@@ -61,7 +61,7 @@ func twoPageStampInput(t *testing.T) []byte {
 
 func pageHasWatermarkArtifact(t *testing.T, ctx *model.Context, pageNr int) bool {
 	t.Helper()
-	d, _, _, err := ctx.PageDict(pageNr, false)
+	d, _, _, err := ctx.PageDict(t.Context(), pageNr, false)
 	if err != nil {
 		t.Fatal(err)
 	}

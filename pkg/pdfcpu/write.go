@@ -424,7 +424,7 @@ func writeRootObject(c context.Context, ctx *model.Context) error {
 		d.Delete("OCProperties")
 	}
 
-	if err = writeDictObject(ctx, objNumber, genNumber, d); err != nil {
+	if err = writeDictObject(c, ctx, objNumber, genNumber, d); err != nil {
 		return err
 	}
 

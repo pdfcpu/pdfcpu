@@ -620,8 +620,12 @@ func (xRefTable *XRefTable) FreeObject(objNr int) error {
 	return nil
 }
 
-// DeleteObject makes a deep remove of o.
-func (xRefTable *XRefTable) DeleteObject(o types.Object) error {
+// DeleteObject removes o and its reachable objects, stopping when c is canceled.
+// Cancellation may leave the in-memory object graph partially deleted.
+func (xRefTable *XRefTable) DeleteObject(c context.Context, o types.Object) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	var err error
 
 	ir, ok := o.(types.IndirectRef)
@@ -639,7 +643,7 @@ func (xRefTable *XRefTable) DeleteObject(o types.Object) error {
 
 	case types.Dict:
 		for _, v := range o {
-			err := xRefTable.DeleteObject(v)
+			err := xRefTable.DeleteObject(c, v)
 			if err != nil {
 				return err
 			}
@@ -647,7 +651,7 @@ func (xRefTable *XRefTable) DeleteObject(o types.Object) error {
 
 	case types.StreamDict:
 		for _, v := range o.Dict {
-			err := xRefTable.DeleteObject(v)
+			err := xRefTable.DeleteObject(c, v)
 			if err != nil {
 				return err
 			}
@@ -655,7 +659,7 @@ func (xRefTable *XRefTable) DeleteObject(o types.Object) error {
 
 	case types.Array:
 		for _, v := range o {
-			err := xRefTable.DeleteObject(v)
+			err := xRefTable.DeleteObject(c, v)
 			if err != nil {
 				return err
 			}
@@ -666,8 +670,11 @@ func (xRefTable *XRefTable) DeleteObject(o types.Object) error {
 	return nil
 }
 
-// DeleteObjectGraph deletes all objects reachable by indRef.
-func (xRefTable *XRefTable) DeleteObjectGraph(o types.Object) error {
+// DeleteObjectGraph deletes all objects reachable by an indirect reference o and supports cancellation.
+func (xRefTable *XRefTable) DeleteObjectGraph(c context.Context, o types.Object) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if log.DebugEnabled() {
 		log.Debug.Println("DeleteObjectGraph: begin")
 	}
@@ -678,7 +685,7 @@ func (xRefTable *XRefTable) DeleteObjectGraph(o types.Object) error {
 	}
 
 	// Delete ObjectGraph for object indRef.ObjectNumber.Value() via recursion.
-	if err := xRefTable.DeleteObject(indRef); err != nil {
+	if err := xRefTable.DeleteObject(c, indRef); err != nil {
 		return err
 	}
 
@@ -919,12 +926,15 @@ func (xRefTable *XRefTable) EnsureValidFreeList() error {
 }
 
 // DeleteDictEntry deletes key from d and removes the referenced object graph.
-func (xRefTable *XRefTable) DeleteDictEntry(d types.Dict, key string) error {
+func (xRefTable *XRefTable) DeleteDictEntry(c context.Context, d types.Dict, key string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	o, found := d.Find(key)
 	if !found {
 		return nil
 	}
-	if err := xRefTable.DeleteObject(o); err != nil {
+	if err := xRefTable.DeleteObject(c, o); err != nil {
 		return err
 	}
 	d.Delete(key)
@@ -1669,7 +1679,10 @@ func (xRefTable *XRefTable) NamesDict() (types.Dict, error) {
 
 // RemoveNameTree removes a specific name tree.
 // Also removes a resulting empty names dict.
-func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
+func (xRefTable *XRefTable) RemoveNameTree(c context.Context, nameTreeName string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	namesDict, err := xRefTable.NamesDict()
 	if err != nil {
 		return fmt.Errorf("name tree %q: obtain Names dictionary: %w", nameTreeName, err)
@@ -1682,7 +1695,7 @@ func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 	// We have an existing name dict.
 
 	// Delete the name tree.
-	if err = xRefTable.DeleteDictEntry(namesDict, nameTreeName); err != nil {
+	if err = xRefTable.DeleteDictEntry(c, namesDict, nameTreeName); err != nil {
 		return fmt.Errorf("name tree %q: delete tree entry: %w", nameTreeName, err)
 	}
 	if namesDict.Len() > 0 {
@@ -1694,7 +1707,7 @@ func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 	if err != nil {
 		return fmt.Errorf("name tree %q: obtain catalog: %w", nameTreeName, err)
 	}
-	if err = xRefTable.DeleteDictEntry(rootDict, "Names"); err != nil {
+	if err = xRefTable.DeleteDictEntry(c, rootDict, "Names"); err != nil {
 		return fmt.Errorf("name tree %q: delete empty catalog Names entry: %w", nameTreeName, err)
 	}
 
@@ -1706,7 +1719,10 @@ func (xRefTable *XRefTable) RemoveNameTree(nameTreeName string) error {
 }
 
 // RemoveCollection removes an existing Collection entry from the catalog.
-func (xRefTable *XRefTable) RemoveCollection() error {
+func (xRefTable *XRefTable) RemoveCollection(c context.Context) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {
 		return fmt.Errorf("portfolio: catalog: %w", err)
@@ -1714,7 +1730,7 @@ func (xRefTable *XRefTable) RemoveCollection() error {
 	if rootDict == nil {
 		return errors.New("portfolio: catalog: missing dictionary")
 	}
-	if err := xRefTable.DeleteDictEntry(rootDict, "Collection"); err != nil {
+	if err := xRefTable.DeleteDictEntry(c, rootDict, "Collection"); err != nil {
 		return fmt.Errorf("portfolio: delete Collection entry: %w", err)
 	}
 
@@ -1794,14 +1810,17 @@ func (xRefTable *XRefTable) EnsureCollection() error {
 }
 
 // RemoveEmbeddedFilesNameTree removes both the embedded files name tree and the Collection dict.
-func (xRefTable *XRefTable) RemoveEmbeddedFilesNameTree() error {
+func (xRefTable *XRefTable) RemoveEmbeddedFilesNameTree(c context.Context) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	delete(xRefTable.Names, "EmbeddedFiles")
 
-	if err := xRefTable.RemoveNameTree("EmbeddedFiles"); err != nil {
+	if err := xRefTable.RemoveNameTree(c, "EmbeddedFiles"); err != nil {
 		return fmt.Errorf("remove EmbeddedFiles name tree: %w", err)
 	}
 
-	if err := xRefTable.RemoveCollection(); err != nil {
+	if err := xRefTable.RemoveCollection(c); err != nil {
 		return fmt.Errorf("remove portfolio Collection: %w", err)
 	}
 
@@ -2239,7 +2258,10 @@ func errForUnexpectedPageObjectType(validationMode int, objType string, indRef t
 	return fmt.Errorf("unsupported page tree node: %s", indRef)
 }
 
-func (xRefTable *XRefTable) processPageTreeKidForPageDict(indRef types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool, depth int, visit *PageTreeVisit) (types.Dict, *types.IndirectRef, error) {
+func (xRefTable *XRefTable) processPageTreeKidForPageDict(c context.Context, indRef types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool, depth int, visit *PageTreeVisit) (types.Dict, *types.IndirectRef, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, err
+	}
 	objType, err := xRefTable.pageObjType(indRef)
 	if err != nil {
 		return nil, nil, err
@@ -2248,12 +2270,12 @@ func (xRefTable *XRefTable) processPageTreeKidForPageDict(indRef types.IndirectR
 	switch objType {
 
 	case "Pages":
-		return xRefTable.processPageTreeForPageDictDepth(&indRef, pAttrs, p, page, consolidateRes, depth+1, visit)
+		return xRefTable.processPageTreeForPageDictDepth(c, &indRef, pAttrs, p, page, consolidateRes, depth+1, visit)
 
 	case "Page":
 		*p++
 		if *p == page {
-			return xRefTable.processPageTreeForPageDictDepth(&indRef, pAttrs, p, page, consolidateRes, depth+1, visit)
+			return xRefTable.processPageTreeForPageDictDepth(c, &indRef, pAttrs, p, page, consolidateRes, depth+1, visit)
 		}
 
 	default:
@@ -2276,12 +2298,19 @@ func (xRefTable *XRefTable) dereferencePageCount(d types.Dict, ownerObjNr int) (
 	return &count, nil
 }
 
-func (xRefTable *XRefTable) processPageTreeForPageDictDepth(root *types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool, depth int, visit *PageTreeVisit) (types.Dict, *types.IndirectRef, error) {
+func (xRefTable *XRefTable) checkPageTreeTraversal(c context.Context, depth int) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	return xRefTable.CheckRecursionDepth("page tree", depth)
+}
+
+func (xRefTable *XRefTable) processPageTreeForPageDictDepth(c context.Context, root *types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool, depth int, visit *PageTreeVisit) (types.Dict, *types.IndirectRef, error) {
 	// Walk this page tree all the way down to the leaf node representing page.
 
 	//fmt.Printf("entering processPageTreeForPageDict: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
 
-	if err := xRefTable.CheckRecursionDepth("page tree", depth); err != nil {
+	if err := xRefTable.checkPageTreeTraversal(c, depth); err != nil {
 		return nil, nil, err
 	}
 
@@ -2318,6 +2347,9 @@ func (xRefTable *XRefTable) processPageTreeForPageDictDepth(root *types.Indirect
 	defer visit.Leave(objNr)
 
 	for _, o := range kids {
+		if err := contextutil.Check(c); err != nil {
+			return nil, nil, err
+		}
 
 		if o == nil {
 			continue
@@ -2330,7 +2362,7 @@ func (xRefTable *XRefTable) processPageTreeForPageDictDepth(root *types.Indirect
 			return nil, nil, fmt.Errorf("processPageTreeForPageDictDepth: corrupt page node dict")
 		}
 
-		pageDict, pageDictIndRef, err := xRefTable.processPageTreeKidForPageDict(indRef, pAttrs, p, page, consolidateRes, depth, visit)
+		pageDict, pageDictIndRef, err := xRefTable.processPageTreeKidForPageDict(c, indRef, pAttrs, p, page, consolidateRes, depth, visit)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -2342,13 +2374,16 @@ func (xRefTable *XRefTable) processPageTreeForPageDictDepth(root *types.Indirect
 	return nil, nil, nil
 }
 
-func (xRefTable *XRefTable) processPageTreeForPageDict(root *types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool) (types.Dict, *types.IndirectRef, error) {
-	return xRefTable.processPageTreeForPageDictDepth(root, pAttrs, p, page, consolidateRes, 0, NewPageTreeVisit())
+func (xRefTable *XRefTable) processPageTreeForPageDict(c context.Context, root *types.IndirectRef, pAttrs *InheritedPageAttrs, p *int, page int, consolidateRes bool) (types.Dict, *types.IndirectRef, error) {
+	return xRefTable.processPageTreeForPageDictDepth(c, root, pAttrs, p, page, consolidateRes, 0, NewPageTreeVisit())
 }
 
 // PageDict returns a specific page dict along with the resources, mediaBox and CropBox in effect.
 // consolidateRes ensures optimized resources in InheritedPageAttrs.
-func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (types.Dict, *types.IndirectRef, *InheritedPageAttrs, error) {
+func (xRefTable *XRefTable) PageDict(c context.Context, pageNr int, consolidateRes bool) (types.Dict, *types.IndirectRef, *InheritedPageAttrs, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, nil, nil, err
+	}
 	var (
 		inhPAttrs InheritedPageAttrs
 		pageCount int
@@ -2370,7 +2405,7 @@ func (xRefTable *XRefTable) PageDict(pageNr int, consolidateRes bool) (types.Dic
 
 	// Calculate and return only resources that are really needed by
 	// any content stream of this page and any possible forms or type 3 fonts referenced.
-	pageDict, pageDictindRef, err := xRefTable.processPageTreeForPageDict(pageRootDictIndRef, &inhPAttrs, &pageCount, pageNr, consolidateRes)
+	pageDict, pageDictindRef, err := xRefTable.processPageTreeForPageDict(c, pageRootDictIndRef, &inhPAttrs, &pageCount, pageNr, consolidateRes)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -2510,7 +2545,10 @@ func (xRefTable *XRefTable) ConsolidatePageResources() error {
 }
 
 // PageDictIndRef returns the pageDict IndRef for a logical page number.
-func (xRefTable *XRefTable) PageDictIndRef(page int) (*types.IndirectRef, error) {
+func (xRefTable *XRefTable) PageDictIndRef(c context.Context, page int) (*types.IndirectRef, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	var (
 		inhPAttrs InheritedPageAttrs
 		pageCount int
@@ -2525,7 +2563,7 @@ func (xRefTable *XRefTable) PageDictIndRef(page int) (*types.IndirectRef, error)
 	// Calculate and return only resources that are really needed by
 	// any content stream of this page and any possible forms or type 3 fonts referenced.
 	consolidateRes := false
-	_, ir, err := xRefTable.processPageTreeForPageDict(pageRootDictIndRef, &inhPAttrs, &pageCount, page, consolidateRes)
+	_, ir, err := xRefTable.processPageTreeForPageDict(c, pageRootDictIndRef, &inhPAttrs, &pageCount, page, consolidateRes)
 	if err != nil {
 		return nil, err
 	}
@@ -2537,7 +2575,10 @@ func (xRefTable *XRefTable) PageDictIndRef(page int) (*types.IndirectRef, error)
 }
 
 // Calculate logical page number for page dict object number.
-func (xRefTable *XRefTable) processPageTreeForPageNumberDepth(root *types.IndirectRef, pageCount *int, pageObjNr int, depth int, visit *PageTreeVisit) (int, error) {
+func (xRefTable *XRefTable) processPageTreeForPageNumberDepth(c context.Context, root *types.IndirectRef, pageCount *int, pageObjNr int, depth int, visit *PageTreeVisit) (int, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, err
+	}
 	//fmt.Printf("entering processPageTreeForPageNumber: p=%d obj#%d\n", *p, root.ObjectNumber.Value())
 
 	if err := xRefTable.CheckRecursionDepth("page tree", depth); err != nil {
@@ -2556,6 +2597,9 @@ func (xRefTable *XRefTable) processPageTreeForPageNumberDepth(root *types.Indire
 
 	// Iterate over page tree.
 	for _, o := range d.ArrayEntry("Kids") {
+		if err := contextutil.Check(c); err != nil {
+			return 0, err
+		}
 
 		if o == nil {
 			continue
@@ -2578,7 +2622,7 @@ func (xRefTable *XRefTable) processPageTreeForPageNumberDepth(root *types.Indire
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			pageNr, err := xRefTable.processPageTreeForPageNumberDepth(&indRef, pageCount, pageObjNr, depth+1, visit)
+			pageNr, err := xRefTable.processPageTreeForPageNumberDepth(c, &indRef, pageCount, pageObjNr, depth+1, visit)
 			if err != nil {
 				return 0, err
 			}
@@ -2598,16 +2642,19 @@ func (xRefTable *XRefTable) processPageTreeForPageNumberDepth(root *types.Indire
 	return 0, nil
 }
 
-func (xRefTable *XRefTable) processPageTreeForPageNumber(root *types.IndirectRef, pageCount *int, pageObjNr int) (int, error) {
-	return xRefTable.processPageTreeForPageNumberDepth(root, pageCount, pageObjNr, 0, NewPageTreeVisit())
+func (xRefTable *XRefTable) processPageTreeForPageNumber(c context.Context, root *types.IndirectRef, pageCount *int, pageObjNr int) (int, error) {
+	return xRefTable.processPageTreeForPageNumberDepth(c, root, pageCount, pageObjNr, 0, NewPageTreeVisit())
 }
 
 // PageNumber returns the logical page number for a page dict object number.
-func (xRefTable *XRefTable) PageNumber(pageObjNr int) (int, error) {
+func (xRefTable *XRefTable) PageNumber(c context.Context, pageObjNr int) (int, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, err
+	}
 	// Get an indirect reference to the page tree root dict.
 	pageRootDict, _ := xRefTable.Pages()
 	pageCount := 0
-	return xRefTable.processPageTreeForPageNumber(pageRootDict, &pageCount, pageObjNr)
+	return xRefTable.processPageTreeForPageNumber(c, pageRootDict, &pageCount, pageObjNr)
 }
 
 // EnsurePageCount evaluates the page count for xRefTable if necessary.
@@ -3242,8 +3289,8 @@ func (xRefTable *XRefTable) InsertBlankPages(c context.Context, pages types.IntS
 	return nil
 }
 
-func weaveInPage(ctx *Context, parent types.IndirectRef, pageNr int) (*types.IndirectRef, error) {
-	d1, indRef, inhPAttrs, err := ctx.PageDict(pageNr, false)
+func weaveInPage(c context.Context, ctx *Context, parent types.IndirectRef, pageNr int) (*types.IndirectRef, error) {
+	d1, indRef, inhPAttrs, err := ctx.PageDict(c, pageNr, false)
 	if err != nil {
 		return nil, err
 	}
@@ -3258,8 +3305,8 @@ func weaveInPage(ctx *Context, parent types.IndirectRef, pageNr int) (*types.Ind
 }
 
 // Weave in ctx's pages: for each page weave in the corresponding ctx page as long as there is one.
-func (xRefTable *XRefTable) insertPagesDepth(parent *types.IndirectRef, p *int, ctx *Context, depth int, visit *PageTreeVisit) (int, error) {
-	if err := xRefTable.CheckRecursionDepth("page tree", depth); err != nil {
+func (xRefTable *XRefTable) insertPagesDepth(c context.Context, parent *types.IndirectRef, p *int, ctx *Context, depth int, visit *PageTreeVisit) (int, error) {
+	if err := xRefTable.checkPageTreeTraversal(c, depth); err != nil {
 		return 0, err
 	}
 
@@ -3284,6 +3331,9 @@ func (xRefTable *XRefTable) insertPagesDepth(parent *types.IndirectRef, p *int, 
 	a := types.Array{}
 
 	for _, o := range kids {
+		if err := contextutil.Check(c); err != nil {
+			return 0, err
+		}
 
 		if o == nil {
 			continue
@@ -3304,7 +3354,7 @@ func (xRefTable *XRefTable) insertPagesDepth(parent *types.IndirectRef, p *int, 
 
 		case "Pages":
 			// Recurse over sub pagetree.
-			j, err := xRefTable.insertPagesDepth(&ir, p, ctx, depth+1, visit)
+			j, err := xRefTable.insertPagesDepth(c, &ir, p, ctx, depth+1, visit)
 			if err != nil {
 				return 0, err
 			}
@@ -3316,7 +3366,7 @@ func (xRefTable *XRefTable) insertPagesDepth(parent *types.IndirectRef, p *int, 
 			a = append(a, ir)
 			i++
 			if *p <= ctx.PageCount {
-				indRef1, err := weaveInPage(ctx, *parent, *p)
+				indRef1, err := weaveInPage(c, ctx, *parent, *p)
 				if err != nil {
 					return 0, err
 				}
@@ -3335,12 +3385,18 @@ func (xRefTable *XRefTable) insertPagesDepth(parent *types.IndirectRef, p *int, 
 }
 
 // InsertPages inserts pages from ctx into the page tree below parent.
-func (xRefTable *XRefTable) InsertPages(parent *types.IndirectRef, p *int, ctx *Context) (int, error) {
-	return xRefTable.insertPagesDepth(parent, p, ctx, 0, NewPageTreeVisit())
+func (xRefTable *XRefTable) InsertPages(c context.Context, parent *types.IndirectRef, p *int, ctx *Context) (int, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, err
+	}
+	return xRefTable.insertPagesDepth(c, parent, p, ctx, 0, NewPageTreeVisit())
 }
 
 // AppendPages appends pages from ctx to the page tree root starting at fromPageNr.
-func (xRefTable *XRefTable) AppendPages(rootPageIndRef *types.IndirectRef, fromPageNr int, ctx *Context) (int, error) {
+func (xRefTable *XRefTable) AppendPages(c context.Context, rootPageIndRef *types.IndirectRef, fromPageNr int, ctx *Context) (int, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, err
+	}
 	// Create an intermediary page node containing kids array with indRefs For all ctx Pages fromPageNr - end
 
 	rootPageDict, err := xRefTable.DereferenceDict(*rootPageIndRef)
@@ -3379,7 +3435,7 @@ func (xRefTable *XRefTable) AppendPages(rootPageIndRef *types.IndirectRef, fromP
 	kids1 := types.Array{}
 
 	for i := fromPageNr; i <= ctx.PageCount; i++ {
-		d, indRef2, inhPAttrs, err := ctx.PageDict(i, false)
+		d, indRef2, inhPAttrs, err := ctx.PageDict(c, i, false)
 		if err != nil {
 			return 0, err
 		}

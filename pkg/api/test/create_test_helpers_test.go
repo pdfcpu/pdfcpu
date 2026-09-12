@@ -58,10 +58,10 @@ startxref
 `
 )
 
-func addPageTreeForResourceDictInheritanceDemo(testContext context.Context, xRefTable *model.XRefTable, rootDict types.Dict) error {
+func addPageTreeForResourceDictInheritanceDemo(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict) error {
 	// Create root page node.
 
-	fIndRef, err := pdffont.EnsureFontDict(testContext, xRefTable, "Courier", "", "", false, nil)
+	fIndRef, err := pdffont.EnsureFontDict(c, xRefTable, "Courier", "", "", false, nil)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func addPageTreeForResourceDictInheritanceDemo(testContext context.Context, xRef
 
 	// Create intermediate page node.
 
-	f100IndRef, err := pdffont.EnsureFontDict(testContext, xRefTable, "Courier-Bold", "", "", false, nil)
+	f100IndRef, err := pdffont.EnsureFontDict(c, xRefTable, "Courier-Bold", "", "", false, nil)
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func addPageTreeForResourceDictInheritanceDemo(testContext context.Context, xRef
 		Y:        400,
 	}
 
-	if _, err := model.WriteMultiLine(testContext, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
+	if _, err := model.WriteMultiLine(c, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
 		return fmt.Errorf("render Times-Roman demo text: %w", err)
 	}
 
@@ -150,7 +150,7 @@ func addPageTreeForResourceDictInheritanceDemo(testContext context.Context, xRef
 		Y:        300,
 	}
 
-	if _, err := model.WriteMultiLine(testContext, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
+	if _, err := model.WriteMultiLine(c, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
 		return fmt.Errorf("render Courier demo text: %w", err)
 	}
 
@@ -166,11 +166,11 @@ func addPageTreeForResourceDictInheritanceDemo(testContext context.Context, xRef
 		Y:        350,
 	}
 
-	if _, err := model.WriteMultiLine(testContext, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
+	if _, err := model.WriteMultiLine(c, xRefTable, p.Buf, p.MediaBox, nil, td); err != nil {
 		return fmt.Errorf("render Courier-Bold demo text: %w", err)
 	}
 
-	pageIndRef, err := createDemoPage(testContext, xRefTable, *pagesIndRef, p)
+	pageIndRef, err := createDemoPage(c, xRefTable, *pagesIndRef, p)
 	if err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func addPageTreeForResourceDictInheritanceDemo(testContext context.Context, xRef
 	return nil
 }
 
-func createResourceDictInheritanceDemoXRef(testContext context.Context) (*model.XRefTable, error) {
+func createResourceDictInheritanceDemoXRef(c context.Context) (*model.XRefTable, error) {
 	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
 	if err != nil {
 		return nil, err
@@ -195,7 +195,7 @@ func createResourceDictInheritanceDemoXRef(testContext context.Context) (*model.
 		return nil, err
 	}
 
-	if err = addPageTreeForResourceDictInheritanceDemo(testContext, xRefTable, rootDict); err != nil {
+	if err = addPageTreeForResourceDictInheritanceDemo(c, xRefTable, rootDict); err != nil {
 		return nil, err
 	}
 
@@ -321,8 +321,8 @@ func createPostScriptCalculatorFunctionStreamDict(xRefTable *model.XRefTable) (*
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func addResources(testContext context.Context, xRefTable *model.XRefTable, pageDict types.Dict, fontName string) error {
-	fIndRef, err := pdffont.EnsureFontDict(testContext, xRefTable, fontName, "", "", true, nil)
+func addResources(c context.Context, xRefTable *model.XRefTable, pageDict types.Dict, fontName string) error {
+	fIndRef, err := pdffont.EnsureFontDict(c, xRefTable, fontName, "", "", true, nil)
 	if err != nil {
 		return err
 	}
@@ -794,7 +794,7 @@ func annotRect(i int, w, h, d, l float64) *types.Rectangle {
 }
 
 // createAnnotsArray generates side by side lined up annotations starting in the lower left corner of the page.
-func createAnnotsArray(testContext context.Context, xRefTable *model.XRefTable, pageIndRef types.IndirectRef, mediaBox types.Array) (types.Array, error) {
+func createAnnotsArray(c context.Context, xRefTable *model.XRefTable, pageIndRef types.IndirectRef, mediaBox types.Array) (types.Array, error) {
 	pageWidth := mediaBox[2].(types.Float)
 	pageHeight := mediaBox[3].(types.Float)
 
@@ -824,7 +824,7 @@ func createAnnotsArray(testContext context.Context, xRefTable *model.XRefTable, 
 		createWidgetAnnotation,
 		createPrinterMarkAnnotation,
 		func(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
-			return createWaterMarkAnnotation(testContext, xRefTable, pageIndRef, annotRect)
+			return createWaterMarkAnnotation(c, xRefTable, pageIndRef, annotRect)
 		},
 		create3DAnnotation,
 		createRedactAnnotation,
@@ -836,7 +836,7 @@ func createAnnotsArray(testContext context.Context, xRefTable *model.XRefTable, 
 		createLinkAnnotationDictWithMovieAction,
 		createLinkAnnotationDictWithHideAction,
 		func(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
-			return createTrapNetAnnotation(testContext, xRefTable, pageIndRef, annotRect)
+			return createTrapNetAnnotation(c, xRefTable, pageIndRef, annotRect)
 		}, // must be the last annotation for this page!
 	} {
 		r := annotRect(i, pageWidth.Value(), pageHeight.Value(), 30, 80)
@@ -852,7 +852,7 @@ func createAnnotsArray(testContext context.Context, xRefTable *model.XRefTable, 
 	return a, nil
 }
 
-func createPageWithAnnotations(testContext context.Context, xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, mediaBox *types.Rectangle, fontName string) (*types.IndirectRef, error) {
+func createPageWithAnnotations(c context.Context, xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, mediaBox *types.Rectangle, fontName string) (*types.IndirectRef, error) {
 	mba := mediaBox.Array()
 
 	pageDict := types.Dict(
@@ -866,7 +866,7 @@ func createPageWithAnnotations(testContext context.Context, xRefTable *model.XRe
 			"UserUnit":     types.Float(1.5)}, // Note: not honoured by Apple Preview
 	)
 
-	err := addResources(testContext, xRefTable, pageDict, fontName)
+	err := addResources(c, xRefTable, pageDict, fontName)
 	if err != nil {
 		return nil, err
 	}
@@ -905,7 +905,7 @@ func createPageWithAnnotations(testContext context.Context, xRefTable *model.XRe
 	)
 	pageDict.Insert("SeparationInfo", separationInfoDict)
 
-	annotsArray, err := createAnnotsArray(testContext, xRefTable, *pageIndRef, mba)
+	annotsArray, err := createAnnotsArray(c, xRefTable, *pageIndRef, mba)
 	if err != nil {
 		return nil, err
 	}
@@ -916,7 +916,7 @@ func createPageWithAnnotations(testContext context.Context, xRefTable *model.XRe
 	return pageIndRef, nil
 }
 
-func createPageWithForm(testContext context.Context, xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, annotsArray types.Array, mediaBox *types.Rectangle, fontName string) (*types.IndirectRef, error) {
+func createPageWithForm(c context.Context, xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, annotsArray types.Array, mediaBox *types.Rectangle, fontName string) (*types.IndirectRef, error) {
 	mba := mediaBox.Array()
 
 	pageDict := types.Dict(
@@ -931,7 +931,7 @@ func createPageWithForm(testContext context.Context, xRefTable *model.XRefTable,
 		},
 	)
 
-	err := addResources(testContext, xRefTable, pageDict, fontName)
+	err := addResources(c, xRefTable, pageDict, fontName)
 	if err != nil {
 		return nil, err
 	}
@@ -947,7 +947,7 @@ func createPageWithForm(testContext context.Context, xRefTable *model.XRefTable,
 	return xRefTable.IndRefForNewObject(pageDict)
 }
 
-func addPageTreeWithAnnotations(testContext context.Context, xRefTable *model.XRefTable, rootDict types.Dict, fontName string) (*types.IndirectRef, error) {
+func addPageTreeWithAnnotations(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, fontName string) (*types.IndirectRef, error) {
 	// mediabox = physical page dimensions
 	mediaBox := types.RectForFormat("A4")
 	mba := mediaBox.Array()
@@ -966,7 +966,7 @@ func addPageTreeWithAnnotations(testContext context.Context, xRefTable *model.XR
 		return nil, err
 	}
 
-	pageIndRef, err := createPageWithAnnotations(testContext, xRefTable, *parentPageIndRef, mediaBox, fontName)
+	pageIndRef, err := createPageWithAnnotations(c, xRefTable, *parentPageIndRef, mediaBox, fontName)
 	if err != nil {
 		return nil, err
 	}
@@ -977,7 +977,7 @@ func addPageTreeWithAnnotations(testContext context.Context, xRefTable *model.XR
 	return pageIndRef, nil
 }
 
-func addPageTreeWithFormFields(testContext context.Context, xRefTable *model.XRefTable, rootDict types.Dict, annotsArray types.Array, fontName string) (*types.IndirectRef, error) {
+func addPageTreeWithFormFields(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, annotsArray types.Array, fontName string) (*types.IndirectRef, error) {
 	// mediabox = physical page dimensions
 	mediaBox := types.RectForFormat("A4")
 	mba := mediaBox.Array()
@@ -996,7 +996,7 @@ func addPageTreeWithFormFields(testContext context.Context, xRefTable *model.XRe
 		return nil, err
 	}
 
-	pageIndRef, err := createPageWithForm(testContext, xRefTable, *parentPageIndRef, annotsArray, mediaBox, fontName)
+	pageIndRef, err := createPageWithForm(c, xRefTable, *parentPageIndRef, annotsArray, mediaBox, fontName)
 	if err != nil {
 		return nil, err
 	}
@@ -1189,7 +1189,7 @@ func addRequirements(rootDict types.Dict) {
 	rootDict.Insert("Requirements", types.Array{d})
 }
 
-func createAnnotationDemoXRef(testContext context.Context) (*model.XRefTable, error) {
+func createAnnotationDemoXRef(c context.Context) (*model.XRefTable, error) {
 	fontName := "Helvetica"
 
 	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
@@ -1202,7 +1202,7 @@ func createAnnotationDemoXRef(testContext context.Context) (*model.XRefTable, er
 		return nil, err
 	}
 
-	pageIndRef, err := addPageTreeWithAnnotations(testContext, xRefTable, rootDict, fontName)
+	pageIndRef, err := addPageTreeWithAnnotations(c, xRefTable, rootDict, fontName)
 	if err != nil {
 		return nil, err
 	}
@@ -1321,7 +1321,7 @@ func createDownAppearanceForFormField(xRefTable *model.XRefTable, w, h float64) 
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createFormTextField(testContext context.Context, xRefTable *model.XRefTable, pageAnnots *types.Array, fontName string) (*types.IndirectRef, error) {
+func createFormTextField(c context.Context, xRefTable *model.XRefTable, pageAnnots *types.Array, fontName string) (*types.IndirectRef, error) {
 	// lower left corner
 	x := 100.0
 	y := 300.0
@@ -1347,7 +1347,7 @@ func createFormTextField(testContext context.Context, xRefTable *model.XRefTable
 		return nil, err
 	}
 
-	fontDict, err := pdffont.EnsureFontDict(testContext, xRefTable, fontName, "", "", true, nil)
+	fontDict, err := pdffont.EnsureFontDict(c, xRefTable, fontName, "", "", true, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1471,8 +1471,8 @@ func createOffAppearance(xRefTable *model.XRefTable, resourceDict types.Dict, w,
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func createCheckBoxButtonField(testContext context.Context, xRefTable *model.XRefTable, pageAnnots *types.Array) (*types.IndirectRef, error) {
-	fontDict, err := pdffont.EnsureFontDict(testContext, xRefTable, "ZapfDingbats", "", "", false, nil)
+func createCheckBoxButtonField(c context.Context, xRefTable *model.XRefTable, pageAnnots *types.Array) (*types.IndirectRef, error) {
+	fontDict, err := pdffont.EnsureFontDict(c, xRefTable, "ZapfDingbats", "", "", false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1532,7 +1532,7 @@ func createCheckBoxButtonField(testContext context.Context, xRefTable *model.XRe
 	return ir, nil
 }
 
-func createRadioButtonField(testContext context.Context, xRefTable *model.XRefTable, pageAnnots *types.Array) (*types.IndirectRef, error) {
+func createRadioButtonField(c context.Context, xRefTable *model.XRefTable, pageAnnots *types.Array) (*types.IndirectRef, error) {
 	var flags uint32
 	flags = setBit(flags, 16)
 
@@ -1553,7 +1553,7 @@ func createRadioButtonField(testContext context.Context, xRefTable *model.XRefTa
 		return nil, err
 	}
 
-	fontDict, err := pdffont.EnsureFontDict(testContext, xRefTable, "ZapfDingbats", "", "", false, nil)
+	fontDict, err := pdffont.EnsureFontDict(c, xRefTable, "ZapfDingbats", "", "", false, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1762,20 +1762,20 @@ func createXFAArray(xRefTable *model.XRefTable) (types.Array, error) {
 	}, nil
 }
 
-func createFormDict(testContext context.Context, xRefTable *model.XRefTable, fontName string) (types.Dict, types.Array, error) {
+func createFormDict(c context.Context, xRefTable *model.XRefTable, fontName string) (types.Dict, types.Array, error) {
 	pageAnnots := types.Array{}
 
-	text, err := createFormTextField(testContext, xRefTable, &pageAnnots, fontName)
+	text, err := createFormTextField(c, xRefTable, &pageAnnots, fontName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	checkBox, err := createCheckBoxButtonField(testContext, xRefTable, &pageAnnots)
+	checkBox, err := createCheckBoxButtonField(c, xRefTable, &pageAnnots)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	radioButton, err := createRadioButtonField(testContext, xRefTable, &pageAnnots)
+	radioButton, err := createRadioButtonField(c, xRefTable, &pageAnnots)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1807,7 +1807,7 @@ func createFormDict(testContext context.Context, xRefTable *model.XRefTable, fon
 	return d, pageAnnots, nil
 }
 
-func createFormDemoXRef(testContext context.Context) (*model.XRefTable, error) {
+func createFormDemoXRef(c context.Context) (*model.XRefTable, error) {
 	fontName := "Helvetica"
 
 	xRefTable, err := pdfcpu.CreateXRefTableWithRootDict()
@@ -1820,14 +1820,14 @@ func createFormDemoXRef(testContext context.Context) (*model.XRefTable, error) {
 		return nil, err
 	}
 
-	formDict, annotsArray, err := createFormDict(testContext, xRefTable, fontName)
+	formDict, annotsArray, err := createFormDict(c, xRefTable, fontName)
 	if err != nil {
 		return nil, err
 	}
 
 	rootDict.Insert("AcroForm", formDict)
 
-	_, err = addPageTreeWithFormFields(testContext, xRefTable, rootDict, annotsArray, fontName)
+	_, err = addPageTreeWithFormFields(c, xRefTable, rootDict, annotsArray, fontName)
 	if err != nil {
 		return nil, err
 	}
@@ -1852,7 +1852,7 @@ func createDemoContentStreamDict(xRefTable *model.XRefTable, b []byte) (*types.I
 	return xRefTable.IndRefForNewObject(*sd)
 }
 
-func addPageTreeWithPage(testContext context.Context, xRefTable *model.XRefTable, rootDict types.Dict, p model.Page) error {
+func addPageTreeWithPage(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, p model.Page) error {
 	pagesDict := types.Dict(
 		map[string]types.Object{
 			"Type":     types.Name("Pages"),
@@ -1866,7 +1866,7 @@ func addPageTreeWithPage(testContext context.Context, xRefTable *model.XRefTable
 		return err
 	}
 
-	pageIndRef, err := createDemoPage(testContext, xRefTable, *parentPageIndRef, p)
+	pageIndRef, err := createDemoPage(c, xRefTable, *parentPageIndRef, p)
 	if err != nil {
 		return err
 	}
@@ -1877,7 +1877,7 @@ func addPageTreeWithPage(testContext context.Context, xRefTable *model.XRefTable
 	return nil
 }
 
-func createDemoPage(testContext context.Context, xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, p model.Page) (*types.IndirectRef, error) {
+func createDemoPage(c context.Context, xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, p model.Page) (*types.IndirectRef, error) {
 	pageDict := types.Dict(
 		map[string]types.Object{
 			"Type":   types.Name("Page"),
@@ -1885,7 +1885,7 @@ func createDemoPage(testContext context.Context, xRefTable *model.XRefTable, par
 		},
 	)
 
-	fontRes, err := pdffont.FontResources(testContext, xRefTable, p.Fm)
+	fontRes, err := pdffont.FontResources(c, xRefTable, p.Fm)
 	if err != nil {
 		return nil, err
 	}

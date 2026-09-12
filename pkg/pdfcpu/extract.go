@@ -875,7 +875,7 @@ func ExtractPageContent(c context.Context, ctx *model.Context, pageNr int) (io.R
 	}
 
 	consolidateRes := false
-	d, _, _, err := ctx.PageDict(pageNr, consolidateRes)
+	d, _, _, err := ctx.PageDict(c, pageNr, consolidateRes)
 	if err != nil {
 		return nil, fmt.Errorf("page %d: page dict: %w", pageNr, err)
 	}

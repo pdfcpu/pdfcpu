@@ -552,7 +552,7 @@ func bookletPages(c context.Context, ctx *model.Context, selectedPages types.Int
 			continue
 		}
 
-		if err := ctx.NUpTilePDFBytesForPDF(bp.Number, formsResDict, &buf, rDest, nup, bp.Rotate); err != nil {
+		if err := ctx.NUpTilePDFBytesForPDF(c, bp.Number, formsResDict, &buf, rDest, nup, bp.Rotate); err != nil {
 			return 0, fmt.Errorf("booklet page imposition: %w", err)
 		}
 		if err := contextutil.Check(c); err != nil {

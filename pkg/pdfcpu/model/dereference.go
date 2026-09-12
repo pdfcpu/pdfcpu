@@ -24,6 +24,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -618,10 +619,17 @@ func (xRefTable *XRefTable) dereferenceDestArray(o types.Object) (types.Array, e
 	return nil, fmt.Errorf("invalid dest array: %s", o)
 }
 
-// DereferenceDestArray resolves the destination for key.
-func (xRefTable *XRefTable) DereferenceDestArray(key string) (types.Array, error) {
+// DereferenceDestArray resolves the destination for key and supports cancellation.
+func (xRefTable *XRefTable) DereferenceDestArray(c context.Context, key string) (types.Array, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 	if dNames := xRefTable.Names["Dests"]; dNames != nil {
-		if o, ok := dNames.Value(key); ok {
+		o, ok, err := dNames.Value(c, key)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
 			return xRefTable.dereferenceDestArray(o)
 		}
 	}

@@ -98,8 +98,8 @@ func handleZoomOutBgColAndBorder(cropBox *types.Rectangle, bb *[]byte, zoom *mod
 	}
 }
 
-func zoomPage(ctx *model.Context, pageNr int, zoom *model.Zoom) error {
-	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
+func zoomPage(c context.Context, ctx *model.Context, pageNr int, zoom *model.Zoom) error {
+	d, _, inhPAttrs, err := ctx.PageDict(c, pageNr, false)
 	if err != nil {
 		return fmt.Errorf("page dictionary: %w", err)
 	}
@@ -204,7 +204,9 @@ func Zoom(c context.Context, ctx *model.Context, selectedPages types.IntSet, zoo
 	if err := requireContextWithXRefTable(ctx); err != nil {
 		return fmt.Errorf("zoom: source context: %w", err)
 	}
-	return zoomUsing(c, ctx, selectedPages, zoom, zoomPage)
+	return zoomUsing(c, ctx, selectedPages, zoom, func(ctx *model.Context, pageNr int, zoom *model.Zoom) error {
+		return zoomPage(c, ctx, pageNr, zoom)
+	})
 }
 
 func zoomUsing(c context.Context, ctx *model.Context, selectedPages types.IntSet, zoom *model.Zoom, apply func(*model.Context, int, *model.Zoom) error) error {

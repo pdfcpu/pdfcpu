@@ -255,7 +255,7 @@ func TestFixInfoDictClearsMetadataAlias(t *testing.T) {
 			before := sd
 			before.Dict = sd.Dict.Clone().(types.Dict)
 
-			if err := fixInfoDict(xRefTable, xRefTable.RootDict); err != nil {
+			if err := fixInfoDict(t.Context(), xRefTable, xRefTable.RootDict); err != nil {
 				t.Fatal(err)
 			}
 			assertInfoReference(t, xRefTable, false)
@@ -339,7 +339,7 @@ func TestMetadataAuthorityControlsCachedInfoValues(t *testing.T) {
 			xRefTable, infoDict := metadataInfoXRefTable(tt.mode, tt.infoModDate, tt.xmpModDate)
 			before := infoDict.Clone()
 
-			metadataAuthoritative, err := metaDataModifiedAfterInfoDict(xRefTable)
+			metadataAuthoritative, err := metaDataModifiedAfterInfoDict(t.Context(), xRefTable)
 			if err != nil {
 				t.Fatal(err)
 			}

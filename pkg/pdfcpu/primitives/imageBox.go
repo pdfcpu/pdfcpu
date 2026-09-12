@@ -256,7 +256,7 @@ func (ib *ImageBox) checkForExistingImage(sd *types.StreamDict, w, h int) (*type
 			continue
 		}
 		// compare decoded content from sd and io.ImageDict
-		ok, err := model.EqualObjects(*sd, *io.ImageDict, ib.pdf.XRefTable, nil)
+		ok, err := model.EqualObjects(ib.pdf.ctx, *sd, *io.ImageDict, ib.pdf.XRefTable, nil)
 		if err != nil {
 			return nil, err
 		}

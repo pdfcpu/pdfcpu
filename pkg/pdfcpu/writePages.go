@@ -61,7 +61,7 @@ func writePageDict(c context.Context, ctx *model.Context, indRef *types.Indirect
 
 	dictName := "pageDict"
 
-	if err := writeDictObject(ctx, objNr, genNr, pageDict); err != nil {
+	if err := writeDictObject(c, ctx, objNr, genNr, pageDict); err != nil {
 		return err
 	}
 
@@ -309,7 +309,7 @@ func writePagesDictDepth(c context.Context, ctx *model.Context, indRef *types.In
 		log.Write.Printf("writePagesDict: writing pageDict for obj=%d page=%d\n%s", objNr, *pageNr, d)
 	}
 
-	if err = writeDictObject(ctx, objNr, genNr, d); err != nil {
+	if err = writeDictObject(c, ctx, objNr, genNr, d); err != nil {
 		return false, 0, err
 	}
 

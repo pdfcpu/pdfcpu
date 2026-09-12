@@ -516,7 +516,7 @@ func UpdateImagesByPageNrAndId(c context.Context, ctx *model.Context, rd io.Read
 	if err := contextutil.Check(c); err != nil {
 		return err
 	}
-	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
+	d, _, inhPAttrs, err := ctx.PageDict(c, pageNr, false)
 	if err != nil {
 		return fmt.Errorf("page %d resource %s: resolve page dictionary: %w", pageNr, id, err)
 	}

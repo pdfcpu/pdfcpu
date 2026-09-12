@@ -38,7 +38,7 @@ func TestNUpTilePDFBytesForPDFPreservesPageNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ctx.NUpTilePDFBytesForPDF(1, types.NewDict(), &bytes.Buffer{}, types.RectForDim(10, 10), &NUp{}, false)
+	err = ctx.NUpTilePDFBytesForPDF(t.Context(), 1, types.NewDict(), &bytes.Buffer{}, types.RectForDim(10, 10), &NUp{}, false)
 	if !errors.Is(err, ErrPageNotFound) {
 		t.Fatalf("expected %v, got %v", ErrPageNotFound, err)
 	}

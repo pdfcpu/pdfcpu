@@ -257,7 +257,7 @@ func (ctx *Context) ListAttachments(c context.Context) ([]Attachment, error) {
 	}
 
 	// Extract stub info.
-	if err := ctx.Names["EmbeddedFiles"].Process(xRefTable, createAttachmentStub); err != nil {
+	if err := ctx.Names["EmbeddedFiles"].Process(c, xRefTable, createAttachmentStub); err != nil {
 		return nil, fmt.Errorf("EmbeddedFiles name tree: list attachments: %w", err)
 	}
 
@@ -293,7 +293,7 @@ func (ctx *Context) AddAttachment(c context.Context, a Attachment, useCollection
 
 	m := NameMap{a.ID: []types.Dict{d}}
 
-	if err := xRefTable.Names["EmbeddedFiles"].Add(xRefTable, a.ID, *ir, m, []string{"F", "UF"}); err != nil {
+	if err := xRefTable.Names["EmbeddedFiles"].Add(c, xRefTable, a.ID, *ir, m, []string{"F", "UF"}); err != nil {
 		return fmt.Errorf("EmbeddedFiles name tree: add attachment %q: %w", a.ID, err)
 	}
 	return contextutil.Check(c)
@@ -328,7 +328,7 @@ func (ctx *Context) SearchEmbeddedFilesNameTreeNodeByContent(c context.Context, 
 		return nil
 	}
 
-	if err := ctx.Names["EmbeddedFiles"].Process(ctx.XRefTable, identifyAttachmentStub); err != nil {
+	if err := ctx.Names["EmbeddedFiles"].Process(c, ctx.XRefTable, identifyAttachmentStub); err != nil {
 		if !errors.Is(err, errContentMatch) {
 			return nil, nil, fmt.Errorf("EmbeddedFiles name tree: search attachments: %w", err)
 		}
@@ -348,13 +348,13 @@ func (ctx *Context) removeAttachment(c context.Context, id string) (bool, error)
 	}
 	xRefTable := ctx.XRefTable
 	// EmbeddedFiles name tree containing at least one key value pair.
-	empty, ok, err := xRefTable.Names["EmbeddedFiles"].Remove(xRefTable, id)
+	empty, ok, err := xRefTable.Names["EmbeddedFiles"].Remove(c, xRefTable, id)
 	if err != nil {
 		return false, fmt.Errorf("EmbeddedFiles name tree: remove attachment %q: %w", id, err)
 	}
 	if empty {
 		// Delete name tree root object.
-		if err := xRefTable.RemoveEmbeddedFilesNameTree(); err != nil {
+		if err := xRefTable.RemoveEmbeddedFilesNameTree(c); err != nil {
 			return false, fmt.Errorf("EmbeddedFiles name tree: remove root: %w", err)
 		}
 	}
@@ -370,13 +370,13 @@ func (ctx *Context) removeAttachment(c context.Context, id string) (bool, error)
 			}
 			return false, nil
 		}
-		empty, _, err = xRefTable.Names["EmbeddedFiles"].Remove(xRefTable, *k)
+		empty, _, err = xRefTable.Names["EmbeddedFiles"].Remove(c, xRefTable, *k)
 		if err != nil {
 			return false, fmt.Errorf("EmbeddedFiles name tree: remove attachment %q: %w", *k, err)
 		}
 		if empty {
 			// Delete name tree root object.
-			if err := xRefTable.RemoveEmbeddedFilesNameTree(); err != nil {
+			if err := xRefTable.RemoveEmbeddedFilesNameTree(c); err != nil {
 				return false, fmt.Errorf("EmbeddedFiles name tree: remove root: %w", err)
 			}
 		}
@@ -405,7 +405,7 @@ func (ctx *Context) RemoveAttachments(c context.Context, ids []string) (bool, er
 		if log.CLIEnabled() {
 			log.CLI.Println("removing all attachments")
 		}
-		if err := xRefTable.RemoveEmbeddedFilesNameTree(); err != nil {
+		if err := xRefTable.RemoveEmbeddedFilesNameTree(c); err != nil {
 			return false, fmt.Errorf("EmbeddedFiles name tree: remove root: %w", err)
 		}
 		return true, nil
@@ -454,7 +454,10 @@ func extractSelectedAttachments(c context.Context, ctx *Context, ids []string, c
 			return err
 		}
 		attachmentID := id
-		v, ok := ctx.Names["EmbeddedFiles"].Value(id)
+		v, ok, err := ctx.Names["EmbeddedFiles"].Value(c, id)
+		if err != nil {
+			return err
+		}
 		if !ok {
 			k, o, err := ctx.SearchEmbeddedFilesNameTreeNodeByContent(c, id)
 			if err != nil {
@@ -506,7 +509,7 @@ func (ctx *Context) ExtractAttachments(c context.Context, ids []string) ([]Attac
 	}
 
 	// Extract all files.
-	if err := ctx.Names["EmbeddedFiles"].Process(ctx.XRefTable, createAttachment); err != nil {
+	if err := ctx.Names["EmbeddedFiles"].Process(c, ctx.XRefTable, createAttachment); err != nil {
 		return nil, fmt.Errorf("EmbeddedFiles name tree: extract attachments: %w", err)
 	}
 

@@ -269,7 +269,7 @@ func resizePageAnnotations(c context.Context, ctx *model.Context, d types.Dict, 
 }
 
 func resizePage(c context.Context, ctx *model.Context, pageNr int, res *model.Resize) error {
-	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
+	d, _, inhPAttrs, err := ctx.PageDict(c, pageNr, false)
 	if err != nil {
 		return fmt.Errorf("page dictionary: %w", err)
 	}

@@ -48,7 +48,7 @@ func cutBlankPageContext(t *testing.T) (*model.Context, types.Dict) {
 	}
 	ctx.PageCount = 1
 
-	d, _, _, err := ctx.PageDict(1, false)
+	d, _, _, err := ctx.PageDict(t.Context(), 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -35,13 +35,13 @@ func composePageRotation(current, delta int) int {
 	return rotation
 }
 
-func rotatePage(xRefTable *model.XRefTable, i, j int) error {
+func rotatePage(c context.Context, xRefTable *model.XRefTable, i, j int) error {
 	if log.DebugEnabled() {
 		log.Debug.Printf("rotate page:%d\n", i)
 	}
 
 	consolidateRes := false
-	d, _, inhPAttrs, err := xRefTable.PageDict(i, consolidateRes)
+	d, _, inhPAttrs, err := xRefTable.PageDict(c, i, consolidateRes)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,9 @@ func RotatePages(c context.Context, ctx *model.Context, selectedPages types.IntS
 	if err := requireContextWithXRefTable(ctx); err != nil {
 		return fmt.Errorf("rotate pages: source context: %w", err)
 	}
-	return rotatePagesUsing(c, ctx, selectedPages, rotation, rotatePage)
+	return rotatePagesUsing(c, ctx, selectedPages, rotation, func(xRefTable *model.XRefTable, pageNr, rotation int) error {
+		return rotatePage(c, xRefTable, pageNr, rotation)
+	})
 }
 
 func rotatePagesUsing(

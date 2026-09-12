@@ -17,8 +17,8 @@ limitations under the License.
 package pdfcpu
 
 import (
-	"context"
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"path/filepath"
@@ -696,11 +696,11 @@ func TestHandleLinkRejectsMissingPageState(t *testing.T) {
 	wm.OnTop = true
 	wm.URL = "https://example.com"
 
-	err := handleLink(testOptimizeContext(t), nil, types.Dict{}, 1, wm)
+	err := handleLink(t.Context(), testOptimizeContext(t), nil, types.Dict{}, 1, wm)
 	if err == nil || !strings.Contains(err.Error(), "missing page dictionary reference") {
 		t.Fatalf("expected page reference context, got %v", err)
 	}
-	err = handleLink(testOptimizeContext(t), types.NewIndirectRef(1, 0), nil, 1, wm)
+	err = handleLink(t.Context(), testOptimizeContext(t), types.NewIndirectRef(1, 0), nil, 1, wm)
 	if err == nil || !strings.Contains(err.Error(), "missing page dictionary") {
 		t.Fatalf("expected page dictionary context, got %v", err)
 	}
@@ -1055,7 +1055,7 @@ func TestRemovePageWatermarksUsesSortedPages(t *testing.T) {
 func TestFindPageWatermarksHandlesMissingAndMalformedContents(t *testing.T) {
 	ctx := testOptimizeContext(t)
 	pageDict := addOptimizeTestPage(t, ctx)
-	_, pageRef, _, err := ctx.PageDict(1, false)
+	_, pageRef, _, err := ctx.PageDict(t.Context(), 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1089,7 +1089,7 @@ func TestFindPageWatermarksHandlesMissingAndMalformedContents(t *testing.T) {
 func TestFindPageWatermarksPreservesUnsupportedFilter(t *testing.T) {
 	ctx := testOptimizeContext(t)
 	pageDict := addOptimizeTestPage(t, ctx)
-	_, pageRef, _, err := ctx.PageDict(1, false)
+	_, pageRef, _, err := ctx.PageDict(t.Context(), 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}

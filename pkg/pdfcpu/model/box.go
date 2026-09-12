@@ -954,7 +954,7 @@ func (ctx *Context) RemovePageBoundaries(c context.Context, selectedPages types.
 		return ErrMissingXRefTable
 	}
 	return processPageBoundaries(c, selectedPages, func(pageNr int) error {
-		d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
+		d, _, inhPAttrs, err := ctx.PageDict(c, pageNr, false)
 		if err != nil {
 			return fmt.Errorf("page %d: page dictionary: %w", pageNr, err)
 		}
@@ -1237,7 +1237,7 @@ func (ctx *Context) AddPageBoundaries(c context.Context, selectedPages types.Int
 		return ErrMissingXRefTable
 	}
 	return processPageBoundaries(c, selectedPages, func(pageNr int) error {
-		d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
+		d, _, inhPAttrs, err := ctx.PageDict(c, pageNr, false)
 		if err != nil {
 			return fmt.Errorf("page %d: page dictionary: %w", pageNr, err)
 		}
@@ -1296,8 +1296,8 @@ func processPageBoundaries(
 	return c.Err()
 }
 
-func cropPage(ctx *Context, pageNr int, b *Box) error {
-	d, _, inhPAttrs, err := ctx.PageDict(pageNr, false)
+func cropPage(c context.Context, ctx *Context, pageNr int, b *Box) error {
+	d, _, inhPAttrs, err := ctx.PageDict(c, pageNr, false)
 	if err != nil {
 		return fmt.Errorf("page %d: page dictionary: %w", pageNr, err)
 	}
@@ -1316,7 +1316,9 @@ func (ctx *Context) Crop(c context.Context, selectedPages types.IntSet, b *Box) 
 	if ctx.XRefTable == nil {
 		return ErrMissingXRefTable
 	}
-	return cropPagesWithContextUsing(c, ctx, selectedPages, b, cropPage)
+	return cropPagesWithContextUsing(c, ctx, selectedPages, b, func(ctx *Context, pageNr int, b *Box) error {
+		return cropPage(c, ctx, pageNr, b)
+	})
 }
 
 func cropPagesWithContextUsing(

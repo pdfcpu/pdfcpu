@@ -58,7 +58,7 @@ func TestEqualObjectsSelectsLowestDictionaryKey(t *testing.T) {
 	xRefTable := newXRefTable(NewDefaultConfiguration())
 
 	for range 25 {
-		_, err := EqualObjects(d1, d2, xRefTable, nil)
+		_, err := EqualObjects(t.Context(), d1, d2, xRefTable, nil)
 		if err == nil || !strings.Contains(err.Error(), "dict entry Alpha") {
 			t.Fatalf("expected Alpha comparison error, got %v", err)
 		}

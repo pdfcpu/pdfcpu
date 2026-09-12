@@ -29,8 +29,8 @@
 //
 // eg. for optimization:
 //
-//	func OptimizeFile(ctx context.Context, inFile, outFile string, conf *pdf.Configuration) error
-//	func Optimize(ctx context.Context, rs io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error
+//	func OptimizeFile(c context.Context, inFile, outFile string, conf *pdf.Configuration) error
+//	func Optimize(c context.Context, rs io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error
 package api
 
 import (
@@ -150,7 +150,7 @@ func OptimizeContext(c context.Context, ctx *model.Context) error {
 // PatchFile writes bb at offset in a staged copy, replaces fileName after the update succeeds
 // and supports cancellation.
 func PatchFile(c context.Context, fileName string, bb []byte, offset int64) error {
-	return updateFileTransaction(c, fileName, "patch", func(_ context.Context, f *os.File) error {
+	return updateFileTransaction(c, fileName, "patch", func(c context.Context, f *os.File) error {
 		_, err := f.WriteAt(bb, offset)
 		return err
 	})

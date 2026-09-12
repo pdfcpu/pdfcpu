@@ -46,7 +46,7 @@ func TestRemoveNameTreeWrapsNamesDictionaryAccess(t *testing.T) {
 	xRefTable.Root = types.NewIndirectRef(1, 0)
 	xRefTable.Table[1] = NewXRefTableEntryGen0(failingRemovalObject(wantErr))
 
-	err := xRefTable.RemoveNameTree("JavaScript")
+	err := xRefTable.RemoveNameTree(t.Context(), "JavaScript")
 
 	requireRemovalError(
 		t,
@@ -66,7 +66,7 @@ func TestRemoveNameTreeWrapsTreeEntryDeletion(t *testing.T) {
 	}
 	xRefTable.Table[1] = NewXRefTableEntryGen0(failingRemovalObject(wantErr))
 
-	err := xRefTable.RemoveNameTree("JavaScript")
+	err := xRefTable.RemoveNameTree(t.Context(), "JavaScript")
 
 	requireRemovalError(
 		t,
@@ -94,7 +94,7 @@ func TestRemoveNameTreeWrapsCatalogAccess(t *testing.T) {
 	))
 	xRefTable.Table[2] = NewXRefTableEntryGen0(failingRemovalObject(wantErr))
 
-	err := xRefTable.RemoveNameTree("JavaScript")
+	err := xRefTable.RemoveNameTree(t.Context(), "JavaScript")
 
 	requireRemovalError(
 		t,
@@ -122,7 +122,7 @@ func TestRemoveNameTreeWrapsEmptyNamesEntryDeletion(t *testing.T) {
 	))
 	xRefTable.Table[2] = NewXRefTableEntryGen0(failingRemovalObject(wantErr))
 
-	err := xRefTable.RemoveNameTree("JavaScript")
+	err := xRefTable.RemoveNameTree(t.Context(), "JavaScript")
 
 	requireRemovalError(
 		t,

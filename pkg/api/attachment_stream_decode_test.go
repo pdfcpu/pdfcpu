@@ -65,7 +65,7 @@ func pdfWithUndecodableAttachment(t *testing.T, id string) []byte {
 		t.Fatal(err)
 	}
 	nameRefs := model.NameMap{id: []types.Dict{fileSpec}}
-	if err := ctx.Names["EmbeddedFiles"].Add(ctx.XRefTable, id, *fileSpecRef, nameRefs, []string{"F", "UF"}); err != nil {
+	if err := ctx.Names["EmbeddedFiles"].Add(t.Context(), ctx.XRefTable, id, *fileSpecRef, nameRefs, []string{"F", "UF"}); err != nil {
 		t.Fatal(err)
 	}
 

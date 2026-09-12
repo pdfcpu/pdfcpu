@@ -24,6 +24,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -985,6 +986,9 @@ func parseObject(c context.Context, line *string, level, depthLimit int, relaxed
 	if err := CheckRecursionDepth("parse object", level, depthLimit); err != nil {
 		return nil, err
 	}
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
 
 	l := *line
 
@@ -1006,6 +1010,9 @@ func parseObject(c context.Context, line *string, level, depthLimit int, relaxed
 
 	if log.ParseEnabled() {
 		log.Parse.Printf("ParseObject returning %v\n", value)
+	}
+	if err := contextutil.Check(c); err != nil {
+		return nil, err
 	}
 
 	*line = l

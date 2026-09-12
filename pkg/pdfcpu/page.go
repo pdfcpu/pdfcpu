@@ -127,7 +127,7 @@ func migratedPageDict(c context.Context, ctxSrc, ctxDest *model.Context, pageNr 
 	if err := contextutil.Check(c); err != nil {
 		return nil, nil, nil, err
 	}
-	d, pageIndRef, inhPAttrs, err := ctxSrc.PageDict(pageNr, true)
+	d, pageIndRef, inhPAttrs, err := ctxSrc.PageDict(c, pageNr, true)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("read page dict: %w", err)
 	}
@@ -254,7 +254,7 @@ func migrateNamedDestValue(xRefTable *model.XRefTable, v *types.Object, migrated
 	return true, nil
 }
 
-func migrateNamedDests(ctxSrc *model.Context, n *model.Node, migrated map[int]int) error {
+func migrateNamedDests(c context.Context, ctxSrc *model.Context, n *model.Node, migrated map[int]int) error {
 	if err := requireContextWithXRefTable(ctxSrc); err != nil {
 		return fmt.Errorf("source context: %w", err)
 	}
@@ -285,12 +285,12 @@ func migrateNamedDests(ctxSrc *model.Context, n *model.Node, migrated map[int]in
 		return nil
 	}
 
-	if err := n.Process(ctxSrc.XRefTable, patchValues); err != nil {
+	if err := n.Process(c, ctxSrc.XRefTable, patchValues); err != nil {
 		return fmt.Errorf("process named destinations: %w", err)
 	}
 
 	for _, k := range remove {
-		if _, _, err := n.Remove(ctxSrc.XRefTable, k); err != nil {
+		if _, _, err := n.Remove(c, ctxSrc.XRefTable, k); err != nil {
 			return fmt.Errorf("remove named destination %q: %w", k, err)
 		}
 	}
@@ -315,7 +315,7 @@ func finishAddedPages(c context.Context, ctxSrc, ctxDest *model.Context, fieldsD
 	}
 	if n, ok := ctxSrc.Names["Dests"]; ok {
 		// Carry over used named destinations.
-		if err := migrateNamedDests(ctxSrc, n, migrated); err != nil {
+		if err := migrateNamedDests(c, ctxSrc, n, migrated); err != nil {
 			return fmt.Errorf("add pages: migrate named destinations: %w", err)
 		}
 		ctxDest.Names = map[string]*model.Node{"Dests": n}

@@ -53,7 +53,7 @@ func TestRemoveEmbeddedFilesNameTreeWrapsNameTreeRemoval(t *testing.T) {
 	}
 	xRefTable.Table[1] = NewXRefTableEntryGen0(failingRemovalObject(wantErr))
 
-	err := xRefTable.RemoveEmbeddedFilesNameTree()
+	err := xRefTable.RemoveEmbeddedFilesNameTree(t.Context())
 
 	requireRemovalError(
 		t,
@@ -74,7 +74,7 @@ func TestRemoveEmbeddedFilesNameTreeWrapsCollectionRemoval(t *testing.T) {
 	}
 	xRefTable.Table[1] = NewXRefTableEntryGen0(failingRemovalObject(wantErr))
 
-	err := xRefTable.RemoveEmbeddedFilesNameTree()
+	err := xRefTable.RemoveEmbeddedFilesNameTree(t.Context())
 
 	requireRemovalError(
 		t,

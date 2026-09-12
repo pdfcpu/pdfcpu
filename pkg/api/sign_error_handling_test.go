@@ -430,7 +430,7 @@ func TestValidateSignaturesRawStatelessUsesEmptyTrustPool(t *testing.T) {
 
 	called := false
 	operation := func(
-		_ context.Context,
+		c context.Context,
 		_ io.ReaderAt,
 		_ *model.Context,
 		_ bool,
@@ -513,7 +513,7 @@ func TestValidateSignaturesRawInitializesOperationState(t *testing.T) {
 
 	called := false
 	operation := func(
-		_ context.Context,
+		c context.Context,
 		_ io.ReaderAt,
 		ctx *model.Context,
 		all bool,

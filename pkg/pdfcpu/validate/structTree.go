@@ -17,6 +17,7 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
@@ -952,7 +953,7 @@ func processStructTreeClassMapDict(xRefTable *model.XRefTable, d types.Dict, own
 	return nil
 }
 
-func validateStructTreeRootDictEntryParentTree(xRefTable *model.XRefTable, ir *types.IndirectRef, useIDs bool) error {
+func validateStructTreeRootDictEntryParentTree(c context.Context, xRefTable *model.XRefTable, ir *types.IndirectRef, useIDs bool) error {
 	objNr := ir.ObjectNumber.Value()
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 
@@ -973,7 +974,7 @@ func validateStructTreeRootDictEntryParentTree(xRefTable *model.XRefTable, ir *t
 		return model.WithValidationErrorObject(err, objNr)
 	}
 
-	_, _, err = validateNumberTree(xRefTable, "StructTree", d, objNr, true, useIDs)
+	_, _, err = validateNumberTree(c, xRefTable, "StructTree", d, objNr, true, useIDs)
 	return err
 }
 
@@ -989,7 +990,7 @@ func validateStructTreeRootType(xRefTable *model.XRefTable, d types.Dict) error 
 	return nil
 }
 
-func validateStructTreeRootDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (err error) {
+func validateStructTreeRootDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (err error) {
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
@@ -1014,7 +1015,7 @@ func validateStructTreeRootDict(xRefTable *model.XRefTable, d types.Dict, ownerO
 			return model.WithValidationErrorObject(err, idTreeObjNr)
 		}
 		if len(d) > 0 {
-			_, _, _, err = validateNameTree(xRefTable, "IDTree", d, idTreeObjNr, true)
+			_, _, _, err = validateNameTree(c, xRefTable, "IDTree", d, idTreeObjNr, true)
 			if err != nil {
 				return fmt.Errorf("structure tree IDTree: %w", err)
 			}
@@ -1033,7 +1034,7 @@ func validateStructTreeRootDict(xRefTable *model.XRefTable, d types.Dict, ownerO
 	// Optional entry ParentTree: number tree, value=indRef of struct element dict or array of struct element dicts
 	// A number tree used in finding the structure elements to which content items belong.
 	if ir = d.IndirectRefEntry("ParentTree"); ir != nil {
-		err := validateStructTreeRootDictEntryParentTree(xRefTable, ir, useIDs)
+		err := validateStructTreeRootDictEntryParentTree(c, xRefTable, ir, useIDs)
 		if err != nil {
 			return err
 		}
@@ -1071,7 +1072,7 @@ func validateStructTreeRootDict(xRefTable *model.XRefTable, d types.Dict, ownerO
 	return err
 }
 
-func validateStructTree(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+func validateStructTree(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// 14.7.2 Structure Hierarchy
 
 	rootObjNr := validationRootObjectNumber(xRefTable)
@@ -1082,7 +1083,7 @@ func validateStructTree(xRefTable *model.XRefTable, rootDict types.Dict, require
 		return err
 	}
 
-	return validateStructTreeRootDict(
+	return validateStructTreeRootDict(c,
 		xRefTable, d, validationEntryObjectNumber(rootObjNr, rootDict, "StructTreeRoot"),
 	)
 }

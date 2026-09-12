@@ -93,14 +93,14 @@ type mergeValidationModeTest struct {
 	run  func(*model.Configuration) error
 }
 
-func mergeValidationModeTests(testContext context.Context, validFile, relaxedOnlyFile string) []mergeValidationModeTest {
+func mergeValidationModeTests(c context.Context, validFile, relaxedOnlyFile string) []mergeValidationModeTest {
 	valid := strictValidationTestPDF()
 	relaxedOnly := relaxedOnlyValidationTestPDF()
 
 	return []mergeValidationModeTest{
 		{"raw destination", func(conf *model.Configuration) error {
 			return MergeRaw(
-				testContext,
+				c,
 				[]io.ReadSeeker{bytes.NewReader(relaxedOnly), bytes.NewReader(valid)},
 				io.Discard,
 				false,
@@ -109,7 +109,7 @@ func mergeValidationModeTests(testContext context.Context, validFile, relaxedOnl
 		}},
 		{"raw source", func(conf *model.Configuration) error {
 			return MergeRaw(
-				testContext,
+				c,
 				[]io.ReadSeeker{bytes.NewReader(valid), bytes.NewReader(relaxedOnly)},
 				io.Discard,
 				false,
@@ -117,22 +117,22 @@ func mergeValidationModeTests(testContext context.Context, validFile, relaxedOnl
 			)
 		}},
 		{"create destination", func(conf *model.Configuration) error {
-			return Merge(testContext, "", []string{relaxedOnlyFile, validFile}, io.Discard, conf, false)
+			return Merge(c, "", []string{relaxedOnlyFile, validFile}, io.Discard, conf, false)
 		}},
 		{"create source", func(conf *model.Configuration) error {
-			return Merge(testContext, "", []string{validFile, relaxedOnlyFile}, io.Discard, conf, false)
+			return Merge(c, "", []string{validFile, relaxedOnlyFile}, io.Discard, conf, false)
 		}},
 		{"append destination", func(conf *model.Configuration) error {
-			return Merge(testContext, relaxedOnlyFile, []string{validFile}, io.Discard, conf, false)
+			return Merge(c, relaxedOnlyFile, []string{validFile}, io.Discard, conf, false)
 		}},
 		{"append source", func(conf *model.Configuration) error {
-			return Merge(testContext, validFile, []string{relaxedOnlyFile}, io.Discard, conf, false)
+			return Merge(c, validFile, []string{relaxedOnlyFile}, io.Discard, conf, false)
 		}},
 		{"zip destination", func(conf *model.Configuration) error {
-			return MergeCreateZip(testContext, bytes.NewReader(relaxedOnly), bytes.NewReader(valid), io.Discard, conf)
+			return MergeCreateZip(c, bytes.NewReader(relaxedOnly), bytes.NewReader(valid), io.Discard, conf)
 		}},
 		{"zip source", func(conf *model.Configuration) error {
-			return MergeCreateZip(testContext, bytes.NewReader(valid), bytes.NewReader(relaxedOnly), io.Discard, conf)
+			return MergeCreateZip(c, bytes.NewReader(valid), bytes.NewReader(relaxedOnly), io.Discard, conf)
 		}},
 	}
 }

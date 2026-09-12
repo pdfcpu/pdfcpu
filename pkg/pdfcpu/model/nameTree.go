@@ -17,10 +17,12 @@ limitations under the License.
 package model
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -68,39 +70,47 @@ func (n Node) withinLimits(k string) bool {
 	return keyLessOrEqual(n.Kmin, k) && keyLessOrEqual(k, n.Kmax)
 }
 
-// Value returns the value for given key
-func (n Node) Value(k string) (types.Object, bool) {
+// Value returns the value for the given key and supports cancellation.
+func (n Node) Value(c context.Context, k string) (types.Object, bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, false, err
+	}
 	if !n.withinLimits(k) {
-		return nil, false
+		return nil, false, nil
 	}
 
 	if n.leaf() {
 
 		// names are sorted by key.
 		for _, v := range n.Names {
-
+			if err := contextutil.Check(c); err != nil {
+				return nil, false, err
+			}
 			if v.k < k {
 				continue
 			}
 
 			if v.k == k {
-				return v.v, true
+				return v.v, true, nil
 			}
 
-			return nil, false
+			return nil, false, nil
 		}
 
-		return nil, false
+		return nil, false, nil
 	}
 
 	// kids are sorted by key ranges.
 	for _, v := range n.Kids {
+		if err := contextutil.Check(c); err != nil {
+			return nil, false, err
+		}
 		if v.withinLimits(k) {
-			return v.Value(k)
+			return v.Value(c, k)
 		}
 	}
 
-	return nil, false
+	return nil, false, nil
 }
 
 // AppendToNames adds an entry to a leaf node (for internalizing name trees).
@@ -140,11 +150,14 @@ func (m NameMap) Add(k string, d types.Dict) {
 	m[k] = append(dd, d)
 }
 
-func (n *Node) insertIntoLeaf(k string, v types.Object, m NameMap) error {
+func (n *Node) insertIntoLeaf(c context.Context, k string, v types.Object, m NameMap) error {
 	if log.DebugEnabled() {
 		log.Debug.Printf("Insert k:%s in the middle\n", k)
 	}
 	for i, e := range n.Names {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		if keyLess(e.k, k) {
 			continue
 		}
@@ -165,8 +178,11 @@ func (n *Node) insertIntoLeaf(k string, v types.Object, m NameMap) error {
 	return nil
 }
 
-func updateNameRef(xRefTable *XRefTable, d types.Dict, keys []string, nameOld, nameNew string) error {
+func updateNameRef(c context.Context, xRefTable *XRefTable, d types.Dict, keys []string, nameOld, nameNew string) error {
 	for _, k := range keys {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		s, found, err := xRefTable.DereferenceStringEntry(d, k)
 		if found && s == nil && err == nil {
 			err = errors.New("expected StringLiteral or HexLiteral")
@@ -190,18 +206,16 @@ func updateNameRef(xRefTable *XRefTable, d types.Dict, keys []string, nameOld, n
 	return nil
 }
 
-func updateNameRefDicts(
-	xRefTable *XRefTable,
-	dd []types.Dict,
-	nameRefDictKeys []string,
-	nameOld, nameNew string,
-) error {
+func updateNameRefDicts(c context.Context, xRefTable *XRefTable, dd []types.Dict, nameRefDictKeys []string, nameOld, nameNew string) error {
 	// eg.
 	// "Dests": "D", "Dest"    		[]string{"D", "Dest"}
 	// "EmbeddedFiles": F", "UF"	[]string{"F", "UF"}
 
 	for _, d := range dd {
-		if err := updateNameRef(xRefTable, d, nameRefDictKeys, nameOld, nameNew); err != nil {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		if err := updateNameRef(c, xRefTable, d, nameRefDictKeys, nameOld, nameNew); err != nil {
 			return err
 		}
 	}
@@ -209,17 +223,14 @@ func updateNameRefDicts(
 	return nil
 }
 
-func (n *Node) insertUniqueIntoLeaf(
-	xRefTable *XRefTable,
-	k string,
-	v types.Object,
-	m NameMap,
-	nameRefDictKeys []string,
-) (bool, error) {
+func (n *Node) insertUniqueIntoLeaf(c context.Context, xRefTable *XRefTable, k string, v types.Object, m NameMap, nameRefDictKeys []string) (bool, error) {
 	var err error
 	kOrig := k
 	for first := true; first || errors.Is(err, errNameTreeDuplicateKey); first = false {
-		err = n.insertIntoLeaf(k, v, m)
+		if err := contextutil.Check(c); err != nil {
+			return false, err
+		}
+		err = n.insertIntoLeaf(c, k, v, m)
 		if err == nil {
 			break
 		}
@@ -234,7 +245,7 @@ func (n *Node) insertUniqueIntoLeaf(
 		if !ok {
 			return true, nil
 		}
-		if err := updateNameRefDicts(xRefTable, dd, nameRefDictKeys, k, kNew); err != nil {
+		if err := updateNameRefDicts(c, xRefTable, dd, nameRefDictKeys, k, kNew); err != nil {
 			return false, err
 		}
 		k = kNew
@@ -243,8 +254,11 @@ func (n *Node) insertUniqueIntoLeaf(
 	return false, nil
 }
 
-// HandleLeaf processes a leaf node.
-func (n *Node) HandleLeaf(xRefTable *XRefTable, k string, v types.Object, m NameMap, nameRefDictKeys []string) error {
+// HandleLeaf processes a leaf node and supports cancellation.
+func (n *Node) HandleLeaf(c context.Context, xRefTable *XRefTable, k string, v types.Object, m NameMap, nameRefDictKeys []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	// A leaf node contains up to maxEntries names.
 	// Any number of entries greater than maxEntries will be delegated to kid nodes.
 
@@ -281,7 +295,7 @@ func (n *Node) HandleLeaf(xRefTable *XRefTable, k string, v types.Object, m Name
 		n.Names = append(n.Names, entry{k, v})
 	} else {
 		// Insert (k,v) while ensuring unique k.
-		ok, err := n.insertUniqueIntoLeaf(xRefTable, k, v, m, nameRefDictKeys)
+		ok, err := n.insertUniqueIntoLeaf(c, xRefTable, k, v, m, nameRefDictKeys)
 		if err != nil {
 			return err
 		}
@@ -298,16 +312,16 @@ func (n *Node) HandleLeaf(xRefTable *XRefTable, k string, v types.Object, m Name
 	}
 
 	// turn leaf into intermediate node with 2 kids/leafs (binary tree)
-	c := maxEntries + 1
-	k1 := &Node{Names: make([]entry, c/2, maxEntries)}
-	copy(k1.Names, n.Names[:c/2])
+	splitCount := maxEntries + 1
+	k1 := &Node{Names: make([]entry, splitCount/2, maxEntries)}
+	copy(k1.Names, n.Names[:splitCount/2])
 	k1.Kmin = n.Names[0].k
-	k1.Kmax = n.Names[c/2-1].k
+	k1.Kmax = n.Names[splitCount/2-1].k
 
-	k2 := &Node{Names: make([]entry, len(n.Names)-c/2, maxEntries)}
-	copy(k2.Names, n.Names[c/2:])
-	k2.Kmin = n.Names[c/2].k
-	k2.Kmax = n.Names[c-1].k
+	k2 := &Node{Names: make([]entry, len(n.Names)-splitCount/2, maxEntries)}
+	copy(k2.Names, n.Names[splitCount/2:])
+	k2.Kmin = n.Names[splitCount/2].k
+	k2.Kmax = n.Names[splitCount-1].k
 
 	n.Kids = []*Node{k1, k2}
 	n.Names = nil
@@ -326,8 +340,8 @@ func updateNameTreeLimits(path []*Node) {
 	}
 }
 
-// Add adds an entry to a name tree.
-func (n *Node) Add(xRefTable *XRefTable, k string, v types.Object, m NameMap, nameRefDictKeys []string) error {
+// Add adds an entry to a name tree and supports cancellation.
+func (n *Node) Add(c context.Context, xRefTable *XRefTable, k string, v types.Object, m NameMap, nameRefDictKeys []string) error {
 	//fmt.Printf("Add: %s %v\n", k, v)
 
 	// The values associated with the keys may be objects of any type.
@@ -337,12 +351,15 @@ func (n *Node) Add(xRefTable *XRefTable, k string, v types.Object, m NameMap, na
 
 	var path []*Node
 	for {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		if n.Names == nil {
 			n.Names = make([]entry, 0, maxEntries)
 		}
 
 		if n.leaf() {
-			if err := n.HandleLeaf(xRefTable, k, v, m, nameRefDictKeys); err != nil {
+			if err := n.HandleLeaf(c, xRefTable, k, v, m, nameRefDictKeys); err != nil {
 				return err
 			}
 			updateNameTreeLimits(path)
@@ -358,6 +375,9 @@ func (n *Node) Add(xRefTable *XRefTable, k string, v types.Object, m NameMap, na
 		// For intermediary nodes we delegate to the corresponding subtree.
 		var target *Node
 		for _, a := range n.Kids {
+			if err := contextutil.Check(c); err != nil {
+				return err
+			}
 			if keyLess(k, a.Kmin) || a.withinLimits(k) {
 				target = a
 				break
@@ -373,11 +393,14 @@ func (n *Node) Add(xRefTable *XRefTable, k string, v types.Object, m NameMap, na
 	}
 }
 
-// AddTree adds a name tree to a name tree.
-func (n *Node) AddTree(xRefTable *XRefTable, tree *Node, m NameMap, nameRefDictKeys []string) error {
+// AddTree adds a name tree to a name tree and supports cancellation.
+func (n *Node) AddTree(c context.Context, xRefTable *XRefTable, tree *Node, m NameMap, nameRefDictKeys []string) error {
 	stack := []*Node{tree}
 
 	for len(stack) > 0 {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		tree = stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
 		if tree == nil {
@@ -385,12 +408,15 @@ func (n *Node) AddTree(xRefTable *XRefTable, tree *Node, m NameMap, nameRefDictK
 		}
 		if !tree.leaf() {
 			for i := len(tree.Kids) - 1; i >= 0; i-- {
+				if err := contextutil.Check(c); err != nil {
+					return err
+				}
 				stack = append(stack, tree.Kids[i])
 			}
 			continue
 		}
 		for _, e := range tree.Names {
-			if err := n.Add(xRefTable, e.k, e.v, m, nameRefDictKeys); err != nil {
+			if err := n.Add(c, xRefTable, e.k, e.v, m, nameRefDictKeys); err != nil {
 				return err
 			}
 		}
@@ -399,17 +425,17 @@ func (n *Node) AddTree(xRefTable *XRefTable, tree *Node, m NameMap, nameRefDictK
 	return nil
 }
 
-func deleteNameTreeValueGraph(xRefTable *XRefTable, k string, o types.Object) error {
+func deleteNameTreeValueGraph(c context.Context, xRefTable *XRefTable, k string, o types.Object) error {
 	if xRefTable == nil {
 		return nil
 	}
-	if err := xRefTable.DeleteObjectGraph(o); err != nil {
+	if err := xRefTable.DeleteObjectGraph(c, o); err != nil {
 		return fmt.Errorf("name tree key %q: delete value graph: %w", k, err)
 	}
 	return nil
 }
 
-func (n *Node) removeFromNames(xRefTable *XRefTable, k string) (ok bool, err error) {
+func (n *Node) removeFromNames(c context.Context, xRefTable *XRefTable, k string) (ok bool, err error) {
 	for i, v := range n.Names {
 
 		if v.k < k {
@@ -421,7 +447,7 @@ func (n *Node) removeFromNames(xRefTable *XRefTable, k string) (ok bool, err err
 			if log.DebugEnabled() {
 				log.Debug.Println("removeFromNames: deleting object graph of v")
 			}
-			if err := deleteNameTreeValueGraph(xRefTable, k, v.v); err != nil {
+			if err := deleteNameTreeValueGraph(c, xRefTable, k, v.v); err != nil {
 				return false, err
 			}
 
@@ -434,11 +460,11 @@ func (n *Node) removeFromNames(xRefTable *XRefTable, k string) (ok bool, err err
 	return false, nil
 }
 
-func (n *Node) removeSingleFromParent(xRefTable *XRefTable, k string) error {
+func (n *Node) removeSingleFromParent(c context.Context, xRefTable *XRefTable, k string) error {
 	if log.DebugEnabled() {
 		log.Debug.Println("removeFromLeaf: deleting object graph of v")
 	}
-	if err := deleteNameTreeValueGraph(xRefTable, k, n.Names[0].v); err != nil {
+	if err := deleteNameTreeValueGraph(c, xRefTable, k, n.Names[0].v); err != nil {
 		return err
 	}
 	n.Kmin, n.Kmax = "", ""
@@ -446,7 +472,7 @@ func (n *Node) removeSingleFromParent(xRefTable *XRefTable, k string) error {
 	return nil
 }
 
-func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, err error) {
+func (n *Node) removeFromLeaf(c context.Context, xRefTable *XRefTable, k string) (empty, ok bool, err error) {
 	if keyLess(k, n.Kmin) || keyLess(n.Kmax, k) {
 		return false, false, nil
 	}
@@ -455,7 +481,7 @@ func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, e
 
 	// If sole entry gets deleted, remove this node from parent.
 	if len(n.Names) == 1 {
-		if err := n.removeSingleFromParent(xRefTable, k); err != nil {
+		if err := n.removeSingleFromParent(c, xRefTable, k); err != nil {
 			return false, false, err
 		}
 		return true, true, nil
@@ -466,7 +492,7 @@ func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, e
 		if log.DebugEnabled() {
 			log.Debug.Println("removeFromLeaf: deleting object graph of v")
 		}
-		if err := deleteNameTreeValueGraph(xRefTable, k, n.Names[0].v); err != nil {
+		if err := deleteNameTreeValueGraph(c, xRefTable, k, n.Names[0].v); err != nil {
 			return false, false, err
 		}
 
@@ -480,7 +506,7 @@ func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, e
 		if log.DebugEnabled() {
 			log.Debug.Println("removeFromLeaf: deleting object graph of v")
 		}
-		if err := deleteNameTreeValueGraph(xRefTable, k, n.Names[len(n.Names)-1].v); err != nil {
+		if err := deleteNameTreeValueGraph(c, xRefTable, k, n.Names[len(n.Names)-1].v); err != nil {
 			return false, false, err
 		}
 
@@ -489,16 +515,16 @@ func (n *Node) removeFromLeaf(xRefTable *XRefTable, k string) (empty, ok bool, e
 		return false, true, nil
 	}
 
-	if ok, err = n.removeFromNames(xRefTable, k); err != nil {
+	if ok, err = n.removeFromNames(c, xRefTable, k); err != nil {
 		return false, false, err
 	}
 
 	return false, ok, nil
 }
 
-func (n *Node) removeKid(xRefTable *XRefTable, k string, kid *Node, i int) (bool, error) {
+func (n *Node) removeKid(c context.Context, xRefTable *XRefTable, k string, kid *Node, i int) (bool, error) {
 	if xRefTable != nil {
-		if err := xRefTable.DeleteObject(kid.D); err != nil {
+		if err := xRefTable.DeleteObject(c, kid.D); err != nil {
 			return false, fmt.Errorf("name tree key %q: delete child node: %w", k, err)
 		}
 	}
@@ -536,7 +562,7 @@ func (n *Node) removeKid(xRefTable *XRefTable, k string, kid *Node, i int) (bool
 		}
 
 		if xRefTable != nil {
-			if err := xRefTable.DeleteObject(n.D); err != nil {
+			if err := xRefTable.DeleteObject(c, n.D); err != nil {
 				return false, fmt.Errorf("name tree key %q: delete parent node: %w", k, err)
 			}
 		}
@@ -553,7 +579,7 @@ func (n *Node) removeKid(xRefTable *XRefTable, k string, kid *Node, i int) (bool
 	return false, nil
 }
 
-func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err error) {
+func (n *Node) removeFromKids(c context.Context, xRefTable *XRefTable, k string) (ok bool, err error) {
 	// Locate the kid to recurse into, then remove k from that subtree.
 	for i, kid := range n.Kids {
 
@@ -561,7 +587,7 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 			continue
 		}
 
-		empty, ok, err := kid.Remove(xRefTable, k)
+		empty, ok, err := kid.Remove(c, xRefTable, k)
 		if err != nil {
 			return false, err
 		}
@@ -573,7 +599,7 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 
 			// This kid is now empty and needs to be removed.
 
-			noKids, err := n.removeKid(xRefTable, k, kid, i)
+			noKids, err := n.removeKid(c, xRefTable, k, kid, i)
 			if err != nil {
 				return false, err
 			}
@@ -596,23 +622,29 @@ func (n *Node) removeFromKids(xRefTable *XRefTable, k string) (ok bool, err erro
 // Remove removes an entry from a name tree.
 // empty returns true if this node is an empty leaf node after removal.
 // ok returns true if removal was successful.
-func (n *Node) Remove(xRefTable *XRefTable, k string) (empty, ok bool, err error) {
+func (n *Node) Remove(c context.Context, xRefTable *XRefTable, k string) (empty, ok bool, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, false, err
+	}
 	if n.leaf() {
-		return n.removeFromLeaf(xRefTable, k)
+		return n.removeFromLeaf(c, xRefTable, k)
 	}
 
-	if ok, err = n.removeFromKids(xRefTable, k); err != nil {
+	if ok, err = n.removeFromKids(c, xRefTable, k); err != nil {
 		return false, false, err
 	}
 
 	return n.emptyLeaf(), ok, nil
 }
 
-// Process traverses the nametree applying a handler to each entry (key-value pair).
-func (n *Node) Process(xRefTable *XRefTable, handler func(*XRefTable, string, *types.Object) error) error {
+// Process traverses the name tree applying a handler to each entry and supports cancellation.
+func (n *Node) Process(c context.Context, xRefTable *XRefTable, handler func(*XRefTable, string, *types.Object) error) error {
 	stack := []*Node{n}
 
 	for len(stack) > 0 {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		n = stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
 		if n == nil {
@@ -620,12 +652,21 @@ func (n *Node) Process(xRefTable *XRefTable, handler func(*XRefTable, string, *t
 		}
 		if !n.leaf() {
 			for i := len(n.Kids) - 1; i >= 0; i-- {
+				if err := contextutil.Check(c); err != nil {
+					return err
+				}
 				stack = append(stack, n.Kids[i])
 			}
 			continue
 		}
 		for k, e := range n.Names {
+			if err := contextutil.Check(c); err != nil {
+				return err
+			}
 			if err := handler(xRefTable, e.k, &e.v); err != nil {
+				return err
+			}
+			if err := contextutil.Check(c); err != nil {
 				return err
 			}
 			n.Names[k] = e
@@ -635,8 +676,8 @@ func (n *Node) Process(xRefTable *XRefTable, handler func(*XRefTable, string, *t
 	return nil
 }
 
-// KeyList returns a sorted list of all keys.
-func (n Node) KeyList() ([]string, error) {
+// KeyList returns a sorted list of all keys and supports cancellation.
+func (n Node) KeyList(c context.Context) ([]string, error) {
 	list := []string{}
 
 	keys := func(xRefTable *XRefTable, k string, v *types.Object) error {
@@ -644,7 +685,7 @@ func (n Node) KeyList() ([]string, error) {
 		return nil
 	}
 
-	if err := n.Process(nil, keys); err != nil {
+	if err := n.Process(c, nil, keys); err != nil {
 		return nil, err
 	}
 

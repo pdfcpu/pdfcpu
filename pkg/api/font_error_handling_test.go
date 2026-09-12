@@ -746,7 +746,7 @@ func TestCreateUserFontDemoFilesOrdersPlanesAndRejectsInvalidPlane(t *testing.T)
 			return font.TTFLight{Planes: map[int]bool{2: true, 0: true, 1: true}}, true, nil
 		}
 		var fileNames []string
-		ops.createPDFFile = func(_ context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
+		ops.createPDFFile = func(c context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
 			fileNames = append(fileNames, filepath.Base(fileName))
 			return nil
 		}
@@ -928,7 +928,7 @@ func TestCreateCheatSheetsUserFontsDoesNotMutateInputAndSortsWork(t *testing.T) 
 		return font.TTFLight{Planes: map[int]bool{0: true}}, true, nil
 	}
 	var fileNames []string
-	ops.createPDFFile = func(_ context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
+	ops.createPDFFile = func(c context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
 		fileNames = append(fileNames, filepath.Base(fileName))
 		return nil
 	}
@@ -958,7 +958,7 @@ func TestCheatSheetBatchGenerationFailureLeavesOutputsUntouched(t *testing.T) {
 	wantErr := errors.New("generate Zulu")
 	ops := noOpFontDemoOperations()
 	ops.files = defaultCheatSheetFileOperations()
-	ops.createPDFFile = func(_ context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
+	ops.createPDFFile = func(c context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
 		if filepath.Base(fileName) == "Zulu_BMP.pdf" {
 			return wantErr
 		}
@@ -1001,7 +1001,7 @@ func TestCheatSheetPublicationFailureRollsBackEarlierFiles(t *testing.T) {
 		}
 		return rename(source, target)
 	}
-	ops.createPDFFile = func(_ context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
+	ops.createPDFFile = func(c context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
 		return os.WriteFile(fileName, []byte("new "+filepath.Base(fileName)), 0600)
 	}
 	fonts := map[string]font.TTFLight{
@@ -1045,7 +1045,7 @@ func TestCheatSheetPublicationFailureJoinsRollbackFailure(t *testing.T) {
 			return rename(source, target)
 		}
 	}
-	ops.createPDFFile = func(_ context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
+	ops.createPDFFile = func(c context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
 		return os.WriteFile(fileName, []byte("new "+filepath.Base(fileName)), 0600)
 	}
 	fonts := map[string]font.TTFLight{
@@ -1073,7 +1073,7 @@ func TestCheatSheetCleanupFailureAfterPublicationReturnsError(t *testing.T) {
 		}
 		return removeAll(path)
 	}
-	ops.createPDFFile = func(_ context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
+	ops.createPDFFile = func(c context.Context, _ *model.XRefTable, fileName string, _ *model.Configuration) error {
 		return os.WriteFile(fileName, []byte("published"), 0600)
 	}
 	fonts := map[string]font.TTFLight{"Demo": {Planes: map[int]bool{0: true}}}
@@ -1130,7 +1130,7 @@ func TestCreateCheatSheetsUserFontsLoadsDefaultsAndRejectsUnknownFonts(t *testin
 
 	t.Run("unknown explicit font", func(t *testing.T) {
 		ops := noOpFontDemoOperations()
-		ops.userFont = func(_ context.Context, fontName string) (font.TTFLight, bool, error) {
+		ops.userFont = func(c context.Context, fontName string) (font.TTFLight, bool, error) {
 			return font.TTFLight{}, fontName != "Missing", nil
 		}
 		createCalls := 0

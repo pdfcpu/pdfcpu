@@ -207,7 +207,7 @@ func TestFromJSONUpdatePageTreeErrorIncludesPageContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pageDict, _, _, err := ctx.PageDict(1, false)
+	pageDict, _, _, err := ctx.PageDict(t.Context(), 1, false)
 	if err != nil {
 		t.Fatal(err)
 	}

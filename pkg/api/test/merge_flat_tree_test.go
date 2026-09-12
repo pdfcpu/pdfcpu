@@ -149,10 +149,11 @@ func rectsEqual(a, b *types.Rectangle) bool {
 	}
 }
 
-func inheritedPageAttrs(ctx *model.Context) ([]*model.InheritedPageAttrs, error) {
+func inheritedPageAttrs(t *testing.T, ctx *model.Context) ([]*model.InheritedPageAttrs, error) {
+	t.Helper()
 	attrs := make([]*model.InheritedPageAttrs, ctx.PageCount+1)
 	for pageNr := 1; pageNr <= ctx.PageCount; pageNr++ {
-		_, _, pageAttrs, err := ctx.PageDict(pageNr, false)
+		_, _, pageAttrs, err := ctx.PageDict(t.Context(), pageNr, false)
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +212,7 @@ func TestMergePreservesInheritedPageAttrs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expected, err := inheritedPageAttrs(srcCtx)
+	expected, err := inheritedPageAttrs(t, srcCtx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +234,7 @@ func TestMergePreservesInheritedPageAttrs(t *testing.T) {
 	}
 
 	for pageNr := 1; pageNr <= mergedCtx.PageCount; pageNr++ {
-		_, _, got, err := mergedCtx.PageDict(pageNr, false)
+		_, _, got, err := mergedCtx.PageDict(t.Context(), pageNr, false)
 		if err != nil {
 			t.Fatalf("PageDict(%d): %v", pageNr, err)
 		}
@@ -298,7 +299,7 @@ func TestMergePageTreeParentLinks(t *testing.T) {
 	}
 
 	for pageNr := 1; pageNr <= ctx.PageCount; pageNr++ {
-		leafIndRef, err := ctx.PageDictIndRef(pageNr)
+		leafIndRef, err := ctx.PageDictIndRef(t.Context(), pageNr)
 		if err != nil {
 			t.Fatalf("PageDictIndRef(%d): %v", pageNr, err)
 		}

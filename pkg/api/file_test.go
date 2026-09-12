@@ -501,7 +501,7 @@ func TestUpdateFileTransactionPreservesInput(t *testing.T) {
 				t.Fatal(err)
 			}
 			failure := errors.New("partial update failed")
-			err := updateFileTransaction(t.Context(), path, "test", func(_ context.Context, f *os.File) error {
+			err := updateFileTransaction(t.Context(), path, "test", func(c context.Context, f *os.File) error {
 				bb, err := io.ReadAll(f)
 				if err != nil || string(bb) != "original" {
 					t.Fatalf("staged input: %q, %v", bb, err)

@@ -83,18 +83,18 @@ func changedFormTestCSV(t *testing.T) string {
 	return b.String()
 }
 
-func multiFillFormWithWriteContext(testContext context.Context, inFilePDF string, rd io.Reader, outDir, fileName string, format form.DataFormat, merge bool, writeContext formContextWriter) error {
+func multiFillFormWithWriteContext(c context.Context, inFilePDF string, rd io.Reader, outDir, fileName string, format form.DataFormat, merge bool, writeContext formContextWriter) error {
 	conf := model.NewDefaultConfiguration()
 	conf.Cmd = model.MULTIFILLFORMFIELDS
 	fileName = strings.TrimSuffix(filepath.Base(fileName), ".pdf")
 	fileName = sanitizeFilenamePart(fileName, "form")
 	if format == form.JSON {
-		return multiFillFormJSONUsing(testContext, inFilePDF, rd, outDir, fileName, merge, conf, writeContext)
+		return multiFillFormJSONUsing(c, inFilePDF, rd, outDir, fileName, merge, conf, writeContext)
 	}
-	return multiFillFormCSVUsing(testContext, inFilePDF, rd, outDir, fileName, merge, conf, writeContext)
+	return multiFillFormCSVUsing(c, inFilePDF, rd, outDir, fileName, merge, conf, writeContext)
 }
 
-func formMutationFileFunctions(testContext context.Context) []struct {
+func formMutationFileFunctions(c context.Context) []struct {
 	name string
 	fn   func(string, string) error
 } {
@@ -103,16 +103,16 @@ func formMutationFileFunctions(testContext context.Context) []struct {
 		fn   func(string, string) error
 	}{
 		{name: "remove form fields", fn: func(inFile, outFile string) error {
-			return RemoveFormFieldsFile(testContext, inFile, outFile, nil, nil)
+			return RemoveFormFieldsFile(c, inFile, outFile, nil, nil)
 		}},
 		{name: "lock form fields", fn: func(inFile, outFile string) error {
-			return LockFormFieldsFile(testContext, inFile, outFile, nil, nil)
+			return LockFormFieldsFile(c, inFile, outFile, nil, nil)
 		}},
 		{name: "unlock form fields", fn: func(inFile, outFile string) error {
-			return UnlockFormFieldsFile(testContext, inFile, outFile, nil, nil)
+			return UnlockFormFieldsFile(c, inFile, outFile, nil, nil)
 		}},
 		{name: "reset form fields", fn: func(inFile, outFile string) error {
-			return ResetFormFieldsFile(testContext, inFile, outFile, nil, nil)
+			return ResetFormFieldsFile(c, inFile, outFile, nil, nil)
 		}},
 	}
 }
@@ -761,7 +761,7 @@ func TestMultiFillFormWriteErrorsIncludeFormAndPathContext(t *testing.T) {
 
 func TestMultiFillFormRemovesPartialOutputs(t *testing.T) {
 	wantErr := errors.New("write multifill output")
-	writeContext := func(_ context.Context, _ *model.Context, w io.Writer) error {
+	writeContext := func(c context.Context, _ *model.Context, w io.Writer) error {
 		if _, err := w.Write([]byte("partial PDF")); err != nil {
 			return err
 		}
@@ -807,7 +807,7 @@ func TestMultiFillFormRemovesPartialOutputs(t *testing.T) {
 }
 
 func TestWriteMultiFillOutputRemovesPartialOutputAfterCloseFailure(t *testing.T) {
-	writeContext := func(_ context.Context, _ *model.Context, w io.Writer) error {
+	writeContext := func(c context.Context, _ *model.Context, w io.Writer) error {
 		f := w.(*os.File)
 		if _, err := f.Write([]byte("partial PDF")); err != nil {
 			return err
@@ -835,7 +835,7 @@ func TestWriteMultiFillOutputRemovesPartialOutputAfterCloseFailure(t *testing.T)
 
 func TestMultiFillFormWriteFailurePreservesExistingOutput(t *testing.T) {
 	wantErr := errors.New("write multifill output")
-	writeContext := func(_ context.Context, _ *model.Context, w io.Writer) error {
+	writeContext := func(c context.Context, _ *model.Context, w io.Writer) error {
 		if _, err := w.Write([]byte("partial PDF")); err != nil {
 			return err
 		}

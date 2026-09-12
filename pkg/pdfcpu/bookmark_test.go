@@ -69,7 +69,7 @@ func TestPageNrFromDestinationReturnsStrictDestinationError(t *testing.T) {
 	}
 	ctx.XRefTable.ValidationMode = model.ValidationStrict
 
-	if _, err = PageNrFromDestination(ctx, types.Name("missing")); err == nil {
+	if _, err = PageNrFromDestination(t.Context(), ctx, types.Name("missing")); err == nil {
 		t.Fatal("expected destination error")
 	}
 }
@@ -82,7 +82,7 @@ func TestPageNrFromDestinationIgnoresRelaxedDestinationError(t *testing.T) {
 	}
 	ctx.XRefTable.ValidationMode = model.ValidationRelaxed
 
-	pageNr, err := PageNrFromDestination(ctx, types.Name("missing"))
+	pageNr, err := PageNrFromDestination(t.Context(), ctx, types.Name("missing"))
 	if err != nil {
 		t.Fatalf("got %v, want nil", err)
 	}
@@ -100,7 +100,7 @@ func TestPageNrFromDestinationResolvesIndirectInteger(t *testing.T) {
 	indRef := *types.NewIndirectRef(7, 0)
 	dest := types.Array{indRef, types.Name("Fit")}
 
-	pageNr, err := PageNrFromDestination(ctx, dest)
+	pageNr, err := PageNrFromDestination(t.Context(), ctx, dest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +142,7 @@ func TestPageNrFromDestinationRejectsInvalidInput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := PageNrFromDestination(tt.ctx, tt.dest)
+			_, err := PageNrFromDestination(t.Context(), tt.ctx, tt.dest)
 			if tt.wantErr != nil {
 				if !errors.Is(err, tt.wantErr) {
 					t.Fatalf("got %v, want %v", err, tt.wantErr)

@@ -100,39 +100,39 @@ func reusableConfigurationState(conf *model.Configuration) configurationReuseSta
 	return state
 }
 
-func configurationReuseOperations(testContext context.Context) []configurationOperation {
+func configurationReuseOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"validate", func(conf *model.Configuration) error {
-			return Validate(testContext, bytes.NewReader(nil), conf, nil)
+			return Validate(c, bytes.NewReader(nil), conf, nil)
 		}},
 		{"add keywords", func(conf *model.Configuration) error {
-			return AddKeywords(testContext, bytes.NewReader(nil), io.Discard, []string{"keyword"}, conf)
+			return AddKeywords(c, bytes.NewReader(nil), io.Discard, []string{"keyword"}, conf)
 		}},
 		{"merge", func(conf *model.Configuration) error {
-			return MergeRaw(testContext, []io.ReadSeeker{bytes.NewReader(nil)}, io.Discard, false, conf)
+			return MergeRaw(c, []io.ReadSeeker{bytes.NewReader(nil)}, io.Discard, false, conf)
 		}},
 		{"add watermarks", func(conf *model.Configuration) error {
-			return AddWatermarks(testContext, bytes.NewReader(nil), io.Discard, nil, &model.Watermark{}, conf)
+			return AddWatermarks(c, bytes.NewReader(nil), io.Discard, nil, &model.Watermark{}, conf)
 		}},
 		{"extract metadata", func(conf *model.Configuration) error {
-			return ExtractMetadata(testContext, bytes.NewReader(nil), func(pdfcpu.Metadata) error { return nil }, conf)
+			return ExtractMetadata(c, bytes.NewReader(nil), func(pdfcpu.Metadata) error { return nil }, conf)
 		}},
 		{"encrypt", func(conf *model.Configuration) error {
-			return Encrypt(testContext, bytes.NewReader(nil), io.Discard, conf)
+			return Encrypt(c, bytes.NewReader(nil), io.Discard, conf)
 		}},
 		{"change user password", func(conf *model.Configuration) error {
-			return ChangeUserPassword(testContext, bytes.NewReader(nil), io.Discard, "operation-old", "operation-new", conf)
+			return ChangeUserPassword(c, bytes.NewReader(nil), io.Discard, "operation-old", "operation-new", conf)
 		}},
 		{"change owner password", func(conf *model.Configuration) error {
-			return ChangeOwnerPassword(testContext, bytes.NewReader(nil), io.Discard, "operation-old", "operation-new", conf)
+			return ChangeOwnerPassword(c, bytes.NewReader(nil), io.Discard, "operation-old", "operation-new", conf)
 		}},
 		{"add annotations increment", func(conf *model.Configuration) error {
 			rws := nopReadWriteSeeker{bytes.NewReader(nil)}
-			return AddAnnotationsAsIncrement(testContext, rws, nil, testAnnotationRenderer(), conf)
+			return AddAnnotationsAsIncrement(c, rws, nil, testAnnotationRenderer(), conf)
 		}},
 		{"multi-fill form", func(conf *model.Configuration) error {
 			return MultiFillForm(
-				testContext,
+				c,
 				"missing.pdf",
 				bytes.NewReader([]byte(`{`)),
 				"",
@@ -143,7 +143,7 @@ func configurationReuseOperations(testContext context.Context) []configurationOp
 			)
 		}},
 		{"cut", func(conf *model.Configuration) error {
-			return Cut(testContext, bytes.NewReader(nil), "", "", nil, &model.Cut{Hor: []float64{0.5}}, conf)
+			return Cut(c, bytes.NewReader(nil), "", "", nil, &model.Cut{Hor: []float64{0.5}}, conf)
 		}},
 	}
 }
@@ -195,240 +195,240 @@ func TestConfigurationConcurrentReadOnlyReuse(t *testing.T) {
 	}
 }
 
-func bookmarkConfigurationOperations(testContext context.Context) []configurationOperation {
+func bookmarkConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"bookmarks", func(conf *model.Configuration) error {
-			_, err := Bookmarks(testContext, bytes.NewReader(nil), conf)
+			_, err := Bookmarks(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"list bookmarks", func(conf *model.Configuration) error {
-			_, err := ListBookmarks(testContext, bytes.NewReader(nil), conf)
+			_, err := ListBookmarks(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"export bookmarks", func(conf *model.Configuration) error {
-			return ExportBookmarksJSON(testContext, bytes.NewReader(nil), io.Discard, "in.pdf", conf)
+			return ExportBookmarksJSON(c, bytes.NewReader(nil), io.Discard, "in.pdf", conf)
 		}},
 		{"import bookmarks", func(conf *model.Configuration) error {
 			return ImportBookmarks(
-				testContext, bytes.NewReader(nil), bytes.NewReader([]byte("{}")), io.Discard, false, conf,
+				c, bytes.NewReader(nil), bytes.NewReader([]byte("{}")), io.Discard, false, conf,
 			)
 		}},
 		{"add bookmarks", func(conf *model.Configuration) error {
-			return AddBookmarks(testContext, bytes.NewReader(nil), io.Discard, nil, false, conf)
+			return AddBookmarks(c, bytes.NewReader(nil), io.Discard, nil, false, conf)
 		}},
 		{"remove bookmarks", func(conf *model.Configuration) error {
-			return RemoveBookmarks(testContext, bytes.NewReader(nil), io.Discard, conf)
+			return RemoveBookmarks(c, bytes.NewReader(nil), io.Discard, conf)
 		}},
 	}
 }
 
-func documentDisplayConfigurationOperations(testContext context.Context) []configurationOperation {
+func documentDisplayConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"page layout", func(conf *model.Configuration) error {
-			_, err := PageLayout(testContext, bytes.NewReader(nil), conf)
+			_, err := PageLayout(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"list page layout", func(conf *model.Configuration) error {
-			_, err := ListPageLayout(testContext, bytes.NewReader(nil), conf)
+			_, err := ListPageLayout(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"set page layout", func(conf *model.Configuration) error {
-			return SetPageLayout(testContext, bytes.NewReader(nil), io.Discard, model.PageLayoutSinglePage, conf)
+			return SetPageLayout(c, bytes.NewReader(nil), io.Discard, model.PageLayoutSinglePage, conf)
 		}},
 		{"reset page layout", func(conf *model.Configuration) error {
-			return ResetPageLayout(testContext, bytes.NewReader(nil), io.Discard, conf)
+			return ResetPageLayout(c, bytes.NewReader(nil), io.Discard, conf)
 		}},
 		{"page mode", func(conf *model.Configuration) error {
-			_, err := PageMode(testContext, bytes.NewReader(nil), conf)
+			_, err := PageMode(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"list page mode", func(conf *model.Configuration) error {
-			_, err := ListPageMode(testContext, bytes.NewReader(nil), conf)
+			_, err := ListPageMode(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"set page mode", func(conf *model.Configuration) error {
-			return SetPageMode(testContext, bytes.NewReader(nil), io.Discard, model.PageModeUseNone, conf)
+			return SetPageMode(c, bytes.NewReader(nil), io.Discard, model.PageModeUseNone, conf)
 		}},
 		{"reset page mode", func(conf *model.Configuration) error {
-			return ResetPageMode(testContext, bytes.NewReader(nil), io.Discard, conf)
+			return ResetPageMode(c, bytes.NewReader(nil), io.Discard, conf)
 		}},
 		{"viewer preferences", func(conf *model.Configuration) error {
-			_, _, err := ViewerPreferences(testContext, bytes.NewReader(nil), conf)
+			_, _, err := ViewerPreferences(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"list viewer preferences", func(conf *model.Configuration) error {
-			_, err := ListViewerPreferences(testContext, bytes.NewReader(nil), false, conf)
+			_, err := ListViewerPreferences(c, bytes.NewReader(nil), false, conf)
 			return err
 		}},
 		{"set viewer preferences", func(conf *model.Configuration) error {
-			return SetViewerPreferences(testContext, bytes.NewReader(nil), io.Discard, model.ViewerPreferences{}, conf)
+			return SetViewerPreferences(c, bytes.NewReader(nil), io.Discard, model.ViewerPreferences{}, conf)
 		}},
 		{"reset viewer preferences", func(conf *model.Configuration) error {
-			return ResetViewerPreferences(testContext, bytes.NewReader(nil), io.Discard, conf)
+			return ResetViewerPreferences(c, bytes.NewReader(nil), io.Discard, conf)
 		}},
 	}
 }
 
-func infoPropertyMergeConfigurationOperations(testContext context.Context) []configurationOperation {
+func infoPropertyMergeConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"PDF info", func(conf *model.Configuration) error {
-			_, err := PDFInfo(testContext, bytes.NewReader(nil), "in.pdf", nil, false, conf)
+			_, err := PDFInfo(c, bytes.NewReader(nil), "in.pdf", nil, false, conf)
 			return err
 		}},
 		{"properties", func(conf *model.Configuration) error {
-			_, err := Properties(testContext, bytes.NewReader(nil), conf)
+			_, err := Properties(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"add properties", func(conf *model.Configuration) error {
-			return AddProperties(testContext, bytes.NewReader(nil), io.Discard, map[string]string{"Key": "Value"}, conf)
+			return AddProperties(c, bytes.NewReader(nil), io.Discard, map[string]string{"Key": "Value"}, conf)
 		}},
 		{"remove properties", func(conf *model.Configuration) error {
-			return RemoveProperties(testContext, bytes.NewReader(nil), io.Discard, []string{"Key"}, conf)
+			return RemoveProperties(c, bytes.NewReader(nil), io.Discard, []string{"Key"}, conf)
 		}},
 		{"merge create", func(conf *model.Configuration) error {
-			return Merge(testContext, "", []string{"missing.pdf"}, io.Discard, conf, false)
+			return Merge(c, "", []string{"missing.pdf"}, io.Discard, conf, false)
 		}},
 		{"merge append", func(conf *model.Configuration) error {
-			return Merge(testContext, "missing.pdf", nil, io.Discard, conf, false)
+			return Merge(c, "missing.pdf", nil, io.Discard, conf, false)
 		}},
 		{"merge zip", func(conf *model.Configuration) error {
-			return MergeCreateZip(testContext, bytes.NewReader(nil), bytes.NewReader(nil), io.Discard, conf)
+			return MergeCreateZip(c, bytes.NewReader(nil), bytes.NewReader(nil), io.Discard, conf)
 		}},
 	}
 }
 
-func pageTransformationConfigurationOperations(testContext context.Context) []configurationOperation {
+func pageTransformationConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"insert pages before", func(conf *model.Configuration) error {
-			return InsertPages(testContext, bytes.NewReader(nil), io.Discard, nil, true, nil, conf)
+			return InsertPages(c, bytes.NewReader(nil), io.Discard, nil, true, nil, conf)
 		}},
 		{"insert pages after", func(conf *model.Configuration) error {
-			return InsertPages(testContext, bytes.NewReader(nil), io.Discard, nil, false, nil, conf)
+			return InsertPages(c, bytes.NewReader(nil), io.Discard, nil, false, nil, conf)
 		}},
 		{"remove pages", func(conf *model.Configuration) error {
-			return RemovePages(testContext, bytes.NewReader(nil), io.Discard, nil, conf)
+			return RemovePages(c, bytes.NewReader(nil), io.Discard, nil, conf)
 		}},
 		{"rotate", func(conf *model.Configuration) error {
-			return Rotate(testContext, bytes.NewReader(nil), io.Discard, 90, nil, conf)
+			return Rotate(c, bytes.NewReader(nil), io.Discard, 90, nil, conf)
 		}},
 		{"collect", func(conf *model.Configuration) error {
-			return Collect(testContext, bytes.NewReader(nil), io.Discard, nil, conf)
+			return Collect(c, bytes.NewReader(nil), io.Discard, nil, conf)
 		}},
 		{"trim", func(conf *model.Configuration) error {
-			return Trim(testContext, bytes.NewReader(nil), io.Discard, nil, conf)
+			return Trim(c, bytes.NewReader(nil), io.Discard, nil, conf)
 		}},
 		{"resize", func(conf *model.Configuration) error {
-			return Resize(testContext, bytes.NewReader(nil), io.Discard, nil, &model.Resize{Scale: 0.5}, conf)
+			return Resize(c, bytes.NewReader(nil), io.Discard, nil, &model.Resize{Scale: 0.5}, conf)
 		}},
 		{"zoom", func(conf *model.Configuration) error {
-			return Zoom(testContext, bytes.NewReader(nil), io.Discard, nil, &model.Zoom{Factor: 0.5}, conf)
+			return Zoom(c, bytes.NewReader(nil), io.Discard, nil, &model.Zoom{Factor: 0.5}, conf)
 		}},
 	}
 }
 
-func boxImageConfigurationOperations(testContext context.Context) []configurationOperation {
+func boxImageConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"boxes", func(conf *model.Configuration) error {
-			_, err := Boxes(testContext, bytes.NewReader(nil), nil, conf)
+			_, err := Boxes(c, bytes.NewReader(nil), nil, conf)
 			return err
 		}},
 		{"list boxes", func(conf *model.Configuration) error {
-			_, err := ListBoxes(testContext, bytes.NewReader(nil), nil, nil, conf)
+			_, err := ListBoxes(c, bytes.NewReader(nil), nil, nil, conf)
 			return err
 		}},
 		{"add boxes", func(conf *model.Configuration) error {
 			pb := &model.PageBoundaries{Crop: &model.Box{}}
-			return AddBoxes(testContext, bytes.NewReader(nil), io.Discard, nil, pb, conf)
+			return AddBoxes(c, bytes.NewReader(nil), io.Discard, nil, pb, conf)
 		}},
 		{"remove boxes", func(conf *model.Configuration) error {
 			pb := &model.PageBoundaries{Crop: &model.Box{}}
-			return RemoveBoxes(testContext, bytes.NewReader(nil), io.Discard, nil, pb, conf)
+			return RemoveBoxes(c, bytes.NewReader(nil), io.Discard, nil, pb, conf)
 		}},
 		{"crop", func(conf *model.Configuration) error {
-			return Crop(testContext, bytes.NewReader(nil), io.Discard, nil, &model.Box{}, conf)
+			return Crop(c, bytes.NewReader(nil), io.Discard, nil, &model.Box{}, conf)
 		}},
 		{"images", func(conf *model.Configuration) error {
-			_, err := Images(testContext, bytes.NewReader(nil), nil, conf)
+			_, err := Images(c, bytes.NewReader(nil), nil, conf)
 			return err
 		}},
 		{"list images", func(conf *model.Configuration) error {
-			_, err := ListImages(testContext, bytes.NewReader(nil), nil, conf)
+			_, err := ListImages(c, bytes.NewReader(nil), nil, conf)
 			return err
 		}},
 		{"update images", func(conf *model.Configuration) error {
-			return UpdateImages(testContext, bytes.NewReader(nil), bytes.NewReader(nil), io.Discard, 1, 0, "", conf)
+			return UpdateImages(c, bytes.NewReader(nil), bytes.NewReader(nil), io.Discard, 1, 0, "", conf)
 		}},
 	}
 }
 
-func attachmentPermissionConfigurationOperations(testContext context.Context) []configurationOperation {
+func attachmentPermissionConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"attachments", func(conf *model.Configuration) error {
-			_, err := Attachments(testContext, bytes.NewReader(nil), conf)
+			_, err := Attachments(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"add attachments", func(conf *model.Configuration) error {
 			return AddAttachments(
-				testContext, bytes.NewReader(nil), io.Discard, []string{"attachment.txt"}, false, conf,
+				c, bytes.NewReader(nil), io.Discard, []string{"attachment.txt"}, false, conf,
 			)
 		}},
 		{"add attachment portfolio", func(conf *model.Configuration) error {
 			return AddAttachments(
-				testContext, bytes.NewReader(nil), io.Discard, []string{"attachment.txt"}, true, conf,
+				c, bytes.NewReader(nil), io.Discard, []string{"attachment.txt"}, true, conf,
 			)
 		}},
 		{"remove attachments", func(conf *model.Configuration) error {
 			return RemoveAttachments(
-				testContext, bytes.NewReader(nil), io.Discard, []string{"attachment.txt"}, conf,
+				c, bytes.NewReader(nil), io.Discard, []string{"attachment.txt"}, conf,
 			)
 		}},
 		{"extract attachments raw", func(conf *model.Configuration) error {
-			_, err := ExtractAttachmentsRaw(testContext, bytes.NewReader(nil), "out", nil, conf)
+			_, err := ExtractAttachmentsRaw(c, bytes.NewReader(nil), "out", nil, conf)
 			return err
 		}},
 		{"extract attachments", func(conf *model.Configuration) error {
-			return ExtractAttachments(testContext, bytes.NewReader(nil), "out", nil, conf)
+			return ExtractAttachments(c, bytes.NewReader(nil), "out", nil, conf)
 		}},
 		{"permissions", func(conf *model.Configuration) error {
-			_, err := Permissions(testContext, bytes.NewReader(nil), conf)
+			_, err := Permissions(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"permissions list", func(conf *model.Configuration) error {
-			_, err := PermissionsList(testContext, bytes.NewReader(nil), conf)
+			_, err := PermissionsList(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 	}
 }
 
-func coreDocumentConfigurationOperations(testContext context.Context) []configurationOperation {
+func coreDocumentConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"validate", func(conf *model.Configuration) error {
-			return Validate(testContext, bytes.NewReader(nil), conf, nil)
+			return Validate(c, bytes.NewReader(nil), conf, nil)
 		}},
 		{"optimize", func(conf *model.Configuration) error {
-			return Optimize(testContext, bytes.NewReader(nil), io.Discard, conf, nil)
+			return Optimize(c, bytes.NewReader(nil), io.Discard, conf, nil)
 		}},
 		{"create", func(conf *model.Configuration) error {
-			return Create(testContext, bytes.NewReader(nil), bytes.NewReader([]byte("{}")), io.Discard, conf)
+			return Create(c, bytes.NewReader(nil), bytes.NewReader([]byte("{}")), io.Discard, conf)
 		}},
 		{"split raw", func(conf *model.Configuration) error {
-			_, err := SplitRaw(testContext, bytes.NewReader(nil), 1, conf)
+			_, err := SplitRaw(c, bytes.NewReader(nil), 1, conf)
 			return err
 		}},
 		{"split", func(conf *model.Configuration) error {
-			return Split(testContext, bytes.NewReader(nil), "out", "in.pdf", 1, conf)
+			return Split(c, bytes.NewReader(nil), "out", "in.pdf", 1, conf)
 		}},
 		{"split by page number", func(conf *model.Configuration) error {
-			return SplitByPageNr(testContext, bytes.NewReader(nil), "out", "in.pdf", []int{2}, conf)
+			return SplitByPageNr(c, bytes.NewReader(nil), "out", "in.pdf", []int{2}, conf)
 		}},
 	}
 }
 
-func extractionImportConfigurationOperations(testContext context.Context) []configurationOperation {
+func extractionImportConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"import images", func(conf *model.Configuration) error {
 			return ImportImages(
-				testContext,
+				c,
 				bytes.NewReader(nil),
 				io.Discard,
 				[]io.Reader{bytes.NewReader(nil)},
@@ -437,46 +437,46 @@ func extractionImportConfigurationOperations(testContext context.Context) []conf
 			)
 		}},
 		{"extract images raw", func(conf *model.Configuration) error {
-			_, err := ExtractImagesRaw(testContext, bytes.NewReader(nil), nil, conf)
+			_, err := ExtractImagesRaw(c, bytes.NewReader(nil), nil, conf)
 			return err
 		}},
 		{"extract images", func(conf *model.Configuration) error {
-			return ExtractImages(testContext, bytes.NewReader(nil), nil, func(model.Image, bool, int) error { return nil }, conf)
+			return ExtractImages(c, bytes.NewReader(nil), nil, func(model.Image, bool, int) error { return nil }, conf)
 		}},
 		{"extract fonts", func(conf *model.Configuration) error {
-			return ExtractFonts(testContext, bytes.NewReader(nil), nil, func(pdfcpu.Font) error { return nil }, conf)
+			return ExtractFonts(c, bytes.NewReader(nil), nil, func(pdfcpu.Font) error { return nil }, conf)
 		}},
 		{"extract pages", func(conf *model.Configuration) error {
-			return ExtractPages(testContext, bytes.NewReader(nil), nil, func(io.Reader, int) error { return nil }, conf)
+			return ExtractPages(c, bytes.NewReader(nil), nil, func(io.Reader, int) error { return nil }, conf)
 		}},
 		{"extract content", func(conf *model.Configuration) error {
-			return ExtractContent(testContext, bytes.NewReader(nil), nil, func(io.Reader, int) error { return nil }, conf)
+			return ExtractContent(c, bytes.NewReader(nil), nil, func(io.Reader, int) error { return nil }, conf)
 		}},
 		{"extract metadata", func(conf *model.Configuration) error {
-			return ExtractMetadata(testContext, bytes.NewReader(nil), func(pdfcpu.Metadata) error { return nil }, conf)
+			return ExtractMetadata(c, bytes.NewReader(nil), func(pdfcpu.Metadata) error { return nil }, conf)
 		}},
 	}
 }
 
-func securitySignatureConfigurationOperations(testContext context.Context) []configurationOperation {
+func securitySignatureConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"encrypt", func(conf *model.Configuration) error {
-			return Encrypt(testContext, bytes.NewReader(nil), io.Discard, conf)
+			return Encrypt(c, bytes.NewReader(nil), io.Discard, conf)
 		}},
 		{"decrypt", func(conf *model.Configuration) error {
-			return Decrypt(testContext, bytes.NewReader(nil), io.Discard, conf)
+			return Decrypt(c, bytes.NewReader(nil), io.Discard, conf)
 		}},
 		{"validate signatures raw", func(conf *model.Configuration) error {
-			_, err := ValidateSignaturesRaw(testContext, bytes.NewReader(nil), false, conf)
+			_, err := ValidateSignaturesRaw(c, bytes.NewReader(nil), false, conf)
 			return err
 		}},
 		{"remove signatures", func(conf *model.Configuration) error {
-			return RemoveSignatures(testContext, bytes.NewReader(nil), io.Discard, conf)
+			return RemoveSignatures(c, bytes.NewReader(nil), io.Discard, conf)
 		}},
 	}
 }
 
-func cutConfigurationOperations(testContext context.Context) []configurationOperation {
+func cutConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"poster", func(conf *model.Configuration) error {
 			cut := &model.Cut{
@@ -484,108 +484,108 @@ func cutConfigurationOperations(testContext context.Context) []configurationOper
 				PageDim: &types.Dim{Width: 100, Height: 100},
 				UserDim: true,
 			}
-			return Poster(testContext, bytes.NewReader(nil), "", "", nil, cut, conf)
+			return Poster(c, bytes.NewReader(nil), "", "", nil, cut, conf)
 		}},
 		{"n-down", func(conf *model.Configuration) error {
-			return NDown(testContext, bytes.NewReader(nil), "", "", nil, 2, &model.Cut{}, conf)
+			return NDown(c, bytes.NewReader(nil), "", "", nil, 2, &model.Cut{}, conf)
 		}},
 		{"cut", func(conf *model.Configuration) error {
-			return Cut(testContext, bytes.NewReader(nil), "", "", nil, &model.Cut{Hor: []float64{0.5}}, conf)
+			return Cut(c, bytes.NewReader(nil), "", "", nil, &model.Cut{Hor: []float64{0.5}}, conf)
 		}},
 	}
 }
 
-func nUpConfigurationOperations(testContext context.Context) []configurationOperation {
+func nUpConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"n-up PDF", func(conf *model.Configuration) error {
 			nup, err := PDFNUpConfig(4, "", nil)
 			if err != nil {
 				return err
 			}
-			return NUp(testContext, bytes.NewReader(nil), io.Discard, nil, nil, nup, conf)
+			return NUp(c, bytes.NewReader(nil), io.Discard, nil, nil, nup, conf)
 		}},
 		{"n-up image", func(conf *model.Configuration) error {
 			nup, err := ImageNUpConfig(4, "", nil)
 			if err != nil {
 				return err
 			}
-			return NUp(testContext, nil, io.Discard, []string{"missing.png"}, nil, nup, conf)
+			return NUp(c, nil, io.Discard, []string{"missing.png"}, nil, nup, conf)
 		}},
 		{"n-up from image", func(conf *model.Configuration) error {
 			nup, err := ImageNUpConfig(4, "", nil)
 			if err != nil {
 				return err
 			}
-			_, err = NUpFromImage(testContext, conf, []string{"missing.png"}, nup)
+			_, err = NUpFromImage(c, conf, []string{"missing.png"}, nup)
 			return err
 		}},
 	}
 }
 
-func gridConfigurationOperations(testContext context.Context) []configurationOperation {
+func gridConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"grid PDF", func(conf *model.Configuration) error {
 			nup, err := PDFGridConfig(2, 2, "", nil)
 			if err != nil {
 				return err
 			}
-			return Grid(testContext, bytes.NewReader(nil), io.Discard, nil, nil, nup, conf)
+			return Grid(c, bytes.NewReader(nil), io.Discard, nil, nil, nup, conf)
 		}},
 		{"grid image", func(conf *model.Configuration) error {
 			nup, err := ImageGridConfig(2, 2, "", nil)
 			if err != nil {
 				return err
 			}
-			return Grid(testContext, nil, io.Discard, []string{"missing.png"}, nil, nup, conf)
+			return Grid(c, nil, io.Discard, []string{"missing.png"}, nil, nup, conf)
 		}},
 		{"grid from image", func(conf *model.Configuration) error {
 			nup, err := ImageGridConfig(2, 2, "", nil)
 			if err != nil {
 				return err
 			}
-			_, err = GridFromImage(testContext, conf, []string{"missing.png"}, nup)
+			_, err = GridFromImage(c, conf, []string{"missing.png"}, nup)
 			return err
 		}},
 	}
 }
 
-func bookletConfigurationOperations(testContext context.Context) []configurationOperation {
+func bookletConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"booklet PDF", func(conf *model.Configuration) error {
 			nup, err := PDFBookletConfig(2, "", nil)
 			if err != nil {
 				return err
 			}
-			return Booklet(testContext, bytes.NewReader(nil), io.Discard, nil, nil, nup, conf)
+			return Booklet(c, bytes.NewReader(nil), io.Discard, nil, nil, nup, conf)
 		}},
 		{"booklet image", func(conf *model.Configuration) error {
 			nup, err := ImageBookletConfig(2, "", nil)
 			if err != nil {
 				return err
 			}
-			return Booklet(testContext, nil, io.Discard, []string{"missing.png"}, nil, nup, conf)
+			return Booklet(c, nil, io.Discard, []string{"missing.png"}, nil, nup, conf)
 		}},
 		{"booklet from images", func(conf *model.Configuration) error {
 			nup, err := ImageBookletConfig(2, "", nil)
 			if err != nil {
 				return err
 			}
-			_, err = BookletFromImages(testContext, conf, []string{"missing.png"}, nup)
+			_, err = BookletFromImages(c, conf, []string{"missing.png"}, nup)
 			return err
 		}},
 	}
 }
 
-func watermarkConfigurationOperations(testContext context.Context) []configurationOperation {
+func watermarkConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"add watermark map", func(conf *model.Configuration) error {
 			wm := &model.Watermark{}
-			return AddWatermarksMap(testContext, bytes.NewReader(nil), io.Discard, map[int]*model.Watermark{1: wm}, conf)
+			return AddWatermarksMap(c, bytes.NewReader(nil), io.Discard, map[int]*model.Watermark{1: wm}, conf)
 		}},
 		{"add watermark slice map", func(conf *model.Configuration) error {
 			wm := &model.Watermark{}
 			return AddWatermarksSliceMap(
-				testContext,
+				c,
 				bytes.NewReader(nil),
 				io.Discard,
 				map[int][]*model.Watermark{1: {wm}},
@@ -593,79 +593,79 @@ func watermarkConfigurationOperations(testContext context.Context) []configurati
 			)
 		}},
 		{"remove watermarks", func(conf *model.Configuration) error {
-			return RemoveWatermarks(testContext, bytes.NewReader(nil), io.Discard, nil, conf)
+			return RemoveWatermarks(c, bytes.NewReader(nil), io.Discard, nil, conf)
 		}},
 	}
 }
 
-func annotationConfigurationOperations(testContext context.Context) []configurationOperation {
+func annotationConfigurationOperations(c context.Context) []configurationOperation {
 	ann := testAnnotationRenderer()
 	annMap := map[int][]model.AnnotationRenderer{1: {ann}}
 
 	return []configurationOperation{
 		{"list annotations", func(conf *model.Configuration) error {
-			_, err := Annotations(testContext, bytes.NewReader(nil), nil, conf)
+			_, err := Annotations(c, bytes.NewReader(nil), nil, conf)
 			return err
 		}},
 		{"add annotations", func(conf *model.Configuration) error {
-			return AddAnnotations(testContext, bytes.NewReader(nil), io.Discard, nil, ann, conf)
+			return AddAnnotations(c, bytes.NewReader(nil), io.Discard, nil, ann, conf)
 		}},
 		{"add annotations increment", func(conf *model.Configuration) error {
 			rws := nopReadWriteSeeker{bytes.NewReader(nil)}
-			return AddAnnotationsAsIncrement(testContext, rws, nil, ann, conf)
+			return AddAnnotationsAsIncrement(c, rws, nil, ann, conf)
 		}},
 		{"add annotation map", func(conf *model.Configuration) error {
-			return AddAnnotationsMap(testContext, bytes.NewReader(nil), io.Discard, annMap, conf)
+			return AddAnnotationsMap(c, bytes.NewReader(nil), io.Discard, annMap, conf)
 		}},
 		{"add annotation map increment", func(conf *model.Configuration) error {
 			rws := nopReadWriteSeeker{bytes.NewReader(nil)}
-			return AddAnnotationsMapAsIncrement(testContext, rws, annMap, conf)
+			return AddAnnotationsMapAsIncrement(c, rws, annMap, conf)
 		}},
 		{"remove annotations", func(conf *model.Configuration) error {
-			return RemoveAnnotations(testContext, bytes.NewReader(nil), io.Discard, nil, nil, nil, conf)
+			return RemoveAnnotations(c, bytes.NewReader(nil), io.Discard, nil, nil, nil, conf)
 		}},
 		{"remove annotations increment", func(conf *model.Configuration) error {
 			rws := nopReadWriteSeeker{bytes.NewReader(nil)}
-			return RemoveAnnotationsAsIncrement(testContext, rws, nil, nil, nil, conf)
+			return RemoveAnnotationsAsIncrement(c, rws, nil, nil, nil, conf)
 		}},
 	}
 }
 
-func basicFormConfigurationOperations(testContext context.Context) []configurationOperation {
+func basicFormConfigurationOperations(c context.Context) []configurationOperation {
 	fieldNames := []string{"field"}
 
 	return []configurationOperation{
 		{"form fields", func(conf *model.Configuration) error {
-			_, err := FormFields(testContext, bytes.NewReader(nil), conf)
+			_, err := FormFields(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"list form fields", func(conf *model.Configuration) error {
-			_, err := ListFormFields(testContext, bytes.NewReader(nil), conf)
+			_, err := ListFormFields(c, bytes.NewReader(nil), conf)
 			return err
 		}},
 		{"remove form fields", func(conf *model.Configuration) error {
-			return RemoveFormFields(testContext, bytes.NewReader(nil), io.Discard, fieldNames, conf)
+			return RemoveFormFields(c, bytes.NewReader(nil), io.Discard, fieldNames, conf)
 		}},
 		{"lock form fields", func(conf *model.Configuration) error {
-			return LockFormFields(testContext, bytes.NewReader(nil), io.Discard, fieldNames, conf)
+			return LockFormFields(c, bytes.NewReader(nil), io.Discard, fieldNames, conf)
 		}},
 		{"unlock form fields", func(conf *model.Configuration) error {
-			return UnlockFormFields(testContext, bytes.NewReader(nil), io.Discard, fieldNames, conf)
+			return UnlockFormFields(c, bytes.NewReader(nil), io.Discard, fieldNames, conf)
 		}},
 		{"reset form fields", func(conf *model.Configuration) error {
-			return ResetFormFields(testContext, bytes.NewReader(nil), io.Discard, fieldNames, conf)
+			return ResetFormFields(c, bytes.NewReader(nil), io.Discard, fieldNames, conf)
 		}},
 	}
 }
 
-func exportFormConfigurationOperations(testContext context.Context) []configurationOperation {
+func exportFormConfigurationOperations(c context.Context) []configurationOperation {
 	return []configurationOperation{
 		{"export form", func(conf *model.Configuration) error {
-			_, err := ExportForm(testContext, bytes.NewReader(nil), "in.pdf", conf)
+			_, err := ExportForm(c, bytes.NewReader(nil), "in.pdf", conf)
 			return err
 		}},
 		{"export form JSON", func(conf *model.Configuration) error {
-			return ExportFormJSON(testContext, bytes.NewReader(nil), io.Discard, "in.pdf", conf)
+			return ExportFormJSON(c, bytes.NewReader(nil), io.Discard, "in.pdf", conf)
 		}},
 	}
 }
@@ -1097,19 +1097,19 @@ func nilConfigurationOperations(t *testing.T) []configurationOperation {
 	return operations
 }
 
-func requiredConfigurationOperations(testContext context.Context) []configurationOperation {
+func requiredConfigurationOperations(c context.Context) []configurationOperation {
 	operations := []configurationOperation{
 		{"user password", func(conf *model.Configuration) error {
-			return ChangeUserPassword(testContext, bytes.NewReader(nil), io.Discard, "old", "new", conf)
+			return ChangeUserPassword(c, bytes.NewReader(nil), io.Discard, "old", "new", conf)
 		}},
 		{"owner password", func(conf *model.Configuration) error {
-			return ChangeOwnerPassword(testContext, bytes.NewReader(nil), io.Discard, "old", "new", conf)
+			return ChangeOwnerPassword(c, bytes.NewReader(nil), io.Discard, "old", "new", conf)
 		}},
 		{"set permissions", func(conf *model.Configuration) error {
-			return SetPermissions(testContext, bytes.NewReader(nil), io.Discard, conf)
+			return SetPermissions(c, bytes.NewReader(nil), io.Discard, conf)
 		}},
 	}
-	return append(operations, securitySignatureConfigurationOperations(testContext)[:2]...)
+	return append(operations, securitySignatureConfigurationOperations(c)[:2]...)
 }
 
 func testDefaultConfigurationOperations(t *testing.T, operations []configurationOperation) {

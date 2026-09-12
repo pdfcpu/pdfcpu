@@ -2585,9 +2585,9 @@ func streamDictForObject(c context.Context, ctx *model.Context, d types.Dict, ob
 	return sd, nil
 }
 
-func dict(ctx *model.Context, d1 types.Dict, objNr, genNr, endInd, streamInd int) (d2 types.Dict, err error) {
+func dict(c context.Context, ctx *model.Context, d1 types.Dict, objNr, genNr, endInd, streamInd int) (d2 types.Dict, err error) {
 	if ctx.EncKey != nil {
-		if _, err := decryptDeepObject(d1, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
+		if _, err := decryptDeepObject(c, d1, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
 			return nil, err
 		}
 	}
@@ -2690,7 +2690,7 @@ func resolveObject(c context.Context, ctx *model.Context, obj types.Object, offs
 	switch o := obj.(type) {
 
 	case types.Dict:
-		d, err := dict(ctx, o, objNr, genNr, endInd, streamInd)
+		d, err := dict(c, ctx, o, objNr, genNr, endInd, streamInd)
 		if err != nil || d != nil {
 			// Dict
 			return d, err
@@ -2700,7 +2700,7 @@ func resolveObject(c context.Context, ctx *model.Context, obj types.Object, offs
 
 	case types.Array:
 		if ctx.EncKey != nil {
-			if _, err := decryptDeepObject(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
+			if _, err := decryptDeepObject(c, o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
 				return nil, err
 			}
 		}

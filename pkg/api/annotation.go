@@ -111,7 +111,7 @@ func AddAnnotations(c context.Context, rs io.ReadSeeker, w io.Writer, selectedPa
 		return fmt.Errorf("add annotations: parse page selection: %w", err)
 	}
 
-	ok, err := pdfcpu.AddAnnotations(ctx, pages, ann, false)
+	ok, err := pdfcpu.AddAnnotations(c, ctx, pages, ann, false)
 	if err != nil {
 		return fmt.Errorf("add annotations: add: %w", err)
 	}
@@ -156,7 +156,7 @@ func AddAnnotationsAsIncrement(c context.Context, rws io.ReadWriteSeeker, select
 		return fmt.Errorf("add annotations: parse page selection: %w", err)
 	}
 
-	ok, err := pdfcpu.AddAnnotations(ctx, pages, ar, true)
+	ok, err := pdfcpu.AddAnnotations(c, ctx, pages, ar, true)
 	if err != nil {
 		return fmt.Errorf("add annotations: add: %w", err)
 	}
@@ -253,7 +253,7 @@ func AddAnnotationsMap(c context.Context, rs io.ReadSeeker, w io.Writer, m map[i
 		return fmt.Errorf("add annotations: %w", err)
 	}
 
-	ok, err := pdfcpu.AddAnnotationsMap(ctx, m, false)
+	ok, err := pdfcpu.AddAnnotationsMap(c, ctx, m, false)
 	if err != nil {
 		return fmt.Errorf("add annotations: add: %w", err)
 	}
@@ -293,7 +293,7 @@ func AddAnnotationsMapAsIncrement(c context.Context, rws io.ReadWriteSeeker, m m
 		return errors.New("incremental writing not supported for PDF version < V1.4")
 	}
 
-	ok, err := pdfcpu.AddAnnotationsMap(ctx, m, true)
+	ok, err := pdfcpu.AddAnnotationsMap(c, ctx, m, true)
 	if err != nil {
 		return fmt.Errorf("add annotations: add: %w", err)
 	}
