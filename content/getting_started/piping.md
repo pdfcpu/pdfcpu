@@ -32,6 +32,17 @@ For commands with non-PDF arguments, `-` support applies to PDF input and output
 
 Avoid adding a separate `optimize` step after commands that already write an optimized PDF. For example, `merge`, `stamp`, `watermark`, `trim` and `rotate` produce processed PDF output directly. Use `optimize` as its own pipeline step when optimization is the operation you want to perform.
 
+## Password files
+
+Mounted password files keep secret values out of command arguments while leaving stdin available for PDF input:
+
+```sh
+pdfcpu decrypt --upw-file /run/secrets/user - - < encrypted.pdf > plain.pdf
+```
+
+Password-file paths cannot be `-`. See [Password files](/getting_started/common_flags/#password-files) for newline handling,
+empty passwords and password-change syntax. Existing literal password arguments remain supported.
+
 ## Temporary storage and output replacement
 
 PDF input from `stdin` is stored in a temporary file. Merged form multi-fill output to `stdout` also uses temporary

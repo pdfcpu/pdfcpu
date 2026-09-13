@@ -26,13 +26,14 @@ Example:
     package main
 
     import (
+        "context"
         "log"
 
         "github.com/pdfcpu/pdfcpu/pkg/api"
     )
 
     func main() {
-        if err := api.ValidateFile("input.pdf", nil); err != nil {
+        if err := api.ValidateFile(context.Background(), "input.pdf", nil, nil); err != nil {
             log.Fatal(err)
         }
     }

@@ -7,7 +7,7 @@ title: "Configuration Reset Required in v0.16"
 
 This guide applies when upgrading an existing file-backed pdfcpu configuration from v0.15 or earlier.
 
-Starting with v0.16, configuration compatibility is determined by `schemaVersion` instead of the pdfcpu release version.
+Configuration compatibility is determined by `schemaVersion` instead of the pdfcpu release version.
 Future pdfcpu releases therefore require a reset only when the configuration schema changes.
 
 New installations and stateless use with `--conf disable` require no migration.
@@ -81,11 +81,35 @@ Stateless mode ignores `config.yml` and cannot initialize or reset configuration
 Applications loading a file-backed configuration receive a typed compatibility error when the configuration requires
 attention. Loading never modifies or resets the file automatically.
 
-* Use `LoadConfigurationWithOptions`
+* Use `api.LoadConfiguration(api.ConfigurationOptions{})` and handle the returned configuration and error
 * handle `ErrConfigurationResetRequired` and schema compatibility errors
 * let the application or its operator decide when to call `ResetConfigurationWithOptions`.
 
 Applications using stateless configuration require no migration.
+
+The no-argument `api.LoadConfiguration()` wrapper has been removed. Existing callers must pass configuration options
+and handle the returned error.
+
+## Progress options in v0.16
+
+`Validate`, `ValidateFile`, `ValidateFiles`, `Optimize`, `OptimizeFile` and `ReadValidateAndOptimize` accept a final
+`*api.ProgressOptions` parameter. Pass `nil` when progress reporting is unnecessary:
+
+```go
+err := api.ValidateFile(ctx, "input.pdf", conf, nil)
+```
+
+To observe progress, pass a pointer:
+
+```go
+options := &api.ProgressOptions{
+    Observer: func(event api.ProgressEvent) error {
+        fmt.Println(event.Stage)
+        return nil
+    },
+}
+err := api.OptimizeFile(ctx, "input.pdf", "output.pdf", conf, options)
+```
 
 See [Configuration Modes](/config/config_modes) for access behavior,
 [Configuration](/getting_started/config_dir) for root selection, or [config reset](/config/config_reset) for reset

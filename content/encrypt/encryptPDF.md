@@ -46,6 +46,10 @@ pdfcpu encrypt inFile [ outFile ] [flags]
 
 <br>
 
+Encryption requires either `--opw` or `--opw-file`, with a non-empty owner password.
+[Password files](/getting_started/common_flags/#password-files) are available as alternatives to
+literal password strings.
+
 ### [Common Flags](/getting_started/common_flags)
 
 <br>

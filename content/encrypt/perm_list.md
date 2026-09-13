@@ -16,6 +16,10 @@ pdfcpu permissions list inFile... [flags]
 
 <br>
 
+Use `--upw-file` or `--opw-file` to supply the password used to inspect the encrypted PDF.
+[Password files](/getting_started/common_flags/#password-files) are available as alternatives to
+literal password strings.
+
 ### [Common Flags](/getting_started/common_flags)
 
 <br>

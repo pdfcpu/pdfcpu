@@ -32,6 +32,10 @@ pdfcpu permissions set [--perm n(one)|p(rint)|a(ll)|max4Hex|max12Bits] [--upw us
 
 <br>
 
+Use `--opw-file` to supply the owner password, and `--upw-file` when a user password is also needed.
+[Password files](/getting_started/common_flags/#password-files) are available as alternatives to
+literal password strings.
+
 ### [Common Flags](/getting_started/common_flags)
 
 <br>

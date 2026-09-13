@@ -156,6 +156,15 @@ pdfcpu permissions list inFile... [flags]
 pdfcpu permissions set  inFile [ outFile ] [flags]
 ```
 
+Password changes also accept file inputs:
+
+```sh
+pdfcpu changeupw inFile --upwold-file oldFile --upwnew-file newFile [ outFile ] [flags]
+pdfcpu changeopw inFile --opwold-file oldFile --opwnew-file newFile [ outFile ] [flags]
+```
+
+See [Password files](/getting_started/common_flags/#password-files) for `--upw-file`, `--opw-file` and the shared rules.
+
 ## [Trust](/core/trust)
 
 Manage certificates and digital signatures.
