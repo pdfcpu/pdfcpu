@@ -43,11 +43,13 @@ func changeopwCmd() *cobra.Command {
 		Use:   "changeopw inFile opwOld opwNew [ outFile ]",
 		Short: "Change owner password",
 		Long:  usageLongChangeOwnerPW,
-		Args:  cobra.RangeArgs(3, 4),
-		RunE:  wrapContextHandler(handleChangeOwnerPasswordCommand),
+		Args:  passwordChangeCommandArgs,
+		RunE:  wrapPasswordChangeHandler(handleChangeOwnerPasswordCommand),
 	}
 
 	cmd.Flags().StringVar(&upw, "upw", "", "user password")
+	addPasswordFileFlag(cmd, "upw", false)
+	addPasswordChangeFlags(cmd)
 
 	return cmd
 }
@@ -57,11 +59,13 @@ func changeupwCmd() *cobra.Command {
 		Use:   "changeupw inFile upwOld upwNew [ outFile ]",
 		Short: "Change user password",
 		Long:  usageLongChangeUserPW,
-		Args:  cobra.RangeArgs(3, 4),
-		RunE:  wrapContextHandler(handleChangeUserPasswordCommand),
+		Args:  passwordChangeCommandArgs,
+		RunE:  wrapPasswordChangeHandler(handleChangeUserPasswordCommand),
 	}
 
 	cmd.Flags().StringVar(&opw, "opw", "", "owner password")
+	addPasswordFileFlag(cmd, "opw", false)
+	addPasswordChangeFlags(cmd)
 
 	return cmd
 }
@@ -95,7 +99,7 @@ func encryptCmd() *cobra.Command {
 		}),
 	}
 	addPasswordFlags(cmd)
-	cmd.MarkFlagRequired("opw")
+	cmd.MarkFlagsOneRequired("opw", "opw-file")
 	cmd.Flags().StringVarP(&opts.mode, "mode", "m", opts.mode, "algorithm: rc4|aes")
 	cmd.Flags().StringVarP(&opts.key, "key", "k", opts.key, "key length in bits: 40|128|256")
 	cmd.Flags().StringVar(&opts.perm, "perm", opts.perm, "user access permissions: none|print|all")
@@ -335,7 +339,7 @@ func handleEncryptCommand(c context.Context, conf *model.Configuration, args []s
 	}
 
 	if conf.OwnerPW == "" {
-		return fmt.Errorf("encrypt: owner password must not be empty (use --opw): %w", pdfcpu.ErrOwnerPasswordRequired)
+		return fmt.Errorf("encrypt: owner password must not be empty (use --opw or --opw-file): %w", pdfcpu.ErrOwnerPasswordRequired)
 	}
 
 	if err := validateEncryptFlags(opts); err != nil {

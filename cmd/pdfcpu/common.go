@@ -48,18 +48,21 @@ func wrapHandler(handler func(*model.Configuration, []string) error) func(*cobra
 	}
 }
 
-func wrapContextHandler(
-	handler func(context.Context, *model.Configuration, []string) error,
-) func(*cobra.Command, []string) error {
+func wrapContextHandler(handler func(context.Context, *model.Configuration, []string) error) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		c := cmd.Context()
 		if err := contextutil.Check(c); err != nil {
 			return err
 		}
+		passwords, err := commandPasswords(cmd)
+		if err != nil {
+			return commandError(err)
+		}
 		conf, err := getConfig()
 		if err != nil {
 			return commandError(err)
 		}
+		applyCommandPasswords(conf, passwords)
 		return commandError(handler(c, conf, args))
 	}
 }
@@ -92,11 +95,13 @@ func (e prefixStrippedError) Unwrap() error {
 func addPasswordFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&upw, "upw", "", "user password")
 	cmd.Flags().StringVar(&opw, "opw", "", "owner password")
+	addPasswordFileFlags(cmd, false)
 }
 
 func addPersistentPasswordFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(&upw, "upw", "", "user password")
 	cmd.PersistentFlags().StringVar(&opw, "opw", "", "owner password")
+	addPasswordFileFlags(cmd, true)
 }
 
 func addSelectedPagesFlag(cmd *cobra.Command) {

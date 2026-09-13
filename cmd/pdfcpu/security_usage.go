@@ -17,6 +17,18 @@ limitations under the License.
 package main
 
 const (
+	passwordFileUsage = `
+
+Password files:
+   Use --upw-file or --opw-file wherever the corresponding literal flag is available.
+   Supply each password either directly or through a file, but not both.
+   Password-file options require a filename; they cannot read from stdin.
+   One trailing line ending (LF or CRLF), commonly added by text editors, is allowed and ignored,
+   eg. both "abcde" and "abcde" followed by <Enter> supply the password "abcde".
+   Spaces and any additional line endings are part of the password.
+   An empty file supplies an empty password.
+   Encryption and owner-password replacement require a non-empty owner password.`
+
 	usageLongPerm = `Manage user access permissions.
 
       perm ... user access permissions
@@ -53,7 +65,7 @@ Pipeline examples:
 
    aws s3 cp s3://acme-legal/protected.pdf - \
       | pdfcpu permissions set --opw "$OPW" --perm print - - \
-      | aws s3 cp - s3://acme-legal/printable.pdf`
+      | aws s3 cp - s3://acme-legal/printable.pdf` + passwordFileUsage
 
 	usageLongEncrypt = `Setup password protection based on user and owner password.
 
@@ -68,7 +80,7 @@ PDF 2.0 files have to be encrypted using aes/256.
 Pipeline example:
    aws s3 cp s3://acme-hr/onboarding.pdf - \
       | pdfcpu encrypt --opw "$OPW" --upw "$UPW" - - \
-      | aws s3 cp - s3://acme-hr/secure/onboarding.pdf`
+      | aws s3 cp - s3://acme-hr/secure/onboarding.pdf` + passwordFileUsage
 
 	usageLongDecrypt = `Remove password protection and reset permissions.
 
@@ -78,31 +90,47 @@ Pipeline example:
 Pipeline example:
    aws s3 cp s3://acme-hr/secure/onboarding.pdf - \
       | pdfcpu decrypt --upw "$UPW" - - \
-      | aws s3 cp - s3://acme-hr/plain/onboarding.pdf`
+      | aws s3 cp - s3://acme-hr/plain/onboarding.pdf` + passwordFileUsage
 
 	usageLongChangeUserPW = `Change the user password also known as the open doc password.
 
-       opw ... owner password, required unless = ""
+       opw ... current owner password (--opw or --opw-file); omission tries an empty password
     inFile ... input PDF file, use - to read from stdin
     upwOld ... old user password
     upwNew ... new user password
    outFile ... output PDF file, use - to write to stdout
 
+File-based password change:
+   pdfcpu changeupw in.pdf --opw-file /run/secrets/opw \
+      --upwold-file /run/secrets/old-password --upwnew-file /run/secrets/new-password out.pdf
+
+   Supply both --upwold-file and --upwnew-file together, with inFile [outFile].
+   Omit positional old and new passwords when using these file options.
+   Both current passwords are authenticated before changing either password.
+
 Pipeline example:
    aws s3 cp s3://acme-legal/client.pdf - \
-      | pdfcpu changeupw --opw "$OPW" - "$OLD_UPW" "$NEW_UPW" - \
-      | aws s3 cp - s3://acme-legal/client-rotated-upw.pdf`
+      | pdfcpu changeupw - --opw "$OPW" "$OLD_UPW" "$NEW_UPW" - \
+      | aws s3 cp - s3://acme-legal/client-rotated-upw.pdf` + passwordFileUsage
 
 	usageLongChangeOwnerPW = `Change the owner password also known as the set permissions password.
 
-       upw ... user password, required unless = ""
+       upw ... current user password (--upw or --upw-file); omission tries an empty password
     inFile ... input PDF file, use - to read from stdin
-    opwOld ... old owner password (provide user password on initial changeopw)
+    opwOld ... current owner password
     opwNew ... new owner password
    outFile ... output PDF file, use - to write to stdout
 
+File-based password change:
+   pdfcpu changeopw in.pdf --upw-file /run/secrets/upw \
+      --opwold-file /run/secrets/old-password --opwnew-file /run/secrets/new-password out.pdf
+
+   Supply both --opwold-file and --opwnew-file together, with inFile [outFile].
+   Omit positional old and new passwords when using these file options.
+   Both current passwords are authenticated before changing either password.
+
 Pipeline example:
    aws s3 cp s3://acme-legal/client.pdf - \
-      | pdfcpu changeopw --upw "$UPW" - "$OLD_OPW" "$NEW_OPW" - \
-      | aws s3 cp - s3://acme-legal/client-rotated-opw.pdf`
+      | pdfcpu changeopw - --upw "$UPW" "$OLD_OPW" "$NEW_OPW" - \
+      | aws s3 cp - s3://acme-legal/client-rotated-opw.pdf` + passwordFileUsage
 )

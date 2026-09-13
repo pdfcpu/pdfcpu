@@ -225,3 +225,76 @@ func TestSetPermissions(t *testing.T) {
 		t.Fatalf("%s: got: %d want: %d", msg, uint16(*p), uint16(permNew))
 	}
 }
+
+// passwordFromFile reads an exact password value from a temporary secret file.
+func passwordFromFile(t *testing.T, value string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "password")
+	if err := os.WriteFile(path, []byte(value), 0600); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+// TestEncryptionFileSecrets verifies encryption and password changes using caller-loaded file secrets.
+func TestEncryptionFileSecrets(t *testing.T) {
+	for _, algorithm := range []struct {
+		name string
+		aes  bool
+		bits int
+	}{
+		{"RC4-128", false, 128}, {"AES-128", true, 128}, {"AES-256", true, 256},
+	} {
+		t.Run(algorithm.name, func(t *testing.T) {
+			testEncryptionFileSecrets(t, algorithm.aes, algorithm.bits)
+		})
+	}
+}
+
+func testEncryptionFileSecrets(t *testing.T, aes bool, bits int) {
+	t.Helper()
+	user := passwordFromFile(t, "file-user")
+	owner := passwordFromFile(t, "file-owner")
+	newUser := passwordFromFile(t, "file-new-user")
+	newOwner := passwordFromFile(t, "file-new-owner")
+	encrypted := filepath.Join(t.TempDir(), "encrypted.pdf")
+	conf := confForAlgorithm(aes, bits, user, owner)
+	if err := api.EncryptFile(t.Context(), filepath.Join(inDir, "5116.DCT_Filter.pdf"), encrypted, conf); err != nil {
+		t.Fatal(err)
+	}
+	if err := api.ValidateFile(t.Context(), encrypted, nil, nil); err == nil {
+		t.Fatal("encrypted document accepted without passwords")
+	}
+	if err := api.ChangeUserPasswordFile(t.Context(), encrypted, "", user, newUser, conf); err != nil {
+		t.Fatal(err)
+	}
+	conf = confForAlgorithm(aes, bits, newUser, owner)
+	if err := api.ChangeOwnerPasswordFile(t.Context(), encrypted, "", owner, newOwner, conf); err != nil {
+		t.Fatal(err)
+	}
+	if err := api.ValidateFile(t.Context(), encrypted, confForAlgorithm(aes, bits, user, owner), nil); err == nil {
+		t.Fatal("replaced passwords still accepted")
+	}
+	conf = confForAlgorithm(aes, bits, newUser, newOwner)
+	if err := api.ValidateFile(t.Context(), encrypted, conf, nil); err != nil {
+		t.Fatal(err)
+	}
+	plain := filepath.Join(t.TempDir(), "plain.pdf")
+	if err := api.DecryptFile(t.Context(), encrypted, plain, conf); err != nil {
+		t.Fatal(err)
+	}
+	if err := api.ValidateFile(t.Context(), plain, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	empty := passwordFromFile(t, "")
+	if err := api.ChangeUserPasswordFile(t.Context(), encrypted, "", newUser, empty, conf); err != nil {
+		t.Fatal(err)
+	}
+	if err := api.ValidateFile(t.Context(), encrypted, nil, nil); err != nil {
+		t.Fatalf("empty user-password file did not remove the open password: %v", err)
+	}
+}

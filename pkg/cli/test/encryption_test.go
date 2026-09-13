@@ -17,6 +17,7 @@ limitations under the License.
 package test
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -609,5 +610,85 @@ func TestEncryptDecrypt(t *testing.T) {
 		testEncryptDecryptFile(t, fileName, "aes", 40)
 		testEncryptDecryptFile(t, fileName, "aes", 128)
 		testEncryptDecryptFile(t, fileName, "aes", 256)
+	}
+}
+
+// passwordFromFile reads an exact password value from a temporary secret file.
+func passwordFromFile(t *testing.T, value string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "password")
+	if err := os.WriteFile(path, []byte(value), 0600); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+// TestEncryptionFileSecrets verifies encryption and password changes using caller-loaded file secrets.
+func TestEncryptionFileSecrets(t *testing.T) {
+	for _, algorithm := range []struct {
+		name string
+		aes  bool
+		bits int
+	}{
+		{"RC4-128", false, 128}, {"AES-128", true, 128}, {"AES-256", true, 256},
+	} {
+		t.Run(algorithm.name, func(t *testing.T) {
+			testEncryptionFileSecrets(t, algorithm.aes, algorithm.bits)
+		})
+	}
+}
+
+func testEncryptionFileSecrets(t *testing.T, aes bool, bits int) {
+	t.Helper()
+	user := passwordFromFile(t, "file-user")
+	owner := passwordFromFile(t, "file-owner")
+	newUser := passwordFromFile(t, "file-new-user")
+	newOwner := passwordFromFile(t, "file-new-owner")
+	encrypted := filepath.Join(t.TempDir(), "encrypted.pdf")
+	conf := confForAlgorithm(aes, bits)
+	conf.UserPW, conf.OwnerPW = user, owner
+	cmd := cli.EncryptCommand(filepath.Join(inDir, "5116.DCT_Filter.pdf"), encrypted, conf)
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateFile(t, encrypted, nil); err == nil {
+		t.Fatal("encrypted document accepted without passwords")
+	}
+	cmd = cli.ChangeUserPWCommand(encrypted, "", &user, &newUser, conf)
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	conf.UserPW = newUser
+	cmd = cli.ChangeOwnerPWCommand(encrypted, "", &owner, &newOwner, conf)
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	stale := confForAlgorithm(aes, bits)
+	stale.UserPW, stale.OwnerPW = user, owner
+	if err := validateFile(t, encrypted, stale); err == nil {
+		t.Fatal("replaced passwords still accepted")
+	}
+	conf.OwnerPW = newOwner
+	if err := validateFile(t, encrypted, conf); err != nil {
+		t.Fatal(err)
+	}
+	plain := filepath.Join(t.TempDir(), "plain.pdf")
+	if _, err := cli.Dispatch(t.Context(), cli.DecryptCommand(encrypted, plain, conf)); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateFile(t, plain, nil); err != nil {
+		t.Fatal(err)
+	}
+	empty := passwordFromFile(t, "")
+	cmd = cli.ChangeUserPWCommand(encrypted, "", &newUser, &empty, conf)
+	if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateFile(t, encrypted, nil); err != nil {
+		t.Fatalf("empty user-password file did not remove the open password: %v", err)
 	}
 }
