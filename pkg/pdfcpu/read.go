@@ -891,7 +891,7 @@ func parseXRefStream(c context.Context, ctx *model.Context, rd io.Reader, offset
 		log.Read.Printf("parseXRefStream: begin at offset %d\n", *offset)
 	}
 
-	buf, endInd, streamInd, streamOffset, err := buffer(c, rd, maxObjectBufferLen)
+	buf, endInd, streamInd, streamOffset, err := buffer(c, rd, objectBufferLimit(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -2224,6 +2224,13 @@ func lastStreamMarker(streamInd *int, endInd int, line string) {
 
 }
 
+func objectBufferLimit(ctx *model.Context) int64 {
+	if ctx.Configuration == nil || ctx.Configuration.Limits.MaxObjectBytes == 0 {
+		return model.DefaultResourceLimits().MaxObjectBytes
+	}
+	return ctx.Configuration.Limits.MaxObjectBytes
+}
+
 func growObjectBuffer(buf []byte, growSize int, rd io.Reader, maxObjectBytes int64) ([]byte, error) {
 	remaining := maxObjectBytes - int64(len(buf))
 	if remaining <= 0 {
@@ -2615,7 +2622,7 @@ func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr in
 	//                                    streamInd                        endInd
 	//                                  -1 if absent                    -1 if absent
 	var buf []byte
-	if buf, endInd, streamInd, streamOffset, err = buffer(c, rd, maxObjectBufferLen); err != nil {
+	if buf, endInd, streamInd, streamOffset, err = buffer(c, rd, objectBufferLimit(ctx)); err != nil {
 		return nil, 0, 0, 0, err
 	}
 

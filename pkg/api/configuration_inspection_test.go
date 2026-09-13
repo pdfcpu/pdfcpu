@@ -163,6 +163,7 @@ func TestConfigurationInspectionJSONContract(t *testing.T) {
 			AllowedRevocationHosts:     []string{"pki.example"},
 		},
 		Limits: ConfigurationLimitsInspection{
+			MaxObjectBytes:       67108864,
 			MaxStreamBytes:       536870912,
 			MaxDecodeBytes:       536870912,
 			MaxImagePixels:       100000000,
@@ -187,7 +188,8 @@ func TestConfigurationInspectionJSONContract(t *testing.T) {
 		`"writable":false}},"schema":{"detected":1,"minimumSupported":1,"maximumSupported":1},` +
 		`"network":{"offline":true,"httpTimeoutSeconds":5,"crlTimeoutSeconds":10,"ocspTimeoutSeconds":10,` +
 		`"preferredRevocationChecker":"CRL","allowedRevocationHosts":["pki.example"]},` +
-		`"limits":{"maxStreamBytes":536870912,"maxDecodeBytes":536870912,"maxImagePixels":100000000,` +
+		`"limits":{"maxInputBytes":0,"maxObjectBytes":67108864,` +
+		`"maxStreamBytes":536870912,"maxDecodeBytes":536870912,"maxImagePixels":100000000,` +
 		`"maxImageBytes":536870912,"maxObjectCount":10000000,"maxObjectStreamCount":1000000,` +
 		`"maxObjectStreamFirst":16777216,"maxXRefEntries":10000000,"maxRecursionDepth":100}}`
 	if got := string(bb); got != want {
@@ -244,6 +246,8 @@ func assertExplicitInspectionSettings(t *testing.T, inspection *ConfigurationIns
 		t.Fatalf("unexpected allowed revocation hosts: %v", inspection.Network.AllowedRevocationHosts)
 	}
 	wantLimits := ConfigurationLimitsInspection{
+		MaxInputBytes:        2 << 20,
+		MaxObjectBytes:       67108864,
 		MaxStreamBytes:       536870912,
 		MaxDecodeBytes:       536870912,
 		MaxImagePixels:       100000000,
@@ -264,6 +268,7 @@ func TestInspectConfigurationReportsExplicitSelectionWithoutWrites(t *testing.T)
 	configPath := initializeInspectionRoot(t, root)
 	missingEnvironmentRoot := filepath.Join(t.TempDir(), "environment")
 	t.Setenv(configurationRootEnv, missingEnvironmentRoot)
+	replaceConfigurationSetting(t, configPath, "maxInputBytes: 0", "maxInputBytes: 2 MB")
 	replaceConfigurationSetting(t, configPath, "offline: false", "offline: true")
 	replaceConfigurationSetting(t, configPath, "timeout: 5", "timeout: 7")
 	replaceConfigurationSetting(t, configPath, "allowedRevocationHosts: []", "allowedRevocationHosts: [pki.example]")

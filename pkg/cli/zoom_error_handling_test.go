@@ -125,7 +125,7 @@ func TestZoomStreamingReadFailurePreservesExistingOutput(t *testing.T) {
 func TestZoomStreamingWriteFailurePreservesExistingOutput(t *testing.T) {
 	pageStreamingStdin(t)
 	outFile, want := zoomExistingOutput(t)
-	rs, w, finalize, err := streamInOutForOperation(t.Context(), "-", outFile, "zoom")
+	rs, w, finalize, err := streamInOutForOperation(t.Context(), nil, "-", outFile, "zoom")
 	if err != nil {
 		t.Fatal(err)
 	}

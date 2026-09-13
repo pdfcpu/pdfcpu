@@ -804,7 +804,7 @@ func TestNUpStreamFailurePreservesExistingOutput(t *testing.T) {
 
 func TestNUpOutputCloseFailurePreservesPrimaryError(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	_, w, finalize, err := streamInOutForOperation(t.Context(), "", outFile, "n-up")
+	_, w, finalize, err := streamInOutForOperation(t.Context(), nil, "", outFile, "n-up")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -828,7 +828,7 @@ func TestNUpOutputCloseFailurePreservesPrimaryError(t *testing.T) {
 
 func TestNUpPartialOutputCleanup(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	_, w, finalize, err := streamInOutForOperation(t.Context(), "", outFile, "n-up")
+	_, w, finalize, err := streamInOutForOperation(t.Context(), nil, "", outFile, "n-up")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1073,7 +1073,7 @@ func TestBookletStdoutWriterFailure(t *testing.T) {
 
 func TestBookletOutputCloseFailurePreservesPrimaryError(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	_, w, finalize, err := streamInOutForOperation(t.Context(), "", outFile, "booklet")
+	_, w, finalize, err := streamInOutForOperation(t.Context(), nil, "", outFile, "booklet")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1097,7 +1097,7 @@ func TestBookletOutputCloseFailurePreservesPrimaryError(t *testing.T) {
 
 func TestBookletPartialOutputCleanup(t *testing.T) {
 	outFile := filepath.Join(t.TempDir(), "out.pdf")
-	_, w, finalize, err := streamInOutForOperation(t.Context(), "", outFile, "booklet")
+	_, w, finalize, err := streamInOutForOperation(t.Context(), nil, "", outFile, "booklet")
 	if err != nil {
 		t.Fatal(err)
 	}

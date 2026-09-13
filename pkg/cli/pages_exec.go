@@ -68,7 +68,7 @@ func nUp(c context.Context, cmd *Command) ([]string, error) {
 		inFile = cmd.InFiles[0]
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, *cmd.OutFile, "n-up")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, *cmd.OutFile, "n-up")
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func grid(c context.Context, cmd *Command) ([]string, error) {
 	if !cmd.NUp.ImgInputFile {
 		inFile = cmd.InFiles[0]
 	}
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, *cmd.OutFile, "grid")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, *cmd.OutFile, "grid")
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func booklet(c context.Context, cmd *Command) ([]string, error) {
 		inFile = cmd.InFiles[0]
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, *cmd.OutFile, "booklet")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, *cmd.OutFile, "booklet")
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func resize(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.ResizeFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Resize, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "resize")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "resize")
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func poster(c context.Context, cmd *Command) ([]string, error) {
 		if outFile == "" {
 			outFile = "stdin"
 		}
-		return withStdinReadSeeker(c, "poster", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "poster", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.Poster(c, rs, *cmd.OutDir, outFile, cmd.PageSelection, cmd.Cut, cmd.Conf)
 		})
 	}
@@ -203,7 +203,7 @@ func nDown(c context.Context, cmd *Command) ([]string, error) {
 		if outFile == "" {
 			outFile = "stdin"
 		}
-		return withStdinReadSeeker(c, "ndown", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "ndown", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.NDown(c, rs, *cmd.OutDir, outFile, cmd.PageSelection, cmd.IntVal, cmd.Cut, cmd.Conf)
 		})
 	}
@@ -226,7 +226,7 @@ func cut(c context.Context, cmd *Command) ([]string, error) {
 		if outFile == "" {
 			outFile = "stdin"
 		}
-		return withStdinReadSeeker(c, "cut", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "cut", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.Cut(c, rs, *cmd.OutDir, outFile, cmd.PageSelection, cmd.Cut, cmd.Conf)
 		})
 	}
@@ -257,7 +257,7 @@ func zoom(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.ZoomFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Zoom, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "zoom")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "zoom")
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +276,7 @@ func rotate(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.RotateFile(c, *cmd.InFile, *cmd.OutFile, cmd.IntVal, cmd.PageSelection, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "rotate")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "rotate")
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +301,7 @@ func insertPages(c context.Context, cmd *Command) ([]string, error) {
 		)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "insert pages")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "insert pages")
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +320,7 @@ func removePages(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.RemovePagesFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "remove pages")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "remove pages")
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +343,7 @@ func crop(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.CropFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Box, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "crop")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "crop")
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +379,7 @@ func listBoxes(c context.Context, cmd *Command) ([]string, error) {
 	}
 	reportCommandProgress(cmd, "listing %s for %s\n", pageBoundariesForPresentation(cmd.PageBoundaries), inFile)
 	if inFile == "-" {
-		return withStdinReadSeeker(c, "list boxes", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "list boxes", func(rs io.ReadSeeker) ([]string, error) {
 			return api.ListBoxes(c, rs, cmd.PageSelection, cmd.PageBoundaries, cmd.Conf)
 		})
 	}
@@ -405,7 +405,7 @@ func addBoxes(c context.Context, cmd *Command) ([]string, error) {
 		)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "add boxes")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "add boxes")
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +430,7 @@ func removeBoxes(c context.Context, cmd *Command) ([]string, error) {
 		)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "remove boxes")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "remove boxes")
 	if err != nil {
 		return nil, err
 	}

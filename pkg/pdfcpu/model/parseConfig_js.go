@@ -425,6 +425,16 @@ func parseKeysPart2(k, v string, c *Configuration) (bool, error) {
 func parseKeysPart3(k, v string, c *Configuration) (bool, error) {
 	switch k {
 
+	case "maxInputBytes":
+		if v == "0" || v == `"0"` || v == "'0'" {
+			c.Limits.MaxInputBytes = 0
+			return true, nil
+		}
+		return true, handleLimitInt64(k, v, &c.Limits.MaxInputBytes)
+
+	case "maxObjectBytes":
+		return true, handleLimitInt64(k, v, &c.Limits.MaxObjectBytes)
+
 	case "maxStreamBytes":
 		return true, handleLimitInt64(k, v, &c.Limits.MaxStreamBytes)
 

@@ -478,7 +478,7 @@ func TestRunKeywordStreamOperationPreservesOutput(t *testing.T) {
 	}
 	wantErr := errors.New("keyword operation failed")
 
-	err := runKeywordStreamOperation(t.Context(), inFile, outFile, "add keywords", func(context.Context, io.ReadSeeker, io.Writer) error {
+	err := runKeywordStreamOperation(t.Context(), nil, inFile, outFile, "add keywords", func(context.Context, io.ReadSeeker, io.Writer) error {
 		return wantErr
 	})
 	if !errors.Is(err, wantErr) {

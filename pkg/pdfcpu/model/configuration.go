@@ -60,6 +60,8 @@ var schema1ConfigurationKeys = map[string]struct{}{
 	"maxDecodeBytes":                  {},
 	"maxImageBytes":                   {},
 	"maxImagePixels":                  {},
+	"maxInputBytes":                   {},
+	"maxObjectBytes":                  {},
 	"maxStreamBytes":                  {},
 	"needAppearances":                 {},
 	"offline":                         {},
@@ -480,6 +482,13 @@ func (c *Configuration) UserFontStore() (dir string, available bool) {
 
 // ResourceLimits controls resource usage for input-driven allocation.
 type ResourceLimits struct {
+	// MaxInputBytes limits each PDF input and stdin spool. Zero means unlimited.
+	MaxInputBytes int64
+
+	// MaxObjectBytes limits an indirect-object buffer, excluding stream payloads.
+	// Zero selects the default of 64 MiB.
+	MaxObjectBytes int64
+
 	// MaxStreamBytes limits encoded stream bytes read from a PDF.
 	MaxStreamBytes int64
 
@@ -516,6 +525,7 @@ func DefaultResourceLimits() ResourceLimits {
 	)
 
 	return ResourceLimits{
+		MaxObjectBytes:       64 * MB,
 		MaxStreamBytes:       512 * MB,
 		MaxDecodeBytes:       512 * MB,
 		MaxImagePixels:       100 * MP,

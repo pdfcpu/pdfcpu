@@ -312,7 +312,7 @@ func TestRunPropertyStreamOperationPreservesOutput(t *testing.T) {
 	}
 	wantErr := errors.New("property operation failed")
 
-	err := runPropertyStreamOperation(t.Context(), inFile, outFile, "add properties", func(context.Context, io.ReadSeeker, io.Writer) error {
+	err := runPropertyStreamOperation(t.Context(), nil, inFile, outFile, "add properties", func(context.Context, io.ReadSeeker, io.Writer) error {
 		return wantErr
 	})
 	if !errors.Is(err, wantErr) {

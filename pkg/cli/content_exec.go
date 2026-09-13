@@ -59,7 +59,7 @@ func addWatermarks(c context.Context, cmd *Command) ([]string, error) {
 		)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "add watermarks")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "add watermarks")
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func removeWatermarks(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.RemoveWatermarksFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "remove watermarks")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "remove watermarks")
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func listAnnotationsForCommand(c context.Context, cmd *Command) ([]string, error
 		return nil, err
 	}
 	if inFile == "-" {
-		return withStdinReadSeeker(c, "list annotations", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "list annotations", func(rs io.ReadSeeker) ([]string, error) {
 			_, ss, err := listAnnotations(c, rs, cmd.PageSelection, cmd.BoolVal1, cmd.Conf)
 			return ss, err
 		})
@@ -185,7 +185,7 @@ func removeAnnotations(c context.Context, cmd *Command) ([]string, error) {
 		)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "remove annotations")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "remove annotations")
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func listBookmarks(c context.Context, cmd *Command) ([]string, error) {
 		return nil, err
 	}
 	if inFile == "-" {
-		return withStdinReadSeeker(c, "list bookmarks", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "list bookmarks", func(rs io.ReadSeeker) ([]string, error) {
 			return api.ListBookmarks(c, rs, cmd.Conf)
 		})
 	}
@@ -238,7 +238,7 @@ func exportBookmarks(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.ExportBookmarksFile(c, inFile, outFileJSON, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFileJSON, "export bookmarks")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, outFileJSON, "export bookmarks")
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +276,7 @@ func importBookmarks(c context.Context, cmd *Command) ([]string, error) {
 		return nil, err
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "import bookmarks")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, outFile, "import bookmarks")
 	if err != nil {
 		_ = f.Close()
 		return nil, err
@@ -301,7 +301,7 @@ func removeBookmarks(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.RemoveBookmarksFile(c, inFile, outFile, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "remove bookmarks")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, outFile, "remove bookmarks")
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,7 @@ func listPageLayout(c context.Context, cmd *Command) ([]string, error) {
 	}
 
 	if inFile == "-" {
-		return withStdinReadSeeker(c, "list page layout", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "list page layout", func(rs io.ReadSeeker) ([]string, error) {
 			return api.ListPageLayout(c, rs, cmd.Conf)
 		})
 	}
@@ -346,7 +346,7 @@ func setPageLayout(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.SetPageLayoutFile(c, inFile, outFile, *pageLayout, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "set page layout")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, outFile, "set page layout")
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +368,7 @@ func resetPageLayout(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.ResetPageLayoutFile(c, inFile, outFile, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "reset page layout")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, outFile, "reset page layout")
 	if err != nil {
 		return nil, err
 	}
@@ -385,7 +385,7 @@ func listPageMode(c context.Context, cmd *Command) ([]string, error) {
 	}
 
 	if inFile == "-" {
-		return withStdinReadSeeker(c, "list page mode", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "list page mode", func(rs io.ReadSeeker) ([]string, error) {
 			return api.ListPageMode(c, rs, cmd.Conf)
 		})
 	}
@@ -413,7 +413,7 @@ func setPageMode(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.SetPageModeFile(c, inFile, outFile, *pageMode, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "set page mode")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, outFile, "set page mode")
 	if err != nil {
 		return nil, err
 	}
@@ -435,7 +435,7 @@ func resetPageMode(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.ResetPageModeFile(c, inFile, outFile, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "reset page mode")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, outFile, "reset page mode")
 	if err != nil {
 		return nil, err
 	}
@@ -452,7 +452,7 @@ func listViewerPreferences(c context.Context, cmd *Command) ([]string, error) {
 	}
 
 	if inFile == "-" {
-		return withStdinReadSeeker(c, "list viewer preferences", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "list viewer preferences", func(rs io.ReadSeeker) ([]string, error) {
 			if !cmd.BoolVal2 {
 				return api.ListViewerPreferences(c, rs, cmd.BoolVal1, cmd.Conf)
 			}
@@ -483,7 +483,7 @@ func setViewerPreferences(c context.Context, cmd *Command) ([]string, error) {
 		)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "set viewer preferences")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, outFile, "set viewer preferences")
 	if err != nil {
 		return nil, err
 	}
@@ -517,7 +517,7 @@ func resetViewerPreferences(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.ResetViewerPreferencesFile(c, inFile, outFile, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "reset viewer preferences")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, outFile, "reset viewer preferences")
 	if err != nil {
 		return nil, err
 	}

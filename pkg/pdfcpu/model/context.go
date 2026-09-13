@@ -53,13 +53,20 @@ type Context struct {
 
 // NewContext initializes a new Context.
 func NewContext(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
-
 	if conf == nil {
 		conf = NewDefaultConfiguration()
 	}
 
+	if err := conf.Limits.CheckInputSize(0); err != nil {
+		return nil, err
+	}
+
 	rdCtx, err := newReadContext(rs)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := conf.Limits.CheckInputSize(rdCtx.FileSize); err != nil {
 		return nil, err
 	}
 

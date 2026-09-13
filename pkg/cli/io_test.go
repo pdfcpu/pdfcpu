@@ -26,6 +26,8 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 type cancelingReader struct {
@@ -63,7 +65,7 @@ func TestReadSeekerFromStdinSpoolsToTemporaryInput(t *testing.T) {
 		_ = source.Close()
 	})
 
-	in, err := readSeekerFromStdin(t.Context(), "test operation")
+	in, err := readSeekerFromStdin(t.Context(), nil, "test operation")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +95,9 @@ func TestReadSeekerFromStdinCancellationRemovesTemporaryInput(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	r := &cancelingReader{cancel: cancel}
 
-	in, err := readSeekerFromReader(ctx, "test operation", r)
+	conf := model.NewStatelessConfiguration()
+	conf.Limits.MaxInputBytes = int64(len("partial stdin"))
+	in, err := readSeekerFromReader(ctx, conf, "test operation", r)
 	if in != nil {
 		t.Fatal("expected no temporary input")
 	}
@@ -167,7 +171,7 @@ func TestTemporaryStdinRemovedWhenOutputCreationFails(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("TMPDIR", tmpDir)
 	outFile := filepath.Join(tmpDir, "missing", "out.pdf")
-	_, _, _, err = streamInOutForOperation(t.Context(), "-", outFile, "test operation")
+	_, _, _, err = streamInOutForOperation(t.Context(), nil, "-", outFile, "test operation")
 	if err == nil {
 		t.Fatal("expected output creation failure")
 	}
@@ -192,7 +196,7 @@ func TestStreamInOutFailurePreservesExistingOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, w, finalize, err := streamInOutForOperation(t.Context(), "", outFile, "test operation")
+	_, w, finalize, err := streamInOutForOperation(t.Context(), nil, "", outFile, "test operation")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +229,7 @@ func TestStdinStorageCreationFailures(t *testing.T) {
 			if err := os.WriteFile(outFile, []byte("original"), 0600); err != nil {
 				t.Fatal(err)
 			}
-			_, _, _, err := streamInOutForOperation(t.Context(), "-", outFile, "test storage")
+			_, _, _, err := streamInOutForOperation(t.Context(), nil, "-", outFile, "test storage")
 			if !errors.Is(err, cause) || !strings.Contains(err.Error(), "create temporary input") {
 				t.Fatalf("expected contextual storage error, got %v", err)
 			}

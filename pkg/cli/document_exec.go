@@ -85,7 +85,7 @@ func validateInput(c context.Context, fn string, conf *model.Configuration, prog
 	if fn != "-" {
 		err = api.ValidateFile(c, fn, conf, &options)
 	} else {
-		_, err = withStdinReadSeeker(c, "validate", func(rs io.ReadSeeker) (struct{}, error) {
+		_, err = withStdinReadSeeker(c, conf, "validate", func(rs io.ReadSeeker) (struct{}, error) {
 			return struct{}{}, api.Validate(c, rs, conf, &options)
 		})
 	}
@@ -196,7 +196,7 @@ func optimize(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.OptimizeFile(c, *cmd.InFile, *cmd.OutFile, cmd.Conf, &options)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "optimize")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "optimize")
 	if err != nil {
 		return nil, err
 	}
@@ -213,9 +213,9 @@ func mergeStdinCount(inFiles []string) int {
 	return count
 }
 
-func mergeReader(c context.Context, fn string, source int) (io.ReadSeeker, *os.File, *temporaryInput, error) {
+func mergeReader(c context.Context, conf *model.Configuration, fn string, source int) (io.ReadSeeker, *os.File, *temporaryInput, error) {
 	if fn == "-" {
-		in, err := readSeekerFromStdin(c, fmt.Sprintf("merge source %d", source))
+		in, err := readSeekerFromStdin(c, conf, fmt.Sprintf("merge source %d", source))
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("merge source %d: read source: %w", source, err)
 		}
@@ -238,7 +238,7 @@ func closeMergeInputs(files []*os.File) error {
 	return errors.Join(errs...)
 }
 
-func mergeReaders(c context.Context, inFiles []string) ([]io.ReadSeeker, []*os.File, *temporaryInput, error) {
+func mergeReaders(c context.Context, conf *model.Configuration, inFiles []string) ([]io.ReadSeeker, []*os.File, *temporaryInput, error) {
 	if c == nil {
 		return nil, nil, nil, ErrMissingContext
 	}
@@ -253,7 +253,7 @@ func mergeReaders(c context.Context, inFiles []string) ([]io.ReadSeeker, []*os.F
 			}
 			return nil, nil, nil, err
 		}
-		rs, f, in, err := mergeReader(c, fn, i)
+		rs, f, in, err := mergeReader(c, conf, fn, i)
 		if err != nil {
 			err = errors.Join(err, closeMergeInputs(files))
 			if temporaryIn != nil {
@@ -273,12 +273,12 @@ func mergeReaders(c context.Context, inFiles []string) ([]io.ReadSeeker, []*os.F
 }
 
 func mergeCreateRaw(c context.Context, cmd *Command) ([]string, error) {
-	readers, files, temporaryIn, err := mergeReaders(c, cmd.InFiles)
+	readers, files, temporaryIn, err := mergeReaders(c, cmd.Conf, cmd.InFiles)
 	if err != nil {
 		return nil, err
 	}
 
-	_, w, finalize, err := streamInOutForOperation(c, "", *cmd.OutFile, "merge")
+	_, w, finalize, err := streamInOutForOperation(c, cmd.Conf, "", *cmd.OutFile, "merge")
 	if err != nil {
 		err = errors.Join(err, closeMergeInputs(files))
 		if temporaryIn != nil {
@@ -410,7 +410,7 @@ func split(c context.Context, cmd *Command) ([]string, error) {
 	}
 	if *cmd.InFile == "-" {
 		reportSplitProgress(cmd, "stdin.pdf")
-		return withStdinReadSeeker(c, "split", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "split", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.Split(c, rs, *cmd.OutDir, "stdin.pdf", cmd.IntVal, cmd.Conf)
 		})
 	}
@@ -433,7 +433,7 @@ func splitByPageNr(c context.Context, cmd *Command) ([]string, error) {
 	}
 	if *cmd.InFile == "-" {
 		reportSplitProgress(cmd, "stdin.pdf")
-		return withStdinReadSeeker(c, "split by page number", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "split by page number", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.SplitByPageNr(c, rs, *cmd.OutDir, "stdin.pdf", cmd.IntVals, cmd.Conf)
 		})
 	}
@@ -457,7 +457,7 @@ func trim(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.TrimFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "trim")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "trim")
 	if err != nil {
 		return nil, fmt.Errorf("trim: prepare input/output: %w", err)
 	}
@@ -480,7 +480,7 @@ func collect(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.CollectFile(c, *cmd.InFile, *cmd.OutFile, cmd.PageSelection, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "collect")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "collect")
 	if err != nil {
 		return nil, err
 	}
@@ -710,7 +710,7 @@ func listInfoInput(c context.Context, fn string, selectedPages []string, fonts, 
 			ss   []string
 			info *pdfcpu.PDFInfo
 		}
-		r, err := withStdinReadSeeker(c, "list info", func(rs io.ReadSeeker) (result, error) {
+		r, err := withStdinReadSeeker(c, conf, "list info", func(rs io.ReadSeeker) (result, error) {
 			ss, info, err := listInfoReadSeeker(c, rs, fn, selectedPages, fonts, json, conf)
 			return result{ss: ss, info: info}, err
 		})
@@ -881,7 +881,7 @@ func create(c context.Context, cmd *Command) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "create")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "create")
 	if err != nil {
 		_ = rd.Close()
 		return nil, err

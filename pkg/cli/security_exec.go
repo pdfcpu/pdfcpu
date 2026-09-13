@@ -79,7 +79,7 @@ func encrypt(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.EncryptFile(c, *cmd.InFile, *cmd.OutFile, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "encrypt")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "encrypt")
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func decrypt(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.DecryptFile(c, *cmd.InFile, *cmd.OutFile, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "decrypt")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "decrypt")
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func changeUserPassword(c context.Context, cmd *Command) ([]string, error) {
 	}
 
 	rs, w, finalize, err := streamInOutForOperation(
-		c, *cmd.InFile, *cmd.OutFile, "change user password",
+		c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "change user password",
 	)
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func changeOwnerPassword(c context.Context, cmd *Command) ([]string, error) {
 	}
 
 	rs, w, finalize, err := streamInOutForOperation(
-		c, *cmd.InFile, *cmd.OutFile, "change owner password",
+		c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "change owner password",
 	)
 	if err != nil {
 		return nil, err
@@ -236,7 +236,7 @@ func readPermissionCommandInput(c context.Context, fileName string, conf *model.
 		ss, err := readPermissionsFile(c, fileName, conf)
 		return fileName, ss, err
 	}
-	ss, err := withStdinReadSeeker(c, "list permissions", func(rs io.ReadSeeker) ([]string, error) {
+	ss, err := withStdinReadSeeker(c, conf, "list permissions", func(rs io.ReadSeeker) ([]string, error) {
 		return listPermissionsForReader(c, rs, conf)
 	})
 	return "stdin", ss, err
@@ -308,7 +308,7 @@ func setPermissions(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.SetPermissionsFile(c, *cmd.InFile, *cmd.OutFile, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, "set permissions")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "set permissions")
 	if err != nil {
 		return nil, err
 	}

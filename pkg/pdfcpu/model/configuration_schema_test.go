@@ -225,6 +225,9 @@ func assertSchema1RuntimeOverlay(t *testing.T, conf *Configuration) {
 	if conf.PreferredCertRevocationChecker != OCSP || conf.FormFieldListMaxColWidth != 42 {
 		t.Fatalf("certificate overlay not applied: %+v", schemaValues(conf))
 	}
+	if got, want := conf.Limits.MaxObjectBytes, int64(2<<20); got != want {
+		t.Fatalf("max object bytes: got %d, want %d", got, want)
+	}
 	if got, want := conf.Limits.MaxStreamBytes, int64(64<<20); got != want {
 		t.Fatalf("max stream bytes: got %d, want %d", got, want)
 	}
@@ -256,6 +259,7 @@ timeout: 17
 allowedRevocationHosts: [ocsp.example.test, crl.example.test]
 preferredCertRevocationChecker: ocsp
 formFieldListMaxColWidth: 42
+maxObjectBytes: 2 MB
 maxStreamBytes: 64 MB
 `
 	conf, err := readConfiguration(strings.NewReader(input), "overlay.yml")
@@ -313,5 +317,49 @@ func TestSchema0KeepsUnknownKeyCompatibility(t *testing.T) {
 	}
 	if conf.SchemaVersion != ConfigurationSchemaVersionLegacy {
 		t.Fatalf("schema version: got %d, want %d", conf.SchemaVersion, ConfigurationSchemaVersionLegacy)
+	}
+}
+
+// TestSchema1ObjectBufferLimit rejects invalid limits and preserves defaults for older schema-1 files.
+func TestSchema1ObjectBufferLimit(t *testing.T) {
+	for _, value := range []string{"0", "-1", "0 MB", "9223372036854775808"} {
+		_, err := readConfiguration(strings.NewReader("schemaVersion: 1\nmaxObjectBytes: "+value+"\n"), "limits.yml")
+		if err == nil {
+			t.Fatalf("accepted invalid maxObjectBytes %q", value)
+		}
+	}
+	conf, err := readConfiguration(strings.NewReader("schemaVersion: 1\n"), "limits.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if conf.Limits.MaxObjectBytes != 64<<20 {
+		t.Fatalf("default maxObjectBytes: %d", conf.Limits.MaxObjectBytes)
+	}
+}
+
+// TestSchema1InputLimit verifies zero, quantities, defaulting and invalid input limits.
+func TestSchema1InputLimit(t *testing.T) {
+	tests := []struct {
+		value string
+		want  int64
+		valid bool
+	}{
+		{"0", 0, true}, {`"0"`, 0, true}, {"3", 3, true}, {"2 MB", 2 << 20, true},
+		{"-1", 0, false}, {"9223372036854775808", 0, false}, {"0 MB", 0, false},
+	}
+	for _, tt := range tests {
+		conf, err := readConfiguration(strings.NewReader("schemaVersion: 1\nmaxInputBytes: "+tt.value+"\n"), "limits.yml")
+		if !tt.valid {
+			if err == nil {
+				t.Fatalf("accepted %q", tt.value)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("%s: %v", tt.value, err)
+		}
+		if conf.Limits.MaxInputBytes != tt.want {
+			t.Fatalf("%s: got %d, want %d", tt.value, conf.Limits.MaxInputBytes, tt.want)
+		}
 	}
 }

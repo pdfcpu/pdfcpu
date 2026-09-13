@@ -211,7 +211,7 @@ func TestExtractPagesStdoutBrokenPipe(t *testing.T) {
 
 // TestExtractPagesStdoutCleanupPreservesErrors verifies the corresponding behavior.
 func TestExtractPagesStdoutCleanupPreservesErrors(t *testing.T) {
-	rs, _, finalize, err := streamInOutForOperation(t.Context(), extractTestPDF(t), "-", extractPagesOperation)
+	rs, _, finalize, err := streamInOutForOperation(t.Context(), nil, extractTestPDF(t), "-", extractPagesOperation)
 	if err != nil {
 		t.Fatal(err)
 	}

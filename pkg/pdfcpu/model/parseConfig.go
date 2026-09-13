@@ -31,40 +31,42 @@ import (
 )
 
 type configuration struct {
-	CreationDate                    string      `yaml:"created"`
-	Version                         string      `yaml:"version"`
-	SchemaVersion                   int         `yaml:"-"`
-	CheckFileNameExt                bool        `yaml:"checkFileNameExt"`
-	Reader15                        bool        `yaml:"reader15"`
-	DecodeAllStreams                bool        `yaml:"decodeAllStreams"`
-	ValidationMode                  string      `yaml:"validationMode"`
-	PostProcessValidate             bool        `yaml:"postProcessValidate"`
-	Eol                             string      `yaml:"eol"`
-	WriteObjectStream               bool        `yaml:"writeObjectStream"`
-	WriteXRefStream                 bool        `yaml:"writeXRefStream"`
-	EncryptUsingAES                 bool        `yaml:"encryptUsingAES"`
-	EncryptKeyLength                int         `yaml:"encryptKeyLength"`
-	Permissions                     int         `yaml:"permissions"`
-	Unit                            string      `yaml:"unit"`
-	TimestampFormat                 string      `yaml:"timestampFormat"`
-	DateFormat                      string      `yaml:"dateFormat"`
-	Optimize                        bool        `yaml:"optimize"`
-	OptimizeBeforeWriting           bool        `yaml:"optimizeBeforeWriting"`
-	OptimizeResourceDicts           bool        `yaml:"optimizeResourceDicts"`
-	OptimizeDuplicateContentStreams bool        `yaml:"optimizeDuplicateContentStreams"`
-	CreateBookmarks                 bool        `yaml:"createBookmarks"`
-	NeedAppearances                 bool        `yaml:"needAppearances"`
-	Offline                         bool        `yaml:"offline"`
-	Timeout                         int         `yaml:"timeout"`
-	TimeoutCRL                      int         `yaml:"timeoutCRL"`
-	TimeoutOCSP                     int         `yaml:"timeoutOCSP"`
-	AllowedRevocationHosts          []string    `yaml:"allowedRevocationHosts"`
-	PreferredCertRevocationChecker  string      `yaml:"preferredCertRevocationChecker"`
-	FormFieldListMaxColWidth        int         `yaml:"formFieldListMaxColWidth"`
-	MaxStreamBytes                  *int64Value `yaml:"maxStreamBytes"`
-	MaxDecodeBytes                  *int64Value `yaml:"maxDecodeBytes"`
-	MaxImagePixels                  *int64Value `yaml:"maxImagePixels"`
-	MaxImageBytes                   *int64Value `yaml:"maxImageBytes"`
+	CreationDate                    string           `yaml:"created"`
+	Version                         string           `yaml:"version"`
+	SchemaVersion                   int              `yaml:"-"`
+	CheckFileNameExt                bool             `yaml:"checkFileNameExt"`
+	Reader15                        bool             `yaml:"reader15"`
+	DecodeAllStreams                bool             `yaml:"decodeAllStreams"`
+	ValidationMode                  string           `yaml:"validationMode"`
+	PostProcessValidate             bool             `yaml:"postProcessValidate"`
+	Eol                             string           `yaml:"eol"`
+	WriteObjectStream               bool             `yaml:"writeObjectStream"`
+	WriteXRefStream                 bool             `yaml:"writeXRefStream"`
+	EncryptUsingAES                 bool             `yaml:"encryptUsingAES"`
+	EncryptKeyLength                int              `yaml:"encryptKeyLength"`
+	Permissions                     int              `yaml:"permissions"`
+	Unit                            string           `yaml:"unit"`
+	TimestampFormat                 string           `yaml:"timestampFormat"`
+	DateFormat                      string           `yaml:"dateFormat"`
+	Optimize                        bool             `yaml:"optimize"`
+	OptimizeBeforeWriting           bool             `yaml:"optimizeBeforeWriting"`
+	OptimizeResourceDicts           bool             `yaml:"optimizeResourceDicts"`
+	OptimizeDuplicateContentStreams bool             `yaml:"optimizeDuplicateContentStreams"`
+	CreateBookmarks                 bool             `yaml:"createBookmarks"`
+	NeedAppearances                 bool             `yaml:"needAppearances"`
+	Offline                         bool             `yaml:"offline"`
+	Timeout                         int              `yaml:"timeout"`
+	TimeoutCRL                      int              `yaml:"timeoutCRL"`
+	TimeoutOCSP                     int              `yaml:"timeoutOCSP"`
+	AllowedRevocationHosts          []string         `yaml:"allowedRevocationHosts"`
+	PreferredCertRevocationChecker  string           `yaml:"preferredCertRevocationChecker"`
+	FormFieldListMaxColWidth        int              `yaml:"formFieldListMaxColWidth"`
+	MaxInputBytes                   *inputLimitValue `yaml:"maxInputBytes"`
+	MaxObjectBytes                  *int64Value      `yaml:"maxObjectBytes"`
+	MaxStreamBytes                  *int64Value      `yaml:"maxStreamBytes"`
+	MaxDecodeBytes                  *int64Value      `yaml:"maxDecodeBytes"`
+	MaxImagePixels                  *int64Value      `yaml:"maxImagePixels"`
+	MaxImageBytes                   *int64Value      `yaml:"maxImageBytes"`
 }
 
 func schemaVersionValueFromYAML(document *yaml.Node) (int, error) {
@@ -131,6 +133,22 @@ func configurationKeyNamesFromYAML(document *yaml.Node) []string {
 		keys = append(keys, mapping.Content[i].Value)
 	}
 	return keys
+}
+
+type inputLimitValue int64
+
+// UnmarshalYAML unmarshals an input byte limit, including zero for unlimited input.
+func (i *inputLimitValue) UnmarshalYAML(value *yaml.Node) error {
+	if (value.Tag == "!!int" || value.Tag == "!!str") && value.Value == "0" {
+		*i = 0
+		return nil
+	}
+	var n int64Value
+	if err := n.UnmarshalYAML(value); err != nil {
+		return err
+	}
+	*i = inputLimitValue(n)
+	return nil
 }
 
 type int64Value int64
@@ -260,18 +278,7 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	conf.FormFieldListMaxColWidth = c.FormFieldListMaxColWidth
 	conf.Limits = DefaultResourceLimits()
 
-	if c.MaxStreamBytes != nil {
-		conf.Limits.MaxStreamBytes = int64(*c.MaxStreamBytes)
-	}
-	if c.MaxDecodeBytes != nil {
-		conf.Limits.MaxDecodeBytes = int64(*c.MaxDecodeBytes)
-	}
-	if c.MaxImagePixels != nil {
-		conf.Limits.MaxImagePixels = int64(*c.MaxImagePixels)
-	}
-	if c.MaxImageBytes != nil {
-		conf.Limits.MaxImageBytes = int64(*c.MaxImageBytes)
-	}
+	applyConfigurationLimits(c, &conf)
 
 	switch strings.ToLower(c.PreferredCertRevocationChecker) {
 	case "crl":
@@ -403,7 +410,13 @@ func overlaySchema1Network(c configuration, keys map[string]bool, conf *Configur
 	}
 }
 
-func overlaySchema1Limits(c configuration, conf *Configuration) {
+func applyConfigurationLimits(c configuration, conf *Configuration) {
+	if c.MaxInputBytes != nil {
+		conf.Limits.MaxInputBytes = int64(*c.MaxInputBytes)
+	}
+	if c.MaxObjectBytes != nil {
+		conf.Limits.MaxObjectBytes = int64(*c.MaxObjectBytes)
+	}
 	if c.MaxStreamBytes != nil {
 		conf.Limits.MaxStreamBytes = int64(*c.MaxStreamBytes)
 	}
@@ -428,7 +441,7 @@ func loadedSchema1Config(c configuration, keys map[string]bool, configPath strin
 	overlaySchema1Formatting(c, keys, conf)
 	overlaySchema1Optimization(c, keys, conf)
 	overlaySchema1Network(c, keys, conf)
-	overlaySchema1Limits(c, conf)
+	applyConfigurationLimits(c, conf)
 
 	return conf
 }

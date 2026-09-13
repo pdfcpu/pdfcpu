@@ -342,7 +342,7 @@ func listImagesFile(c context.Context, inFile string, selectedPages []string, co
 		return nil, err
 	}
 	if inFile == "-" {
-		return withStdinReadSeeker(c, "list images", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, conf, "list images", func(rs io.ReadSeeker) ([]string, error) {
 			output, err := api.ListImages(c, rs, selectedPages, conf)
 			if err != nil {
 				return nil, fmt.Errorf("stdin: %w", err)
@@ -494,7 +494,7 @@ func updateImagesInOut(c context.Context, cmd *Command, objNr, pageNr int, id st
 			return nil, errors.Join(err, closeImage())
 		}
 	}
-	rs, w, finalize, err := streamInOutForOperation(c, cmd.InFiles[0], *cmd.OutFile, "update images")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, cmd.InFiles[0], *cmd.OutFile, "update images")
 	if err != nil {
 		return nil, errors.Join(err, closeImage())
 	}
@@ -547,7 +547,7 @@ func listAttachments(c context.Context, rs io.ReadSeeker, conf *model.Configurat
 
 var closeListAttachmentsInput = (*os.File).Close
 
-// ListAttachmentsFile returns a list of embedded file attachments of inFile with optional description and supports cancellation.
+// ListAttachmentsFile returns embedded file attachments of inFile with optional descriptions and supports cancellation.
 func ListAttachmentsFile(c context.Context, inFile string, conf *model.Configuration) (ss []string, err error) {
 	if err := contextutil.Check(c); err != nil {
 		return nil, err
@@ -620,7 +620,7 @@ func listAttachmentsCommand(c context.Context, cmd *Command) ([]string, error) {
 		return nil, err
 	}
 	if *cmd.InFile == "-" {
-		return withStdinReadSeeker(c, "list attachments", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "list attachments", func(rs io.ReadSeeker) ([]string, error) {
 			return listAttachments(c, rs, cmd.Conf, true, true)
 		})
 	}
@@ -645,7 +645,7 @@ func addAttachments(c context.Context, cmd *Command) ([]string, error) {
 		op = "add portfolio attachments"
 	}
 	if *cmd.InFile == "-" || *cmd.OutFile == "-" {
-		rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, op)
+		rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, op)
 		if err != nil {
 			return nil, err
 		}
@@ -670,7 +670,7 @@ func removeAttachments(c context.Context, cmd *Command) ([]string, error) {
 	reportCommandOutputPath(cmd)
 	if *cmd.InFile == "-" || *cmd.OutFile == "-" {
 		rs, w, finalize, err := streamInOutForOperation(
-			c, *cmd.InFile, *cmd.OutFile, "remove attachments",
+			c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "remove attachments",
 		)
 		if err != nil {
 			return nil, err
@@ -691,7 +691,7 @@ func extractAttachments(c context.Context, cmd *Command) ([]string, error) {
 	}
 	reportExtractionProgress(cmd, "attachments")
 	if *cmd.InFile == "-" {
-		return withStdinReadSeeker(c, "extract attachments", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "extract attachments", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.ExtractAttachments(c, rs, *cmd.OutDir, cmd.InFiles, cmd.Conf)
 		})
 	}
@@ -731,7 +731,7 @@ func listKeywords(c context.Context, cmd *Command) ([]string, error) {
 		return nil, err
 	}
 	if inFile == "-" {
-		return withStdinReadSeeker(c, "list keywords", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "list keywords", func(rs io.ReadSeeker) ([]string, error) {
 			return api.Keywords(c, rs, cmd.Conf)
 		})
 	}
@@ -739,8 +739,8 @@ func listKeywords(c context.Context, cmd *Command) ([]string, error) {
 	return ListKeywordsFile(c, inFile, cmd.Conf)
 }
 
-func runKeywordStreamOperation(c context.Context, inFile, outFile, op string, fn func(context.Context, io.ReadSeeker, io.Writer) error) error {
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, op)
+func runKeywordStreamOperation(c context.Context, conf *model.Configuration, inFile, outFile, op string, fn func(context.Context, io.ReadSeeker, io.Writer) error) error {
+	rs, w, finalize, err := streamInOutForOperation(c, conf, inFile, outFile, op)
 	if err != nil {
 		return err
 	}
@@ -777,7 +777,7 @@ func addKeywords(c context.Context, cmd *Command) ([]string, error) {
 	}
 
 	err := runKeywordStreamOperation(
-		c, *cmd.InFile, *cmd.OutFile, "add keywords",
+		c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "add keywords",
 		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
 			return api.AddKeywords(c, rs, w, cmd.StringVals, cmd.Conf)
 		},
@@ -806,7 +806,7 @@ func removeKeywords(c context.Context, cmd *Command) ([]string, error) {
 	}
 
 	err := runKeywordStreamOperation(
-		c, *cmd.InFile, *cmd.OutFile, "remove keywords",
+		c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "remove keywords",
 		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
 			return api.RemoveKeywords(c, rs, w, cmd.StringVals, cmd.Conf)
 		},
@@ -872,7 +872,7 @@ func listPropertiesCommand(c context.Context, cmd *Command) ([]string, error) {
 		return nil, err
 	}
 	if inFile == "-" {
-		return withStdinReadSeeker(c, "list properties", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "list properties", func(rs io.ReadSeeker) ([]string, error) {
 			return listProperties(c, rs, cmd.Conf)
 		})
 	}
@@ -907,8 +907,8 @@ func validatePropertyNames(properties []string) error {
 	return nil
 }
 
-func runPropertyStreamOperation(c context.Context, inFile, outFile, op string, fn func(context.Context, io.ReadSeeker, io.Writer) error) error {
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, op)
+func runPropertyStreamOperation(c context.Context, conf *model.Configuration, inFile, outFile, op string, fn func(context.Context, io.ReadSeeker, io.Writer) error) error {
+	rs, w, finalize, err := streamInOutForOperation(c, conf, inFile, outFile, op)
 	if err != nil {
 		return err
 	}
@@ -946,7 +946,7 @@ func addProperties(c context.Context, cmd *Command) ([]string, error) {
 	}
 
 	err := runPropertyStreamOperation(
-		c, *cmd.InFile, *cmd.OutFile, "add properties",
+		c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "add properties",
 		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
 			return api.AddProperties(c, rs, w, cmd.StringMap, cmd.Conf)
 		},
@@ -970,7 +970,7 @@ func removeProperties(c context.Context, cmd *Command) ([]string, error) {
 	}
 
 	err := runPropertyStreamOperation(
-		c, *cmd.InFile, *cmd.OutFile, "remove properties",
+		c, cmd.Conf, *cmd.InFile, *cmd.OutFile, "remove properties",
 		func(c context.Context, rs io.ReadSeeker, w io.Writer) error {
 			return api.RemoveProperties(c, rs, w, cmd.StringVals, cmd.Conf)
 		},

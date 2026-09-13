@@ -513,6 +513,8 @@ func parseFromJSON(c context.Context, ctx *model.Context, bb []byte) (*primitive
 		CheckBoxAPs:   map[float64]*primitives.AP{},
 		RadioBtnAPs:   map[float64]*primitives.AP{},
 		OldFieldIDs:   types.StringSet{},
+		Offline:       ctx.Offline,
+		Timeout:       ctx.Timeout,
 	}
 
 	if err := json.Unmarshal(bb, pdf); err != nil {

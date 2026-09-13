@@ -198,6 +198,13 @@ func inspectionDisplayValue(value string) string {
 	return value
 }
 
+func formatInputByteLimit(value int64) string {
+	if value == 0 {
+		return "unlimited"
+	}
+	return formatByteLimit(value)
+}
+
 func formatByteLimit(value int64) string {
 	const (
 		kilobyte = int64(1 << 10)
@@ -261,6 +268,8 @@ func writeConfigurationInspection(w io.Writer, inspection *api.ConfigurationInsp
 	hosts := strings.Join(inspection.Network.AllowedRevocationHosts, ", ")
 	fmt.Fprintf(&b, "  allowed revocation hosts: %s\n", inspectionDisplayValue(hosts))
 	fmt.Fprintln(&b, "limits:")
+	fmt.Fprintf(&b, "  max input bytes: %s\n", formatInputByteLimit(inspection.Limits.MaxInputBytes))
+	fmt.Fprintf(&b, "  max object bytes: %s\n", formatByteLimit(inspection.Limits.MaxObjectBytes))
 	fmt.Fprintf(&b, "  max stream bytes: %s\n", formatByteLimit(inspection.Limits.MaxStreamBytes))
 	fmt.Fprintf(&b, "  max decode bytes: %s\n", formatByteLimit(inspection.Limits.MaxDecodeBytes))
 	fmt.Fprintf(&b, "  max image pixels: %s\n", formatPixelLimit(inspection.Limits.MaxImagePixels))

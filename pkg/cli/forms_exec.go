@@ -107,7 +107,7 @@ func listFormFieldsJSON(c context.Context, inFiles []string, conf *model.Configu
 		var fg *form.FormGroup
 		var err error
 		if fn == "-" {
-			fg, err = withStdinReadSeeker(c, "list form fields", func(rs io.ReadSeeker) (*form.FormGroup, error) {
+			fg, err = withStdinReadSeeker(c, conf, "list form fields", func(rs io.ReadSeeker) (*form.FormGroup, error) {
 				return exportFormGroup(c, rs, source, conf)
 			})
 		} else {
@@ -212,7 +212,7 @@ func listFormFieldsForCommand(c context.Context, cmd *Command) ([]string, error)
 		var output []string
 		var err error
 		if fn == "-" {
-			output, err = withStdinReadSeeker(c, "list form fields", func(rs io.ReadSeeker) ([]string, error) {
+			output, err = withStdinReadSeeker(c, cmd.Conf, "list form fields", func(rs io.ReadSeeker) ([]string, error) {
 				return listFormFields(c, rs, cmd.Conf)
 			})
 		} else {
@@ -237,18 +237,18 @@ func listFormFieldsForCommand(c context.Context, cmd *Command) ([]string, error)
 	return ss, errors.Join(c.Err(), errors.Join(errs...))
 }
 
-func formTemplateFileFromStdin(c context.Context) (string, func(error) error, error) {
+func formTemplateFileFromStdin(c context.Context, conf *model.Configuration) (string, func(error) error, error) {
 	if c == nil {
 		return "", nil, ErrMissingContext
 	}
-	in, err := readSeekerFromStdin(c, "multi-fill form")
+	in, err := readSeekerFromStdin(c, conf, "multi-fill form")
 	if err != nil {
 		return "", nil, err
 	}
 	return in.path, func(opErr error) error { return in.finalize("multi-fill form", opErr) }, nil
 }
 
-func formPDFFileCommand(c context.Context, inFile, outFile, operation string, fileFn func(context.Context) error, readerFn func(context.Context, io.ReadSeeker, io.Writer) error) ([]string, error) {
+func formPDFFileCommand(c context.Context, conf *model.Configuration, inFile, outFile, operation string, fileFn func(context.Context) error, readerFn func(context.Context, io.ReadSeeker, io.Writer) error) ([]string, error) {
 	if err := contextutil.Check(c); err != nil {
 		return nil, err
 	}
@@ -256,7 +256,7 @@ func formPDFFileCommand(c context.Context, inFile, outFile, operation string, fi
 		return nil, fileFn(c)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, operation)
+	rs, w, finalize, err := streamInOutForOperation(c, conf, inFile, outFile, operation)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +276,7 @@ func formPDFWithData(c context.Context, cmd *Command, operation string, fileFn f
 		return nil, fmt.Errorf("%s: open form data %s: %w", operation, *cmd.InFileJSON, err)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, *cmd.OutFile, operation)
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, *cmd.OutFile, operation)
 	if err != nil {
 		return nil, errors.Join(err, closeStreamFile(rd, operation+": close form data"))
 	}
@@ -295,7 +295,7 @@ func removeFormFields(c context.Context, cmd *Command) ([]string, error) {
 	}
 	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
-		c,
+		c, cmd.Conf,
 		*cmd.InFile,
 		*cmd.OutFile,
 		"remove form fields",
@@ -317,7 +317,7 @@ func lockFormFields(c context.Context, cmd *Command) ([]string, error) {
 	}
 	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
-		c,
+		c, cmd.Conf,
 		*cmd.InFile,
 		*cmd.OutFile,
 		"lock form fields",
@@ -339,7 +339,7 @@ func unlockFormFields(c context.Context, cmd *Command) ([]string, error) {
 	}
 	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
-		c,
+		c, cmd.Conf,
 		*cmd.InFile,
 		*cmd.OutFile,
 		"unlock form fields",
@@ -361,7 +361,7 @@ func resetFormFields(c context.Context, cmd *Command) ([]string, error) {
 	}
 	reportCommandOutputPath(cmd)
 	return formPDFFileCommand(
-		c,
+		c, cmd.Conf,
 		*cmd.InFile,
 		*cmd.OutFile,
 		"reset form fields",
@@ -388,7 +388,7 @@ func exportFormFields(c context.Context, cmd *Command) ([]string, error) {
 	}
 	reportOutputPath(*cmd.OutFileJSON)
 	if *cmd.InFile == "-" {
-		rs, w, finalize, err := streamInOutForOperation(c, "-", *cmd.OutFileJSON, "export form")
+		rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, "-", *cmd.OutFileJSON, "export form")
 		if err != nil {
 			return nil, err
 		}
@@ -434,7 +434,7 @@ func multiFillFormInputFile(c context.Context, cmd *Command) (string, func(error
 	if *cmd.InFile != "-" {
 		return *cmd.InFile, nil, nil
 	}
-	return formTemplateFileFromStdin(c)
+	return formTemplateFileFromStdin(c, cmd.Conf)
 }
 
 func multiFillFormOutputFile(cmd *Command) string {

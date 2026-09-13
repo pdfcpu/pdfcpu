@@ -99,7 +99,7 @@ func validateSignatures(c context.Context, cmd *Command, operation signatureVali
 	}
 
 	if inFile == "-" {
-		in, err := readSeekerFromStdin(c, "validate signatures")
+		in, err := readSeekerFromStdin(c, cmd.Conf, "validate signatures")
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +125,7 @@ func removeSignatures(c context.Context, cmd *Command) ([]string, error) {
 		return nil, api.RemoveSignaturesFile(c, inFile, outFile, cmd.Conf)
 	}
 
-	rs, w, finalize, err := streamInOutForOperation(c, inFile, outFile, "remove signatures")
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, inFile, outFile, "remove signatures")
 	if err != nil {
 		return nil, err
 	}

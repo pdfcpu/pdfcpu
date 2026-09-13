@@ -115,6 +115,8 @@ func schema1DefaultValues(conf *Configuration) map[string]any {
 		"maxDecodeBytes":                  conf.Limits.MaxDecodeBytes,
 		"maxImageBytes":                   conf.Limits.MaxImageBytes,
 		"maxImagePixels":                  conf.Limits.MaxImagePixels,
+		"maxInputBytes":                   conf.Limits.MaxInputBytes,
+		"maxObjectBytes":                  conf.Limits.MaxObjectBytes,
 		"maxStreamBytes":                  conf.Limits.MaxStreamBytes,
 		"needAppearances":                 conf.NeedAppearances,
 		"offline":                         conf.Offline,

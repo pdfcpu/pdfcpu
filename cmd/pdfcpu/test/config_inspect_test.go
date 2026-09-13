@@ -65,6 +65,7 @@ func expectedConfiguredInspection(root string) api.ConfigurationInspection {
 			AllowedRevocationHosts:     []string{},
 		},
 		Limits: api.ConfigurationLimitsInspection{
+			MaxObjectBytes:       67108864,
 			MaxStreamBytes:       536870912,
 			MaxDecodeBytes:       536870912,
 			MaxImagePixels:       100000000,
@@ -125,6 +126,8 @@ func TestConfigInspectReportsEffectiveConfigurationWithoutWrites(t *testing.T) {
 		"  OCSP timeout seconds: 10",
 		"  preferred revocation checker: CRL",
 		"  allowed revocation hosts: (none)",
+		"  max input bytes: unlimited",
+		"  max object bytes: 64 MB",
 		"  max stream bytes: 512 MB",
 		"  max decode bytes: 512 MB",
 		"  max image pixels: 100 MP",

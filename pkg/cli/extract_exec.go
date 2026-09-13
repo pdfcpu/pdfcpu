@@ -109,7 +109,7 @@ func extractSelectedPageToStdout(c context.Context, rs io.ReadSeeker, w io.Write
 }
 
 func extractPageToStdout(c context.Context, cmd *Command) error {
-	rs, w, finalize, err := streamInOutForOperation(c, *cmd.InFile, "-", extractPagesOperation)
+	rs, w, finalize, err := streamInOutForOperation(c, cmd.Conf, *cmd.InFile, "-", extractPagesOperation)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func extractImages(c context.Context, cmd *Command) ([]string, error) {
 	}
 	reportExtractionProgress(cmd, "images")
 	if *cmd.InFile == "-" {
-		return withStdinReadSeeker(c, "extract images", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "extract images", func(rs io.ReadSeeker) ([]string, error) {
 			err := api.ExtractImages(
 				c, rs, cmd.PageSelection, api.WriteImageToDisk(c, *cmd.OutDir, "stdin"), cmd.Conf,
 			)
@@ -146,7 +146,7 @@ func extractFonts(c context.Context, cmd *Command) ([]string, error) {
 	}
 	reportExtractionProgress(cmd, "fonts")
 	if *cmd.InFile == "-" {
-		return withStdinReadSeeker(c, "extract fonts", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "extract fonts", func(rs io.ReadSeeker) ([]string, error) {
 			err := api.ExtractFonts(
 				c, rs, cmd.PageSelection, api.WriteFontToDisk(c, *cmd.OutDir, "stdin"), cmd.Conf,
 			)
@@ -171,7 +171,7 @@ func extractPages(c context.Context, cmd *Command) ([]string, error) {
 	}
 
 	if *cmd.InFile == "-" {
-		return withStdinReadSeeker(c, "extract pages", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "extract pages", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.ExtractPages(
 				c, rs, cmd.PageSelection, api.WritePageToDisk(c, *cmd.OutDir, "stdin"), cmd.Conf,
 			)
@@ -190,7 +190,7 @@ func extractContent(c context.Context, cmd *Command) ([]string, error) {
 	}
 	reportExtractionProgress(cmd, "content")
 	if *cmd.InFile == "-" {
-		return withStdinReadSeeker(c, "extract content", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "extract content", func(rs io.ReadSeeker) ([]string, error) {
 			return nil, api.ExtractContent(
 				c, rs, cmd.PageSelection, api.WriteContentToDisk(c, *cmd.OutDir, "stdin"), cmd.Conf,
 			)
@@ -208,7 +208,7 @@ func extractMetadata(c context.Context, cmd *Command) ([]string, error) {
 	}
 	reportExtractionProgress(cmd, "metadata")
 	if *cmd.InFile == "-" {
-		return withStdinReadSeeker(c, "extract metadata", func(rs io.ReadSeeker) ([]string, error) {
+		return withStdinReadSeeker(c, cmd.Conf, "extract metadata", func(rs io.ReadSeeker) ([]string, error) {
 			err := api.ExtractMetadata(
 				c, rs, api.WriteMetadataToDisk(c, *cmd.OutDir, "stdin"), cmd.Conf,
 			)

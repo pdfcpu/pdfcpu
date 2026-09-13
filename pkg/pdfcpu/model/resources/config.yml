@@ -91,6 +91,12 @@ preferredCertRevocationChecker: crl
 # if > 0 affects the columns AltName, Default and Value.
 formFieldListMaxColWidth: 0
 
+# bytes per PDF input and stdin spool; zero means unlimited.
+maxInputBytes: 0
+
+# indirect-object buffer bytes, excluding stream payloads.
+maxObjectBytes: 64 MB
+
 # encoded stream bytes read from a PDF.
 maxStreamBytes: 512 MB
 

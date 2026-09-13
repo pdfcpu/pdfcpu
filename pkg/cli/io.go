@@ -28,6 +28,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/internal/fileutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 type streamInOutFinalizer struct {
@@ -88,12 +89,38 @@ func (in *temporaryInput) finalize(op string, opErr error) error {
 	return errors.Join(opErr, closeErr, removeErr)
 }
 
-func readSeekerFromStdin(c context.Context, op string) (*temporaryInput, error) {
-	return readSeekerFromReader(c, op, os.Stdin)
+func copyInput(w io.Writer, r io.Reader, limit int64) (int64, error) {
+	if limit == 0 {
+		return io.Copy(w, r)
+	}
+	n, err := io.Copy(w, io.LimitReader(r, limit))
+	if err != nil || n < limit {
+		return n, err
+	}
+	var probe [1]byte
+	read, err := io.ReadFull(r, probe[:])
+	if read > 0 {
+		return n, fmt.Errorf("maximum %d bytes: %w", limit, model.ErrInputSizeLimit)
+	}
+	if errors.Is(err, io.EOF) {
+		return n, nil
+	}
+	return n, err
 }
 
-func readSeekerFromReader(c context.Context, op string, r io.Reader) (*temporaryInput, error) {
+func readSeekerFromStdin(c context.Context, conf *model.Configuration, op string) (*temporaryInput, error) {
+	return readSeekerFromReader(c, conf, op, os.Stdin)
+}
+
+func readSeekerFromReader(c context.Context, conf *model.Configuration, op string, r io.Reader) (*temporaryInput, error) {
 	if err := contextutil.Check(c); err != nil {
+		return nil, err
+	}
+	limits := model.DefaultResourceLimits()
+	if conf != nil {
+		limits = conf.Limits
+	}
+	if err := limits.CheckInputSize(0); err != nil {
 		return nil, err
 	}
 	f, err := createTemporaryInputFile("", "pdfcpu-stdin-*.pdf")
@@ -102,7 +129,7 @@ func readSeekerFromReader(c context.Context, op string, r io.Reader) (*temporary
 	}
 	in := &temporaryInput{file: f, path: f.Name(), remove: os.Remove}
 
-	n, copyErr := io.Copy(f, contextReader{ctx: c, r: r})
+	n, copyErr := copyInput(f, contextReader{ctx: c, r: r}, limits.MaxInputBytes)
 	if copyErr != nil {
 		return nil, in.finalize(op, fmt.Errorf("%s: read stdin: %w", op, copyErr))
 	}
@@ -115,9 +142,9 @@ func readSeekerFromReader(c context.Context, op string, r io.Reader) (*temporary
 	return in, nil
 }
 
-func withStdinReadSeeker[T any](c context.Context, op string, fn func(io.ReadSeeker) (T, error)) (T, error) {
+func withStdinReadSeeker[T any](c context.Context, conf *model.Configuration, op string, fn func(io.ReadSeeker) (T, error)) (T, error) {
 	var zero T
-	in, err := readSeekerFromStdin(c, op)
+	in, err := readSeekerFromStdin(c, conf, op)
 	if err != nil {
 		return zero, err
 	}
@@ -198,7 +225,7 @@ func createStreamOutput(fileName string) (*os.File, string, string, error) {
 	return f, f.Name(), fileName, nil
 }
 
-func streamInOutForOperation(c context.Context, inFile, outFile, op string) (io.ReadSeeker, io.Writer, func(error) error, error) {
+func streamInOutForOperation(c context.Context, conf *model.Configuration, inFile, outFile, op string) (io.ReadSeeker, io.Writer, func(error) error, error) {
 	if err := contextutil.Check(c); err != nil {
 		return nil, nil, nil, err
 	}
@@ -210,7 +237,7 @@ func streamInOutForOperation(c context.Context, inFile, outFile, op string) (io.
 	finalizer := &streamInOutFinalizer{}
 	if inFile != "" {
 		if inFile == "-" {
-			in, err := readSeekerFromStdin(c, op)
+			in, err := readSeekerFromStdin(c, conf, op)
 			if err != nil {
 				return nil, nil, nil, err
 			}

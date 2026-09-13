@@ -21,6 +21,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 // TestNextStreamOffset verifies safe stream delimiter parsing.
@@ -91,5 +93,42 @@ func TestBufferHonorsCancellation(t *testing.T) {
 	_, _, _, _, err := buffer(ctx, strings.NewReader(strings.Repeat("x", 32)), 16)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("got %v, want context cancellation", err)
+	}
+}
+
+// TestObjectHonorsBufferLimit verifies configured limits at the indirect-object reader boundary.
+func TestObjectHonorsBufferLimit(t *testing.T) {
+	const input = "1 0 obj (bounded object) endobj\n"
+	for _, limit := range []int64{16, int64(len(input)), 0, -1} {
+		conf := model.NewStatelessConfiguration()
+		conf.Limits.MaxObjectBytes = limit
+		ctx, err := model.NewContext(strings.NewReader(input), conf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _, _, _, err = object(t.Context(), ctx, 0, 1, 0)
+		if limit == 16 || limit < 0 {
+			if !errors.Is(err, errObjectBufferLimit) {
+				t.Fatalf("limit %d: got %v, want object buffer limit", limit, err)
+			}
+		} else if err != nil {
+			t.Fatalf("limit %d: %v", limit, err)
+		}
+	}
+}
+
+// TestXRefStreamHonorsBufferLimit verifies xref streams cannot bypass the configured object buffer limit.
+func TestXRefStreamHonorsBufferLimit(t *testing.T) {
+	const input = "1 0 obj << /Type /XRef /Length 0 >> stream\n"
+	conf := model.NewStatelessConfiguration()
+	conf.Limits.MaxObjectBytes = 16
+	ctx, err := model.NewContext(strings.NewReader(input), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var offset int64
+	_, err = parseXRefStream(t.Context(), ctx, strings.NewReader(input), &offset, 0, 0)
+	if !errors.Is(err, errObjectBufferLimit) {
+		t.Fatalf("got %v, want object buffer limit", err)
 	}
 }

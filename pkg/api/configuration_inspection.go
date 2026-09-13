@@ -134,6 +134,12 @@ type ConfigurationNetworkInspection struct {
 
 // ConfigurationLimitsInspection contains configured input-driven resource limits.
 type ConfigurationLimitsInspection struct {
+	// MaxInputBytes limits each PDF input and stdin spool. Zero means unlimited.
+	MaxInputBytes int64 `json:"maxInputBytes"`
+
+	// MaxObjectBytes limits an indirect-object buffer, excluding stream payloads.
+	MaxObjectBytes int64 `json:"maxObjectBytes"`
+
 	// MaxStreamBytes limits encoded stream bytes read from a PDF.
 	MaxStreamBytes int64 `json:"maxStreamBytes"`
 
@@ -207,6 +213,8 @@ func inspectConfigurationPaths(root string, conf *model.Configuration) (Configur
 
 func inspectConfigurationLimits(limits model.ResourceLimits) ConfigurationLimitsInspection {
 	return ConfigurationLimitsInspection{
+		MaxInputBytes:        limits.MaxInputBytes,
+		MaxObjectBytes:       limits.MaxObjectBytes,
 		MaxStreamBytes:       limits.MaxStreamBytes,
 		MaxDecodeBytes:       limits.MaxDecodeBytes,
 		MaxImagePixels:       limits.MaxImagePixels,

@@ -182,6 +182,18 @@
       "minimum": 0,
       "default": 0
     },
+    "maxInputBytes": {
+      "oneOf": [
+        {"const": 0},
+        {"const": "0"},
+        {"$ref": "#/$defs/positiveQuantity"}
+      ],
+      "default": 0
+    },
+    "maxObjectBytes": {
+      "$ref": "#/$defs/positiveQuantity",
+      "default": 67108864
+    },
     "maxStreamBytes": {
       "$ref": "#/$defs/positiveQuantity",
       "default": 536870912
