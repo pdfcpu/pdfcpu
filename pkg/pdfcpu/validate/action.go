@@ -914,14 +914,7 @@ func validateActionDictObject(xRefTable *model.XRefTable, d types.Dict, o types.
 	return validateActionDictObjectDepth(xRefTable, d, o, context, 0, model.NewActionVisit())
 }
 
-func validateActionDictObjectDepth(
-	xRefTable *model.XRefTable,
-	d types.Dict,
-	o types.Object,
-	context string,
-	depth int,
-	visit *model.ActionVisit,
-) (err error) {
+func validateActionDictObjectDepth(xRefTable *model.XRefTable, d types.Dict, o types.Object, context string, depth int, visit *model.ActionVisit) (err error) {
 	objNr := validationObjectNumber(0, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -936,9 +929,15 @@ func validateActionDictObjectDepth(
 	}
 	defer visit.Leave(objNr)
 
+	// A deeper path needs revalidation to preserve descendant depth checks.
+	if visit.AlreadyValidated(objNr, depth) {
+		return nil
+	}
+
 	if err := validateActionDict(xRefTable, d, depth, visit); err != nil {
 		return model.WrapRecursionError(objectContext(context, o), err)
 	}
+	visit.MarkValidated(objNr, depth)
 	return nil
 }
 

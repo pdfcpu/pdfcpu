@@ -201,9 +201,10 @@ func (v *StructureTreeVisit) Leave(objNr int) {
 	delete(v.ancestors, objNr)
 }
 
-// ActionVisit tracks action-chain ancestor traversal state.
+// ActionVisit tracks active ancestors and completed subtrees within one action-chain traversal.
 type ActionVisit struct {
 	ancestors map[int]bool
+	validated map[int]int
 }
 
 // NewActionVisit returns an action-chain traversal state.
@@ -231,6 +232,28 @@ func (v *ActionVisit) Leave(objNr int) {
 		return
 	}
 	delete(v.ancestors, objNr)
+}
+
+// AlreadyValidated reports whether a completed action subtree covers the requested starting depth.
+func (v *ActionVisit) AlreadyValidated(objNr, depth int) bool {
+	if v == nil || objNr == 0 {
+		return false
+	}
+	validatedDepth, ok := v.validated[objNr]
+	return ok && depth <= validatedDepth
+}
+
+// MarkValidated records successful action subtree validation at the requested starting depth.
+func (v *ActionVisit) MarkValidated(objNr, depth int) {
+	if v == nil || objNr == 0 {
+		return
+	}
+	if v.validated == nil {
+		v.validated = map[int]int{}
+	}
+	if previous, ok := v.validated[objNr]; !ok || depth > previous {
+		v.validated[objNr] = depth
+	}
 }
 
 // BeadVisit tracks bead-chain ancestor traversal state.
