@@ -34,9 +34,8 @@ const maxEntries = 3
 // Node is an opinionated implementation of the PDF name tree.
 // pdfcpu caches all name trees found in the PDF catalog with this data structure.
 // The PDF spec does not impose any rules regarding a strategy for the creation of nodes.
-// A binary tree was chosen where each leaf node has a limited number of entries (maxEntries).
-// Once maxEntries has been reached a leaf node turns into an intermediary node with two kids,
-// which are leaf nodes each of them holding half of the sorted entries of the original leaf node.
+// New trees use bounded leaf sizes and promote splits into their parents to keep insertion balanced.
+// Existing trees retain their leaf capacities and branching structure unless insertion splits a node.
 type Node struct {
 	Kids       []*Node    // Mirror of the name tree's Kids array, an array of indirect references.
 	Names      []entry    // Mirror of the name tree's Names array.
@@ -361,6 +360,11 @@ func (n *Node) Add(c context.Context, xRefTable *XRefTable, k string, v types.Ob
 		if n.leaf() {
 			if err := n.HandleLeaf(c, xRefTable, k, v, m, nameRefDictKeys); err != nil {
 				return err
+			}
+			if len(n.Kids) > 0 {
+				if err := promoteNameTreeSplit(c, path, n); err != nil {
+					return err
+				}
 			}
 			updateNameTreeLimits(path)
 			return nil

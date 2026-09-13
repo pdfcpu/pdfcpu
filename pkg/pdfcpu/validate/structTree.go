@@ -974,7 +974,7 @@ func validateStructTreeRootDictEntryParentTree(c context.Context, xRefTable *mod
 		return model.WithValidationErrorObject(err, objNr)
 	}
 
-	_, _, err = validateNumberTree(c, xRefTable, "StructTree", d, objNr, true, useIDs)
+	_, _, err = validateNumberTree(c, xRefTable, "StructTree", d, objNr, true, useIDs, *ir)
 	return err
 }
 
@@ -1015,7 +1015,7 @@ func validateStructTreeRootDict(c context.Context, xRefTable *model.XRefTable, d
 			return model.WithValidationErrorObject(err, idTreeObjNr)
 		}
 		if len(d) > 0 {
-			_, _, _, err = validateNameTree(c, xRefTable, "IDTree", d, idTreeObjNr, true)
+			_, _, _, err = validateNameTree(c, xRefTable, "IDTree", d, idTreeObjNr, true, *ir)
 			if err != nil {
 				return fmt.Errorf("structure tree IDTree: %w", err)
 			}

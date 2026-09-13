@@ -387,7 +387,7 @@ func validatePageLabels(c context.Context, xRefTable *model.XRefTable, rootDict 
 		return model.WithValidationErrorObject(err, ir.ObjectNumber.Value())
 	}
 
-	_, _, err = validateNumberTree(c, xRefTable, "PageLabel", d, ir.ObjectNumber.Value(), true, false)
+	_, _, err = validateNumberTree(c, xRefTable, "PageLabel", d, ir.ObjectNumber.Value(), true, false, *ir)
 
 	return err
 }
@@ -436,7 +436,7 @@ func validateNames(c context.Context, xRefTable *model.XRefTable, rootDict types
 			continue
 		}
 
-		_, _, tree, err := validateNameTree(c, xRefTable, treeName, d, treeObjNr, true)
+		_, _, tree, err := validateNameTree(c, xRefTable, treeName, d, treeObjNr, true, value)
 		if err != nil {
 			return err
 		}

@@ -223,8 +223,8 @@ func validateNumberTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict,
 	return nil
 }
 
-func validateNumberTree(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root, useIDs bool) (firstKey, lastKey int, err error) {
-	return validateNumberTreeDepth(c, xRefTable, name, d, ownerObjNr, root, useIDs, 0)
+func validateNumberTree(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root, useIDs bool, rootObject ...types.Object) (firstKey, lastKey int, err error) {
+	return validateNumberTreeDepth(c, xRefTable, name, d, ownerObjNr, root, useIDs, 0, newTreeVisit(false, rootObject...))
 }
 
 func numberTreeKidContext(name string, o types.Object, i int) string {
@@ -234,7 +234,8 @@ func numberTreeKidContext(name string, o types.Object, i int) string {
 	return fmt.Sprintf("number tree %s Kids[%d]", name, i)
 }
 
-func validateNumberTreeDepth(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root, useIDs bool, depth int) (firstKey, lastKey int, err error) {
+func validateNumberTreeDepth(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root, useIDs bool, depth int, visits ...*treeVisit) (firstKey, lastKey int, err error) {
+	visit := treeTraversal(visits, false)
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
@@ -275,7 +276,7 @@ func validateNumberTreeDepth(c context.Context, xRefTable *model.XRefTable, name
 			}
 
 			var fk int
-			fk, lastKey, err = validateNumberTreeDepth(c, xRefTable, name, d1, kidObjNr, false, useIDs, depth+1)
+			fk, lastKey, err = validateNumberTreeChild(c, xRefTable, name, d1, kidObjNr, o, useIDs, depth+1, visit)
 			if err != nil {
 				return 0, 0, model.WrapRecursionError(numberTreeKidContext(name, o, i), err)
 			}
@@ -311,4 +312,13 @@ func checkValidationTree(c context.Context, xRefTable *model.XRefTable, name str
 		return err
 	}
 	return xRefTable.CheckRecursionDepth(name, depth)
+}
+
+func validateNumberTreeChild(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, o types.Object, useIDs bool, depth int, visit *treeVisit) (int, int, error) {
+	n, err := visit.enter(o)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer visit.leave(n)
+	return validateNumberTreeDepth(c, xRefTable, name, d, ownerObjNr, false, useIDs, depth, visit)
 }

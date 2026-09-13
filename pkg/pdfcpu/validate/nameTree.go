@@ -735,8 +735,8 @@ func validateNameTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict, o
 	return nil
 }
 
-func validateNameTree(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root bool) (string, string, *model.Node, error) {
-	return validateNameTreeDepth(c, xRefTable, name, d, ownerObjNr, root, 0)
+func validateNameTree(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root bool, rootObject ...types.Object) (string, string, *model.Node, error) {
+	return validateNameTreeDepth(c, xRefTable, name, d, ownerObjNr, root, 0, rootObject...)
 }
 
 func nameTreeKidContext(name string, o types.Object, i int) string {
@@ -746,7 +746,8 @@ func nameTreeKidContext(name string, o types.Object, i int) string {
 	return fmt.Sprintf("name tree %s Kids[%d]", name, i)
 }
 
-func validateNameTreeKids(c context.Context, xRefTable *model.XRefTable, name string, a types.Array, ownerObjNr int, node *model.Node, depth int, specViolations *[]error) (string, string, error) {
+func validateNameTreeKids(c context.Context, xRefTable *model.XRefTable, name string, a types.Array, ownerObjNr int, node *model.Node, depth int, specViolations *[]error, visits ...*treeVisit) (string, string, error) {
+	visit := treeTraversal(visits, true)
 	var kmin, kmax string
 
 	for i, o := range a {
@@ -765,18 +766,19 @@ func validateNameTreeKids(c context.Context, xRefTable *model.XRefTable, name st
 			return "", "", model.WithValidationErrorObject(err, kidObjNr)
 		}
 
-		kminKid, kmaxKid, kidNode, err := validateNameTreeDepthWithViolations(c,
+		kminKid, kmaxKid, kidNode, err := validateNameTreeChild(c,
 			xRefTable,
 			name,
 			d,
 			kidObjNr,
-			false,
+			o,
 			depth+1,
 			specViolations,
+			visit,
 		)
 		if err != nil {
 			err = model.WrapRecursionError(nameTreeKidContext(name, o, i), err)
-			if xRefTable.ValidationMode == model.ValidationStrict || contextutil.Check(c) != nil {
+			if xRefTable.ValidationMode == model.ValidationStrict || contextutil.Check(c) != nil || fatalTreeError(err) {
 				return "", "", err
 			}
 			if errors.Is(err, errMissingNameTreeKidsOrNames) {
@@ -795,7 +797,7 @@ func validateNameTreeKids(c context.Context, xRefTable *model.XRefTable, name st
 	return kmin, kmax, nil
 }
 
-func validateNameTreeDepth(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root bool, depth int) (string, string, *model.Node, error) {
+func validateNameTreeDepth(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root bool, depth int, rootObject ...types.Object) (string, string, *model.Node, error) {
 	var specViolations []error
 	kmin, kmax, node, err := validateNameTreeDepthWithViolations(c,
 		xRefTable,
@@ -805,6 +807,7 @@ func validateNameTreeDepth(c context.Context, xRefTable *model.XRefTable, name s
 		root,
 		depth,
 		&specViolations,
+		newTreeVisit(true, rootObject...),
 	)
 	if err == nil {
 		showDigestedSpecViolations(specViolations)
@@ -812,7 +815,8 @@ func validateNameTreeDepth(c context.Context, xRefTable *model.XRefTable, name s
 	return kmin, kmax, node, err
 }
 
-func validateNameTreeDepthWithViolations(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root bool, depth int, specViolations *[]error) (kmin, kmax string, node *model.Node, err error) {
+func validateNameTreeDepthWithViolations(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root bool, depth int, specViolations *[]error, visits ...*treeVisit) (kmin, kmax string, node *model.Node, err error) {
+	visit := treeTraversal(visits, true)
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
@@ -853,7 +857,7 @@ func validateNameTreeDepthWithViolations(c context.Context, xRefTable *model.XRe
 			return "", "", nil, nil
 		}
 
-		kmin, kmax, err = validateNameTreeKids(c, xRefTable, name, a, kidsObjNr, node, depth, specViolations)
+		kmin, kmax, err = validateNameTreeKids(c, xRefTable, name, a, kidsObjNr, node, depth, specViolations, visit)
 		if err != nil {
 			return "", "", nil, err
 		}
@@ -888,4 +892,13 @@ func validateNameTreeDepthWithViolations(c context.Context, xRefTable *model.XRe
 	//fmt.Println("validateNameTree end")
 
 	return kmin, kmax, node, nil
+}
+
+func validateNameTreeChild(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, o types.Object, depth int, specViolations *[]error, visit *treeVisit) (string, string, *model.Node, error) {
+	n, err := visit.enter(o)
+	if err != nil {
+		return "", "", nil, err
+	}
+	defer visit.leave(n)
+	return validateNameTreeDepthWithViolations(c, xRefTable, name, d, ownerObjNr, false, depth, specViolations, visit)
 }

@@ -56,6 +56,18 @@ var ErrActionCycle = errors.New("circular action chain")
 // ErrBeadCycle signals a circular bead chain that does not terminate correctly.
 var ErrBeadCycle = errors.New("circular bead chain")
 
+// ErrNameTreeCycle signals an indirect child cycle in a name tree.
+var ErrNameTreeCycle = errors.New("circular name tree")
+
+// ErrNameTreeDuplicate signals a repeated indirect name-tree node.
+var ErrNameTreeDuplicate = errors.New("duplicate name tree node")
+
+// ErrNumberTreeCycle signals an indirect child cycle in a number tree.
+var ErrNumberTreeCycle = errors.New("circular number tree")
+
+// ErrNumberTreeDuplicate signals a repeated indirect number-tree node.
+var ErrNumberTreeDuplicate = errors.New("duplicate number tree node")
+
 // MaxRecursionDepth returns the configured recursion depth limit.
 func (xRefTable *XRefTable) MaxRecursionDepth() int {
 	if xRefTable == nil || xRefTable.Conf == nil || xRefTable.Conf.Limits.MaxRecursionDepth <= 0 {

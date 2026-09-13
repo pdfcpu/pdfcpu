@@ -118,7 +118,7 @@ func buildNameTree(t *testing.T, r *Node) {
 	checkAddResult(t, r, "{a,i},[(a,(av))(b,(bv))(d,(dv)){a,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 
 	r.Add(t.Context(), nil, "c", types.StringLiteral("cv"), nil, nil)
-	checkAddResult(t, r, "{a,i},{a,d},[(a,(av))(b,(bv)){a,b}],[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
+	checkAddResult(t, r, "{a,i},[(a,(av))(b,(bv)){a,b}],[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 }
 
 func destroyNameTree(t *testing.T, r *Node) {
@@ -147,7 +147,7 @@ func destroyNameTree(t *testing.T, r *Node) {
 	}
 
 	empty, ok, _ := r.Remove(t.Context(), nil, "b")
-	checkRemoveResult(t, r, "b", empty, ok, "{a,i},{a,d},[(a,(av)){a,a}],[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
+	checkRemoveResult(t, r, "b", empty, ok, "{a,i},[(a,(av)){a,a}],[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
 
 	empty, ok, _ = r.Remove(t.Context(), nil, "a")
 	checkRemoveResult(t, r, "a", empty, ok, "{c,i},[(c,(cv))(d,(dv)){c,d}],[(f,(fv))(h,(hv))(i,(iv)){f,i}]", false)
