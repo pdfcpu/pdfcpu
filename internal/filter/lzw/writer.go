@@ -1,13 +1,14 @@
-// Derived from compress/lzw in order to implement
-// Adobe's PDF lzw compression as defined for the LZWDecode filter.
-// See https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdfs/PDF32000_2008.pdf
-// and https://github.com/golang/go/issues/25409.
-//
-// It is also compatible with the TIFF file format.
-//
 // Copyright 2011 The Go Authors. All rights reserved.
+// Copyright 2026 The pdfcpu Authors.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+
+// Package lzw is an enhanced version of compress/lzw.
+//
+// It implements Adobe's PDF lzw compression as defined for the LZWDecode filter
+// and is also compatible with the TIFF file format.
+//
+// See the golang proposal: https://github.com/golang/go/issues/25409.
 
 package lzw
 

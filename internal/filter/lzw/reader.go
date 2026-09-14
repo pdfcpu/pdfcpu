@@ -1,4 +1,5 @@
 // Copyright 2011 The Go Authors. All rights reserved.
+// Copyright 2026 The pdfcpu Authors.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -8,8 +9,7 @@
 // and is also compatible with the TIFF file format.
 //
 // See the golang proposal: https://github.com/golang/go/issues/25409.
-//
-// More information: https://github.com/pdfcpu/pdfcpu/tree/master/internal/filter/lzw
+
 package lzw
 
 import (
@@ -37,20 +37,17 @@ type decoder struct {
 
 	// The first 1<<litWidth codes are literal codes.
 	// The next two codes mean clear and EOF.
-	// Other valid codes are in the range [lo, hi] where lo := clear + 2,
-	// with the upper bound incrementing on each code seen.
-	// overflow is the code at which hi overflows the code width. NOTE: TIFF's LZW is "off by one".
-	// last is the most recently seen code, or decoderInvalidCode.
-	//
-	// An invariant is that
-	// (hi < overflow) || (hi == overflow && last == decoderInvalidCode)
+	// Dictionary entries start at clear + 2. After the first literal, hi is the next free index,
+	// capped at len(prefix) when the dictionary is full.
+	// overflow is the next code-width boundary; oneOff makes width changes occur one code early.
+	// last is the most recently seen code, or decoderInvalidCode after initialization or clear.
 	clear, eof, hi, overflow, last uint16
 
-	// Each code c in [lo, hi] expands to two or more bytes. For c != hi:
+	// Each stored dictionary code c in [clear + 2, hi) expands to two or more bytes:
 	//   suffix[c] is the last of these bytes.
 	//   prefix[c] is the code for all but the last byte.
-	//   This code can either be a literal code or another code in [lo, c).
-	// The c == hi case is a special case.
+	//   This code can either be a literal code or another code in [clear + 2, c).
+	// When hi is below capacity, c == hi expands the previous code followed by its first byte.
 	suffix [1 << maxWidth]uint8
 	prefix [1 << maxWidth]uint16
 
@@ -84,6 +81,7 @@ func (d *decoder) readMSB() (uint16, error) {
 	return code, nil
 }
 
+// Read decompresses data into b.
 func (d *decoder) Read(b []byte) (int, error) {
 	for {
 		if len(d.toRead) > 0 {
@@ -98,37 +96,36 @@ func (d *decoder) Read(b []byte) (int, error) {
 	}
 }
 
-func (d *decoder) handleOverflow() {
+func (d *decoder) advanceCode() {
+	if d.hi < uint16(len(d.prefix)) {
+		d.hi++
+	}
 	ui := d.hi
 	if d.oneOff {
 		ui++
 	}
-	if ui >= d.overflow {
-		if d.width == maxWidth {
-			d.last = decoderInvalidCode
-			// Undo the d.hi++ a few lines above, so that (1) we maintain
-			// the invariant that d.hi <= d.overflow, and (2) d.hi does not
-			// eventually overflow a uint16.
-			if !d.oneOff {
-				d.hi--
-			}
-		} else {
-			d.width++
-			d.overflow <<= 1
-		}
+	if ui >= d.overflow && d.width < maxWidth {
+		d.width++
+		d.overflow <<= 1
 	}
+}
+
+func (d *decoder) saveEntry(head uint8) {
+	if d.last == decoderInvalidCode || d.hi >= uint16(len(d.prefix)) {
+		return
+	}
+	d.suffix[d.hi] = head
+	d.prefix[d.hi] = d.last
 }
 
 // decode decompresses bytes from r and leaves them in d.toRead.
 // read specifies how to decode bytes into codes.
 // litWidth is the width in bits of literal codes.
 func (d *decoder) decode() {
-	i := 0
 	// Loop over the code stream, converting codes into decompressed bytes.
 loop:
 	for {
 		code, err := d.read(d)
-		i++
 		if err != nil {
 			// Some PDF Writers write an EOD some don't.
 			// Don't insist on EOD marker.
@@ -141,11 +138,7 @@ loop:
 			// We have a literal code.
 			d.output[d.o] = uint8(code)
 			d.o++
-			if d.last != decoderInvalidCode {
-				// Save what the hi code expands to.
-				d.suffix[d.hi] = uint8(code)
-				d.prefix[d.hi] = d.last
-			}
+			d.saveEntry(uint8(code))
 		case code == d.clear:
 			d.width = 1 + d.litWidth
 			d.hi = d.eof
@@ -177,17 +170,13 @@ loop:
 			}
 			d.output[i] = uint8(c)
 			d.o += copy(d.output[d.o:], d.output[i:])
-			if d.last != decoderInvalidCode {
-				// Save what the hi code expands to.
-				d.suffix[d.hi] = uint8(c)
-				d.prefix[d.hi] = d.last
-			}
+			d.saveEntry(uint8(c))
 		default:
 			d.err = errors.New("lzw: invalid code")
 			break loop
 		}
-		d.last, d.hi = code, d.hi+1
-		d.handleOverflow()
+		d.last = code
+		d.advanceCode()
 		if d.o >= flushBuffer {
 			break
 		}
@@ -199,6 +188,7 @@ loop:
 
 var errClosed = errors.New("lzw: reader/writer is closed")
 
+// Close prevents further reads without closing the underlying reader.
 func (d *decoder) Close() error {
 	d.err = errClosed // in case any Reads come along
 	return nil
