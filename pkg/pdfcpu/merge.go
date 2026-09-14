@@ -1008,82 +1008,173 @@ func patchIndRef(ir *types.IndirectRef, lookup map[int]int) {
 	ir.ObjectNumber = types.Integer(j)
 }
 
-func patchObject(o types.Object, lookup map[int]int) types.Object {
-	if log.TraceEnabled() {
-		log.Trace.Printf("patchObject before: %v\n", o)
-	}
+const patchMarkerKey = "\x00pdfcpuPatchObject"
 
-	var ob types.Object
+type patchMarker struct{}
 
-	switch obj := o.(type) {
-
-	case types.IndirectRef:
-		patchIndRef(&obj, lookup)
-		ob = obj
-
-	case types.Dict:
-		patchDict(obj, lookup)
-		ob = obj
-
-	case types.StreamDict:
-		patchDict(obj.Dict, lookup)
-		ob = obj
-
-	case types.ObjectStreamDict:
-		patchDict(obj.Dict, lookup)
-		ob = obj
-
-	case types.XRefStreamDict:
-		patchDict(obj.Dict, lookup)
-		ob = obj
-
-	case types.Array:
-		patchArray(&obj, lookup)
-		ob = obj
-	}
-
-	if log.TraceEnabled() {
-		log.Trace.Printf("patchObject end: %v\n", ob)
-	}
-
-	return ob
+func (m *patchMarker) String() string {
+	return ""
 }
 
-func patchDict(d types.Dict, lookup map[int]int) {
-	if log.TraceEnabled() {
-		log.Trace.Printf("patchDict before: %v\n", d)
-	}
-
-	for k, obj := range d {
-		o := patchObject(obj, lookup)
-		if o != nil {
-			d[k] = o
-		}
-	}
-
-	if log.TraceEnabled() {
-		log.Trace.Printf("patchDict after: %v\n", d)
-	}
+func (m *patchMarker) Clone() types.Object {
+	return m
 }
 
-func patchArray(a *types.Array, lookup map[int]int) {
-	if a == nil {
+func (m *patchMarker) PDFString() string {
+	return ""
+}
+
+type patchTarget struct {
+	root  *types.Object
+	dict  types.Dict
+	key   string
+	array types.Array
+	index int
+}
+
+func (t patchTarget) set(o types.Object) {
+	if t.root != nil {
+		*t.root = o
 		return
 	}
-	if log.TraceEnabled() {
-		log.Trace.Printf("patchArray begin: %v\n", *a)
+	if t.dict != nil {
+		t.dict[t.key] = o
+		return
 	}
+	t.array[t.index] = o
+}
 
-	for i, obj := range *a {
-		o := patchObject(obj, lookup)
-		if o != nil {
-			(*a)[i] = o
+type patchFrame struct {
+	object     types.Object
+	target     patchTarget
+	restore    *patchRestore
+	arrayID    patchArrayID
+	leaveArray bool
+}
+
+type patchRestore struct {
+	dict  types.Dict
+	value *types.Object
+	found bool
+}
+
+type patchArrayID struct {
+	first    *types.Object
+	length   int
+	capacity int
+}
+
+type objectPatcher struct {
+	lookup       map[int]int
+	marker       *patchMarker
+	activeArrays map[patchArrayID]bool
+	stack        []patchFrame
+}
+
+func (r *patchRestore) apply() {
+	if r.dict != nil {
+		if r.found {
+			r.dict[patchMarkerKey] = *r.value
+			return
 		}
+		delete(r.dict, patchMarkerKey)
+	}
+}
+
+func (p *objectPatcher) pushDict(d types.Dict) {
+	if len(d) == 0 {
+		return
+	}
+	if marker, ok := d[patchMarkerKey].(*patchMarker); ok && marker == p.marker {
+		return
 	}
 
-	if log.TraceEnabled() {
-		log.Trace.Printf("patchArray end: %v\n", a)
+	saved, found := d[patchMarkerKey]
+	d[patchMarkerKey] = p.marker
+	savedValue := saved
+	p.stack = append(p.stack, patchFrame{restore: &patchRestore{dict: d, value: &savedValue, found: found}})
+	for key, o := range d {
+		if key == patchMarkerKey {
+			continue
+		}
+		p.stack = append(p.stack, patchFrame{object: o, target: patchTarget{dict: d, key: key}})
 	}
+	if found {
+		p.stack = append(p.stack, patchFrame{object: saved, target: patchTarget{root: &savedValue}})
+	}
+}
+
+func (p *objectPatcher) pushArray(a types.Array) {
+	if len(a) == 0 {
+		return
+	}
+	id := patchArrayID{first: &a[0], length: len(a), capacity: cap(a)}
+	if p.activeArrays[id] {
+		return
+	}
+
+	p.activeArrays[id] = true
+	p.stack = append(p.stack, patchFrame{arrayID: id, leaveArray: true})
+	for i := len(a) - 1; i >= 0; i-- {
+		p.stack = append(p.stack, patchFrame{object: a[i], target: patchTarget{array: a, index: i}})
+	}
+}
+
+func (p *objectPatcher) patch(f patchFrame) {
+	switch o := f.object.(type) {
+	case types.IndirectRef:
+		patchIndRef(&o, p.lookup)
+		f.target.set(o)
+	case types.Dict:
+		f.target.set(o)
+		p.pushDict(o)
+	case types.StreamDict:
+		f.target.set(o)
+		p.pushDict(o.Dict)
+	case types.ObjectStreamDict:
+		f.target.set(o)
+		p.pushDict(o.Dict)
+	case types.XRefStreamDict:
+		f.target.set(o)
+		p.pushDict(o.Dict)
+	case types.Array:
+		f.target.set(o)
+		p.pushArray(o)
+	}
+}
+
+func (p *objectPatcher) run(o types.Object) types.Object {
+	var result types.Object
+	p.stack = append(p.stack, patchFrame{object: o, target: patchTarget{root: &result}})
+	for len(p.stack) > 0 {
+		i := len(p.stack) - 1
+		f := p.stack[i]
+		p.stack = p.stack[:i]
+		if f.leaveArray {
+			delete(p.activeArrays, f.arrayID)
+			continue
+		}
+		if f.restore != nil {
+			f.restore.apply()
+			continue
+		}
+		p.patch(f)
+	}
+	return result
+}
+
+func patchObject(o types.Object, lookup map[int]int) types.Object {
+	if log.TraceEnabled() {
+		log.Trace.Printf("patchObject before: %T\n", o)
+	}
+
+	p := objectPatcher{lookup: lookup, marker: &patchMarker{}, activeArrays: map[patchArrayID]bool{}}
+	result := p.run(o)
+
+	if log.TraceEnabled() {
+		log.Trace.Printf("patchObject end: %T\n", result)
+	}
+	return result
 }
 
 func objNrsIntSet(ctx *model.Context) types.IntSet {

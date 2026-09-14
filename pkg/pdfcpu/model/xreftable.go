@@ -590,6 +590,9 @@ func (xRefTable *XRefTable) FreeObject(objNr int) error {
 	if err != nil {
 		return err
 	}
+	if freeListHeadEntry == nil {
+		return errors.New("freeObject: missing free list head")
+	}
 
 	entry, found := xRefTable.FindTableEntryLight(objNr)
 	if !found {
@@ -620,54 +623,174 @@ func (xRefTable *XRefTable) FreeObject(objNr int) error {
 	return nil
 }
 
-// DeleteObject removes o and its reachable objects, stopping when c is canceled.
-// Cancellation may leave the in-memory object graph partially deleted.
-func (xRefTable *XRefTable) DeleteObject(c context.Context, o types.Object) error {
-	if err := contextutil.Check(c); err != nil {
-		return err
-	}
-	var err error
+const deleteObjectMarkerKey = "\x00pdfcpuDeleteObject"
 
-	ir, ok := o.(types.IndirectRef)
-	if ok {
-		o, err = xRefTable.locateObjForIndRef(ir)
+type deleteObjectMarker struct{}
+
+func (m *deleteObjectMarker) String() string {
+	return ""
+}
+
+func (m *deleteObjectMarker) Clone() types.Object {
+	return m
+}
+
+func (m *deleteObjectMarker) PDFString() string {
+	return ""
+}
+
+type deleteObjectArrayID struct {
+	first    *types.Object
+	length   int
+	capacity int
+}
+
+type deleteObjectDictRestore struct {
+	dict  types.Dict
+	value types.Object
+	found bool
+}
+
+func (r *deleteObjectDictRestore) apply() {
+	if r.found {
+		r.dict[deleteObjectMarkerKey] = r.value
+		return
+	}
+	delete(r.dict, deleteObjectMarkerKey)
+}
+
+type deleteObjectFrame struct {
+	object     types.Object
+	restore    *deleteObjectDictRestore
+	arrayID    deleteObjectArrayID
+	leaveArray bool
+}
+
+type objectDeletion struct {
+	xRefTable    *XRefTable
+	marker       *deleteObjectMarker
+	processed    map[int]bool
+	activeArrays map[deleteObjectArrayID]bool
+	restores     []*deleteObjectDictRestore
+	stack        []deleteObjectFrame
+}
+
+func (d *objectDeletion) restoreDicts() {
+	for len(d.restores) > 0 {
+		i := len(d.restores) - 1
+		d.restores[i].apply()
+		d.restores = d.restores[:i]
+	}
+}
+
+func (d *objectDeletion) leaveDict(r *deleteObjectDictRestore) {
+	r.apply()
+	d.restores = d.restores[:len(d.restores)-1]
+}
+
+func (d *objectDeletion) pushDict(dict types.Dict) {
+	if len(dict) == 0 {
+		return
+	}
+	if marker, ok := dict[deleteObjectMarkerKey].(*deleteObjectMarker); ok && marker == d.marker {
+		return
+	}
+
+	value, found := dict[deleteObjectMarkerKey]
+	dict[deleteObjectMarkerKey] = d.marker
+	restore := &deleteObjectDictRestore{dict: dict, value: value, found: found}
+	d.restores = append(d.restores, restore)
+	d.stack = append(d.stack, deleteObjectFrame{restore: restore})
+	for key, o := range dict {
+		if key == deleteObjectMarkerKey {
+			continue
+		}
+		d.stack = append(d.stack, deleteObjectFrame{object: o})
+	}
+	if found {
+		d.stack = append(d.stack, deleteObjectFrame{object: value})
+	}
+}
+
+func (d *objectDeletion) pushArray(a types.Array) {
+	if len(a) == 0 {
+		return
+	}
+	id := deleteObjectArrayID{first: &a[0], length: len(a), capacity: cap(a)}
+	if d.activeArrays[id] {
+		return
+	}
+
+	d.activeArrays[id] = true
+	d.stack = append(d.stack, deleteObjectFrame{arrayID: id, leaveArray: true})
+	for i := len(a) - 1; i >= 0; i-- {
+		d.stack = append(d.stack, deleteObjectFrame{object: a[i]})
+	}
+}
+
+func (d *objectDeletion) delete(o types.Object) error {
+	if ir, ok := o.(types.IndirectRef); ok {
+		objNr := ir.ObjectNumber.Value()
+		if d.processed[objNr] {
+			return nil
+		}
+		var err error
+		o, err = d.xRefTable.locateObjForIndRef(ir)
 		if err != nil || o == nil {
 			return err
 		}
-		if err = xRefTable.FreeObject(ir.ObjectNumber.Value()); err != nil {
+		if err = d.xRefTable.FreeObject(objNr); err != nil {
 			return err
 		}
+		d.processed[objNr] = true
 	}
 
 	switch o := o.(type) {
-
 	case types.Dict:
-		for _, v := range o {
-			err := xRefTable.DeleteObject(c, v)
-			if err != nil {
-				return err
-			}
-		}
-
+		d.pushDict(o)
 	case types.StreamDict:
-		for _, v := range o.Dict {
-			err := xRefTable.DeleteObject(c, v)
-			if err != nil {
-				return err
-			}
-		}
-
+		d.pushDict(o.Dict)
 	case types.Array:
-		for _, v := range o {
-			err := xRefTable.DeleteObject(c, v)
-			if err != nil {
-				return err
-			}
-		}
-
+		d.pushArray(o)
 	}
-
 	return nil
+}
+
+func (d *objectDeletion) run(c context.Context, o types.Object) error {
+	d.stack = append(d.stack, deleteObjectFrame{object: o})
+	defer d.restoreDicts()
+	for len(d.stack) > 0 {
+		i := len(d.stack) - 1
+		f := d.stack[i]
+		d.stack = d.stack[:i]
+		if f.restore != nil {
+			d.leaveDict(f.restore)
+			continue
+		}
+		if f.leaveArray {
+			delete(d.activeArrays, f.arrayID)
+			continue
+		}
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		if err := d.delete(f.object); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DeleteObject removes o and its reachable objects, stopping when c is canceled.
+// Cancellation may leave the in-memory object graph partially deleted.
+func (xRefTable *XRefTable) DeleteObject(c context.Context, o types.Object) error {
+	d := objectDeletion{
+		xRefTable:    xRefTable,
+		marker:       &deleteObjectMarker{},
+		processed:    map[int]bool{},
+		activeArrays: map[deleteObjectArrayID]bool{},
+	}
+	return d.run(c, o)
 }
 
 // DeleteObjectGraph deletes all objects reachable by an indirect reference o and supports cancellation.
