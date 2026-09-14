@@ -704,6 +704,7 @@ func TestAddPagesRejectsMissingContexts(t *testing.T) {
 	}
 }
 
+// TestAddPagesRejectsMissingDestinationPageTree verifies missing roots retain destination page-tree error context.
 func TestAddPagesRejectsMissingDestinationPageTree(t *testing.T) {
 	src, err := CreateContextWithXRefTable(nil, types.PaperSize["A4"])
 	if err != nil {
@@ -719,7 +720,7 @@ func TestAddPagesRejectsMissingDestinationPageTree(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error")
 	}
-	if !strings.Contains(err.Error(), "add pages: missing destination page tree") {
+	if !strings.Contains(err.Error(), "add pages: read destination page tree: missing pages root") {
 		t.Fatalf("expected missing destination page tree context, got %q", err.Error())
 	}
 }

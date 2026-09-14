@@ -51,13 +51,14 @@ func TestLocateNameTreeCatalogContext(t *testing.T) {
 	requireLocateNameTreeError(t, err, `name tree "JavaScript"`, "catalog", "missing root dict")
 }
 
+// TestLocateNameTreeGuardsNilCatalog verifies unresolved catalogs retain name-tree error context.
 func TestLocateNameTreeGuardsNilCatalog(t *testing.T) {
 	xRefTable := locateNameTreeXRefTable()
 	xRefTable.Root = types.NewIndirectRef(42, 0)
 
 	err := xRefTable.LocateNameTree("JavaScript", false)
 
-	requireLocateNameTreeError(t, err, `name tree "JavaScript"`, "catalog", "missing dictionary")
+	requireLocateNameTreeError(t, err, `name tree "JavaScript"`, "catalog", "missing root dict")
 }
 
 func TestLocateNameTreeNamesDictionaryCreationContext(t *testing.T) {

@@ -259,12 +259,11 @@ func (xRefTable *XRefTable) VersionString() string {
 }
 
 // ParseRootVersion returns a string representation for an optional Version entry in the root object.
+// This entry overrides the header version.
+// An unresolved catalog reference has no version override.
 func (xRefTable *XRefTable) ParseRootVersion() (v *string, err error) {
-	// Look in the catalog/root for a name entry "Version".
-	// This entry overrides the header version.
-
-	rootDict, err := xRefTable.Catalog()
-	if err != nil {
+	rootDict, err := xRefTable.catalogDict()
+	if err != nil || rootDict == nil {
 		return nil, err
 	}
 
@@ -1249,8 +1248,20 @@ func (xRefTable *XRefTable) DereferenceXObjectDict(indRef types.IndirectRef) (*t
 	return sd, nil
 }
 
-// Catalog returns a pointer to the root object / catalog.
+// Catalog returns the document catalog dictionary, which is non-nil on success.
 func (xRefTable *XRefTable) Catalog() (types.Dict, error) {
+	d, err := xRefTable.catalogDict()
+	if err != nil {
+		return nil, err
+	}
+	if d == nil {
+		return nil, errors.New("missing root dict")
+	}
+	return d, nil
+}
+
+// catalogDict resolves the catalog while preserving PDF null semantics for optional metadata lookup.
+func (xRefTable *XRefTable) catalogDict() (types.Dict, error) {
 	if xRefTable.RootDict != nil {
 		return xRefTable.RootDict, nil
 	}
@@ -1306,13 +1317,21 @@ func (xRefTable *XRefTable) CatalogHasPieceInfo() (bool, error) {
 	return hasPieceInfo && obj != nil, nil
 }
 
-// Pages returns the Pages reference contained in the catalog.
+// Pages returns the Pages reference contained in the catalog, which is non-nil on success.
 func (xRefTable *XRefTable) Pages() (*types.IndirectRef, error) {
 	rootDict, err := xRefTable.Catalog()
 	if err != nil {
 		return nil, err
 	}
-	return rootDict.IndirectRefEntry("Pages"), nil
+	o, found := rootDict.Find("Pages")
+	if !found {
+		return nil, errors.New("missing pages root")
+	}
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		return nil, errors.New("corrupt pages root")
+	}
+	return &ir, nil
 }
 
 // MissingObjects returns the number of objects that were not written
@@ -2775,7 +2794,10 @@ func (xRefTable *XRefTable) PageNumber(c context.Context, pageObjNr int) (int, e
 		return 0, err
 	}
 	// Get an indirect reference to the page tree root dict.
-	pageRootDict, _ := xRefTable.Pages()
+	pageRootDict, err := xRefTable.Pages()
+	if err != nil {
+		return 0, err
+	}
 	pageCount := 0
 	return xRefTable.processPageTreeForPageNumber(c, pageRootDict, &pageCount, pageObjNr)
 }
