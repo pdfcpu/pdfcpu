@@ -327,6 +327,8 @@
       url: /config/config_list
     - title: Inspect
       url: /config/config_inspect
+    - title: Limits
+      url: /config/config_limits
     - title: Validate
       url: /config/config_validate
     - title: Reset

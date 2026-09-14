@@ -45,13 +45,17 @@ empty passwords and password-change syntax. Existing literal password arguments 
 
 ## Temporary storage and output replacement
 
-PDF input from `stdin` is stored in a temporary file. Merged form multi-fill output to `stdout` also uses temporary
-storage. See [Environment Variables](/getting_started/environment_variables#temporary-storage) to choose its location.
+PDF input from `stdin` is stored in a temporary file.<br>
+Configure `maxInputBytes` to bound each PDF input and its stdin spool.<br>
+ `0` (the default) means unlimited.
+(See [PDF input limit](/config/config_limits#pdf-input-limit)).
 
-When replacing a file, pdfcpu writes a temporary copy beside the destination first. If writing fails, the original
-remains intact. Allow space for the full input when piping and the full resulting output when replacing a file,
+Merged form multi-fill output to `stdout` also uses temporary storage.
+<br>See [Environment Variables](/getting_started/environment_variables#temporary-storage) to choose its location.
+
+When replacing a file, pdfcpu writes a temporary copy beside the destination first.<br>
+If writing fails, the original remains intact. Allow space for the full input when piping and the full resulting output when replacing a file,
 including incremental updates.
-
 Output sent to `stdout`, including shell redirection with `>` is outside this replacement handling.
 
 ## Support Matrix

@@ -5,7 +5,8 @@ title: "Resize"
 
 # Resize
 
-Resize selected pages of `inFile` either by scale factor, to standard form or specific page dimensions and optional enforce orientation.
+Resize selected pages of `inFile` by scale factor, to a standard paper size or to specific page dimensions.
+Choose whether to preserve the requested page orientation and allow additional content rotation.
 Have a look at some [examples](#examples).
 
 ## Usage
@@ -46,11 +47,24 @@ A configuration string with input parameters for the resize command.
 |:--------------------|:------------------------------------------------------
 | scalefactor         | 0.0 < s < 1.0 or s > 1.0           
 | dimensions          | (width, height) in user units eg. '400 200'      
-| enforce             | new aspect ratio: on/off true/false               
+| enforce             | preserve requested output-page orientation: on/off true/false t/f
 | formsize, papersize | [paper size](/paper) to be used. Append L or P to enforce landscape/portrait mode| f: A4
+| rotate              | allow additional best-fit content rotation: on/off true/false t/f; default on
+| border              | draw the fitted content boundary: on/off true/false t/f
 | bgcolor             | [color](/getting_started/color)                  | none
 
 <br>
+
+`enforce:on` preserves the requested output-page orientation. The `P` and `L` paper-size suffixes also
+select and enforce that orientation. Without enforcement, the destination follows the source orientation.
+
+`rotate:on` is the default: when orientation is enforced, resize may turn content by 90 degrees for a better fit.
+Use `rotate:off` to preserve its displayed orientation, scale proportionally and center it in the destination.
+This does not suppress normalization of an existing page-level or inherited `/Rotate` value. Annotation rectangles
+and quad points follow the same complete transform as the content. The option has no effect on scale-only resizing
+or sizing by just width or height.
+
+Direct Go callers can set `model.Resize.DisableContentRotation` to `true`. Its zero value retains best-fit rotation.
 
 ## Examples
 
@@ -63,7 +77,7 @@ $ pdfcpu resize "scale:2" in.pdf out.pdf
 
 Shrink first 3 pages by cutting in half the page dimensions, keep orientation.
 ```sh
-$ pdfcpu resize in.pdf out.pdf --pages 1-3
+$ pdfcpu resize "sc:.5" in.pdf out.pdf --pages 1-3
 ```
 
 <br>
@@ -85,6 +99,15 @@ $ pdfcpu resize "form:A4" in.pdf out.pdf
 Resize pages to A4 and enforce orientation (here: portrait mode), apply background color.
 ```sh
 $ pdfcpu resize "f:A4P, bgcol:#d0d0d0" in.pdf out.pdf
+```
+
+<br>
+
+Resize mixed portrait and landscape pages to A4 portrait while preserving displayed content orientation.
+Landscape content fits the A4 width and is centered vertically, leaving unused space above and below.
+
+```sh
+$ pdfcpu resize 'form:A4P, rotate:off' in.pdf out.pdf
 ```
 
 <br>

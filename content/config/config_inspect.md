@@ -88,6 +88,8 @@ network:
   preferred revocation checker: CRL
   allowed revocation hosts: (none)
 limits:
+  max input bytes: unlimited
+  max object bytes: 64 MB
   max stream bytes: 512 MB
   max decode bytes: 512 MB
   max image pixels: 100 MP
@@ -153,6 +155,8 @@ Path availability and writability reflect the current process and filesystem.
 		"allowedRevocationHosts": []
 	},
 	"limits": {
+		"maxInputBytes": 0,
+		"maxObjectBytes": 67108864,
 		"maxStreamBytes": 536870912,
 		"maxDecodeBytes": 536870912,
 		"maxImagePixels": 100000000,
@@ -165,3 +169,8 @@ Path availability and writability reflect the current process and filesystem.
 	}
 }
 ```
+
+## Limits and network policy
+
+See [Limits](/config/config_limits) for defaults, units, scope and Go API settings, in `config.yml` order.
+The page also explains structural limits reported by inspection that are not YAML configuration keys.

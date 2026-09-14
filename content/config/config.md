@@ -34,3 +34,5 @@ runtime policy it defines.
 
 Users upgrading an existing v0.15 or older configuration should follow
 [Configuration Reset Required in v0.16](/getting_started/configuration_v016).
+
+See [Limits](/config/config_limits) for network timeouts, input and resource limits in `config.yml` order.
