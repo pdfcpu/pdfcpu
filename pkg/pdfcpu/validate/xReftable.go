@@ -557,7 +557,7 @@ func validatePageMode(xRefTable *model.XRefTable, rootDict types.Dict, required 
 	return nil
 }
 
-func validateOpenAction(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+func validateOpenAction(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 12.3.2 Destinations, 12.6 Actions
 
 	// A value specifying a destination that shall be displayed
@@ -579,7 +579,7 @@ func validateOpenAction(xRefTable *model.XRefTable, rootDict types.Dict, require
 	switch o := o.(type) {
 
 	case types.Dict:
-		err = validateActionDictObject(xRefTable, o, rawOpenAction, "rootDict.OpenAction")
+		err = validateActionDictObject(c, xRefTable, o, rawOpenAction, "rootDict.OpenAction")
 
 	case types.Array:
 		err = validateDestinationArray(
@@ -1503,11 +1503,11 @@ func rootEntryValidators(c context.Context) []rootEntryValidator {
 		{"PageLayout", validatePageLayout, OPTIONAL, model.V10},
 		{"PageMode", validatePageMode, OPTIONAL, model.V10},
 		{"Outlines", bindRootContext(c, validateOutlines), OPTIONAL, model.V10},
-		{"Threads", validateThreads, OPTIONAL, model.V11},
-		{"OpenAction", validateOpenAction, OPTIONAL, model.V11},
-		{"AA", validateRootAdditionalActions, OPTIONAL, model.V14},
+		{"Threads", bindRootContext(c, validateThreads), OPTIONAL, model.V11},
+		{"OpenAction", bindRootContext(c, validateOpenAction), OPTIONAL, model.V11},
+		{"AA", bindRootContext(c, validateRootAdditionalActions), OPTIONAL, model.V14},
 		{"URI", validateURI, OPTIONAL, model.V11},
-		{"AcroForm", validateForm, OPTIONAL, model.V12},
+		{"AcroForm", bindRootContext(c, validateFormContext), OPTIONAL, model.V12},
 		{"Metadata", validateRootMetadata, OPTIONAL, model.V14},
 		{"StructTreeRoot", bindRootContext(c, validateStructTree), OPTIONAL, model.V13},
 		{"MarkInfo", validateMarkInfo, OPTIONAL, model.V14},

@@ -103,7 +103,7 @@ func validateOutlineItemDict(c context.Context, xRefTable *model.XRefTable, d ty
 	}
 
 	// Optional A or Dest, since V1.1
-	destName, err := validateActionOrDestination(xRefTable, d, dictName, model.V11)
+	destName, err := validateActionOrDestination(c, xRefTable, d, dictName, model.V11)
 	if err != nil {
 		model.ShowMsg("outlineItemDict: corrupt action or destination entry")
 		return err
@@ -339,12 +339,18 @@ func validateOutlineCount(xRefTable *model.XRefTable, total, visible int, count 
 }
 
 func firstOfRemainder(c context.Context, xRefTable *model.XRefTable, last *types.IndirectRef, duplObjNr, oneBeforeDuplObj int) (int, types.Dict, error) {
+	visited := map[int]bool{}
 	// Starting with the last node, go back until we hit duplObjNr or oneBeforeDuplObj
 	for ir := last; ir != nil; {
 		if err := contextutil.Check(c); err != nil {
 			return 0, nil, err
 		}
 		objNr := ir.ObjectNumber.Value()
+		if visited[objNr] {
+			err := errors.New("outline item previous chain: cycle detected")
+			return 0, nil, model.WithValidationErrorObject(err, objNr)
+		}
+		visited[objNr] = true
 		d, err := xRefTable.DereferenceDict(*ir)
 		if err != nil {
 			err = fmt.Errorf("outline item: dereference previous chain: %w", err)

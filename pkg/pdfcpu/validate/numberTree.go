@@ -171,7 +171,7 @@ func validateNumberTreeDictNumsEntry(c context.Context, xRefTable *model.XRefTab
 			err = validatePageLabelDict(xRefTable, o)
 
 		case "StructTree":
-			err = validateStructTreeRootDictEntryK(xRefTable, o, useIDs)
+			err = validateStructTreeRootKContext(c, xRefTable, o, useIDs)
 		}
 		if err != nil {
 			err = fmt.Errorf("number tree %s key %d: %w", name, lastKey, err)

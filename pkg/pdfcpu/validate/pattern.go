@@ -17,16 +17,18 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
 	"slices"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func validateTilingPatternDict(xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
+func validateTilingPatternDict(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
 	dictName := "tilingPatternDict"
 
 	if err := xRefTable.ValidateVersion(dictName, sinceVersion); err != nil {
@@ -78,14 +80,14 @@ func validateTilingPatternDict(xRefTable *model.XRefTable, sd *types.StreamDict,
 		return fmt.Errorf("%s.Resources: missing required entry", dictName)
 	}
 
-	_, err = validateResourceDict(xRefTable, o)
+	_, err = validateResourceDict(c, xRefTable, o)
 	if err != nil {
 		return fmt.Errorf("%s.Resources: %w", dictName, err)
 	}
 	return nil
 }
 
-func validateShadingPatternDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+func validateShadingPatternDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 	dictName := "shadingPatternDict"
 
 	if err := xRefTable.ValidateVersion(dictName, sinceVersion); err != nil {
@@ -114,7 +116,7 @@ func validateShadingPatternDict(xRefTable *model.XRefTable, d types.Dict, sinceV
 	}
 
 	if d1 != nil {
-		err = validateExtGStateDict(xRefTable, rawExtGState)
+		err = validateExtGStateDict(c, xRefTable, rawExtGState)
 		if err != nil {
 			return fmt.Errorf("%s.ExtGState: %w", dictName, err)
 		}
@@ -126,20 +128,86 @@ func validateShadingPatternDict(xRefTable *model.XRefTable, d types.Dict, sinceV
 		return fmt.Errorf("%s.Shading: missing required entry", dictName)
 	}
 
-	if err := validateShading(xRefTable, o); err != nil {
+	if err := validateShading(c, xRefTable, o); err != nil {
 		err = fmt.Errorf("%s.Shading: %w", dictName, err)
 		return model.WithValidationErrorObject(err, validationObjectNumber(0, o))
 	}
 	return nil
 }
 
-func validatePattern(xRefTable *model.XRefTable, o types.Object) (err error) {
+type patternTraversalContextKey struct{}
+
+type patternTraversal struct {
+	xRefTable *model.XRefTable
+	depth     int
+	ancestors map[int]bool
+}
+
+func patternTraversalFromContext(c context.Context, xRefTable *model.XRefTable) (context.Context, *patternTraversal) {
+	if c != nil {
+		if t, ok := c.Value(patternTraversalContextKey{}).(*patternTraversal); ok {
+			return c, t
+		}
+	}
+	t := &patternTraversal{xRefTable: xRefTable, ancestors: map[int]bool{}}
+	if c == nil {
+		return nil, t
+	}
+	return context.WithValue(c, patternTraversalContextKey{}, t), t
+}
+
+func patternObjectIdentity(o types.Object) int {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		return 0
+	}
+	return ir.ObjectNumber.Value()
+}
+
+func (t *patternTraversal) enter(objNr int) error {
+	if objNr <= 0 {
+		return nil
+	}
+	if t.ancestors[objNr] {
+		return model.ErrPatternCycle
+	}
+	t.ancestors[objNr] = true
+	return nil
+}
+
+func (t *patternTraversal) leave(objNr int) {
+	if objNr > 0 {
+		delete(t.ancestors, objNr)
+	}
+	t.depth--
+}
+
+func validatePattern(c context.Context, xRefTable *model.XRefTable, o types.Object) error {
+	c, traversal := patternTraversalFromContext(c, xRefTable)
+	return traversal.validate(c, o)
+}
+
+func (t *patternTraversal) validate(c context.Context, o types.Object) (err error) {
 	objNr := validationObjectNumber(0, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
 	}()
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 
-	o, err = xRefTable.Dereference(o)
+	depth := t.depth + 1
+	if err := t.xRefTable.CheckRecursionDepth("Pattern graph", depth); err != nil {
+		return err
+	}
+	patternObjNr := patternObjectIdentity(o)
+	if err := t.enter(patternObjNr); err != nil {
+		return err
+	}
+	t.depth = depth
+	defer t.leave(patternObjNr)
+
+	o, err = t.xRefTable.Dereference(o)
 	if err != nil || o == nil {
 		if err != nil {
 			return fmt.Errorf("pattern: dereference: %w", err)
@@ -150,12 +218,12 @@ func validatePattern(xRefTable *model.XRefTable, o types.Object) (err error) {
 	switch o := o.(type) {
 
 	case types.StreamDict:
-		if err = validateTilingPatternDict(xRefTable, &o, model.V10); err != nil {
+		if err = validateTilingPatternDict(c, t.xRefTable, &o, model.V10); err != nil {
 			return fmt.Errorf("tiling pattern: %w", err)
 		}
 
 	case types.Dict:
-		if err = validateShadingPatternDict(xRefTable, o, model.V13); err != nil {
+		if err = validateShadingPatternDict(c, t.xRefTable, o, model.V13); err != nil {
 			return fmt.Errorf("shading pattern: %w", err)
 		}
 
@@ -167,7 +235,7 @@ func validatePattern(xRefTable *model.XRefTable, o types.Object) (err error) {
 	return err
 }
 
-func validatePatternResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (err error) {
+func validatePatternResourceDict(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (err error) {
 	objNr := validationObjectNumber(0, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -187,12 +255,13 @@ func validatePatternResourceDict(xRefTable *model.XRefTable, o types.Object, sin
 		}
 		return nil
 	}
+	c, _ = patternTraversalFromContext(c, xRefTable)
 
 	// Iterate over pattern resource dictionary
 	for _, name := range slices.Sorted(maps.Keys(d)) {
 		o := d[name]
 		// Process pattern
-		if err = validatePattern(xRefTable, o); err != nil {
+		if err = validatePattern(c, xRefTable, o); err != nil {
 			return fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("patternResourceDict.%s", name), o), err)
 		}
 

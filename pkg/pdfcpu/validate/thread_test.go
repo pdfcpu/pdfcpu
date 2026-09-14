@@ -17,12 +17,28 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+type beadCancelContext struct {
+	context.Context
+	cancel   context.CancelFunc
+	checks   int
+	cancelAt int
+}
+
+func (c *beadCancelContext) Err() error {
+	c.checks++
+	if c.checks == c.cancelAt {
+		c.cancel()
+	}
+	return c.Context.Err()
+}
 
 func beadDict(thread, previous, next types.IndirectRef) types.Dict {
 	return types.Dict{
@@ -79,7 +95,7 @@ func TestValidateBeadDictAllowsLongChains(t *testing.T) {
 		)
 	}
 
-	if err := validateFirstBeadDict(beadXRefTable(1, dicts), &first, &thread); err != nil {
+	if err := validateFirstBeadDict(t.Context(), beadXRefTable(1, dicts), &first, &thread); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -113,7 +129,7 @@ func TestValidateBeadDictRejectsCycles(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateFirstBeadDict(beadXRefTable(100, tt.dicts), &first, &thread)
+			err := validateFirstBeadDict(t.Context(), beadXRefTable(100, tt.dicts), &first, &thread)
 			if !errors.Is(err, model.ErrBeadCycle) {
 				t.Fatalf("got %v, want ErrBeadCycle", err)
 			}
@@ -146,10 +162,38 @@ func TestValidateBeadDictAllowsValidCircularChains(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateFirstBeadDict(beadXRefTable(100, tt.dicts), &first, &thread)
+			err := validateFirstBeadDict(t.Context(), beadXRefTable(100, tt.dicts), &first, &thread)
 			if err != nil {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+// TestValidateBeadDictCancellation verifies cancellation interrupts an active flat bead traversal.
+func TestValidateBeadDictCancellation(t *testing.T) {
+	thread := *types.NewIndirectRef(10, 0)
+	first := *types.NewIndirectRef(1, 0)
+	dicts := map[int]types.Dict{}
+	for objNr := 1; objNr <= 4; objNr++ {
+		previous := objNr - 1
+		if objNr == 1 {
+			previous = 4
+		}
+		next := objNr + 1
+		if objNr == 4 {
+			next = 1
+		}
+		dicts[objNr] = beadDict(thread, *types.NewIndirectRef(previous, 0), *types.NewIndirectRef(next, 0))
+	}
+	base, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	c := &beadCancelContext{Context: base, cancel: cancel, cancelAt: 3}
+	err := validateFirstBeadDict(c, beadXRefTable(1, dicts), &first, &thread)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context.Canceled", err)
+	}
+	if c.checks != 3 {
+		t.Fatalf("continued traversal after cancellation: %d checks", c.checks)
 	}
 }

@@ -17,9 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -71,7 +73,10 @@ func validateEntryV(xRefTable *model.XRefTable, d types.Dict, dictName string, r
 	return nil
 }
 
-func enterBead(visit *model.BeadVisit, beadIndRef *types.IndirectRef) (int, error) {
+func enterBead(c context.Context, visit *model.BeadVisit, beadIndRef *types.IndirectRef) (int, error) {
+	if err := contextutil.Check(c); err != nil {
+		return 0, err
+	}
 	objNumber := beadIndRef.ObjectNumber.Value()
 	if err := visit.Enter(objNumber); err != nil {
 		return 0, err
@@ -79,20 +84,13 @@ func enterBead(visit *model.BeadVisit, beadIndRef *types.IndirectRef) (int, erro
 	return objNumber, nil
 }
 
-func validateBeadDict(
-	xRefTable *model.XRefTable,
-	beadIndRef,
-	threadIndRef,
-	pBeadIndRef,
-	lBeadIndRef *types.IndirectRef,
-	visit *model.BeadVisit,
-) error {
+func validateBeadDict(c context.Context, xRefTable *model.XRefTable, beadIndRef, threadIndRef, pBeadIndRef, lBeadIndRef *types.IndirectRef, visit *model.BeadVisit) error {
 	dictName := "beadDict"
 	sinceVersion := model.V10
 
 	for {
 		objNumber := beadIndRef.ObjectNumber.Value()
-		_, err := enterBead(visit, beadIndRef)
+		_, err := enterBead(c, visit, beadIndRef)
 		if err != nil {
 			return model.WithValidationErrorObject(err, objNumber)
 		}
@@ -172,13 +170,16 @@ func validateBeadChainIntegrity(beadIndRef, pBeadIndRef, nBeadIndRef *types.Indi
 	return *pBeadIndRef != *beadIndRef && *nBeadIndRef != *beadIndRef
 }
 
-func validateFirstBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef *types.IndirectRef) (err error) {
+func validateFirstBeadDict(c context.Context, xRefTable *model.XRefTable, beadIndRef, threadIndRef *types.IndirectRef) (err error) {
 	dictName := "firstBeadDict"
 	sinceVersion := model.V10
 	objNumber := beadIndRef.ObjectNumber.Value()
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNumber)
 	}()
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 
 	d, err := xRefTable.DereferenceDict(*beadIndRef)
 	if err != nil {
@@ -227,7 +228,7 @@ func validateFirstBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef 
 		if !validateBeadChainIntegrity(beadIndRef, pBeadIndRef, nBeadIndRef) {
 			return fmt.Errorf("first bead obj#%d: corrupt bead chain", objNumber)
 		}
-		if err = validateBeadDict(xRefTable, nBeadIndRef, threadIndRef, beadIndRef, pBeadIndRef, model.NewBeadVisit()); err != nil {
+		if err = validateBeadDict(c, xRefTable, nBeadIndRef, threadIndRef, beadIndRef, pBeadIndRef, model.NewBeadVisit()); err != nil {
 			return fmt.Errorf("first bead obj#%d next: %w", objNumber, err)
 		}
 	}
@@ -237,9 +238,12 @@ func validateFirstBeadDict(xRefTable *model.XRefTable, beadIndRef, threadIndRef 
 	return nil
 }
 
-func validateThreadDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (err error) {
+func validateThreadDict(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (err error) {
 	dictName := "threadDict"
 	var specViolations []error
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 
 	threadIndRef, ok := o.(types.IndirectRef)
 	if !ok {
@@ -291,15 +295,18 @@ func validateThreadDict(xRefTable *model.XRefTable, o types.Object, sinceVersion
 	}
 
 	// Validate the list of beads starting with the first bead dict.
-	if err = validateFirstBeadDict(xRefTable, fBeadIndRef, &threadIndRef); err != nil {
+	if err = validateFirstBeadDict(c, xRefTable, fBeadIndRef, &threadIndRef); err != nil {
 		return fmt.Errorf("thread obj#%d first bead: %w", objNumber, err)
 	}
 	showDigestedSpecViolations(specViolations)
 	return nil
 }
 
-func validateThreads(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+func validateThreads(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 12.4.3 Articles
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 
 	ir := rootDict.IndirectRefEntry("Threads")
 	if ir == nil {
@@ -326,12 +333,15 @@ func validateThreads(xRefTable *model.XRefTable, rootDict types.Dict, required b
 	}
 
 	for i, o := range a {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 
 		if o == nil {
 			continue
 		}
 
-		err = validateThreadDict(xRefTable, o, sinceVersion)
+		err = validateThreadDict(c, xRefTable, o, sinceVersion)
 		if err != nil {
 			err = fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("rootDict.Threads[%d]", i), o), err)
 			return model.WithValidationErrorObject(err, validationObjectNumber(ir.ObjectNumber.Value(), o))

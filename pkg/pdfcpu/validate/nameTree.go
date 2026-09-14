@@ -39,14 +39,14 @@ func validateDestsNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinc
 	return err
 }
 
-func validateAPNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+func validateAPNameTreeValue(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	// Version check
 	err := xRefTable.ValidateVersion("APNameTreeValue", sinceVersion)
 	if err != nil {
 		return err
 	}
 
-	return validateXObjectStreamDict(xRefTable, o)
+	return validateXObjectStreamDict(c, xRefTable, o)
 }
 
 func validateJavaScriptNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
@@ -512,7 +512,7 @@ func validateAlternatePresentationsNameTreeValue(xRefTable *model.XRefTable, o t
 	return err
 }
 
-func validateRenditionsNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+func validateRenditionsNameTreeValue(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	// see 13.2.3
 
 	// Value is a rendition object.
@@ -529,13 +529,13 @@ func validateRenditionsNameTreeValue(xRefTable *model.XRefTable, o types.Object,
 	}
 
 	if d != nil {
-		err = validateRenditionDict(xRefTable, d, validationObjectNumber(0, o), sinceVersion)
+		err = validateRenditionDict(c, xRefTable, d, validationObjectNumber(0, o), sinceVersion)
 	}
 
 	return err
 }
 
-func validateIDTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (err error) {
+func validateIDTreeValueContext(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (err error) {
 	objNr := validationObjectNumber(0, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -560,7 +560,7 @@ func validateIDTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersio
 		return fmt.Errorf("IDTree value Type: %w", err)
 	}
 	if dictType == nil || dictType.Value() == "StructElem" {
-		err = validateStructElementDict(xRefTable, d, true)
+		err = validateStructElementDictContext(c, xRefTable, d, true)
 		if err != nil {
 			return err
 		}
@@ -571,7 +571,7 @@ func validateIDTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersio
 	return nil
 }
 
-func validateNameTreeValue(name string, xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
+func validateNameTreeValue(c context.Context, name string, xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
 	objNr := validationObjectNumber(ownerObjNr, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -587,8 +587,10 @@ func validateNameTreeValue(name string, xRefTable *model.XRefTable, o types.Obje
 		sinceVersion        model.Version
 		sinceVersionRelaxed model.Version
 	}{
-		"Dests":                  {validateDestsNameTreeValue, model.V12, model.V12},
-		"AP":                     {validateAPNameTreeValue, model.V13, model.V13},
+		"Dests": {validateDestsNameTreeValue, model.V12, model.V12},
+		"AP": {func(x *model.XRefTable, o types.Object, version model.Version) error {
+			return validateAPNameTreeValue(c, x, o, version)
+		}, model.V13, model.V13},
 		"JavaScript":             {validateJavaScriptNameTreeValue, model.V13, model.V13},
 		"Pages":                  {validatePagesNameTreeValue, model.V13, model.V13},
 		"Templates":              {validateTemplatesNameTreeValue, model.V13, model.V13},
@@ -596,8 +598,9 @@ func validateNameTreeValue(name string, xRefTable *model.XRefTable, o types.Obje
 		"URLS":                   {validateURLSNameTreeValue, model.V13, model.V13},
 		"EmbeddedFiles":          {validateEmbeddedFilesNameTreeValue, model.V14, model.V11},
 		"AlternatePresentations": {validateAlternatePresentationsNameTreeValue, model.V14, model.V14},
-		"Renditions":             {validateRenditionsNameTreeValue, model.V15, model.V15},
-		"IDTree":                 {validateIDTreeValue, model.V13, model.V13},
+		"Renditions": {func(x *model.XRefTable, o types.Object, version model.Version) error {
+			return validateRenditionsNameTreeValue(c, x, o, version)
+		}, model.V15, model.V15},
 	} {
 		if name == k {
 			sinceVersion := v.sinceVersion
@@ -609,6 +612,13 @@ func validateNameTreeValue(name string, xRefTable *model.XRefTable, o types.Obje
 	}
 
 	return fmt.Errorf("name tree %s: unknown tree name", name)
+}
+
+func validateNameTreeValueContext(c context.Context, name string, x *model.XRefTable, o types.Object, owner int) error {
+	if name == "IDTree" {
+		return validateIDTreeValueContext(c, x, o, model.V13)
+	}
+	return validateNameTreeValue(c, name, x, o, owner)
 }
 
 func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, name string, node *model.Node) (string, string, error) {
@@ -677,7 +687,7 @@ func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTabl
 			continue
 		}
 
-		err = validateNameTreeValue(name, xRefTable, o, namesObjNr)
+		err = validateNameTreeValueContext(c, name, xRefTable, o, namesObjNr)
 		if err != nil {
 			return "", "", fmt.Errorf("name tree %s key %q: %w", name, key, err)
 		}

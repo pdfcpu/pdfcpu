@@ -17,11 +17,13 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -441,11 +443,15 @@ func validateFloatForObject(xRefTable *model.XRefTable, o types.Object, ownerObj
 	return &f, nil
 }
 
-func validateFunctionArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version, validate func(types.Array) bool) (types.Array, error) {
+func validateFunctionArrayEntry(t *functionTraversal, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version, depth int, validate func(types.Array) bool) (types.Array, error) {
 	if log.ValidateEnabled() {
 		log.Validate.Printf("validateFunctionArrayEntry begin: entry=%s\n", entryName)
 	}
+	if err := contextutil.Check(t.c); err != nil {
+		return nil, err
+	}
 
+	xRefTable := t.xRefTable
 	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
 	a, err := validateArrayEntry(
 		xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, validate,
@@ -455,7 +461,7 @@ func validateFunctionArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerO
 	}
 
 	for _, o := range a {
-		if err = validateFunction(xRefTable, o, objNr); err != nil {
+		if err = t.validateFunction(o, objNr, depth); err != nil {
 			return nil, err
 		}
 	}
@@ -467,18 +473,46 @@ func validateFunctionArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerO
 	return a, nil
 }
 
-func validateFunctionOrArrayOfFunctionsEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version) error {
+func validateFunctionObjects(t *functionTraversal, rawObject, resolvedObject types.Object, ownerObjNr int) error {
+	a, ok := resolvedObject.(types.Array)
+	if !ok {
+		functionObject := rawObject
+		if functionObjectIdentity(rawObject) == 0 {
+			functionObject = resolvedObject
+		}
+		return t.validateFunction(functionObject, ownerObjNr, 0)
+	}
+
+	for _, o := range a {
+		if err := contextutil.Check(t.c); err != nil {
+			return err
+		}
+		if o == nil {
+			continue
+		}
+		if err := t.validateFunction(o, ownerObjNr, 0); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateFunctionOrArrayOfFunctionsEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version) error {
 	if log.ValidateEnabled() {
 		log.Validate.Printf("validateFunctionOrArrayOfFunctionsEntry begin: entry=%s\n", entryName)
 	}
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 
-	o, _, err := d.Entry(dictName, entryName, required)
-	objNr := validationObjectNumber(ownerObjNr, o)
-	if err != nil || o == nil {
+	rawObject, _, err := d.Entry(dictName, entryName, required)
+	objNr := validationObjectNumber(ownerObjNr, rawObject)
+	if err != nil || rawObject == nil {
 		return model.WithValidationErrorObject(err, objNr)
 	}
 
-	if o, err = xRefTable.Dereference(o); err != nil {
+	o, err := xRefTable.Dereference(rawObject)
+	if err != nil {
 		return model.WithValidationErrorObject(err, objNr)
 	}
 
@@ -493,27 +527,8 @@ func validateFunctionOrArrayOfFunctionsEntry(xRefTable *model.XRefTable, d types
 		return nil
 	}
 
-	switch o := o.(type) {
-
-	case types.Array:
-
-		for _, o := range o {
-
-			if o == nil {
-				continue
-			}
-
-			if err = validateFunction(xRefTable, o, objNr); err != nil {
-				return err
-			}
-
-		}
-
-	default:
-		if err = processFunction(xRefTable, o, objNr); err != nil {
-			return err
-		}
-
+	if err = validateFunctionObjects(newFunctionTraversal(c, xRefTable), rawObject, o, objNr); err != nil {
+		return err
 	}
 
 	if err = xRefTable.ValidateVersion("dict="+dictName+" entry="+entryName, sinceVersion); err != nil {

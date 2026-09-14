@@ -57,7 +57,7 @@ func TestValidateResourceDictUsesFixedCategoryOrder(t *testing.T) {
 	}
 
 	requireDeterministicValidationError(t, func() error {
-		_, err := validateResourceDict(xRefTable, d)
+		_, err := validateResourceDict(t.Context(), xRefTable, d)
 		return err
 	}, "ExtGState resource dict")
 }
@@ -73,7 +73,7 @@ func TestValidateAdditionalActionsUsesSortedKeys(t *testing.T) {
 	}
 
 	requireDeterministicValidationError(t, func() error {
-		return validateAdditionalActions(xRefTable, d, "rootDict", "AA", REQUIRED, model.V10, "root")
+		return validateAdditionalActions(t.Context(), xRefTable, d, "rootDict", "AA", REQUIRED, model.V10, "root")
 	}, "action Alpha not allowed")
 }
 
@@ -86,7 +86,7 @@ func TestValidateAppearanceSubDictUsesSortedKeys(t *testing.T) {
 	}
 
 	requireDeterministicValidationError(t, func() error {
-		return validateAppearanceSubDict(xRefTable, d)
+		return validateAppearanceSubDict(t.Context(), xRefTable, d)
 	}, "appearance subdict entry Alpha")
 }
 

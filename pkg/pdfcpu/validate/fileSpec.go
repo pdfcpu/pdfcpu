@@ -17,6 +17,7 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
@@ -602,7 +603,7 @@ func validateURLSpecEntry(xRefTable *model.XRefTable, d types.Dict, dictName str
 	return o, nil
 }
 
-func validateFileSpecificationOrFormObject(xRefTable *model.XRefTable, obj types.Object) (err error) {
+func validateFileSpecificationOrFormObject(c context.Context, xRefTable *model.XRefTable, obj types.Object) (err error) {
 	objNr := validationObjectNumber(0, obj)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -615,7 +616,7 @@ func validateFileSpecificationOrFormObject(xRefTable *model.XRefTable, obj types
 
 	sd, ok := o.(types.StreamDict)
 	if ok {
-		return validateFormStreamDict(xRefTable, &sd)
+		return validateFormStreamDict(c, xRefTable, &sd)
 	}
 
 	_, err = validateFileSpecification(xRefTable, obj)

@@ -47,6 +47,16 @@ func outlineCount(ctx *model.Context, d types.Dict, context string) (int, error)
 	return i.Value(), nil
 }
 
+func checkOutlineSibling(c context.Context, ir *types.IndirectRef, visited map[int]bool, operation string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if err := checkBookmarkCycle(ir, visited); err != nil {
+		return fmt.Errorf("%s: %w", operation, err)
+	}
+	return nil
+}
+
 func newOutlinesDict(c context.Context, ctx *model.Context, fName string) (types.Dict, *types.IndirectRef, *types.IndirectRef, error) {
 	if err := contextutil.Check(c); err != nil {
 		return nil, nil, nil, err
@@ -77,7 +87,7 @@ func newOutlinesDict(c context.Context, ctx *model.Context, fName string) (types
 	return outlinesDict, indRef, first, nil
 }
 
-func foldExistingOutlines(ctx *model.Context, rootDict types.Dict, first *types.IndirectRef, append bool) error {
+func foldExistingOutlines(c context.Context, ctx *model.Context, rootDict types.Dict, first *types.IndirectRef, append bool) error {
 	if obj, ok := rootDict.Find("Outlines"); ok {
 		if append {
 			return nil
@@ -93,12 +103,16 @@ func foldExistingOutlines(ctx *model.Context, rootDict types.Dict, first *types.
 		if err != nil {
 			return err
 		}
-		c := 0
+		total := 0
 		f, l := d.IndirectRefEntry("First"), d.IndirectRefEntry("Last")
 		if f == nil || l == nil {
 			return errors.New("ensure outlines: existing outlines missing first or last item")
 		}
+		visited := map[int]bool{}
 		for ir := f; ir != nil; ir = d.IndirectRefEntry("Next") {
+			if err := checkOutlineSibling(c, ir, visited, "ensure outlines"); err != nil {
+				return err
+			}
 			d, err = ctx.DereferenceDict(*ir)
 			if err != nil {
 				return fmt.Errorf("ensure outlines: dereference outline item: %w", err)
@@ -107,7 +121,7 @@ func foldExistingOutlines(ctx *model.Context, rootDict types.Dict, first *types.
 				return errors.New("ensure outlines: missing outline item dict")
 			}
 			d["Parent"] = *first
-			c++
+			total++
 		}
 		d, err = ctx.DereferenceDict(*first)
 		if err != nil {
@@ -120,9 +134,9 @@ func foldExistingOutlines(ctx *model.Context, rootDict types.Dict, first *types.
 		d["First"] = *f
 		d["Last"] = *l
 		if count != 0 {
-			c = count
+			total = count
 		}
-		d["Count"] = types.Integer(-c)
+		d["Count"] = types.Integer(-total)
 	}
 	return nil
 }
@@ -152,7 +166,7 @@ func EnsureOutlines(c context.Context, ctx *model.Context, fName string, append 
 	if err != nil {
 		return err
 	}
-	if err := foldExistingOutlines(ctx, rootDict, first, append); err != nil {
+	if err := foldExistingOutlines(c, ctx, rootDict, first, append); err != nil {
 		return err
 	}
 
@@ -198,17 +212,17 @@ func mergeOutlinesWrapped(c context.Context, fName string, p int, ctxSrc, ctxDes
 		return errors.New("merge outlines: missing source catalog")
 	}
 
-	if c, err := attachWrappedSourceOutlines(ctxDest, rootDictSource, wrapperDict, first); err != nil {
+	if count, err := attachWrappedSourceOutlines(c, ctxDest, rootDictSource, wrapperDict, first); err != nil {
 		return err
-	} else if c > 0 {
-		topCount += c
+	} else if count > 0 {
+		topCount += count
 	}
 
 	outlinesDict["Count"] = types.Integer(topCount)
 	return nil
 }
 
-func attachWrappedSourceOutlines(ctxDest *model.Context, rootDictSource, wrapperDict types.Dict, first *types.IndirectRef) (int, error) {
+func attachWrappedSourceOutlines(c context.Context, ctxDest *model.Context, rootDictSource, wrapperDict types.Dict, first *types.IndirectRef) (int, error) {
 	obj, ok := rootDictSource.Find("Outlines")
 	if !ok {
 		return 0, nil
@@ -230,8 +244,12 @@ func attachWrappedSourceOutlines(ctxDest *model.Context, rootDictSource, wrapper
 	wrapperDict["First"] = *f
 	wrapperDict["Last"] = *l
 
-	c := 0
+	total := 0
+	visited := map[int]bool{}
 	for ir := f; ir != nil; ir = d.IndirectRefEntry("Next") {
+		if err := checkOutlineSibling(c, ir, visited, "merge source outlines"); err != nil {
+			return 0, err
+		}
 		d, err = ctxDest.DereferenceDict(*ir)
 		if err != nil {
 			return 0, fmt.Errorf("merge outlines: dereference source outline item: %w", err)
@@ -246,13 +264,13 @@ func attachWrappedSourceOutlines(ctxDest *model.Context, rootDictSource, wrapper
 			return 0, err
 		}
 		if itemCount > 0 {
-			c += itemCount
+			total += itemCount
 		}
-		c++
+		total++
 	}
 
-	wrapperDict["Count"] = types.Integer(c)
-	return c, nil
+	wrapperDict["Count"] = types.Integer(total)
+	return total, nil
 }
 
 func destOutlines(ctxDest *model.Context) (*types.IndirectRef, types.Dict, *types.IndirectRef, error) {
@@ -400,7 +418,7 @@ func sourceOutlines(ctxSrc, ctxDest *model.Context) (*types.IndirectRef, *types.
 	return first, last, count, nil
 }
 
-func reparentOutlineItems(ctx *model.Context, first, parent *types.IndirectRef) (int, error) {
+func reparentOutlineItems(c context.Context, ctx *model.Context, first, parent *types.IndirectRef) (int, error) {
 	if ctx == nil {
 		return 0, errors.New("reparent outline item: missing context")
 	}
@@ -409,7 +427,11 @@ func reparentOutlineItems(ctx *model.Context, first, parent *types.IndirectRef) 
 	}
 
 	count := 0
+	visited := map[int]bool{}
 	for ir := first; ir != nil; {
+		if err := checkOutlineSibling(c, ir, visited, "reparent outline item"); err != nil {
+			return 0, err
+		}
 		d, err := ctx.DereferenceDict(*ir)
 		if err != nil {
 			return 0, fmt.Errorf("reparent outline item: dereference item: %w", err)
@@ -432,7 +454,7 @@ func reparentOutlineItems(ctx *model.Context, first, parent *types.IndirectRef) 
 	return count, nil
 }
 
-func mergeOutlinesPreserve(ctxSrc, ctxDest *model.Context) error {
+func mergeOutlinesPreserve(c context.Context, ctxSrc, ctxDest *model.Context) error {
 	first, last, sourceCount, err := sourceOutlines(ctxSrc, ctxDest)
 	if err != nil {
 		return fmt.Errorf("merge outlines preserve: source outlines: %w", err)
@@ -446,7 +468,7 @@ func mergeOutlinesPreserve(ctxSrc, ctxDest *model.Context) error {
 		return fmt.Errorf("merge outlines preserve: ensure destination root: %w", err)
 	}
 
-	count, err := reparentOutlineItems(ctxDest, first, indRef)
+	count, err := reparentOutlineItems(c, ctxDest, first, indRef)
 	if err != nil {
 		return fmt.Errorf("merge outlines preserve: reparent source items: %w", err)
 	}
@@ -1572,7 +1594,7 @@ func mergeConfiguredOutlines(c context.Context, fName string, origDestPageCount 
 	}
 
 	if ctxDest.Configuration.MergeBookmarkMode == model.MergeBookmarkModePreserve {
-		return mergeOutlinesPreserve(ctxSrc, ctxDest)
+		return mergeOutlinesPreserve(c, ctxSrc, ctxDest)
 	}
 
 	return mergeOutlinesWrapped(c, fName, origDestPageCount+1, ctxSrc, ctxDest)

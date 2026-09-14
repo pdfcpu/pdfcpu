@@ -43,34 +43,75 @@ var resourceDictValidators = []resourceDictValidator{
 	{"Shading", model.V13},
 }
 
-func validateResourceCategory(
-	xRefTable *model.XRefTable,
-	name string,
-	o types.Object,
-	sinceVersion model.Version,
-) error {
+func validateResourceCategory(c context.Context, xRefTable *model.XRefTable, name string, o types.Object, sinceVersion model.Version) error {
 	switch name {
 	case "ExtGState":
-		return validateExtGStateResourceDict(xRefTable, o, sinceVersion)
+		return validateExtGStateResourceDict(c, xRefTable, o, sinceVersion)
 	case "Font":
-		return validateFontResourceDict(xRefTable, o, sinceVersion)
+		return validateFontResourceDict(c, xRefTable, o, sinceVersion)
 	case "XObject":
-		return validateXObjectResourceDict(xRefTable, o, sinceVersion)
+		return validateXObjectResourceDict(c, xRefTable, o, sinceVersion)
 	case "Properties":
-		return validatePropertiesResourceDict(xRefTable, o, sinceVersion)
+		return validatePropertiesResourceDict(c, xRefTable, o, sinceVersion)
 	case "ColorSpace":
-		return validateColorSpaceResourceDict(xRefTable, o, sinceVersion)
+		return validateColorSpaceResourceDict(c, xRefTable, o, sinceVersion)
 	case "Pattern":
-		return validatePatternResourceDict(xRefTable, o, sinceVersion)
+		return validatePatternResourceDict(c, xRefTable, o, sinceVersion)
 	case "Shading":
-		return validateShadingResourceDict(xRefTable, o, sinceVersion)
+		return validateShadingResourceDict(c, xRefTable, o, sinceVersion)
 	}
 	return nil
 }
 
-func validateResourceDict(xRefTable *model.XRefTable, o types.Object) (hasResources bool, err error) {
+type resourceTraversalContextKey struct{}
+
+type resourceTraversal struct {
+	xRefTable *model.XRefTable
+	active    types.IntSet
+	depth     int
+}
+
+func resourceTraversalFromContext(c context.Context, xRefTable *model.XRefTable) (context.Context, *resourceTraversal) {
+	if c != nil {
+		if t, ok := c.Value(resourceTraversalContextKey{}).(*resourceTraversal); ok {
+			return c, t
+		}
+	}
+	t := &resourceTraversal{xRefTable: xRefTable, active: types.IntSet{}, depth: -1}
+	if c == nil {
+		return nil, t
+	}
+	return context.WithValue(c, resourceTraversalContextKey{}, t), t
+}
+
+func validateResourceDict(c context.Context, xRefTable *model.XRefTable, o types.Object) (hasResources bool, err error) {
+	c, traversal := resourceTraversalFromContext(c, xRefTable)
+	return traversal.validate(c, o)
+}
+
+func (t *resourceTraversal) validate(c context.Context, o types.Object) (hasResources bool, err error) {
 	resourceObjNr := validationObjectNumber(0, o)
-	d, err := xRefTable.DereferenceDict(o)
+	if err := contextutil.Check(c); err != nil {
+		return false, model.WithValidationErrorObject(err, resourceObjNr)
+	}
+	if objNr, ok := indirectRefObjectNumber(o); ok {
+		if t.active[objNr] {
+			return true, nil
+		}
+		t.active[objNr] = true
+		defer delete(t.active, objNr)
+	}
+
+	depth := t.depth + 1
+	if err := t.xRefTable.CheckRecursionDepth("resource graph", depth); err != nil {
+		return false, model.WithValidationErrorObject(err, resourceObjNr)
+	}
+	t.depth = depth
+	defer func() {
+		t.depth--
+	}()
+
+	d, err := t.xRefTable.DereferenceDict(o)
 	if err != nil || d == nil {
 		return false, model.WithValidationErrorObject(err, resourceObjNr)
 	}
@@ -78,7 +119,7 @@ func validateResourceDict(xRefTable *model.XRefTable, o types.Object) (hasResour
 	for _, v := range resourceDictValidators {
 		if o, ok := d.Find(v.name); ok {
 			categoryObjNr := validationObjectNumber(resourceObjNr, o)
-			err = validateResourceCategory(xRefTable, v.name, o, v.sinceVersion)
+			err = validateResourceCategory(c, t.xRefTable, v.name, o, v.sinceVersion)
 			if err != nil {
 				return false, model.WithValidationErrorObject(err, categoryObjNr)
 			}
@@ -86,7 +127,7 @@ func validateResourceDict(xRefTable *model.XRefTable, o types.Object) (hasResour
 	}
 
 	allowedResDictKeys := []string{"ExtGState", "Font", "XObject", "Properties", "ColorSpace", "Pattern", "ProcSet", "Shading"}
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
+	if t.xRefTable.ValidationMode == model.ValidationRelaxed {
 		allowedResDictKeys = append(allowedResDictKeys, "Encoding")
 		allowedResDictKeys = append(allowedResDictKeys, "ProcSets")
 	}
@@ -187,9 +228,9 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict, ownerObjNr i
 	return validateContents(o, xRefTable, d, contentsObjNr)
 }
 
-func validatePageResources(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+func validatePageResources(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
 	if o, found := d.Find("Resources"); found {
-		_, err := validateResourceDict(xRefTable, o)
+		_, err := validateResourceDict(c, xRefTable, o)
 		return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, o))
 	}
 
@@ -298,6 +339,7 @@ func validatePageEntryRotate(xRefTable *model.XRefTable, d types.Dict, ownerObjN
 }
 
 func validateGroupEntry(
+	c context.Context,
 	xRefTable *model.XRefTable,
 	d types.Dict,
 	ownerObjNr int,
@@ -318,7 +360,7 @@ func validateGroupEntry(
 	}
 
 	if d1 != nil {
-		err = validateGroupAttributesDict(xRefTable, d1)
+		err = validateGroupAttributesDict(c, xRefTable, d1)
 		err = model.WithValidationErrorObject(err, groupObjNr)
 		if err == nil && relaxed && xRefTable.Version() < strictSinceVersion {
 			showDigestedVersionViolation(xRefTable, "dict="+dictName+" entry=Group")
@@ -328,18 +370,18 @@ func validateGroupEntry(
 	return err
 }
 
-func validatePageEntryGroup(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, required bool, sinceVersion model.Version) error {
-	return validateGroupEntry(xRefTable, d, ownerObjNr, "pageDict", required, sinceVersion)
+func validatePageEntryGroup(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, required bool, sinceVersion model.Version) error {
+	return validateGroupEntry(c, xRefTable, d, ownerObjNr, "pageDict", required, sinceVersion)
 }
 
-func validatePageEntryThumb(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, required bool, sinceVersion model.Version) error {
+func validatePageEntryThumb(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, required bool, sinceVersion model.Version) error {
 	thumbObjNr := validationEntryObjectNumber(ownerObjNr, d, "Thumb")
 	sd, err := validateStreamDictEntry(xRefTable, d, ownerObjNr, "pagesDict", "Thumb", required, sinceVersion, nil)
 	if err != nil || sd == nil {
 		return err
 	}
 
-	if err := validateXObjectStreamDict(xRefTable, *sd); err != nil {
+	if err := validateXObjectStreamDict(c, xRefTable, *sd); err != nil {
 		return model.WithValidationErrorObject(err, thumbObjNr)
 	}
 
@@ -546,7 +588,7 @@ func validatePageEntryPZ(xRefTable *model.XRefTable, d types.Dict, ownerObjNr in
 	return err
 }
 
-func validatePageEntrySeparationInfo(xRefTable *model.XRefTable, pagesDict types.Dict, ownerObjNr int, required bool, sinceVersion model.Version) error {
+func validatePageEntrySeparationInfo(c context.Context, xRefTable *model.XRefTable, pagesDict types.Dict, ownerObjNr int, required bool, sinceVersion model.Version) error {
 	// see 14.11.4
 
 	separationObjNr := validationEntryObjectNumber(ownerObjNr, pagesDict, "SeparationInfo")
@@ -576,7 +618,7 @@ func validatePageEntrySeparationInfo(xRefTable *model.XRefTable, pagesDict types
 	if a != nil {
 		colorSpaceObjNr := validationEntryObjectNumber(separationObjNr, d, "ColorSpace")
 		err = validateColorSpaceArraySubset(
-			xRefTable, a, colorSpaceObjNr, []string{"Separation", "DeviceN"},
+			c, xRefTable, a, colorSpaceObjNr, []string{"Separation", "DeviceN"},
 		)
 		err = model.WithValidationErrorObject(err, colorSpaceObjNr)
 	}
@@ -1112,7 +1154,7 @@ func handlePieceInfo(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, d
 	return nil
 }
 
-func validatePageDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, hasMediaBox bool) (types.Array, error) {
+func validatePageDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, hasMediaBox bool) (types.Array, error) {
 	dictName := "pageDict"
 
 	if ir := d.IndirectRefEntry("Parent"); ir == nil {
@@ -1127,7 +1169,7 @@ func validatePageDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, 
 	}
 
 	// Resources
-	err = validatePageResources(xRefTable, d, ownerObjNr)
+	err = validatePageResources(c, xRefTable, d, ownerObjNr)
 	if err != nil {
 		return nil, err
 	}
@@ -1148,7 +1190,7 @@ func validatePageDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, 
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V11
 	}
-	err = validateAdditionalActions(xRefTable, d, dictName, "AA", OPTIONAL, sinceVersion, "page")
+	err = validateAdditionalActions(c, xRefTable, d, dictName, "AA", OPTIONAL, sinceVersion, "page")
 	if err != nil {
 		return nil, model.WithValidationErrorObject(err, validationEntryObjectNumber(ownerObjNr, d, "AA"))
 	}
@@ -1167,8 +1209,12 @@ func validatePageDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, 
 		{validatePageEntryArtBox, OPTIONAL, model.V13, model.V12},
 		{validatePageBoxColorInfo, OPTIONAL, model.V14, model.V14},
 		{validatePageEntryRotate, OPTIONAL, model.V10, model.V10},
-		{validatePageEntryGroup, OPTIONAL, model.V14, model.V14},
-		{validatePageEntryThumb, OPTIONAL, model.V10, model.V10},
+		{func(x *model.XRefTable, d types.Dict, owner int, required bool, version model.Version) error {
+			return validatePageEntryGroup(c, x, d, owner, required, version)
+		}, OPTIONAL, model.V14, model.V14},
+		{func(x *model.XRefTable, d types.Dict, owner int, required bool, version model.Version) error {
+			return validatePageEntryThumb(c, x, d, owner, required, version)
+		}, OPTIONAL, model.V10, model.V10},
 		{validatePageEntryB, OPTIONAL, model.V11, model.V11},
 		{validatePageEntryDur, OPTIONAL, model.V11, model.V11},
 		{validatePageEntryTrans, OPTIONAL, model.V11, model.V11},
@@ -1176,7 +1222,9 @@ func validatePageDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, 
 		{validatePageEntryStructParents, OPTIONAL, model.V10, model.V10},
 		{validatePageEntryID, OPTIONAL, model.V13, model.V13},
 		{validatePageEntryPZ, OPTIONAL, model.V13, model.V13},
-		{validatePageEntrySeparationInfo, OPTIONAL, model.V13, model.V13},
+		{func(x *model.XRefTable, d types.Dict, owner int, required bool, version model.Version) error {
+			return validatePageEntrySeparationInfo(c, x, d, owner, required, version)
+		}, OPTIONAL, model.V13, model.V13},
 		{validatePageEntryTabs, OPTIONAL, model.V15, model.V12},
 		{validatePageEntryTemplateInstantiated, OPTIONAL, model.V15, model.V15},
 		{validatePageEntryPresSteps, OPTIONAL, model.V15, model.V15},
@@ -1201,8 +1249,8 @@ func validatePageMetadata(xRefTable *model.XRefTable, d types.Dict, ownerObjNr i
 	return model.WithValidationErrorObject(err, validationEntryObjectNumber(ownerObjNr, d, "Metadata"))
 }
 
-func validatePagesDictGeneralEntries(xRefTable *model.XRefTable, d types.Dict, objNr int) (hasResources bool, mediaBoxArr types.Array, err error) {
-	hasResources, err = validateResources(xRefTable, d)
+func validatePagesDictGeneralEntries(c context.Context, xRefTable *model.XRefTable, d types.Dict, objNr int) (hasResources bool, mediaBoxArr types.Array, err error) {
+	hasResources, err = validateResources(c, xRefTable, d)
 	if err != nil {
 		resourcesObjNr := validationEntryObjectNumber(objNr, d, "Resources")
 		context := "page tree: node"
@@ -1253,14 +1301,14 @@ func dictTypeForPageNodeDict(xRefTable *model.XRefTable, d types.Dict, objNr int
 	return dictType.Value(), nil
 }
 
-func validateResources(xRefTable *model.XRefTable, d types.Dict) (hasResources bool, err error) {
+func validateResources(c context.Context, xRefTable *model.XRefTable, d types.Dict) (hasResources bool, err error) {
 	// Resources: optional, dict
 	o, ok := d.Find("Resources")
 	if !ok {
 		return false, nil
 	}
 
-	return validateResourceDict(xRefTable, o)
+	return validateResourceDict(c, xRefTable, o)
 }
 
 func pagesDictKids(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (types.Array, error) {
@@ -1429,7 +1477,7 @@ func processPagesKids(c context.Context, xRefTable *model.XRefTable, kids types.
 		case "Page":
 			*curPage++
 			xRefTable.CurPage = *curPage
-			dMediaBoxArr, err := validatePageDict(xRefTable, pageNodeDict, objNr, len(mediaBoxArr) > 0)
+			dMediaBoxArr, err := validatePageDict(c, xRefTable, pageNodeDict, objNr, len(mediaBoxArr) > 0)
 			if err != nil {
 				return nil, pageTreePageError(err, objNr)
 			}
@@ -1464,7 +1512,7 @@ func validatePagesDictDepth(c context.Context, xRefTable *model.XRefTable, d typ
 	}
 	defer visit.Leave(objNr)
 
-	dHasResources, dMediaBoxArr, err := validatePagesDictGeneralEntries(xRefTable, d, objNr)
+	dHasResources, dMediaBoxArr, err := validatePagesDictGeneralEntries(c, xRefTable, d, objNr)
 	if err != nil {
 		return err
 	}

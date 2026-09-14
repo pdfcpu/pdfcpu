@@ -17,9 +17,11 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -62,7 +64,8 @@ func validateExponentialInterpolationFunctionDict(xRefTable *model.XRefTable, d 
 	return nil
 }
 
-func validateStitchingFunctionDict(xRefTable *model.XRefTable, d types.Dict) error {
+func (t *functionTraversal) validateStitchingFunctionDict(d types.Dict, depth int) error {
+	xRefTable := t.xRefTable
 	dictName := "stitchingFunctionDict"
 	// Version check
 	err := xRefTable.ValidateVersion(dictName, model.V13)
@@ -80,7 +83,7 @@ func validateStitchingFunctionDict(xRefTable *model.XRefTable, d types.Dict) err
 		return fmt.Errorf("%s.Range: %w", dictName, err)
 	}
 
-	_, err = validateFunctionArrayEntry(xRefTable, d, 0, dictName, "Functions", REQUIRED, model.V13, nil)
+	_, err = validateFunctionArrayEntry(t, d, 0, dictName, "Functions", REQUIRED, model.V13, depth+1, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Functions: %w", dictName, err)
 	}
@@ -202,7 +205,66 @@ func validatePostScriptCalculatorFunctionStreamDict(xRefTable *model.XRefTable, 
 	return nil
 }
 
-func processFunctionDict(xRefTable *model.XRefTable, d types.Dict) error {
+type functionTraversal struct {
+	c         context.Context
+	xRefTable *model.XRefTable
+	ancestors map[int]bool
+	validated map[int]int
+}
+
+func newFunctionTraversal(c context.Context, xRefTable *model.XRefTable) *functionTraversal {
+	return &functionTraversal{
+		c:         c,
+		xRefTable: xRefTable,
+		ancestors: map[int]bool{},
+		validated: map[int]int{},
+	}
+}
+
+func functionObjectIdentity(o types.Object) int {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		return 0
+	}
+	return ir.ObjectNumber.Value()
+}
+
+func (t *functionTraversal) enter(objNr int) error {
+	if objNr <= 0 {
+		return nil
+	}
+	if t.ancestors[objNr] {
+		return fmt.Errorf("obj#%d: %w", objNr, model.ErrFunctionCycle)
+	}
+	t.ancestors[objNr] = true
+	return nil
+}
+
+func (t *functionTraversal) leave(objNr int) {
+	if objNr > 0 {
+		delete(t.ancestors, objNr)
+	}
+}
+
+func (t *functionTraversal) alreadyValidated(objNr, depth int) bool {
+	if objNr <= 0 {
+		return false
+	}
+	validatedDepth, ok := t.validated[objNr]
+	return ok && depth <= validatedDepth
+}
+
+func (t *functionTraversal) markValidated(objNr, depth int) {
+	if objNr <= 0 {
+		return
+	}
+	if previous, ok := t.validated[objNr]; !ok || depth > previous {
+		t.validated[objNr] = depth
+	}
+}
+
+func (t *functionTraversal) processFunctionDict(d types.Dict, depth int) error {
+	xRefTable := t.xRefTable
 	funcType, err := validateIntegerEntry(xRefTable, d, 0, "functionDict", "FunctionType", REQUIRED, model.V10, func(i int) bool { return i == 2 || i == 3 })
 	if err != nil {
 		return fmt.Errorf("function dictionary: FunctionType: %w", err)
@@ -216,7 +278,7 @@ func processFunctionDict(xRefTable *model.XRefTable, d types.Dict) error {
 		}
 
 	case 3:
-		if err = validateStitchingFunctionDict(xRefTable, d); err != nil {
+		if err = t.validateStitchingFunctionDict(d, depth); err != nil {
 			return fmt.Errorf("stitching function: %w", err)
 		}
 
@@ -247,7 +309,7 @@ func processFunctionStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict)
 	return nil
 }
 
-func processFunction(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
+func (t *functionTraversal) processFunction(o types.Object, ownerObjNr, depth int) (err error) {
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
@@ -263,12 +325,12 @@ func processFunction(xRefTable *model.XRefTable, o types.Object, ownerObjNr int)
 	case types.Dict:
 
 		// process function  2,3
-		err = processFunctionDict(xRefTable, o)
+		err = t.processFunctionDict(o, depth)
 
 	case types.StreamDict:
 
 		// process function  0,4
-		err = processFunctionStreamDict(xRefTable, &o)
+		err = processFunctionStreamDict(t.xRefTable, &o)
 
 	default:
 		return fmt.Errorf("function object: expected dict or stream dict, got %T", o)
@@ -277,13 +339,27 @@ func processFunction(xRefTable *model.XRefTable, o types.Object, ownerObjNr int)
 	return err
 }
 
-func validateFunction(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
+func (t *functionTraversal) validateFunction(o types.Object, ownerObjNr, depth int) (err error) {
 	objNr := validationObjectNumber(ownerObjNr, o)
+	functionObjNr := functionObjectIdentity(o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
 	}()
+	if err := contextutil.Check(t.c); err != nil {
+		return err
+	}
+	if err := t.xRefTable.CheckRecursionDepth("function graph", depth); err != nil {
+		return err
+	}
+	if err := t.enter(functionObjNr); err != nil {
+		return err
+	}
+	defer t.leave(functionObjNr)
+	if t.alreadyValidated(functionObjNr, depth) {
+		return nil
+	}
 
-	o, err = xRefTable.Dereference(o)
+	o, err = t.xRefTable.Dereference(o)
 	if err != nil {
 		return fmt.Errorf("function: dereference: %w", err)
 	}
@@ -291,5 +367,13 @@ func validateFunction(xRefTable *model.XRefTable, o types.Object, ownerObjNr int
 		return errors.New("function: missing object")
 	}
 
-	return processFunction(xRefTable, o, objNr)
+	if err = t.processFunction(o, objNr, depth); err != nil {
+		return err
+	}
+	t.markValidated(functionObjNr, depth)
+	return nil
+}
+
+func validateFunction(c context.Context, xRefTable *model.XRefTable, o types.Object, ownerObjNr int) error {
+	return newFunctionTraversal(c, xRefTable).validateFunction(o, ownerObjNr, 0)
 }

@@ -22,6 +22,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 	"strings"
@@ -376,6 +377,13 @@ func newFontObject(ctx *model.Context, fontDict types.Dict, resourceName, prefix
 	}
 }
 
+func recordCorruptFontResourceDict(ctx *model.Context, rDict types.Dict, recorded bool) bool {
+	if !recorded {
+		ctx.Optimize.CorruptFontResDicts = append(ctx.Optimize.CorruptFontResDicts, rDict)
+	}
+	return true
+}
+
 // Get rid of redundant fonts for given fontResources dictionary.
 func optimizeFontResourcesDict(c context.Context, ctx *model.Context, rDict types.Dict, pageNr int, rNamePrefix string) error {
 	pageFonts := pageFonts(ctx, pageNr)
@@ -384,13 +392,13 @@ func optimizeFontResourcesDict(c context.Context, ctx *model.Context, rDict type
 
 	// Iterate over font resource dict.
 	for rName, v := range rDict {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 
 		if v == nil {
-			if !recordedCorrupt {
-				// fontId with missing fontDict indRef.
-				ctx.Optimize.CorruptFontResDicts = append(ctx.Optimize.CorruptFontResDicts, rDict)
-				recordedCorrupt = true
-			}
+			// fontId with missing fontDict indRef.
+			recordedCorrupt = recordCorruptFontResourceDict(ctx, rDict, recordedCorrupt)
 			continue
 		}
 
@@ -667,6 +675,9 @@ func formResourcesVisited(ctx *model.Context, pageNr, objNr int) bool {
 }
 
 func optimizeForm(c context.Context, ctx *model.Context, osd *types.StreamDict, rNamePrefix, rName string, rDict types.Dict, objNr, pageNr, pageObjNumber int, vis []types.Object) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	ir, err := optimizeXObjectForm(c, ctx, osd, objNr)
 	if err != nil {
 		return fmt.Errorf("form XObject %s obj#%d: optimize usage: %w", qualifiedRName(rNamePrefix, rName), objNr, err)
@@ -727,6 +738,9 @@ func optimizeExtGStateResources(c context.Context, ctx *model.Context, rDict typ
 }
 
 func optimizeSMaskResources(c context.Context, dict types.Dict, vis []types.Object, rNamePrefix string, ctx *model.Context, rDict types.Dict, pageNr int, pageImages types.IntSet, pageObjNumber int) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	indRef := dict.IndirectRefEntry("G")
 	if indRef == nil {
 		return nil
@@ -782,6 +796,9 @@ func optimizeExtGStateResourcesDict(c context.Context, ctx *model.Context, rDict
 	}
 
 	for rName, v := range rDict {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 
 		indRef, ok := v.(types.IndirectRef)
 		if !ok {
@@ -860,6 +877,9 @@ func optimizeXObjectResourcesDict(c context.Context, ctx *model.Context, rDict t
 	pageImages := pageImages(ctx, pageNr)
 
 	for rName, v := range rDict {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 
 		indRef, ok := v.(types.IndirectRef)
 		if !ok {
@@ -955,6 +975,9 @@ func processExtGStateResources(c context.Context, ctx *model.Context, obj types.
 
 // Optimize given resource dictionary by removing redundant fonts and images.
 func optimizeResources(c context.Context, ctx *model.Context, resourcesDict types.Dict, pageNr, pageObjNumber int, rNamePrefix string, visitedRes []types.Object) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if log.OptimizeEnabled() {
 		log.Optimize.Printf("optimizeResources begin: pageNr=%d pageObjNumber=%d\n", pageNr, pageObjNumber)
 	}
@@ -1117,41 +1140,51 @@ func parsePagesDict(c context.Context, ctx *model.Context, pagesDict types.Dict,
 	return pageNr, nil
 }
 
-func traverse(c context.Context, xRefTable *model.XRefTable, value types.Object, duplObjs types.IntSet) error {
-	if err := contextutil.Check(c); err != nil {
-		return err
-	}
-	if indRef, ok := value.(types.IndirectRef); ok {
-		duplObjs[int(indRef.ObjectNumber)] = true
-		o, err := xRefTable.Dereference(indRef)
-		if err != nil {
-			return fmt.Errorf("obj#%d: dereference duplicate graph object: %w", indRef.ObjectNumber.Value(), err)
-		}
-		if err := traverseObjectGraphAndMarkDuplicates(c, xRefTable, o, duplObjs); err != nil {
-			return fmt.Errorf("obj#%d: traverse duplicate graph object: %w", indRef.ObjectNumber.Value(), err)
-		}
-	}
-	if d, ok := value.(types.Dict); ok {
-		if err := traverseObjectGraphAndMarkDuplicates(c, xRefTable, d, duplObjs); err != nil {
-			return err
-		}
-	}
-	if sd, ok := value.(types.StreamDict); ok {
-		if err := traverseObjectGraphAndMarkDuplicates(c, xRefTable, sd, duplObjs); err != nil {
-			return err
-		}
-	}
-	if a, ok := value.(types.Array); ok {
-		if err := traverseObjectGraphAndMarkDuplicates(c, xRefTable, a, duplObjs); err != nil {
-			return err
-		}
-	}
+type duplicateObjectTraversal struct {
+	xRefTable *model.XRefTable
+	objects   types.IntSet
+}
 
+func (t *duplicateObjectTraversal) traverseIndirect(c context.Context, indRef types.IndirectRef, depth int) error {
+	objNr := indRef.ObjectNumber.Value()
+	if t.objects[objNr] {
+		return nil
+	}
+	depth++
+	if err := t.xRefTable.CheckRecursionDepth("duplicate object graph", depth); err != nil {
+		return fmt.Errorf("obj#%d: %w", objNr, err)
+	}
+	t.objects[objNr] = true
+	o, err := t.xRefTable.Dereference(indRef)
+	if err != nil {
+		return fmt.Errorf("obj#%d: dereference duplicate graph object: %w", objNr, err)
+	}
+	if err := t.walk(c, o, depth); err != nil {
+		return fmt.Errorf("obj#%d: traverse duplicate graph object: %w", objNr, err)
+	}
 	return nil
 }
 
-// Traverse the object graph for a Object and mark all objects as potential duplicates.
+func (t *duplicateObjectTraversal) traverse(c context.Context, value types.Object, depth int) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	switch value := value.(type) {
+	case types.IndirectRef:
+		return t.traverseIndirect(c, value, depth)
+	case types.Dict, types.StreamDict, types.Array:
+		return t.walk(c, value, depth)
+	}
+	return nil
+}
+
+// Traverse the object graph for an object and mark all objects as potential duplicates.
 func traverseObjectGraphAndMarkDuplicates(c context.Context, xRefTable *model.XRefTable, obj types.Object, duplObjs types.IntSet) error {
+	t := &duplicateObjectTraversal{xRefTable: xRefTable, objects: duplObjs}
+	return t.traverse(c, obj, 0)
+}
+
+func (t *duplicateObjectTraversal) walk(c context.Context, obj types.Object, depth int) error {
 	if err := contextutil.Check(c); err != nil {
 		return err
 	}
@@ -1165,7 +1198,7 @@ func traverseObjectGraphAndMarkDuplicates(c context.Context, xRefTable *model.XR
 		if log.OptimizeEnabled() {
 			log.Optimize.Println("traverseObjectGraphAndMarkDuplicates: dict")
 		}
-		if err := traverseDuplicateDict(c, xRefTable, x, duplObjs); err != nil {
+		if err := t.traverseDict(c, x, depth); err != nil {
 			return fmt.Errorf("dict entry: %w", err)
 		}
 
@@ -1173,7 +1206,7 @@ func traverseObjectGraphAndMarkDuplicates(c context.Context, xRefTable *model.XR
 		if log.OptimizeEnabled() {
 			log.Optimize.Println("traverseObjectGraphAndMarkDuplicates: streamDict")
 		}
-		if err := traverseDuplicateDict(c, xRefTable, x.Dict, duplObjs); err != nil {
+		if err := t.traverseDict(c, x.Dict, depth); err != nil {
 			return fmt.Errorf("stream dict entry: %w", err)
 		}
 
@@ -1182,7 +1215,7 @@ func traverseObjectGraphAndMarkDuplicates(c context.Context, xRefTable *model.XR
 			log.Optimize.Println("traverseObjectGraphAndMarkDuplicates: arr")
 		}
 		for i, value := range x {
-			if err := traverse(c, xRefTable, value, duplObjs); err != nil {
+			if err := t.traverse(c, value, depth); err != nil {
 				return fmt.Errorf("array[%d]: %w", i, err)
 			}
 		}
@@ -1195,10 +1228,10 @@ func traverseObjectGraphAndMarkDuplicates(c context.Context, xRefTable *model.XR
 	return nil
 }
 
-func traverseDuplicateDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, duplObjs types.IntSet) error {
-	for _, value := range d {
-		if err := traverse(c, xRefTable, value, duplObjs); err != nil {
-			return err
+func (t *duplicateObjectTraversal) traverseDict(c context.Context, d types.Dict, depth int) error {
+	for _, key := range slices.Sorted(maps.Keys(d)) {
+		if err := t.traverse(c, d[key], depth); err != nil {
+			return fmt.Errorf("entry %s: %w", key, err)
 		}
 	}
 	return contextutil.Check(c)

@@ -263,14 +263,14 @@ func validateAnnotationDictText(xRefTable *model.XRefTable, d types.Dict, dictNa
 	return validateTextAnnotationState(xRefTable, dictName, state, stateModel)
 }
 
-func validateActionOrDestination(xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) (string, error) {
+func validateActionOrDestination(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) (string, error) {
 	// The action that shall be performed when this item is activated.
 	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "A", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return "", err
 	}
 	if d1 != nil {
-		return "", validateActionDictObject(xRefTable, d1, d["A"], dictName+".A")
+		return "", validateActionDictObject(c, xRefTable, d1, d["A"], dictName+".A")
 	}
 
 	// A destination that shall be displayed when this item is activated.
@@ -317,11 +317,11 @@ func validateURIActionDictEntry(xRefTable *model.XRefTable, d types.Dict, dictNa
 	return validateURIActionDict(xRefTable, d1, dictName)
 }
 
-func validateAnnotationDictLink(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictLink(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// see 12.5.6.5
 
 	// A or Dest, required either or
-	if _, err := validateActionOrDestination(xRefTable, d, dictName, model.V11); err != nil {
+	if _, err := validateActionOrDestination(c, xRefTable, d, dictName, model.V11); err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
 			return err
 		}
@@ -963,7 +963,7 @@ func validateAnnotationDictMovie(xRefTable *model.XRefTable, d types.Dict, dictN
 	return nil
 }
 
-func validateAnnotationDictWidget(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictWidget(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// see 12.5.6.19
 
 	// H, optional, name
@@ -986,14 +986,14 @@ func validateAnnotationDictWidget(xRefTable *model.XRefTable, d types.Dict, dict
 		return err
 	}
 	if d1 != nil {
-		if err = validateActionDictObject(xRefTable, d1, d["A"], dictName+".A"); err != nil {
+		if err = validateActionDictObject(c, xRefTable, d1, d["A"], dictName+".A"); err != nil {
 			return err
 		}
 	}
 
 	// AA, optional, dict, since V1.2
 	// An additional-actions dictionary defining the annotation’s behaviour in response to various trigger events.
-	if err = validateAdditionalActions(xRefTable, d, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot"); err != nil {
+	if err = validateAdditionalActions(c, xRefTable, d, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot"); err != nil {
 		return err
 	}
 
@@ -1011,7 +1011,7 @@ func validateAnnotationDictWidget(xRefTable *model.XRefTable, d types.Dict, dict
 	return err
 }
 
-func validateAnnotationDictScreen(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictScreen(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// see 12.5.6.18
 
 	// T, optional, text string
@@ -1030,16 +1030,16 @@ func validateAnnotationDictScreen(xRefTable *model.XRefTable, d types.Dict, dict
 		return err
 	}
 	if d1 != nil {
-		if err = validateActionDictObject(xRefTable, d1, d["A"], dictName+".A"); err != nil {
+		if err = validateActionDictObject(c, xRefTable, d1, d["A"], dictName+".A"); err != nil {
 			return err
 		}
 	}
 
 	// AA, optional, additional-actions dict, since V1.2
-	return validateAdditionalActions(xRefTable, d, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot")
+	return validateAdditionalActions(c, xRefTable, d, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot")
 }
 
-func validateAnnotationDictPrinterMark(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictPrinterMark(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// see 12.5.6.20
 
 	// MN, optional, name
@@ -1057,7 +1057,7 @@ func validateAnnotationDictPrinterMark(xRefTable *model.XRefTable, d types.Dict,
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V11
 	}
-	return validateAppearDictEntry(xRefTable, d, dictName, REQUIRED, sinceVersion)
+	return validateAppearDictEntry(c, xRefTable, d, dictName, REQUIRED, sinceVersion)
 }
 
 func validateTrapNetFontFauxing(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -1288,7 +1288,7 @@ func validateExDataDict(xRefTable *model.XRefTable, d types.Dict) error {
 	return err
 }
 
-func validatePopupEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
+func validatePopupEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V12
 	}
@@ -1303,7 +1303,7 @@ func validatePopupEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entr
 			return err
 		}
 
-		if _, err = validateAnnotationDict(xRefTable, d1); err != nil {
+		if _, err = validateAnnotationDict(c, xRefTable, d1); err != nil {
 			return err
 		}
 
@@ -1312,29 +1312,66 @@ func validatePopupEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entr
 	return nil
 }
 
-func validateIRTEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
-	d1, err := validateDictEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion, nil)
-	if err != nil {
+type annotationIRTTraversal map[int]bool
+
+func (v annotationIRTTraversal) enter(objNr int) error {
+	if objNr <= 0 {
+		return nil
+	}
+	if v[objNr] {
+		return fmt.Errorf("obj#%d: %w", objNr, model.ErrAnnotationIRTCycle)
+	}
+	v[objNr] = true
+	return nil
+}
+
+func (v annotationIRTTraversal) leave(objNr int) {
+	if objNr > 0 {
+		delete(v, objNr)
+	}
+}
+
+func validateIRTEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, depth int, visit annotationIRTTraversal) (err error) {
+	rawEntry := d[entryName]
+	irtObjNr := validationObjectNumber(0, rawEntry)
+	defer func() {
+		err = model.WithValidationErrorObject(err, irtObjNr)
+	}()
+
+	if err := contextutil.Check(c); err != nil {
 		return err
 	}
 
-	if d1 != nil {
-		if _, err = validateAnnotationDict(xRefTable, d1); err != nil {
-			return err
+	d1, err := validateDictEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion, nil)
+	if err != nil || d1 == nil {
+		if err != nil {
+			return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
 		}
+		return nil
+	}
+	if err := xRefTable.CheckRecursionDepth("annotation IRT chain", depth); err != nil {
+		return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
+	}
+	if err := visit.enter(irtObjNr); err != nil {
+		return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
+	}
+	defer visit.leave(irtObjNr)
+
+	if _, err = validateAnnotationDictDepth(c, xRefTable, d1, depth+1, visit); err != nil {
+		return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
 	}
 
 	return nil
 }
 
-func validateMarkupAnnotationPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateMarkupAnnotationPart1(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// T, optional, text string, since V1.1
 	if _, err := validateStringEntry(xRefTable, d, 0, dictName, "T", OPTIONAL, model.V11, nil); err != nil {
 		return err
 	}
 
 	// Popup, optional, dict, since V1.3
-	if err := validatePopupEntry(xRefTable, d, dictName, "Popup", OPTIONAL, model.V13); err != nil {
+	if err := validatePopupEntry(c, xRefTable, d, dictName, "Popup", OPTIONAL, model.V13); err != nil {
 		return err
 	}
 
@@ -1368,13 +1405,13 @@ func validateMarkupAnnotationPart1(xRefTable *model.XRefTable, d types.Dict, dic
 	return nil
 }
 
-func validateMarkupAnnotationPart2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateMarkupAnnotationPart2(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, depth int, visit annotationIRTTraversal) error {
 	// IRT, optional, (in reply to) dict, since V1.5
 	sinceVersion := model.V15
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V14
 	}
-	if err := validateIRTEntry(xRefTable, d, dictName, "IRT", OPTIONAL, sinceVersion); err != nil {
+	if err := validateIRTEntry(c, xRefTable, d, dictName, "IRT", OPTIONAL, sinceVersion, depth, visit); err != nil {
 		return err
 	}
 
@@ -1420,14 +1457,14 @@ func validateMarkupAnnotationPart2(xRefTable *model.XRefTable, d types.Dict, dic
 	return nil
 }
 
-func validateMarkupAnnotation(xRefTable *model.XRefTable, d types.Dict) error {
+func validateMarkupAnnotation(c context.Context, xRefTable *model.XRefTable, d types.Dict, depth int, visit annotationIRTTraversal) error {
 	dictName := "markupAnnot"
 
-	if err := validateMarkupAnnotationPart1(xRefTable, d, dictName); err != nil {
+	if err := validateMarkupAnnotationPart1(c, xRefTable, d, dictName); err != nil {
 		return err
 	}
 
-	if err := validateMarkupAnnotationPart2(xRefTable, d, dictName); err != nil {
+	if err := validateMarkupAnnotationPart2(c, xRefTable, d, dictName, depth, visit); err != nil {
 		return err
 	}
 
@@ -1460,14 +1497,14 @@ func validateEntryP(xRefTable *model.XRefTable, d types.Dict, dictName string, r
 	return model.WithValidationErrorObject(err, pageObjNr)
 }
 
-func validateAppearDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version) error {
+func validateAppearDictEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version) error {
 	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "AP", required, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
 
 	if d1 != nil {
-		err = validateAppearanceDict(xRefTable, d1)
+		err = validateAppearanceDict(c, xRefTable, d1)
 	}
 
 	return err
@@ -1670,7 +1707,7 @@ func validateAnnotationDictGeneralPart1(xRefTable *model.XRefTable, d types.Dict
 	return subtype, nil
 }
 
-func validateAnnotationDictGeneralPart2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictGeneralPart2(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// M, optional, date string in any format, since V1.1
 	if _, err := validateStringEntry(xRefTable, d, 0, dictName, "M", OPTIONAL, model.V11, nil); err != nil {
 		return err
@@ -1686,7 +1723,7 @@ func validateAnnotationDictGeneralPart2(xRefTable *model.XRefTable, d types.Dict
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V11
 	}
-	if err := validateAppearDictEntry(xRefTable, d, dictName, OPTIONAL, sinceVersion); err != nil {
+	if err := validateAppearDictEntry(c, xRefTable, d, dictName, OPTIONAL, sinceVersion); err != nil {
 		return err
 	}
 
@@ -1722,16 +1759,22 @@ func validateAnnotationDictGeneralPart2(xRefTable *model.XRefTable, d types.Dict
 	return nil
 }
 
-func validateAnnotationDictGeneral(xRefTable *model.XRefTable, d types.Dict, dictName string) (*types.Name, error) {
+func validateAnnotationDictGeneral(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) (*types.Name, error) {
 	subType, err := validateAnnotationDictGeneralPart1(xRefTable, d, dictName)
 	if err != nil {
 		return nil, err
 	}
 
-	return subType, validateAnnotationDictGeneralPart2(xRefTable, d, dictName)
+	return subType, validateAnnotationDictGeneralPart2(c, xRefTable, d, dictName)
 }
 
-func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, dictName string, subtype types.Name) error {
+func bindAnnotationContext(c context.Context, validate func(context.Context, *model.XRefTable, types.Dict, string) error) func(*model.XRefTable, types.Dict, string) error {
+	return func(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+		return validate(c, xRefTable, d, dictName)
+	}
+}
+
+func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, subtype types.Name, depth int, visit annotationIRTTraversal) error {
 	// OC, optional, content group dict or content membership dict, since V1.5
 	// Specifying the optional content properties for the annotation.
 	sinceVersion := model.V15
@@ -1751,7 +1794,7 @@ func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, di
 		markup              bool
 	}{
 		"Text":           {validateAnnotationDictText, model.V10, model.V10, true},
-		"Link":           {validateAnnotationDictLink, model.V10, model.V10, false},
+		"Link":           {bindAnnotationContext(c, validateAnnotationDictLink), model.V10, model.V10, false},
 		"FreeText":       {validateAnnotationDictFreeText, model.V13, model.V12, true},
 		"Line":           {validateAnnotationDictLine, model.V13, model.V13, true},
 		"Polygon":        {validateAnnotationDictPolyLine, model.V15, model.V14, true},
@@ -1769,9 +1812,9 @@ func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, di
 		"FileAttachment": {validateAnnotationDictFileAttachment, model.V13, model.V13, true},
 		"Sound":          {validateAnnotationDictSound, model.V12, model.V12, true},
 		"Movie":          {validateAnnotationDictMovie, model.V12, model.V12, false},
-		"Widget":         {validateAnnotationDictWidget, model.V12, model.V11, false},
-		"Screen":         {validateAnnotationDictScreen, model.V15, model.V14, false},
-		"PrinterMark":    {validateAnnotationDictPrinterMark, model.V14, model.V14, false},
+		"Widget":         {bindAnnotationContext(c, validateAnnotationDictWidget), model.V12, model.V11, false},
+		"Screen":         {bindAnnotationContext(c, validateAnnotationDictScreen), model.V15, model.V14, false},
+		"PrinterMark":    {bindAnnotationContext(c, validateAnnotationDictPrinterMark), model.V14, model.V14, false},
 		"TrapNet":        {validateAnnotationDictTrapNet, model.V13, model.V13, false},
 		"Watermark":      {validateAnnotationDictWatermark, model.V16, model.V13, false},
 		"3D":             {validateAnnotationDict3D, model.V16, model.V16, false},
@@ -1791,7 +1834,7 @@ func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, di
 			}
 
 			if v.markup {
-				err := validateMarkupAnnotation(xRefTable, d)
+				err := validateMarkupAnnotation(c, xRefTable, d, depth, visit)
 				if err != nil {
 					return err
 				}
@@ -1812,7 +1855,11 @@ func validateAnnotationDictConcrete(xRefTable *model.XRefTable, d types.Dict, di
 	return nil
 }
 
-func validateAnnotationDict(xRefTable *model.XRefTable, d types.Dict) (isTrapNet bool, err error) {
+func validateAnnotationDict(c context.Context, xRefTable *model.XRefTable, d types.Dict) (isTrapNet bool, err error) {
+	return validateAnnotationDictDepth(c, xRefTable, d, 0, annotationIRTTraversal{})
+}
+
+func validateAnnotationDictDepth(c context.Context, xRefTable *model.XRefTable, d types.Dict, depth int, visit annotationIRTTraversal) (isTrapNet bool, err error) {
 	dictName := "annotDict"
 
 	hexType, err := validateAnnotationType(xRefTable, d, dictName)
@@ -1820,12 +1867,12 @@ func validateAnnotationDict(xRefTable *model.XRefTable, d types.Dict) (isTrapNet
 		return false, err
 	}
 
-	subtype, err := validateAnnotationDictGeneral(xRefTable, d, dictName)
+	subtype, err := validateAnnotationDictGeneral(c, xRefTable, d, dictName)
 	if err != nil {
 		return false, err
 	}
 
-	if err = validateAnnotationDictConcrete(xRefTable, d, dictName, *subtype); err != nil {
+	if err = validateAnnotationDictConcrete(c, xRefTable, d, dictName, *subtype, depth, visit); err != nil {
 		return false, err
 	}
 
@@ -1964,7 +2011,7 @@ func annotationArrayEntryForValidation(
 	return &annotationArrayEntry{dict: d}, nil
 }
 
-func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array, ownerObjNr int) (types.Array, error) {
+func validateAnnotationsArray(c context.Context, xRefTable *model.XRefTable, a types.Array, ownerObjNr int) (types.Array, error) {
 	// a ... array of indrefs to annotation dicts.
 
 	pgAnnots := model.PgAnnots{}
@@ -1976,6 +2023,9 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array, ownerOb
 	cleanAnnotsArr := types.Array{}
 
 	for i, v := range a {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
 
 		if hasTrapNet {
 			err := errors.New("page annotation array: TrapNet must be the last entry")
@@ -2004,7 +2054,7 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array, ownerOb
 			}
 		}
 
-		hasTrapNet, err = validateAnnotationDict(xRefTable, annotDict)
+		hasTrapNet, err = validateAnnotationDict(c, xRefTable, annotDict)
 		if err != nil {
 			return nil, pageAnnotationError(err, ownerObjNr, hasIndRef, indRef, i, "validate")
 		}
@@ -2024,7 +2074,7 @@ func validateAnnotationsArray(xRefTable *model.XRefTable, a types.Array, ownerOb
 	return cleanAnnotsArr, nil
 }
 
-func validatePageAnnotations(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+func validatePageAnnotations(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
 	annotsObjNr := validationEntryObjectNumber(ownerObjNr, d, "Annots")
 	a, err := validateArrayEntry(xRefTable, d, ownerObjNr, "pageDict", "Annots", OPTIONAL, model.V10, nil)
 	if err != nil || a == nil {
@@ -2039,7 +2089,7 @@ func validatePageAnnotations(xRefTable *model.XRefTable, d types.Dict, ownerObjN
 		return nil
 	}
 
-	cleanedAnnots, err := validateAnnotationsArray(xRefTable, a, annotsObjNr)
+	cleanedAnnots, err := validateAnnotationsArray(c, xRefTable, a, annotsObjNr)
 	if err != nil {
 		return err
 	}
@@ -2108,7 +2158,7 @@ func validatePagesAnnotations(c context.Context, xRefTable *model.XRefTable, d t
 		case "Page":
 			curPage++
 			xRefTable.CurPage = curPage
-			if err = validatePageAnnotations(xRefTable, d, validationObjectNumber(0, v)); err != nil {
+			if err = validatePageAnnotations(c, xRefTable, d, validationObjectNumber(0, v)); err != nil {
 				return curPage, fmt.Errorf("page %d: %w", curPage, err)
 			}
 

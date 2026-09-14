@@ -17,12 +17,14 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
 	"slices"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -846,7 +848,7 @@ func validateDescendantFonts(xRefTable *model.XRefTable, d types.Dict, fontDictN
 	return nil
 }
 
-func validateType0FontDict(xRefTable *model.XRefTable, d types.Dict) (string, error) {
+func validateType0FontDict(c context.Context, xRefTable *model.XRefTable, d types.Dict) (string, error) {
 	dictName := "type0FontDict"
 
 	// BaseFont, required, name
@@ -861,7 +863,7 @@ func validateType0FontDict(xRefTable *model.XRefTable, d types.Dict) (string, er
 	}
 
 	// Encoding, required,  name or CMap stream dict
-	if err = validateType0FontEncoding(xRefTable, d, dictName, REQUIRED); err != nil {
+	if err = validateType0FontEncoding(c, xRefTable, d, dictName, REQUIRED); err != nil {
 		return "", err
 	}
 
@@ -985,35 +987,79 @@ func validateCharProcsDict(xRefTable *model.XRefTable, d types.Dict, dictName st
 	return nil
 }
 
-func validateUseCMapEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version) (err error) {
-	entryName := "UseCMap"
+type cMapTraversal struct {
+	c         context.Context
+	xRefTable *model.XRefTable
+	ancestors map[int]bool
+}
+
+func newCMapTraversal(c context.Context, xRefTable *model.XRefTable) *cMapTraversal {
+	return &cMapTraversal{c: c, xRefTable: xRefTable, ancestors: map[int]bool{}}
+}
+
+func cMapObjectIdentity(o types.Object) int {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		return 0
+	}
+	return ir.ObjectNumber.Value()
+}
+
+func (t *cMapTraversal) enter(objNr int) error {
+	if objNr <= 0 {
+		return nil
+	}
+	if t.ancestors[objNr] {
+		return fmt.Errorf("obj#%d: %w", objNr, model.ErrCMapCycle)
+	}
+	t.ancestors[objNr] = true
+	return nil
+}
+
+func (t *cMapTraversal) leave(objNr int) {
+	if objNr > 0 {
+		delete(t.ancestors, objNr)
+	}
+}
+
+func (t *cMapTraversal) validateEntry(d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, depth int) (err error) {
 	objNr := validationEntryObjectNumber(0, d, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
 	}()
+	if err := contextutil.Check(t.c); err != nil {
+		return err
+	}
 
-	o, err := validateEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion)
+	rawObject, found := d.Find(entryName)
+	if !found || rawObject == nil {
+		_, err = validateEntry(t.xRefTable, d, 0, dictName, entryName, required, sinceVersion)
+		return err
+	}
+	if err := t.xRefTable.CheckRecursionDepth("CMap chain", depth); err != nil {
+		return err
+	}
+
+	cMapObjNr := cMapObjectIdentity(rawObject)
+	if err := t.enter(cMapObjNr); err != nil {
+		return err
+	}
+	defer t.leave(cMapObjNr)
+
+	o, err := validateEntry(t.xRefTable, d, 0, dictName, entryName, required, sinceVersion)
 	if err != nil || o == nil {
 		return err
 	}
 
 	switch o := o.(type) {
-
 	case types.Name:
-		// no further processing
+		return nil
 
 	case types.StreamDict:
-		err = validateCMapStreamDict(xRefTable, &o)
-		if err != nil {
-			return err
-		}
-
-	default:
-		return fmt.Errorf("dict=%s corrupt entry \"%s\"", dictName, entryName)
-
+		return t.validateStreamDict(&o, depth)
 	}
 
-	return nil
+	return fmt.Errorf("dict=%s corrupt entry \"%s\"", dictName, entryName)
 }
 
 func validateCIDSystemInfoDict(xRefTable *model.XRefTable, d types.Dict) error {
@@ -1037,10 +1083,11 @@ func validateCIDSystemInfoDict(xRefTable *model.XRefTable, d types.Dict) error {
 	return err
 }
 
-func validateCMapStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {
+func (t *cMapTraversal) validateStreamDict(sd *types.StreamDict, depth int) error {
 	// See table 120
 
 	dictName := "CMapStreamDict"
+	xRefTable := t.xRefTable
 
 	// Type, optional, name
 	_, err := validateNameEntry(xRefTable, sd.Dict, 0, dictName, "Type", OPTIONAL, model.V10, func(s string) bool { return s == "CMap" })
@@ -1076,38 +1123,14 @@ func validateCMapStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) er
 	// UseCMap, name or cmap stream dict, optional.
 	// If present, the referencing CMap shall specify only
 	// the character mappings that differ from the referenced CMap.
-	return validateUseCMapEntry(xRefTable, sd.Dict, dictName, OPTIONAL, model.V10)
+	return t.validateEntry(sd.Dict, dictName, "UseCMap", OPTIONAL, model.V10, depth+1)
 }
 
-func validateType0FontEncoding(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool) (err error) {
-	entryName := "Encoding"
-	objNr := validationEntryObjectNumber(0, d, entryName)
-	defer func() {
-		err = model.WithValidationErrorObject(err, objNr)
-	}()
-
-	o, err := validateEntry(xRefTable, d, 0, dictName, entryName, required, model.V10)
-	if err != nil || o == nil {
-		return err
-	}
-
-	switch o := o.(type) {
-
-	case types.Name:
-		// no further processing
-
-	case types.StreamDict:
-		err = validateCMapStreamDict(xRefTable, &o)
-
-	default:
-		err = fmt.Errorf("dict=%s corrupt entry \"Encoding\"", dictName)
-
-	}
-
-	return err
+func validateType0FontEncoding(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, required bool) error {
+	return newCMapTraversal(c, xRefTable).validateEntry(d, dictName, "Encoding", required, model.V10, 0)
 }
 
-func validateType3FontDict(xRefTable *model.XRefTable, d types.Dict) error {
+func validateType3FontDict(c context.Context, xRefTable *model.XRefTable, d types.Dict) error {
 	// see 9.6.5
 
 	dictName := "type3FontDict"
@@ -1171,12 +1194,13 @@ func validateType3FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V11
 	}
+	rawResources, _ := d.Find("Resources")
 	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "Resources", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
 	if d1 != nil {
-		_, err := validateResourceDict(xRefTable, d1)
+		_, err := validateResourceDict(c, xRefTable, rawResources)
 		if err != nil {
 			return err
 		}
@@ -1188,7 +1212,7 @@ func validateType3FontDict(xRefTable *model.XRefTable, d types.Dict) error {
 	return err
 }
 
-func _validateFontDict(xRefTable *model.XRefTable, d types.Dict, isIndRef bool, indRef types.IndirectRef) (fontName string, err error) {
+func _validateFontDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, isIndRef bool, indRef types.IndirectRef) (fontName string, err error) {
 	repairStringType1FontDict(xRefTable, d)
 	repairSelfReferentialFontToUnicode(xRefTable, d, isIndRef, indRef)
 
@@ -1209,7 +1233,7 @@ func _validateFontDict(xRefTable *model.XRefTable, d types.Dict, isIndRef bool, 
 		fontName, err = validateTrueTypeFontDict(xRefTable, d)
 
 	case "Type0":
-		fontName, err = validateType0FontDict(xRefTable, d)
+		fontName, err = validateType0FontDict(c, xRefTable, d)
 
 	case "Type1", "Type1C":
 		fontName, err = validateType1FontDict(xRefTable, d)
@@ -1218,7 +1242,7 @@ func _validateFontDict(xRefTable *model.XRefTable, d types.Dict, isIndRef bool, 
 		return validateType1FontDict(xRefTable, d)
 
 	case "Type3":
-		err = validateType3FontDict(xRefTable, d)
+		err = validateType3FontDict(c, xRefTable, d)
 
 	default:
 		return "", fmt.Errorf("font dict: unknown Subtype %q", subtype.Value())
@@ -1277,7 +1301,7 @@ func dereferenceFontDict(xRefTable *model.XRefTable, indRef types.IndirectRef) (
 	return d, nil
 }
 
-func validateFontDict(xRefTable *model.XRefTable, isIndRef bool, indRef types.IndirectRef) (string, error) {
+func validateFontDict(c context.Context, xRefTable *model.XRefTable, isIndRef bool, indRef types.IndirectRef) (string, error) {
 	if isIndRef {
 		done, err := checkFontIndRefValidationState(xRefTable, indRef)
 		if err != nil || done {
@@ -1308,13 +1332,13 @@ func validateFontDict(xRefTable *model.XRefTable, isIndRef bool, indRef types.In
 		model.ShowDigestedSpecViolation("missing fontDict entry \"Type\"")
 	}
 
-	return _validateFontDict(xRefTable, d, isIndRef, indRef)
+	return _validateFontDict(c, xRefTable, d, isIndRef, indRef)
 }
 
-func validateFontObject(xRefTable *model.XRefTable, obj types.Object) (string, bool, types.IndirectRef, error) {
+func validateFontObject(c context.Context, xRefTable *model.XRefTable, obj types.Object) (string, bool, types.IndirectRef, error) {
 	indRef, ok := obj.(types.IndirectRef)
 	if ok {
-		fontName, err := validateFontDict(xRefTable, true, indRef)
+		fontName, err := validateFontDict(c, xRefTable, true, indRef)
 		return fontName, true, indRef, err
 	}
 
@@ -1326,7 +1350,7 @@ func validateFontObject(xRefTable *model.XRefTable, obj types.Object) (string, b
 		return "", false, types.IndirectRef{}, ErrMissingFont
 	}
 
-	fontName, err := _validateFontDict(xRefTable, d, false, types.IndirectRef{})
+	fontName, err := _validateFontDict(c, xRefTable, d, false, types.IndirectRef{})
 	return fontName, false, types.IndirectRef{}, err
 }
 
@@ -1370,7 +1394,7 @@ func isMisplacedEncodingResourceDict(xRefTable *model.XRefTable, id string, o ty
 	return true
 }
 
-func validateFontResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+func validateFontResourceDict(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	resourceObjNr := validationObjectNumber(0, o)
 
 	// Version check
@@ -1389,7 +1413,10 @@ func validateFontResourceDict(xRefTable *model.XRefTable, o types.Object, sinceV
 		err = errors.New("Font resource dict: missing dict")
 		return model.WithValidationErrorObject(err, resourceObjNr)
 	}
+	return validateFontResources(c, xRefTable, d, resourceObjNr)
+}
 
+func validateFontResources(c context.Context, xRefTable *model.XRefTable, d types.Dict, resourceObjNr int) error {
 	// fontid, fontname
 	m1 := map[string]string{}
 
@@ -1400,6 +1427,9 @@ func validateFontResourceDict(xRefTable *model.XRefTable, o types.Object, sinceV
 
 	// Iterate over font resource dict
 	for _, id := range slices.Sorted(maps.Keys(d)) {
+		if err := contextutil.Check(c); err != nil {
+			return model.WithValidationErrorObject(err, resourceObjNr)
+		}
 		obj := d[id]
 		if xRefTable.ValidationMode == model.ValidationRelaxed && isMisplacedEncodingResourceDict(xRefTable, id, obj) {
 			d.Delete(id)
@@ -1409,7 +1439,7 @@ func validateFontResourceDict(xRefTable *model.XRefTable, o types.Object, sinceV
 		fontObjNr := validationObjectNumber(resourceObjNr, obj)
 
 		// Process fontDict
-		fn, indRefOk, indRef, err := validateFontObject(xRefTable, obj)
+		fn, indRefOk, indRef, err := validateFontObject(c, xRefTable, obj)
 		if err != nil {
 			if errors.Is(err, ErrMissingFont) {
 				if xRefTable.ValidationMode == model.ValidationRelaxed {

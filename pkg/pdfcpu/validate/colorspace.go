@@ -17,16 +17,93 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
 	"slices"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 var errMissingColorSpaceObject = errors.New("color space: missing object")
+
+type colorSpaceRole int
+
+const (
+	colorSpaceAny colorSpaceRole = iota
+	colorSpaceNoPattern
+	colorSpaceIndexedBase
+	colorSpaceDeviceOrCIE
+	colorSpaceSeparation
+)
+
+func (r colorSpaceRole) allows(name types.Name) bool {
+	switch r {
+	case colorSpaceAny:
+		return true
+	case colorSpaceNoPattern:
+		return name != model.PatternCS
+	case colorSpaceIndexedBase:
+		return name != model.PatternCS && name != model.IndexedCS
+	case colorSpaceDeviceOrCIE:
+		return types.MemberOf(name.Value(), []string{
+			model.DeviceGrayCS, model.DeviceRGBCS, model.DeviceCMYKCS,
+			model.CalGrayCS, model.CalRGBCS, model.LabCS, model.ICCBasedCS,
+		})
+	case colorSpaceSeparation:
+		return name == model.SeparationCS
+	}
+	return false
+}
+
+func (r colorSpaceRole) description() string {
+	switch r {
+	case colorSpaceNoPattern:
+		return "non-Pattern color space"
+	case colorSpaceIndexedBase:
+		return "Indexed base color space"
+	case colorSpaceDeviceOrCIE:
+		return "device or CIE-based color space"
+	case colorSpaceSeparation:
+		return "Separation color space"
+	}
+	return "color space"
+}
+
+type colorSpaceTraversal struct {
+	c         context.Context
+	xRefTable *model.XRefTable
+	ancestors map[int]bool
+}
+
+func newColorSpaceTraversal(c context.Context, xRefTable *model.XRefTable) *colorSpaceTraversal {
+	return &colorSpaceTraversal{c: c, xRefTable: xRefTable, ancestors: map[int]bool{}}
+}
+
+func (t *colorSpaceTraversal) enter(o types.Object) (int, error) {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		return 0, nil
+	}
+	objNr := ir.ObjectNumber.Value()
+	if objNr <= 0 {
+		return 0, nil
+	}
+	if t.ancestors[objNr] {
+		return 0, fmt.Errorf("obj#%d: %w", objNr, model.ErrColorSpaceCycle)
+	}
+	t.ancestors[objNr] = true
+	return objNr, nil
+}
+
+func (t *colorSpaceTraversal) leave(objNr int) {
+	if objNr != 0 {
+		delete(t.ancestors, objNr)
+	}
+}
 
 func validateDeviceColorSpaceName(s string) bool {
 	return types.MemberOf(s, []string{model.DeviceGrayCS, model.DeviceRGBCS, model.DeviceCMYKCS})
@@ -147,8 +224,10 @@ func validateLabColorSpace(xRefTable *model.XRefTable, a types.Array, sinceVersi
 	return err
 }
 
-func validateAlternateColorSpaceEntryForICC(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, entryName string, required bool, excludePatternCS bool) error {
+func (t *colorSpaceTraversal) validateAlternateColorSpaceEntryForICC(d types.Dict, ownerObjNr int, dictName string, entryName string, required bool, depth int) error {
+	xRefTable := t.xRefTable
 	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	rawEntry := d[entryName]
 	o, err := validateEntry(xRefTable, d, ownerObjNr, dictName, entryName, required, model.V10)
 	if err != nil || o == nil {
 		return err
@@ -162,7 +241,7 @@ func validateAlternateColorSpaceEntryForICC(xRefTable *model.XRefTable, d types.
 		}
 
 	case types.Array:
-		if err = validateColorSpaceArray(xRefTable, o, objNr, excludePatternCS); err != nil {
+		if err = t.validateColorSpaceDepth(rawEntry, objNr, colorSpaceNoPattern, depth+1); err != nil {
 			err = fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
@@ -174,9 +253,10 @@ func validateAlternateColorSpaceEntryForICC(xRefTable *model.XRefTable, d types.
 	return model.WithValidationErrorObject(err, objNr)
 }
 
-func validateICCBasedColorSpace(xRefTable *model.XRefTable, a types.Array, sinceVersion model.Version) (err error) {
+func (t *colorSpaceTraversal) validateICCBasedColorSpace(a types.Array, sinceVersion model.Version, depth int) (err error) {
 	// see 8.6.5.5
 
+	xRefTable := t.xRefTable
 	dictName := "ICCBasedColorSpace"
 
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
@@ -225,9 +305,7 @@ func validateICCBasedColorSpace(xRefTable *model.XRefTable, a types.Array, since
 		return err
 	}
 
-	err = validateAlternateColorSpaceEntryForICC(
-		xRefTable, sd.Dict, profileObjNr, dictName, "Alternate", OPTIONAL, ExcludePatternCS,
-	)
+	err = t.validateAlternateColorSpaceEntryForICC(sd.Dict, profileObjNr, dictName, "Alternate", OPTIONAL, depth)
 	if err != nil {
 		return err
 	}
@@ -275,9 +353,10 @@ func validateIndexedColorSpaceLookuptable(xRefTable *model.XRefTable, o types.Ob
 	return err
 }
 
-func validateIndexedColorSpace(xRefTable *model.XRefTable, a types.Array, ownerObjNr int, sinceVersion model.Version) error {
+func (t *colorSpaceTraversal) validateIndexedColorSpace(a types.Array, ownerObjNr int, sinceVersion model.Version, depth int) error {
 	// see 8.6.6.3
 
+	xRefTable := t.xRefTable
 	err := xRefTable.ValidateVersion("IndexedColorSpace", sinceVersion)
 	if err != nil {
 		return err
@@ -288,7 +367,7 @@ func validateIndexedColorSpace(xRefTable *model.XRefTable, a types.Array, ownerO
 	}
 
 	// arr[1] base: base colorspace
-	err = validateColorSpace(xRefTable, a[1], ownerObjNr, ExcludePatternCS)
+	err = t.validateColorSpaceDepth(a[1], ownerObjNr, colorSpaceIndexedBase, depth+1)
 	if err != nil {
 		return fmt.Errorf("Indexed color space base: %w", err)
 	}
@@ -308,7 +387,8 @@ func validateIndexedColorSpace(xRefTable *model.XRefTable, a types.Array, ownerO
 	return nil
 }
 
-func validatePatternColorSpace(xRefTable *model.XRefTable, a types.Array, ownerObjNr int, sinceVersion model.Version) error {
+func (t *colorSpaceTraversal) validatePatternColorSpace(a types.Array, ownerObjNr int, sinceVersion model.Version, depth int) error {
+	xRefTable := t.xRefTable
 	err := xRefTable.ValidateVersion("PatternColorSpace", sinceVersion)
 	if err != nil {
 		return err
@@ -320,7 +400,7 @@ func validatePatternColorSpace(xRefTable *model.XRefTable, a types.Array, ownerO
 
 	// 8.7.3.3: arr[1]: name of underlying color space, any cs except PatternCS
 	if len(a) == 2 {
-		err := validateColorSpace(xRefTable, a[1], ownerObjNr, ExcludePatternCS)
+		err := t.validateColorSpaceDepth(a[1], ownerObjNr, colorSpaceNoPattern, depth+1)
 		if err != nil {
 			return fmt.Errorf("Pattern color space underlying color space: %w", err)
 		}
@@ -329,9 +409,10 @@ func validatePatternColorSpace(xRefTable *model.XRefTable, a types.Array, ownerO
 	return nil
 }
 
-func validateSeparationColorSpace(xRefTable *model.XRefTable, a types.Array, ownerObjNr int, sinceVersion model.Version) error {
+func (t *colorSpaceTraversal) validateSeparationColorSpace(a types.Array, ownerObjNr int, sinceVersion model.Version, depth int) error {
 	// see 8.6.6.4
 
+	xRefTable := t.xRefTable
 	err := xRefTable.ValidateVersion("SeparationColorSpace", sinceVersion)
 	if err != nil {
 		return err
@@ -350,60 +431,56 @@ func validateSeparationColorSpace(xRefTable *model.XRefTable, a types.Array, own
 	}
 
 	// arr[2]: alternate space
-	err = validateColorSpace(xRefTable, a[2], ownerObjNr, ExcludePatternCS)
+	err = t.validateColorSpaceDepth(a[2], ownerObjNr, colorSpaceDeviceOrCIE, depth+1)
 	if err != nil {
 		return fmt.Errorf("Separation color space alternate color space: %w", err)
 	}
 
 	// arr[3]: tintTransform, function
-	if err := validateFunction(xRefTable, a[3], ownerObjNr); err != nil {
+	if err := validateFunction(t.c, xRefTable, a[3], ownerObjNr); err != nil {
 		return fmt.Errorf("Separation color space tint transform: %w", err)
 	}
 	return nil
 }
 
-func validateDeviceNColorSpaceColorantsDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+func (t *colorSpaceTraversal) validateDeviceNColorSpaceColorantsDict(d types.Dict, ownerObjNr, depth int) error {
 	for _, name := range slices.Sorted(maps.Keys(d)) {
+		if err := contextutil.Check(t.c); err != nil {
+			return err
+		}
 		obj := d[name]
 		objNr := validationObjectNumber(ownerObjNr, obj)
 
-		a, err := xRefTable.DereferenceArray(obj)
-		if err != nil {
-			err = fmt.Errorf("DeviceN colorants %s: dereference Separation color space array: %w", name, err)
-			return model.WithValidationErrorObject(err, objNr)
+		if err := t.validateColorSpaceDepth(obj, ownerObjNr, colorSpaceSeparation, depth+1); err != nil {
+			return model.WithValidationErrorObject(fmt.Errorf("DeviceN colorants %s: %w", name, err), objNr)
 		}
-
-		if a != nil {
-			err = validateSeparationColorSpace(xRefTable, a, objNr, model.V12)
-			if err != nil {
-				return fmt.Errorf("DeviceN colorants %s: %w", name, err)
-			}
-		}
-
 	}
 
 	return nil
 }
 
-func validateDeviceNColorSpaceProcessDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+func (t *colorSpaceTraversal) validateDeviceNColorSpaceProcessDict(d types.Dict, ownerObjNr, depth int) error {
 	dictName := "DeviceNCSProcessDict"
 
-	err := validateColorSpaceEntry(xRefTable, d, ownerObjNr, dictName, "ColorSpace", REQUIRED, true)
+	err := t.validateColorSpaceEntryDepth(d, ownerObjNr, dictName, "ColorSpace", REQUIRED, colorSpaceDeviceOrCIE, depth+1)
 	if err != nil {
 		return err
 	}
 
-	_, err = validateNameArrayEntry(xRefTable, d, ownerObjNr, dictName, "Components", REQUIRED, model.V10, nil)
+	_, err = validateNameArrayEntry(t.xRefTable, d, ownerObjNr, dictName, "Components", REQUIRED, model.V10, nil)
 
 	return err
 }
 
-func validateDeviceNColorSpaceSoliditiesDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+func (t *colorSpaceTraversal) validateDeviceNColorSpaceSoliditiesDict(d types.Dict, ownerObjNr int) error {
 	for _, name := range slices.Sorted(maps.Keys(d)) {
+		if err := contextutil.Check(t.c); err != nil {
+			return err
+		}
 		obj := d[name]
 		objNr := validationObjectNumber(ownerObjNr, obj)
 		_, err := validateFloatForObject(
-			xRefTable, obj, ownerObjNr, func(f float64) bool { return f >= 0.0 && f <= 1.0 },
+			t.xRefTable, obj, ownerObjNr, func(f float64) bool { return f >= 0.0 && f <= 1.0 },
 		)
 		if err != nil {
 			err = fmt.Errorf("DeviceN solidities %s: %w", name, err)
@@ -414,10 +491,13 @@ func validateDeviceNColorSpaceSoliditiesDict(xRefTable *model.XRefTable, d types
 	return nil
 }
 
-func validateDeviceNColorSpaceDotGainDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+func (t *colorSpaceTraversal) validateDeviceNColorSpaceDotGainDict(d types.Dict, ownerObjNr int) error {
 	for _, name := range slices.Sorted(maps.Keys(d)) {
+		if err := contextutil.Check(t.c); err != nil {
+			return err
+		}
 		obj := d[name]
-		err := validateFunction(xRefTable, obj, ownerObjNr)
+		err := validateFunction(t.c, t.xRefTable, obj, ownerObjNr)
 		if err != nil {
 			return fmt.Errorf("DeviceN dot gain %s: %w", name, err)
 		}
@@ -426,8 +506,9 @@ func validateDeviceNColorSpaceDotGainDict(xRefTable *model.XRefTable, d types.Di
 	return nil
 }
 
-func validateDeviceNColorSpaceMixingHintsDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+func (t *colorSpaceTraversal) validateDeviceNColorSpaceMixingHintsDict(d types.Dict, ownerObjNr int) error {
 	dictName := "deviceNCSMixingHintsDict"
+	xRefTable := t.xRefTable
 
 	rawSolidities := d["Solidities"]
 	soliditiesObjNr := validationObjectNumber(ownerObjNr, rawSolidities)
@@ -436,7 +517,7 @@ func validateDeviceNColorSpaceMixingHintsDict(xRefTable *model.XRefTable, d type
 		return err
 	}
 	if d1 != nil {
-		err = validateDeviceNColorSpaceSoliditiesDict(xRefTable, d1, soliditiesObjNr)
+		err = t.validateDeviceNColorSpaceSoliditiesDict(d1, soliditiesObjNr)
 		if err != nil {
 			return err
 		}
@@ -455,13 +536,14 @@ func validateDeviceNColorSpaceMixingHintsDict(xRefTable *model.XRefTable, d type
 	}
 
 	if d1 != nil {
-		err = validateDeviceNColorSpaceDotGainDict(xRefTable, d1, dotGainObjNr)
+		err = t.validateDeviceNColorSpaceDotGainDict(d1, dotGainObjNr)
 	}
 
 	return err
 }
 
-func validateDeviceNColorSpaceAttributesDict(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
+func (t *colorSpaceTraversal) validateDeviceNColorSpaceAttributesDict(o types.Object, ownerObjNr, depth int) (err error) {
+	xRefTable := t.xRefTable
 	objNr := validationObjectNumber(ownerObjNr, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -495,7 +577,7 @@ func validateDeviceNColorSpaceAttributesDict(xRefTable *model.XRefTable, o types
 	}
 
 	if d1 != nil {
-		err = validateDeviceNColorSpaceColorantsDict(xRefTable, d1, colorantsObjNr)
+		err = t.validateDeviceNColorSpaceColorantsDict(d1, colorantsObjNr, depth)
 		if err != nil {
 			return err
 		}
@@ -509,7 +591,7 @@ func validateDeviceNColorSpaceAttributesDict(xRefTable *model.XRefTable, o types
 	}
 
 	if d1 != nil {
-		err = validateDeviceNColorSpaceProcessDict(xRefTable, d1, processObjNr)
+		err = t.validateDeviceNColorSpaceProcessDict(d1, processObjNr, depth)
 		if err != nil {
 			return err
 		}
@@ -523,15 +605,16 @@ func validateDeviceNColorSpaceAttributesDict(xRefTable *model.XRefTable, o types
 	}
 
 	if d1 != nil {
-		err = validateDeviceNColorSpaceMixingHintsDict(xRefTable, d1, mixingHintsObjNr)
+		err = t.validateDeviceNColorSpaceMixingHintsDict(d1, mixingHintsObjNr)
 	}
 
 	return err
 }
 
-func validateDeviceNColorSpace(xRefTable *model.XRefTable, a types.Array, ownerObjNr int, sinceVersion model.Version) error {
+func (t *colorSpaceTraversal) validateDeviceNColorSpace(a types.Array, ownerObjNr int, sinceVersion model.Version, depth int) error {
 	// see 8.6.6.5
 
+	xRefTable := t.xRefTable
 	err := xRefTable.ValidateVersion("DeviceNColorSpace", sinceVersion)
 	if err != nil {
 		return err
@@ -549,20 +632,20 @@ func validateDeviceNColorSpace(xRefTable *model.XRefTable, a types.Array, ownerO
 	}
 
 	// arr[2]: alternate space
-	err = validateColorSpace(xRefTable, a[2], ownerObjNr, ExcludePatternCS)
+	err = t.validateColorSpaceDepth(a[2], ownerObjNr, colorSpaceDeviceOrCIE, depth+1)
 	if err != nil {
 		return fmt.Errorf("DeviceN color space alternate color space: %w", err)
 	}
 
 	// arr[3]: tintTransform, function
-	err = validateFunction(xRefTable, a[3], ownerObjNr)
+	err = validateFunction(t.c, xRefTable, a[3], ownerObjNr)
 	if err != nil {
 		return fmt.Errorf("DeviceN color space tint transform: %w", err)
 	}
 
 	// arr[4]: color space attributes dict, optional
 	if len(a) == 5 {
-		if err = validateDeviceNColorSpaceAttributesDict(xRefTable, a[4], ownerObjNr); err != nil {
+		if err = t.validateDeviceNColorSpaceAttributesDict(a[4], ownerObjNr, depth); err != nil {
 			return fmt.Errorf("DeviceN color space attributes: %w", err)
 		}
 	}
@@ -570,7 +653,8 @@ func validateDeviceNColorSpace(xRefTable *model.XRefTable, a types.Array, ownerO
 	return nil
 }
 
-func validateCSArray(xRefTable *model.XRefTable, a types.Array, ownerObjNr int, csName string) error {
+func (t *colorSpaceTraversal) validateCSArray(a types.Array, ownerObjNr int, csName string, depth int) error {
+	xRefTable := t.xRefTable
 	switch csName {
 
 	// CIE-based
@@ -584,20 +668,20 @@ func validateCSArray(xRefTable *model.XRefTable, a types.Array, ownerObjNr int, 
 		return validateLabColorSpace(xRefTable, a, model.V11)
 
 	case model.ICCBasedCS:
-		return validateICCBasedColorSpace(xRefTable, a, model.V13)
+		return t.validateICCBasedColorSpace(a, model.V13, depth)
 
 	// Special
 	case model.IndexedCS:
-		return validateIndexedColorSpace(xRefTable, a, ownerObjNr, model.V11)
+		return t.validateIndexedColorSpace(a, ownerObjNr, model.V11, depth)
 
 	case model.PatternCS:
-		return validatePatternColorSpace(xRefTable, a, ownerObjNr, model.V12)
+		return t.validatePatternColorSpace(a, ownerObjNr, model.V12, depth)
 
 	case model.SeparationCS:
-		return validateSeparationColorSpace(xRefTable, a, ownerObjNr, model.V12)
+		return t.validateSeparationColorSpace(a, ownerObjNr, model.V12, depth)
 
 	case model.DeviceNCS:
-		return validateDeviceNColorSpace(xRefTable, a, ownerObjNr, model.V13)
+		return t.validateDeviceNColorSpace(a, ownerObjNr, model.V13, depth)
 
 	default:
 		return fmt.Errorf("color space array: undefined color space %q", csName)
@@ -621,18 +705,18 @@ func colorSpaceArrayName(xRefTable *model.XRefTable, a types.Array, ownerObjNr i
 	return name, nil
 }
 
-func validateColorSpaceArraySubset(xRefTable *model.XRefTable, a types.Array, ownerObjNr int, cs []string) error {
+func (t *colorSpaceTraversal) validateColorSpaceArraySubset(a types.Array, ownerObjNr int, cs []string) error {
 	if len(a) == 0 {
 		return errors.New("color space array: empty")
 	}
-	csName, err := colorSpaceArrayName(xRefTable, a, ownerObjNr)
+	csName, err := colorSpaceArrayName(t.xRefTable, a, ownerObjNr)
 	if err != nil {
 		return err
 	}
 
 	for _, v := range cs {
 		if csName.Value() == v {
-			if err := validateCSArray(xRefTable, a, ownerObjNr, v); err != nil {
+			if err := t.validateCSArray(a, ownerObjNr, v, 0); err != nil {
 				return fmt.Errorf("color space %s: %w", csName.Value(), err)
 			}
 			return nil
@@ -642,14 +726,19 @@ func validateColorSpaceArraySubset(xRefTable *model.XRefTable, a types.Array, ow
 	return fmt.Errorf("color space array: invalid color space %q", csName.Value())
 }
 
-func validateColorSpaceArray(xRefTable *model.XRefTable, a types.Array, ownerObjNr int, excludePatternCS bool) (err error) {
+func (t *colorSpaceTraversal) validateColorSpaceArray(a types.Array, ownerObjNr int, role colorSpaceRole, depth int) (err error) {
 	if len(a) == 0 {
 		return errors.New("color space array: empty")
 	}
-	name, err := colorSpaceArrayName(xRefTable, a, ownerObjNr)
+	name, err := colorSpaceArrayName(t.xRefTable, a, ownerObjNr)
 	if err != nil {
 		return err
 	}
+	if !role.allows(name) {
+		return fmt.Errorf("color space %s: not allowed as %s", name.Value(), role.description())
+	}
+
+	xRefTable := t.xRefTable
 
 	switch name {
 
@@ -664,23 +753,20 @@ func validateColorSpaceArray(xRefTable *model.XRefTable, a types.Array, ownerObj
 		err = validateLabColorSpace(xRefTable, a, model.V11)
 
 	case model.ICCBasedCS:
-		err = validateICCBasedColorSpace(xRefTable, a, model.V13)
+		err = t.validateICCBasedColorSpace(a, model.V13, depth)
 
 	// Special
 	case model.IndexedCS:
-		err = validateIndexedColorSpace(xRefTable, a, ownerObjNr, model.V11)
+		err = t.validateIndexedColorSpace(a, ownerObjNr, model.V11, depth)
 
 	case model.PatternCS:
-		if excludePatternCS {
-			return errors.New("color space Pattern: not allowed here")
-		}
-		err = validatePatternColorSpace(xRefTable, a, ownerObjNr, model.V12)
+		err = t.validatePatternColorSpace(a, ownerObjNr, model.V12, depth)
 
 	case model.SeparationCS:
-		err = validateSeparationColorSpace(xRefTable, a, ownerObjNr, model.V12)
+		err = t.validateSeparationColorSpace(a, ownerObjNr, model.V12, depth)
 
 	case model.DeviceNCS:
-		err = validateDeviceNColorSpace(xRefTable, a, ownerObjNr, model.V13)
+		err = t.validateDeviceNColorSpace(a, ownerObjNr, model.V13, depth)
 
 	case model.DeviceGrayCS, model.DeviceRGBCS, model.DeviceCMYKCS:
 		if xRefTable.ValidationMode != model.ValidationRelaxed {
@@ -697,13 +783,25 @@ func validateColorSpaceArray(xRefTable *model.XRefTable, a types.Array, ownerObj
 	return nil
 }
 
-func validateColorSpace(xRefTable *model.XRefTable, o types.Object, ownerObjNr int, excludePatternCS bool) (err error) {
+func (t *colorSpaceTraversal) validateColorSpaceDepth(o types.Object, ownerObjNr int, role colorSpaceRole, depth int) (err error) {
 	objNr := validationObjectNumber(ownerObjNr, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
 	}()
 
-	o, err = xRefTable.Dereference(o)
+	if err := contextutil.Check(t.c); err != nil {
+		return err
+	}
+	if err := t.xRefTable.CheckRecursionDepth("colour-space graph", depth); err != nil {
+		return err
+	}
+	ancestor, err := t.enter(o)
+	if err != nil {
+		return err
+	}
+	defer t.leave(ancestor)
+
+	o, err = t.xRefTable.Dereference(o)
 	if err != nil {
 		return fmt.Errorf("color space: dereference: %w", err)
 	}
@@ -714,16 +812,19 @@ func validateColorSpace(xRefTable *model.XRefTable, o types.Object, ownerObjNr i
 	switch o := o.(type) {
 
 	case types.Name:
+		if !role.allows(o) {
+			return fmt.Errorf("color space %s: not allowed as %s", o.Value(), role.description())
+		}
 		validateSpecialColorSpaceName := func(s string) bool { return types.MemberOf(s, []string{"Pattern"}) }
 		if ok := validateDeviceColorSpaceName(o.Value()) || validateSpecialColorSpaceName(o.Value()); !ok {
 			err = fmt.Errorf("color space name: invalid device color space name %q", o.Value())
 		}
 
 	case types.Array:
-		err = validateColorSpaceArray(xRefTable, o, objNr, excludePatternCS)
+		err = t.validateColorSpaceArray(o, objNr, role, depth)
 
 	default:
-		if xRefTable.ValidationMode == model.ValidationStrict {
+		if t.xRefTable.ValidationMode == model.ValidationStrict {
 			return fmt.Errorf("color space: expected name or array, got %T", o)
 		}
 		model.ShowSkipped(fmt.Sprintf("invalid color space type: %s", o))
@@ -732,8 +833,26 @@ func validateColorSpace(xRefTable *model.XRefTable, o types.Object, ownerObjNr i
 	return err
 }
 
-func validateColorSpaceEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, entryName string, required bool, excludePatternCS bool) error {
+func validateColorSpaceArraySubset(c context.Context, xRefTable *model.XRefTable, a types.Array, ownerObjNr int, cs []string) error {
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if err := xRefTable.CheckRecursionDepth("colour-space graph", 0); err != nil {
+		return err
+	}
+	return newColorSpaceTraversal(c, xRefTable).validateColorSpaceArraySubset(a, ownerObjNr, cs)
+}
+
+func (t *colorSpaceTraversal) validateColorSpaceEntryDepth(d types.Dict, ownerObjNr int, dictName, entryName string, required bool, role colorSpaceRole, depth int) error {
+	xRefTable := t.xRefTable
+	if err := contextutil.Check(t.c); err != nil {
+		return err
+	}
+	if err := xRefTable.CheckRecursionDepth("colour-space graph", depth); err != nil {
+		return err
+	}
 	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	rawEntry := d[entryName]
 	o, err := validateEntry(xRefTable, d, ownerObjNr, dictName, entryName, required, model.V10)
 	if err != nil || o == nil {
 		if err != nil {
@@ -746,6 +865,10 @@ func validateColorSpaceEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjN
 	switch o := o.(type) {
 
 	case types.Name:
+		if !role.allows(o) {
+			err = fmt.Errorf("%s.%s: color space %s: not allowed as %s", dictName, entryName, o.Value(), role.description())
+			return model.WithValidationErrorObject(err, objNr)
+		}
 		if ok := validateDeviceColorSpaceName(o.Value()); !ok {
 			if xRefTable.ValidationMode == model.ValidationStrict {
 				err = fmt.Errorf("%s.%s: invalid device color space name %q", dictName, entryName, o.Value())
@@ -755,7 +878,7 @@ func validateColorSpaceEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjN
 		}
 
 	case types.Array:
-		if err = validateColorSpaceArray(xRefTable, o, objNr, excludePatternCS); err != nil {
+		if err = t.validateColorSpaceDepth(rawEntry, ownerObjNr, role, depth); err != nil {
 			err = fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
@@ -767,7 +890,11 @@ func validateColorSpaceEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjN
 	return model.WithValidationErrorObject(err, objNr)
 }
 
-func validateColorSpaceResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+func validateColorSpaceEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, role colorSpaceRole) error {
+	return newColorSpaceTraversal(c, xRefTable).validateColorSpaceEntryDepth(d, ownerObjNr, dictName, entryName, required, role, 0)
+}
+
+func validateColorSpaceResourceDict(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	resourceObjNr := validationObjectNumber(0, o)
 	// see 8.6 Color Spaces
 
@@ -791,12 +918,17 @@ func validateColorSpaceResourceDict(xRefTable *model.XRefTable, o types.Object, 
 		return model.WithValidationErrorObject(err, resourceObjNr)
 	}
 
+	t := newColorSpaceTraversal(c, xRefTable)
+
 	// Iterate over colorspace resource dictionary
 	for _, name := range slices.Sorted(maps.Keys(d)) {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		o := d[name]
 		colorSpaceObjNr := validationObjectNumber(resourceObjNr, o)
 		// Process colorspace
-		err = validateColorSpace(xRefTable, o, resourceObjNr, IncludePatternCS)
+		err = t.validateColorSpaceDepth(o, resourceObjNr, colorSpaceAny, 0)
 		if err != nil {
 			if xRefTable.ValidationMode == model.ValidationRelaxed && errors.Is(err, errMissingColorSpaceObject) {
 				d.Delete(name)

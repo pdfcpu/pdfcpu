@@ -17,10 +17,12 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"slices"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -66,7 +68,7 @@ func validateLineDashPatternEntry(xRefTable *model.XRefTable, d types.Dict, dict
 	return nil
 }
 
-func validateFunctionOrNameEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, validName func(string) bool) (err error) {
+func validateFunctionOrNameEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, validName func(string) bool) (err error) {
 	objNr := validationEntryObjectNumber(0, d, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -88,12 +90,12 @@ func validateFunctionOrNameEntry(xRefTable *model.XRefTable, d types.Dict, dictN
 		}
 
 	case types.Dict:
-		if err = processFunction(xRefTable, o, 0); err != nil {
+		if err = validateFunction(c, xRefTable, functionEntryObject(d, entryName, o), 0); err != nil {
 			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
 	case types.StreamDict:
-		if err = processFunction(xRefTable, o, 0); err != nil {
+		if err = validateFunction(c, xRefTable, functionEntryObject(d, entryName, o), 0); err != nil {
 			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
@@ -105,32 +107,48 @@ func validateFunctionOrNameEntry(xRefTable *model.XRefTable, d types.Dict, dictN
 	return nil
 }
 
-func validateBGEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
-	if xRefTable.ValidationMode == model.ValidationStrict {
-		return validateFunctionOrNameEntry(xRefTable, d, dictName, entryName, required, sinceVersion, func(string) bool { return false })
+func functionEntryObject(d types.Dict, entryName string, resolved types.Object) types.Object {
+	o := d[entryName]
+	if functionObjectIdentity(o) > 0 {
+		return o
 	}
-	return validateFunctionOrNameEntry(xRefTable, d, dictName, entryName, required, sinceVersion, func(s string) bool { return s == "Identity" })
+	return resolved
 }
 
-func validateBG2Entry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
-	return validateFunctionOrNameEntry(xRefTable, d, dictName, entryName, required, sinceVersion, func(s string) bool { return s == "Default" })
-}
-
-func validateUCREntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
+func validateBGEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
 	if xRefTable.ValidationMode == model.ValidationStrict {
-		return validateFunctionOrNameEntry(xRefTable, d, dictName, entryName, required, sinceVersion, func(string) bool { return false })
+		return validateFunctionOrNameEntry(c, xRefTable, d, dictName, entryName, required, sinceVersion, func(string) bool { return false })
 	}
-	return validateFunctionOrNameEntry(xRefTable, d, dictName, entryName, required, sinceVersion, func(s string) bool { return s == "Identity" })
+	return validateFunctionOrNameEntry(c, xRefTable, d, dictName, entryName, required, sinceVersion, func(s string) bool { return s == "Identity" })
 }
 
-func validateUCR2Entry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
-	return validateFunctionOrNameEntry(xRefTable, d, dictName, entryName, required, sinceVersion, func(s string) bool { return s == "Default" })
+func validateBG2Entry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
+	return validateFunctionOrNameEntry(c, xRefTable, d, dictName, entryName, required, sinceVersion, func(s string) bool { return s == "Default" })
 }
 
-func validateTransferFunction(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
+func validateUCREntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
+	if xRefTable.ValidationMode == model.ValidationStrict {
+		return validateFunctionOrNameEntry(c, xRefTable, d, dictName, entryName, required, sinceVersion, func(string) bool { return false })
+	}
+	return validateFunctionOrNameEntry(c, xRefTable, d, dictName, entryName, required, sinceVersion, func(s string) bool { return s == "Identity" })
+}
+
+func validateUCR2Entry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
+	return validateFunctionOrNameEntry(c, xRefTable, d, dictName, entryName, required, sinceVersion, func(s string) bool { return s == "Default" })
+}
+
+func validateTransferFunction(c context.Context, xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	rawObject := o
+	if o, err = xRefTable.Dereference(o); err != nil {
+		return fmt.Errorf("transfer function: dereference: %w", err)
+	}
+	t := newFunctionTraversal(c, xRefTable)
 
 	switch o := o.(type) {
 
@@ -148,16 +166,16 @@ func validateTransferFunction(xRefTable *model.XRefTable, o types.Object, ownerO
 
 		for i, o := range o {
 			objNr := validationObjectNumber(ownerObjNr, o)
-			o, err := xRefTable.Dereference(o)
+			resolved, err := xRefTable.Dereference(o)
 			if err != nil {
 				err = fmt.Errorf("transfer function array[%d]: dereference: %w", i, err)
 				return model.WithValidationErrorObject(err, objNr)
 			}
-			if o == nil {
+			if resolved == nil {
 				continue
 			}
 
-			err = processFunction(xRefTable, o, 0)
+			err = t.validateFunction(o, objNr, 0)
 			if err != nil {
 				err = fmt.Errorf("transfer function array[%d]: %w", i, err)
 				return model.WithValidationErrorObject(err, objNr)
@@ -166,10 +184,10 @@ func validateTransferFunction(xRefTable *model.XRefTable, o types.Object, ownerO
 		}
 
 	case types.Dict:
-		err = processFunction(xRefTable, o, 0)
+		err = t.validateFunction(rawObject, ownerObjNr, 0)
 
 	case types.StreamDict:
-		err = processFunction(xRefTable, o, 0)
+		err = t.validateFunction(rawObject, ownerObjNr, 0)
 
 	default:
 		return fmt.Errorf("transfer function: expected function, name or function array, got %T", o)
@@ -179,7 +197,7 @@ func validateTransferFunction(xRefTable *model.XRefTable, o types.Object, ownerO
 	return err
 }
 
-func validateTransferFunctionEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
+func validateTransferFunctionEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
 	objNr := validationEntryObjectNumber(0, d, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -193,16 +211,24 @@ func validateTransferFunctionEntry(xRefTable *model.XRefTable, d types.Dict, dic
 		return nil
 	}
 
-	if err := validateTransferFunction(xRefTable, o, objNr); err != nil {
+	if err := validateTransferFunction(c, xRefTable, d[entryName], objNr); err != nil {
 		return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 	}
 	return nil
 }
 
-func validateTR(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
+func validateTR(c context.Context, xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	rawObject := o
+	if o, err = xRefTable.Dereference(o); err != nil {
+		return fmt.Errorf("TR: dereference: %w", err)
+	}
+	t := newFunctionTraversal(c, xRefTable)
 
 	switch o := o.(type) {
 
@@ -220,18 +246,18 @@ func validateTR(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err
 
 		for i, o := range o {
 			objNr := validationObjectNumber(ownerObjNr, o)
-			o, err = xRefTable.Dereference(o)
+			resolved, err := xRefTable.Dereference(o)
 			if err != nil {
 				err = fmt.Errorf("TR array[%d]: dereference: %w", i, err)
 				return model.WithValidationErrorObject(err, objNr)
 			}
 
-			if o == nil {
+			if resolved == nil {
 				continue
 			}
 
-			if o, ok := o.(types.Name); ok {
-				s := o.Value()
+			if name, ok := resolved.(types.Name); ok {
+				s := name.Value()
 				if s != "Identity" {
 					err = fmt.Errorf("TR array[%d]: invalid name %q", i, s)
 					return model.WithValidationErrorObject(err, objNr)
@@ -239,7 +265,7 @@ func validateTR(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err
 				continue
 			}
 
-			err = processFunction(xRefTable, o, 0)
+			err = t.validateFunction(o, objNr, 0)
 			if err != nil {
 				err = fmt.Errorf("TR array[%d]: %w", i, err)
 				return model.WithValidationErrorObject(err, objNr)
@@ -248,10 +274,10 @@ func validateTR(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err
 		}
 
 	case types.Dict:
-		err = processFunction(xRefTable, o, 0)
+		err = t.validateFunction(rawObject, ownerObjNr, 0)
 
 	case types.StreamDict:
-		err = processFunction(xRefTable, o, 0)
+		err = t.validateFunction(rawObject, ownerObjNr, 0)
 
 	default:
 		return fmt.Errorf("TR: expected function, name or function array, got %T", o)
@@ -261,7 +287,7 @@ func validateTR(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err
 	return err
 }
 
-func validateTREntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
+func validateTREntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
 	objNr := validationEntryObjectNumber(0, d, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -275,7 +301,7 @@ func validateTREntry(xRefTable *model.XRefTable, d types.Dict, dictName string, 
 		return nil
 	}
 
-	if err := validateTR(xRefTable, o, objNr); err != nil {
+	if err := validateTR(c, xRefTable, d[entryName], objNr); err != nil {
 		return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 	}
 	return nil
@@ -289,10 +315,18 @@ func validateTR2Name(name types.Name) error {
 	return nil
 }
 
-func validateTR2(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
+func validateTR2(c context.Context, xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (err error) {
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	rawObject := o
+	if o, err = xRefTable.Dereference(o); err != nil {
+		return fmt.Errorf("TR2: dereference: %w", err)
+	}
+	t := newFunctionTraversal(c, xRefTable)
 
 	switch o := o.(type) {
 
@@ -309,25 +343,25 @@ func validateTR2(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (er
 
 		for i, o := range o {
 			objNr := validationObjectNumber(ownerObjNr, o)
-			o, err = xRefTable.Dereference(o)
+			resolved, err := xRefTable.Dereference(o)
 			if err != nil {
 				err = fmt.Errorf("TR2 array[%d]: dereference: %w", i, err)
 				return model.WithValidationErrorObject(err, objNr)
 			}
 
-			if o == nil {
+			if resolved == nil {
 				continue
 			}
 
-			if o, ok := o.(types.Name); ok {
-				if err = validateTR2Name(o); err != nil {
+			if name, ok := resolved.(types.Name); ok {
+				if err = validateTR2Name(name); err != nil {
 					err = fmt.Errorf("TR2 array[%d]: %w", i, err)
 					return model.WithValidationErrorObject(err, objNr)
 				}
 				continue
 			}
 
-			err = processFunction(xRefTable, o, 0)
+			err = t.validateFunction(o, objNr, 0)
 			if err != nil {
 				err = fmt.Errorf("TR2 array[%d]: %w", i, err)
 				return model.WithValidationErrorObject(err, objNr)
@@ -336,10 +370,10 @@ func validateTR2(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (er
 		}
 
 	case types.Dict:
-		err = processFunction(xRefTable, o, 0)
+		err = t.validateFunction(rawObject, ownerObjNr, 0)
 
 	case types.StreamDict:
-		err = processFunction(xRefTable, o, 0)
+		err = t.validateFunction(rawObject, ownerObjNr, 0)
 
 	default:
 		return fmt.Errorf("TR2: expected function, name or function array, got %T", o)
@@ -349,7 +383,7 @@ func validateTR2(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) (er
 	return err
 }
 
-func validateTR2Entry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
+func validateTR2Entry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
 	objNr := validationEntryObjectNumber(0, d, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -363,13 +397,13 @@ func validateTR2Entry(xRefTable *model.XRefTable, d types.Dict, dictName string,
 		return nil
 	}
 
-	if err := validateTR2(xRefTable, o, objNr); err != nil {
+	if err := validateTR2(c, xRefTable, d[entryName], objNr); err != nil {
 		return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 	}
 	return nil
 }
 
-func validateSpotFunctionEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
+func validateSpotFunctionEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
 	objNr := validationEntryObjectNumber(0, d, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -395,12 +429,12 @@ func validateSpotFunctionEntry(xRefTable *model.XRefTable, d types.Dict, dictNam
 		}
 
 	case types.Dict:
-		if err = processFunction(xRefTable, o, 0); err != nil {
+		if err = validateFunction(c, xRefTable, functionEntryObject(d, entryName, o), 0); err != nil {
 			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
 	case types.StreamDict:
-		if err = processFunction(xRefTable, o, 0); err != nil {
+		if err = validateFunction(c, xRefTable, functionEntryObject(d, entryName, o), 0); err != nil {
 			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
@@ -412,7 +446,7 @@ func validateSpotFunctionEntry(xRefTable *model.XRefTable, d types.Dict, dictNam
 	return err
 }
 
-func validateType1HalftoneDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+func validateType1HalftoneDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 	dictName := "type1HalftoneDict"
 
 	// HalftoneName, optional, string
@@ -434,13 +468,13 @@ func validateType1HalftoneDict(xRefTable *model.XRefTable, d types.Dict, sinceVe
 	}
 
 	// SpotFunction, required, function or name
-	err = validateSpotFunctionEntry(xRefTable, d, dictName, "SpotFunction", REQUIRED, sinceVersion)
+	err = validateSpotFunctionEntry(c, xRefTable, d, dictName, "SpotFunction", REQUIRED, sinceVersion)
 	if err != nil {
 		return err
 	}
 
 	// TransferFunction, optional, function
-	err = validateTransferFunctionEntry(xRefTable, d, dictName, "TransferFunction", OPTIONAL, sinceVersion)
+	err = validateTransferFunctionEntry(c, xRefTable, d, dictName, "TransferFunction", OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -450,25 +484,83 @@ func validateType1HalftoneDict(xRefTable *model.XRefTable, d types.Dict, sinceVe
 	return err
 }
 
-func validateType5HalftoneDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+type halftoneTraversal struct {
+	c         context.Context
+	xRefTable *model.XRefTable
+	ancestors map[int]bool
+	validated map[int]int
+}
+
+func newHalftoneTraversal(c context.Context, xRefTable *model.XRefTable) *halftoneTraversal {
+	return &halftoneTraversal{
+		c:         c,
+		xRefTable: xRefTable,
+		ancestors: map[int]bool{},
+		validated: map[int]int{},
+	}
+}
+
+func halftoneObjectIdentity(o types.Object) int {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		return 0
+	}
+	return ir.ObjectNumber.Value()
+}
+
+func (t *halftoneTraversal) enter(objNr int) error {
+	if objNr <= 0 {
+		return nil
+	}
+	if t.ancestors[objNr] {
+		return fmt.Errorf("obj#%d: %w", objNr, model.ErrHalftoneCycle)
+	}
+	t.ancestors[objNr] = true
+	return nil
+}
+
+func (t *halftoneTraversal) leave(objNr int) {
+	if objNr > 0 {
+		delete(t.ancestors, objNr)
+	}
+}
+
+func (t *halftoneTraversal) alreadyValidated(objNr, depth int) bool {
+	if objNr <= 0 {
+		return false
+	}
+	validatedDepth, ok := t.validated[objNr]
+	return ok && depth <= validatedDepth
+}
+
+func (t *halftoneTraversal) markValidated(objNr, depth int) {
+	if objNr <= 0 {
+		return
+	}
+	if previous, ok := t.validated[objNr]; !ok || depth > previous {
+		t.validated[objNr] = depth
+	}
+}
+
+func (t *halftoneTraversal) validateType5HalftoneDict(d types.Dict, sinceVersion model.Version, depth int) error {
 	dictName := "type5HalftoneDict"
 
-	_, err := validateStringEntry(xRefTable, d, 0, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
+	_, err := validateStringEntry(t.xRefTable, d, 0, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
 
-	for _, c := range []string{"Gray", "Red", "Green", "Blue", "Cyan", "Magenta", "Yellow", "Black"} {
-		err = validateHalfToneEntry(xRefTable, d, dictName, c, OPTIONAL, sinceVersion)
+	for _, component := range []string{"Gray", "Red", "Green", "Blue", "Cyan", "Magenta", "Yellow", "Black"} {
+		err = t.validateEntry(d, dictName, component, OPTIONAL, sinceVersion, depth+1)
 		if err != nil {
 			return err
 		}
 	}
 
-	return validateHalfToneEntry(xRefTable, d, dictName, "Default", REQUIRED, sinceVersion)
+	return t.validateEntry(d, dictName, "Default", REQUIRED, sinceVersion, depth+1)
 }
 
-func validateType6HalftoneStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
+func validateType6HalftoneStreamDict(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
 	dictName := "type6HalftoneDict"
 
 	_, err := validateStringEntry(xRefTable, sd.Dict, 0, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
@@ -486,10 +578,10 @@ func validateType6HalftoneStreamDict(xRefTable *model.XRefTable, sd *types.Strea
 		return err
 	}
 
-	return validateTransferFunctionEntry(xRefTable, sd.Dict, dictName, "TransferFunction", OPTIONAL, sinceVersion)
+	return validateTransferFunctionEntry(c, xRefTable, sd.Dict, dictName, "TransferFunction", OPTIONAL, sinceVersion)
 }
 
-func validateType10HalftoneStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
+func validateType10HalftoneStreamDict(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
 	dictName := "type10HalftoneDict"
 
 	_, err := validateStringEntry(xRefTable, sd.Dict, 0, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
@@ -507,10 +599,10 @@ func validateType10HalftoneStreamDict(xRefTable *model.XRefTable, sd *types.Stre
 		return err
 	}
 
-	return validateTransferFunctionEntry(xRefTable, sd.Dict, dictName, "TransferFunction", OPTIONAL, sinceVersion)
+	return validateTransferFunctionEntry(c, xRefTable, sd.Dict, dictName, "TransferFunction", OPTIONAL, sinceVersion)
 }
 
-func validateType16HalftoneStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
+func validateType16HalftoneStreamDict(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
 	dictName := "type16HalftoneDict"
 
 	_, err := validateStringEntry(xRefTable, sd.Dict, 0, dictName, "HalftoneName", OPTIONAL, sinceVersion, nil)
@@ -538,11 +630,12 @@ func validateType16HalftoneStreamDict(xRefTable *model.XRefTable, sd *types.Stre
 		return err
 	}
 
-	return validateTransferFunctionEntry(xRefTable, sd.Dict, dictName, "TransferFunction", OPTIONAL, sinceVersion)
+	return validateTransferFunctionEntry(c, xRefTable, sd.Dict, dictName, "TransferFunction", OPTIONAL, sinceVersion)
 }
 
-func validateHalfToneDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+func (t *halftoneTraversal) validateDict(d types.Dict, sinceVersion model.Version, depth int) error {
 	dictName := "halfToneDict"
+	xRefTable := t.xRefTable
 
 	// Type, optional, name
 	_, err := validateNameEntry(xRefTable, d, 0, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Halftone" })
@@ -559,10 +652,10 @@ func validateHalfToneDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion
 	switch *halftoneType {
 
 	case 1:
-		err = validateType1HalftoneDict(xRefTable, d, sinceVersion)
+		err = validateType1HalftoneDict(t.c, xRefTable, d, sinceVersion)
 
 	case 5:
-		err = validateType5HalftoneDict(xRefTable, d, sinceVersion)
+		err = t.validateType5HalftoneDict(d, sinceVersion, depth)
 
 	default:
 		err = fmt.Errorf("unknown halftoneTyp: %d", *halftoneType)
@@ -572,7 +665,7 @@ func validateHalfToneDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion
 	return err
 }
 
-func validateHalfToneStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
+func validateHalfToneStreamDict(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
 	dictName := "writeHalfToneStreamDict"
 
 	// Type, name, optional
@@ -590,13 +683,13 @@ func validateHalfToneStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict
 	switch *halftoneType {
 
 	case 6:
-		err = validateType6HalftoneStreamDict(xRefTable, sd, sinceVersion)
+		err = validateType6HalftoneStreamDict(c, xRefTable, sd, sinceVersion)
 
 	case 10:
-		err = validateType10HalftoneStreamDict(xRefTable, sd, sinceVersion)
+		err = validateType10HalftoneStreamDict(c, xRefTable, sd, sinceVersion)
 
 	case 16:
-		err = validateType16HalftoneStreamDict(xRefTable, sd, sinceVersion)
+		err = validateType16HalftoneStreamDict(c, xRefTable, sd, sinceVersion)
 
 	default:
 		err = fmt.Errorf("unknown halftoneTyp: %d", *halftoneType)
@@ -606,40 +699,70 @@ func validateHalfToneStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict
 	return err
 }
 
-func validateHalfToneEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
-	// See 10.5
-	objNr := validationEntryObjectNumber(0, d, entryName)
-	defer func() {
-		err = model.WithValidationErrorObject(err, objNr)
-	}()
-
-	o, err := validateEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion)
-	if err != nil || o == nil {
-		return err
-	}
-
+func (t *halftoneTraversal) validateObject(o types.Object, dictName, entryName string, sinceVersion model.Version, depth int) error {
 	switch o := o.(type) {
-
 	case types.Name:
 		if o.Value() != "Default" {
 			return fmt.Errorf("%s.%s: invalid halftone name %q", dictName, entryName, o.Value())
 		}
 
 	case types.Dict:
-		if err = validateHalfToneDict(xRefTable, o, sinceVersion); err != nil {
+		if err := t.validateDict(o, sinceVersion, depth); err != nil {
 			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
 	case types.StreamDict:
-		if err = validateHalfToneStreamDict(xRefTable, &o, sinceVersion); err != nil {
+		if err := validateHalfToneStreamDict(t.c, t.xRefTable, &o, sinceVersion); err != nil {
 			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
 	default:
-		err = fmt.Errorf("%s.%s: expected halftone dict, stream dict or Default name, got %T", dictName, entryName, o)
+		return fmt.Errorf("%s.%s: expected halftone dict, stream dict or Default name, got %T", dictName, entryName, o)
+	}
+	return nil
+}
+
+func (t *halftoneTraversal) validateEntry(d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, depth int) (err error) {
+	// See 10.5
+	objNr := validationEntryObjectNumber(0, d, entryName)
+	defer func() {
+		err = model.WithValidationErrorObject(err, objNr)
+	}()
+	if err := contextutil.Check(t.c); err != nil {
+		return err
 	}
 
-	return err
+	rawObject, found := d.Find(entryName)
+	if !found || rawObject == nil {
+		_, err = validateEntry(t.xRefTable, d, 0, dictName, entryName, required, sinceVersion)
+		return err
+	}
+	if err := t.xRefTable.CheckRecursionDepth("halftone graph", depth); err != nil {
+		return err
+	}
+
+	halftoneObjNr := halftoneObjectIdentity(rawObject)
+	if err := t.enter(halftoneObjNr); err != nil {
+		return err
+	}
+	defer t.leave(halftoneObjNr)
+	if t.alreadyValidated(halftoneObjNr, depth) {
+		return nil
+	}
+
+	o, err := validateEntry(t.xRefTable, d, 0, dictName, entryName, required, sinceVersion)
+	if err != nil || o == nil {
+		return err
+	}
+	if err = t.validateObject(o, dictName, entryName, sinceVersion, depth); err != nil {
+		return err
+	}
+	t.markValidated(halftoneObjNr, depth)
+	return nil
+}
+
+func validateHalfToneEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) error {
+	return newHalftoneTraversal(c, xRefTable).validateEntry(d, dictName, entryName, required, sinceVersion, 0)
 }
 
 func validateBlendModeEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
@@ -679,7 +802,7 @@ func validateBlendModeEntry(xRefTable *model.XRefTable, d types.Dict, dictName s
 	return nil
 }
 
-func validateSoftMaskTransferFunctionEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
+func validateSoftMaskTransferFunctionEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
 	objNr := validationEntryObjectNumber(0, d, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -699,12 +822,12 @@ func validateSoftMaskTransferFunctionEntry(xRefTable *model.XRefTable, d types.D
 		}
 
 	case types.Dict:
-		if err = processFunction(xRefTable, o, 0); err != nil {
+		if err = validateFunction(c, xRefTable, functionEntryObject(d, entryName, o), 0); err != nil {
 			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
 	case types.StreamDict:
-		if err = processFunction(xRefTable, o, 0); err != nil {
+		if err = validateFunction(c, xRefTable, functionEntryObject(d, entryName, o), 0); err != nil {
 			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
@@ -716,7 +839,7 @@ func validateSoftMaskTransferFunctionEntry(xRefTable *model.XRefTable, d types.D
 	return err
 }
 
-func validateSoftMaskDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (err error) {
+func validateSoftMaskDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (err error) {
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
@@ -741,22 +864,23 @@ func validateSoftMaskDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr i
 	// A transparency group XObject (see “Transparency Group XObjects”)
 	// to be used as the source of alpha or colour values for deriving the mask.
 	rawGroup := d["G"]
+	groupObjNr := validationObjectNumber(ownerObjNr, rawGroup)
 	sd, err := validateStreamDictEntry(xRefTable, d, ownerObjNr, dictName, "G", REQUIRED, model.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	if sd != nil {
-		err = validateXObjectStreamDict(xRefTable, rawGroup)
+		err = validateXObjectStreamDictContents(c, xRefTable, sd)
 		if err != nil {
-			return err
+			return model.WithValidationErrorObject(err, groupObjNr)
 		}
 	}
 
 	// TR (Optional) function or name
 	// A function object (see “Functions”) specifying the transfer function
 	// to be used in deriving the mask values.
-	err = validateSoftMaskTransferFunctionEntry(xRefTable, d, dictName, "TR", OPTIONAL, model.V10)
+	err = validateSoftMaskTransferFunctionEntry(c, xRefTable, d, dictName, "TR", OPTIONAL, model.V10)
 	if err != nil {
 		return err
 	}
@@ -769,7 +893,7 @@ func validateSoftMaskDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr i
 	return err
 }
 
-func validateSoftMaskEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
+func validateSoftMaskEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
 	// see 11.3.7.2 Source Shape and Opacity
 	// see 11.6.4.3 Mask Shape and Opacity
 	objNr := validationEntryObjectNumber(0, d, entryName)
@@ -791,7 +915,7 @@ func validateSoftMaskEntry(xRefTable *model.XRefTable, d types.Dict, dictName st
 		}
 
 	case types.Dict:
-		if err = validateSoftMaskDict(xRefTable, o, objNr); err != nil {
+		if err = validateSoftMaskDict(c, xRefTable, o, objNr); err != nil {
 			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
@@ -875,39 +999,39 @@ func validateExtGStateDictPart1(xRefTable *model.XRefTable, d types.Dict, dictNa
 	return err
 }
 
-func validateExtGStateDictPart2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateExtGStateDictPart2(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// BG, function, optional, black-generation function, see 10.3.4
-	err := validateBGEntry(xRefTable, d, dictName, "BG", OPTIONAL, model.V10)
+	err := validateBGEntry(c, xRefTable, d, dictName, "BG", OPTIONAL, model.V10)
 	if err != nil {
 		return err
 	}
 
 	// BG2, function or name(/Default), optional, since V1.3
-	err = validateBG2Entry(xRefTable, d, dictName, "BG2", OPTIONAL, model.V10)
+	err = validateBG2Entry(c, xRefTable, d, dictName, "BG2", OPTIONAL, model.V10)
 	if err != nil {
 		return err
 	}
 
 	// UCR, function, optional, undercolor-removal function, see 10.3.4
-	err = validateUCREntry(xRefTable, d, dictName, "UCR", OPTIONAL, model.V10)
+	err = validateUCREntry(c, xRefTable, d, dictName, "UCR", OPTIONAL, model.V10)
 	if err != nil {
 		return err
 	}
 
 	// UCR2, function or name(/Default), optional, since V1.3
-	err = validateUCR2Entry(xRefTable, d, dictName, "UCR2", OPTIONAL, model.V10)
+	err = validateUCR2Entry(c, xRefTable, d, dictName, "UCR2", OPTIONAL, model.V10)
 	if err != nil {
 		return err
 	}
 
 	// TR, function, array of 4 functions or name(/Identity), optional, see 10.4 transfer functions
-	err = validateTREntry(xRefTable, d, dictName, "TR", OPTIONAL, model.V10)
+	err = validateTREntry(c, xRefTable, d, dictName, "TR", OPTIONAL, model.V10)
 	if err != nil {
 		return err
 	}
 
 	// TR2, function, array of 4 functions or name(/Identity,/Default), optional, since V1.3
-	err = validateTR2Entry(xRefTable, d, dictName, "TR2", OPTIONAL, model.V10)
+	err = validateTR2Entry(c, xRefTable, d, dictName, "TR2", OPTIONAL, model.V10)
 	if err != nil {
 		return err
 	}
@@ -918,7 +1042,7 @@ func validateExtGStateDictPart2(xRefTable *model.XRefTable, d types.Dict, dictNa
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V11
 	}
-	err = validateHalfToneEntry(xRefTable, d, dictName, "HT", OPTIONAL, sinceVersion)
+	err = validateHalfToneEntry(c, xRefTable, d, dictName, "HT", OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -945,7 +1069,7 @@ func validateExtGStateDictPart2(xRefTable *model.XRefTable, d types.Dict, dictNa
 	return err
 }
 
-func validateExtGStateDictPart3(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateExtGStateDictPart3(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// BM, name or array, optional, since V1.4
 	sinceVersion := model.V14
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
@@ -961,7 +1085,7 @@ func validateExtGStateDictPart3(xRefTable *model.XRefTable, d types.Dict, dictNa
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V13
 	}
-	err = validateSoftMaskEntry(xRefTable, d, dictName, "SMask", OPTIONAL, sinceVersion)
+	err = validateSoftMaskEntry(c, xRefTable, d, dictName, "SMask", OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -1009,7 +1133,7 @@ func validateExtGStateDictPart3(xRefTable *model.XRefTable, d types.Dict, dictNa
 	return err
 }
 
-func validateExtGStateDict(xRefTable *model.XRefTable, o types.Object) (err error) {
+func validateExtGStateDict(c context.Context, xRefTable *model.XRefTable, o types.Object) (err error) {
 	objNr := validationObjectNumber(0, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -1039,12 +1163,12 @@ func validateExtGStateDict(xRefTable *model.XRefTable, o types.Object) (err erro
 		return fmt.Errorf("ExtGState graphics state parameters: %w", err)
 	}
 
-	err = validateExtGStateDictPart2(xRefTable, d, dictName)
+	err = validateExtGStateDictPart2(c, xRefTable, d, dictName)
 	if err != nil {
 		return fmt.Errorf("ExtGState transfer and halftone parameters: %w", err)
 	}
 
-	err = validateExtGStateDictPart3(xRefTable, d, dictName)
+	err = validateExtGStateDictPart3(c, xRefTable, d, dictName)
 	if err != nil {
 		return fmt.Errorf("ExtGState transparency parameters: %w", err)
 	}
@@ -1061,7 +1185,7 @@ func validateExtGStateDict(xRefTable *model.XRefTable, o types.Object) (err erro
 	return nil
 }
 
-func validateExtGStateResourceDict(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (err error) {
+func validateExtGStateResourceDict(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (err error) {
 	objNr := validationObjectNumber(0, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -1086,9 +1210,12 @@ func validateExtGStateResourceDict(xRefTable *model.XRefTable, o types.Object, s
 
 	// Iterate over extGState resource dictionary
 	for _, name := range slices.Sorted(maps.Keys(d)) {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		o := d[name]
 		// Process extGStateDict
-		err = validateExtGStateDict(xRefTable, o)
+		err = validateExtGStateDict(c, xRefTable, o)
 		if err != nil {
 			return fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("ExtGState resource %s", name), o), err)
 		}

@@ -63,7 +63,7 @@ func TestSharedActionRegistersDestinationOnce(t *testing.T) {
 	x := sharedActionXRefTable(100, dicts)
 	x.Conf.Cmd = model.MERGECREATE
 	x.NameRefs = map[string]model.NameMap{}
-	if err := validateActionDictObject(x, dicts[1], *types.NewIndirectRef(1, 0), "shared action"); err != nil {
+	if err := validateActionDictObject(t.Context(), x, dicts[1], *types.NewIndirectRef(1, 0), "shared action"); err != nil {
 		t.Fatal(err)
 	}
 	if got := len(x.NameRefs["Dests"]["target"]); got != 1 {
@@ -81,13 +81,13 @@ func TestSharedActionChecksDeeperPath(t *testing.T) {
 	for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
 		x := sharedActionXRefTable(3, dicts)
 		x.ValidationMode = mode
-		err := validateActionDictObject(x, dicts[1], ir(1), "shared action")
+		err := validateActionDictObject(t.Context(), x, dicts[1], ir(1), "shared action")
 		if !errors.Is(err, model.ErrMaxRecursionDepthExceeded) {
 			t.Fatalf("mode %d: got %v, want depth error", mode, err)
 		}
 	}
 	dicts[1]["Next"] = types.Array{ir(4), ir(2)}
-	if err := validateActionDictObject(sharedActionXRefTable(4, dicts), dicts[1], ir(1), "shared action"); err != nil {
+	if err := validateActionDictObject(t.Context(), sharedActionXRefTable(4, dicts), dicts[1], ir(1), "shared action"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -101,7 +101,7 @@ func validateSharedAction(t *testing.T, d types.Dict) *model.XRefTable {
 	x.URIs = map[int]map[string]string{}
 	x.CurPage = 7
 	x.ValidateLinks = true
-	if err := validateActionDictObject(x, dicts[1], *types.NewIndirectRef(1, 0), "shared action"); err != nil {
+	if err := validateActionDictObject(t.Context(), x, dicts[1], *types.NewIndirectRef(1, 0), "shared action"); err != nil {
 		t.Fatal(err)
 	}
 	return x
@@ -137,7 +137,7 @@ func TestDirectActionsRemainDistinct(t *testing.T) {
 	x := sharedActionXRefTable(100, map[int]types.Dict{1: d})
 	x.Conf.Cmd = model.MERGECREATE
 	x.NameRefs = map[string]model.NameMap{}
-	if err := validateActionDictObject(x, d, *types.NewIndirectRef(1, 0), "direct actions"); err != nil {
+	if err := validateActionDictObject(t.Context(), x, d, *types.NewIndirectRef(1, 0), "direct actions"); err != nil {
 		t.Fatal(err)
 	}
 	if len(x.NameRefs["Dests"]["first"]) != 1 || len(x.NameRefs["Dests"]["second"]) != 1 {
@@ -150,11 +150,11 @@ func TestActionValidationStartsFresh(t *testing.T) {
 	d := sharedActionDict(nil)
 	x := sharedActionXRefTable(100, map[int]types.Dict{1: d})
 	ir := *types.NewIndirectRef(1, 0)
-	if err := validateActionDictObject(x, d, ir, "first traversal"); err != nil {
+	if err := validateActionDictObject(t.Context(), x, d, ir, "first traversal"); err != nil {
 		t.Fatal(err)
 	}
 	d["S"] = types.Name("InvalidAction")
-	if err := validateActionDictObject(x, d, ir, "second traversal"); err == nil {
+	if err := validateActionDictObject(t.Context(), x, d, ir, "second traversal"); err == nil {
 		t.Fatal("second traversal reused stale validation")
 	}
 }

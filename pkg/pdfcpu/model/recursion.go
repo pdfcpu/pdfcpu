@@ -21,8 +21,71 @@ import (
 	"fmt"
 )
 
+// ErrActionCycle signals a circular action chain.
+var ErrActionCycle = errors.New("circular action chain")
+
+// ErrAnnotationIRTCycle signals a circular annotation reply chain.
+var ErrAnnotationIRTCycle = errors.New("circular annotation IRT chain")
+
+// ErrBeadCycle signals a circular bead chain that does not terminate correctly.
+var ErrBeadCycle = errors.New("circular bead chain")
+
+// ErrCMapCycle signals a circular CMap chain.
+var ErrCMapCycle = errors.New("circular CMap chain")
+
+// ErrColorSpaceCycle signals a circular colour-space graph.
+var ErrColorSpaceCycle = errors.New("circular colour-space graph")
+
+// ErrFormFieldCycle signals a form field tree cycle.
+var ErrFormFieldCycle = errors.New("circular form field tree")
+
+// ErrFormFieldDuplicate signals a repeated field or widget in the Fields/Kids hierarchy.
+var ErrFormFieldDuplicate = errors.New("duplicate form field node")
+
+// ErrFunctionCycle signals a circular function graph.
+var ErrFunctionCycle = errors.New("circular function graph")
+
+// ErrHalftoneCycle signals a circular halftone graph.
+var ErrHalftoneCycle = errors.New("circular halftone graph")
+
 // ErrMaxRecursionDepthExceeded signals excessive parser or object graph nesting.
 var ErrMaxRecursionDepthExceeded = errors.New("max recursion depth exceeded")
+
+// ErrMediaClipCycle signals a circular MediaClip chain.
+var ErrMediaClipCycle = errors.New("circular MediaClip chain")
+
+// ErrNameTreeCycle signals an indirect child cycle in a name tree.
+var ErrNameTreeCycle = errors.New("circular name tree")
+
+// ErrNameTreeDuplicate signals a repeated indirect name-tree node.
+var ErrNameTreeDuplicate = errors.New("duplicate name tree node")
+
+// ErrNumberTreeCycle signals an indirect child cycle in a number tree.
+var ErrNumberTreeCycle = errors.New("circular number tree")
+
+// ErrNumberTreeDuplicate signals a repeated indirect number-tree node.
+var ErrNumberTreeDuplicate = errors.New("duplicate number tree node")
+
+// ErrPageTreeCycle signals a page tree node cycle.
+var ErrPageTreeCycle = errors.New("circular page tree")
+
+// ErrPageTreeDuplicate signals a page tree node reachable from multiple parents.
+var ErrPageTreeDuplicate = errors.New("duplicate page tree node")
+
+// ErrPatternCycle signals a circular Pattern graph.
+var ErrPatternCycle = errors.New("circular Pattern graph")
+
+// ErrRenditionCycle signals a circular selector-Rendition graph.
+var ErrRenditionCycle = errors.New("circular rendition graph")
+
+// ErrStructureTreeCycle signals a structure tree cycle.
+var ErrStructureTreeCycle = errors.New("circular structure tree")
+
+// ErrStructureTreeDuplicate signals repeated structure-element ownership in the K hierarchy.
+var ErrStructureTreeDuplicate = errors.New("duplicate structure tree node")
+
+// ErrTargetCycle signals a circular embedded target chain.
+var ErrTargetCycle = errors.New("circular embedded target chain")
 
 type recursionDepthError struct {
 	name  string
@@ -37,36 +100,6 @@ func (e *recursionDepthError) Error() string {
 func (e *recursionDepthError) Unwrap() error {
 	return ErrMaxRecursionDepthExceeded
 }
-
-// ErrPageTreeCycle signals a page tree node cycle.
-var ErrPageTreeCycle = errors.New("circular page tree")
-
-// ErrPageTreeDuplicate signals a page tree node reachable from multiple parents.
-var ErrPageTreeDuplicate = errors.New("duplicate page tree node")
-
-// ErrFormFieldCycle signals a form field tree cycle.
-var ErrFormFieldCycle = errors.New("circular form field tree")
-
-// ErrStructureTreeCycle signals a structure tree cycle.
-var ErrStructureTreeCycle = errors.New("circular structure tree")
-
-// ErrActionCycle signals a circular action chain.
-var ErrActionCycle = errors.New("circular action chain")
-
-// ErrBeadCycle signals a circular bead chain that does not terminate correctly.
-var ErrBeadCycle = errors.New("circular bead chain")
-
-// ErrNameTreeCycle signals an indirect child cycle in a name tree.
-var ErrNameTreeCycle = errors.New("circular name tree")
-
-// ErrNameTreeDuplicate signals a repeated indirect name-tree node.
-var ErrNameTreeDuplicate = errors.New("duplicate name tree node")
-
-// ErrNumberTreeCycle signals an indirect child cycle in a number tree.
-var ErrNumberTreeCycle = errors.New("circular number tree")
-
-// ErrNumberTreeDuplicate signals a repeated indirect number-tree node.
-var ErrNumberTreeDuplicate = errors.New("duplicate number tree node")
 
 // MaxRecursionDepth returns the configured recursion depth limit.
 func (xRefTable *XRefTable) MaxRecursionDepth() int {
@@ -184,6 +217,7 @@ func (v *FormFieldVisit) Leave(objNr int) {
 // StructureTreeVisit tracks structure tree ancestor traversal state.
 type StructureTreeVisit struct {
 	ancestors map[int]bool
+	validated map[int]int
 }
 
 // NewStructureTreeVisit returns a structure tree traversal state.
@@ -211,6 +245,28 @@ func (v *StructureTreeVisit) Leave(objNr int) {
 		return
 	}
 	delete(v.ancestors, objNr)
+}
+
+// AlreadyValidated reports whether a completed structure subtree covers the requested starting depth.
+func (v *StructureTreeVisit) AlreadyValidated(objNr, depth int) bool {
+	if v == nil || objNr == 0 {
+		return false
+	}
+	validatedDepth, ok := v.validated[objNr]
+	return ok && depth <= validatedDepth
+}
+
+// MarkValidated records successful structure subtree validation at the requested starting depth.
+func (v *StructureTreeVisit) MarkValidated(objNr, depth int) {
+	if v == nil || objNr == 0 {
+		return
+	}
+	if v.validated == nil {
+		v.validated = map[int]int{}
+	}
+	if previous, ok := v.validated[objNr]; !ok || depth > previous {
+		v.validated[objNr] = depth
+	}
 }
 
 // ActionVisit tracks active ancestors and completed subtrees within one action-chain traversal.
@@ -257,6 +313,61 @@ func (v *ActionVisit) AlreadyValidated(objNr, depth int) bool {
 
 // MarkValidated records successful action subtree validation at the requested starting depth.
 func (v *ActionVisit) MarkValidated(objNr, depth int) {
+	if v == nil || objNr == 0 {
+		return
+	}
+	if v.validated == nil {
+		v.validated = map[int]int{}
+	}
+	if previous, ok := v.validated[objNr]; !ok || depth > previous {
+		v.validated[objNr] = depth
+	}
+}
+
+// RenditionVisit tracks active ancestors and completed subtrees within one selector-Rendition traversal.
+type RenditionVisit struct {
+	ancestors map[int]bool
+	validated map[int]int
+}
+
+// NewRenditionVisit returns a selector-Rendition traversal state.
+func NewRenditionVisit() *RenditionVisit {
+	return &RenditionVisit{
+		ancestors: map[int]bool{},
+	}
+}
+
+// Enter rejects selector-Rendition cycles.
+func (v *RenditionVisit) Enter(objNr int) error {
+	if v == nil || objNr == 0 {
+		return nil
+	}
+	if v.ancestors[objNr] {
+		return fmt.Errorf("obj#%d: %w", objNr, ErrRenditionCycle)
+	}
+	v.ancestors[objNr] = true
+	return nil
+}
+
+// Leave leaves the current selector-Rendition node.
+func (v *RenditionVisit) Leave(objNr int) {
+	if v == nil || objNr == 0 {
+		return
+	}
+	delete(v.ancestors, objNr)
+}
+
+// AlreadyValidated reports whether a completed rendition subtree covers the requested starting depth.
+func (v *RenditionVisit) AlreadyValidated(objNr, depth int) bool {
+	if v == nil || objNr == 0 {
+		return false
+	}
+	validatedDepth, ok := v.validated[objNr]
+	return ok && depth <= validatedDepth
+}
+
+// MarkValidated records successful rendition subtree validation at the requested starting depth.
+func (v *RenditionVisit) MarkValidated(objNr, depth int) {
 	if v == nil || objNr == 0 {
 		return
 	}

@@ -17,12 +17,14 @@ limitations under the License.
 package validate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"maps"
 	"slices"
 	"strings"
 
+	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -59,12 +61,42 @@ func validateGoToRActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 	return err
 }
 
-func validateTargetDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
-	// table 202
+type targetTraversal map[int]bool
 
+func (v targetTraversal) enter(objNr int) error {
+	if objNr <= 0 {
+		return nil
+	}
+	if v[objNr] {
+		return fmt.Errorf("obj#%d: %w", objNr, model.ErrTargetCycle)
+	}
+	v[objNr] = true
+	return nil
+}
+
+func (v targetTraversal) leave(objNr int) {
+	if objNr > 0 {
+		delete(v, objNr)
+	}
+}
+
+func validateTargetDictEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
+	return validateTargetDictEntryDepth(c, xRefTable, d, dictName, entryName, required, sinceVersion, 0, targetTraversal{})
+}
+
+func validateTargetDictEntryDepth(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, depth int, visit targetTraversal) (err error) {
+	// table 202
 	parentDictName := dictName
 	rawEntry := d[entryName]
 	targetObjNr := validationObjectNumber(0, rawEntry)
+	defer func() {
+		err = model.WithValidationErrorObject(err, targetObjNr)
+	}()
+
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+
 	d1, err := validateDictEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d1 == nil {
 		if err != nil {
@@ -72,6 +104,13 @@ func validateTargetDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName,
 		}
 		return nil
 	}
+	if err := xRefTable.CheckRecursionDepth("embedded target chain", depth); err != nil {
+		return fmt.Errorf("%s: %w", dictEntryContext(parentDictName, entryName, rawEntry), err)
+	}
+	if err := visit.enter(targetObjNr); err != nil {
+		return fmt.Errorf("%s: %w", dictEntryContext(parentDictName, entryName, rawEntry), err)
+	}
+	defer visit.leave(targetObjNr)
 
 	dictName = "targetDict"
 
@@ -100,14 +139,14 @@ func validateTargetDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName,
 	}
 
 	// T, optional, target dict
-	if err := validateTargetDictEntry(xRefTable, d1, dictName, "T", OPTIONAL, model.V10); err != nil {
+	if err := validateTargetDictEntryDepth(c, xRefTable, d1, dictName, "T", OPTIONAL, model.V10, depth+1, visit); err != nil {
 		return fmt.Errorf("%s: %w", dictEntryContext(parentDictName, entryName, rawEntry), err)
 	}
 
 	return nil
 }
 
-func validateGoToEActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateGoToEActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// see 12.6.4.4 Embedded Go-To Actions
 
 	// F, optional, file specification
@@ -144,7 +183,7 @@ func validateGoToEActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 	}
 
 	// T, required unless entry F is present, target dict
-	return validateTargetDictEntry(xRefTable, d, dictName, "T", f == nil, model.V10)
+	return validateTargetDictEntry(c, xRefTable, d, dictName, "T", f == nil, model.V10)
 }
 
 func validateWinDict(xRefTable *model.XRefTable, d types.Dict) error {
@@ -767,7 +806,7 @@ func validateSetOCGStateActionDict(xRefTable *model.XRefTable, d types.Dict, dic
 	return err
 }
 
-func validateRenditionActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateRenditionActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// see 12.6.4.13
 
 	// OP or JS need to be present.
@@ -808,7 +847,7 @@ func validateRenditionActionDict(xRefTable *model.XRefTable, d types.Dict, dictN
 	}
 	if d1 != nil {
 		err = validateRenditionDict(
-			xRefTable, d1, validationObjectNumber(0, rawR), sinceVersion,
+			c, xRefTable, d1, validationObjectNumber(0, rawR), sinceVersion,
 		)
 		if err != nil {
 			return fmt.Errorf("%s: %w", dictEntryContext(dictName, "R", rawR), err)
@@ -842,7 +881,7 @@ func validateTransActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 	return validateTransitionDict(xRefTable, d1, 0)
 }
 
-func validateGoTo3DViewActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateGoTo3DViewActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// see 12.6.4.15
 
 	// TA, required, target annotation
@@ -851,7 +890,7 @@ func validateGoTo3DViewActionDict(xRefTable *model.XRefTable, d types.Dict, dict
 		return err
 	}
 
-	_, err = validateAnnotationDict(xRefTable, d1)
+	_, err = validateAnnotationDict(c, xRefTable, d1)
 	if err != nil {
 		return err
 	}
@@ -863,15 +902,17 @@ func validateGoTo3DViewActionDict(xRefTable *model.XRefTable, d types.Dict, dict
 	return err
 }
 
-func validateActionDictCore(xRefTable *model.XRefTable, n *types.Name, d types.Dict) error {
+func validateActionDictCore(c context.Context, xRefTable *model.XRefTable, n *types.Name, d types.Dict) error {
 	for k, v := range map[string]struct {
 		validate            func(xRefTable *model.XRefTable, d types.Dict, dictName string) error
 		sinceVersion        model.Version
 		sinceVersionRelaxed model.Version
 	}{
-		"GoTo":        {validateGoToActionDict, model.V10, model.V10},
-		"GoToR":       {validateGoToRActionDict, model.V10, model.V10},
-		"GoToE":       {validateGoToEActionDict, model.V16, model.V11},
+		"GoTo":  {validateGoToActionDict, model.V10, model.V10},
+		"GoToR": {validateGoToRActionDict, model.V10, model.V10},
+		"GoToE": {func(x *model.XRefTable, d types.Dict, name string) error {
+			return validateGoToEActionDict(c, x, d, name)
+		}, model.V16, model.V11},
 		"Launch":      {validateLaunchActionDict, model.V10, model.V10},
 		"Thread":      {validateThreadActionDict, model.V10, model.V10},
 		"URI":         {validateURIActionDict, model.V10, model.V10},
@@ -884,9 +925,13 @@ func validateActionDictCore(xRefTable *model.XRefTable, n *types.Name, d types.D
 		"ImportData":  {validateImportDataActionDict, model.V12, model.V12},
 		"JavaScript":  {validateJavaScriptActionDict, model.V13, model.V12},
 		"SetOCGState": {validateSetOCGStateActionDict, model.V15, model.V15},
-		"Rendition":   {validateRenditionActionDict, model.V15, model.V14},
-		"Trans":       {validateTransActionDict, model.V15, model.V15},
-		"GoTo3DView":  {validateGoTo3DViewActionDict, model.V16, model.V16},
+		"Rendition": {func(x *model.XRefTable, d types.Dict, name string) error {
+			return validateRenditionActionDict(c, x, d, name)
+		}, model.V15, model.V14},
+		"Trans": {validateTransActionDict, model.V15, model.V15},
+		"GoTo3DView": {func(x *model.XRefTable, d types.Dict, name string) error {
+			return validateGoTo3DViewActionDict(c, x, d, name)
+		}, model.V16, model.V16},
 	} {
 		if n.Value() == k {
 
@@ -910,16 +955,19 @@ func validateActionDictCore(xRefTable *model.XRefTable, n *types.Name, d types.D
 	return fmt.Errorf("action %s: unsupported action type %q", n.Value(), n.Value())
 }
 
-func validateActionDictObject(xRefTable *model.XRefTable, d types.Dict, o types.Object, context string) error {
-	return validateActionDictObjectDepth(xRefTable, d, o, context, 0, model.NewActionVisit())
+func validateActionDictObject(c context.Context, xRefTable *model.XRefTable, d types.Dict, o types.Object, context string) error {
+	return validateActionDictObjectDepth(c, xRefTable, d, o, context, 0, model.NewActionVisit())
 }
 
-func validateActionDictObjectDepth(xRefTable *model.XRefTable, d types.Dict, o types.Object, context string, depth int, visit *model.ActionVisit) (err error) {
+func validateActionDictObjectDepth(c context.Context, xRefTable *model.XRefTable, d types.Dict, o types.Object, context string, depth int, visit *model.ActionVisit) (err error) {
 	objNr := validationObjectNumber(0, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
 	}()
 
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	if err := xRefTable.CheckRecursionDepth("action chain", depth); err != nil {
 		return fmt.Errorf("%s: %w", context, err)
 	}
@@ -934,14 +982,14 @@ func validateActionDictObjectDepth(xRefTable *model.XRefTable, d types.Dict, o t
 		return nil
 	}
 
-	if err := validateActionDict(xRefTable, d, depth, visit); err != nil {
+	if err := validateActionDict(c, xRefTable, d, depth, visit); err != nil {
 		return model.WrapRecursionError(objectContext(context, o), err)
 	}
 	visit.MarkValidated(objNr, depth)
 	return nil
 }
 
-func validateNextAction(xRefTable *model.XRefTable, o types.Object, depth int, visit *model.ActionVisit) (err error) {
+func validateNextAction(c context.Context, xRefTable *model.XRefTable, o types.Object, depth int, visit *model.ActionVisit) (err error) {
 	objNr := validationObjectNumber(0, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -952,7 +1000,7 @@ func validateNextAction(xRefTable *model.XRefTable, o types.Object, depth int, v
 		if d == nil {
 			return nil
 		}
-		if err := validateActionDictObjectDepth(xRefTable, d, o, "action Next", depth+1, visit); err != nil {
+		if err := validateActionDictObjectDepth(c, xRefTable, d, o, "action Next", depth+1, visit); err != nil {
 			return err
 		}
 		return nil
@@ -967,6 +1015,9 @@ func validateNextAction(xRefTable *model.XRefTable, o types.Object, depth int, v
 	}
 
 	for i, v := range a {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		nextObjNr := validationObjectNumber(objNr, v)
 		d, err := xRefTable.DereferenceDict(v)
 		if err != nil {
@@ -976,7 +1027,7 @@ func validateNextAction(xRefTable *model.XRefTable, o types.Object, depth int, v
 		if d == nil {
 			continue
 		}
-		if err := validateActionDictObjectDepth(xRefTable, d, v, fmt.Sprintf("action Next[%d]", i), depth+1, visit); err != nil {
+		if err := validateActionDictObjectDepth(c, xRefTable, d, v, fmt.Sprintf("action Next[%d]", i), depth+1, visit); err != nil {
 			return err
 		}
 	}
@@ -984,7 +1035,7 @@ func validateNextAction(xRefTable *model.XRefTable, o types.Object, depth int, v
 	return nil
 }
 
-func validateActionDict(xRefTable *model.XRefTable, d types.Dict, depth int, visit *model.ActionVisit) error {
+func validateActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, depth int, visit *model.ActionVisit) error {
 	dictName := "actionDict"
 
 	// Type, optional, name
@@ -1009,14 +1060,14 @@ func validateActionDict(xRefTable *model.XRefTable, d types.Dict, depth int, vis
 	}
 
 	if s != nil {
-		err = validateActionDictCore(xRefTable, s, d)
+		err = validateActionDictCore(c, xRefTable, s, d)
 		if err != nil {
 			return err
 		}
 	}
 
 	if o, ok := d.Find("Next"); ok {
-		if err := validateNextAction(xRefTable, o, depth, visit); err != nil {
+		if err := validateNextAction(c, xRefTable, o, depth, visit); err != nil {
 			return err
 		}
 	}
@@ -1028,11 +1079,11 @@ func validateActionDict(xRefTable *model.XRefTable, d types.Dict, depth int, vis
 	return nil
 }
 
-func validateRootAdditionalActions(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-	return validateAdditionalActions(xRefTable, rootDict, "rootDict", "AA", required, sinceVersion, "root")
+func validateRootAdditionalActions(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+	return validateAdditionalActions(c, xRefTable, rootDict, "rootDict", "AA", required, sinceVersion, "root")
 }
 
-func validateAdditionalActions(xRefTable *model.XRefTable, dict types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, source string) (err error) {
+func validateAdditionalActions(c context.Context, xRefTable *model.XRefTable, dict types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, source string) (err error) {
 	actionsObjNr := validationEntryObjectNumber(0, dict, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, actionsObjNr)
@@ -1072,6 +1123,9 @@ func validateAdditionalActions(xRefTable *model.XRefTable, dict types.Dict, dict
 	}
 
 	for _, k := range slices.Sorted(maps.Keys(d)) {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
 		v := d[k]
 		actionObjNr := validationObjectNumber(actionsObjNr, v)
 
@@ -1089,7 +1143,7 @@ func validateAdditionalActions(xRefTable *model.XRefTable, dict types.Dict, dict
 			continue
 		}
 
-		err = validateActionDictObject(xRefTable, d, v, fmt.Sprintf("additional action %s.%s.%s", dictName, entryName, k))
+		err = validateActionDictObject(c, xRefTable, d, v, fmt.Sprintf("additional action %s.%s.%s", dictName, entryName, k))
 		if err != nil {
 			return err
 		}
