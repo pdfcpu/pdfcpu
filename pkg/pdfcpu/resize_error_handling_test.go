@@ -88,11 +88,11 @@ func TestResizeBlankPageUpdatesGeometryAndAnnotations(t *testing.T) {
 	if r.LL.X != 5 || r.LL.Y != 10 || r.UR.X != 15 || r.UR.Y != 20 {
 		t.Fatalf("expected transformed blank-page annotation, got %s", r)
 	}
-	if _, found := d.Find("CropBox"); found {
-		t.Fatal("expected blank-page CropBox removal")
+	if got := resizeTestRectangle(t, ctx, d["CropBox"]); !got.Equals(*mediaBox) {
+		t.Fatal("expected resized CropBox to match MediaBox")
 	}
-	if _, found := d.Find("Rotate"); found {
-		t.Fatal("expected blank-page Rotate removal")
+	if rotation := d.IntEntry("Rotate"); rotation == nil || *rotation != 0 {
+		t.Fatal("expected normalized blank-page rotation")
 	}
 }
 
@@ -243,13 +243,13 @@ func TestParseResizeConfigRejectsMalformedClauses(t *testing.T) {
 func TestPrepTransformHonorsEnforcedOrientation(t *testing.T) {
 	src := types.RectForDim(200, 100)
 	dest := types.RectForDim(100, 200)
-	prepTransform(src, dest, true)
+	prepTransform(src, dest, true, true)
 	if dest.Width() != 100 || dest.Height() != 200 {
 		t.Fatalf("expected enforced portrait destination, got %.0fx%.0f", dest.Width(), dest.Height())
 	}
 
 	dest = types.RectForDim(100, 200)
-	prepTransform(src, dest, false)
+	prepTransform(src, dest, false, true)
 	if dest.Width() != 200 || dest.Height() != 100 {
 		t.Fatalf("expected destination orientation adjustment, got %.0fx%.0f", dest.Width(), dest.Height())
 	}

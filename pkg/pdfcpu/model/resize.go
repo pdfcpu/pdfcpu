@@ -28,14 +28,15 @@ import (
 
 // Resize represents a page resize configuration.
 type Resize struct {
-	Scale         float64            // scale factor x > 0, x > 1 enlarges, x < 1 shrinks down
-	Unit          types.DisplayUnit  // display unit
-	PageDim       *types.Dim         // page dimensions in display unit
-	PageSize      string             // paper size eg. A2,A3,A4,Legal,Ledger,...
-	EnforceOrient bool               // enforce orientation of PageDim
-	UserDim       bool               // true if dimensions set by dim rather than formsize
-	Border        bool               // true to render original crop box
-	BgColor       *color.SimpleColor // background color
+	DisableContentRotation bool               // disable additional best-fit rotation, not existing page rotation.
+	Scale                  float64            // scale factor x > 0, x > 1 enlarges, x < 1 shrinks down
+	Unit                   types.DisplayUnit  // display unit
+	PageDim                *types.Dim         // page dimensions in display unit
+	PageSize               string             // paper size eg. A2,A3,A4,Legal,Ledger,...
+	EnforceOrient          bool               // enforce orientation of PageDim
+	UserDim                bool               // true if dimensions set by dim rather than formsize
+	Border                 bool               // true to render original crop box
+	BgColor                *color.SimpleColor // background color
 }
 
 // EnforceOrientation reports whether the configured page orientation must be preserved.
@@ -80,6 +81,18 @@ func parseEnforceOrientation(s string, res *Resize) error {
 		return errors.New("enforce orientation, please provide one of: on/off true/false")
 	}
 
+	return nil
+}
+
+func parseContentRotation(s string, res *Resize) error {
+	switch strings.ToLower(s) {
+	case "on", "true", "t":
+		res.DisableContentRotation = false
+	case "off", "false", "f":
+		res.DisableContentRotation = true
+	default:
+		return errors.New("resize rotation, please provide one of: on/off true/false t/f")
+	}
 	return nil
 }
 
@@ -163,6 +176,7 @@ type resizeParameterMap map[string]func(string, *Resize) error
 var ResizeParamMap = resizeParameterMap{
 	"dimensions":  parseDimensionsRes,
 	"enforce":     parseEnforceOrientation,
+	"rotate":      parseContentRotation,
 	"formsize":    parsePageFormatRes,
 	"papersize":   parsePageFormatRes,
 	"scalefactor": parseScaleFactorRes,

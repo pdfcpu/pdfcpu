@@ -77,14 +77,14 @@ func ParseResizeConfig(s string, u types.DisplayUnit) (*model.Resize, error) {
 	return res, nil
 }
 
-func prepTransform(rSrc, rDest *types.Rectangle, enforce bool) (float64, float64, float64, float64, float64) {
+func prepTransform(rSrc, rDest *types.Rectangle, enforce, rotate bool) (float64, float64, float64, float64, float64) {
 	if !enforce && ((rSrc.Portrait() && rDest.Landscape()) || (rSrc.Landscape() && rDest.Portrait())) {
 		w1 := rDest.Width()
 		rDest.UR.X = rDest.LL.X + rDest.Height()
 		rDest.UR.Y = rDest.LL.Y + w1
 	}
 
-	w, h, dx, dy, rot := types.BestFitRectIntoRect(rSrc, rDest, enforce, true)
+	w, h, dx, dy, rot := types.BestFitRectIntoRect(rSrc, rDest, enforce && rotate, true)
 
 	sc := w / rSrc.Width()
 
@@ -127,7 +127,7 @@ func prepResize(res *model.Resize, cropBox *types.Rectangle) (*types.Rectangle, 
 				r = types.RectForDim(w, h)
 			} else {
 				r = types.RectForDim(w, h)
-				sc, sin, cos, dx, dy = prepTransform(cropBox, r, res.EnforceOrientation())
+				sc, sin, cos, dx, dy = prepTransform(cropBox, r, res.EnforceOrientation(), !res.DisableContentRotation)
 			}
 		}
 	}
@@ -144,7 +144,7 @@ func handleBgColAndBorder(dx, dy float64, cropBox *types.Rectangle, bb *[]byte, 
 		if dy > 0 {
 			h -= 2 * dy
 		}
-		r1 := types.RectForWidthAndHeight(dx, dy, w, h)
+		r1 := types.RectForWidthAndHeight(cropBox.LL.X+dx, cropBox.LL.Y+dy, w, h)
 		var buf bytes.Buffer
 
 		if res.BgColor != nil {
@@ -268,6 +268,41 @@ func resizePageAnnotations(c context.Context, ctx *model.Context, d types.Dict, 
 	return nil
 }
 
+func resizeSourceGeometry(source *types.Rectangle, rotation int) (*types.Rectangle, matrix.Matrix) {
+	box := *source
+	if types.IntMemberOf(rotation, []int{90, -90, 270, -270}) {
+		box.UR.X = box.LL.X + source.Height()
+		box.UR.Y = box.LL.Y + source.Width()
+	}
+	var dx, dy float64
+	switch rotation {
+	case 90, -270:
+		dy = box.Height()
+	case -90, 270:
+		dx = box.Width()
+	case 180, -180:
+		dx, dy = box.Width(), box.Height()
+	}
+	normal := matrix.CalcTransformMatrix(1, 1, 0, 1, -source.LL.X, -source.LL.Y)
+	return &box, normal.Multiply(matrix.CalcRotateAndTranslateTransformMatrix(float64(-rotation), dx, dy))
+}
+
+func resizedPageContent(ctx *model.Context, d types.Dict, pageNr int, normal matrix.Matrix, prefix []byte) ([]byte, error) {
+	bb, err := ctx.PageContent(d, pageNr)
+	if err != nil && !errors.Is(err, model.ErrNoContent) {
+		return nil, fmt.Errorf("read page content: %w", err)
+	}
+	if normal != matrix.IdentMatrix {
+		var b bytes.Buffer
+		fmt.Fprintf(&b, " q %.5f %.5f %.5f %.5f %.5f %.5f cm ",
+			normal[0][0], normal[0][1], normal[1][0], normal[1][1], normal[2][0], normal[2][1])
+		bb = append(b.Bytes(), bb...)
+		bb = append(bb, []byte(" Q")...)
+	}
+	bb = append(prefix, bb...)
+	return append(bb, []byte(" Q")...), nil
+}
+
 func resizePage(c context.Context, ctx *model.Context, pageNr int, res *model.Resize) error {
 	d, _, inhPAttrs, err := ctx.PageDict(c, pageNr, false)
 	if err != nil {
@@ -279,39 +314,19 @@ func resizePage(c context.Context, ctx *model.Context, pageNr int, res *model.Re
 		cropBox = inhPAttrs.CropBox
 	}
 
-	// Account for existing rotation.
-	if inhPAttrs.Rotate != 0 {
-		if types.IntMemberOf(inhPAttrs.Rotate, []int{+90, -90, +270, -270}) {
-			w := cropBox.Width()
-			cropBox.UR.X = cropBox.LL.X + cropBox.Height()
-			cropBox.UR.Y = cropBox.LL.Y + w
-		}
-	}
+	cropBox, normal := resizeSourceGeometry(cropBox, inhPAttrs.Rotate)
 
 	r, sc, sin, cos, dx, dy := prepResize(res, cropBox)
 
-	m := matrix.CalcTransformMatrix(sc, sc, sin, cos, dx, dy)
+	m := matrix.CalcTransformMatrix(sc, sc, sin, cos, dx+cropBox.LL.X, dy+cropBox.LL.Y)
 
 	var trans bytes.Buffer
 	fmt.Fprintf(&trans, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
-	bb, err := ctx.PageContent(d, pageNr)
+	bb, err := resizedPageContent(ctx, d, pageNr, normal, trans.Bytes())
 	if err != nil {
-		if errors.Is(err, model.ErrNoContent) {
-			bb = nil
-		} else {
-			return fmt.Errorf("read page content: %w", err)
-		}
+		return err
 	}
-
-	if inhPAttrs.Rotate != 0 {
-		bbInvRot := append([]byte(" q "), model.ContentBytesForPageRotation(inhPAttrs.Rotate, cropBox.Width(), cropBox.Height())...)
-		bb = append(bbInvRot, bb...)
-		bb = append(bb, []byte(" Q")...)
-	}
-
-	bb = append(trans.Bytes(), bb...)
-	bb = append(bb, []byte(" Q")...)
 
 	if res.Scale > 0 {
 		cropBox.UR.X = cropBox.LL.X + sc*cropBox.Width()
@@ -334,7 +349,7 @@ func resizePage(c context.Context, ctx *model.Context, pageNr int, res *model.Re
 		return err
 	}
 
-	if err := resizePageAnnotations(c, ctx, d, m); err != nil {
+	if err := resizePageAnnotations(c, ctx, d, normal.Multiply(m)); err != nil {
 		return fmt.Errorf("resize annotations: %w", err)
 	}
 
@@ -346,8 +361,13 @@ func resizePage(c context.Context, ctx *model.Context, pageNr int, res *model.Re
 	d["Contents"] = *ir
 
 	d.Update("MediaBox", cropBox.Array())
-	d.Delete("Rotate")
+	// Override inherited rotation, including a local zero that previously masked an ancestor.
+	d.Update("Rotate", types.Integer(0))
 	d.Delete("CropBox")
+	if inhPAttrs.CropBox != nil {
+		// Override inherited crop boxes without changing unselected siblings.
+		d.Update("CropBox", cropBox.Array())
+	}
 
 	return nil
 }

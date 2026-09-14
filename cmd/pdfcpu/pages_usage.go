@@ -273,7 +273,7 @@ Pipeline example:
 	usageLongResize = `Resize existing pages.
 
       pages ... please refer to "pdfcpu selectedpages"
-description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
+description ... scalefactor, dimensions, formsize, enforce, rotate, border, bgcolor
      inFile ... input PDF file, use - to read from stdin
     outFile ... output PDF file, use - to write to stdout
 
@@ -292,7 +292,11 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
       dimensions:   Resize page to custom dimensions.
                         (width height) in given display unit eg. "400 200"
 
-      enforce:      if dimensions set only, enforce orientation (on/off, true/false, t/f).
+      enforce:      preserve the requested output-page orientation (on/off, true/false, t/f).
+
+      rotate:       allow additional best-fit content rotation (on/off, true/false, t/f; default: on).
+                        rotate:off: content scales proportionally and remains centered.
+                        Existing page rotation is still normalized.
 
       border:       if dimensions set only, draw content region border (on/off, true/false, t/f).
 
@@ -315,6 +319,9 @@ description ... scalefactor, dimensions, formsize, enforce, border, bgcolor
 
          pdfcpu resize 'f:A4P, bgcol:#d0d0d0' in.pdf out.pdf
             Resize pages to A4 and enforce orientation(here: portrait mode), apply background color.
+
+         pdfcpu resize 'form:A4P, rotate:off' in.pdf out.pdf
+            Keep every page A4 portrait and fit landscape content without additional turn.
 
          pdfcpu resize 'dim:400 200' in.pdf out.pdf
             Resize pages to 400 x 200 points, keep orientation.
