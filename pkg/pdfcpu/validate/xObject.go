@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
@@ -143,6 +144,117 @@ func validateOPIDictV13Part1(xRefTable *model.XRefTable, d types.Dict, dictName 
 	return err
 }
 
+func validateOPIIntegerArrayEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string) (types.Array, []int, error) {
+	a, err := validateArrayEntry(xRefTable, d, 0, dictName, entryName, OPTIONAL, model.V10, nil)
+	if err != nil || a == nil {
+		return nil, nil, err
+	}
+	objNr := validationEntryObjectNumber(0, d, entryName)
+	values := make([]int, len(a))
+	for i, raw := range a {
+		entryObjNr := validationObjectNumber(objNr, raw)
+		o, err := xRefTable.Dereference(raw)
+		if err != nil {
+			err = fmt.Errorf("%s.%s[%d]: dereference integer: %w", dictName, entryName, i, err)
+			return nil, nil, model.WithValidationErrorObject(err, entryObjNr)
+		}
+		integer, ok := o.(types.Integer)
+		if !ok {
+			err = fmt.Errorf("%s.%s[%d]: expected integer", dictName, entryName, i)
+			return nil, nil, model.WithValidationErrorObject(err, entryObjNr)
+		}
+		values[i] = integer.Value()
+	}
+	return a, values, nil
+}
+
+func validateOPIImageType(xRefTable *model.XRefTable, d types.Dict, dictName string) (*int, error) {
+	a, values, err := validateOPIIntegerArrayEntry(xRefTable, d, dictName, "ImageType")
+	if err != nil || a == nil {
+		return nil, err
+	}
+	objNr := validationEntryObjectNumber(0, d, "ImageType")
+	if err = validateArrayExactLength(a, objNr, dictName, "ImageType", 2); err != nil {
+		return nil, err
+	}
+	for i, value := range values {
+		if value <= 0 {
+			err = fmt.Errorf("%s.ImageType[%d]: invalid value %d, expected a positive integer", dictName, i, value)
+			return nil, model.WithValidationErrorObject(err, validationObjectNumber(objNr, a[i]))
+		}
+	}
+	return &values[1], nil
+}
+
+func validateOPIGrayMapLength(a types.Array, objNr, bitsPerSample int, dictName string) error {
+	expected := fmt.Sprintf("2^%d values, matching ImageType bits per sample", bitsPerSample)
+	if bitsPerSample < strconv.IntSize {
+		length := 1 << uint(bitsPerSample)
+		if len(a) == length {
+			return nil
+		}
+		expected = fmt.Sprintf("%d (2^%d), matching ImageType bits per sample", length, bitsPerSample)
+	}
+	return arrayCardinalityError(dictName, "GrayMap", objNr, len(a), expected)
+}
+
+func validateOPIGrayMap(xRefTable *model.XRefTable, d types.Dict, dictName string, bitsPerSample *int) error {
+	a, values, err := validateOPIIntegerArrayEntry(xRefTable, d, dictName, "GrayMap")
+	if err != nil || a == nil {
+		return err
+	}
+	objNr := validationEntryObjectNumber(0, d, "GrayMap")
+	if bitsPerSample == nil {
+		err = fmt.Errorf("%s.GrayMap: ImageType is required to determine the expected length", dictName)
+		return model.WithValidationErrorObject(err, objNr)
+	}
+	if err = validateOPIGrayMapLength(a, objNr, *bitsPerSample, dictName); err != nil {
+		return err
+	}
+	for i, value := range values {
+		if value < 0 || value > 65535 {
+			err = fmt.Errorf("%s.GrayMap[%d]: invalid value %d, expected 0 through 65535", dictName, i, value)
+			return model.WithValidationErrorObject(err, validationObjectNumber(objNr, a[i]))
+		}
+	}
+	return nil
+}
+
+func validateOPITags(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	const entryName = "Tags"
+	a, err := validateArrayEntry(xRefTable, d, 0, dictName, entryName, OPTIONAL, model.V10, nil)
+	if err != nil || a == nil {
+		return err
+	}
+	objNr := validationEntryObjectNumber(0, d, entryName)
+	if err = validateArrayPairs(a, objNr, dictName, entryName, 0); err != nil {
+		return err
+	}
+	for i := 0; i < len(a); i += 2 {
+		tagObjNr := validationObjectNumber(objNr, a[i])
+		o, err := xRefTable.Dereference(a[i])
+		if err != nil {
+			err = fmt.Errorf("%s.%s[%d]: dereference tag number: %w", dictName, entryName, i, err)
+			return model.WithValidationErrorObject(err, tagObjNr)
+		}
+		if _, ok := o.(types.Integer); !ok {
+			err = fmt.Errorf("%s.%s[%d]: expected TIFF tag number integer", dictName, entryName, i)
+			return model.WithValidationErrorObject(err, tagObjNr)
+		}
+		textObjNr := validationObjectNumber(objNr, a[i+1])
+		o, err = xRefTable.Dereference(a[i+1])
+		if err != nil {
+			err = fmt.Errorf("%s.%s[%d]: dereference tag text: %w", dictName, entryName, i+1, err)
+			return model.WithValidationErrorObject(err, textObjNr)
+		}
+		if _, err = types.StringOrHexLiteral(o); err != nil {
+			err = fmt.Errorf("%s.%s[%d]: expected TIFF tag text string", dictName, entryName, i+1)
+			return model.WithValidationErrorObject(err, textObjNr)
+		}
+	}
+	return nil
+}
+
 func validateOPIDictV13Part2(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// Resolution, optional, array of numbers, len 2
 	_, err := validateNumberArrayEntry(xRefTable, d, 0, dictName, "Resolution", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 })
@@ -179,13 +291,13 @@ func validateOPIDictV13Part2(xRefTable *model.XRefTable, d types.Dict, dictName 
 	}
 
 	// ImageType, optional, array of integers, len 2
-	_, err = validateIntegerArrayEntry(xRefTable, d, 0, dictName, "ImageType", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 })
+	bitsPerSample, err := validateOPIImageType(xRefTable, d, dictName)
 	if err != nil {
 		return err
 	}
 
 	// GrayMap, optional, array of integers
-	_, err = validateIntegerArrayEntry(xRefTable, d, 0, dictName, "GrayMap", OPTIONAL, model.V10, nil)
+	err = validateOPIGrayMap(xRefTable, d, dictName, bitsPerSample)
 	if err != nil {
 		return err
 	}
@@ -197,7 +309,7 @@ func validateOPIDictV13Part2(xRefTable *model.XRefTable, d types.Dict, dictName 
 	}
 
 	// Tags, optional, array
-	if _, err = validateArrayEntry(xRefTable, d, 0, dictName, "Tags", OPTIONAL, model.V10, nil); err != nil {
+	if err = validateOPITags(xRefTable, d, dictName); err != nil {
 		return err
 	}
 
@@ -221,27 +333,66 @@ func validateOPIDictV13(xRefTable *model.XRefTable, d types.Dict) error {
 	return validateOPIDictV13Part2(xRefTable, d, dictName)
 }
 
-func validateOPIDictInks(xRefTable *model.XRefTable, o types.Object) error {
-	o, err := xRefTable.Dereference(o)
+func validateOPIInksArray(xRefTable *model.XRefTable, a types.Array, objNr int, dictName string) error {
+	if len(a) < 3 || len(a)%2 == 0 {
+		return arrayCardinalityError(dictName, "Inks", objNr, len(a),
+			"/monochrome followed by one or more colourant string and tint pairs")
+	}
+	markerObjNr := validationObjectNumber(objNr, a[0])
+	o, err := xRefTable.Dereference(a[0])
+	if err != nil {
+		err = fmt.Errorf("%s.Inks[0]: dereference marker: %w", dictName, err)
+		return model.WithValidationErrorObject(err, markerObjNr)
+	}
+	marker, ok := o.(types.Name)
+	if !ok || marker.Value() != "monochrome" {
+		err = fmt.Errorf("%s.Inks[0]: expected /monochrome marker", dictName)
+		return model.WithValidationErrorObject(err, markerObjNr)
+	}
+	for i := 1; i < len(a); i += 2 {
+		nameObjNr := validationObjectNumber(objNr, a[i])
+		o, err = xRefTable.Dereference(a[i])
+		if err != nil {
+			err = fmt.Errorf("%s.Inks[%d]: dereference colourant name: %w", dictName, i, err)
+			return model.WithValidationErrorObject(err, nameObjNr)
+		}
+		if _, err = types.StringOrHexLiteral(o); err != nil {
+			err = fmt.Errorf("%s.Inks[%d]: expected colourant name string", dictName, i)
+			return model.WithValidationErrorObject(err, nameObjNr)
+		}
+		tintObjNr := validationObjectNumber(objNr, a[i+1])
+		tint, err := xRefTable.DereferenceNumber(a[i+1])
+		if err != nil {
+			err = fmt.Errorf("%s.Inks[%d]: expected tint number: %w", dictName, i+1, err)
+			return model.WithValidationErrorObject(err, tintObjNr)
+		}
+		if tint < 0 || tint > 1 {
+			err = fmt.Errorf("%s.Inks[%d]: invalid tint %g, expected 0 through 1", dictName, i+1, tint)
+			return model.WithValidationErrorObject(err, tintObjNr)
+		}
+	}
+	return nil
+}
+
+func validateOPIDictInks(xRefTable *model.XRefTable, raw types.Object, dictName string) error {
+	objNr := validationObjectNumber(0, raw)
+	o, err := xRefTable.Dereference(raw)
 	if err != nil || o == nil {
-		return err
+		return model.WithValidationErrorObject(err, objNr)
 	}
 
 	switch o := o.(type) {
-
 	case types.Name:
 		if colorant := o.Value(); colorant != "full_color" && colorant != "registration" {
-			return errors.New("corrupt colorant name")
+			err = fmt.Errorf("%s.Inks: invalid colourant name %s", dictName, colorant)
+			return model.WithValidationErrorObject(err, objNr)
 		}
-
 	case types.Array:
-		// no further processing
-
+		return validateOPIInksArray(xRefTable, o, objNr, dictName)
 	default:
-		return errors.New("corrupt type")
-
+		err = fmt.Errorf("%s.Inks: expected name or array, got %T", dictName, o)
+		return model.WithValidationErrorObject(err, objNr)
 	}
-
 	return nil
 }
 
@@ -270,7 +421,7 @@ func validateOPIDictV20(xRefTable *model.XRefTable, d types.Dict) error {
 		return err
 	}
 
-	_, err = validateArrayEntry(xRefTable, d, 0, dictName, "Tags", OPTIONAL, model.V10, nil)
+	err = validateOPITags(xRefTable, d, dictName)
 	if err != nil {
 		return err
 	}
@@ -291,7 +442,7 @@ func validateOPIDictV20(xRefTable *model.XRefTable, d types.Dict) error {
 	}
 
 	if o, found := d.Find("Inks"); found {
-		err = validateOPIDictInks(xRefTable, o)
+		err = validateOPIDictInks(xRefTable, o, dictName)
 		if err != nil {
 			return err
 		}
@@ -365,7 +516,7 @@ func validateMaskStreamDict(c context.Context, xRefTable *model.XRefTable, sd *t
 	return nil
 }
 
-func validateMaskEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) (err error) {
+func validateMaskEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, components int, bits *types.Integer) (err error) {
 	// stream ("explicit masking", another Image XObject) or array of colors ("color key masking")
 	objNr := validationEntryObjectNumber(0, d, entryName)
 	defer func() {
@@ -389,7 +540,8 @@ func validateMaskEntry(c context.Context, xRefTable *model.XRefTable, d types.Di
 		}
 
 	case types.Array:
-		// no further processing
+		components = relaxedIndexedMaskComponents(xRefTable, d, o, components)
+		return validateColorKeyMask(c, xRefTable, o, objNr, dictName, components, bits)
 
 	default:
 		return fmt.Errorf("%s.%s: expected image stream dict or color key array, got %T", dictName, entryName, o)
@@ -511,28 +663,19 @@ func validateImageStreamDictPart2(c context.Context, xRefTable *model.XRefTable,
 			return i == 1
 		}
 	}
-	_, err := validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "BitsPerComponent", required, model.V10, validateBPC)
+	bpc, err := validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "BitsPerComponent", required, model.V10, validateBPC)
 	if err != nil {
 		return err
 	}
 
-	// Note 8.6.5.8: If a PDF processor does not recognise the specified name, it shall use the RelativeColorimetric intent by default.
+	// Note 8.6.5.8: If a PDF processor does not recognise the specified name, it shall use the RelativeColorimetric
+	// intent by default.
 	_, err = validateNameEntry(xRefTable, sd.Dict, 0, dictName, "Intent", OPTIONAL, model.V11, nil)
 	if err != nil {
 		return err
 	}
 
-	// Mask, stream or array, optional since V1.3; not allowed for image masks.
-	if !isImageMask {
-		err = validateMaskEntry(c, xRefTable, sd.Dict, dictName, "Mask", OPTIONAL, model.V13)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Decode, array, optional
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Decode", OPTIONAL, model.V10, nil)
-	if err != nil {
+	if err = validateImageArrays(c, xRefTable, sd, dictName, isImageMask, bpc); err != nil {
 		return err
 	}
 

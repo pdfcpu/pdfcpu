@@ -564,6 +564,35 @@ func TestTTFLightInvariantValidation(t *testing.T) {
 	}
 }
 
+func TestWidthsIncludesLastCharacter(t *testing.T) {
+	size := 1
+	xRefTable := &model.XRefTable{
+		Table: map[int]*model.XRefTableEntry{0: model.NewFreeHeadXRefTableEntry()},
+		Size:  &size,
+	}
+	ir, err := Widths(xRefTable, validTTFLight(), 'A', 'A')
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, ok := xRefTable.Table[ir.ObjectNumber.Value()].Object.(types.Array)
+	if !ok {
+		t.Fatalf("expected widths array, got %T", xRefTable.Table[ir.ObjectNumber.Value()].Object)
+	}
+	if len(a) != 1 || a[0] != types.Integer(600) {
+		t.Fatalf("expected inclusive width [600], got %v", a)
+	}
+}
+
+func TestWidthsRejectsReversedCharacterRange(t *testing.T) {
+	_, err := Widths(&model.XRefTable{}, validTTFLight(), 'B', 'A')
+	if !errors.Is(err, corefont.ErrInvalidFontData) {
+		t.Fatalf("expected %v, got %v", corefont.ErrInvalidFontData, err)
+	}
+	if !strings.Contains(err.Error(), "invalid character range 66..65") {
+		t.Fatalf("expected character range context, got %q", err)
+	}
+}
+
 func TestPublicEmbeddingBoundariesValidateTTFLight(t *testing.T) {
 	ttf := validTTFLight()
 	ttf.Planes = nil

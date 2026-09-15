@@ -101,6 +101,7 @@ func validateBorderStyleDict(xRefTable *model.XRefTable, d types.Dict, dictName,
 func validateIconFitDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
 	// see table 247
 
+	ownerObjNr := validationEntryObjectNumber(0, d, entryName)
 	d1, err := validateDictEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d1 == nil {
 		return err
@@ -120,7 +121,7 @@ func validateIconFitDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName
 	}
 
 	// A,optional, array of 2 numbers between 0.0 and 1.0
-	if _, err = validateNumberArrayEntry(xRefTable, d1, 0, dictName, "A", OPTIONAL, model.V10, nil); err != nil {
+	if err = validateUnitIntervalArrayEntry(xRefTable, d1, ownerObjNr, dictName, "A", model.V10, 2); err != nil {
 		return err
 	}
 
@@ -135,6 +136,7 @@ func validateIconFitDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName
 func validateAppearanceCharacteristicsDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
 	// see 12.5.6.19
 
+	ownerObjNr := validationEntryObjectNumber(0, d, entryName)
 	d1, err := validateDictEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d1 == nil {
 		return err
@@ -148,12 +150,12 @@ func validateAppearanceCharacteristicsDictEntry(xRefTable *model.XRefTable, d ty
 	}
 
 	// BC, optional, array of numbers, len=0,1,3,4
-	if _, err = validateNumberArrayEntry(xRefTable, d1, 0, dictName, "BC", OPTIONAL, model.V10, nil); err != nil {
+	if err = validateColorArrayEntry(xRefTable, d1, ownerObjNr, dictName, "BC", model.V10); err != nil {
 		return err
 	}
 
-	// BG, optional, array of numbers between 0.0 and 0.1, len=0,1,3,4
-	if _, err = validateNumberArrayEntry(xRefTable, d1, 0, dictName, "BG", OPTIONAL, model.V10, nil); err != nil {
+	// BG, optional, array of numbers between 0.0 and 1.0, len=0,1,3,4
+	if err = validateColorArrayEntry(xRefTable, d1, ownerObjNr, dictName, "BG", model.V10); err != nil {
 		return err
 	}
 
@@ -568,7 +570,7 @@ func validateAnnotationDictLinePart1(xRefTable *model.XRefTable, d types.Dict, d
 	}
 
 	// IC, optional, number array, since V1.4, len:0,1,3,4
-	if _, err := validateNumberArrayEntry(xRefTable, d, 0, dictName, "IC", OPTIONAL, sinceVersion, nil); err != nil {
+	if err := validateColorArrayEntry(xRefTable, d, 0, dictName, "IC", sinceVersion); err != nil {
 		return err
 	}
 
@@ -673,7 +675,7 @@ func validateAnnotationDictCircleOrSquare(xRefTable *model.XRefTable, d types.Di
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V13
 	}
-	if _, err := validateNumberArrayEntry(xRefTable, d, 0, dictName, "IC", OPTIONAL, sinceVersion, nil); err != nil {
+	if err := validateColorArrayEntry(xRefTable, d, 0, dictName, "IC", sinceVersion); err != nil {
 		return err
 	}
 
@@ -740,15 +742,7 @@ func validateAnnotationDictPolyLine(xRefTable *model.XRefTable, d types.Dict, di
 	}
 
 	// IC, optional, array of numbers [0.0 .. 1.0], len:1,3,4
-	ensureArrayLength := func(a types.Array, lengths ...int) bool {
-		for _, length := range lengths {
-			if len(a) == length {
-				return true
-			}
-		}
-		return false
-	}
-	if _, err := validateNumberArrayEntry(xRefTable, d, 0, dictName, "IC", OPTIONAL, model.V14, func(a types.Array) bool { return ensureArrayLength(a, 1, 3, 4) }); err != nil {
+	if err := validateUnitIntervalArrayEntry(xRefTable, d, 0, dictName, "IC", model.V14, 1, 3, 4); err != nil {
 		return err
 	}
 
@@ -1097,7 +1091,7 @@ func validateTrapNetFontFauxing(xRefTable *model.XRefTable, d types.Dict, dictNa
 	return nil
 }
 
-func validateAnnotationDictTrapNet(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictTrapNet(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// see 12.5.6.21
 
 	// LastModified, optional, date
@@ -1110,8 +1104,8 @@ func validateAnnotationDictTrapNet(xRefTable *model.XRefTable, d types.Dict, dic
 		return err
 	}
 
-	// AnnotStates, optional, array of names
-	if _, err := validateNameArrayEntry(xRefTable, d, 0, dictName, "AnnotStates", OPTIONAL, model.V10, nil); err != nil {
+	// AnnotStates, optional, array of names or null placeholders.
+	if err := validateTrapNetStateValues(c, xRefTable, d, dictName); err != nil {
 		return err
 	}
 
@@ -1747,7 +1741,7 @@ func validateAnnotationDictGeneralPart2(c context.Context, xRefTable *model.XRef
 	}
 
 	// C, optional array, of numbers, since V1.1
-	if _, err := validateNumberArrayEntry(xRefTable, d, 0, dictName, "C", OPTIONAL, model.V11, nil); err != nil {
+	if err := validateColorArrayEntry(xRefTable, d, 0, dictName, "C", model.V11); err != nil {
 		return err
 	}
 
@@ -1815,7 +1809,7 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 		"Widget":         {bindAnnotationContext(c, validateAnnotationDictWidget), model.V12, model.V11, false},
 		"Screen":         {bindAnnotationContext(c, validateAnnotationDictScreen), model.V15, model.V14, false},
 		"PrinterMark":    {bindAnnotationContext(c, validateAnnotationDictPrinterMark), model.V14, model.V14, false},
-		"TrapNet":        {validateAnnotationDictTrapNet, model.V13, model.V13, false},
+		"TrapNet":        {bindAnnotationContext(c, validateAnnotationDictTrapNet), model.V13, model.V13, false},
 		"Watermark":      {validateAnnotationDictWatermark, model.V16, model.V13, false},
 		"3D":             {validateAnnotationDict3D, model.V16, model.V16, false},
 		"Redact":         {validateAnnotationDictRedact, model.V17, model.V17, true},
@@ -2054,7 +2048,7 @@ func validateAnnotationsArray(c context.Context, xRefTable *model.XRefTable, a t
 			}
 		}
 
-		hasTrapNet, err = validateAnnotationDict(c, xRefTable, annotDict)
+		hasTrapNet, err = validatePageAnnotationDict(c, xRefTable, annotDict, len(cleanAnnotsArr))
 		if err != nil {
 			return nil, pageAnnotationError(err, ownerObjNr, hasIndRef, indRef, i, "validate")
 		}

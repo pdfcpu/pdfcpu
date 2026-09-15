@@ -798,13 +798,19 @@ func Widths(xRefTable *model.XRefTable, ttf font.TTFLight, first, last int) (*ty
 	if err := validateEmbeddingMetrics(ttf, fontName, "create TrueType widths"); err != nil {
 		return nil, err
 	}
+	if last < first {
+		return nil, fmt.Errorf("font %s: create TrueType widths: invalid character range %d..%d: %w", fontName, first, last, font.ErrInvalidFontData)
+	}
 	a := types.Array{}
-	for i := first; i < last; i++ {
+	for i := first; ; i++ {
 		pos, ok := ttf.Chars[uint32(i)]
 		if !ok {
 			pos = 0 // should be the "invalid char"
 		}
 		a = append(a, types.Integer(ttf.GlyphWidths[pos]))
+		if i == last {
+			break
+		}
 	}
 	return insertFontObject(xRefTable, fontName, "create TrueType widths", a)
 }

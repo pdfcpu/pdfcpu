@@ -145,13 +145,17 @@ func validateDestinationArray(xRefTable *model.XRefTable, a types.Array, ownerOb
 		return nil
 	}
 
-	// Validate first element: indRef of page dict or pageNumber(int) of remote doc for remote Go-to Action or nil.
+	// Validate the local destination page.
 	o, err := validateDestinationArrayFirstElement(xRefTable, a, ownerObjNr)
 	if err != nil || o == nil {
 		return err
 	}
 
-	o, err = xRefTable.Dereference(a[1])
+	return validateDestinationArrayMode(xRefTable, a, ownerObjNr)
+}
+
+func validateDestinationArrayMode(xRefTable *model.XRefTable, a types.Array, ownerObjNr int) error {
+	o, err := xRefTable.Dereference(a[1])
 	if err != nil {
 		err = fmt.Errorf("destination array[1]: %w", err)
 		return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, a[1]))

@@ -39,70 +39,80 @@ func validateBitsPerFlag(i int) bool {
 	return types.IntMemberOf(i, []int{2, 4, 8})
 }
 
-func validateShadingDictCommonEntries(c context.Context, xRefTable *model.XRefTable, dict types.Dict) (shadType int, err error) {
-	dictName := "shadingDictCommonEntries"
-
-	shadingType, err := validateIntegerEntry(xRefTable, dict, 0, dictName, "ShadingType", REQUIRED, model.V10, func(i int) bool { return i >= 1 && i <= 7 })
-	if err != nil {
-		return 0, fmt.Errorf("%s.ShadingType: %w", dictName, err)
-	}
-
-	err = validateColorSpaceEntry(c, xRefTable, dict, 0, dictName, "ColorSpace", OPTIONAL, colorSpaceNoPattern)
-	if err != nil {
-		return 0, fmt.Errorf("%s.ColorSpace: %w", dictName, err)
-	}
-
-	_, err = validateArrayEntry(xRefTable, dict, 0, dictName, "Background", OPTIONAL, model.V10, nil)
-	if err != nil {
-		return 0, fmt.Errorf("%s.Background: %w", dictName, err)
-	}
-
-	_, err = validateRectangleEntry(xRefTable, dict, 0, dictName, "BBox", OPTIONAL, model.V10, nil)
-	if err != nil {
-		return 0, fmt.Errorf("%s.BBox: %w", dictName, err)
-	}
-
-	_, err = validateBooleanEntry(xRefTable, dict, 0, dictName, "AntiAlias", OPTIONAL, model.V10, nil)
-	if err != nil {
-		return 0, fmt.Errorf("%s.AntiAlias: %w", dictName, err)
-	}
-
-	return shadingType.Value(), nil
+type shadingInfo struct {
+	kind       int
+	components int
 }
 
-func validateFunctionBasedShadingDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict) error {
+func validateShadingDictCommonEntries(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr int) (info shadingInfo, err error) {
+	dictName := "shadingDictCommonEntries"
+
+	shadingType, err := validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "ShadingType", REQUIRED, model.V10, func(i int) bool { return i >= 1 && i <= 7 })
+	if err != nil {
+		return info, fmt.Errorf("%s.ShadingType: %w", dictName, err)
+	}
+
+	err = validateColorSpaceEntry(c, xRefTable, dict, ownerObjNr, dictName, "ColorSpace", OPTIONAL, colorSpaceNoPattern)
+	if err != nil {
+		return info, fmt.Errorf("%s.ColorSpace: %w", dictName, err)
+	}
+
+	info.components, err = colorSpaceComponents(xRefTable, dict["ColorSpace"], ownerObjNr)
+	if err != nil {
+		return info, fmt.Errorf("%s.ColorSpace: %w", dictName, err)
+	}
+	err = validateComponentArrayEntry(c, xRefTable, dict, ownerObjNr, dictName, "Background", info.components)
+	if err != nil {
+		return info, fmt.Errorf("%s.Background: %w", dictName, err)
+	}
+
+	_, err = validateRectangleEntry(xRefTable, dict, ownerObjNr, dictName, "BBox", OPTIONAL, model.V10, nil)
+	if err != nil {
+		return info, fmt.Errorf("%s.BBox: %w", dictName, err)
+	}
+
+	_, err = validateBooleanEntry(xRefTable, dict, ownerObjNr, dictName, "AntiAlias", OPTIONAL, model.V10, nil)
+	if err != nil {
+		return info, fmt.Errorf("%s.AntiAlias: %w", dictName, err)
+	}
+
+	info.kind = shadingType.Value()
+	return info, nil
+}
+
+func validateFunctionBasedShadingDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr, components int) error {
 	dictName := "functionBasedShadingDict"
 
-	_, err := validateNumberArrayEntry(xRefTable, dict, 0, dictName, "Domain", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 4 })
+	_, err := validateNumberArrayEntry(xRefTable, dict, ownerObjNr, dictName, "Domain", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 4 })
 	if err != nil {
 		return fmt.Errorf("%s.Domain: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, 0, dictName, "Matrix", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 6 })
+	_, err = validateNumberArrayEntry(xRefTable, dict, ownerObjNr, dictName, "Matrix", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 6 })
 	if err != nil {
 		return fmt.Errorf("%s.Matrix: %w", dictName, err)
 	}
 
-	if err = validateFunctionOrArrayOfFunctionsEntry(c, xRefTable, dict, 0, dictName, "Function", REQUIRED, model.V10); err != nil {
+	if _, err = validateShadingFunctionEntry(c, xRefTable, dict, ownerObjNr, dictName, REQUIRED, components); err != nil {
 		return fmt.Errorf("%s.Function: %w", dictName, err)
 	}
 	return nil
 }
 
-func validateAxialShadingDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr int) error {
+func validateAxialShadingDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr, components int) error {
 	dictName := "axialShadingDict"
 
-	_, err := validateNumberArrayEntry(xRefTable, dict, 0, dictName, "Coords", REQUIRED, model.V10, func(a types.Array) bool { return len(a) == 4 })
+	_, err := validateNumberArrayEntry(xRefTable, dict, ownerObjNr, dictName, "Coords", REQUIRED, model.V10, func(a types.Array) bool { return len(a) == 4 })
 	if err != nil {
 		return fmt.Errorf("%s.Coords: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, 0, dictName, "Domain", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 })
+	_, err = validateNumberArrayEntry(xRefTable, dict, ownerObjNr, dictName, "Domain", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 })
 	if err != nil {
 		return fmt.Errorf("%s.Domain: %w", dictName, err)
 	}
 
-	err = validateFunctionOrArrayOfFunctionsEntry(c, xRefTable, dict, 0, dictName, "Function", REQUIRED, model.V10)
+	_, err = validateShadingFunctionEntry(c, xRefTable, dict, ownerObjNr, dictName, REQUIRED, components)
 	if err != nil {
 		return fmt.Errorf("%s.Function: %w", dictName, err)
 	}
@@ -118,20 +128,20 @@ func validateAxialShadingDict(c context.Context, xRefTable *model.XRefTable, dic
 	return nil
 }
 
-func validateRadialShadingDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr int) error {
+func validateRadialShadingDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr, components int) error {
 	dictName := "radialShadingDict"
 
-	_, err := validateNumberArrayEntry(xRefTable, dict, 0, dictName, "Coords", REQUIRED, model.V10, func(a types.Array) bool { return len(a) == 6 })
+	_, err := validateNumberArrayEntry(xRefTable, dict, ownerObjNr, dictName, "Coords", REQUIRED, model.V10, func(a types.Array) bool { return len(a) == 6 })
 	if err != nil {
 		return fmt.Errorf("%s.Coords: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, 0, dictName, "Domain", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 })
+	_, err = validateNumberArrayEntry(xRefTable, dict, ownerObjNr, dictName, "Domain", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 })
 	if err != nil {
 		return fmt.Errorf("%s.Domain: %w", dictName, err)
 	}
 
-	err = validateFunctionOrArrayOfFunctionsEntry(c, xRefTable, dict, 0, dictName, "Function", REQUIRED, model.V10)
+	_, err = validateShadingFunctionEntry(c, xRefTable, dict, ownerObjNr, dictName, REQUIRED, components)
 	if err != nil {
 		return fmt.Errorf("%s.Function: %w", dictName, err)
 	}
@@ -150,145 +160,113 @@ func validateRadialShadingDict(c context.Context, xRefTable *model.XRefTable, di
 func validateShadingDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr int) error {
 	// Shading 1-3
 
-	shadingType, err := validateShadingDictCommonEntries(c, xRefTable, dict)
+	info, err := validateShadingDictCommonEntries(c, xRefTable, dict, ownerObjNr)
 	if err != nil {
 		return fmt.Errorf("shading dict: %w", err)
 	}
 
-	switch shadingType {
+	switch info.kind {
 	case 1:
-		err = validateFunctionBasedShadingDict(c, xRefTable, dict)
+		err = validateFunctionBasedShadingDict(c, xRefTable, dict, ownerObjNr, info.components)
 
 	case 2:
-		err = validateAxialShadingDict(c, xRefTable, dict, ownerObjNr)
+		err = validateAxialShadingDict(c, xRefTable, dict, ownerObjNr, info.components)
 
 	case 3:
-		err = validateRadialShadingDict(c, xRefTable, dict, ownerObjNr)
+		err = validateRadialShadingDict(c, xRefTable, dict, ownerObjNr, info.components)
 
 	default:
-		return fmt.Errorf("unexpected shadingType: %d", shadingType)
+		return fmt.Errorf("unexpected shadingType: %d", info.kind)
 	}
 
 	if err != nil {
-		return fmt.Errorf("shading dict type %d: %w", shadingType, err)
+		return fmt.Errorf("shading dict type %d: %w", info.kind, err)
 	}
 	return nil
 }
 
-func validateFreeFormGouroudShadedTriangleMeshesDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict) error {
+func validateFreeFormGouroudShadedTriangleMeshesDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr, components int) error {
 	dictName := "freeFormGouraudShadedTriangleMeshesDict"
 
-	_, err := validateIntegerEntry(xRefTable, dict, 0, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
+	_, err := validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerCoordinate: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, dict, 0, dictName, "BitsPerComponent", REQUIRED, model.V10, validateBitsPerComponent)
+	_, err = validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "BitsPerComponent", REQUIRED, model.V10, validateBitsPerComponent)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerComponent: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, dict, 0, dictName, "BitsPerFlag", REQUIRED, model.V10, validateBitsPerFlag)
+	_, err = validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "BitsPerFlag", REQUIRED, model.V10, validateBitsPerFlag)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerFlag: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, 0, dictName, "Decode", REQUIRED, model.V10, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Decode: %w", dictName, err)
-	}
-
-	if err = validateFunctionOrArrayOfFunctionsEntry(c, xRefTable, dict, 0, dictName, "Function", OPTIONAL, model.V10); err != nil {
-		return fmt.Errorf("%s.Function: %w", dictName, err)
-	}
-	return nil
+	return validateMeshShadingArrays(c, xRefTable, dict, ownerObjNr, dictName, components)
 }
 
-func validateLatticeFormGouraudShadedTriangleMeshesDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict) error {
+func validateLatticeFormGouraudShadedTriangleMeshesDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr, components int) error {
 	dictName := "latticeFormGouraudShadedTriangleMeshesDict"
 
-	_, err := validateIntegerEntry(xRefTable, dict, 0, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
+	_, err := validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerCoordinate: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, dict, 0, dictName, "BitsPerComponent", REQUIRED, model.V10, validateBitsPerComponent)
+	_, err = validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "BitsPerComponent", REQUIRED, model.V10, validateBitsPerComponent)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerComponent: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, dict, 0, dictName, "VerticesPerRow", REQUIRED, model.V10, func(i int) bool { return i >= 2 })
+	_, err = validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "VerticesPerRow", REQUIRED, model.V10, func(i int) bool { return i >= 2 })
 	if err != nil {
 		return fmt.Errorf("%s.VerticesPerRow: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, 0, dictName, "Decode", REQUIRED, model.V10, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Decode: %w", dictName, err)
-	}
-
-	if err = validateFunctionOrArrayOfFunctionsEntry(c, xRefTable, dict, 0, dictName, "Function", OPTIONAL, model.V10); err != nil {
-		return fmt.Errorf("%s.Function: %w", dictName, err)
-	}
-	return nil
+	return validateMeshShadingArrays(c, xRefTable, dict, ownerObjNr, dictName, components)
 }
 
-func validateCoonsPatchMeshesDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict) error {
+func validateCoonsPatchMeshesDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr, components int) error {
 	dictName := "coonsPatchMeshesDict"
 
-	_, err := validateIntegerEntry(xRefTable, dict, 0, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
+	_, err := validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerCoordinate: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, dict, 0, dictName, "BitsPerComponent", REQUIRED, model.V10, validateBitsPerComponent)
+	_, err = validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "BitsPerComponent", REQUIRED, model.V10, validateBitsPerComponent)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerComponent: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, dict, 0, dictName, "BitsPerFlag", REQUIRED, model.V10, validateBitsPerFlag)
+	_, err = validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "BitsPerFlag", REQUIRED, model.V10, validateBitsPerFlag)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerFlag: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, 0, dictName, "Decode", REQUIRED, model.V10, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Decode: %w", dictName, err)
-	}
-
-	if err = validateFunctionOrArrayOfFunctionsEntry(c, xRefTable, dict, 0, dictName, "Function", OPTIONAL, model.V10); err != nil {
-		return fmt.Errorf("%s.Function: %w", dictName, err)
-	}
-	return nil
+	return validateMeshShadingArrays(c, xRefTable, dict, ownerObjNr, dictName, components)
 }
 
-func validateTensorProductPatchMeshesDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict) error {
+func validateTensorProductPatchMeshesDict(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr, components int) error {
 	dictName := "tensorProductPatchMeshesDict"
 
-	_, err := validateIntegerEntry(xRefTable, dict, 0, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
+	_, err := validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "BitsPerCoordinate", REQUIRED, model.V10, validateBitsPerCoordinate)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerCoordinate: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, dict, 0, dictName, "BitsPerComponent", REQUIRED, model.V10, validateBitsPerComponent)
+	_, err = validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "BitsPerComponent", REQUIRED, model.V10, validateBitsPerComponent)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerComponent: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, dict, 0, dictName, "BitsPerFlag", REQUIRED, model.V10, validateBitsPerFlag)
+	_, err = validateIntegerEntry(xRefTable, dict, ownerObjNr, dictName, "BitsPerFlag", REQUIRED, model.V10, validateBitsPerFlag)
 	if err != nil {
 		return fmt.Errorf("%s.BitsPerFlag: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, dict, 0, dictName, "Decode", REQUIRED, model.V10, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Decode: %w", dictName, err)
-	}
-
-	if err = validateFunctionOrArrayOfFunctionsEntry(c, xRefTable, dict, 0, dictName, "Function", OPTIONAL, model.V10); err != nil {
-		return fmt.Errorf("%s.Function: %w", dictName, err)
-	}
-	return nil
+	return validateMeshShadingArrays(c, xRefTable, dict, ownerObjNr, dictName, components)
 }
 
 func validateShadingStreamDict(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, ownerObjNr int) error {
@@ -296,34 +274,34 @@ func validateShadingStreamDict(c context.Context, xRefTable *model.XRefTable, sd
 
 	dict := sd.Dict
 
-	shadingType, err := validateShadingDictCommonEntries(c, xRefTable, dict)
+	info, err := validateShadingDictCommonEntries(c, xRefTable, dict, ownerObjNr)
 	if err != nil {
 		return fmt.Errorf("shading stream dict: %w", err)
 	}
 
-	switch shadingType {
+	switch info.kind {
 
 	case 2:
-		err = validateAxialShadingDict(c, xRefTable, dict, ownerObjNr)
+		err = validateAxialShadingDict(c, xRefTable, dict, ownerObjNr, info.components)
 
 	case 4:
-		err = validateFreeFormGouroudShadedTriangleMeshesDict(c, xRefTable, dict)
+		err = validateFreeFormGouroudShadedTriangleMeshesDict(c, xRefTable, dict, ownerObjNr, info.components)
 
 	case 5:
-		err = validateLatticeFormGouraudShadedTriangleMeshesDict(c, xRefTable, dict)
+		err = validateLatticeFormGouraudShadedTriangleMeshesDict(c, xRefTable, dict, ownerObjNr, info.components)
 
 	case 6:
-		err = validateCoonsPatchMeshesDict(c, xRefTable, dict)
+		err = validateCoonsPatchMeshesDict(c, xRefTable, dict, ownerObjNr, info.components)
 
 	case 7:
-		err = validateTensorProductPatchMeshesDict(c, xRefTable, dict)
+		err = validateTensorProductPatchMeshesDict(c, xRefTable, dict, ownerObjNr, info.components)
 
 	default:
-		return fmt.Errorf("unexpected shadingType: %d", shadingType)
+		return fmt.Errorf("unexpected shadingType: %d", info.kind)
 	}
 
 	if err != nil {
-		return fmt.Errorf("shading stream dict type %d: %w", shadingType, err)
+		return fmt.Errorf("shading stream dict type %d: %w", info.kind, err)
 	}
 	return nil
 }

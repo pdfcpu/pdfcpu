@@ -200,7 +200,7 @@ func createCircleAnnotation(xRefTable *model.XRefTable, pageIndRef types.Indirec
 			"Rect":     annotRect,
 			"P":        pageIndRef,
 			"Border":   types.NewIntegerArray(0, 0, 10),
-			"C":        types.NewNumberArray(0.5, 0, 5, 0),
+			"C":        types.NewNumberArray(0.5, 0, 0.5, 0),
 			"IC":       types.NewNumberArray(0.8, .8, .8),
 		},
 	)
@@ -313,11 +313,9 @@ func createHighlightAnnotation(xRefTable *model.XRefTable, pageIndRef types.Indi
 			"Type": types.Name("OCMD"),
 			"OCGs": types.Array{nil, optionalContentGroupDict},
 			"P":    types.Name("AllOn"),
-			"VE":   types.Array{},
+			"VE":   types.Array{types.Name("And"), optionalContentGroupDict},
 		},
 	)
-
-	_ = optionalContentMembershipDict
 
 	d := types.Dict(
 		map[string]types.Object{

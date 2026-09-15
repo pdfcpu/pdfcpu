@@ -50,7 +50,7 @@ func validateGoToRActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 	}
 
 	// D, required, name, byte string or array
-	err = validateActionDestinationEntry(xRefTable, d, dictName, "D", REQUIRED, model.V10)
+	err = validateRemoteActionDestinationEntry(xRefTable, d, dictName, "D")
 	if err != nil {
 		return err
 	}
@@ -156,12 +156,12 @@ func validateGoToEActionDict(c context.Context, xRefTable *model.XRefTable, d ty
 	}
 
 	// D, required, name, byte string or array
-	err = validateActionDestinationEntry(xRefTable, d, dictName, "D", REQUIRED, model.V10)
+	err = validateRemoteActionDestinationEntry(xRefTable, d, dictName, "D")
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
 			return err
 		}
-		err = validateActionDestinationEntry(xRefTable, d, dictName, "Dest", REQUIRED, model.V10)
+		err = validateRemoteActionDestinationEntry(xRefTable, d, dictName, "Dest")
 		if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
 			err = nil
 			model.ShowSkipped("GotoEAction: missing \"D\"")
@@ -791,11 +791,74 @@ func validateJavaScriptActionDict(xRefTable *model.XRefTable, d types.Dict, dict
 	return validateJavaScript(xRefTable, d, dictName, "JS", REQUIRED)
 }
 
+func validateSetOCGStateGroup(xRefTable *model.XRefTable, o types.Object, objNr, index int, dictName string) error {
+	o, err := xRefTable.Dereference(o)
+	if err != nil {
+		err = fmt.Errorf("%s.State[%d]: dereference optional content group: %w", dictName, index, err)
+		return model.WithValidationErrorObject(err, objNr)
+	}
+	d, ok := o.(types.Dict)
+	if !ok {
+		err = fmt.Errorf("%s.State[%d]: expected optional content group dictionary", dictName, index)
+		return model.WithValidationErrorObject(err, objNr)
+	}
+	if err = validateOptionalContentGroupDict(xRefTable, d, objNr, model.V15); err != nil {
+		return fmt.Errorf("%s.State[%d]: %w", dictName, index, err)
+	}
+	return nil
+}
+
+func validateSetOCGStateArray(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	const entryName = "State"
+	a, err := validateArrayEntry(xRefTable, d, 0, dictName, entryName, REQUIRED, model.V10, nil)
+	if err != nil {
+		return err
+	}
+	objNr := validationEntryObjectNumber(0, d, entryName)
+	if len(a) == 0 {
+		return arrayCardinalityError(dictName, entryName, objNr, 0, "one or more operator and OCG sequences")
+	}
+	operatorSeen, operandSeen := false, false
+	for i, raw := range a {
+		entryObjNr := validationObjectNumber(objNr, raw)
+		o, err := xRefTable.Dereference(raw)
+		if err != nil {
+			err = fmt.Errorf("%s.%s[%d]: dereference: %w", dictName, entryName, i, err)
+			return model.WithValidationErrorObject(err, entryObjNr)
+		}
+		if n, ok := o.(types.Name); ok {
+			if !types.MemberOf(n.Value(), []string{"ON", "OFF", "Toggle"}) {
+				err = fmt.Errorf("%s.%s[%d]: invalid operator %s", dictName, entryName, i, n.Value())
+				return model.WithValidationErrorObject(err, entryObjNr)
+			}
+			if operatorSeen && !operandSeen {
+				err = fmt.Errorf("%s.%s[%d]: preceding operator has no OCG operands", dictName, entryName, i)
+				return model.WithValidationErrorObject(err, entryObjNr)
+			}
+			operatorSeen, operandSeen = true, false
+			continue
+		}
+		if !operatorSeen {
+			err = fmt.Errorf("%s.%s[%d]: expected ON, OFF, or Toggle operator", dictName, entryName, i)
+			return model.WithValidationErrorObject(err, entryObjNr)
+		}
+		if err = validateSetOCGStateGroup(xRefTable, raw, entryObjNr, i, dictName); err != nil {
+			return err
+		}
+		operandSeen = true
+	}
+	if !operandSeen {
+		err = fmt.Errorf("%s.%s[%d]: operator has no OCG operands", dictName, entryName, len(a)-1)
+		return model.WithValidationErrorObject(err, objNr)
+	}
+	return nil
+}
+
 func validateSetOCGStateActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	// see 12.6.4.12
 
 	// State, required, array
-	_, err := validateArrayEntry(xRefTable, d, 0, dictName, "State", REQUIRED, model.V10, nil)
+	err := validateSetOCGStateArray(xRefTable, d, dictName)
 	if err != nil {
 		return err
 	}

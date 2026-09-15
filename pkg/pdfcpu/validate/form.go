@@ -37,7 +37,9 @@ import (
 // 	}
 //
 // 	// Type, optional, name
-// 	_, err = validateNameEntry(xRefTable, d, "signatureDict", "Type", OPTIONAL, model.V10, func(s string) bool { return s == "Sig" })
+// 	_, err = validateNameEntry(
+// 		xRefTable, d, "signatureDict", "Type", OPTIONAL, model.V10, func(s string) bool { return s == "Sig" },
+// 	)
 //
 // 	// process signature dict fields.
 //
@@ -445,7 +447,8 @@ func validateFormFieldDictEntries(c context.Context, xRefTable *model.XRefTable,
 	}
 
 	// DA, required for text fields, since ?
-	// The default appearance string containing a sequence of valid page-content graphics or text state operators that define such properties as the field’s text size and colour.
+	// The default appearance string contains valid page-content graphics or text-state operators
+	// that define properties such as the field's text size and colour.
 	hasDA, err = validateFormFieldDA(xRefTable, d, dictName, terminalNode, outFieldType, requiresDA)
 
 	return outFieldType, hasDA, err
@@ -771,61 +774,61 @@ func validateFormCO(c context.Context, xRefTable *model.XRefTable, arr types.Arr
 	return validateFormFields(c, xRefTable, arr, ownerObjNr, requiresDA)
 }
 
+func validateFormXFAArray(xRefTable *model.XRefTable, a types.Array, objNr int) error {
+	// see 12.7.8
+	if err := validateArrayPairs(a, objNr, "AcroForm", "XFA", 1); err != nil {
+		return err
+	}
+	for i, v := range a {
+		entryObjNr := validationObjectNumber(objNr, v)
+		if v == nil {
+			err := fmt.Errorf("AcroForm XFA[%d]: missing entry", i)
+			return model.WithValidationErrorObject(err, entryObjNr)
+		}
+		o, err := xRefTable.Dereference(v)
+		if err != nil {
+			err = fmt.Errorf("AcroForm XFA[%d]: dereference: %w", i, err)
+			return model.WithValidationErrorObject(err, entryObjNr)
+		}
+		if i%2 == 0 {
+			if _, err := types.StringOrHexLiteral(o); err != nil {
+				err = fmt.Errorf("AcroForm XFA[%d]: expected string", i)
+				return model.WithValidationErrorObject(err, entryObjNr)
+			}
+			continue
+		}
+		if _, ok := o.(types.StreamDict); !ok {
+			err = fmt.Errorf("AcroForm XFA[%d]: expected stream dict", i)
+			return model.WithValidationErrorObject(err, entryObjNr)
+		}
+	}
+	return nil
+}
+
 func validateFormXFA(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 	// see 12.7.8
-
-	o, ok := d.Find("XFA")
+	rawObject, ok := d.Find("XFA")
 	if !ok {
 		return nil
 	}
-
-	// streamDict or array of text,streamDict pairs
-
-	o, err := xRefTable.Dereference(o)
+	objNr := validationObjectNumber(0, rawObject)
+	o, err := xRefTable.Dereference(rawObject)
 	if err != nil {
-		return fmt.Errorf("AcroForm XFA: dereference: %w", err)
+		return model.WithValidationErrorObject(fmt.Errorf("AcroForm XFA: dereference: %w", err), objNr)
 	}
 	if o == nil {
-		return errors.New("AcroForm XFA: missing object")
+		return model.WithValidationErrorObject(errors.New("AcroForm XFA: missing object"), objNr)
 	}
-
 	switch o := o.(type) {
-
 	case types.StreamDict:
 		// no further processing
-
 	case types.Array:
-
-		for i, v := range o {
-
-			if v == nil {
-				return fmt.Errorf("AcroForm XFA[%d]: missing entry", i)
-			}
-
-			o, err := xRefTable.Dereference(v)
-			if err != nil {
-				return fmt.Errorf("AcroForm XFA[%d]: dereference: %w", i, err)
-			}
-
-			if i%2 == 0 {
-				if _, err := types.StringOrHexLiteral(o); err != nil {
-					return fmt.Errorf("AcroForm XFA[%d]: expected string", i)
-				}
-
-			} else {
-
-				_, ok := o.(types.StreamDict)
-				if !ok {
-					return fmt.Errorf("AcroForm XFA[%d]: expected stream dict", i)
-				}
-
-			}
+		if err = validateFormXFAArray(xRefTable, o, objNr); err != nil {
+			return err
 		}
-
 	default:
-		return fmt.Errorf("AcroForm XFA: expected stream dict or array, got %T", o)
+		return model.WithValidationErrorObject(fmt.Errorf("AcroForm XFA: expected stream dict or array, got %T", o), objNr)
 	}
-
 	return xRefTable.ValidateVersion("AcroFormXFA", sinceVersion)
 }
 

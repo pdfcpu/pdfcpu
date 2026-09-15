@@ -1,0 +1,69 @@
+/*
+Copyright 2026 The pdfcpu Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package validate
+
+import (
+	"fmt"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+)
+
+func validateRemoteDestinationArray(xRefTable *model.XRefTable, a types.Array, ownerObjNr int) (err error) {
+	defer func() {
+		err = model.WithValidationErrorObject(err, ownerObjNr)
+	}()
+	if !validateDestinationArrayLength(a) {
+		err = fmt.Errorf("remote destination array: invalid length %d", len(a))
+		if xRefTable.ValidationMode == model.ValidationRelaxed {
+			model.ShowDigestedSpecViolationError(err)
+			return nil
+		}
+		return err
+	}
+	// See 12.6.4.3 and 12.6.4.4: remote and embedded destinations use a zero-based page number.
+	o, err := xRefTable.Dereference(a[0])
+	if err != nil {
+		return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, a[0]))
+	}
+	page, ok := o.(types.Integer)
+	if !ok || page < 0 {
+		err = fmt.Errorf("remote destination array[0]: expected non-negative page number, got %v (%T)", o, o)
+		err = model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, a[0]))
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return err
+		}
+		model.ShowDigestedSpecViolationError(err)
+	}
+	return validateDestinationArrayMode(xRefTable, a, ownerObjNr)
+}
+
+func validateRemoteActionDestinationEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string) error {
+	rawEntry := d[entryName]
+	o, err := validateEntry(xRefTable, d, 0, dictName, entryName, REQUIRED, model.V10)
+	if err == nil && o != nil {
+		if a, ok := o.(types.Array); ok {
+			err = validateRemoteDestinationArray(xRefTable, a, validationObjectNumber(0, rawEntry))
+		} else {
+			_, err = validateDestination(xRefTable, rawEntry, 0, true)
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
+	}
+	return nil
+}

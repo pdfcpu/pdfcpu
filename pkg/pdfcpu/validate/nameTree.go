@@ -459,32 +459,73 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *model.XRefTable, o types.Obje
 	return err
 }
 
-func validateSlideShowDict(XRefTable *model.XRefTable, d types.Dict) error {
+func validateSlideShowResources(xRefTable *model.XRefTable, d types.Dict) error {
+	const (
+		dictName  = "slideShowDict"
+		entryName = "Resources"
+	)
+	a, err := validateArrayEntry(xRefTable, d, 0, dictName, entryName, REQUIRED, model.V14, nil)
+	if err != nil {
+		return err
+	}
+	objNr := validationEntryObjectNumber(0, d, entryName)
+	if err = validateArrayPairs(a, objNr, dictName, entryName, 1); err != nil {
+		return err
+	}
+	for i, o := range a {
+		entryObjNr := validationObjectNumber(objNr, o)
+		if i%2 == 0 {
+			o, err = xRefTable.Dereference(o)
+			if err == nil {
+				_, err = types.StringOrHexLiteral(o)
+			}
+			if err != nil {
+				err = fmt.Errorf("%s.%s[%d]: expected string: %w", dictName, entryName, i, err)
+				return model.WithValidationErrorObject(err, entryObjNr)
+			}
+			continue
+		}
+		if _, ok := o.(types.IndirectRef); !ok {
+			err = fmt.Errorf("%s.%s[%d]: expected indirect reference", dictName, entryName, i)
+			return model.WithValidationErrorObject(err, entryObjNr)
+		}
+		o, err = xRefTable.Dereference(o)
+		if err != nil || o == nil {
+			if err == nil {
+				err = errors.New("missing referenced resource")
+			}
+			err = fmt.Errorf("%s.%s[%d]: %w", dictName, entryName, i, err)
+			return model.WithValidationErrorObject(err, entryObjNr)
+		}
+	}
+	return nil
+}
+
+func validateSlideShowDict(xRefTable *model.XRefTable, d types.Dict) error {
 	// see 13.5, table 297
 
 	dictName := "slideShowDict"
 
 	// Type, required, name, since V1.4
-	_, err := validateNameEntry(XRefTable, d, 0, dictName, "Type", REQUIRED, model.V14, func(s string) bool { return s == "SlideShow" })
+	_, err := validateNameEntry(xRefTable, d, 0, dictName, "Type", REQUIRED, model.V14, func(s string) bool { return s == "SlideShow" })
 	if err != nil {
 		return err
 	}
 
 	// Subtype, required, name, since V1.4
-	_, err = validateNameEntry(XRefTable, d, 0, dictName, "Subtype", REQUIRED, model.V14, func(s string) bool { return s == "Embedded" })
+	_, err = validateNameEntry(xRefTable, d, 0, dictName, "Subtype", REQUIRED, model.V14, func(s string) bool { return s == "Embedded" })
 	if err != nil {
 		return err
 	}
 
-	// Resources, required, name tree, since V1.4
-	// Note: This is really an array of (string,indRef) pairs.
-	_, err = validateArrayEntry(XRefTable, d, 0, dictName, "Resources", REQUIRED, model.V14, nil)
+	// Resources, required array of string and indirect-reference pairs, since V1.4
+	err = validateSlideShowResources(xRefTable, d)
 	if err != nil {
 		return err
 	}
 
 	// StartResource, required, byte string, since V1.4
-	_, err = validateStringEntry(XRefTable, d, 0, dictName, "StartResource", REQUIRED, model.V14, nil)
+	_, err = validateStringEntry(xRefTable, d, 0, dictName, "StartResource", REQUIRED, model.V14, nil)
 
 	return err
 }

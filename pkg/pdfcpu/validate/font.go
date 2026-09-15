@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"math"
 	"slices"
 	"strings"
 
@@ -567,6 +568,50 @@ func validateFontEncoding(xRefTable *model.XRefTable, d types.Dict, dictName str
 	return nil
 }
 
+func simpleFontWidthCount(firstChar, lastChar int) (int, bool) {
+	if lastChar < firstChar || firstChar < 0 && lastChar > math.MaxInt+firstChar {
+		return 0, false
+	}
+	span := lastChar - firstChar
+	if span == math.MaxInt {
+		return 0, false
+	}
+	return span + 1, true
+}
+
+func relaxedSimpleFontWidthCount(actual, expected int) bool {
+	return actual > 0 && (actual == expected-1 || actual > expected)
+}
+
+func relaxedEmptySimpleFontWidths(xRefTable *model.XRefTable, firstChar, lastChar, widthCount int) bool {
+	return xRefTable.ValidationMode == model.ValidationRelaxed && firstChar == 65535 && lastChar == 0 && widthCount == 0
+}
+
+func validateSimpleFontWidths(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, firstChar *types.Integer) error {
+	lastChar, err := validateIntegerEntry(xRefTable, d, 0, dictName, "LastChar", required, model.V10, nil)
+	if err != nil {
+		return err
+	}
+	widths, err := validateNumberArrayEntry(xRefTable, d, 0, dictName, "Widths", required, model.V10, nil)
+	if err != nil || firstChar == nil || lastChar == nil || widths == nil {
+		return err
+	}
+	first, last := firstChar.Value(), lastChar.Value()
+	if relaxedEmptySimpleFontWidths(xRefTable, first, last, len(widths)) {
+		return nil
+	}
+	expected, ok := simpleFontWidthCount(first, last)
+	if !ok {
+		err := fmt.Errorf("%s.LastChar: invalid value %d, expected at least FirstChar %d", dictName, last, first)
+		return model.WithValidationErrorObject(err, validationEntryObjectNumber(0, d, "LastChar"))
+	}
+	if len(widths) == expected || xRefTable.ValidationMode == model.ValidationRelaxed && relaxedSimpleFontWidthCount(len(widths), expected) {
+		return nil
+	}
+	constraint := fmt.Sprintf("%d to match FirstChar %d and LastChar %d", expected, first, last)
+	return arrayCardinalityError(dictName, "Widths", validationEntryObjectNumber(0, d, "Widths"), len(widths), constraint)
+}
+
 func validateTrueTypeFontDict(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 	// see 9.6.3
 	dictName := "trueTypeFontDict"
@@ -588,25 +633,12 @@ func validateTrueTypeFontDict(xRefTable *model.XRefTable, d types.Dict) (string,
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = OPTIONAL
 	}
-	if _, err = validateIntegerEntry(xRefTable, d, 0, dictName, "FirstChar", required, model.V10, nil); err != nil {
+	firstChar, err := validateIntegerEntry(xRefTable, d, 0, dictName, "FirstChar", required, model.V10, nil)
+	if err != nil {
 		return "", err
 	}
 
-	// LastChar, required, integer
-	required = REQUIRED
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		required = OPTIONAL
-	}
-	if _, err = validateIntegerEntry(xRefTable, d, 0, dictName, "LastChar", required, model.V10, nil); err != nil {
-		return "", err
-	}
-
-	// Widths, array of numbers.
-	required = REQUIRED
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		required = OPTIONAL
-	}
-	if _, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Widths", required, model.V10, nil); err != nil {
+	if err = validateSimpleFontWidths(xRefTable, d, dictName, required, firstChar); err != nil {
 		return "", err
 	}
 
@@ -888,9 +920,38 @@ func validateType0FontDict(c context.Context, xRefTable *model.XRefTable, d type
 	return fontName, err
 }
 
+func missingType1FontMetrics(xRefTable *model.XRefTable, d types.Dict) ([]string, error) {
+	var missing []string
+	for _, key := range []string{"FirstChar", "LastChar", "Widths", "FontDescriptor"} {
+		o, err := xRefTable.Dereference(d[key])
+		if err != nil {
+			return nil, model.WithValidationErrorObject(err, validationEntryObjectNumber(0, d, key))
+		}
+		if o == nil {
+			missing = append(missing, key)
+		}
+	}
+	return missing, nil
+}
+
+func type1FontMetricsRequired(xRefTable *model.XRefTable, d types.Dict, fontName string) (bool, error) {
+	missing, err := missingType1FontMetrics(xRefTable, d)
+	if err != nil {
+		return false, err
+	}
+	// For standard 14 fonts, FirstChar, LastChar, Widths and FontDescriptor must all be present or all be absent.
+	required := xRefTable.Version() >= model.V20 || !validateStandardType1Font(fontName) || len(missing) < 4
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		if required && len(missing) > 0 {
+			model.ShowDigestedSpecViolation(fmt.Sprintf("Type1 font %s: missing required entries %s", fontName, strings.Join(missing, ", ")))
+		}
+		return false, nil
+	}
+	return required, nil
+}
+
 func validateType1FontDict(xRefTable *model.XRefTable, d types.Dict) (string, error) {
 	// see 9.6.2
-
 	dictName := "type1FontDict"
 
 	// Name, name, obsolet and should not be used.
@@ -902,30 +963,17 @@ func validateType1FontDict(xRefTable *model.XRefTable, d types.Dict) (string, er
 	}
 
 	fontName := bf.String()
-	required := xRefTable.Version() >= model.V17 || !validateStandardType1Font(fontName)
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		required = false
+	required, err := type1FontMetricsRequired(xRefTable, d, fontName)
+	if err != nil {
+		return "", err
 	}
-	// FirstChar,  required except for standard 14 fonts. since 2.0 always required, integer
+	// FirstChar, required except for standard 14 fonts before PDF 2.0, integer
 	fc, err := validateIntegerEntry(xRefTable, d, 0, dictName, "FirstChar", required, model.V10, nil)
 	if err != nil {
 		return "", err
 	}
 
-	if !required && fc != nil {
-		// For the standard 14 fonts, the entries FirstChar, LastChar, Widths and FontDescriptor shall either all be present or all be absent.
-		if xRefTable.ValidationMode == model.ValidationStrict {
-			required = true
-		}
-	}
-
-	// LastChar, required except for standard 14 fonts. since 2.0 always required, integer
-	if _, err = validateIntegerEntry(xRefTable, d, 0, dictName, "LastChar", required, model.V10, nil); err != nil {
-		return "", err
-	}
-
-	// Widths, required except for standard 14 fonts. since 2.0 always required, array of numbers
-	if _, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Widths", required, model.V10, nil); err != nil {
+	if err = validateSimpleFontWidths(xRefTable, d, dictName, required, fc); err != nil {
 		return "", err
 	}
 
@@ -1131,8 +1179,7 @@ func validateType0FontEncoding(c context.Context, xRefTable *model.XRefTable, d 
 }
 
 func validateType3FontDict(c context.Context, xRefTable *model.XRefTable, d types.Dict) error {
-	// see 9.6.5
-
+	// see  9.6.5
 	dictName := "type3FontDict"
 
 	// Name, name, obsolet and should not be used.
@@ -1162,20 +1209,12 @@ func validateType3FontDict(c context.Context, xRefTable *model.XRefTable, d type
 	}
 
 	// FirstChar, required, integer
-	_, err = validateIntegerEntry(xRefTable, d, 0, dictName, "FirstChar", REQUIRED, model.V10, nil)
+	firstChar, err := validateIntegerEntry(xRefTable, d, 0, dictName, "FirstChar", REQUIRED, model.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	// LastChar, required, integer
-	_, err = validateIntegerEntry(xRefTable, d, 0, dictName, "LastChar", REQUIRED, model.V10, nil)
-	if err != nil {
-		return err
-	}
-
-	// Widths, required, array of number
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Widths", REQUIRED, model.V10, nil)
-	if err != nil {
+	if err = validateSimpleFontWidths(xRefTable, d, dictName, REQUIRED, firstChar); err != nil {
 		return err
 	}
 

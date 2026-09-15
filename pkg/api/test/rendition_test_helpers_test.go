@@ -226,7 +226,7 @@ func createFloatingWindowsParamsDict() *types.Dict {
 			"T":    types.Boolean(true),
 			"UC":   types.Boolean(true),
 			"R":    types.Integer(0),
-			"TT":   types.NewStringLiteralArray("en-US", "Special title", "de", "Spezieller Titel", "default title"),
+			"TT":   types.NewStringLiteralArray("en-US", "Special title", "de", "Spezieller Titel", "", "default title"),
 		},
 	)
 

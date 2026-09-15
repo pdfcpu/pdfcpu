@@ -424,7 +424,7 @@ func validateMediaClipDataDict(c context.Context, xRefTable *model.XRefTable, d 
 	}
 
 	// Alt, optional, string array
-	_, err = validateStringArrayEntry(xRefTable, d, 0, dictName, "Alt", OPTIONAL, sinceVersion, nil)
+	err = validateMultiLanguageTextEntry(xRefTable, d, 0, dictName, "Alt", sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -645,7 +645,7 @@ func (t *mediaClipTraversal) validateSectionDict(d types.Dict, sinceVersion mode
 	}
 
 	// Alt, optional, string array
-	_, err := validateStringArrayEntry(xRefTable, d, 0, dictName, "Alt", OPTIONAL, sinceVersion, nil)
+	err := validateMultiLanguageTextEntry(xRefTable, d, 0, dictName, "Alt", sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -892,7 +892,7 @@ func validateFloatingWindowsParameterDict(xRefTable *model.XRefTable, d types.Di
 	}
 
 	// TT, optional, string array
-	_, err = validateStringArrayEntry(xRefTable, d, 0, dictName, "TT", OPTIONAL, sinceVersion, nil)
+	err = validateMultiLanguageTextEntry(xRefTable, d, 0, dictName, "TT", sinceVersion)
 
 	return err
 }

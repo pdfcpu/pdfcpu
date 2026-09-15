@@ -20,11 +20,21 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/form"
 )
+
+func createSinglePageDemoForm(t *testing.T, fileName string) string {
+	t.Helper()
+	jsonFile := strings.TrimSuffix(fileName, filepath.Ext(fileName)) + ".json"
+	inFileJSON := filepath.Join(inDir, "json", "form", "demoSinglePage", jsonFile)
+	outFile := filepath.Join(t.TempDir(), fileName)
+	createPDF(t, "create single page demo form", "", inFileJSON, outFile, conf)
+	return outFile
+}
 
 /**************************************************************
  * All form related processing is optimized for Adobe Reader! *
@@ -155,7 +165,7 @@ func TestResetFormFields(t *testing.T) {
 		{"TestResetFormCJK", "chineseSimple.pdf", "chineseSimple-reset.pdf"}, // User font CJK (UnifontMedium)
 		{"TestResetPersonForm", "person.pdf", "person-reset.pdf"},            // Person Form
 	} {
-		inFile := filepath.Join(samplesDir, "form", "demoSinglePage", tt.inFile)
+		inFile := createSinglePageDemoForm(t, tt.inFile)
 		outFile := filepath.Join(outDir, tt.outFile)
 
 		cmd := cli.ResetFormCommand(inFile, outFile, nil, conf)
@@ -180,7 +190,7 @@ func TestLockFormFields(t *testing.T) {
 		{"TestLockFormCJK", "chineseSimple.pdf", "chineseSimple-locked.pdf"}, // User font CJK (UnifontMedium)
 		{"TestLockPersonForm", "person.pdf", "person-locked.pdf"},            // Person Form
 	} {
-		inFile := filepath.Join(samplesDir, "form", "demoSinglePage", tt.inFile)
+		inFile := createSinglePageDemoForm(t, tt.inFile)
 		outFile := filepath.Join(outDir, tt.outFile)
 
 		cmd := cli.LockFormCommand(inFile, outFile, nil, conf)
@@ -194,20 +204,26 @@ func TestLockFormFields(t *testing.T) {
 func TestUnlockFormFields(t *testing.T) {
 
 	for _, tt := range []struct {
-		msg     string
-		inFile  string
-		outFile string
+		msg        string
+		sourceFile string
+		inFile     string
+		outFile    string
 	}{
-		{"TestUnlockFormEN", "english-locked.pdf", "english-unlocked.pdf"},              // Core font (Helvetica)
-		{"TestUnlockFormUK", "ukrainian-locked.pdf", "ukrainian-unlocked.pdf"},          // User font (Roboto-Regular)
-		{"TestUnlockFormRTL", "arabic-locked.pdf", "arabic-unlocked.pdf"},               // User font RTL (Roboto-Regular)
-		{"TestUnlockFormCJK", "chineseSimple-locked.pdf", "chineseSimple-unlocked.pdf"}, // User font CJK (UnifontMedium)
-		{"TestUnlockPersonForm", "person-locked.pdf", "person-unlocked.pdf"},            // Person Form
+		{"TestUnlockFormEN", "english.pdf", "english-locked.pdf", "english-unlocked.pdf"},                    // Core font (Helvetica)
+		{"TestUnlockFormUK", "ukrainian.pdf", "ukrainian-locked.pdf", "ukrainian-unlocked.pdf"},              // User font (Roboto-Regular)
+		{"TestUnlockFormRTL", "arabic.pdf", "arabic-locked.pdf", "arabic-unlocked.pdf"},                      // User font RTL (Roboto-Regular)
+		{"TestUnlockFormCJK", "chineseSimple.pdf", "chineseSimple-locked.pdf", "chineseSimple-unlocked.pdf"}, // User font CJK (UnifontMedium)
+		{"TestUnlockPersonForm", "person.pdf", "person-locked.pdf", "person-unlocked.pdf"},                   // Person Form
 	} {
-		inFile := filepath.Join(samplesDir, "form", "lock", tt.inFile)
+		sourceFile := createSinglePageDemoForm(t, tt.sourceFile)
+		inFile := filepath.Join(t.TempDir(), tt.inFile)
+		cmd := cli.LockFormCommand(sourceFile, inFile, nil, conf)
+		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
+			t.Fatalf("%s %s: %v\n", tt.msg, sourceFile, err)
+		}
 		outFile := filepath.Join(outDir, tt.outFile)
 
-		cmd := cli.UnlockFormCommand(inFile, outFile, nil, conf)
+		cmd = cli.UnlockFormCommand(inFile, outFile, nil, conf)
 		if _, err := cli.Dispatch(t.Context(), cmd); err != nil {
 			t.Fatalf("%s %s: %v\n", tt.msg, inFile, err)
 		}
@@ -216,8 +232,6 @@ func TestUnlockFormFields(t *testing.T) {
 
 // TestExportForm verifies export form.
 func TestExportForm(t *testing.T) {
-
-	inDir := filepath.Join(samplesDir, "form", "demoSinglePage")
 
 	for _, tt := range []struct {
 		msg     string
@@ -230,7 +244,7 @@ func TestExportForm(t *testing.T) {
 		{"TestExportFormCJK", "chineseSimple.pdf", "chineseSimple.json"}, // User font CJK (UnifontMedium)
 		{"TestExportPersonForm", "person.pdf", "person.json"},            // Person Form
 	} {
-		inFile := filepath.Join(inDir, tt.inFile)
+		inFile := createSinglePageDemoForm(t, tt.inFile)
 		outFile := filepath.Join(outDir, tt.outFile)
 
 		cmd := cli.ExportFormCommand(inFile, outFile, conf)
@@ -243,7 +257,6 @@ func TestExportForm(t *testing.T) {
 // TestFillForm verifies fill form.
 func TestFillForm(t *testing.T) {
 
-	inDir := filepath.Join(samplesDir, "form", "demoSinglePage")
 	jsonDir := filepath.Join(samplesDir, "form", "fill")
 
 	for _, tt := range []struct {
@@ -258,7 +271,7 @@ func TestFillForm(t *testing.T) {
 		{"TestFillFormCJK", "chineseSimple.pdf", "chineseSimple.json", "chineseSimple.pdf"}, // User font CJK (UnifontMedium)
 		{"TestFillPersonForm", "person.pdf", "person.json", "person.pdf"},                   // Person Form
 	} {
-		inFile := filepath.Join(inDir, tt.inFile)
+		inFile := createSinglePageDemoForm(t, tt.inFile)
 		inFileJSON := filepath.Join(jsonDir, tt.inFileJSON)
 		outFile := filepath.Join(outDir, tt.outFile)
 

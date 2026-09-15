@@ -24,6 +24,120 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+var errVisibilityExpressionCycle = errors.New("circular visibility expression")
+
+type visibilityExpressionTraversal struct {
+	xRefTable *model.XRefTable
+	ancestors map[int]bool
+}
+
+func visibilityExpressionIdentity(o types.Object) int {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		return 0
+	}
+	return ir.ObjectNumber.Value()
+}
+
+func (t *visibilityExpressionTraversal) enter(objNr int) error {
+	if objNr <= 0 {
+		return nil
+	}
+	if t.ancestors[objNr] {
+		return fmt.Errorf("obj#%d: %w", objNr, errVisibilityExpressionCycle)
+	}
+	t.ancestors[objNr] = true
+	return nil
+}
+
+func (t *visibilityExpressionTraversal) leave(objNr int) {
+	if objNr > 0 {
+		delete(t.ancestors, objNr)
+	}
+}
+
+func visibilityExpressionCardinality(a types.Array, objNr int, path, operator string) error {
+	if operator == "Not" && len(a) == 2 || operator != "Not" && len(a) >= 2 {
+		return nil
+	}
+	expected := "an operator and one or more operands"
+	if operator == "Not" {
+		expected = "Not and exactly one operand"
+	}
+	err := fmt.Errorf("%s: invalid array length %d, expected %s", path, len(a), expected)
+	return model.WithValidationErrorObject(err, objNr)
+}
+
+func (t *visibilityExpressionTraversal) validateOperand(raw types.Object, ownerObjNr int, path string, depth int) error {
+	objNr := validationObjectNumber(ownerObjNr, raw)
+	o, err := t.xRefTable.Dereference(raw)
+	if err != nil {
+		err = fmt.Errorf("%s: dereference operand: %w", path, err)
+		return model.WithValidationErrorObject(err, objNr)
+	}
+	switch o := o.(type) {
+	case types.Dict:
+		if err = validateOptionalContentGroupDict(t.xRefTable, o, objNr, model.V15); err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+		return nil
+	case types.Array:
+		return t.validateArray(o, objNr, visibilityExpressionIdentity(raw), path, depth)
+	default:
+		err = fmt.Errorf("%s: expected optional content group or visibility expression, got %T", path, o)
+		return model.WithValidationErrorObject(err, objNr)
+	}
+}
+
+func (t *visibilityExpressionTraversal) validateArray(a types.Array, objNr, identity int, path string, depth int) error {
+	if err := t.xRefTable.CheckRecursionDepth("visibility expression", depth); err != nil {
+		return model.WithValidationErrorObject(err, objNr)
+	}
+	if err := t.enter(identity); err != nil {
+		return model.WithValidationErrorObject(err, objNr)
+	}
+	defer t.leave(identity)
+	if len(a) == 0 {
+		err := fmt.Errorf("%s: invalid array length 0, expected an operator and one or more operands", path)
+		return model.WithValidationErrorObject(err, objNr)
+	}
+	operatorObjNr := validationObjectNumber(objNr, a[0])
+	o, err := t.xRefTable.Dereference(a[0])
+	if err != nil {
+		err = fmt.Errorf("%s[0]: dereference operator: %w", path, err)
+		return model.WithValidationErrorObject(err, operatorObjNr)
+	}
+	operator, ok := o.(types.Name)
+	if !ok || !types.MemberOf(operator.Value(), []string{"And", "Or", "Not"}) {
+		err = fmt.Errorf("%s[0]: expected And, Or, or Not operator", path)
+		return model.WithValidationErrorObject(err, operatorObjNr)
+	}
+	if err = visibilityExpressionCardinality(a, objNr, path, operator.Value()); err != nil {
+		return err
+	}
+	for i := 1; i < len(a); i++ {
+		if err = t.validateOperand(a[i], objNr, fmt.Sprintf("%s[%d]", path, i), depth+1); err != nil {
+			return model.WrapRecursionError(path, err)
+		}
+	}
+	return nil
+}
+
+func validateVisibilityExpressionEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+	const (
+		dictName  = "OCMDict"
+		entryName = "VE"
+	)
+	raw := d[entryName]
+	a, err := validateArrayEntry(xRefTable, d, ownerObjNr, dictName, entryName, OPTIONAL, model.V16, nil)
+	if err != nil || a == nil {
+		return err
+	}
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	t := visibilityExpressionTraversal{xRefTable: xRefTable, ancestors: map[int]bool{}}
+	return t.validateArray(a, objNr, visibilityExpressionIdentity(raw), dictName+"."+entryName, 0)
+}
+
 func validateOptionalContentGroupIntent(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version) (err error) {
 	// see 8.11.2.1
 
@@ -291,7 +405,7 @@ func validateOptionalContentMembershipDict(xRefTable *model.XRefTable, d types.D
 	}
 
 	// VE, optional, array, since V1.6
-	_, err = validateArrayEntry(xRefTable, d, ownerObjNr, dictName, "VE", OPTIONAL, model.V16, nil)
+	err = validateVisibilityExpressionEntry(xRefTable, d, ownerObjNr)
 	if err != nil {
 		return fmt.Errorf("%s.VE: %w", dictName, err)
 	}

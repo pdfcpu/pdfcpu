@@ -202,30 +202,40 @@ func createResourceDictInheritanceDemoXRef(c context.Context) (*model.XRefTable,
 	return xRefTable, nil
 }
 
-func createFunctionalShadingDict() types.Dict {
-	f := types.Dict(
-		map[string]types.Object{
-			"FunctionType": types.Integer(2),
-			"Domain":       types.NewNumberArray(1.0, 1.2, 1.4, 1.6, 1.8, 2.0),
-			"N":            types.Float(1),
-		},
-	)
-
+func createFunctionalShadingDict(xRefTable *model.XRefTable) (types.Dict, error) {
+	sd := &types.StreamDict{
+		Dict: types.Dict(
+			map[string]types.Object{
+				"FunctionType":  types.Integer(0),
+				"Domain":        types.NewNumberArray(0, 1, 0, 1),
+				"Range":         types.NewNumberArray(0, 1),
+				"Size":          types.NewIntegerArray(2, 2),
+				"BitsPerSample": types.Integer(8),
+			},
+		),
+		Content: []byte{0, 85, 170, 255},
+	}
+	if err := sd.Encode(); err != nil {
+		return nil, err
+	}
+	f, err := xRefTable.IndRefForNewObject(*sd)
+	if err != nil {
+		return nil, err
+	}
 	d := types.Dict(
 		map[string]types.Object{
 			"ShadingType": types.Integer(1),
-			"Function":    types.Array{f},
+			"Function":    types.Array{*f},
 		},
 	)
-
-	return d
+	return d, nil
 }
 
 func createRadialShadingDict() types.Dict {
 	f := types.Dict(
 		map[string]types.Object{
 			"FunctionType": types.Integer(2),
-			"Domain":       types.NewNumberArray(1.0, 1.2, 1.4, 1.6, 1.8, 2.0),
+			"Domain":       types.NewNumberArray(0, 1),
 			"N":            types.Float(1),
 		},
 	)
@@ -307,8 +317,8 @@ func createPostScriptCalculatorFunctionStreamDict(xRefTable *model.XRefTable) (*
 		Dict: types.Dict(
 			map[string]types.Object{
 				"FunctionType": types.Integer(4),
-				"Domain":       types.NewNumberArray(100.),
-				"Range":        types.NewNumberArray(100.),
+				"Domain":       types.NewNumberArray(0, 1),
+				"Range":        types.NewNumberArray(0, 1),
 			},
 		),
 		Content: []byte{},
@@ -327,7 +337,10 @@ func addResources(c context.Context, xRefTable *model.XRefTable, pageDict types.
 		return err
 	}
 
-	functionalBasedShDict := createFunctionalShadingDict()
+	functionalBasedShDict, err := createFunctionalShadingDict(xRefTable)
+	if err != nil {
+		return err
+	}
 
 	radialShDict := createRadialShadingDict()
 

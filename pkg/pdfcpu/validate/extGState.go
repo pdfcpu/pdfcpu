@@ -18,6 +18,7 @@ package validate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -855,7 +856,7 @@ func validateSoftMaskDict(c context.Context, xRefTable *model.XRefTable, d types
 	}
 
 	// S, name, required
-	_, err = validateNameEntry(xRefTable, d, 0, dictName, "S", REQUIRED, model.V10, func(s string) bool { return s == "Alpha" || s == "Luminosity" })
+	subtype, err := validateNameEntry(xRefTable, d, 0, dictName, "S", REQUIRED, model.V10, func(s string) bool { return s == "Alpha" || s == "Luminosity" })
 	if err != nil {
 		return err
 	}
@@ -888,7 +889,7 @@ func validateSoftMaskDict(c context.Context, xRefTable *model.XRefTable, d types
 	// BC, number array, optional
 	// Array of component values specifying the colour to be used
 	// as the backdrop against which to composite the transparency group XObject G.
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "BC", OPTIONAL, model.V10, nil)
+	err = validateSoftMaskBackdrop(c, xRefTable, d, sd, ownerObjNr, groupObjNr, subtype != nil && *subtype == "Luminosity")
 
 	return err
 }
@@ -925,6 +926,44 @@ func validateSoftMaskEntry(c context.Context, xRefTable *model.XRefTable, d type
 	}
 
 	return err
+}
+
+func validateExtGStateFont(x *model.XRefTable, d types.Dict, dictName string) error {
+	a, err := validateArrayEntry(x, d, 0, dictName, "Font", OPTIONAL, model.V13, nil)
+	if err != nil || a == nil {
+		return err
+	}
+	objNr := validationEntryObjectNumber(0, d, "Font")
+	if err := validateArrayExactLength(a, objNr, dictName, "Font", 2); err != nil {
+		return err
+	}
+	if err := validateExtGStateFontReference(x, a[0], dictName); err != nil {
+		return model.WithValidationErrorObject(err, objNr)
+	}
+	if _, err := x.DereferenceNumber(a[1]); err != nil {
+		err = fmt.Errorf("%s.Font[1]: expected font size number: %w", dictName, err)
+		return model.WithValidationErrorObject(err, validationObjectNumber(objNr, a[1]))
+	}
+	return nil
+}
+
+func validateExtGStateFontReference(x *model.XRefTable, o types.Object, dictName string) error {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		return fmt.Errorf("%s.Font[0]: expected indirect font reference", dictName)
+	}
+	d, err := x.DereferenceDict(ir)
+	if err == nil && d == nil {
+		err = errors.New("missing font dictionary")
+	}
+	if err == nil {
+		_, err = validateNameEntry(x, d, ir.ObjectNumber.Value(), "fontDict", "Type", REQUIRED, model.V10,
+			func(s string) bool { return s == "Font" })
+	}
+	if err != nil {
+		return model.WithValidationErrorObject(fmt.Errorf("%s.Font[0]: %w", dictName, err), ir.ObjectNumber.Value())
+	}
+	return nil
 }
 
 func validateExtGStateDictPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -994,9 +1033,7 @@ func validateExtGStateDictPart1(xRefTable *model.XRefTable, d types.Dict, dictNa
 	}
 
 	// Font, array, optional, since V1.3
-	_, err = validateArrayEntry(xRefTable, d, 0, dictName, "Font", OPTIONAL, model.V13, nil)
-
-	return err
+	return validateExtGStateFont(xRefTable, d, dictName)
 }
 
 func validateExtGStateDictPart2(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {

@@ -28,6 +28,86 @@ import (
 
 // see 7.10 Functions
 
+func validateFunctionDimension(a types.Array, d types.Dict, ownerObjNr int, dictName, entryName string) (int, error) {
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	if err := validateArrayPairs(a, objNr, dictName, entryName, 1); err != nil {
+		return 0, err
+	}
+	return len(a) / 2, nil
+}
+
+func validateFunctionArrayLength(a types.Array, d types.Dict, ownerObjNr int, dictName, entryName string, length int, relationship string) error {
+	if len(a) == length {
+		return nil
+	}
+	expected := fmt.Sprintf("%d, %s", length, relationship)
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	return arrayCardinalityError(dictName, entryName, objNr, len(a), expected)
+}
+
+type exponentialFunctionArrays struct {
+	domain     types.Array
+	rangeArray types.Array
+	c0         types.Array
+	c1         types.Array
+}
+
+func validateExponentialFunctionArrays(xRefTable *model.XRefTable, d types.Dict, dictName string) (*exponentialFunctionArrays, error) {
+	a := &exponentialFunctionArrays{}
+	var err error
+	if a.domain, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Domain", REQUIRED, model.V13, nil); err != nil {
+		return nil, fmt.Errorf("%s.Domain: %w", dictName, err)
+	}
+	if a.rangeArray, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Range", OPTIONAL, model.V13, nil); err != nil {
+		return nil, fmt.Errorf("%s.Range: %w", dictName, err)
+	}
+	if a.c0, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "C0", OPTIONAL, model.V13, nil); err != nil {
+		return nil, fmt.Errorf("%s.C0: %w", dictName, err)
+	}
+	if a.c1, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "C1", OPTIONAL, model.V13, nil); err != nil {
+		return nil, fmt.Errorf("%s.C1: %w", dictName, err)
+	}
+	return a, nil
+}
+
+func validateExponentialOutputDimension(a *exponentialFunctionArrays, d types.Dict, dictName string) (int, error) {
+	c0Length := 1
+	if a.c0 != nil {
+		c0Length = len(a.c0)
+		if c0Length == 0 {
+			return 0, arrayCardinalityError(dictName, "C0", validationEntryObjectNumber(0, d, "C0"), 0,
+				"one or more output values")
+		}
+	}
+	c1Length := 1
+	if a.c1 != nil {
+		c1Length = len(a.c1)
+		if c1Length == 0 {
+			return 0, arrayCardinalityError(dictName, "C1", validationEntryObjectNumber(0, d, "C1"), 0,
+				"one or more output values")
+		}
+	}
+	if c1Length != c0Length {
+		expected := fmt.Sprintf("%d, matching C0 output dimension", c0Length)
+		return 0, arrayCardinalityError(dictName, "C1", validationEntryObjectNumber(0, d, "C1"), c1Length, expected)
+	}
+	return c0Length, nil
+}
+
+func validateExponentialFunctionCardinality(a *exponentialFunctionArrays, d types.Dict, dictName string) error {
+	if err := validateFunctionArrayLength(a.domain, d, 0, dictName, "Domain", 2, "one input dimension"); err != nil {
+		return err
+	}
+	n, err := validateExponentialOutputDimension(a, d, dictName)
+	if err != nil {
+		return err
+	}
+	if a.rangeArray == nil {
+		return nil
+	}
+	return validateFunctionArrayLength(a.rangeArray, d, 0, dictName, "Range", 2*n, "twice the output dimension")
+}
+
 func validateExponentialInterpolationFunctionDict(xRefTable *model.XRefTable, d types.Dict) error {
 	dictName := "exponentialInterpolationFunctionDict"
 	// Version check
@@ -36,24 +116,12 @@ func validateExponentialInterpolationFunctionDict(xRefTable *model.XRefTable, d 
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Domain", REQUIRED, model.V13, nil)
+	a, err := validateExponentialFunctionArrays(xRefTable, d, dictName)
 	if err != nil {
-		return fmt.Errorf("%s.Domain: %w", dictName, err)
+		return err
 	}
-
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Range", OPTIONAL, model.V13, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Range: %w", dictName, err)
-	}
-
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "C0", OPTIONAL, model.V13, nil)
-	if err != nil {
-		return fmt.Errorf("%s.C0: %w", dictName, err)
-	}
-
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "C1", OPTIONAL, model.V13, nil)
-	if err != nil {
-		return fmt.Errorf("%s.C1: %w", dictName, err)
+	if err = validateExponentialFunctionCardinality(a, d, dictName); err != nil {
+		return err
 	}
 
 	_, err = validateNumberEntry(xRefTable, d, 0, dictName, "N", REQUIRED, model.V13, nil)
@@ -61,6 +129,73 @@ func validateExponentialInterpolationFunctionDict(xRefTable *model.XRefTable, d 
 		return fmt.Errorf("%s.N: %w", dictName, err)
 	}
 
+	return nil
+}
+
+type stitchingFunctionArrays struct {
+	domain     types.Array
+	rangeArray types.Array
+	functions  types.Array
+	bounds     types.Array
+	encode     types.Array
+}
+
+func (t *functionTraversal) validateStitchingFunctionArrays(d types.Dict, dictName string) (*stitchingFunctionArrays, error) {
+	a := &stitchingFunctionArrays{}
+	var err error
+	if a.domain, err = validateNumberArrayEntry(t.xRefTable, d, 0, dictName, "Domain", REQUIRED, model.V13, nil); err != nil {
+		return nil, fmt.Errorf("%s.Domain: %w", dictName, err)
+	}
+	if a.rangeArray, err = validateNumberArrayEntry(t.xRefTable, d, 0, dictName, "Range", OPTIONAL, model.V13, nil); err != nil {
+		return nil, fmt.Errorf("%s.Range: %w", dictName, err)
+	}
+	if a.functions, err = validateArrayEntry(t.xRefTable, d, 0, dictName, "Functions", REQUIRED, model.V13, nil); err != nil {
+		return nil, fmt.Errorf("%s.Functions: %w", dictName, err)
+	}
+	if a.bounds, err = validateNumberArrayEntry(t.xRefTable, d, 0, dictName, "Bounds", REQUIRED, model.V13, nil); err != nil {
+		return nil, fmt.Errorf("%s.Bounds: %w", dictName, err)
+	}
+	if a.encode, err = validateNumberArrayEntry(t.xRefTable, d, 0, dictName, "Encode", REQUIRED, model.V13, nil); err != nil {
+		return nil, fmt.Errorf("%s.Encode: %w", dictName, err)
+	}
+	return a, nil
+}
+
+func validateStitchingFunctionCardinality(xRefTable *model.XRefTable, a *stitchingFunctionArrays, d types.Dict, dictName string) error {
+	if err := validateFunctionArrayLength(a.domain, d, 0, dictName, "Domain", 2, "one input dimension"); err != nil {
+		return err
+	}
+	if a.rangeArray != nil && (len(a.rangeArray) > 0 || xRefTable.ValidationMode == model.ValidationStrict) {
+		if _, err := validateFunctionDimension(a.rangeArray, d, 0, dictName, "Range"); err != nil {
+			return err
+		}
+	}
+	k := len(a.functions)
+	if k == 0 {
+		return arrayCardinalityError(dictName, "Functions", validationEntryObjectNumber(0, d, "Functions"), 0,
+			"one or more subfunctions")
+	}
+	boundCount := len(a.bounds)
+	boundCountExpected := k - 1
+	// Older FOP versions omitted the final bound for repeated terminal gradient stops.
+	missingOneBoundRelaxed := xRefTable.ValidationMode == model.ValidationRelaxed && boundCount == boundCountExpected-1
+	if boundCount != boundCountExpected && !missingOneBoundRelaxed {
+		return validateFunctionArrayLength(a.bounds, d, 0, dictName, "Bounds", boundCountExpected,
+			"one fewer than Functions")
+	}
+	if err := validateFunctionArrayLength(a.encode, d, 0, dictName, "Encode", 2*k, "twice the Functions count"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *functionTraversal) validateStitchingSubfunctions(a *stitchingFunctionArrays, d types.Dict, depth int) error {
+	objNr := validationEntryObjectNumber(0, d, "Functions")
+	for _, o := range a.functions {
+		if err := t.validateFunction(o, objNr, depth+1); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -73,58 +208,81 @@ func (t *functionTraversal) validateStitchingFunctionDict(d types.Dict, depth in
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Domain", REQUIRED, model.V13, nil)
+	a, err := t.validateStitchingFunctionArrays(d, dictName)
 	if err != nil {
-		return fmt.Errorf("%s.Domain: %w", dictName, err)
+		return err
 	}
-
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Range", OPTIONAL, model.V13, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Range: %w", dictName, err)
+	if err = validateStitchingFunctionCardinality(xRefTable, a, d, dictName); err != nil {
+		return err
 	}
-
-	_, err = validateFunctionArrayEntry(t, d, 0, dictName, "Functions", REQUIRED, model.V13, depth+1, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Functions: %w", dictName, err)
-	}
-
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Bounds", REQUIRED, model.V13, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Bounds: %w", dictName, err)
-	}
-
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Encode", REQUIRED, model.V13, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Encode: %w", dictName, err)
-	}
-
-	return nil
+	return t.validateStitchingSubfunctions(a, d, depth)
 }
 
-func validateSampledFunctionStreamDictVersion(
-	xRefTable *model.XRefTable,
-	sd *types.StreamDict,
-	version model.Version,
-) error {
+type sampledFunctionArrays struct {
+	domain     types.Array
+	rangeArray types.Array
+	size       types.Array
+	encode     types.Array
+	decode     types.Array
+}
+
+func validateSampledFunctionArrays(xRefTable *model.XRefTable, d types.Dict, dictName string, version model.Version) (*sampledFunctionArrays, error) {
+	a := &sampledFunctionArrays{}
+	var err error
+	if a.domain, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Domain", REQUIRED, version, nil); err != nil {
+		return nil, fmt.Errorf("%s.Domain: %w", dictName, err)
+	}
+	if a.rangeArray, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Range", REQUIRED, version, nil); err != nil {
+		return nil, fmt.Errorf("%s.Range: %w", dictName, err)
+	}
+	if a.size, err = validateIntegerArrayEntry(xRefTable, d, 0, dictName, "Size", REQUIRED, version, nil); err != nil {
+		return nil, fmt.Errorf("%s.Size: %w", dictName, err)
+	}
+	if a.encode, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Encode", OPTIONAL, version, nil); err != nil {
+		return nil, fmt.Errorf("%s.Encode: %w", dictName, err)
+	}
+	if a.decode, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Decode", OPTIONAL, version, nil); err != nil {
+		return nil, fmt.Errorf("%s.Decode: %w", dictName, err)
+	}
+	return a, nil
+}
+
+func validateSampledFunctionCardinality(a *sampledFunctionArrays, d types.Dict, dictName string) error {
+	m, err := validateFunctionDimension(a.domain, d, 0, dictName, "Domain")
+	if err != nil {
+		return err
+	}
+	n, err := validateFunctionDimension(a.rangeArray, d, 0, dictName, "Range")
+	if err != nil {
+		return err
+	}
+	if err = validateFunctionArrayLength(a.size, d, 0, dictName, "Size", m, "matching Domain input dimension"); err != nil {
+		return err
+	}
+	if a.encode != nil {
+		if err = validateFunctionArrayLength(a.encode, d, 0, dictName, "Encode", 2*m, "twice the input dimension"); err != nil {
+			return err
+		}
+	}
+	if a.decode == nil {
+		return nil
+	}
+	return validateFunctionArrayLength(a.decode, d, 0, dictName, "Decode", 2*n, "twice the output dimension")
+}
+
+func validateSampledFunctionStreamDictVersion(xRefTable *model.XRefTable, sd *types.StreamDict, version model.Version) error {
 	dictName := "sampledFunctionStreamDict"
 	err := xRefTable.ValidateVersion(dictName, version)
 	if err != nil {
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Domain", REQUIRED, version, nil)
+	a, err := validateSampledFunctionArrays(xRefTable, sd.Dict, dictName, version)
 	if err != nil {
-		return fmt.Errorf("%s.Domain: %w", dictName, err)
+		return err
 	}
-
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Range", REQUIRED, version, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Range: %w", dictName, err)
-	}
-
-	_, err = validateIntegerArrayEntry(xRefTable, sd.Dict, 0, dictName, "Size", REQUIRED, version, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Size: %w", dictName, err)
+	if err = validateSampledFunctionCardinality(a, sd.Dict, dictName); err != nil {
+		return err
 	}
 
 	validate := func(i int) bool { return types.IntMemberOf(i, []int{1, 2, 4, 8, 12, 16, 24, 32}) }
@@ -136,16 +294,6 @@ func validateSampledFunctionStreamDictVersion(
 	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "Order", OPTIONAL, version, func(i int) bool { return i == 1 || i == 3 })
 	if err != nil {
 		return fmt.Errorf("%s.Order: %w", dictName, err)
-	}
-
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Encode", OPTIONAL, version, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Encode: %w", dictName, err)
-	}
-
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Decode", OPTIONAL, version, nil)
-	if err != nil {
-		return fmt.Errorf("%s.Decode: %w", dictName, err)
 	}
 
 	return nil
@@ -166,28 +314,27 @@ func validateSampledFunctionStreamDict(xRefTable *model.XRefTable, sd *types.Str
 	return nil
 }
 
-func validatePostScriptCalculatorFunctionStreamDictVersion(
-	xRefTable *model.XRefTable,
-	sd *types.StreamDict,
-	version model.Version,
-) error {
+func validatePostScriptCalculatorFunctionStreamDictVersion(xRefTable *model.XRefTable, sd *types.StreamDict, version model.Version) error {
 	dictName := "postScriptCalculatorFunctionStreamDict"
 	err := xRefTable.ValidateVersion(dictName, version)
 	if err != nil {
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Domain", REQUIRED, version, nil)
+	domain, err := validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Domain", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Domain: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Range", REQUIRED, version, nil)
+	rangeArray, err := validateNumberArrayEntry(xRefTable, sd.Dict, 0, dictName, "Range", REQUIRED, version, nil)
 	if err != nil {
 		return fmt.Errorf("%s.Range: %w", dictName, err)
 	}
-
-	return nil
+	if _, err = validateFunctionDimension(domain, sd.Dict, 0, dictName, "Domain"); err != nil {
+		return err
+	}
+	_, err = validateFunctionDimension(rangeArray, sd.Dict, 0, dictName, "Range")
+	return err
 }
 
 func validatePostScriptCalculatorFunctionStreamDict(xRefTable *model.XRefTable, sd *types.StreamDict) error {

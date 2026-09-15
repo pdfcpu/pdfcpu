@@ -443,36 +443,6 @@ func validateFloatForObject(xRefTable *model.XRefTable, o types.Object, ownerObj
 	return &f, nil
 }
 
-func validateFunctionArrayEntry(t *functionTraversal, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version, depth int, validate func(types.Array) bool) (types.Array, error) {
-	if log.ValidateEnabled() {
-		log.Validate.Printf("validateFunctionArrayEntry begin: entry=%s\n", entryName)
-	}
-	if err := contextutil.Check(t.c); err != nil {
-		return nil, err
-	}
-
-	xRefTable := t.xRefTable
-	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
-	a, err := validateArrayEntry(
-		xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, validate,
-	)
-	if err != nil || a == nil {
-		return nil, model.WithValidationErrorObject(err, objNr)
-	}
-
-	for _, o := range a {
-		if err = t.validateFunction(o, objNr, depth); err != nil {
-			return nil, err
-		}
-	}
-
-	if log.ValidateEnabled() {
-		log.Validate.Printf("validateFunctionArrayEntry end: entry=%s\n", entryName)
-	}
-
-	return a, nil
-}
-
 func validateFunctionObjects(t *functionTraversal, rawObject, resolvedObject types.Object, ownerObjNr int) error {
 	a, ok := resolvedObject.(types.Array)
 	if !ok {
