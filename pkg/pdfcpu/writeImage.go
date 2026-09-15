@@ -151,9 +151,20 @@ func pdfImage(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool, objN
 	}
 
 	context := fmt.Sprintf("image obj#%d", objNr)
-	bpc, err := integerEntryValue(xRefTable, sd.Dict, "BitsPerComponent", context, true)
+	imgMask, err := imageBooleanEntry(xRefTable, sd, "ImageMask", objNr)
 	if err != nil {
 		return nil, err
+	}
+	bpc, err := integerEntryValue(xRefTable, sd.Dict, "BitsPerComponent", context, !imgMask)
+	if err != nil {
+		return nil, err
+	}
+	if imgMask {
+		comp = 1
+		if bpc == nil {
+			v := 1
+			bpc = &v
+		}
 	}
 	w, err := integerEntryValue(xRefTable, sd.Dict, "Width", context, true)
 	if err != nil {
@@ -169,11 +180,6 @@ func pdfImage(xRefTable *model.XRefTable, sd *types.StreamDict, thumb bool, objN
 	}
 
 	decode, err := decodeArr(xRefTable, sd.Dict["Decode"], objNr)
-	if err != nil {
-		return nil, err
-	}
-
-	imgMask, err := imageBooleanEntry(xRefTable, sd, "ImageMask", objNr)
 	if err != nil {
 		return nil, err
 	}
