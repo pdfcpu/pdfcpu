@@ -37,6 +37,8 @@ func TestImageBoxRemoteURL(t *testing.T) {
 		{"localhost", "http://127.0.0.1/logo.png", true, true},
 		{"metadata", "http://169.254.169.254/latest/meta-data", true, true},
 		{"private", "http://10.0.0.1/logo.png", true, true},
+		{"shared", "http://100.64.0.1/logo.png", true, true},
+		{"nat64Public", "http://[64:ff9b::808:808]/logo.png", true, false},
 		{"ipv6Loopback", "http://[::1]/logo.png", true, true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -70,5 +72,12 @@ func TestRejectImageBoxIPs(t *testing.T) {
 	ips = append(ips, net.IPAddr{IP: net.ParseIP("127.0.0.1")})
 	if err := rejectImageBoxIPs("example.com", ips); err == nil {
 		t.Fatal("expected mixed public/private DNS results to fail")
+	}
+}
+
+func TestRejectImageBoxSharedIPs(t *testing.T) {
+	ips := []net.IPAddr{{IP: net.ParseIP("8.8.8.8")}, {IP: net.ParseIP("100.64.0.1")}}
+	if err := rejectImageBoxIPs("example.com", ips); err == nil {
+		t.Fatal("expected mixed public/shared DNS results to fail")
 	}
 }

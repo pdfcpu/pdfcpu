@@ -23,6 +23,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/pdfcpu/pdfcpu/internal/netutil"
 )
 
 func imageBoxRemoteURL(s string) (*url.URL, bool, error) {
@@ -60,19 +62,10 @@ func rejectPrivateImageBoxHost(host string) error {
 }
 
 func rejectPrivateImageBoxIP(host string, ip net.IP) error {
-	if imageBoxBlockedIP(ip) {
+	if netutil.BlockedIP(ip) {
 		return fmt.Errorf("image URL resolves to disallowed address: %s", host)
 	}
 	return nil
-}
-
-func imageBoxBlockedIP(ip net.IP) bool {
-	return ip.IsLoopback() ||
-		ip.IsPrivate() ||
-		ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() ||
-		ip.IsMulticast() ||
-		ip.IsUnspecified()
 }
 
 func (pdf *PDF) imageBoxHTTPClient() *http.Client {

@@ -25,6 +25,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/pdfcpu/pdfcpu/internal/netutil"
 )
 
 const (
@@ -77,15 +79,6 @@ func validateRevocationURLString(s string) error {
 	return validateRevocationURL(u)
 }
 
-func revocationBlockedIP(ip net.IP) bool {
-	return ip.IsLoopback() ||
-		ip.IsPrivate() ||
-		ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() ||
-		ip.IsMulticast() ||
-		ip.IsUnspecified()
-}
-
 func validateRevocationIPs(host string, ips []net.IPAddr, allowed map[string]bool) error {
 	if len(ips) == 0 {
 		return fmt.Errorf("revocation URL host does not resolve: %s", host)
@@ -94,7 +87,7 @@ func validateRevocationIPs(host string, ips []net.IPAddr, allowed map[string]boo
 		return nil
 	}
 	for _, ip := range ips {
-		if revocationBlockedIP(ip.IP) {
+		if netutil.BlockedIP(ip.IP) {
 			return fmt.Errorf("revocation URL resolves to disallowed address: %s", host)
 		}
 	}

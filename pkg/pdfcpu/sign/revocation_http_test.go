@@ -98,6 +98,9 @@ func TestValidateRevocationIPs(t *testing.T) {
 		{"LinkLocal", "pki.example.corp", revocationTestIPs("169.254.1.1"), nil, true},
 		{"Mixed", "crl.example.com", revocationTestIPs("8.8.8.8", "127.0.0.1"), nil, true},
 		{"AllowedPrivate", "pki.example.corp", revocationTestIPs("10.0.0.1"), []string{"PKI.EXAMPLE.CORP."}, false},
+		{"Shared", "crl.example.com", revocationTestIPs("100.64.0.1"), nil, true},
+		{"AllowedShared", "pki.example.corp", revocationTestIPs("100.64.0.1"), []string{"pki.example.corp"}, false},
+		{"NAT64Public", "crl.example.com", revocationTestIPs("64:ff9b::808:808"), nil, false},
 		{"Unresolved", "crl.example.com", nil, nil, true},
 	}
 
@@ -205,5 +208,19 @@ func TestRevocationHTTPClientUsesSafeDefaults(t *testing.T) {
 	configured := revocationHTTPClient(3*time.Second, nil)
 	if configured.Timeout != 3*time.Second {
 		t.Fatalf("configured timeout: got %v, want %v", configured.Timeout, 3*time.Second)
+	}
+}
+
+// TestRevocationDialContextBlocksSharedDNS verifies special-purpose DNS results cannot reach the dialer.
+func TestRevocationDialContextBlocksSharedDNS(t *testing.T) {
+	dial := func(context.Context, string, string) (net.Conn, error) {
+		t.Fatal("dial called for a blocked address")
+		return nil, nil
+	}
+	dialContext := revocationDialContext(
+		revocationTestResolver{ips: revocationTestIPs("8.8.8.8", "100.64.0.1")}, dial, nil,
+	)
+	if _, err := dialContext(t.Context(), "tcp", "crl.example.com:80"); err == nil {
+		t.Fatal("expected mixed public/shared DNS results to fail")
 	}
 }
