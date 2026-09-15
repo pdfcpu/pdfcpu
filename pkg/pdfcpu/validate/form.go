@@ -306,6 +306,8 @@ func cacheSig(xRefTable *model.XRefTable, d types.Dict, dictName string, form bo
 		if err != nil {
 			return nil
 		}
+		// The signature dictionary determines the revision, even when its field was updated later.
+		incr = indirectObjectIncrement(xRefTable, *indRef, incr)
 		typ, _, err := xRefTable.DereferenceNameEntry(sigDict, "Type")
 		if err != nil {
 			return fmt.Errorf("signature dict Type: %w", err)
@@ -590,24 +592,6 @@ func validateFormFieldKids(c context.Context, xRefTable *model.XRefTable, objNr,
 	}
 
 	return nil
-}
-
-func validateFormFieldDict(c context.Context, xRefTable *model.XRefTable, ir types.IndirectRef, inFieldType *types.Name, requiresDA bool) error {
-	var specViolations []error
-	err := validateFormFieldDictDepth(
-		c,
-		xRefTable,
-		ir,
-		inFieldType,
-		requiresDA,
-		0,
-		model.NewFormFieldVisit(),
-		&specViolations,
-	)
-	if err == nil {
-		showDigestedSpecViolations(specViolations)
-	}
-	return err
 }
 
 func validateFormFieldDictDepth(c context.Context, xRefTable *model.XRefTable, ir types.IndirectRef, inFieldType *types.Name, requiresDA bool, depth int, visit *model.FormFieldVisit, specViolations *[]error) (err error) {

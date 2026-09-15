@@ -98,7 +98,7 @@ func validateSignatures(
 		svr, err := validateURSignatureWithCertificatePool(
 			c,
 			ctx.URSignature,
-			ctx.URSignatureIncrement,
+			signatureRevisionOffset(ctx.URSignatureIncrement),
 			ctx,
 			ra,
 			rootCerts,
@@ -118,6 +118,12 @@ func validateSignatures(
 		return nil, err
 	}
 	return append(results, validated...), contextutil.Check(c)
+}
+
+// signatureRevisionOffset converts reader ordinals (newest is 1) to revisions back from current (0).
+// Preserve zero for contexts constructed without reader revision metadata. Unsigned revisions still count.
+func signatureRevisionOffset(increment int) int {
+	return max(0, increment-1)
 }
 
 func sortedSignatureIncrements(
@@ -160,7 +166,7 @@ func validateSignaturesForIncrements(
 			}
 
 			svr, err := validateSignatureWithCertificatePool(
-				c, sig, ctx, ra, first, all, inc, rootCerts,
+				c, sig, ctx, ra, first, all, signatureRevisionOffset(inc), rootCerts,
 			)
 			if err != nil {
 				return nil, fmt.Errorf("signature obj#%d: %w", sig.ObjNr, err)

@@ -155,7 +155,7 @@ func TestSignatureValidationFatalVersusEvidenceContract(t *testing.T) {
 					7: model.NewXRefTableEntryGen0(lazy),
 				},
 				Signatures: map[int]map[int]model.Signature{
-					0: {
+					1: {
 						7: {ObjNr: 7},
 					},
 				},
@@ -183,7 +183,7 @@ func TestSignatureValidationFatalVersusEvidenceContract(t *testing.T) {
 					9: model.NewXRefTableEntryGen0(types.Dict{}),
 				},
 				Signatures: map[int]map[int]model.Signature{
-					0: {
+					1: {
 						7: {ObjNr: 7},
 					},
 				},
@@ -246,7 +246,7 @@ func sameIncrementSignatureContext() *model.Context {
 				17: model.NewXRefTableEntryGen0(sigDict()),
 			},
 			Signatures: map[int]map[int]model.Signature{
-				0: {
+				1: {
 					7: {Type: model.SigTypeForm, ObjNr: 7, Signed: true},
 					5: {Type: model.SigTypeForm, ObjNr: 5, Signed: true},
 				},
@@ -436,7 +436,7 @@ func TestUsageRightsRevisionReportingUsesCachedIncrement(t *testing.T) {
 		XRefTable:     &model.XRefTable{},
 	}
 	ctx.URSignature = fixture.sigDict
-	ctx.URSignatureIncrement = 1
+	ctx.URSignatureIncrement = 2
 
 	results, err := ValidateSignatures(t.Context(), bytes.NewReader(file), ctx, true)
 	if err != nil {
@@ -842,7 +842,7 @@ func TestValidateSignaturesAddsSignatureObjectContext(t *testing.T) {
 				7: model.NewXRefTableEntryGen0(lazy),
 			},
 			Signatures: map[int]map[int]model.Signature{
-				0: {
+				1: {
 					7: {ObjNr: 7},
 				},
 			},
@@ -878,7 +878,7 @@ func TestValidateSignaturesAddsSignatureDictionaryObjectContext(t *testing.T) {
 				9: model.NewXRefTableEntryGen0(lazy),
 			},
 			Signatures: map[int]map[int]model.Signature{
-				0: {
+				1: {
 					7: {ObjNr: 7},
 				},
 			},
