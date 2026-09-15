@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1022,6 +1023,55 @@ func TestExtractXRefStreamEntriesRejectsZeroWidths(t *testing.T) {
 	err = extractXRefTableEntriesFromXRefStream(nil, 0, xsd, ctx, 0)
 	if !errors.Is(err, errInvalidXRefStreamWArray) {
 		t.Fatalf("got %v, want %v", err, errInvalidXRefStreamWArray)
+	}
+}
+
+func TestXRefStreamEntryLenRejectsOverflow(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		w    [3]int
+	}{
+		{"first addition", [3]int{math.MaxInt, 1, 0}},
+		{"second addition", [3]int{math.MaxInt - 1, 1, 1}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := xRefStreamEntryLen(tc.w); !errors.Is(err, errInvalidXRefStreamWArray) {
+				t.Fatalf("got %v, want %v", err, errInvalidXRefStreamWArray)
+			}
+		})
+	}
+}
+
+func TestExtractXRefStreamEntriesRejectsWidthOverflow(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	w := 2*(math.MaxInt/3) + 1
+	xsd := &types.XRefStreamDict{
+		Objects: []int{0, 1, 2},
+		W:       [3]int{w, w, w + 2},
+	}
+	err = extractXRefTableEntriesFromXRefStream(make([]byte, 3), 0, xsd, ctx, 0)
+	if !errors.Is(err, errInvalidXRefStreamWArray) {
+		t.Fatalf("got %v, want %v", err, errInvalidXRefStreamWArray)
+	}
+}
+
+func TestExtractXRefStreamEntriesRejectsImpossibleObjectCount(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	xsd := &types.XRefStreamDict{
+		Objects: []int{0, 1},
+		W:       [3]int{math.MaxInt/2 + 1, 0, 0},
+	}
+	err = extractXRefTableEntriesFromXRefStream(nil, 0, xsd, ctx, 0)
+	if !errors.Is(err, errCorruptXRefStream) {
+		t.Fatalf("got %v, want %v", err, errCorruptXRefStream)
 	}
 }
 

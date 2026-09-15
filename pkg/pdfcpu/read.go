@@ -36,6 +36,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/safemath"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/scan"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -701,6 +702,18 @@ func createXRefTableEntryFromXRefStream(entryType int64, objNr int, c2, c3, offE
 	return xRefTableEntry
 }
 
+func xRefStreamEntryLen(w [3]int) (int, error) {
+	n, err := safemath.AddInt(w[0], w[1])
+	if err != nil {
+		return 0, errInvalidXRefStreamWArray
+	}
+	n, err = safemath.AddInt(n, w[2])
+	if err != nil || n == 0 {
+		return 0, errInvalidXRefStreamWArray
+	}
+	return n, nil
+}
+
 // For each object embedded in this xRefStream create the corresponding xRef table entry.
 func extractXRefTableEntriesFromXRefStream(buf []byte, offExtra int64, xsd *types.XRefStreamDict, ctx *model.Context, incr int) error {
 	if log.ReadEnabled() {
@@ -717,13 +730,12 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, offExtra int64, xsd *type
 	i2 := xsd.W[1]
 	i3 := xsd.W[2]
 
-	xrefEntryLen := i1 + i2 + i3
+	xrefEntryLen, err := xRefStreamEntryLen(xsd.W)
+	if err != nil {
+		return err
+	}
 	if log.ReadEnabled() {
 		log.Read.Printf("extractXRefTableEntriesFromXRefStream: begin xrefEntryLen = %d\n", xrefEntryLen)
-	}
-
-	if xrefEntryLen == 0 {
-		return errInvalidXRefStreamWArray
 	}
 
 	if len(buf)%xrefEntryLen > 0 {
@@ -733,9 +745,12 @@ func extractXRefTableEntriesFromXRefStream(buf []byte, offExtra int64, xsd *type
 	objCount := len(xsd.Objects)
 	if log.ReadEnabled() {
 		log.Read.Printf("extractXRefTableEntriesFromXRefStream: objCount:%d %v\n", objCount, xsd.Objects)
-		log.Read.Printf("extractXRefTableEntriesFromXRefStream: len(buf):%d objCount*xrefEntryLen:%d\n", len(buf), objCount*xrefEntryLen)
+		log.Read.Printf(
+			"extractXRefTableEntriesFromXRefStream: len(buf):%d availableEntries:%d\n",
+			len(buf), len(buf)/xrefEntryLen,
+		)
 	}
-	if len(buf) < objCount*xrefEntryLen {
+	if objCount > len(buf)/xrefEntryLen {
 		// Sometimes there is an additional xref entry not accounted for by "Index".
 		// We ignore such entries and do not treat this as an error.
 		return errCorruptXRefStream
