@@ -656,8 +656,10 @@ func validateImageStreamDictPart2(c context.Context, xRefTable *model.XRefTable,
 		required = OPTIONAL
 	}
 
+	validateBPC := func(i int) bool {
+		return types.IntMemberOf(i, []int{1, 2, 4, 8, 16})
+	}
 	// For imageMasks BitsPerComponent must be 1.
-	var validateBPC func(i int) bool
 	if isImageMask {
 		validateBPC = func(i int) bool {
 			return i == 1
@@ -665,7 +667,7 @@ func validateImageStreamDictPart2(c context.Context, xRefTable *model.XRefTable,
 	}
 	bpc, err := validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "BitsPerComponent", required, model.V10, validateBPC)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: invalid BitsPerComponent: %w", dictName, err)
 	}
 
 	// Note 8.6.5.8: If a PDF processor does not recognise the specified name, it shall use the RelativeColorimetric

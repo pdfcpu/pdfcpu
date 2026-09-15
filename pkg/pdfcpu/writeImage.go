@@ -86,12 +86,8 @@ func decodeArr(xRefTable *model.XRefTable, o types.Object, objNr int) ([]colValR
 	return decode, nil
 }
 
-func checkedImageBytes(w, h, comp, bpc int) (int64, error) {
-	pixels, err := safemath.MultiplyInt64(int64(w), int64(h))
-	if err != nil {
-		return 0, err
-	}
-	bits, err := safemath.MultiplyInt64(pixels, int64(comp))
+func checkedImageRowBytes(w, comp, bpc int) (int64, error) {
+	bits, err := safemath.MultiplyInt64(int64(w), int64(comp))
 	if err != nil {
 		return 0, err
 	}
@@ -103,6 +99,14 @@ func checkedImageBytes(w, h, comp, bpc int) (int64, error) {
 		return 0, errors.New("image dimension overflow")
 	}
 	return (bits + 7) / 8, nil
+}
+
+func checkedImageBytes(w, h, comp, bpc int) (int64, error) {
+	rowBytes, err := checkedImageRowBytes(w, comp, bpc)
+	if err != nil {
+		return 0, err
+	}
+	return safemath.MultiplyInt64(rowBytes, int64(h))
 }
 
 func imageLimits(xRefTable *model.XRefTable) model.ResourceLimits {
@@ -405,6 +409,32 @@ func scaleToBPC8(v uint8, bpc int) uint8 {
 	return uint8(float64(v) * 255.0 / float64(maxValForBits(bpc)))
 }
 
+func packedImageSample(b []byte, rowOffset, sample, bpc int) uint16 {
+	bitOffset := sample * bpc
+	byteOffset := rowOffset + bitOffset/8
+	if bpc == 16 {
+		return uint16(b[byteOffset])<<8 | uint16(b[byteOffset+1])
+	}
+	shift := uint(8 - bpc - bitOffset%8)
+	return uint16(b[byteOffset]>>shift) & uint16(maxValForBits(bpc))
+}
+
+func decodedImageSample(im *PDFImage, rowOffset, sample, component int) uint8 {
+	v := packedImageSample(im.sd.Content, rowOffset, sample, im.bpc)
+	r := colValRange{0, 1}
+	if component < len(im.decode) {
+		r = im.decode[component]
+	}
+	f := r.min + float64(v)*(r.max-r.min)/float64(maxValForBits(im.bpc))
+	if f <= 0 {
+		return 0
+	}
+	if f >= 1 {
+		return 255
+	}
+	return uint8(f * 255)
+}
+
 func renderDeviceGrayToPNG(im *PDFImage) (io.Reader, string, error) {
 	b := im.sd.Content
 	if log.DebugEnabled() {
@@ -454,30 +484,37 @@ func renderDeviceGrayToPNG(im *PDFImage) (io.Reader, string, error) {
 	return &buf, "png", nil
 }
 
-func renderDeviceRGBToPNG(im *PDFImage) (io.Reader, string, error) {
-	b := im.sd.Content
-	if log.DebugEnabled() {
-		log.Debug.Printf("renderDeviceRGBToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
+func renderRGBToPNG(im *PDFImage, context string) (io.Reader, string, error) {
+	if !types.IntMemberOf(im.bpc, []int{1, 2, 4, 8, 16}) {
+		return nil, "", fmt.Errorf("%s: objNr=%d unsupported bits per component %d", context, im.objNr, im.bpc)
+	}
+	rowBytes, err := checkedImageRowBytes(im.w, 3, im.bpc)
+	if err != nil {
+		return nil, "", fmt.Errorf("%s: objNr=%d: %w", context, im.objNr, err)
+	}
+	imageBytes, err := safemath.MultiplyInt64(rowBytes, int64(im.h))
+	if err != nil {
+		return nil, "", fmt.Errorf("%s: objNr=%d: %w", context, im.objNr, err)
+	}
+	if int64(len(im.sd.Content)) < imageBytes {
+		return nil, "", fmt.Errorf("%s: objNr=%d corrupt image object", context, im.objNr)
 	}
 
-	// Validate buflen.
-	// Sometimes there is a trailing 0x0A in addition to the imagebytes.
-	if len(b) < (3*im.bpc*im.w*im.h+7)/8 {
-		return nil, "", fmt.Errorf("renderDeviceRGBToPNG: objNr=%d corrupt image object", im.objNr)
-	}
-
-	// TODO Support bpc and decode.
 	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
-
-	i := 0
 	for y := 0; y < im.h; y++ {
+		rowOffset := y * int(rowBytes)
 		for x := 0; x < im.w; x++ {
+			sample := x * 3
 			alpha := uint8(255)
 			if im.softMask != nil {
 				alpha = im.softMask[y*im.w+x]
 			}
-			img.Set(x, y, color.NRGBA{R: b[i], G: b[i+1], B: b[i+2], A: alpha})
-			i += 3
+			img.Set(x, y, color.NRGBA{
+				R: decodedImageSample(im, rowOffset, sample, 0),
+				G: decodedImageSample(im, rowOffset, sample+1, 1),
+				B: decodedImageSample(im, rowOffset, sample+2, 2),
+				A: alpha,
+			})
 		}
 	}
 
@@ -489,36 +526,24 @@ func renderDeviceRGBToPNG(im *PDFImage) (io.Reader, string, error) {
 	return &buf, "png", nil
 }
 
-func renderCalRGBToPNG(im *PDFImage) (io.Reader, string, error) {
-	b := im.sd.Content
+func renderDeviceRGBToPNG(im *PDFImage) (io.Reader, string, error) {
 	if log.DebugEnabled() {
-		log.Debug.Printf("renderCalRGBToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
+		log.Debug.Printf(
+			"renderDeviceRGBToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n",
+			im.objNr, im.w, im.h, im.bpc, len(im.sd.Content),
+		)
 	}
+	return renderRGBToPNG(im, "renderDeviceRGBToPNG")
+}
 
-	if len(b) < (3*im.bpc*im.w*im.h+7)/8 {
-		return nil, "", fmt.Errorf("renderCalRGBToPNG: objNr=%d corrupt image object %v", im.objNr, *im.sd)
+func renderCalRGBToPNG(im *PDFImage) (io.Reader, string, error) {
+	if log.DebugEnabled() {
+		log.Debug.Printf(
+			"renderCalRGBToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n",
+			im.objNr, im.w, im.h, im.bpc, len(im.sd.Content),
+		)
 	}
-
-	// Optional int array "Range", length 2*N specifies min,max values of color components.
-	// This information can be validated against the iccProfile.
-
-	// RGB
-	// TODO Support bpc, decode and softmask.
-	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
-	i := 0
-	for y := 0; y < im.h; y++ {
-		for x := 0; x < im.w; x++ {
-			img.Set(x, y, color.NRGBA{R: b[i], G: b[i+1], B: b[i+2], A: 255})
-			i += 3
-		}
-	}
-
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, img); err != nil {
-		return nil, "", err
-	}
-
-	return &buf, "png", nil
+	return renderRGBToPNG(im, "renderCalRGBToPNG")
 }
 
 func renderICCBased(xRefTable *model.XRefTable, im *PDFImage, cs types.Array) (io.Reader, string, error) {
