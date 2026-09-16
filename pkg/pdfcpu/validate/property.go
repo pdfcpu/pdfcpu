@@ -18,6 +18,7 @@ package validate
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -104,7 +105,7 @@ func (t *propertiesTraversal) validate(c context.Context, xRefTable *model.XRefT
 	// Optional E see since 1.4 14.9.5
 	// Optional Lang string RFC 3066 see 14.9.2
 
-	d, err := xRefTable.DereferenceDict(o)
+	d, streamDict, err := dereferencePropertiesDict(xRefTable, o)
 	if err != nil || d == nil {
 		if err != nil {
 			return fmt.Errorf("%s: dereference: %w", objectContext("propertiesDict", o), err)
@@ -115,7 +116,29 @@ func (t *propertiesTraversal) validate(c context.Context, xRefTable *model.XRefT
 	if err = validateMetadata(xRefTable, d, OPTIONAL, model.V14); err != nil {
 		return fmt.Errorf("%s: %w", dictEntryContext("propertiesDict", "Metadata", d["Metadata"]), err)
 	}
-	return validatePropertiesDictEntries(c, xRefTable, d, objNr)
+	if err = validatePropertiesDictEntries(c, xRefTable, d, objNr); err != nil {
+		return err
+	}
+	if streamDict {
+		err := errors.New("property list stream dictionary accepted in relaxed mode")
+		model.ShowDigestedSpecViolationError(model.WithValidationErrorObject(err, objNr))
+	}
+	return nil
+}
+
+func dereferencePropertiesDict(xRefTable *model.XRefTable, o types.Object) (types.Dict, bool, error) {
+	resolvedObject, err := xRefTable.Dereference(o)
+	if err != nil || resolvedObject == nil {
+		return nil, false, err
+	}
+	if d, ok := resolvedObject.(types.Dict); ok {
+		return d, false, nil
+	}
+	if d, ok := resolvedObject.(types.StreamDict); ok && xRefTable.ValidationMode == model.ValidationRelaxed {
+		return d.Dict, true, nil
+	}
+	_, err = xRefTable.DereferenceDict(o)
+	return nil, false, err
 }
 
 func validatePropertiesDictEntries(c context.Context, xRefTable *model.XRefTable, d types.Dict, objNr int) (err error) {
