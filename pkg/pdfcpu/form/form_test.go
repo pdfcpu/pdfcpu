@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -117,6 +118,34 @@ func TestLocateAPNAppearanceStateDict(t *testing.T) {
 	}
 	if len(got) != len(states) {
 		t.Fatalf("got %d appearance states, want %d", len(got), len(states))
+	}
+}
+
+// TestExportPageFieldSkipsPushbutton verifies form export ignores pushbuttons without permanent values.
+func TestExportPageFieldSkipsPushbutton(t *testing.T) {
+	ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d := types.Dict{
+		"Kids": types.Array{
+			types.Dict{"AP": types.Dict{"D": types.StreamDict{}}},
+			types.Dict{"AP": types.Dict{"D": types.StreamDict{}}},
+		},
+	}
+	ff := types.Integer(primitives.FieldPushbutton)
+	form := Form{}
+	ok := false
+
+	if err := exportPageField(t.Context(), "Btn", ctx.XRefTable, 1, &form, d, "1", "button", "", false, &ok, &ff); err != nil {
+		t.Fatal(err)
+	}
+	if ok {
+		t.Fatal("pushbutton reported as exported")
+	}
+	if len(form.CheckBoxes) != 0 || len(form.RadioButtonGroups) != 0 {
+		t.Fatal("pushbutton exported as a value-bearing button")
 	}
 }
 

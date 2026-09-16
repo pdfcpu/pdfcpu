@@ -634,14 +634,11 @@ func fieldsForAnnots(c context.Context, xRefTable *model.XRefTable, annots, fiel
 	return m, nil
 }
 
-func exportBtn(
-	xRefTable *model.XRefTable,
-	i int,
-	form *Form,
-	d types.Dict,
-	id, name, altName string,
-	locked bool,
-	ok *bool) error {
+func exportBtn(xRefTable *model.XRefTable, i int, form *Form, d types.Dict, id, name, altName string, locked bool, ok *bool, ff *types.Integer) error {
+	if ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldPushbutton > 0 {
+		return nil
+	}
+
 	if len(d.ArrayEntry("Kids")) > 1 {
 
 		for _, rb := range form.RadioButtonGroups {
@@ -774,7 +771,7 @@ func exportPageField(c context.Context, ft string, xRefTable *model.XRefTable, i
 
 	switch ft {
 	case "Btn":
-		err = exportBtn(xRefTable, i, form, d, id, name, altName, locked, ok)
+		err = exportBtn(xRefTable, i, form, d, id, name, altName, locked, ok, ff)
 	case "Ch":
 		err = exportCh(xRefTable, i, form, d, id, name, altName, locked, ok)
 	case "Tx":
