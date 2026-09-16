@@ -441,7 +441,7 @@ func (df *DateField) renderN(c context.Context, xRefTable *model.XRefTable) ([]b
 	if err != nil {
 		return nil, fmt.Errorf("date field text: %w", err)
 	}
-	s, err := model.PrepBytes(c, xRefTable, v, f.Name, true, false, f.FillFont)
+	s, err := f.prepareBytes(c, xRefTable, v, true, false)
 	if err != nil {
 		return nil, fmt.Errorf("date field text: %w", err)
 	}

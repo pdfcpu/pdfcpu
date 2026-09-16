@@ -42,6 +42,7 @@ type FormFont struct {
 	Color    string `json:"col"`
 	col      *color.SimpleColor
 	FillFont bool
+	encoding *simpleFontEncoding
 }
 
 func formatFontSize(size float64) string {
@@ -224,14 +225,11 @@ func FormFontDetails(c context.Context, xRefTable *model.XRefTable, indRef types
 		}
 	}
 
-	fScript := ""
-	enc, _, err := xRefTable.DereferenceNameEntry(fontDict, "Encoding")
+	encodingName, _, err := formFontEncoding(xRefTable, fontDict)
 	if err != nil {
 		return "", "", "", fmt.Errorf("font %s Encoding: %w", fName, err)
 	}
-	if enc != nil {
-		fScript = pdffont.ScriptForEncoding(enc.Value())
-	}
+	fScript := pdffont.ScriptForEncoding(encodingName)
 
 	return fName, fLang, fScript, nil
 }
@@ -460,6 +458,9 @@ func calcFontDetailsFromDA(c context.Context, ctx *model.Context, d types.Dict, 
 	f.Lang = lang
 	f.Script = script
 	f.FillFont = fillFont
+	if err := applyFormFontEncoding(ctx.XRefTable, &f, fontIndRef); err != nil {
+		return "", nil, false, nil, fmt.Errorf("font %s Encoding: %w", name, err)
+	}
 
 	rtl := pdffont.RTL(lang)
 

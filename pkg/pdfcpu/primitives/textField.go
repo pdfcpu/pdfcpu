@@ -396,7 +396,7 @@ func (tf *TextField) renderCombLine(c context.Context, xRefTable *model.XRefTabl
 	limit := min(len(rr), tf.MaxLen)
 	dx := tf.BoundingBox.Width() / float64(tf.MaxLen)
 	for j := range limit {
-		s, err := model.PrepBytes(c, xRefTable, string(rr[j]), f.Name, embed, false, f.FillFont)
+		s, err := f.prepareBytes(c, xRefTable, string(rr[j]), embed, false)
 		if err != nil {
 			return fmt.Errorf("comb character %d: %w", j+1, err)
 		}
@@ -425,7 +425,7 @@ func (tf *TextField) renderLines(
 		}
 		rr := textFieldRunes(s, f.RTL())
 		if !(tf.Comb && tf.MaxLen > 0 && tf.HorAlign == types.AlignLeft) {
-			s, err = model.PrepBytes(c, xRefTable, s, f.Name, !cjk, f.RTL(), f.FillFont)
+			s, err = f.prepareBytes(c, xRefTable, s, !cjk, f.RTL())
 			if err != nil {
 				return fmt.Errorf("line %d: %w", i+1, err)
 			}
@@ -1214,6 +1214,9 @@ func EnsureTextFieldAP(c context.Context, ctx *model.Context, d types.Dict, text
 	f.Lang = lang
 	f.Script = script
 	f.FillFont = fillFont
+	if err := applyFormFontEncoding(ctx.XRefTable, &f, fontIndRef); err != nil {
+		return fmt.Errorf("font %s Encoding: %w", name, err)
+	}
 
 	tf.fontID = fontID
 	tf.Font = &f

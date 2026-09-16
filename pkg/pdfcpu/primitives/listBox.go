@@ -476,7 +476,7 @@ func (lb *ListBox) renderN(c context.Context, xRefTable *model.XRefTable) ([]byt
 		if err != nil {
 			return nil, fmt.Errorf("list box option %d: %w", i+1, err)
 		}
-		s, err = model.PrepBytes(c, xRefTable, s, f.Name, true, lb.RTL, f.FillFont)
+		s, err = f.prepareBytes(c, xRefTable, s, true, lb.RTL)
 		if err != nil {
 			return nil, fmt.Errorf("list box option %d: %w", i+1, err)
 		}

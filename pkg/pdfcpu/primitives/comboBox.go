@@ -371,7 +371,7 @@ func (cb *ComboBox) renderN(c context.Context, xRefTable *model.XRefTable) ([]by
 	if err != nil {
 		return nil, fmt.Errorf("combo box text: %w", err)
 	}
-	s, err := model.PrepBytes(c, xRefTable, v, f.Name, true, cb.RTL, f.FillFont)
+	s, err := f.prepareBytes(c, xRefTable, v, true, cb.RTL)
 	if err != nil {
 		return nil, fmt.Errorf("combo box text: %w", err)
 	}

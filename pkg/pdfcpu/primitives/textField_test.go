@@ -75,6 +75,45 @@ func TestTextFieldCombEscapesEachCell(t *testing.T) {
 	}
 }
 
+func TestTextFieldAppearanceAppliesFontEncodingDifferences(t *testing.T) {
+	ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	indRef := types.NewIndirectRef(7, 0)
+	ctx.XRefTable.Table[7] = model.NewXRefTableEntryGen0(types.Dict{
+		"Subtype":  types.Name("Type1"),
+		"BaseFont": types.Name("Courier"),
+		"Encoding": types.Dict{
+			"BaseEncoding": types.Name("WinAnsiEncoding"),
+			"Differences":  types.Array{types.Integer(65), types.Name("B"), types.Name("A")},
+		},
+	})
+
+	fontName, _, _, err := FormFontDetails(t.Context(), ctx.XRefTable, *indRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := &FormFont{Name: fontName, Size: 10, col: &color.Black, FillFont: true}
+	if err := applyFormFontEncoding(ctx.XRefTable, f, indRef); err != nil {
+		t.Fatal(err)
+	}
+	tf := TextField{
+		Value:       "AB COMPANY",
+		BoundingBox: types.RectForDim(120, 20),
+		Font:        f,
+		fontID:      "Courier",
+	}
+
+	bb, err := tf.renderN(t.Context(), ctx.XRefTable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if content := string(bb); !strings.Contains(content, "(BA COMPBNY) Tj") {
+		t.Fatalf("appearance does not apply font encoding Differences: %s", content)
+	}
+}
+
 func TestTextFieldMetricsUseStatelessRepository(t *testing.T) {
 	useMissingGlobalFontDirectory(t)
 	ctx, err := model.NewContext(strings.NewReader(""), model.NewStatelessConfiguration())
