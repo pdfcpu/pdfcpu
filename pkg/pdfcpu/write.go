@@ -894,10 +894,6 @@ func newXRefStreamDict(ctx *model.Context) *types.XRefStreamDict {
 }
 
 func writeXRefStream(c context.Context, ctx *model.Context) error {
-	objNrs, err := sortedWritableKeys(c, ctx)
-	if err != nil {
-		return err
-	}
 	if log.WriteEnabled() {
 		log.Write.Println("writeXRefStream begin")
 	}
@@ -917,6 +913,10 @@ func writeXRefStream(c context.Context, ctx *model.Context) error {
 	// Include xref stream dict obj within xref stream dict.
 	offset := ctx.Write.Offset
 	ctx.Write.SetWriteOffset(objNumber)
+	objNrs, err := sortedWritableKeys(c, ctx)
+	if err != nil {
+		return err
+	}
 
 	i2Base := int64(*ctx.Size)
 	if offset > i2Base {

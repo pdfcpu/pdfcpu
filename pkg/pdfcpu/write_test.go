@@ -17,12 +17,14 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -101,6 +103,82 @@ func TestCreateXRefStreamReturnsCancellationBeforeEntryProcessing(t *testing.T) 
 	_, _, err := createXRefStream(c, &model.Context{}, 1, 1, 1, []int{0})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("got %v, want context.Canceled", err)
+	}
+}
+
+func writeMinimalPDFWithXRef(t *testing.T, xrefStream bool) ([]byte, int64, *model.Configuration) {
+	t.Helper()
+	conf := model.NewDefaultConfiguration()
+	conf.WriteObjectStream = xrefStream
+	conf.WriteXRefStream = xrefStream
+	ctx, err := CreateContextWithXRefTable(conf, types.PaperSize["A4"])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var buf bytes.Buffer
+	ctx.Write.Writer = bufio.NewWriter(&buf)
+	if err := WriteContext(t.Context(), ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	pdf := buf.Bytes()
+	marker := []byte("startxref\n")
+	i := bytes.LastIndex(pdf, marker)
+	if i < 0 {
+		t.Fatal("missing startxref")
+	}
+	line := pdf[i+len(marker):]
+	j := bytes.IndexByte(line, '\n')
+	if j < 0 {
+		t.Fatal("unterminated startxref offset")
+	}
+	offset, err := strconv.ParseInt(string(line[:j]), 10, 64)
+	if err != nil {
+		t.Fatalf("parse startxref offset: %v", err)
+	}
+	if offset < 0 || offset >= int64(len(pdf)) {
+		t.Fatalf("startxref offset %d outside PDF length %d", offset, len(pdf))
+	}
+	return pdf, offset, conf
+}
+
+func TestWriteXRefSection(t *testing.T) {
+	pdf, offset, conf := writeMinimalPDFWithXRef(t, false)
+	if !bytes.HasPrefix(pdf[offset:], []byte("xref\n")) {
+		t.Fatalf("startxref offset %d does not point to an xref section", offset)
+	}
+	readCtx, err := Read(t.Context(), bytes.NewReader(pdf), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if readCtx.Read.UsingXRefStreams {
+		t.Fatal("xref section output was read as an xref stream")
+	}
+}
+
+func TestWriteXRefStreamIncludesSelfEntry(t *testing.T) {
+	pdf, offset, conf := writeMinimalPDFWithXRef(t, true)
+
+	s := string(pdf[offset:])
+	objNr, _, err := model.ParseObjectAttributes(&s)
+	if err != nil {
+		t.Fatalf("parse xref stream object header: %v", err)
+	}
+
+	readCtx, err := Read(t.Context(), bytes.NewReader(pdf), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !readCtx.Read.UsingXRefStreams {
+		t.Fatal("xref stream output was read as an xref section")
+	}
+	entry, found := readCtx.Table[*objNr]
+	if !found {
+		t.Fatalf("xref stream object %d missing its own xref entry", *objNr)
+	}
+	if entry.Offset == nil || *entry.Offset != offset {
+		t.Fatalf("xref stream object %d offset = %v, want %d", *objNr, entry.Offset, offset)
 	}
 }
 
