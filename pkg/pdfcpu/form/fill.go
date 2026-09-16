@@ -589,8 +589,8 @@ func fillRadioButtonGroup(
 		return nil
 	}
 
-	s := types.EncodeName(vNew)
-	v := types.Name(s)
+	// Name.PDFString escapes the name when it is serialized.
+	v := types.Name(vNew)
 	d["V"] = v
 
 	if err := fillRadioButtons(ctx, d, vNew, v); err != nil {

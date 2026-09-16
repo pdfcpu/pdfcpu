@@ -620,3 +620,22 @@ func TestFieldMapRejectsInvalidRecordsWithoutPanic(t *testing.T) {
 		})
 	}
 }
+
+// TestFillRadioButtonGroupNameEncoding verifies radio names are escaped only once.
+func TestFillRadioButtonGroupNameEncoding(t *testing.T) {
+	const value = "now only job"
+	kid := types.Dict{"AP": types.Dict{"N": types.Dict{"Off": types.Dict{}, value: types.Dict{}}}}
+	field := types.Dict{"Kids": types.Array{kid}}
+	fill := func(string, string, FieldType, DataFormat) ([]string, bool, bool) {
+		return []string{value}, false, true
+	}
+
+	if err := fillRadioButtonGroup(emptyFormContext(t), field, "1", "choice", nil, false, JSON, fill, new(bool)); err != nil {
+		t.Fatal(err)
+	}
+	for _, obj := range []types.Object{field["V"], kid["AS"]} {
+		if got := obj.PDFString(); got != "/now#20only#20job" {
+			t.Errorf("serialized name = %s, want /now#20only#20job", got)
+		}
+	}
+}
