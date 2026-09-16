@@ -900,6 +900,21 @@ func appendAnnotationAppearances(c context.Context, w io.Writer, pageDict types.
 	return contextutil.Check(c)
 }
 
+func normalizePDFSourceContent(content []byte, visibleRegion *types.Rectangle, rotation int) ([]byte, *types.Rectangle) {
+	box, m := resizeSourceGeometry(visibleRegion, composePageRotation(rotation, 0))
+	bb := types.RectForDim(box.Width(), box.Height())
+	if m == matrix.IdentMatrix {
+		return content, bb
+	}
+
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ",
+		m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
+	b.Write(content)
+	b.WriteString(" Q")
+	return b.Bytes(), bb
+}
+
 func createPDFRes(c context.Context, ctx, otherCtx *model.Context, pageNrSrc, pageNrDest int, migrated map[int]int, wm *model.Watermark) error {
 	if err := contextutil.Check(c); err != nil {
 		return err
@@ -921,9 +936,6 @@ func createPDFRes(c context.Context, ctx, otherCtx *model.Context, pageNrSrc, pa
 		return errors.New("missing source page attributes")
 	}
 
-	// Take into account existing rotation.
-	wm.Rotation -= float64(inhPAttrs.Rotate % 360)
-
 	// Retrieve content stream bytes of page dict.
 	pdfRes.Content, err = otherXRefTable.PageContent(d, pageNrSrc)
 	if err != nil && err != model.ErrNoContent {
@@ -941,7 +953,11 @@ func createPDFRes(c context.Context, ctx, otherCtx *model.Context, pageNrSrc, pa
 	if err := appendAnnotationAppearances(c, &b, d, inhPAttrs.Resources, otherCtx, ctx, migrated); err != nil {
 		return fmt.Errorf("source page annotations: %w", err)
 	}
-	pdfRes.Content = b.Bytes()
+	visibleRegion := viewPort(inhPAttrs)
+	if visibleRegion == nil {
+		return fmt.Errorf("PDF stamp page %d: missing media box", pageNrSrc)
+	}
+	pdfRes.Content, pdfRes.Bb = normalizePDFSourceContent(b.Bytes(), visibleRegion, inhPAttrs.Rotate)
 
 	// Create an object for resource dict in xRefTable.
 	ir, err := xRefTable.IndRefForNewObject(inhPAttrs.Resources)
@@ -950,10 +966,6 @@ func createPDFRes(c context.Context, ctx, otherCtx *model.Context, pageNrSrc, pa
 	}
 	pdfRes.ResDict = ir
 
-	pdfRes.Bb = viewPort(inhPAttrs)
-	if pdfRes.Bb == nil {
-		return fmt.Errorf("PDF stamp page %d: missing media box", pageNrSrc)
-	}
 	wm.PdfRes[pageNrDest] = pdfRes
 
 	return contextutil.Check(c)
