@@ -790,7 +790,7 @@ func validateType1FontDict(xRefTable *model.XRefTable, d types.Dict) (string, er
 	}
 
 	fontName := bf.String()
-	required := xRefTable.Version() >= model.V17 || !validateStandardType1Font(fontName)
+	required := xRefTable.Version() >= model.V20 || !validateStandardType1Font(fontName)
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = false
 	}
