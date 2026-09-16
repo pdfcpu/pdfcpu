@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"sync"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/safemath"
@@ -83,6 +84,75 @@ type flate struct {
 	baseFilter
 }
 
+type zlibReadResetCloser interface {
+	io.ReadCloser
+	zlib.Resetter
+}
+
+type zlibErrorTrackingReader struct {
+	r   io.Reader
+	err error
+}
+
+var (
+	zlibWriterPool sync.Pool
+	zlibReaderPool sync.Pool
+)
+
+func (r *zlibErrorTrackingReader) Read(p []byte) (int, error) {
+	n, err := r.r.Read(p)
+	if err != nil && err != io.EOF && r.err == nil {
+		r.err = err
+	}
+	return n, err
+}
+
+func acquireZlibWriter(w io.Writer) *zlib.Writer {
+	if v := zlibWriterPool.Get(); v != nil {
+		zw := v.(*zlib.Writer)
+		zw.Reset(w)
+		return zw
+	}
+	return zlib.NewWriter(w)
+}
+
+func releaseZlibWriter(w *zlib.Writer, reusable bool) error {
+	err := w.Close()
+	if reusable && err == nil {
+		zlibWriterPool.Put(w)
+	}
+	return err
+}
+
+func acquireZlibReader(r io.Reader) (zlibReadResetCloser, error) {
+	if v := zlibReaderPool.Get(); v != nil {
+		rc := v.(zlibReadResetCloser)
+		if err := rc.Reset(r, nil); err != nil {
+			_ = rc.Close()
+			return nil, err
+		}
+		return rc, nil
+	}
+
+	rc, err := zlib.NewReader(r)
+	if err != nil {
+		return nil, err
+	}
+	rrc, ok := rc.(zlibReadResetCloser)
+	if !ok {
+		_ = rc.Close()
+		return nil, errors.New("flate decode: zlib reader does not support reset")
+	}
+	return rrc, nil
+}
+
+func releaseZlibReader(r zlibReadResetCloser, reusable bool) {
+	err := r.Close()
+	if reusable && err == nil {
+		zlibReaderPool.Put(r)
+	}
+}
+
 // IsCorruptFlateInput reports whether err contains a Flate corrupt-input error.
 func IsCorruptFlateInput(err error) bool {
 	var corruptInputErr stdflate.CorruptInputError
@@ -98,11 +168,14 @@ func (f flate) Encode(r io.Reader) (io.Reader, error) {
 	// TODO Optional decode parameters may need predictor preprocessing.
 
 	var b bytes.Buffer
-	w := zlib.NewWriter(&b)
-	defer w.Close()
+	w := acquireZlibWriter(&b)
 
 	written, err := io.Copy(w, r)
 	if err != nil {
+		_ = releaseZlibWriter(w, false)
+		return nil, err
+	}
+	if err := releaseZlibWriter(w, true); err != nil {
 		return nil, err
 	}
 
@@ -124,14 +197,16 @@ func (f flate) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) {
 		log.Trace.Println("DecodeFlate begin")
 	}
 
-	rc, err := zlib.NewReader(r)
+	rc, err := acquireZlibReader(r)
 	if err != nil {
 		return nil, err
 	}
-	defer rc.Close()
 
 	// Optional decode parameters need postprocessing.
-	return f.decodePostProcess(rc, maxLen)
+	tr := zlibErrorTrackingReader{r: rc}
+	out, err := f.decodePostProcess(&tr, maxLen)
+	releaseZlibReader(rc, err == nil && tr.err == nil)
+	return out, err
 }
 
 func (f flate) passThru(rin io.Reader, maxLen int64) (*bytes.Buffer, error) {
