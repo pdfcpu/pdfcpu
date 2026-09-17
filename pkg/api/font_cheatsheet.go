@@ -79,14 +79,11 @@ func createFontPageObject(c context.Context, xRefTable *model.XRefTable, parentP
 		return nil, err
 	}
 
+	resDict := types.Dict{}
 	if len(fontRes) > 0 {
-		resDict := types.Dict(
-			map[string]types.Object{
-				"Font": fontRes,
-			},
-		)
-		pageDict.Insert("Resources", resDict)
+		resDict["Font"] = fontRes
 	}
+	pageDict.Insert("Resources", resDict)
 
 	ir, err := createFontContentStream(xRefTable, p.Buf.Bytes())
 	if err != nil {

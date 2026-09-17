@@ -193,6 +193,57 @@ func TestCreateDemoPDF(t *testing.T) {
 	createAndValidate(t, xRefTable, "Test.pdf", msg)
 }
 
+func firstPageTreeKid(t *testing.T, xRefTable *model.XRefTable, d types.Dict) types.Dict {
+	t.Helper()
+	kids, err := xRefTable.DereferenceArray(d["Kids"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(kids) != 1 {
+		t.Fatalf("page-tree node: got %d kids, want 1", len(kids))
+	}
+	kid, err := xRefTable.DereferenceDict(kids[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return kid
+}
+
+func TestResourceDictInheritanceDemoUsesSingleAncestorResources(t *testing.T) {
+	xRefTable, err := createResourceDictInheritanceDemoXRef(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootDict, err := xRefTable.Catalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootPages, err := xRefTable.DereferenceDict(rootDict["Pages"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	resources, err := xRefTable.DereferenceDict(rootPages["Resources"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	fonts, err := xRefTable.DereferenceDict(resources["Font"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"F0", "F99", "F100"} {
+		if _, found := fonts.Find(id); !found {
+			t.Fatalf("page-tree root Resources: missing font %s", id)
+		}
+	}
+	intermediatePages := firstPageTreeKid(t, xRefTable, rootPages)
+	page := firstPageTreeKid(t, xRefTable, intermediatePages)
+	for name, d := range map[string]types.Dict{"intermediate page-tree node": intermediatePages, "page": page} {
+		if _, found := d.Find("Resources"); found {
+			t.Fatalf("%s: unexpected Resources", name)
+		}
+	}
+}
+
 // TestResourceDictInheritanceDemoPDF verifies resource dict inheritance demo PDF.
 func TestResourceDictInheritanceDemoPDF(t *testing.T) {
 	// Create a test page proofing resource inheritance.

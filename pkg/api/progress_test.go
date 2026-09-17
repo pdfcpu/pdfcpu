@@ -56,7 +56,7 @@ func incorrectTrailerSizePDF(t *testing.T) string {
 	objects := []string{
 		"<< /Type /Catalog /Pages 2 0 R >>",
 		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << >> >>",
 	}
 	offsets := make([]int, len(objects))
 	for i, object := range objects {

@@ -90,6 +90,25 @@ const createTestBlankPageJSON = `{
 	}
 }`
 
+func TestFromJSONBlankPageIncludesEmptyResources(t *testing.T) {
+	ctx := newCreateTestContext(t)
+	if err := FromJSON(t.Context(), ctx, strings.NewReader(createTestBlankPageJSON)); err != nil {
+		t.Fatal(err)
+	}
+
+	pageDict, _, _, err := ctx.PageDict(t.Context(), 1, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resources, found := pageDict.Find("Resources")
+	if !found {
+		t.Fatal("page dict: missing Resources")
+	}
+	if d, ok := resources.(types.Dict); !ok || len(d) != 0 {
+		t.Fatalf("page dict: expected empty Resources dict, got %T %v", resources, resources)
+	}
+}
+
 func TestFromJSONBoundaryErrors(t *testing.T) {
 	tests := []struct {
 		name    string

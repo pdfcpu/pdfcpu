@@ -169,15 +169,6 @@ func validateKeywords(xRefTable *model.XRefTable, v types.Object, ownerObjNr int
 	return nil
 }
 
-func validateDocInfoDictEntry(
-	xRefTable *model.XRefTable,
-	k string,
-	v types.Object,
-) (bool, error) {
-	var specViolations []error
-	return validateDocInfoDictEntryWithSpecViolations(xRefTable, k, v, 0, &specViolations)
-}
-
 func validateDocInfoDictEntryWithSpecViolations(
 	xRefTable *model.XRefTable,
 	k string,

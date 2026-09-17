@@ -42,7 +42,7 @@ endobj
 << /Type /Pages /Kids [3 0 R] /Count 1 >>
 endobj
 3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1 1] >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1 1] /Resources << >> >>
 endobj
 xref
 0 4
@@ -53,62 +53,49 @@ xref
 		`trailer
 << /Size 4 /Root 1 0 R >>
 startxref
-182
+199
 %%EOF
 `
 )
 
 func addPageTreeForResourceDictInheritanceDemo(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict) error {
-	// Create root page node.
-
-	fIndRef, err := pdffont.EnsureFontDict(c, xRefTable, "Courier", "", "", false, nil)
+	f0IndRef, err := pdffont.EnsureFontDict(c, xRefTable, "Times-Roman", "", "", false, nil)
+	if err != nil {
+		return err
+	}
+	f99IndRef, err := pdffont.EnsureFontDict(c, xRefTable, "Courier", "", "", false, nil)
+	if err != nil {
+		return err
+	}
+	f100IndRef, err := pdffont.EnsureFontDict(c, xRefTable, "Courier-Bold", "", "", false, nil)
 	if err != nil {
 		return err
 	}
 
-	rootPagesDict := types.Dict(
-		map[string]types.Object{
-			"Type":     types.Name("Pages"),
-			"Count":    types.Integer(1),
-			"MediaBox": types.RectForFormat("A4").Array(),
-			"Resources": types.Dict(
-				map[string]types.Object{
-					"Font": types.Dict(
-						map[string]types.Object{
-							"F99": *fIndRef,
-						},
-					),
-				},
-			),
+	// Define the complete resource dictionary once on the page-tree root.
+	rootPagesDict := types.Dict{
+		"Type":     types.Name("Pages"),
+		"Count":    types.Integer(1),
+		"MediaBox": types.RectForFormat("A4").Array(),
+		"Resources": types.Dict{
+			"Font": types.Dict{
+				"F0":   *f0IndRef,
+				"F99":  *f99IndRef,
+				"F100": *f100IndRef,
+			},
 		},
-	)
+	}
 
 	rootPageIndRef, err := xRefTable.IndRefForNewObject(rootPagesDict)
 	if err != nil {
 		return err
 	}
 
-	// Create intermediate page node.
-
-	f100IndRef, err := pdffont.EnsureFontDict(c, xRefTable, "Courier-Bold", "", "", false, nil)
-	if err != nil {
-		return err
-	}
-
+	// The intermediate page-tree node and leaf page inherit Resources unchanged.
 	pagesDict := types.Dict(
 		map[string]types.Object{
-			"Type":     types.Name("Pages"),
-			"Count":    types.Integer(1),
-			"MediaBox": types.RectForFormat("A4").Array(),
-			"Resources": types.Dict(
-				map[string]types.Object{
-					"Font": types.Dict(
-						map[string]types.Object{
-							"F100": *f100IndRef,
-						},
-					),
-				},
-			),
+			"Type":  types.Name("Pages"),
+			"Count": types.Integer(1),
 		},
 	)
 
@@ -119,14 +106,13 @@ func addPageTreeForResourceDictInheritanceDemo(c context.Context, xRefTable *mod
 
 	// Create leaf page node.
 
-	p := model.Page{MediaBox: types.RectForFormat("A4"), Fm: model.FontMap{}, Buf: new(bytes.Buffer)}
+	p := model.Page{MediaBox: types.RectForFormat("A4"), Buf: new(bytes.Buffer)}
 
 	fontName := "Times-Roman"
-	k := p.Fm.EnsureKey(fontName)
 	td := model.TextDescriptor{
-		Text:     "This font is Times-Roman and it is defined in the resource dict of this page dict.",
+		Text:     "This font is Times-Roman and it is inherited from the page-tree root.",
 		FontName: fontName,
-		FontKey:  k,
+		FontKey:  "F0",
 		FontSize: 12,
 		Scale:    1.,
 		ScaleAbs: true,
@@ -140,7 +126,7 @@ func addPageTreeForResourceDictInheritanceDemo(c context.Context, xRefTable *mod
 
 	fontName = "Courier"
 	td = model.TextDescriptor{
-		Text:     "This font is Courier and it is inherited from the page root.",
+		Text:     "This font is Courier and it is inherited from the page-tree root.",
 		FontName: fontName,
 		FontKey:  "F99",
 		FontSize: 12,
@@ -156,7 +142,7 @@ func addPageTreeForResourceDictInheritanceDemo(c context.Context, xRefTable *mod
 
 	fontName = "Courier-Bold"
 	td = model.TextDescriptor{
-		Text:     "This font is Courier-Bold and it is inherited from an intermediate page node.",
+		Text:     "This font is Courier-Bold and it is inherited from the page-tree root.",
 		FontName: fontName,
 		FontKey:  "F100",
 		FontSize: 12,
@@ -170,7 +156,7 @@ func addPageTreeForResourceDictInheritanceDemo(c context.Context, xRefTable *mod
 		return fmt.Errorf("render Courier-Bold demo text: %w", err)
 	}
 
-	pageIndRef, err := createDemoPage(c, xRefTable, *pagesIndRef, p)
+	pageIndRef, err := createDemoPage(xRefTable, *pagesIndRef, p, nil)
 	if err != nil {
 		return err
 	}
@@ -1879,7 +1865,7 @@ func addPageTreeWithPage(c context.Context, xRefTable *model.XRefTable, rootDict
 		return err
 	}
 
-	pageIndRef, err := createDemoPage(c, xRefTable, *parentPageIndRef, p)
+	pageIndRef, err := createDemoPage(xRefTable, *parentPageIndRef, p, types.Dict{})
 	if err != nil {
 		return err
 	}
@@ -1890,7 +1876,7 @@ func addPageTreeWithPage(c context.Context, xRefTable *model.XRefTable, rootDict
 	return nil
 }
 
-func createDemoPage(c context.Context, xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, p model.Page) (*types.IndirectRef, error) {
+func createDemoPage(xRefTable *model.XRefTable, parentPageIndRef types.IndirectRef, p model.Page, resources types.Dict) (*types.IndirectRef, error) {
 	pageDict := types.Dict(
 		map[string]types.Object{
 			"Type":   types.Name("Page"),
@@ -1898,18 +1884,8 @@ func createDemoPage(c context.Context, xRefTable *model.XRefTable, parentPageInd
 		},
 	)
 
-	fontRes, err := pdffont.FontResources(c, xRefTable, p.Fm)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(fontRes) > 0 {
-		resDict := types.Dict(
-			map[string]types.Object{
-				"Font": fontRes,
-			},
-		)
-		pageDict.Insert("Resources", resDict)
+	if resources != nil {
+		pageDict.Insert("Resources", resources)
 	}
 
 	ir, err := createDemoContentStreamDict(xRefTable, p.Buf.Bytes())

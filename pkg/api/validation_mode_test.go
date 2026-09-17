@@ -41,7 +41,7 @@ func validationModeTestPDF(creationDate string) []byte {
 	objects := []string{
 		"<< /Type /Catalog /Pages 2 0 R >>",
 		"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
-		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << >> >>",
 		fmt.Sprintf("<< /CreationDate (%s) >>", creationDate),
 	}
 	offsets := make([]int, len(objects))

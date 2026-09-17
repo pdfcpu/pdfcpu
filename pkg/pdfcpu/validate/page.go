@@ -228,12 +228,22 @@ func validatePageContents(xRefTable *model.XRefTable, d types.Dict, ownerObjNr i
 	return validateContents(o, xRefTable, d, contentsObjNr)
 }
 
-func validatePageResources(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+func validatePageResources(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, hasResources bool) error {
 	if o, found := d.Find("Resources"); found {
-		_, err := validateResourceDict(c, xRefTable, o)
-		return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, o))
+		var err error
+		hasResources, err = validateResourceDict(c, xRefTable, o)
+		if err != nil {
+			return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, o))
+		}
 	}
-
+	if hasResources {
+		return nil
+	}
+	err := model.WithValidationErrorObject(errors.New(`page dict: missing required entry "Resources"`), ownerObjNr)
+	if xRefTable.ValidationMode == model.ValidationStrict {
+		return err
+	}
+	model.ShowDigestedSpecViolationError(err)
 	return nil
 }
 
@@ -1154,7 +1164,7 @@ func handlePieceInfo(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, d
 	return nil
 }
 
-func validatePageDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, hasMediaBox bool) (types.Array, error) {
+func validatePageDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, hasResources, hasMediaBox bool) (types.Array, error) {
 	dictName := "pageDict"
 
 	if ir := d.IndirectRefEntry("Parent"); ir == nil {
@@ -1169,7 +1179,7 @@ func validatePageDict(c context.Context, xRefTable *model.XRefTable, d types.Dic
 	}
 
 	// Resources
-	err = validatePageResources(c, xRefTable, d, ownerObjNr)
+	err = validatePageResources(c, xRefTable, d, ownerObjNr, hasResources)
 	if err != nil {
 		return nil, err
 	}
@@ -1353,7 +1363,7 @@ func validatePageTreeParentLink(
 	return model.WithValidationErrorObject(err, childObjNr), nil
 }
 
-func showDigestedPageTreeParentViolation(xRefTable *model.XRefTable, err error) {
+func showDigestedPageTreeParentViolation(err error) {
 	if err != nil {
 		model.ShowDigestedSpecViolationError(err)
 	}
@@ -1477,7 +1487,7 @@ func processPagesKids(c context.Context, xRefTable *model.XRefTable, kids types.
 		case "Page":
 			*curPage++
 			xRefTable.CurPage = *curPage
-			dMediaBoxArr, err := validatePageDict(c, xRefTable, pageNodeDict, objNr, len(mediaBoxArr) > 0)
+			dMediaBoxArr, err := validatePageDict(c, xRefTable, pageNodeDict, objNr, hasResources, len(mediaBoxArr) > 0)
 			if err != nil {
 				return nil, pageTreePageError(err, objNr)
 			}
@@ -1494,7 +1504,7 @@ func processPagesKids(c context.Context, xRefTable *model.XRefTable, kids types.
 			return nil, model.WithValidationErrorObject(err, objNr)
 		}
 
-		showDigestedPageTreeParentViolation(xRefTable, parentViolation)
+		showDigestedPageTreeParentViolation(parentViolation)
 	}
 
 	return a, nil

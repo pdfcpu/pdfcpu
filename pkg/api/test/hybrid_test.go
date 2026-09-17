@@ -54,7 +54,7 @@ func minimalHybridPDF() []byte {
 	offsets := []int{0}
 	offsets = append(offsets, appendObject(&buf, 1, "<< /Type /Catalog /Pages 2 0 R >>"))
 	offsets = append(offsets, appendObject(&buf, 2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"))
-	offsets = append(offsets, appendObject(&buf, 3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>"))
+	offsets = append(offsets, appendObject(&buf, 3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << >> >>"))
 	xRefStreamOffset := appendXRefStream(&buf)
 
 	xrefOffset := buf.Len()

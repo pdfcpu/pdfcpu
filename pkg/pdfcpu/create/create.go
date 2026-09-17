@@ -110,16 +110,14 @@ func addPageResources(c context.Context, xRefTable *model.XRefTable, d types.Dic
 		imgRes[img.Res.ID] = *img.Res.IndRef
 	}
 
-	if len(fontRes) > 0 || len(imgRes) > 0 {
-		resDict := types.Dict{}
-		if len(fontRes) > 0 {
-			resDict["Font"] = fontRes
-		}
-		if len(imgRes) > 0 {
-			resDict["XObject"] = imgRes
-		}
-		d["Resources"] = resDict
+	resDict := types.Dict{}
+	if len(fontRes) > 0 {
+		resDict["Font"] = fontRes
 	}
+	if len(imgRes) > 0 {
+		resDict["XObject"] = imgRes
+	}
+	d["Resources"] = resDict
 
 	return nil
 }
