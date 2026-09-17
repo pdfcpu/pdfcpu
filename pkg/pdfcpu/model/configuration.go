@@ -501,7 +501,7 @@ type ResourceLimits struct {
 	// MaxImageBytes limits decoded/rendered image buffer sizes.
 	MaxImageBytes int64
 
-	// MaxObjectCount limits xref stream /Size expansion.
+	// MaxObjectCount limits the cross-reference object number range.
 	MaxObjectCount int
 
 	// MaxObjectStreamCount limits object stream /N.
@@ -510,7 +510,7 @@ type ResourceLimits struct {
 	// MaxObjectStreamFirst limits object stream /First prolog bytes.
 	MaxObjectStreamFirst int64
 
-	// MaxXRefEntries limits xref stream Index expansion.
+	// MaxXRefEntries limits entries in a cross-reference section.
 	MaxXRefEntries int
 
 	// MaxRecursionDepth limits recursive parsing and object graph traversal.

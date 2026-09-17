@@ -431,19 +431,49 @@ func parseXRefTableEntry(xRefTable *model.XRefTable, fields []string, objNr int,
 	return nil
 }
 
+func parseXRefTableSubsectionHeader(fields []string, entryCount int, limits model.ResourceLimits) (int, int, error) {
+	startObjNumber, err := strconv.Atoi(fields[0])
+	if err != nil {
+		return 0, 0, err
+	}
+
+	objCount, err := strconv.Atoi(fields[1])
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if startObjNumber < 0 || objCount < 0 {
+		return 0, 0, errCorruptXRefSubsection
+	}
+	if objCount > limits.MaxObjectCount || startObjNumber > limits.MaxObjectCount-objCount {
+		return 0, 0, fmt.Errorf("xref subsection object range exceeds limit %d: %w", limits.MaxObjectCount, errCorruptXRefSubsection)
+	}
+	if entryCount > limits.MaxXRefEntries || objCount > limits.MaxXRefEntries-entryCount {
+		return 0, 0, fmt.Errorf("xref entry count exceeds limit %d", limits.MaxXRefEntries)
+	}
+
+	return startObjNumber, objCount, nil
+}
+
+func xRefTableObjectNumber(startObjNumber, index, entryCount int, limits model.ResourceLimits) (int, error) {
+	if entryCount >= limits.MaxXRefEntries {
+		return 0, fmt.Errorf("xref entry count exceeds limit %d", limits.MaxXRefEntries)
+	}
+	if index >= limits.MaxObjectCount-startObjNumber {
+		return 0, fmt.Errorf("xref subsection object range exceeds limit %d: %w", limits.MaxObjectCount, errCorruptXRefSubsection)
+	}
+	return startObjNumber + index, nil
+}
+
 // Process xRef table subsection and create corresponding xRef table entries.
-func parseXRefTableSubSection(xRefTable *model.XRefTable, s *bufio.Scanner, fields []string, offExtra int64, incr int) (string, error) {
+func parseXRefTableSubSection(xRefTable *model.XRefTable, limits model.ResourceLimits, s *bufio.Scanner, fields []string, offExtra int64, incr int) (string, error) {
 	var line string
 	trailer := false
+	entryCount := 0
 
 	for !trailer && len(fields) == 2 {
 
-		startObjNumber, err := strconv.Atoi(fields[0])
-		if err != nil {
-			return "", err
-		}
-
-		objCount, err := strconv.Atoi(fields[1])
+		startObjNumber, objCount, err := parseXRefTableSubsectionHeader(fields, entryCount, limits)
 		if err != nil {
 			return "", err
 		}
@@ -454,9 +484,6 @@ func parseXRefTableSubSection(xRefTable *model.XRefTable, s *bufio.Scanner, fiel
 
 		// Process all entries of this subsection into xRefTable entries.
 		for i := 0; ; i++ {
-
-			objNr := startObjNumber + i
-
 			line, err = scanLine(s)
 			if err != nil {
 				return "", err
@@ -470,6 +497,12 @@ func parseXRefTableSubSection(xRefTable *model.XRefTable, s *bufio.Scanner, fiel
 				trailer = strings.Contains(line, "trailer")
 				break
 			}
+
+			objNr, err := xRefTableObjectNumber(startObjNumber, i, entryCount, limits)
+			if err != nil {
+				return "", err
+			}
+			entryCount++
 
 			if xRefTable.Exists(objNr) {
 				if log.ReadEnabled() {
@@ -1473,7 +1506,7 @@ func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, f
 	line = strings.TrimLeft(line, " ")
 	if !strings.HasPrefix(line, "trailer") {
 		// Process all sub sections of this xRef section.
-		if line, err = parseXRefTableSubSection(ctx.XRefTable, s, fields, offExtra, incr); err != nil {
+		if line, err = parseXRefTableSubSection(ctx.XRefTable, ctx.Configuration.Limits, s, fields, offExtra, incr); err != nil {
 			return nil, err
 		}
 		*ssCount++

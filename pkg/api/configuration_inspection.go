@@ -152,7 +152,7 @@ type ConfigurationLimitsInspection struct {
 	// MaxImageBytes limits decoded or rendered image buffer sizes.
 	MaxImageBytes int64 `json:"maxImageBytes"`
 
-	// MaxObjectCount limits xref stream size expansion.
+	// MaxObjectCount limits the cross-reference object number range.
 	MaxObjectCount int `json:"maxObjectCount"`
 
 	// MaxObjectStreamCount limits object stream entry counts.
@@ -161,7 +161,7 @@ type ConfigurationLimitsInspection struct {
 	// MaxObjectStreamFirst limits object stream prolog bytes.
 	MaxObjectStreamFirst int64 `json:"maxObjectStreamFirst"`
 
-	// MaxXRefEntries limits xref stream index expansion.
+	// MaxXRefEntries limits entries in a cross-reference section.
 	MaxXRefEntries int `json:"maxXRefEntries"`
 
 	// MaxRecursionDepth limits recursive parsing and object graph traversal.
