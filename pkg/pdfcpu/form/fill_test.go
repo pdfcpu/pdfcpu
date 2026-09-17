@@ -145,44 +145,15 @@ func TestFormNameEntriesRejectWrongTypesWithoutPanic(t *testing.T) {
 	}
 }
 
-func TestDictionaryEntryDecodeErrorsIncludeContext(t *testing.T) {
+func TestStringEntryDecodeErrorsIncludeContext(t *testing.T) {
 	ctx := emptyFormContext(t)
-	badName := types.Name("#")
 	badString := types.StringLiteral("\xfe\xff\xd8\x00")
-	tests := []struct {
-		name  string
-		fn    func() error
-		entry string
-		phase string
-	}{
-		{name: "radio value", fn: func() error {
-			return collectRadioButtonGroup(ctx.XRefTable, types.Dict{"V": badName}, &Field{}, &FieldMeta{})
-		}, entry: "entry V", phase: "decode name"},
-		{name: "button default", fn: func() error {
-			return collectBtn(ctx.XRefTable, types.Dict{"DV": badName}, &Field{}, &FieldMeta{})
-		}, entry: "entry DV", phase: "decode name"},
-		{name: "reset button default", fn: func() error {
-			return resetBtn(ctx.XRefTable, types.Dict{"DV": badName})
-		}, entry: "entry DV", phase: "decode name"},
-		{name: "reset text default", fn: func() error {
-			return resetTx(t.Context(), ctx, types.Dict{"DV": badString}, map[string]types.IndirectRef{})
-		}, entry: "entry DV", phase: "decode string"},
+	err := resetTx(t.Context(), ctx, types.Dict{"DV": badString}, map[string]types.IndirectRef{})
+	if err == nil || !strings.Contains(err.Error(), "entry DV: decode string") {
+		t.Fatalf("expected entry and decoding context, got %v", err)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.fn()
-			want := tt.entry + ": " + tt.phase
-			if err == nil || !strings.Contains(err.Error(), want) {
-				t.Fatalf("expected %q, got %v", want, err)
-			}
-			if got := strings.Count(err.Error(), tt.entry); got != 1 {
-				t.Fatalf("expected exactly one %q context, got %d in %q", tt.entry, got, err)
-			}
-			if got := strings.Count(err.Error(), tt.phase); got != 1 {
-				t.Fatalf("expected exactly one %q phase, got %d in %q", tt.phase, got, err)
-			}
-		})
+	if got := strings.Count(err.Error(), "entry DV"); got != 1 {
+		t.Fatalf("expected exactly one entry context, got %d in %q", got, err)
 	}
 }
 
@@ -310,6 +281,41 @@ func TestRadioButtonOptionsAreUnique(t *testing.T) {
 	}
 	if len(opts) != 1 || opts[0] != "Yes" {
 		t.Fatalf("unexpected options: %v", opts)
+	}
+}
+
+func TestRadioButtonNameConsumersPreserveLiteralHash(t *testing.T) {
+	const state = "A#42"
+	kid1 := types.Dict{"AP": types.Dict{"N": types.Dict{"Off": types.Dict{}, state: types.Dict{}}}}
+	kid2 := types.Dict{"AP": types.Dict{"N": types.Dict{"Off": types.Dict{}, "Other": types.Dict{}}}}
+	d := types.Dict{
+		"DV":   types.Name(state),
+		"V":    types.Name(state),
+		"Kids": types.Array{kid1, kid2},
+	}
+	ctx := emptyFormContext(t)
+
+	rbg, err := extractRadioButtonGroup(ctx.XRefTable, 1, d, "1", "choice", "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rbg.Default != state || rbg.Value != state || !types.MemberOf(state, rbg.Options) {
+		t.Fatalf("exported radio button group = %+v, want state %q preserved", rbg, state)
+	}
+
+	f := &Field{}
+	if err := collectBtn(ctx.XRefTable, d, f, &FieldMeta{}); err != nil {
+		t.Fatal(err)
+	}
+	if f.Dv != state || f.V != state {
+		t.Fatalf("listed default/value = %q/%q, want %q/%q", f.Dv, f.V, state, state)
+	}
+
+	if err := resetBtn(ctx.XRefTable, d); err != nil {
+		t.Fatal(err)
+	}
+	if d["V"] != types.Name(state) || kid1["AS"] != types.Name(state) || kid2["AS"] != types.Name("Off") {
+		t.Fatalf("reset states = V:%v first:%v second:%v", d["V"], kid1["AS"], kid2["AS"])
 	}
 }
 
@@ -449,7 +455,6 @@ func TestRadioChildHelpersAddAppearancePhases(t *testing.T) {
 		want string
 	}{
 		{name: "appearance", kid: types.Dict{}, want: "kid 1: appearance"},
-		{name: "decode appearance state", kid: types.Dict{"AP": types.Dict{"N": types.Dict{"#": types.Dict{}}}}, want: "kid 1: decode appearance state"},
 	}
 	helpers := []struct {
 		name string
@@ -484,15 +489,68 @@ func TestFillRadioButtonsAddsChildIndexAndPhase(t *testing.T) {
 	}{
 		{name: "dereference", kid: types.Integer(1), want: "kid 2: dereference"},
 		{name: "appearance", kid: types.Dict{}, want: "kid 2: appearance"},
-		{name: "decode appearance state", kid: types.Dict{"AP": types.Dict{"N": types.Dict{"#": types.Dict{}}}}, want: "kid 2: decode appearance state"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d := types.Dict{"Kids": types.Array{validKid, tt.kid}}
-			err := fillRadioButtons(ctx, d, "Yes", types.Name("Yes"))
+			err := fillRadioButtons(ctx, d, types.Name("Yes"))
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("expected %q, got %v", tt.want, err)
+			}
+		})
+	}
+}
+
+func TestFillRadioButtonGroupPreservesStateNames(t *testing.T) {
+	tests := []struct {
+		name      string
+		requested string
+		states    []string
+		opts      []string
+		want      string
+		wantPDF   string
+	}{
+		{name: "space", requested: "now only job", states: []string{"now only job"}, want: "now only job", wantPDF: "/now#20only#20job"},
+		{name: "literal hash", requested: "A#42", states: []string{"A#42"}, want: "A#42", wantPDF: "/A#2342"},
+		{name: "legacy encoded space", requested: "now only job", states: []string{"now#20only#20job"}, want: "now#20only#20job", wantPDF: "/now#2320only#2320job"},
+		{name: "prefer canonical", requested: "now only job", states: []string{"now#20only#20job", "now only job"}, want: "now only job", wantPDF: "/now#20only#20job"},
+		{name: "explicit options", requested: "now only job", states: []string{"0", "1"}, opts: []string{"first", "now only job"}, want: "1", wantPDF: "/1"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kids := types.Array{}
+			for _, state := range tt.states {
+				kids = append(kids, types.Dict{"AP": types.Dict{"N": types.Dict{"Off": types.Dict{}, state: types.Dict{}}}})
+			}
+			field := types.Dict{"Kids": kids}
+			fill := func(string, string, FieldType, DataFormat) ([]string, bool, bool) {
+				return []string{tt.requested}, false, true
+			}
+
+			if err := fillRadioButtonGroup(emptyFormContext(t), field, "1", "choice", tt.opts, false, JSON, fill, new(bool)); err != nil {
+				t.Fatal(err)
+			}
+
+			v, ok := field["V"].(types.Name)
+			if !ok || v.Value() != tt.want {
+				t.Fatalf("V = %v, want %q", field["V"], tt.want)
+			}
+			if got := v.PDFString(); got != tt.wantPDF {
+				t.Fatalf("serialized V = %q, want %q", got, tt.wantPDF)
+			}
+
+			for i, o := range kids {
+				kid := o.(types.Dict)
+				d1 := kid["AP"].(types.Dict)["N"].(types.Dict)
+				wantAS := types.Name("Off")
+				if _, found := d1[tt.want]; found {
+					wantAS = v
+				}
+				if got := kid["AS"]; got != wantAS {
+					t.Errorf("kid %d AS = %v, want %v", i+1, got, wantAS)
+				}
 			}
 		})
 	}

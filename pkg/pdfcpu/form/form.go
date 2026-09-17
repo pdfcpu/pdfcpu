@@ -366,10 +366,6 @@ func collectRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 		}
 
 		for k := range d1 {
-			k, err := types.DecodeName(k)
-			if err != nil {
-				return nil, fmt.Errorf("kid %d: decode appearance state: %w", i+1, err)
-			}
 			if k != "Off" {
 				found := false
 				for _, opt := range opts {
@@ -407,10 +403,7 @@ func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field,
 		return fmt.Errorf("entry V: %w", err)
 	}
 	if s != nil {
-		v, err := types.DecodeName(s.Value())
-		if err != nil {
-			return fmt.Errorf("entry V: decode name: %w", err)
-		}
+		v := s.Value()
 		if v != "Off" {
 			if len(opts) > 0 {
 				j, err := strconv.Atoi(v)
@@ -449,10 +442,7 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 	} else if n != nil {
 		v = *n
 	}
-	dv, err := types.DecodeName(v.String())
-	if err != nil {
-		return fmt.Errorf("entry DV: decode name: %w", err)
-	}
+	dv := v.String()
 
 	if dv != "Off" {
 		if w := runewidth.StringWidth(dv); w > fm.defMax {
@@ -1572,11 +1562,6 @@ func resetBtn(xRefTable *model.XRefTable, d types.Dict) error {
 		d["AS"] = v
 	}
 
-	vraw, err := types.DecodeName(v.String())
-	if err != nil {
-		return fmt.Errorf("entry DV: decode name: %w", err)
-	}
-
 	// RadiobuttonGroup
 
 	for i, o := range d.ArrayEntry("Kids") {
@@ -1591,13 +1576,9 @@ func resetBtn(xRefTable *model.XRefTable, d types.Dict) error {
 		}
 
 		for k := range d1 {
-			k, err := types.DecodeName(k)
-			if err != nil {
-				return fmt.Errorf("kid %d: decode appearance state: %w", i+1, err)
-			}
 			if k != "Off" {
 				d["AS"] = types.Name("Off")
-				if k == vraw {
+				if k == v.Value() {
 					d["AS"] = v
 				}
 				break

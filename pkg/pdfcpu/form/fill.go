@@ -511,7 +511,51 @@ func FillDetails(form *Form, fieldMap map[string]CSVFieldAttributes) func(id, na
 	}
 }
 
-func fillRadioButtons(ctx *model.Context, d types.Dict, vNew string, v types.Name) error {
+func matchingRadioButtonState(d types.Dict, vNew string) (types.Name, types.Name) {
+	var legacy types.Name
+	for k := range d {
+		if k == vNew {
+			return types.Name(k), legacy
+		}
+		if legacy != "" {
+			continue
+		}
+		s, err := types.DecodeName(k)
+		if err == nil && s == vNew {
+			legacy = types.Name(k)
+		}
+	}
+	return "", legacy
+}
+
+func radioButtonState(ctx *model.Context, d types.Dict, vNew string) (types.Name, error) {
+	var legacy types.Name
+	for i, o := range d.ArrayEntry("Kids") {
+		d, err := ctx.DereferenceDict(o)
+		if err != nil {
+			return "", fmt.Errorf("kid %d: dereference: %w", i+1, err)
+		}
+
+		d1, err := locateAPN(ctx.XRefTable, d)
+		if err != nil {
+			return "", fmt.Errorf("kid %d: appearance: %w", i+1, err)
+		}
+
+		n, legacyName := matchingRadioButtonState(d1, vNew)
+		if n != "" {
+			return n, nil
+		}
+		if legacy == "" {
+			legacy = legacyName
+		}
+	}
+	if legacy != "" {
+		return legacy, nil
+	}
+	return types.Name(vNew), nil
+}
+
+func fillRadioButtons(ctx *model.Context, d types.Dict, v types.Name) error {
 	for i, o := range d.ArrayEntry("Kids") {
 		d, err := ctx.DereferenceDict(o)
 		if err != nil {
@@ -524,13 +568,9 @@ func fillRadioButtons(ctx *model.Context, d types.Dict, vNew string, v types.Nam
 		}
 
 		for k := range d1 {
-			k, err := types.DecodeName(k)
-			if err != nil {
-				return fmt.Errorf("kid %d: decode appearance state: %w", i+1, err)
-			}
 			if k != "Off" {
 				d["AS"] = types.Name("Off")
-				if k == vNew {
+				if k == v.Value() {
 					d["AS"] = v
 				}
 				break
@@ -574,29 +614,25 @@ func fillRadioButtonGroup(
 		}
 	}
 
-	vOld := ""
 	n, _, err := ctx.DereferenceNameEntry(d, "V")
 	if err != nil {
 		return fmt.Errorf("radio button group %s: %w", id, err)
 	}
-	if n != nil {
-		n, err := types.DecodeName(n.Value())
-		if err != nil {
-			return err
-		}
-		if n != "Off" {
-			vOld = n
-		}
-	}
-	if vNew == vOld {
+	if n == nil && vNew == "" {
 		return nil
 	}
 
-	s := types.EncodeName(vNew)
-	v := types.Name(s)
+	v, err := radioButtonState(ctx, d, vNew)
+	if err != nil {
+		return err
+	}
+	if n != nil && n.Value() == v.Value() {
+		return nil
+	}
+
 	d["V"] = v
 
-	if err := fillRadioButtons(ctx, d, vNew, v); err != nil {
+	if err := fillRadioButtons(ctx, d, v); err != nil {
 		return err
 	}
 

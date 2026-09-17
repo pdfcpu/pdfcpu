@@ -799,8 +799,6 @@ func (rbg *RadioButtonGroup) prepareButtonDict(r *types.Rectangle, v string, par
 		2) Preselected radio buttons remain sticky after saving across Mac Preview and Adobe Reader.
 	*/
 
-	s := types.EncodeName(v)
-
 	as := types.Name("Off")
 
 	v1 := rbg.Default
@@ -808,7 +806,7 @@ func (rbg *RadioButtonGroup) prepareButtonDict(r *types.Rectangle, v string, par
 		v1 = rbg.Value
 	}
 	if v == v1 {
-		as = types.Name(s)
+		as = types.Name(v)
 	}
 
 	d := types.Dict(map[string]types.Object{
@@ -823,13 +821,13 @@ func (rbg *RadioButtonGroup) prepareButtonDict(r *types.Rectangle, v string, par
 				"D": types.Dict(
 					map[string]types.Object{
 						"Off": *irDOff,
-						s:     *irDYes,
+						v:     *irDYes,
 					},
 				),
 				"N": types.Dict(
 					map[string]types.Object{
 						"Off": *irNOff,
-						s:     *irNYes,
+						v:     *irNYes,
 					},
 				),
 			},
@@ -1020,15 +1018,13 @@ func (rbg *RadioButtonGroup) prepareDict(p *model.Page, pageNr int, fonts model.
 
 	v := types.Name("Off")
 	if rbg.Value != "" {
-		s := types.EncodeName(rbg.Value)
-		v = types.Name(s)
+		v = types.Name(rbg.Value)
 	}
 
 	if rbg.Default != "" {
-		s := types.EncodeName(rbg.Default)
-		d["DV"] = types.Name(s)
+		d["DV"] = types.Name(rbg.Default)
 		if rbg.Value == "" {
-			v = types.Name(s)
+			v = types.Name(rbg.Default)
 		}
 	}
 

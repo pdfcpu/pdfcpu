@@ -300,10 +300,6 @@ func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 		}
 
 		for k := range d1 {
-			k, err := types.DecodeName(k)
-			if err != nil {
-				return nil, false, err
-			}
 			if k != "Off" && !types.MemberOf(k, opts) {
 				opts = append(opts, k)
 			}
@@ -314,10 +310,7 @@ func extractRadioButtonGroupOptions(xRefTable *model.XRefTable, d types.Dict) ([
 }
 
 func resolveOption(s string, opts []string, explicit bool) (string, error) {
-	n, err := types.DecodeName(s)
-	if err != nil {
-		return "", err
-	}
+	n := s
 	if len(opts) > 0 && explicit {
 		j, err := strconv.Atoi(n)
 		if err != nil {
