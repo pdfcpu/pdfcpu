@@ -169,7 +169,7 @@ func TestValidateEmbeddedTargetRejectsRecursionDepth(t *testing.T) {
 	for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
 		xRefTable := actionXRefTable(1, dicts)
 		xRefTable.ValidationMode = mode
-		err := validateGoToEActionDict(t.Context(), xRefTable, embeddedGoToAction(ir5), "GoToE")
+		err := validateGoToEActionDict(t.Context(), xRefTable, embeddedGoToAction(ir5), 0, "GoToE")
 		if !errors.Is(err, model.ErrMaxRecursionDepthExceeded) {
 			t.Fatalf("mode %d: got %v, want ErrMaxRecursionDepthExceeded", mode, err)
 		}
@@ -193,7 +193,7 @@ func TestValidateEmbeddedTargetRejectsCycles(t *testing.T) {
 			t.Run(fmt.Sprintf("mode_%d/%s", mode, tt.name), func(t *testing.T) {
 				xRefTable := actionXRefTable(100, tt.dicts)
 				xRefTable.ValidationMode = mode
-				err := validateGoToEActionDict(t.Context(), xRefTable, embeddedGoToAction(ir5), "GoToE")
+				err := validateGoToEActionDict(t.Context(), xRefTable, embeddedGoToAction(ir5), 0, "GoToE")
 				if !errors.Is(err, model.ErrTargetCycle) {
 					t.Fatalf("got %v, want ErrTargetCycle", err)
 				}
@@ -210,7 +210,7 @@ func TestValidateEmbeddedTargetAllowsReuse(t *testing.T) {
 	action := embeddedGoToAction(ir5)
 
 	for i := 0; i < 2; i++ {
-		if err := validateGoToEActionDict(t.Context(), xRefTable, action, "GoToE"); err != nil {
+		if err := validateGoToEActionDict(t.Context(), xRefTable, action, 0, "GoToE"); err != nil {
 			t.Fatal(err)
 		}
 	}

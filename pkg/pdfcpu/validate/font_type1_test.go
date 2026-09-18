@@ -28,7 +28,13 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func type1FontTestObjects(version model.Version, fontName string) (*model.XRefTable, types.Dict) {
+func type1FontTestObjects(t *testing.T, version model.Version, fontName string) (*model.Context, types.Dict) {
+	t.Helper()
+	conf := model.NewStatelessConfiguration()
+	ctx, err := model.NewContext(bytes.NewReader(nil), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
 	fd := types.Dict{
 		"Type":        types.Name("FontDescriptor"),
 		"FontName":    types.Name(fontName),
@@ -40,12 +46,9 @@ func type1FontTestObjects(version model.Version, fontName string) (*model.XRefTa
 		"CapHeight":   types.Integer(562),
 		"StemV":       types.Integer(51),
 	}
-	x := &model.XRefTable{
-		Table:          map[int]*model.XRefTableEntry{1: model.NewXRefTableEntryGen0(fd)},
-		Conf:           model.NewStatelessConfiguration(),
-		HeaderVersion:  &version,
-		ValidationMode: model.ValidationStrict,
-	}
+	ctx.XRefTable.Table = map[int]*model.XRefTableEntry{1: model.NewXRefTableEntryGen0(fd)}
+	ctx.XRefTable.HeaderVersion = &version
+	ctx.XRefTable.ValidationMode = model.ValidationStrict
 	d := types.Dict{
 		"Type":           types.Name("Font"),
 		"Subtype":        types.Name("Type1"),
@@ -55,12 +58,12 @@ func type1FontTestObjects(version model.Version, fontName string) (*model.XRefTa
 		"Widths":         types.NewIntegerArray(600),
 		"FontDescriptor": *types.NewIndirectRef(1, 0),
 	}
-	return x, d
+	return ctx, d
 }
 
-func checkType1FontValidation(t *testing.T, x *model.XRefTable, d types.Dict, wantMissing string) {
+func checkType1FontValidation(t *testing.T, ctx *model.Context, d types.Dict, wantMissing string) {
 	t.Helper()
-	fontName, err := validateType1FontDict(x, d)
+	fontName, err := validateType1FontDict(ctx.XRefTable, d, 2)
 	if wantMissing != "" {
 		if err == nil || !strings.Contains(err.Error(), "required entry="+wantMissing+" missing") {
 			t.Fatalf("got %v, want missing %s", err, wantMissing)
@@ -82,7 +85,7 @@ func TestType1FontMetricsVersions(t *testing.T) {
 		for _, fontName := range []string{"Courier", "CustomFont"} {
 			for mask := 0; mask < 16; mask++ {
 				t.Run(fmt.Sprintf("%s/%s/metrics_%04b", version, fontName, mask), func(t *testing.T) {
-					x, d := type1FontTestObjects(version, fontName)
+					ctx, d := type1FontTestObjects(t, version, fontName)
 					missing := ""
 					for i, key := range keys {
 						if mask&(1<<i) == 0 {
@@ -95,7 +98,10 @@ func TestType1FontMetricsVersions(t *testing.T) {
 					if version == model.V17 && fontName == "Courier" && mask == 0 {
 						missing = ""
 					}
-					checkType1FontValidation(t, x, d, missing)
+					checkType1FontValidation(t, ctx, d, missing)
+					if !ctx.ValidationReport().Empty() {
+						t.Fatalf("strict validation reported accepted divergences: %+v", ctx.ValidationReport().Notices())
+					}
 				})
 			}
 		}
@@ -106,12 +112,12 @@ func TestType1FontMetricsVersions(t *testing.T) {
 func TestType1FontMetricsRelaxed(t *testing.T) {
 	for _, version := range []model.Version{model.V17, model.V20} {
 		t.Run(version.String(), func(t *testing.T) {
-			x, d := type1FontTestObjects(version, "Courier")
-			x.ValidationMode = model.ValidationRelaxed
+			ctx, d := type1FontTestObjects(t, version, "Courier")
+			ctx.XRefTable.ValidationMode = model.ValidationRelaxed
 			for _, key := range []string{"FirstChar", "LastChar", "Widths", "FontDescriptor"} {
 				delete(d, key)
 			}
-			checkType1FontValidation(t, x, d, "")
+			checkType1FontValidation(t, ctx, d, "")
 		})
 	}
 }
@@ -120,8 +126,8 @@ func TestType1FontMetricsRelaxed(t *testing.T) {
 func TestType1FontMetricsNull(t *testing.T) {
 	for _, indirect := range []bool{false, true} {
 		t.Run(fmt.Sprintf("indirect_%t", indirect), func(t *testing.T) {
-			x, d := type1FontTestObjects(model.V17, "Courier")
-			x.Table[2] = model.NewXRefTableEntryGen0(nil)
+			ctx, d := type1FontTestObjects(t, model.V17, "Courier")
+			ctx.XRefTable.Table[2] = model.NewXRefTableEntryGen0(nil)
 			var null types.Object
 			if indirect {
 				null = *types.NewIndirectRef(2, 0)
@@ -129,9 +135,9 @@ func TestType1FontMetricsNull(t *testing.T) {
 			for _, key := range []string{"FirstChar", "LastChar", "Widths", "FontDescriptor"} {
 				d[key] = null
 			}
-			checkType1FontValidation(t, x, d, "")
+			checkType1FontValidation(t, ctx, d, "")
 			d["LastChar"] = types.Integer(65)
-			if _, err := validateType1FontDict(x, d); err == nil || !strings.Contains(err.Error(), "required entry=FirstChar") {
+			if _, err := validateType1FontDict(ctx.XRefTable, d, 2); err == nil || !strings.Contains(err.Error(), "required entry=FirstChar") {
 				t.Fatalf("got %v, want required FirstChar error", err)
 			}
 		})
@@ -157,18 +163,33 @@ func TestType1FontMetricsRelaxedDiagnostics(t *testing.T) {
 			var buf bytes.Buffer
 			pdfcpuLog.SetCLILogger(log.New(&buf, "", 0))
 			defer pdfcpuLog.SetCLILogger(nil)
-			x, d := type1FontTestObjects(tc.version, tc.fontName)
-			x.ValidationMode = model.ValidationRelaxed
+			ctx, d := type1FontTestObjects(t, tc.version, tc.fontName)
+			ctx.XRefTable.ValidationMode = model.ValidationRelaxed
 			for _, key := range tc.remove {
 				delete(d, key)
 			}
-			checkType1FontValidation(t, x, d, "")
-			want := ""
-			if tc.want != "" {
-				want = fmt.Sprintf("pdfcpu digested: Type1 font %s: missing required entries %s\n", tc.fontName, tc.want)
+			checkType1FontValidation(t, ctx, d, "")
+			if got := buf.String(); got != "" {
+				t.Fatalf("global diagnostic: got %q, want none", got)
 			}
-			if got := buf.String(); got != want {
-				t.Fatalf("diagnostic: got %q, want %q", got, want)
+			notices := ctx.ValidationReport().Notices()
+			if tc.want == "" {
+				if len(notices) != 0 {
+					t.Fatalf("notices: got %+v, want none", notices)
+				}
+				return
+			}
+			if len(notices) != 1 {
+				t.Fatalf("notice count: got %d, want 1", len(notices))
+			}
+			want := fmt.Sprintf("Type1 font %s: missing required entries %s", tc.fontName, tc.want)
+			notice := notices[0]
+			wantCause := "dict=type1FontDict required entry=" + strings.Split(tc.want, ",")[0] + " missing"
+			if notice.Message != want || notice.Cause == nil || notice.Cause.Error() != wantCause {
+				t.Fatalf("notice: got %+v, want %q", notice, want)
+			}
+			if notice.ObjectNumber != 2 || notice.Phase != model.NoticePhaseValidate || notice.Disposition != model.NoticeDigested {
+				t.Fatalf("notice classification: got %+v", notice)
 			}
 		})
 	}

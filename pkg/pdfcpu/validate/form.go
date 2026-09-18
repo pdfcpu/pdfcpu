@@ -476,7 +476,7 @@ func validateFormFieldParts(c context.Context, xRefTable *model.XRefTable, objNr
 	}
 
 	// Validate widget annotation - Validation of AA redundant because of merged acrofield with widget annotation.
-	if _, err = validateAnnotationDict(c, xRefTable, d); err != nil {
+	if _, err = validateAnnotationDict(c, xRefTable, d, objNr); err != nil {
 		return err
 	}
 

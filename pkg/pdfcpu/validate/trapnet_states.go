@@ -51,8 +51,8 @@ func validateTrapNetStateValues(c context.Context, x *model.XRefTable, d types.D
 	return nil
 }
 
-func validatePageAnnotationDict(c context.Context, x *model.XRefTable, d types.Dict, precedingCount int) (bool, error) {
-	trapNet, err := validateAnnotationDict(c, x, d)
+func validatePageAnnotationDict(c context.Context, x *model.XRefTable, d types.Dict, ownerObjNr, precedingCount int) (bool, error) {
+	trapNet, err := validateAnnotationDict(c, x, d, ownerObjNr)
 	if err != nil || !trapNet {
 		return trapNet, err
 	}

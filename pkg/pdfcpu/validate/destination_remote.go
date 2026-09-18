@@ -28,9 +28,14 @@ func validateRemoteDestinationArray(xRefTable *model.XRefTable, a types.Array, o
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
 	if !validateDestinationArrayLength(a) {
-		err = fmt.Errorf("remote destination array: invalid length %d", len(a))
+		err = model.WithValidationErrorObject(fmt.Errorf("remote destination array: invalid length %d", len(a)), ownerObjNr)
 		if xRefTable.ValidationMode == model.ValidationRelaxed {
-			model.ShowDigestedSpecViolationError(err)
+			xRefTable.AddValidationNotice(model.NewValidationNotice(
+				model.NoticePhaseValidate,
+				model.NoticeDigested,
+				err.Error(),
+				err,
+			))
 			return nil
 		}
 		return err
@@ -42,24 +47,34 @@ func validateRemoteDestinationArray(xRefTable *model.XRefTable, a types.Array, o
 	}
 	page, ok := o.(types.Integer)
 	if !ok || page < 0 {
-		err = fmt.Errorf("remote destination array[0]: expected non-negative page number, got %v (%T)", o, o)
-		err = model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, a[0]))
+		strictFailure := fmt.Errorf("remote destination array[0]: expected non-negative page number, got %v (%T)", o, o)
+		strictFailure = model.WithValidationErrorObject(strictFailure, validationObjectNumber(ownerObjNr, a[0]))
 		if xRefTable.ValidationMode == model.ValidationStrict {
+			return strictFailure
+		}
+		if err := validateDestinationArrayMode(xRefTable, a, ownerObjNr); err != nil {
 			return err
 		}
-		model.ShowDigestedSpecViolationError(err)
+		xRefTable.AddValidationNotice(model.NewValidationNotice(
+			model.NoticePhaseValidate,
+			model.NoticeDigested,
+			strictFailure.Error(),
+			strictFailure,
+		))
+		return nil
 	}
 	return validateDestinationArrayMode(xRefTable, a, ownerObjNr)
 }
 
-func validateRemoteActionDestinationEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string) error {
+func validateRemoteActionDestinationEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string) error {
 	rawEntry := d[entryName]
-	o, err := validateEntry(xRefTable, d, 0, dictName, entryName, REQUIRED, model.V10)
+	destinationObjNr := validationObjectNumber(ownerObjNr, rawEntry)
+	o, err := validateEntry(xRefTable, d, ownerObjNr, dictName, entryName, REQUIRED, model.V10)
 	if err == nil && o != nil {
 		if a, ok := o.(types.Array); ok {
-			err = validateRemoteDestinationArray(xRefTable, a, validationObjectNumber(0, rawEntry))
+			err = validateRemoteDestinationArray(xRefTable, a, destinationObjNr)
 		} else {
-			_, err = validateDestination(xRefTable, rawEntry, 0, true)
+			_, err = validateDestination(xRefTable, rawEntry, ownerObjNr, true)
 		}
 	}
 	if err != nil {

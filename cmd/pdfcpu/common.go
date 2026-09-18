@@ -335,5 +335,12 @@ func runCommand(c context.Context, cmd *cli.Command) error {
 	if cmd != nil && cmd.ErrorOutput == nil {
 		cmd.ErrorOutput = os.Stderr
 	}
+	if cmd != nil {
+		if quiet {
+			cmd.NoticeOutput = nil
+		} else if cmd.NoticeOutput == nil {
+			cmd.NoticeOutput = os.Stderr
+		}
+	}
 	return runCommandWithOutput(c, cmd, os.Stdout, cli.Dispatch, quiet)
 }

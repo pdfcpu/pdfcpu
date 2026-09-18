@@ -40,7 +40,7 @@ func validateGoToActionDict(xRefTable *model.XRefTable, d types.Dict, dictName s
 	return validateActionDestinationEntry(xRefTable, d, dictName, "D", required, model.V10)
 }
 
-func validateGoToRActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateGoToRActionDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.6.4.3 Remote Go-To Actions
 
 	// F, required, file specification
@@ -50,7 +50,7 @@ func validateGoToRActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 	}
 
 	// D, required, name, byte string or array
-	err = validateRemoteActionDestinationEntry(xRefTable, d, dictName, "D")
+	err = validateRemoteActionDestinationEntry(xRefTable, d, ownerObjNr, dictName, "D")
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func validateTargetDictEntryDepth(c context.Context, xRefTable *model.XRefTable,
 	return nil
 }
 
-func validateGoToEActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateGoToEActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.6.4.4 Embedded Go-To Actions
 
 	// F, optional, file specification
@@ -156,12 +156,12 @@ func validateGoToEActionDict(c context.Context, xRefTable *model.XRefTable, d ty
 	}
 
 	// D, required, name, byte string or array
-	err = validateRemoteActionDestinationEntry(xRefTable, d, dictName, "D")
+	err = validateRemoteActionDestinationEntry(xRefTable, d, ownerObjNr, dictName, "D")
 	if err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
 			return err
 		}
-		err = validateRemoteActionDestinationEntry(xRefTable, d, dictName, "Dest")
+		err = validateRemoteActionDestinationEntry(xRefTable, d, ownerObjNr, dictName, "Dest")
 		if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
 			err = nil
 			model.ShowSkipped("GotoEAction: missing \"D\"")
@@ -944,7 +944,7 @@ func validateTransActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 	return validateTransitionDict(xRefTable, d1, 0)
 }
 
-func validateGoTo3DViewActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateGoTo3DViewActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.6.4.15
 
 	// TA, required, target annotation
@@ -953,7 +953,8 @@ func validateGoTo3DViewActionDict(c context.Context, xRefTable *model.XRefTable,
 		return err
 	}
 
-	_, err = validateAnnotationDict(c, xRefTable, d1)
+	taObjNr := validationEntryObjectNumber(ownerObjNr, d, "TA")
+	_, err = validateAnnotationDict(c, xRefTable, d1, taObjNr)
 	if err != nil {
 		return err
 	}
@@ -965,16 +966,18 @@ func validateGoTo3DViewActionDict(c context.Context, xRefTable *model.XRefTable,
 	return err
 }
 
-func validateActionDictCore(c context.Context, xRefTable *model.XRefTable, n *types.Name, d types.Dict) error {
+func validateActionDictCore(c context.Context, xRefTable *model.XRefTable, n *types.Name, d types.Dict, ownerObjNr int) error {
 	for k, v := range map[string]struct {
 		validate            func(xRefTable *model.XRefTable, d types.Dict, dictName string) error
 		sinceVersion        model.Version
 		sinceVersionRelaxed model.Version
 	}{
-		"GoTo":  {validateGoToActionDict, model.V10, model.V10},
-		"GoToR": {validateGoToRActionDict, model.V10, model.V10},
+		"GoTo": {validateGoToActionDict, model.V10, model.V10},
+		"GoToR": {func(x *model.XRefTable, d types.Dict, name string) error {
+			return validateGoToRActionDict(x, d, ownerObjNr, name)
+		}, model.V10, model.V10},
 		"GoToE": {func(x *model.XRefTable, d types.Dict, name string) error {
-			return validateGoToEActionDict(c, x, d, name)
+			return validateGoToEActionDict(c, x, d, ownerObjNr, name)
 		}, model.V16, model.V11},
 		"Launch":      {validateLaunchActionDict, model.V10, model.V10},
 		"Thread":      {validateThreadActionDict, model.V10, model.V10},
@@ -993,7 +996,7 @@ func validateActionDictCore(c context.Context, xRefTable *model.XRefTable, n *ty
 		}, model.V15, model.V14},
 		"Trans": {validateTransActionDict, model.V15, model.V15},
 		"GoTo3DView": {func(x *model.XRefTable, d types.Dict, name string) error {
-			return validateGoTo3DViewActionDict(c, x, d, name)
+			return validateGoTo3DViewActionDict(c, x, d, ownerObjNr, name)
 		}, model.V16, model.V16},
 	} {
 		if n.Value() == k {
@@ -1045,7 +1048,7 @@ func validateActionDictObjectDepth(c context.Context, xRefTable *model.XRefTable
 		return nil
 	}
 
-	if err := validateActionDict(c, xRefTable, d, depth, visit); err != nil {
+	if err := validateActionDict(c, xRefTable, d, objNr, depth, visit); err != nil {
 		return model.WrapRecursionError(objectContext(context, o), err)
 	}
 	visit.MarkValidated(objNr, depth)
@@ -1098,7 +1101,7 @@ func validateNextAction(c context.Context, xRefTable *model.XRefTable, o types.O
 	return nil
 }
 
-func validateActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, depth int, visit *model.ActionVisit) error {
+func validateActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr, depth int, visit *model.ActionVisit) error {
 	dictName := "actionDict"
 
 	// Type, optional, name
@@ -1123,7 +1126,7 @@ func validateActionDict(c context.Context, xRefTable *model.XRefTable, d types.D
 	}
 
 	if s != nil {
-		err = validateActionDictCore(c, xRefTable, s, d)
+		err = validateActionDictCore(c, xRefTable, s, d, ownerObjNr)
 		if err != nil {
 			return err
 		}

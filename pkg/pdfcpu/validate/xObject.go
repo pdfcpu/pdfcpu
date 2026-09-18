@@ -493,7 +493,7 @@ func validateOPIVersionDict(xRefTable *model.XRefTable, d types.Dict) error {
 	return nil
 }
 
-func validateMaskStreamDict(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict) error {
+func validateMaskStreamDict(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, ownerObjNr int) error {
 	t, _, err := xRefTable.DereferenceNameEntry(sd.Dict, "Type")
 	if err != nil {
 		return fmt.Errorf("mask stream dict Type: %w", err)
@@ -510,20 +510,20 @@ func validateMaskStreamDict(c context.Context, xRefTable *model.XRefTable, sd *t
 		return errors.New("mask stream dict Subtype: expected Image")
 	}
 
-	if err := validateImageStreamDict(c, xRefTable, sd, isNoAlternateImageStreamDict); err != nil {
+	if err := validateImageStreamDict(c, xRefTable, sd, ownerObjNr, isNoAlternateImageStreamDict); err != nil {
 		return fmt.Errorf("mask image stream dict: %w", err)
 	}
 	return nil
 }
 
-func validateMaskEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, components int, bits *types.Integer) (err error) {
+func validateMaskEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version, components int, bits *types.Integer) (err error) {
 	// stream ("explicit masking", another Image XObject) or array of colors ("color key masking")
-	objNr := validationEntryObjectNumber(0, d, entryName)
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
 	}()
 
-	o, err := validateEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion)
+	o, err := validateEntry(xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion)
 	if err != nil || o == nil {
 		if err != nil {
 			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
@@ -534,14 +534,27 @@ func validateMaskEntry(c context.Context, xRefTable *model.XRefTable, d types.Di
 	switch o := o.(type) {
 
 	case types.StreamDict:
-		err = validateMaskStreamDict(c, xRefTable, &o)
+		err = validateMaskStreamDict(c, xRefTable, &o, objNr)
 		if err != nil {
 			return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 		}
 
 	case types.Array:
-		components = relaxedIndexedMaskComponents(xRefTable, d, o, components)
-		return validateColorKeyMask(c, xRefTable, o, objNr, dictName, components, bits)
+		strictComponents := components
+		components = relaxedIndexedMaskComponents(xRefTable, d, o, ownerObjNr, components)
+		if err = validateColorKeyMask(c, xRefTable, o, objNr, dictName, components, bits); err != nil {
+			return err
+		}
+		if components != strictComponents {
+			strictFailure := validateImageArrayLength(o, objNr, dictName, entryName, strictComponents)
+			xRefTable.AddValidationNotice(model.NewValidationNotice(
+				model.NoticePhaseValidate,
+				model.NoticeDigested,
+				strictFailure.Error(),
+				strictFailure,
+			))
+		}
+		return nil
 
 	default:
 		return fmt.Errorf("%s.%s: expected image stream dict or color key array, got %T", dictName, entryName, o)
@@ -551,13 +564,13 @@ func validateMaskEntry(c context.Context, xRefTable *model.XRefTable, d types.Di
 	return nil
 }
 
-func validateAlternateImageStreamDicts(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
-	arrayObjNr := validationEntryObjectNumber(0, d, entryName)
+func validateAlternateImageStreamDicts(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
+	arrayObjNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, arrayObjNr)
 	}()
 
-	a, err := validateArrayEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion, nil)
+	a, err := validateArrayEntry(xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, nil)
 	if err != nil {
 		return fmt.Errorf("%s.%s: %w", dictName, entryName, err)
 	}
@@ -584,7 +597,7 @@ func validateAlternateImageStreamDicts(c context.Context, xRefTable *model.XRefT
 			continue
 		}
 
-		err = validateImageStreamDict(c, xRefTable, sd, isAlternateImageStreamDict)
+		err = validateImageStreamDict(c, xRefTable, sd, objNr, isAlternateImageStreamDict)
 		if err != nil {
 			err = fmt.Errorf("%s.%s[%d]: %w", dictName, entryName, i, err)
 			return model.WithValidationErrorObject(err, objNr)
@@ -649,7 +662,7 @@ func validateImageStreamDictPart1(c context.Context, xRefTable *model.XRefTable,
 	return isImageMask, nil
 }
 
-func validateImageStreamDictPart2(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, dictName string, isImageMask, isAlternate bool) error {
+func validateImageStreamDictPart2(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, ownerObjNr int, dictName string, isImageMask, isAlternate bool) error {
 	// BitsPerComponent, integer
 	required := REQUIRED
 	if sd.HasSoleFilterNamed(filter.JPX) || isImageMask || xRefTable.ValidationMode == model.ValidationRelaxed {
@@ -677,7 +690,7 @@ func validateImageStreamDictPart2(c context.Context, xRefTable *model.XRefTable,
 		return err
 	}
 
-	if err = validateImageArrays(c, xRefTable, sd, dictName, isImageMask, bpc); err != nil {
+	if err = validateImageArrays(c, xRefTable, sd, ownerObjNr, dictName, isImageMask, bpc); err != nil {
 		return err
 	}
 
@@ -689,7 +702,7 @@ func validateImageStreamDictPart2(c context.Context, xRefTable *model.XRefTable,
 
 	// Alternates, array, optional, since V1.3
 	if !isAlternate {
-		err = validateAlternateImageStreamDicts(c, xRefTable, sd.Dict, dictName, "Alternates", OPTIONAL, model.V13)
+		err = validateAlternateImageStreamDicts(c, xRefTable, sd.Dict, ownerObjNr, dictName, "Alternates", OPTIONAL, model.V13)
 	}
 
 	return err
@@ -715,12 +728,12 @@ func imageTraversalFromContext(c context.Context, xRefTable *model.XRefTable) (c
 	return context.WithValue(c, imageTraversalContextKey{}, t), t
 }
 
-func validateImageStreamDict(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, isAlternate bool) error {
+func validateImageStreamDict(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, ownerObjNr int, isAlternate bool) error {
 	c, traversal := imageTraversalFromContext(c, xRefTable)
-	return traversal.validate(c, sd, isAlternate)
+	return traversal.validate(c, sd, ownerObjNr, isAlternate)
 }
 
-func (t *imageTraversal) validate(c context.Context, sd *types.StreamDict, isAlternate bool) error {
+func (t *imageTraversal) validate(c context.Context, sd *types.StreamDict, ownerObjNr int, isAlternate bool) error {
 	if err := contextutil.Check(c); err != nil {
 		return err
 	}
@@ -732,10 +745,10 @@ func (t *imageTraversal) validate(c context.Context, sd *types.StreamDict, isAlt
 	defer func() {
 		t.depth--
 	}()
-	return validateImageStreamDictBody(c, t.xRefTable, sd, isAlternate)
+	return validateImageStreamDictBody(c, t.xRefTable, sd, ownerObjNr, isAlternate)
 }
 
-func validateImageStreamDictBody(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, isAlternate bool) error {
+func validateImageStreamDictBody(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, ownerObjNr int, isAlternate bool) error {
 	dictName := "imageStreamDict"
 	var isImageMask bool
 
@@ -744,7 +757,7 @@ func validateImageStreamDictBody(c context.Context, xRefTable *model.XRefTable, 
 		return err
 	}
 
-	err = validateImageStreamDictPart2(c, xRefTable, sd, dictName, isImageMask, isAlternate)
+	err = validateImageStreamDictPart2(c, xRefTable, sd, ownerObjNr, dictName, isImageMask, isAlternate)
 	if err != nil {
 		return err
 	}
@@ -761,7 +774,7 @@ func validateImageStreamDictBody(c context.Context, xRefTable *model.XRefTable, 
 	}
 
 	if sd1 != nil {
-		err = validateImageStreamDict(c, xRefTable, sd1, isNoAlternateImageStreamDict)
+		err = validateImageStreamDict(c, xRefTable, sd1, sMaskObjNr, isNoAlternateImageStreamDict)
 		if err != nil {
 			return model.WithValidationErrorObject(err, sMaskObjNr)
 		}
@@ -980,7 +993,7 @@ func validateXObjectType(xRefTable *model.XRefTable, sd *types.StreamDict) error
 	return nil
 }
 
-func validateXObjectStreamDictMissingSubtype(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict) error {
+func validateXObjectStreamDictMissingSubtype(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, ownerObjNr int) error {
 	_, found := sd.Find("BBox")
 	if found {
 		if err := validateFormStreamDict(c, xRefTable, sd); err != nil {
@@ -997,7 +1010,7 @@ func validateXObjectStreamDictMissingSubtype(c context.Context, xRefTable *model
 		return nil
 	}
 
-	if err := validateImageStreamDict(c, xRefTable, sd, isNoAlternateImageStreamDict); err != nil {
+	if err := validateImageStreamDict(c, xRefTable, sd, ownerObjNr, isNoAlternateImageStreamDict); err != nil {
 		return fmt.Errorf("xObject image stream dict: %w", err)
 	}
 	sd.Dict["Subtype"] = types.Name("Image")
@@ -1005,14 +1018,14 @@ func validateXObjectStreamDictMissingSubtype(c context.Context, xRefTable *model
 	return nil
 }
 
-func validateXObjectStreamDictSubtype(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, subtype types.Name) error {
+func validateXObjectStreamDictSubtype(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, ownerObjNr int, subtype types.Name) error {
 	var err error
 
 	switch subtype {
 	case "Form":
 		err = validateFormStreamDict(c, xRefTable, sd)
 	case "Image":
-		err = validateImageStreamDict(c, xRefTable, sd, isNoAlternateImageStreamDict)
+		err = validateImageStreamDict(c, xRefTable, sd, ownerObjNr, isNoAlternateImageStreamDict)
 	case "PS":
 		err = errors.New("PostScript XObjects should not be used")
 	default:
@@ -1048,10 +1061,10 @@ func validateXObjectStreamDict(c context.Context, xRefTable *model.XRefTable, o 
 	if sd == nil {
 		return nil
 	}
-	return validateXObjectStreamDictContents(c, xRefTable, sd)
+	return validateXObjectStreamDictContents(c, xRefTable, sd, objNr)
 }
 
-func validateXObjectStreamDictContents(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict) error {
+func validateXObjectStreamDictContents(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, ownerObjNr int) error {
 	dictName := "xObjectStreamDict"
 
 	if err := validateXObjectType(xRefTable, sd); err != nil {
@@ -1068,10 +1081,10 @@ func validateXObjectStreamDictContents(c context.Context, xRefTable *model.XRefT
 	}
 
 	if subtype == nil || len(*subtype) == 0 {
-		return validateXObjectStreamDictMissingSubtype(c, xRefTable, sd)
+		return validateXObjectStreamDictMissingSubtype(c, xRefTable, sd, ownerObjNr)
 	}
 
-	return validateXObjectStreamDictSubtype(c, xRefTable, sd, *subtype)
+	return validateXObjectStreamDictSubtype(c, xRefTable, sd, ownerObjNr, *subtype)
 }
 
 func validateGroupAttributesDict(c context.Context, xRefTable *model.XRefTable, o types.Object) (err error) {

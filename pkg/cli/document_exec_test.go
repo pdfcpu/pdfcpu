@@ -23,11 +23,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	stdlog "log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	pdfcpuLog "github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
@@ -38,6 +40,365 @@ type validationErrorWriter struct {
 
 func (w validationErrorWriter) Write([]byte) (int, error) {
 	return 0, w.err
+}
+
+func validationReportTestPDF(objects []string) []byte {
+	var b bytes.Buffer
+	b.WriteString("%PDF-1.7\n")
+	offsets := make([]int, len(objects))
+	for i, object := range objects {
+		offsets[i] = b.Len()
+		fmt.Fprintf(&b, "%d 0 obj\n%s\nendobj\n", i+1, object)
+	}
+	xrefOffset := b.Len()
+	fmt.Fprintf(&b, "xref\n0 %d\n0000000000 65535 f \n", len(objects)+1)
+	for _, offset := range offsets {
+		fmt.Fprintf(&b, "%010d 00000 n \n", offset)
+	}
+	fmt.Fprintf(&b, "trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", len(objects)+1, xrefOffset)
+	return b.Bytes()
+}
+
+func validationNoticeTestPDF() []byte {
+	return validationReportTestPDF([]string{
+		"<<@/Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources <<>> >>",
+	})
+}
+
+func type1RequirednessNoticeTestPDF() []byte {
+	return validationReportTestPDF([]string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << /Font << /F1 4 0 R >> >> >>",
+		"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /FirstChar 65 >>",
+	})
+}
+
+func remoteDestinationNoticeTestPDF() []byte {
+	return validationReportTestPDF([]string{
+		"<< /Type /Catalog /Pages 2 0 R /OpenAction 4 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources <<>> >>",
+		"<< /Type /Action /S /GoToR /F (remote.pdf) /D [-1 /Fit] >>",
+	})
+}
+
+func annotationUnitIntervalNoticeTestPDF() []byte {
+	return validationReportTestPDF([]string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources <<>> /Annots [4 0 R] >>",
+		"<< /Type /Annot /Subtype /Text /Rect [0 0 10 10] /C [2 -1 0] >>",
+	})
+}
+
+func stitchingFunctionNoticesTestPDF() []byte {
+	return validationReportTestPDF([]string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << /Shading << /S 5 0 R >> >> >>",
+		"<< /FunctionType 3 /Domain [0 1] /Range 6 0 R " +
+			"/Functions [<< /FunctionType 2 /Domain [0 1] /N 1 >> << /FunctionType 2 /Domain [0 1] /N 1 >>] " +
+			"/Bounds 7 0 R /Encode [0 1 0 1] >>",
+		"<< /ShadingType 2 /ColorSpace /DeviceGray /Coords [0 0 1 1] /Function 4 0 R >>",
+		"[]",
+		"[]",
+	})
+}
+
+func simpleFontWidthsNoticesTestPDF() []byte {
+	return validationReportTestPDF([]string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] " +
+			"/Resources << /Font << /F1 4 0 R /F2 5 0 R /F3 6 0 R >> >> >>",
+		"<< /Type /Font /Subtype /TrueType /BaseFont /MissingWidth /FirstChar 0 /LastChar 1 /Widths [500] >>",
+		"<< /Type /Font /Subtype /TrueType /BaseFont /ExtraWidth /FirstChar 0 /LastChar 0 /Widths [500 600] >>",
+		"<< /Type /Font /Subtype /TrueType /BaseFont /EmptySentinel /FirstChar 65535 /LastChar 0 /Widths [] >>",
+	})
+}
+
+func indexedImageMaskNoticeTestPDF() []byte {
+	return validationReportTestPDF([]string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] " +
+			"/Resources << /XObject << /Im1 4 0 R >> >> >>",
+		"<< /Type /XObject /Subtype /Image /Width 1 /Height 1 " +
+			"/ColorSpace [/Indexed /DeviceRGB 1 <000000FFFFFF>] /BitsPerComponent 8 /Mask 5 0 R /Length 1 >>\n" +
+			"stream\n0\nendstream",
+		"[182 182 151 151 158 158]",
+	})
+}
+
+func step24aClosureNoticesTestPDF() []byte {
+	return validationReportTestPDF([]string{
+		"<<@/Type /Catalog /Pages 2 0 R /OpenAction 4 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << " +
+			"/Font << /F1 5 0 R /F2 6 0 R >> /Shading << /S1 8 0 R >> /XObject << /Im1 11 0 R >> >> " +
+			"/Annots [13 0 R] >>",
+		"<< /Type /Action /S /GoToR /F (remote.pdf) /D [-1 /Fit] >>",
+		"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /FirstChar 65 >>",
+		"<< /Type /Font /Subtype /TrueType /BaseFont /MissingWidth /FirstChar 0 /LastChar 1 /Widths [500] >>",
+		"<< /FunctionType 3 /Domain [0 1] /Range 9 0 R " +
+			"/Functions [<< /FunctionType 2 /Domain [0 1] /N 1 >> << /FunctionType 2 /Domain [0 1] /N 1 >>] " +
+			"/Bounds 10 0 R /Encode [0 1 0 1] >>",
+		"<< /ShadingType 2 /ColorSpace /DeviceGray /Coords [0 0 1 1] /Function 7 0 R >>",
+		"[]",
+		"[]",
+		"<< /Type /XObject /Subtype /Image /Width 1 /Height 1 " +
+			"/ColorSpace [/Indexed /DeviceRGB 1 <000000FFFFFF>] /BitsPerComponent 8 /Mask 12 0 R /Length 1 >>\n" +
+			"stream\n0\nendstream",
+		"[182 182 151 151 158 158]",
+		"<< /Type /Annot /Subtype /Text /Rect [0 0 10 10] /C [2 -1 0] >>",
+	})
+}
+
+func validationNoticeTestFileWithContent(t *testing.T, content []byte) string {
+	t.Helper()
+	inFile := filepath.Join(t.TempDir(), "validation-notice.pdf")
+	if err := os.WriteFile(inFile, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return inFile
+}
+
+func validationNoticeTestFile(t *testing.T) string {
+	t.Helper()
+	return validationNoticeTestFileWithContent(t, validationNoticeTestPDF())
+}
+
+func TestValidateRendersReturnedNoticeExactlyOnce(t *testing.T) {
+	var cliOutput bytes.Buffer
+	pdfcpuLog.SetCLILogger(stdlog.New(&cliOutput, "", 0))
+	defer pdfcpuLog.SetCLILogger(nil)
+
+	conf := model.NewStatelessConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	cmd := ValidateCommand([]string{validationNoticeTestFile(t)}, conf)
+	var noticeOutput bytes.Buffer
+	cmd.NoticeOutput = &noticeOutput
+
+	if _, err := validateCommand(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	want := "pdfcpu digested: object dictionary contains a non-name key token " +
+		"(obj#:1): parse: corrupt dictionary key: parse: corrupt name object\n"
+	if got := noticeOutput.String(); got != want {
+		t.Fatalf("notice output: got %q, want %q", got, want)
+	}
+	if strings.Contains(cliOutput.String(), "pdfcpu digested:") {
+		t.Fatalf("notice was also written through the global CLI logger: %q", cliOutput.String())
+	}
+}
+
+func TestValidateRendersType1RequirednessNotice(t *testing.T) {
+	pdfcpuLog.SetCLILogger(nil)
+	conf := model.NewStatelessConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	inFile := validationNoticeTestFileWithContent(t, type1RequirednessNoticeTestPDF())
+	cmd := ValidateCommand([]string{inFile}, conf)
+	var noticeOutput bytes.Buffer
+	cmd.NoticeOutput = &noticeOutput
+
+	if _, err := validateCommand(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	want := "pdfcpu digested: Type1 font Helvetica: missing required entries LastChar, Widths, FontDescriptor " +
+		"(obj#:4): dict=type1FontDict required entry=LastChar missing\n"
+	if got := noticeOutput.String(); got != want {
+		t.Fatalf("notice output: got %q, want %q", got, want)
+	}
+}
+
+func TestValidateRendersRemoteDestinationNotice(t *testing.T) {
+	pdfcpuLog.SetCLILogger(nil)
+	conf := model.NewStatelessConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	inFile := validationNoticeTestFileWithContent(t, remoteDestinationNoticeTestPDF())
+	cmd := ValidateCommand([]string{inFile}, conf)
+	var noticeOutput bytes.Buffer
+	cmd.NoticeOutput = &noticeOutput
+
+	if _, err := validateCommand(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	want := "pdfcpu digested: remote destination array[0]: expected non-negative page number, " +
+		"got -1 (types.Integer) (obj#:4)\n"
+	if got := noticeOutput.String(); got != want {
+		t.Fatalf("notice output: got %q, want %q", got, want)
+	}
+}
+
+func TestValidateRendersAnnotationUnitIntervalNotice(t *testing.T) {
+	pdfcpuLog.SetCLILogger(nil)
+	conf := model.NewStatelessConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	inFile := validationNoticeTestFileWithContent(t, annotationUnitIntervalNoticeTestPDF())
+	cmd := ValidateCommand([]string{inFile}, conf)
+	var noticeOutput bytes.Buffer
+	cmd.NoticeOutput = &noticeOutput
+
+	if _, err := validateCommand(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	want := "pdfcpu digested: annotDict.C[0]: invalid value 2, expected 0 through 1 (obj#:4)\n"
+	if got := noticeOutput.String(); got != want {
+		t.Fatalf("notice output: got %q, want %q", got, want)
+	}
+}
+
+func TestValidateRendersStitchingFunctionNotices(t *testing.T) {
+	pdfcpuLog.SetCLILogger(nil)
+	conf := model.NewStatelessConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	inFile := validationNoticeTestFileWithContent(t, stitchingFunctionNoticesTestPDF())
+	cmd := ValidateCommand([]string{inFile}, conf)
+	var noticeOutput bytes.Buffer
+	cmd.NoticeOutput = &noticeOutput
+
+	if _, err := validateCommand(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	want := "pdfcpu digested: stitchingFunctionDict.Range: invalid array length 0, expected complete pairs, " +
+		"minimum pair count 1 (obj#:6)\n" +
+		"pdfcpu digested: stitchingFunctionDict.Bounds: invalid array length 0, expected 1, " +
+		"one fewer than Functions (obj#:7)\n"
+	if got := noticeOutput.String(); got != want {
+		t.Fatalf("notice output: got %q, want %q", got, want)
+	}
+}
+
+func TestValidateRendersSimpleFontWidthsNotices(t *testing.T) {
+	pdfcpuLog.SetCLILogger(nil)
+	conf := model.NewStatelessConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	inFile := validationNoticeTestFileWithContent(t, simpleFontWidthsNoticesTestPDF())
+	cmd := ValidateCommand([]string{inFile}, conf)
+	var noticeOutput bytes.Buffer
+	cmd.NoticeOutput = &noticeOutput
+
+	if _, err := validateCommand(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	want := "pdfcpu digested: trueTypeFontDict.Widths: invalid array length 1, expected 2 " +
+		"to match FirstChar 0 and LastChar 1 (obj#:4)\n" +
+		"pdfcpu digested: trueTypeFontDict.Widths: invalid array length 2, expected 1 " +
+		"to match FirstChar 0 and LastChar 0 (obj#:5)\n" +
+		"pdfcpu digested: trueTypeFontDict.LastChar: invalid value 0, expected at least FirstChar 65535 (obj#:6)\n"
+	if got := noticeOutput.String(); got != want {
+		t.Fatalf("notice output: got %q, want %q", got, want)
+	}
+}
+
+func TestValidateRendersIndexedImageMaskNotice(t *testing.T) {
+	pdfcpuLog.SetCLILogger(nil)
+	conf := model.NewStatelessConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	inFile := validationNoticeTestFileWithContent(t, indexedImageMaskNoticeTestPDF())
+	cmd := ValidateCommand([]string{inFile}, conf)
+	var noticeOutput bytes.Buffer
+	cmd.NoticeOutput = &noticeOutput
+
+	if _, err := validateCommand(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	want := "pdfcpu digested: imageStreamDict.Mask: invalid array length 6, " +
+		"expected two values per colour component (1 components) (obj#:5)\n"
+	if got := noticeOutput.String(); got != want {
+		t.Fatalf("notice output: got %q, want %q", got, want)
+	}
+}
+
+func TestValidateRendersStep24aNoticesInCollectionOrder(t *testing.T) {
+	pdfcpuLog.SetCLILogger(nil)
+	conf := model.NewStatelessConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	inFile := validationNoticeTestFileWithContent(t, step24aClosureNoticesTestPDF())
+	cmd := ValidateCommand([]string{inFile}, conf)
+	var noticeOutput bytes.Buffer
+	cmd.NoticeOutput = &noticeOutput
+
+	if _, err := validateCommand(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	want := "pdfcpu digested: object dictionary contains a non-name key token (obj#:1): " +
+		"parse: corrupt dictionary key: parse: corrupt name object\n" +
+		"pdfcpu digested: Type1 font Helvetica: missing required entries LastChar, Widths, FontDescriptor (obj#:5): " +
+		"dict=type1FontDict required entry=LastChar missing\n" +
+		"pdfcpu digested: trueTypeFontDict.Widths: invalid array length 1, expected 2 " +
+		"to match FirstChar 0 and LastChar 1 (obj#:6)\n" +
+		"pdfcpu digested: imageStreamDict.Mask: invalid array length 6, " +
+		"expected two values per colour component (1 components) (obj#:12)\n" +
+		"pdfcpu digested: stitchingFunctionDict.Range: invalid array length 0, expected complete pairs, " +
+		"minimum pair count 1 (obj#:9)\n" +
+		"pdfcpu digested: stitchingFunctionDict.Bounds: invalid array length 0, expected 1, " +
+		"one fewer than Functions (obj#:10)\n" +
+		"pdfcpu digested: remote destination array[0]: expected non-negative page number, got -1 (types.Integer) (obj#:4)\n" +
+		"pdfcpu digested: annotDict.C[0]: invalid value 2, expected 0 through 1 (obj#:13)\n"
+	if got := noticeOutput.String(); got != want {
+		t.Fatalf("notice output: got %q, want %q", got, want)
+	}
+}
+
+func TestValidateSuppressesNoticeWithoutNoticeOutput(t *testing.T) {
+	pdfcpuLog.SetCLILogger(nil)
+	conf := model.NewStatelessConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	cmd := ValidateCommand([]string{validationNoticeTestFile(t)}, conf)
+	var errorOutput bytes.Buffer
+	cmd.ErrorOutput = &errorOutput
+
+	if _, err := validateCommand(t.Context(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	if got := errorOutput.String(); got != "" {
+		t.Fatalf("suppressed notice wrote to error output: %q", got)
+	}
+}
+
+func TestValidateNoticeWriterFailurePreservesCause(t *testing.T) {
+	wantErr := errors.New("notice writer failed")
+	conf := model.NewStatelessConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	cmd := ValidateCommand([]string{validationNoticeTestFile(t)}, conf)
+	cmd.NoticeOutput = validationErrorWriter{err: wantErr}
+
+	_, err := validateCommand(t.Context(), cmd)
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("expected %v, got %v", wantErr, err)
+	}
+	if !strings.Contains(err.Error(), "write validation notice 1") {
+		t.Fatalf("expected notice write context, got %q", err)
+	}
+}
+
+func TestReportValidationNoticesPreservesCollectionOrder(t *testing.T) {
+	ctx := &model.Context{}
+	ctx.AddValidationNotice(model.NewValidationNotice(
+		model.NoticePhaseParse,
+		model.NoticeSkipped,
+		"first divergence",
+		nil,
+	))
+	ctx.AddValidationNotice(model.NewValidationNotice(
+		model.NoticePhaseValidate,
+		model.NoticeRepaired,
+		"second divergence",
+		nil,
+	))
+
+	var output bytes.Buffer
+	if err := reportValidationNotices(&output, ctx.ValidationReport()); err != nil {
+		t.Fatal(err)
+	}
+	want := "pdfcpu skipped: first divergence\npdfcpu repaired: second divergence\n"
+	if got := output.String(); got != want {
+		t.Fatalf("notice order: got %q, want %q", got, want)
+	}
 }
 
 func TestValidateSingleValidFile(t *testing.T) {

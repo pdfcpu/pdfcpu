@@ -56,6 +56,18 @@ var (
 	ErrCorruptObjectOffset = errors.New("corrupt object offset")
 )
 
+type dictionaryKeyError struct {
+	err error
+}
+
+func (e *dictionaryKeyError) Error() string {
+	return fmt.Sprintf("parse: corrupt dictionary key: %v", e.err)
+}
+
+func (e *dictionaryKeyError) Unwrap() error {
+	return e.err
+}
+
 func positionToNextWhitespace(s string) (int, string) {
 	for i, c := range s {
 		if unicode.IsSpace(c) || c == 0x00 {
@@ -583,7 +595,7 @@ func processDictKeys(c context.Context, line *string, level, maxDepth int, relax
 		keyName, err := parseName(&l)
 		if err != nil {
 			if !relaxed {
-				return nil, err
+				return nil, &dictionaryKeyError{err: err}
 			}
 			// Skip junk.
 			l = forwardParseBuf(l, 1)
@@ -1018,6 +1030,51 @@ func parseObject(c context.Context, line *string, level, depthLimit int, relaxed
 	*line = l
 
 	return value, nil
+}
+
+// ParseObjectResult contains an object and any strict failure accepted by a classified relaxed parser fallback.
+type ParseObjectResult struct {
+	Object        types.Object
+	StrictFailure error
+}
+
+func policyManagedParseError(err error) bool {
+	var keyErr *dictionaryKeyError
+	return errors.As(err, &keyErr)
+}
+
+// ParseObjectWithPolicy parses the next object and applies validation policy to classified parser fallbacks.
+func ParseObjectWithPolicy(c context.Context, line *string, level, validationMode int, maxDepth ...int) (ParseObjectResult, error) {
+	if c == nil {
+		return ParseObjectResult{}, ErrMissingContext
+	}
+	if noBuf(line) {
+		return ParseObjectResult{}, errBufNotAvailable
+	}
+
+	depthLimit := parseObjectDepthLimit(maxDepth)
+	original := *line
+	value, err := parseObject(c, line, level, depthLimit, false)
+	if err == nil {
+		return ParseObjectResult{Object: value}, nil
+	}
+	if errors.Is(err, ErrMaxRecursionDepthExceeded) || c.Err() != nil {
+		return ParseObjectResult{}, err
+	}
+	if !policyManagedParseError(err) {
+		*line = original
+		value, err = parseObject(c, line, level, depthLimit, true)
+		return ParseObjectResult{Object: value}, err
+	}
+
+	result := ParseObjectResult{StrictFailure: err}
+	if validationMode != ValidationRelaxed {
+		return result, err
+	}
+
+	*line = original
+	result.Object, err = parseObject(c, line, level, depthLimit, true)
+	return result, err
 }
 
 // ParseObject parses next Object from string buffer and returns the updated (left clipped) buffer.

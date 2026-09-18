@@ -140,57 +140,64 @@ type stitchingFunctionArrays struct {
 	encode     types.Array
 }
 
-func (t *functionTraversal) validateStitchingFunctionArrays(d types.Dict, dictName string) (*stitchingFunctionArrays, error) {
+func (t *functionTraversal) validateStitchingFunctionArrays(d types.Dict, ownerObjNr int, dictName string) (*stitchingFunctionArrays, error) {
 	a := &stitchingFunctionArrays{}
 	var err error
-	if a.domain, err = validateNumberArrayEntry(t.xRefTable, d, 0, dictName, "Domain", REQUIRED, model.V13, nil); err != nil {
+	if a.domain, err = validateNumberArrayEntry(t.xRefTable, d, ownerObjNr, dictName, "Domain", REQUIRED, model.V13, nil); err != nil {
 		return nil, fmt.Errorf("%s.Domain: %w", dictName, err)
 	}
-	if a.rangeArray, err = validateNumberArrayEntry(t.xRefTable, d, 0, dictName, "Range", OPTIONAL, model.V13, nil); err != nil {
+	if a.rangeArray, err = validateNumberArrayEntry(t.xRefTable, d, ownerObjNr, dictName, "Range", OPTIONAL, model.V13, nil); err != nil {
 		return nil, fmt.Errorf("%s.Range: %w", dictName, err)
 	}
-	if a.functions, err = validateArrayEntry(t.xRefTable, d, 0, dictName, "Functions", REQUIRED, model.V13, nil); err != nil {
+	if a.functions, err = validateArrayEntry(t.xRefTable, d, ownerObjNr, dictName, "Functions", REQUIRED, model.V13, nil); err != nil {
 		return nil, fmt.Errorf("%s.Functions: %w", dictName, err)
 	}
-	if a.bounds, err = validateNumberArrayEntry(t.xRefTable, d, 0, dictName, "Bounds", REQUIRED, model.V13, nil); err != nil {
+	if a.bounds, err = validateNumberArrayEntry(t.xRefTable, d, ownerObjNr, dictName, "Bounds", REQUIRED, model.V13, nil); err != nil {
 		return nil, fmt.Errorf("%s.Bounds: %w", dictName, err)
 	}
-	if a.encode, err = validateNumberArrayEntry(t.xRefTable, d, 0, dictName, "Encode", REQUIRED, model.V13, nil); err != nil {
+	if a.encode, err = validateNumberArrayEntry(t.xRefTable, d, ownerObjNr, dictName, "Encode", REQUIRED, model.V13, nil); err != nil {
 		return nil, fmt.Errorf("%s.Encode: %w", dictName, err)
 	}
 	return a, nil
 }
 
-func validateStitchingFunctionCardinality(xRefTable *model.XRefTable, a *stitchingFunctionArrays, d types.Dict, dictName string) error {
-	if err := validateFunctionArrayLength(a.domain, d, 0, dictName, "Domain", 2, "one input dimension"); err != nil {
-		return err
+func validateStitchingFunctionCardinality(xRefTable *model.XRefTable, a *stitchingFunctionArrays, d types.Dict, ownerObjNr int, dictName string) ([]error, error) {
+	if err := validateFunctionArrayLength(a.domain, d, ownerObjNr, dictName, "Domain", 2, "one input dimension"); err != nil {
+		return nil, err
 	}
-	if a.rangeArray != nil && (len(a.rangeArray) > 0 || xRefTable.ValidationMode == model.ValidationStrict) {
-		if _, err := validateFunctionDimension(a.rangeArray, d, 0, dictName, "Range"); err != nil {
-			return err
+	var strictFailures []error
+	if a.rangeArray != nil {
+		if _, err := validateFunctionDimension(a.rangeArray, d, ownerObjNr, dictName, "Range"); err != nil {
+			if xRefTable.ValidationMode != model.ValidationRelaxed || len(a.rangeArray) != 0 {
+				return nil, err
+			}
+			strictFailures = append(strictFailures, err)
 		}
 	}
 	k := len(a.functions)
 	if k == 0 {
-		return arrayCardinalityError(dictName, "Functions", validationEntryObjectNumber(0, d, "Functions"), 0,
+		return nil, arrayCardinalityError(dictName, "Functions", validationEntryObjectNumber(ownerObjNr, d, "Functions"), 0,
 			"one or more subfunctions")
 	}
 	boundCount := len(a.bounds)
 	boundCountExpected := k - 1
-	// Older FOP versions omitted the final bound for repeated terminal gradient stops.
-	missingOneBoundRelaxed := xRefTable.ValidationMode == model.ValidationRelaxed && boundCount == boundCountExpected-1
-	if boundCount != boundCountExpected && !missingOneBoundRelaxed {
-		return validateFunctionArrayLength(a.bounds, d, 0, dictName, "Bounds", boundCountExpected,
+	if boundCount != boundCountExpected {
+		err := validateFunctionArrayLength(a.bounds, d, ownerObjNr, dictName, "Bounds", boundCountExpected,
 			"one fewer than Functions")
+		// Older FOP versions omitted the final bound for repeated terminal gradient stops.
+		if xRefTable.ValidationMode != model.ValidationRelaxed || boundCount != boundCountExpected-1 {
+			return nil, err
+		}
+		strictFailures = append(strictFailures, err)
 	}
-	if err := validateFunctionArrayLength(a.encode, d, 0, dictName, "Encode", 2*k, "twice the Functions count"); err != nil {
-		return err
+	if err := validateFunctionArrayLength(a.encode, d, ownerObjNr, dictName, "Encode", 2*k, "twice the Functions count"); err != nil {
+		return nil, err
 	}
-	return nil
+	return strictFailures, nil
 }
 
-func (t *functionTraversal) validateStitchingSubfunctions(a *stitchingFunctionArrays, d types.Dict, depth int) error {
-	objNr := validationEntryObjectNumber(0, d, "Functions")
+func (t *functionTraversal) validateStitchingSubfunctions(a *stitchingFunctionArrays, d types.Dict, ownerObjNr, depth int) error {
+	objNr := validationEntryObjectNumber(ownerObjNr, d, "Functions")
 	for _, o := range a.functions {
 		if err := t.validateFunction(o, objNr, depth+1); err != nil {
 			return err
@@ -199,7 +206,7 @@ func (t *functionTraversal) validateStitchingSubfunctions(a *stitchingFunctionAr
 	return nil
 }
 
-func (t *functionTraversal) validateStitchingFunctionDict(d types.Dict, depth int) error {
+func (t *functionTraversal) validateStitchingFunctionDict(d types.Dict, ownerObjNr, depth int) error {
 	xRefTable := t.xRefTable
 	dictName := "stitchingFunctionDict"
 	// Version check
@@ -208,14 +215,26 @@ func (t *functionTraversal) validateStitchingFunctionDict(d types.Dict, depth in
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	a, err := t.validateStitchingFunctionArrays(d, dictName)
+	a, err := t.validateStitchingFunctionArrays(d, ownerObjNr, dictName)
 	if err != nil {
 		return err
 	}
-	if err = validateStitchingFunctionCardinality(xRefTable, a, d, dictName); err != nil {
+	strictFailures, err := validateStitchingFunctionCardinality(xRefTable, a, d, ownerObjNr, dictName)
+	if err != nil {
 		return err
 	}
-	return t.validateStitchingSubfunctions(a, d, depth)
+	if err = t.validateStitchingSubfunctions(a, d, ownerObjNr, depth); err != nil {
+		return err
+	}
+	for _, strictFailure := range strictFailures {
+		xRefTable.AddValidationNotice(model.NewValidationNotice(
+			model.NoticePhaseValidate,
+			model.NoticeDigested,
+			strictFailure.Error(),
+			strictFailure,
+		))
+	}
+	return nil
 }
 
 type sampledFunctionArrays struct {
@@ -410,7 +429,7 @@ func (t *functionTraversal) markValidated(objNr, depth int) {
 	}
 }
 
-func (t *functionTraversal) processFunctionDict(d types.Dict, depth int) error {
+func (t *functionTraversal) processFunctionDict(d types.Dict, ownerObjNr, depth int) error {
 	xRefTable := t.xRefTable
 	funcType, err := validateIntegerEntry(xRefTable, d, 0, "functionDict", "FunctionType", REQUIRED, model.V10, func(i int) bool { return i == 2 || i == 3 })
 	if err != nil {
@@ -425,7 +444,7 @@ func (t *functionTraversal) processFunctionDict(d types.Dict, depth int) error {
 		}
 
 	case 3:
-		if err = t.validateStitchingFunctionDict(d, depth); err != nil {
+		if err = t.validateStitchingFunctionDict(d, ownerObjNr, depth); err != nil {
 			return fmt.Errorf("stitching function: %w", err)
 		}
 
@@ -472,7 +491,7 @@ func (t *functionTraversal) processFunction(o types.Object, ownerObjNr, depth in
 	case types.Dict:
 
 		// process function  2,3
-		err = t.processFunctionDict(o, depth)
+		err = t.processFunctionDict(o, ownerObjNr, depth)
 
 	case types.StreamDict:
 

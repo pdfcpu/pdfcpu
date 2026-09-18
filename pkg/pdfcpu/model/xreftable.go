@@ -186,12 +186,13 @@ type XRefTable struct {
 	CustomExtensions bool // File is using custom extensions for annotations and/or keywords.
 
 	// Validation
-	CurPage        int                       // current page during validation
-	Conf           *Configuration            // current command being executed
-	ValidationMode int                       // see Configuration
-	ValidateLinks  bool                      // check for broken links in LinkAnnotations/URIDicts.
-	Valid          bool                      // true means successful validated against ISO 32000.
-	URIs           map[int]map[string]string // URIs for link checking
+	CurPage          int                       // current page during validation
+	Conf             *Configuration            // current command being executed
+	ValidationMode   int                       // see Configuration
+	ValidateLinks    bool                      // check for broken links in LinkAnnotations/URIDicts.
+	Valid            bool                      // true means successful validated against ISO 32000.
+	URIs             map[int]map[string]string // URIs for link checking
+	validationReport *ValidationReport
 
 	Optimized      bool
 	Watermarked    bool

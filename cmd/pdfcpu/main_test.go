@@ -69,6 +69,26 @@ func TestRunCommandJoinsDispatchAndOutputErrors(t *testing.T) {
 	}
 }
 
+func TestRunCommandConfiguresValidationNoticeOutput(t *testing.T) {
+	quietSave := quiet
+	defer func() {
+		quiet = quietSave
+	}()
+
+	quiet = false
+	cmd := &cli.Command{}
+	_ = runCommand(t.Context(), cmd)
+	if cmd.NoticeOutput == nil {
+		t.Fatal("expected validation notice output in normal mode")
+	}
+
+	quiet = true
+	_ = runCommand(t.Context(), cmd)
+	if cmd.NoticeOutput != nil {
+		t.Fatal("expected validation notice output suppression in quiet mode")
+	}
+}
+
 // TestRotation verifies command-line rotation parsing across signed integer boundaries.
 func TestRotation(t *testing.T) {
 	minInt := -int(^uint(0)>>1) - 1

@@ -2657,6 +2657,26 @@ func dict(c context.Context, ctx *model.Context, d1 types.Dict, objNr, genNr, en
 	return d2, nil
 }
 
+func parseObjectWithValidationPolicy(c context.Context, ctx *model.Context, line *string, objNr int) (types.Object, error) {
+	result, err := model.ParseObjectWithPolicy(c, line, 0, ctx.XRefTable.ValidationMode, recursionLimit(ctx))
+	if result.StrictFailure == nil {
+		return result.Object, err
+	}
+	if err != nil {
+		return nil, model.WithValidationErrorObject(err, objNr)
+	}
+
+	cause := model.WithValidationErrorObject(result.StrictFailure, objNr)
+	notice := model.NewValidationNotice(
+		model.NoticePhaseParse,
+		model.NoticeDigested,
+		"object dictionary contains a non-name key token",
+		cause,
+	)
+	ctx.AddValidationNotice(notice)
+	return result.Object, nil
+}
+
 func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr int) (o types.Object, endInd, streamInd int, streamOffset int64, err error) {
 	var rd io.Reader
 
@@ -2736,7 +2756,7 @@ func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr in
 		return nil, endInd, streamInd, streamOffset, err
 	}
 
-	o, err = model.ParseObject(c, &l, 0, recursionLimit(ctx))
+	o, err = parseObjectWithValidationPolicy(c, ctx, &l, objNr)
 
 	return o, endInd, streamInd, streamOffset, err
 }

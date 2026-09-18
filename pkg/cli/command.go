@@ -50,6 +50,7 @@ type Command struct {
 	Inputs            []io.ReadSeeker
 	Output            io.Writer
 	ErrorOutput       io.Writer
+	NoticeOutput      io.Writer
 	Box               *model.Box
 	Import            *pdfcpu.Import
 	NUp               *model.NUp

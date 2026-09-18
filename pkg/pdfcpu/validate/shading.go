@@ -306,9 +306,9 @@ func validateShadingStreamDict(c context.Context, xRefTable *model.XRefTable, sd
 	return nil
 }
 
-func validateShading(c context.Context, xRefTable *model.XRefTable, obj types.Object) (err error) {
+func validateShading(c context.Context, xRefTable *model.XRefTable, obj types.Object, ownerObjNr int) (err error) {
 	// see 8.7.4.3 Shading Dictionaries
-	objNr := validationObjectNumber(0, obj)
+	objNr := validationObjectNumber(ownerObjNr, obj)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
 	}()
@@ -374,7 +374,7 @@ func validateShadingResourceDict(c context.Context, xRefTable *model.XRefTable, 
 		}
 		obj := d[name]
 		// Process shading
-		err = validateShading(c, xRefTable, obj)
+		err = validateShading(c, xRefTable, obj, 0)
 		if err != nil {
 			return fmt.Errorf("%s: %w", objectContext(fmt.Sprintf("shadingResourceDict.%s", name), obj), err)
 		}

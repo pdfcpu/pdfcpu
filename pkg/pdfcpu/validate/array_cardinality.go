@@ -101,16 +101,32 @@ func validateUnitIntervalArrayEntry(x *model.XRefTable, d types.Dict, ownerObjNr
 	if err != nil {
 		return err
 	}
+	var strictFailure error
 	for i, o := range a {
 		n, err := x.DereferenceNumber(o)
 		if err != nil {
 			err = fmt.Errorf("%s.%s[%d]: expected number: %w", dictName, entryName, i, err)
-		} else if x.ValidationMode == model.ValidationStrict && !(n >= 0 && n <= 1) {
-			err = fmt.Errorf("%s.%s[%d]: invalid value %g, expected 0 through 1", dictName, entryName, i, n)
-		}
-		if err != nil {
 			return model.WithValidationErrorObject(err, validationObjectNumber(objNr, o))
 		}
+		if n >= 0 && n <= 1 {
+			continue
+		}
+		err = fmt.Errorf("%s.%s[%d]: invalid value %g, expected 0 through 1", dictName, entryName, i, n)
+		err = model.WithValidationErrorObject(err, validationObjectNumber(objNr, o))
+		if x.ValidationMode == model.ValidationStrict {
+			return err
+		}
+		if strictFailure == nil {
+			strictFailure = err
+		}
+	}
+	if strictFailure != nil {
+		x.AddValidationNotice(model.NewValidationNotice(
+			model.NoticePhaseValidate,
+			model.NoticeDigested,
+			strictFailure.Error(),
+			strictFailure,
+		))
 	}
 	return nil
 }

@@ -73,7 +73,37 @@ func validationProgressObserver(w io.Writer, conf *model.Configuration) api.Prog
 	}
 }
 
-func validateInput(c context.Context, fn string, conf *model.Configuration, progressOutput io.Writer, item, total int) error {
+func validationNoticeText(notice model.ValidationNotice) string {
+	message := notice.Message
+	cause := ""
+	if notice.Cause != nil && notice.Cause.Error() != message {
+		cause = notice.Cause.Error()
+	}
+	if notice.ObjectNumber > 0 {
+		message += fmt.Sprintf(" (obj#:%d)", notice.ObjectNumber)
+	}
+	if cause != "" {
+		if message != "" {
+			message += ": "
+		}
+		message += cause
+	}
+	return fmt.Sprintf("pdfcpu %s: %s", notice.Disposition, message)
+}
+
+func reportValidationNotices(w io.Writer, report model.ValidationReport) error {
+	if w == nil {
+		return nil
+	}
+	for i, notice := range report.Notices() {
+		if _, err := fmt.Fprintln(w, validationNoticeText(notice)); err != nil {
+			return fmt.Errorf("write validation notice %d: %w", i+1, err)
+		}
+	}
+	return nil
+}
+
+func validateInput(c context.Context, fn string, conf *model.Configuration, noticeOutput, progressOutput io.Writer, item, total int) error {
 	options := api.ProgressOptions{
 		Observer: validationProgressObserver(progressOutput, conf),
 		Input:    fn,
@@ -81,13 +111,17 @@ func validateInput(c context.Context, fn string, conf *model.Configuration, prog
 		Total:    total,
 	}
 
+	var report model.ValidationReport
 	var err error
 	if fn != "-" {
-		err = api.ValidateFile(c, fn, conf, &options)
+		report, err = api.ValidateFileWithReport(c, fn, conf, &options)
 	} else {
-		_, err = withStdinReadSeeker(c, conf, "validate", func(rs io.ReadSeeker) (struct{}, error) {
-			return struct{}{}, api.Validate(c, rs, conf, &options)
+		report, err = withStdinReadSeeker(c, conf, "validate", func(rs io.ReadSeeker) (model.ValidationReport, error) {
+			return api.ValidateWithReport(c, rs, conf, &options)
 		})
+	}
+	if noticeErr := reportValidationNotices(noticeOutput, report); noticeErr != nil {
+		return errors.Join(err, noticeErr)
 	}
 	if err != nil {
 		return err
@@ -103,7 +137,7 @@ func reportValidationError(w io.Writer, err error) error {
 	return nil
 }
 
-func validateInputs(c context.Context, inFiles []string, conf *model.Configuration, errorOutput, progressOutput io.Writer) error {
+func validateInputs(c context.Context, inFiles []string, conf *model.Configuration, errorOutput, noticeOutput, progressOutput io.Writer) error {
 	var errs []error
 	failures := 0
 	for i, fn := range inFiles {
@@ -111,7 +145,7 @@ func validateInputs(c context.Context, inFiles []string, conf *model.Configurati
 			log.CLI.Println()
 		}
 
-		err := validateInput(c, fn, conf, progressOutput, i+1, len(inFiles))
+		err := validateInput(c, fn, conf, noticeOutput, progressOutput, i+1, len(inFiles))
 		if err == nil {
 			continue
 		}
@@ -153,14 +187,14 @@ func validateCommand(c context.Context, cmd *Command) ([]string, error) {
 		if cmd.BoolVal1 {
 			progressOutput = cmd.ErrorOutput
 		}
-		return nil, validateInput(c, cmd.InFiles[0], conf, progressOutput, 1, 1)
+		return nil, validateInput(c, cmd.InFiles[0], conf, cmd.NoticeOutput, progressOutput, 1, 1)
 	}
 
 	var progressOutput io.Writer
 	if cmd.BoolVal1 {
 		progressOutput = cmd.ErrorOutput
 	}
-	return nil, validateInputs(c, cmd.InFiles, conf, cmd.ErrorOutput, progressOutput)
+	return nil, validateInputs(c, cmd.InFiles, conf, cmd.ErrorOutput, cmd.NoticeOutput, progressOutput)
 }
 
 func optimizationProgressObserver(cmd *Command) api.ProgressObserver {

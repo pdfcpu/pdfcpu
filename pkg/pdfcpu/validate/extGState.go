@@ -872,7 +872,7 @@ func validateSoftMaskDict(c context.Context, xRefTable *model.XRefTable, d types
 	}
 
 	if sd != nil {
-		err = validateXObjectStreamDictContents(c, xRefTable, sd)
+		err = validateXObjectStreamDictContents(c, xRefTable, sd, groupObjNr)
 		if err != nil {
 			return model.WithValidationErrorObject(err, groupObjNr)
 		}

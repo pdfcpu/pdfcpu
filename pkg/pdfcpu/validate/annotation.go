@@ -98,10 +98,10 @@ func validateBorderStyleDict(xRefTable *model.XRefTable, d types.Dict, dictName,
 	return err
 }
 
-func validateIconFitDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
+func validateIconFitDictEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version) error {
 	// see table 247
 
-	ownerObjNr := validationEntryObjectNumber(0, d, entryName)
+	ownerObjNr = validationEntryObjectNumber(ownerObjNr, d, entryName)
 	d1, err := validateDictEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d1 == nil {
 		return err
@@ -133,10 +133,10 @@ func validateIconFitDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName
 	return nil
 }
 
-func validateAppearanceCharacteristicsDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
+func validateAppearanceCharacteristicsDictEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version) error {
 	// see 12.5.6.19
 
-	ownerObjNr := validationEntryObjectNumber(0, d, entryName)
+	ownerObjNr = validationEntryObjectNumber(ownerObjNr, d, entryName)
 	d1, err := validateDictEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion, nil)
 	if err != nil || d1 == nil {
 		return err
@@ -190,7 +190,7 @@ func validateAppearanceCharacteristicsDictEntry(xRefTable *model.XRefTable, d ty
 	}
 
 	// IF, optional, icon fit dict,
-	if err = validateIconFitDictEntry(xRefTable, d1, dictName, "IF", OPTIONAL, model.V10); err != nil {
+	if err = validateIconFitDictEntry(xRefTable, d1, ownerObjNr, dictName, "IF", OPTIONAL, model.V10); err != nil {
 		return err
 	}
 
@@ -549,7 +549,7 @@ func validateEntryMeasure(xRefTable *model.XRefTable, d types.Dict, dictName str
 
 func validateCP(s string) bool { return s == "Inline" || s == "Top" }
 
-func validateAnnotationDictLinePart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictLinePart1(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// L, required, array of numbers, len:4
 	if _, err := validateNumberArrayEntry(xRefTable, d, 0, dictName, "L", REQUIRED, model.V10, func(a types.Array) bool { return len(a) == 4 }); err != nil {
 		return err
@@ -570,7 +570,7 @@ func validateAnnotationDictLinePart1(xRefTable *model.XRefTable, d types.Dict, d
 	}
 
 	// IC, optional, number array, since V1.4, len:0,1,3,4
-	if err := validateColorArrayEntry(xRefTable, d, 0, dictName, "IC", sinceVersion); err != nil {
+	if err := validateColorArrayEntry(xRefTable, d, ownerObjNr, dictName, "IC", sinceVersion); err != nil {
 		return err
 	}
 
@@ -652,17 +652,17 @@ func validateAnnotationDictLinePart2(xRefTable *model.XRefTable, d types.Dict, d
 	return nil
 }
 
-func validateAnnotationDictLine(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictLine(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.5.6.7
 
-	if err := validateAnnotationDictLinePart1(xRefTable, d, dictName); err != nil {
+	if err := validateAnnotationDictLinePart1(xRefTable, d, ownerObjNr, dictName); err != nil {
 		return err
 	}
 
 	return validateAnnotationDictLinePart2(xRefTable, d, dictName)
 }
 
-func validateAnnotationDictCircleOrSquare(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictCircleOrSquare(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.5.6.8
 
 	// BS, optional, border style dict
@@ -675,7 +675,7 @@ func validateAnnotationDictCircleOrSquare(xRefTable *model.XRefTable, d types.Di
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V13
 	}
-	if err := validateColorArrayEntry(xRefTable, d, 0, dictName, "IC", sinceVersion); err != nil {
+	if err := validateColorArrayEntry(xRefTable, d, ownerObjNr, dictName, "IC", sinceVersion); err != nil {
 		return err
 	}
 
@@ -721,7 +721,7 @@ func validateEntryIT(xRefTable *model.XRefTable, d types.Dict, dictName string, 
 	return err
 }
 
-func validateAnnotationDictPolyLine(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictPolyLine(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.5.6.9
 
 	// Vertices, required, array of numbers
@@ -742,7 +742,7 @@ func validateAnnotationDictPolyLine(xRefTable *model.XRefTable, d types.Dict, di
 	}
 
 	// IC, optional, array of numbers [0.0 .. 1.0], len:1,3,4
-	if err := validateUnitIntervalArrayEntry(xRefTable, d, 0, dictName, "IC", model.V14, 1, 3, 4); err != nil {
+	if err := validateUnitIntervalArrayEntry(xRefTable, d, ownerObjNr, dictName, "IC", model.V14, 1, 3, 4); err != nil {
 		return err
 	}
 
@@ -957,7 +957,7 @@ func validateAnnotationDictMovie(xRefTable *model.XRefTable, d types.Dict, dictN
 	return nil
 }
 
-func validateAnnotationDictWidget(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictWidget(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.5.6.19
 
 	// H, optional, name
@@ -969,7 +969,7 @@ func validateAnnotationDictWidget(c context.Context, xRefTable *model.XRefTable,
 	// MK, optional, dict
 	// An appearance characteristics dictionary that shall be used in constructing
 	// a dynamic appearance stream specifying the annotation’s visual presentation on the page.dict
-	if err := validateAppearanceCharacteristicsDictEntry(xRefTable, d, dictName, "MK", OPTIONAL, model.V10); err != nil {
+	if err := validateAppearanceCharacteristicsDictEntry(xRefTable, d, ownerObjNr, dictName, "MK", OPTIONAL, model.V10); err != nil {
 		return err
 	}
 
@@ -1005,7 +1005,7 @@ func validateAnnotationDictWidget(c context.Context, xRefTable *model.XRefTable,
 	return err
 }
 
-func validateAnnotationDictScreen(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictScreen(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.5.6.18
 
 	// T, optional, text string
@@ -1014,7 +1014,7 @@ func validateAnnotationDictScreen(c context.Context, xRefTable *model.XRefTable,
 	}
 
 	// MK, optional, appearance characteristics dict
-	if err := validateAppearanceCharacteristicsDictEntry(xRefTable, d, dictName, "MK", OPTIONAL, model.V10); err != nil {
+	if err := validateAppearanceCharacteristicsDictEntry(xRefTable, d, ownerObjNr, dictName, "MK", OPTIONAL, model.V10); err != nil {
 		return err
 	}
 
@@ -1282,7 +1282,7 @@ func validateExDataDict(xRefTable *model.XRefTable, d types.Dict) error {
 	return err
 }
 
-func validatePopupEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
+func validatePopupEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version) error {
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V12
 	}
@@ -1297,7 +1297,8 @@ func validatePopupEntry(c context.Context, xRefTable *model.XRefTable, d types.D
 			return err
 		}
 
-		if _, err = validateAnnotationDict(c, xRefTable, d1); err != nil {
+		popupObjNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+		if _, err = validateAnnotationDict(c, xRefTable, d1, popupObjNr); err != nil {
 			return err
 		}
 
@@ -1325,9 +1326,9 @@ func (v annotationIRTTraversal) leave(objNr int) {
 	}
 }
 
-func validateIRTEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, depth int, visit annotationIRTTraversal) (err error) {
+func validateIRTEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version, depth int, visit annotationIRTTraversal) (err error) {
 	rawEntry := d[entryName]
-	irtObjNr := validationObjectNumber(0, rawEntry)
+	irtObjNr := validationObjectNumber(ownerObjNr, rawEntry)
 	defer func() {
 		err = model.WithValidationErrorObject(err, irtObjNr)
 	}()
@@ -1351,21 +1352,21 @@ func validateIRTEntry(c context.Context, xRefTable *model.XRefTable, d types.Dic
 	}
 	defer visit.leave(irtObjNr)
 
-	if _, err = validateAnnotationDictDepth(c, xRefTable, d1, depth+1, visit); err != nil {
+	if _, err = validateAnnotationDictDepth(c, xRefTable, d1, irtObjNr, depth+1, visit); err != nil {
 		return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
 	}
 
 	return nil
 }
 
-func validateMarkupAnnotationPart1(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateMarkupAnnotationPart1(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// T, optional, text string, since V1.1
 	if _, err := validateStringEntry(xRefTable, d, 0, dictName, "T", OPTIONAL, model.V11, nil); err != nil {
 		return err
 	}
 
 	// Popup, optional, dict, since V1.3
-	if err := validatePopupEntry(c, xRefTable, d, dictName, "Popup", OPTIONAL, model.V13); err != nil {
+	if err := validatePopupEntry(c, xRefTable, d, ownerObjNr, dictName, "Popup", OPTIONAL, model.V13); err != nil {
 		return err
 	}
 
@@ -1399,13 +1400,13 @@ func validateMarkupAnnotationPart1(c context.Context, xRefTable *model.XRefTable
 	return nil
 }
 
-func validateMarkupAnnotationPart2(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, depth int, visit annotationIRTTraversal) error {
+func validateMarkupAnnotationPart2(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, depth int, visit annotationIRTTraversal) error {
 	// IRT, optional, (in reply to) dict, since V1.5
 	sinceVersion := model.V15
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V14
 	}
-	if err := validateIRTEntry(c, xRefTable, d, dictName, "IRT", OPTIONAL, sinceVersion, depth, visit); err != nil {
+	if err := validateIRTEntry(c, xRefTable, d, ownerObjNr, dictName, "IRT", OPTIONAL, sinceVersion, depth, visit); err != nil {
 		return err
 	}
 
@@ -1451,14 +1452,14 @@ func validateMarkupAnnotationPart2(c context.Context, xRefTable *model.XRefTable
 	return nil
 }
 
-func validateMarkupAnnotation(c context.Context, xRefTable *model.XRefTable, d types.Dict, depth int, visit annotationIRTTraversal) error {
+func validateMarkupAnnotation(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr, depth int, visit annotationIRTTraversal) error {
 	dictName := "markupAnnot"
 
-	if err := validateMarkupAnnotationPart1(c, xRefTable, d, dictName); err != nil {
+	if err := validateMarkupAnnotationPart1(c, xRefTable, d, ownerObjNr, dictName); err != nil {
 		return err
 	}
 
-	if err := validateMarkupAnnotationPart2(c, xRefTable, d, dictName, depth, visit); err != nil {
+	if err := validateMarkupAnnotationPart2(c, xRefTable, d, ownerObjNr, dictName, depth, visit); err != nil {
 		return err
 	}
 
@@ -1701,7 +1702,7 @@ func validateAnnotationDictGeneralPart1(xRefTable *model.XRefTable, d types.Dict
 	return subtype, nil
 }
 
-func validateAnnotationDictGeneralPart2(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictGeneralPart2(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// M, optional, date string in any format, since V1.1
 	if _, err := validateStringEntry(xRefTable, d, 0, dictName, "M", OPTIONAL, model.V11, nil); err != nil {
 		return err
@@ -1741,7 +1742,7 @@ func validateAnnotationDictGeneralPart2(c context.Context, xRefTable *model.XRef
 	}
 
 	// C, optional array, of numbers, since V1.1
-	if err := validateColorArrayEntry(xRefTable, d, 0, dictName, "C", model.V11); err != nil {
+	if err := validateColorArrayEntry(xRefTable, d, ownerObjNr, dictName, "C", model.V11); err != nil {
 		return err
 	}
 
@@ -1753,13 +1754,13 @@ func validateAnnotationDictGeneralPart2(c context.Context, xRefTable *model.XRef
 	return nil
 }
 
-func validateAnnotationDictGeneral(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) (*types.Name, error) {
+func validateAnnotationDictGeneral(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) (*types.Name, error) {
 	subType, err := validateAnnotationDictGeneralPart1(xRefTable, d, dictName)
 	if err != nil {
 		return nil, err
 	}
 
-	return subType, validateAnnotationDictGeneralPart2(c, xRefTable, d, dictName)
+	return subType, validateAnnotationDictGeneralPart2(c, xRefTable, d, ownerObjNr, dictName)
 }
 
 func bindAnnotationContext(c context.Context, validate func(context.Context, *model.XRefTable, types.Dict, string) error) func(*model.XRefTable, types.Dict, string) error {
@@ -1768,7 +1769,7 @@ func bindAnnotationContext(c context.Context, validate func(context.Context, *mo
 	}
 }
 
-func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, subtype types.Name, depth int, visit annotationIRTTraversal) error {
+func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, subtype types.Name, depth int, visit annotationIRTTraversal) error {
 	// OC, optional, content group dict or content membership dict, since V1.5
 	// Specifying the optional content properties for the annotation.
 	sinceVersion := model.V15
@@ -1780,6 +1781,21 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 	}
 
 	// see table 169
+	line := func(x *model.XRefTable, d types.Dict, name string) error {
+		return validateAnnotationDictLine(x, d, ownerObjNr, name)
+	}
+	polyLine := func(x *model.XRefTable, d types.Dict, name string) error {
+		return validateAnnotationDictPolyLine(x, d, ownerObjNr, name)
+	}
+	circleOrSquare := func(x *model.XRefTable, d types.Dict, name string) error {
+		return validateAnnotationDictCircleOrSquare(x, d, ownerObjNr, name)
+	}
+	widget := func(x *model.XRefTable, d types.Dict, name string) error {
+		return validateAnnotationDictWidget(c, x, d, ownerObjNr, name)
+	}
+	screen := func(x *model.XRefTable, d types.Dict, name string) error {
+		return validateAnnotationDictScreen(c, x, d, ownerObjNr, name)
+	}
 
 	for k, v := range map[string]struct {
 		validate            func(xRefTable *model.XRefTable, d types.Dict, dictName string) error
@@ -1790,15 +1806,15 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 		"Text":           {validateAnnotationDictText, model.V10, model.V10, true},
 		"Link":           {bindAnnotationContext(c, validateAnnotationDictLink), model.V10, model.V10, false},
 		"FreeText":       {validateAnnotationDictFreeText, model.V13, model.V12, true},
-		"Line":           {validateAnnotationDictLine, model.V13, model.V13, true},
-		"Polygon":        {validateAnnotationDictPolyLine, model.V15, model.V14, true},
-		"PolyLine":       {validateAnnotationDictPolyLine, model.V15, model.V14, true},
+		"Line":           {line, model.V13, model.V13, true},
+		"Polygon":        {polyLine, model.V15, model.V14, true},
+		"PolyLine":       {polyLine, model.V15, model.V14, true},
 		"Highlight":      {validateTextMarkupAnnotation, model.V13, model.V13, true},
 		"Underline":      {validateTextMarkupAnnotation, model.V13, model.V13, true},
 		"Squiggly":       {validateTextMarkupAnnotation, model.V14, model.V14, true},
 		"StrikeOut":      {validateTextMarkupAnnotation, model.V13, model.V13, true},
-		"Square":         {validateAnnotationDictCircleOrSquare, model.V13, model.V13, true},
-		"Circle":         {validateAnnotationDictCircleOrSquare, model.V13, model.V13, true},
+		"Square":         {circleOrSquare, model.V13, model.V13, true},
+		"Circle":         {circleOrSquare, model.V13, model.V13, true},
 		"Stamp":          {validateAnnotationDictStamp, model.V13, model.V13, true},
 		"Caret":          {validateAnnotationDictCaret, model.V15, model.V14, true},
 		"Ink":            {validateAnnotationDictInk, model.V13, model.V13, true},
@@ -1806,8 +1822,8 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 		"FileAttachment": {validateAnnotationDictFileAttachment, model.V13, model.V13, true},
 		"Sound":          {validateAnnotationDictSound, model.V12, model.V12, true},
 		"Movie":          {validateAnnotationDictMovie, model.V12, model.V12, false},
-		"Widget":         {bindAnnotationContext(c, validateAnnotationDictWidget), model.V12, model.V11, false},
-		"Screen":         {bindAnnotationContext(c, validateAnnotationDictScreen), model.V15, model.V14, false},
+		"Widget":         {widget, model.V12, model.V11, false},
+		"Screen":         {screen, model.V15, model.V14, false},
 		"PrinterMark":    {bindAnnotationContext(c, validateAnnotationDictPrinterMark), model.V14, model.V14, false},
 		"TrapNet":        {bindAnnotationContext(c, validateAnnotationDictTrapNet), model.V13, model.V13, false},
 		"Watermark":      {validateAnnotationDictWatermark, model.V16, model.V13, false},
@@ -1828,7 +1844,7 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 			}
 
 			if v.markup {
-				err := validateMarkupAnnotation(c, xRefTable, d, depth, visit)
+				err := validateMarkupAnnotation(c, xRefTable, d, ownerObjNr, depth, visit)
 				if err != nil {
 					return err
 				}
@@ -1849,11 +1865,11 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 	return nil
 }
 
-func validateAnnotationDict(c context.Context, xRefTable *model.XRefTable, d types.Dict) (isTrapNet bool, err error) {
-	return validateAnnotationDictDepth(c, xRefTable, d, 0, annotationIRTTraversal{})
+func validateAnnotationDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (isTrapNet bool, err error) {
+	return validateAnnotationDictDepth(c, xRefTable, d, ownerObjNr, 0, annotationIRTTraversal{})
 }
 
-func validateAnnotationDictDepth(c context.Context, xRefTable *model.XRefTable, d types.Dict, depth int, visit annotationIRTTraversal) (isTrapNet bool, err error) {
+func validateAnnotationDictDepth(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr, depth int, visit annotationIRTTraversal) (isTrapNet bool, err error) {
 	dictName := "annotDict"
 
 	hexType, err := validateAnnotationType(xRefTable, d, dictName)
@@ -1861,12 +1877,12 @@ func validateAnnotationDictDepth(c context.Context, xRefTable *model.XRefTable, 
 		return false, err
 	}
 
-	subtype, err := validateAnnotationDictGeneral(c, xRefTable, d, dictName)
+	subtype, err := validateAnnotationDictGeneral(c, xRefTable, d, ownerObjNr, dictName)
 	if err != nil {
 		return false, err
 	}
 
-	if err = validateAnnotationDictConcrete(c, xRefTable, d, dictName, *subtype, depth, visit); err != nil {
+	if err = validateAnnotationDictConcrete(c, xRefTable, d, ownerObjNr, dictName, *subtype, depth, visit); err != nil {
 		return false, err
 	}
 
@@ -1892,6 +1908,14 @@ func addAnnotation(ann model.AnnotationRenderer, pgAnnots model.PgAnnots, i int,
 		*(annots.IndRefs) = append(*(annots.IndRefs), indRef)
 	}
 	annots.Map[objNr] = ann
+}
+
+func annotationValidatedAsFormField(xRefTable *model.XRefTable, hasIndRef bool, indRef types.IndirectRef) bool {
+	if !hasIndRef {
+		return false
+	}
+	valid, err := xRefTable.IsValid(indRef)
+	return err == nil && valid
 }
 
 func detectSignature(xRefTable *model.XRefTable, annotDict types.Dict, objNr, incr int) error {
@@ -2048,9 +2072,15 @@ func validateAnnotationsArray(c context.Context, xRefTable *model.XRefTable, a t
 			}
 		}
 
-		hasTrapNet, err = validatePageAnnotationDict(c, xRefTable, annotDict, len(cleanAnnotsArr))
-		if err != nil {
-			return nil, pageAnnotationError(err, ownerObjNr, hasIndRef, indRef, i, "validate")
+		annotObjNr := ownerObjNr
+		if hasIndRef {
+			annotObjNr = indRef.ObjectNumber.Value()
+		}
+		if !annotationValidatedAsFormField(xRefTable, hasIndRef, indRef) {
+			hasTrapNet, err = validatePageAnnotationDict(c, xRefTable, annotDict, annotObjNr, len(cleanAnnotsArr))
+			if err != nil {
+				return nil, pageAnnotationError(err, ownerObjNr, hasIndRef, indRef, i, "validate")
+			}
 		}
 
 		// Collect annotation.

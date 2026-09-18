@@ -46,7 +46,7 @@ func validationError(conf *model.Configuration, err error) error {
 	return fmt.Errorf("%s%s: %w", prefix, validationModeHint(conf.ValidationMode), err)
 }
 
-func validateWithOptions(c context.Context, rs io.ReadSeeker, conf *model.Configuration, options ProgressOptions, reportReading bool) (err error) {
+func validateWithOptions(c context.Context, rs io.ReadSeeker, conf *model.Configuration, options ProgressOptions, reportReading bool, report *model.ValidationReport) (err error) {
 	defer fault.Catch(&err)
 
 	if err := contextutil.Check(c); err != nil {
@@ -69,6 +69,11 @@ func validateWithOptions(c context.Context, rs io.ReadSeeker, conf *model.Config
 	ctx, err := ReadContext(c, rs, conf)
 	if err != nil {
 		return fmt.Errorf("read context: %w", err)
+	}
+	if report != nil {
+		defer func() {
+			*report = ctx.ValidationReport()
+		}()
 	}
 
 	dur1 := time.Since(from1).Seconds()
@@ -111,12 +116,16 @@ func validateWithOptions(c context.Context, rs io.ReadSeeker, conf *model.Config
 // Validate validates a PDF stream, supports cancellation and reports optional semantic progress.
 // A nil options pointer disables progress reporting.
 func Validate(c context.Context, rs io.ReadSeeker, conf *model.Configuration, options *ProgressOptions) error {
-	return validateWithOptions(c, rs, conf, progressOptionsValue(options), true)
+	return validateWithOptions(c, rs, conf, progressOptionsValue(options), true, nil)
 }
 
-// ValidateFile validates inFile, supports cancellation and reports optional semantic progress.
-// A nil options pointer disables progress reporting. Supplied options are not modified.
-func ValidateFile(c context.Context, inFile string, conf *model.Configuration, options *ProgressOptions) (err error) {
+// ValidateWithReport validates a PDF stream and returns its accepted validation divergences.
+func ValidateWithReport(c context.Context, rs io.ReadSeeker, conf *model.Configuration, options *ProgressOptions) (report model.ValidationReport, err error) {
+	err = validateWithOptions(c, rs, conf, progressOptionsValue(options), true, &report)
+	return report, err
+}
+
+func validateFile(c context.Context, inFile string, conf *model.Configuration, options *ProgressOptions, report *model.ValidationReport) (err error) {
 	defer fault.Catch(&err)
 
 	if err := contextutil.Check(c); err != nil {
@@ -151,11 +160,23 @@ func ValidateFile(c context.Context, inFile string, conf *model.Configuration, o
 		}
 	}()
 
-	if err = validateWithOptions(c, f, conf, inputOptions, false); err != nil {
+	if err = validateWithOptions(c, f, conf, inputOptions, false, report); err != nil {
 		return fmt.Errorf("validate %s: %w", inFile, err)
 	}
 
 	return nil
+}
+
+// ValidateFile validates inFile, supports cancellation and reports optional semantic progress.
+// A nil options pointer disables progress reporting. Supplied options are not modified.
+func ValidateFile(c context.Context, inFile string, conf *model.Configuration, options *ProgressOptions) error {
+	return validateFile(c, inFile, conf, options, nil)
+}
+
+// ValidateFileWithReport validates inFile and returns its accepted validation divergences.
+func ValidateFileWithReport(c context.Context, inFile string, conf *model.Configuration, options *ProgressOptions) (report model.ValidationReport, err error) {
+	err = validateFile(c, inFile, conf, options, &report)
+	return report, err
 }
 
 // ValidateFiles validates inFiles, supports cancellation and reports optional semantic progress.

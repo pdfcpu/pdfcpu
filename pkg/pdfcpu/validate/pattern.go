@@ -87,30 +87,30 @@ func validateTilingPatternDict(c context.Context, xRefTable *model.XRefTable, sd
 	return nil
 }
 
-func validateShadingPatternDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+func validateShadingPatternDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, sinceVersion model.Version) error {
 	dictName := "shadingPatternDict"
 
 	if err := xRefTable.ValidateVersion(dictName, sinceVersion); err != nil {
 		return fmt.Errorf("%s: %w", dictName, err)
 	}
 
-	_, err := validateNameEntry(xRefTable, d, 0, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Pattern" })
+	_, err := validateNameEntry(xRefTable, d, ownerObjNr, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "Pattern" })
 	if err != nil {
 		return fmt.Errorf("%s.Type: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, d, 0, dictName, "PatternType", REQUIRED, sinceVersion, func(i int) bool { return i == 2 })
+	_, err = validateIntegerEntry(xRefTable, d, ownerObjNr, dictName, "PatternType", REQUIRED, sinceVersion, func(i int) bool { return i == 2 })
 	if err != nil {
 		return fmt.Errorf("%s.PatternType: %w", dictName, err)
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "Matrix", OPTIONAL, sinceVersion, func(a types.Array) bool { return len(a) == 6 })
+	_, err = validateNumberArrayEntry(xRefTable, d, ownerObjNr, dictName, "Matrix", OPTIONAL, sinceVersion, func(a types.Array) bool { return len(a) == 6 })
 	if err != nil {
 		return fmt.Errorf("%s.Matrix: %w", dictName, err)
 	}
 
 	rawExtGState := d["ExtGState"]
-	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "ExtGState", OPTIONAL, sinceVersion, nil)
+	d1, err := validateDictEntry(xRefTable, d, ownerObjNr, dictName, "ExtGState", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return fmt.Errorf("%s.ExtGState: %w", dictName, err)
 	}
@@ -128,9 +128,9 @@ func validateShadingPatternDict(c context.Context, xRefTable *model.XRefTable, d
 		return fmt.Errorf("%s.Shading: missing required entry", dictName)
 	}
 
-	if err := validateShading(c, xRefTable, o); err != nil {
+	if err := validateShading(c, xRefTable, o, ownerObjNr); err != nil {
 		err = fmt.Errorf("%s.Shading: %w", dictName, err)
-		return model.WithValidationErrorObject(err, validationObjectNumber(0, o))
+		return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, o))
 	}
 	return nil
 }
@@ -138,9 +138,10 @@ func validateShadingPatternDict(c context.Context, xRefTable *model.XRefTable, d
 type patternTraversalContextKey struct{}
 
 type patternTraversal struct {
-	xRefTable *model.XRefTable
-	depth     int
-	ancestors map[int]bool
+	xRefTable  *model.XRefTable
+	depth      int
+	ancestors  map[int]bool
+	ownerObjNr int
 }
 
 func patternTraversalFromContext(c context.Context, xRefTable *model.XRefTable) (context.Context, *patternTraversal) {
@@ -188,9 +189,14 @@ func validatePattern(c context.Context, xRefTable *model.XRefTable, o types.Obje
 }
 
 func (t *patternTraversal) validate(c context.Context, o types.Object) (err error) {
-	objNr := validationObjectNumber(0, o)
+	objNr := validationObjectNumber(t.ownerObjNr, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
+	}()
+	previousOwnerObjNr := t.ownerObjNr
+	t.ownerObjNr = objNr
+	defer func() {
+		t.ownerObjNr = previousOwnerObjNr
 	}()
 	if err := contextutil.Check(c); err != nil {
 		return err
@@ -223,7 +229,7 @@ func (t *patternTraversal) validate(c context.Context, o types.Object) (err erro
 		}
 
 	case types.Dict:
-		if err = validateShadingPatternDict(c, t.xRefTable, o, model.V13); err != nil {
+		if err = validateShadingPatternDict(c, t.xRefTable, o, objNr, model.V13); err != nil {
 			return fmt.Errorf("shading pattern: %w", err)
 		}
 

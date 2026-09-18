@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
 func doTestParseDictOK(parseString string, t *testing.T) {
@@ -173,4 +175,59 @@ func TestParseDict(t *testing.T) {
 	doTestParseDictIndirectRefs(t)
 	doTestParseDictWithComments(t)
 	doTestLargeDicts(t)
+}
+
+func TestParseObjectWithPolicyDictionaryKeyFallback(t *testing.T) {
+	const malformedDictionary = "<<@/Type /Catalog>>"
+
+	strictInput := malformedDictionary
+	result, err := ParseObjectWithPolicy(t.Context(), &strictInput, 0, ValidationStrict)
+	if err == nil || result.StrictFailure == nil {
+		t.Fatalf("strict parse: result=%+v, err=%v", result, err)
+	}
+	if !strings.Contains(err.Error(), "corrupt dictionary key") || !strings.Contains(err.Error(), "corrupt name object") {
+		t.Fatalf("strict parse error: got %q", err)
+	}
+
+	relaxedInput := malformedDictionary
+	result, err = ParseObjectWithPolicy(t.Context(), &relaxedInput, 0, ValidationRelaxed)
+	if err != nil {
+		t.Fatalf("relaxed parse: %v", err)
+	}
+	if result.StrictFailure == nil {
+		t.Fatal("relaxed parse did not retain the strict failure")
+	}
+	d, ok := result.Object.(types.Dict)
+	if !ok {
+		t.Fatalf("relaxed parse object: got %#v", result.Object)
+	}
+	typeName := d.NameEntry("Type")
+	if typeName == nil || *typeName != "Catalog" {
+		t.Fatalf("relaxed parse type: got %v", typeName)
+	}
+}
+
+func TestParseObjectWithPolicyReportsFailedRelaxedAttempt(t *testing.T) {
+	input := "<<@/Type /Catalog /Broken (unterminated>>"
+	result, err := ParseObjectWithPolicy(t.Context(), &input, 0, ValidationRelaxed)
+	if err == nil {
+		t.Fatal("relaxed parse unexpectedly succeeded")
+	}
+	if result.StrictFailure == nil {
+		t.Fatal("relaxed parse did not retain the strict failure")
+	}
+	if !strings.Contains(err.Error(), "corrupt string literal") {
+		t.Fatalf("relaxed parse error: got %q", err)
+	}
+}
+
+func TestParseObjectWithPolicyPreservesUnclassifiedFallback(t *testing.T) {
+	input := "<</Missing\n/Type /Catalog>>"
+	result, err := ParseObjectWithPolicy(t.Context(), &input, 0, ValidationStrict)
+	if err != nil {
+		t.Fatalf("legacy parser fallback: %v", err)
+	}
+	if result.StrictFailure != nil {
+		t.Fatalf("unclassified strict failure was exposed: %v", result.StrictFailure)
+	}
 }

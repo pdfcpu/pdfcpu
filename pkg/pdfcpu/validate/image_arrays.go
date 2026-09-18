@@ -101,11 +101,11 @@ func iccColorSpaceComponents(x *model.XRefTable, a types.Array, ownerObjNr int) 
 	return v.Value(), nil
 }
 
-func validateImageArrays(c context.Context, x *model.XRefTable, sd *types.StreamDict, dictName string, imageMask bool, bpc *types.Integer) error {
+func validateImageArrays(c context.Context, x *model.XRefTable, sd *types.StreamDict, ownerObjNr int, dictName string, imageMask bool, bpc *types.Integer) error {
 	components := 1
 	if !imageMask {
 		var err error
-		components, err = colorSpaceComponents(x, sd.Dict["ColorSpace"], 0)
+		components, err = colorSpaceComponents(x, sd.Dict["ColorSpace"], ownerObjNr)
 		if err != nil {
 			return fmt.Errorf("%s.ColorSpace: %w", dictName, err)
 		}
@@ -113,7 +113,7 @@ func validateImageArrays(c context.Context, x *model.XRefTable, sd *types.Stream
 		if sd.HasSoleFilterNamed(filter.JPX) {
 			bits = nil
 		}
-		if err = validateMaskEntry(c, x, sd.Dict, dictName, "Mask", OPTIONAL, model.V13, components, bits); err != nil {
+		if err = validateMaskEntry(c, x, sd.Dict, ownerObjNr, dictName, "Mask", OPTIONAL, model.V13, components, bits); err != nil {
 			return err
 		}
 		// JPX without an explicit colour space ignores Decode; its component count comes from the codestream.
@@ -127,7 +127,7 @@ func validateImageArrays(c context.Context, x *model.XRefTable, sd *types.Stream
 			}
 		}
 	}
-	return validateImageDecode(c, x, sd.Dict, dictName, components, imageMask)
+	return validateImageDecode(c, x, sd.Dict, ownerObjNr, dictName, components, imageMask)
 }
 
 func validateImageArrayLength(a types.Array, objNr int, dictName, entryName string, components int) error {
@@ -141,12 +141,12 @@ func validateImageArrayLength(a types.Array, objNr int, dictName, entryName stri
 	return arrayCardinalityError(dictName, entryName, objNr, len(a), expected)
 }
 
-func validateImageDecode(c context.Context, x *model.XRefTable, d types.Dict, dictName string, components int, imageMask bool) error {
-	a, err := validateArrayEntry(x, d, 0, dictName, "Decode", OPTIONAL, model.V10, nil)
+func validateImageDecode(c context.Context, x *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, components int, imageMask bool) error {
+	a, err := validateArrayEntry(x, d, ownerObjNr, dictName, "Decode", OPTIONAL, model.V10, nil)
 	if err != nil || a == nil {
 		return err
 	}
-	objNr := validationEntryObjectNumber(0, d, "Decode")
+	objNr := validationEntryObjectNumber(ownerObjNr, d, "Decode")
 	if err = validateImageArrayLength(a, objNr, dictName, "Decode", components); err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func validateImageDecode(c context.Context, x *model.XRefTable, d types.Dict, di
 
 // relaxedIndexedMaskComponents accepts base-space mask pairs emitted by older image producers.
 // The image colour space has already been validated; Decode keeps the Indexed component count.
-func relaxedIndexedMaskComponents(x *model.XRefTable, d types.Dict, a types.Array, components int) int {
+func relaxedIndexedMaskComponents(x *model.XRefTable, d types.Dict, a types.Array, ownerObjNr, components int) int {
 	if x.ValidationMode != model.ValidationRelaxed || len(a) == 2*components {
 		return components
 	}
@@ -179,11 +179,11 @@ func relaxedIndexedMaskComponents(x *model.XRefTable, d types.Dict, a types.Arra
 	if err != nil || len(cs) != 4 {
 		return components
 	}
-	name, err := colorSpaceArrayName(x, cs, 0)
+	name, err := colorSpaceArrayName(x, cs, ownerObjNr)
 	if err != nil || name != model.IndexedCS {
 		return components
 	}
-	n, err := colorSpaceComponents(x, cs[1], 0)
+	n, err := colorSpaceComponents(x, cs[1], ownerObjNr)
 	if err == nil && n > 1 && len(a) == 2*n {
 		return n
 	}

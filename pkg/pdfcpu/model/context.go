@@ -44,11 +44,12 @@ var ErrMissingXRefTable = errors.New("missing PDF cross-reference table")
 type Context struct {
 	*Configuration
 	*XRefTable
-	Read         *ReadContext
-	Optimize     *OptimizationContext
-	Write        *WriteContext
-	WritingPages bool // true, when writing page dicts.
-	Dest         bool // true when writing a destination within a page.
+	Read             *ReadContext
+	Optimize         *OptimizationContext
+	Write            *WriteContext
+	validationReport ValidationReport
+	WritingPages     bool // true, when writing page dicts.
+	Dest             bool // true when writing a destination within a page.
 }
 
 // NewContext initializes a new Context.
@@ -71,14 +72,13 @@ func NewContext(rs io.ReadSeeker, conf *Configuration) (*Context, error) {
 	}
 
 	ctx := &Context{
-		conf,
-		newXRefTable(conf),
-		rdCtx,
-		newOptimizationContext(),
-		NewWriteContext(conf.Eol),
-		false,
-		false,
+		Configuration: conf,
+		XRefTable:     newXRefTable(conf),
+		Read:          rdCtx,
+		Optimize:      newOptimizationContext(),
+		Write:         NewWriteContext(conf.Eol),
 	}
+	ctx.XRefTable.validationReport = &ctx.validationReport
 
 	return ctx, nil
 }

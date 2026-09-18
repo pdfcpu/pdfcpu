@@ -115,7 +115,7 @@ func TestValidateEmbeddedTargetCancellation(t *testing.T) {
 	base, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	c := &actionCancelContext{Context: base, cancel: cancel, cancelAt: 2}
-	err := validateGoToEActionDict(c, actionCancellationXRefTable(dicts), cancellationEmbeddedGoToAction(ir5), "GoToE")
+	err := validateGoToEActionDict(c, actionCancellationXRefTable(dicts), cancellationEmbeddedGoToAction(ir5), 0, "GoToE")
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("got %v, want context.Canceled", err)
 	}

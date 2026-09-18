@@ -132,6 +132,15 @@ func ValidateContext(c context.Context, ctx *model.Context) error {
 	return validate.XRefTable(c, ctx)
 }
 
+// ValidateContextWithReport validates ctx and returns its accepted validation divergences.
+func ValidateContextWithReport(c context.Context, ctx *model.Context) (model.ValidationReport, error) {
+	err := ValidateContext(c, ctx)
+	if ctx == nil {
+		return model.ValidationReport{}, err
+	}
+	return ctx.ValidationReport(), err
+}
+
 // OptimizeContext optimizes ctx and supports cancellation.
 func OptimizeContext(c context.Context, ctx *model.Context) error {
 	if err := contextutil.Check(c); err != nil {
