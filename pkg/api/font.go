@@ -123,10 +123,6 @@ func defaultCheatSheetFileOperations() cheatSheetFileOperations {
 	}
 }
 
-func defaultFontAPIOperations() fontAPIOperations {
-	return defaultFontAPIOperationsWithResult(nil)
-}
-
 func defaultFontAPIOperationsWithResult(result *FontInstallResult) fontAPIOperations {
 	ops := fontAPIOperations{
 		userFontDir:     font.UserFontDir,

@@ -148,15 +148,6 @@ func TestRotateCloseFilePreservesCause(t *testing.T) {
 	}
 }
 
-func newRotateTestFile(t *testing.T, pattern string) *os.File {
-	t.Helper()
-	f, err := os.CreateTemp(t.TempDir(), pattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return f
-}
-
 // TestCleanupRotateFilesPreservesOperationAndCleanupErrors verifies failed-operation cleanup.
 // TestFinalizeRotateFilesOutputCloseFailureCleansUp verifies failed output finalization.
 // TestFinalizeRotateFilesInputCloseFailureCleansUpReplacement verifies failed input finalization.

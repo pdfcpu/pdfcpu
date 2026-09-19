@@ -60,18 +60,22 @@ Pipeline examples:
       | aws s3 cp - s3://acme-docs/unsigned.pdf
 	`
 
-	usageLongSignaturesValidate = `pdfcpu validates signature integrity, reports available trust evidence and performs
-a best-effort local assessment.
+	usageLongSignaturesValidate = `pdfcpu validates signature integrity and reports available trust evidence as a best-effort local assessment.
 
-This command validates signed byte ranges and supported CMS/PKCS#7 signature data,
-and reports signer metadata.
-It also reports certificate chains, timestamps, revocation responses,
-DSS data and PAdES-B-B results from supported profile checks where available.
+This command validates signed byte ranges and supported CMS/PKCS#7 signature data.
 
-The legacy adbe.x509.rsa_sha1 and adbe.pkcs7.sha1 profiles are supported for validation of existing PDFs only.
+It also reports
+   o signer meta data
+   o certificate chains
+   o timestamps
+   o revocation responses
+   o DSS data
+   o PAdES-B-B results from supported profile checks where available
 
-Certificate-path and revocation checks use pdfcpu's configured local certificate
-store and available CRL/OCSP evidence on a best-effort basis.
+Legacy adbe.x509.rsa_sha1 and adbe.pkcs7.sha1 profiles are supported for validation of existing PDFs only.
+
+Certificate-path and revocation checks use pdfcpu's configured local certificate store
+and available CRL/OCSP evidence on a best-effort basis.
 
 This command does not perform legal-validity, eIDAS, enterprise policy or full long-term validation (LTV).
 
@@ -79,8 +83,8 @@ This command does not perform legal-validity, eIDAS, enterprise policy or full l
           full ... detailed output including certificate chains, revocation status and any problems encountered
         inFile ... input PDF file, use - to read from stdin
 
-        Related configuration parameters: timeoutCRL,
-                                          timeoutOCSP,
-                                          preferredCertRevocationChecker
+Related configuration parameters: timeoutCRL,
+                                  timeoutOCSP,
+                                  preferredCertRevocationChecker
 `
 )

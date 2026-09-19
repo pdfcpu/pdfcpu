@@ -1545,7 +1545,7 @@ func validateDashPatternArray(xRefTable *model.XRefTable, arr types.Array) bool 
 			return false
 		}
 		if log.ValidateEnabled() {
-			log.Validate.Println("digesting invalid dash pattern array: %s", arr)
+			log.Validate.Printf("digesting invalid dash pattern array: %s\n", arr)
 		}
 	}
 

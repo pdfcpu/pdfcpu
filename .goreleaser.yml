@@ -4,8 +4,9 @@ builds:
   - main: ./cmd/pdfcpu
     env:
       - CGO_ENABLED=0
+      - GOWORK=off
     ldflags:
-      - '-s -w -X github.com/pdfcpu/pdfcpu/cmd/pdfcpu.version={{.Version}} -X github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model.VersionStr={{.Version}} -X github.com/pdfcpu/pdfcpu/cmd/pdfcpu.commit={{.ShortCommit}} -X github.com/pdfcpu/pdfcpu/cmd/pdfcpu.date={{.Date}}'
+      - '-s -w -X main.version={{.Version}} -X github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model.VersionStr={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}}'
     goos:
       - linux
       - darwin
@@ -46,10 +47,22 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end -}}
     wrap_in_directory: true
+
+sboms:
+  - artifacts: archive
+    documents:
+      - "{{ .ArtifactName }}.sbom.json"
+    cmd: syft
+    args:
+      - scan
+      - "${artifact}"
+      - --output
+      - "cyclonedx-json=${document}"
+
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Version }}-next"
 changelog:
   sort: desc
   filters:
@@ -61,4 +74,4 @@ release:
   draft: true  # Optional: Set to true if you want to create drafts and not publish immediately
   replace_existing_draft: true
   replace_existing_artifacts: true 
-  prerelease: false  # Optional: Set to true if it's a prerelease
+  prerelease: auto

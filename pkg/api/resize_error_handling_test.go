@@ -185,15 +185,6 @@ func TestResizeFileIOErrorContext(t *testing.T) {
 	}
 }
 
-func newResizeTestFile(t *testing.T, pattern string) *os.File {
-	t.Helper()
-	f, err := os.CreateTemp(t.TempDir(), pattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return f
-}
-
 // TestCleanupResizeFilesPreservesOperationAndCleanupErrors verifies joined cleanup failures.
 // TestFinalizeResizeFilesReplacesInput verifies successful in-place replacement.
 // TestResizeFileFailurePreservesExistingOutput verifies delayed output replacement.

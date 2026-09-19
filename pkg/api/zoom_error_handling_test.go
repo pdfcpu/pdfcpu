@@ -220,15 +220,6 @@ func TestZoomFileIOErrorContext(t *testing.T) {
 	}
 }
 
-func newZoomTestFile(t *testing.T, pattern string) *os.File {
-	t.Helper()
-	f, err := os.CreateTemp(t.TempDir(), pattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return f
-}
-
 // TestCleanupZoomFilesPreservesOperationAndCleanupErrors verifies joined cleanup failures.
 // TestCleanupZoomFilesPreservesPrimaryCloseAndRemovalErrors verifies all cleanup causes remain discoverable.
 // TestFinalizeZoomFilesOutputCloseFailureCleansUp verifies failed output finalization.

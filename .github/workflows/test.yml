@@ -12,17 +12,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            go: '1.25.x'
+            go: '1.26.x'
           - os: ubuntu-latest
-            go: '1.26.x'
-          - os: macos-latest
-            go: '1.25.x'
+            go: '1.27.x'
           - os: macos-latest
             go: '1.26.x'
-          - os: windows-latest
-            go: '1.25.x'
+          - os: macos-latest
+            go: '1.27.x'
           - os: windows-latest
             go: '1.26.x'
+          - os: windows-latest
+            go: '1.27.x'
 
     runs-on: ${{ matrix.os }}
 
@@ -80,8 +80,8 @@ jobs:
           - goos: linux
             goarch: arm64
         go:
-          - '1.25.x'
           - '1.26.x'
+          - '1.27.x'
 
     runs-on: ubuntu-latest
 

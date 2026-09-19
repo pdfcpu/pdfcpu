@@ -270,15 +270,6 @@ func TestUpdateImagesFileIOErrorContext(t *testing.T) {
 	}
 }
 
-func newUpdateImagesTestFile(t *testing.T, pattern string) *os.File {
-	t.Helper()
-	f, err := os.CreateTemp(t.TempDir(), pattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return f
-}
-
 // TestCleanupUpdateImagesFilesPreservesOperationAndCleanupErrors verifies joined cleanup failures.
 // TestCleanupUpdateImagesFilesPreservesRemovalError verifies cleanup removal causes remain discoverable.
 // TestFinalizeUpdateImagesFilesOutputCloseFailureCleansUp verifies failed output finalization.

@@ -211,7 +211,7 @@ func Zoom(c context.Context, ctx *model.Context, selectedPages types.IntSet, zoo
 
 func zoomUsing(c context.Context, ctx *model.Context, selectedPages types.IntSet, zoom *model.Zoom, apply func(*model.Context, int, *model.Zoom) error) error {
 	if log.DebugEnabled() {
-		log.Debug.Printf("Zoom:\n%s\n", zoom)
+		log.Debug.Printf("Zoom:\n%+v\n", zoom)
 	}
 
 	for _, pageNr := range zoomPageNumbers(ctx.PageCount, selectedPages) {

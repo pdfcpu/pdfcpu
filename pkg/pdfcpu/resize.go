@@ -402,15 +402,9 @@ func Resize(c context.Context, ctx *model.Context, selectedPages types.IntSet, r
 	return resizeUsing(c, ctx, selectedPages, res, resizePage)
 }
 
-func resizeUsing(
-	c context.Context,
-	ctx *model.Context,
-	selectedPages types.IntSet,
-	res *model.Resize,
-	apply func(context.Context, *model.Context, int, *model.Resize) error,
-) error {
+func resizeUsing(c context.Context, ctx *model.Context, selectedPages types.IntSet, res *model.Resize, apply func(context.Context, *model.Context, int, *model.Resize) error) error {
 	if log.DebugEnabled() {
-		log.Debug.Printf("Resize:\n%s\n", res)
+		log.Debug.Printf("Resize:\n%+v\n", res)
 	}
 
 	for _, pageNr := range resizePageNumbers(ctx.PageCount, selectedPages) {

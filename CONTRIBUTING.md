@@ -71,7 +71,7 @@ Before starting larger changes, please open an issue or discussion first. This h
 
 Please do not report security vulnerabilities as public GitHub issues.
 
-If you believe you have found a security issue, please contact the maintainers privately first. Include enough information to reproduce and assess the problem, but do not include confidential third-party documents unless you have explicit permission to share them.
+See the [security policy](SECURITY.md) for private reporting instructions and the coordinated disclosure process.
 
 ## Test Files and PDFs
 

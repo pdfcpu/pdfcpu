@@ -21,6 +21,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 )
@@ -54,6 +55,8 @@ func TestSignAttributesRejectsTypedNilKeyWithoutPanic(t *testing.T) {
 
 func TestSignAttributesPreservesRandomSourceFailure(t *testing.T) {
 	_, key := signerCertificate(t, "Signer")
+	// Go 1.26+ ignores custom random readers by default. Exercise error wrapping under the legacy behavior.
+	t.Setenv("GODEBUG", os.Getenv("GODEBUG")+",cryptocustomrand=1")
 	cause := errors.New("entropy unavailable")
 	_, err := signAttributesWithRandom(
 		nil,
