@@ -19,8 +19,82 @@ package model
 import (
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 )
+
+// TestSignerValidationEvidenceZeroValue verifies absent observations do not
+// establish positive or negative signer and timestamp conclusions.
+func TestSignerValidationEvidenceZeroValue(t *testing.T) {
+	var evidence SignerValidationEvidence
+	checks := []struct {
+		name   string
+		status int
+	}{
+		{"SignatureAuthenticated", evidence.SignatureAuthenticated},
+		{"DigestVerified", evidence.DigestVerified},
+		{"ProfileValidated", evidence.ProfileValidated},
+		{"CertificateIdentified", evidence.CertificateIdentified},
+		{"TimestampDigestVerified", evidence.Timestamp.DigestVerified},
+		{"TimestampSignatureAuthenticated", evidence.Timestamp.SignatureAuthenticated},
+		{"TimestampProfileValidated", evidence.Timestamp.ProfileValidated},
+		{"TimestampCertificatePathValidated", evidence.Timestamp.CertificatePathValidated},
+	}
+
+	for _, check := range checks {
+		if check.status != Unknown {
+			t.Errorf("%s: got %d, want Unknown", check.name, check.status)
+		}
+	}
+	if evidence.Timestamp.Kind != TimestampKindUnspecified ||
+		evidence.Timestamp.Present ||
+		!evidence.Timestamp.Time.IsZero() {
+		t.Fatalf("zero timestamp evidence established an observation: %+v", evidence.Timestamp)
+	}
+}
+
+// TestTimestampValidationEvidencePreservesIndependentChecks verifies timestamp
+// observations do not collapse their independent assessment results.
+func TestTimestampValidationEvidencePreservesIndependentChecks(t *testing.T) {
+	wantTime := time.Date(2026, time.September, 18, 12, 0, 0, 0, time.UTC)
+	evidence := TimestampValidationEvidence{
+		Kind:                     TimestampKindSignature,
+		Present:                  true,
+		Time:                     wantTime,
+		DigestVerified:           True,
+		SignatureAuthenticated:   False,
+		ProfileValidated:         Unknown,
+		CertificatePathValidated: True,
+	}
+
+	if evidence.Kind != TimestampKindSignature ||
+		!evidence.Present ||
+		!evidence.Time.Equal(wantTime) ||
+		evidence.DigestVerified != True ||
+		evidence.SignatureAuthenticated != False ||
+		evidence.ProfileValidated != Unknown ||
+		evidence.CertificatePathValidated != True {
+		t.Fatalf("timestamp evidence checks were collapsed: %+v", evidence)
+	}
+}
+
+// TestTimestampKindValues locks the exported timestamp-kind values.
+func TestTimestampKindValues(t *testing.T) {
+	tests := []struct {
+		kind TimestampKind
+		want TimestampKind
+	}{
+		{TimestampKindUnspecified, 0},
+		{TimestampKindSignature, 1},
+		{TimestampKindDocument, 2},
+	}
+
+	for _, tt := range tests {
+		if tt.kind != tt.want {
+			t.Errorf("timestamp kind: got %d, want %d", tt.kind, tt.want)
+		}
+	}
+}
 
 // TestCertificatePathEvidenceDoesNotChangeLocalPathOutput locks down the existing
 // CertificateDetails presentation while structured evidence is populated.
@@ -32,9 +106,9 @@ func TestCertificatePathEvidenceDoesNotChangeLocalPathOutput(t *testing.T) {
 		},
 	}
 	want := certDetails.String()
-	wantLocalPath := "                             Local Path: Status: not ok\n" +
-		"                                         Reason: certificate path was not resolved using the configured local\n" +
-		"                                                 certificate store"
+	wantLocalPath := "Local path:\n" +
+		"  Status: not ok\n" +
+		"  Reason: certificate path was not resolved using the configured local certificate store"
 	if !strings.Contains(want, wantLocalPath) {
 		t.Fatalf("local path output is misaligned:\n%s", want)
 	}
@@ -58,7 +132,7 @@ func TestRevocationEvidenceDoesNotChangeLocalAssessmentOutput(t *testing.T) {
 		Reason: "CRL: certificate status good",
 	}
 	want := details.String()
-	if !strings.HasPrefix(want, " Local:  ok") {
+	if !strings.HasPrefix(want, "Status: ok") {
 		t.Fatalf("revocation output does not scope its assessment as local:\n%s", want)
 	}
 
@@ -92,7 +166,7 @@ func TestSignatureDetailTextWrapsAndAligns(t *testing.T) {
 	details := RevocationDetails{Status: Unknown, Reason: reason}
 	lines := strings.Split(details.String(), "\n")
 
-	continuation := strings.Repeat(" ", len("                                         Reason: "))
+	continuation := strings.Repeat(" ", len("Reason: "))
 	crlAligned := false
 	for _, line := range lines {
 		if utf8.RuneCountInString(line) > signatureOutputMaxWidth {
@@ -113,7 +187,7 @@ func TestSignatureDetailTextWrapsAndAligns(t *testing.T) {
 			t.Errorf("problem line exceeds %d columns: %q", signatureOutputMaxWidth, line)
 		}
 		if strings.TrimSpace(line) == "CRL: fetch failed" {
-			problemCRLAligned = strings.HasPrefix(line, strings.Repeat(" ", 29))
+			problemCRLAligned = strings.HasPrefix(line, "  ")
 		}
 	}
 	if !problemCRLAligned {
@@ -134,11 +208,40 @@ func TestSignerStringOmitsLegacyLTVConclusion(t *testing.T) {
 // is not presented as a legal qualification conclusion.
 func TestCertificateDetailsUsesQCPolicyLabel(t *testing.T) {
 	got := (CertificateDetails{Qualified: true}).String()
-	if !strings.Contains(got, "QC Policy:  true") {
+	if !strings.Contains(got, "QC policy:") {
 		t.Fatalf("certificate output omits recognized QC policy evidence:\n%s", got)
 	}
-	if strings.Contains(got, "Qualified Evidence:") || strings.Contains(got, "                             Qualified:") {
+	if strings.Contains(got, "Qualified Evidence:") || strings.Contains(got, "Qualified:") {
 		t.Fatalf("certificate output uses legacy qualified conclusion:\n%s", got)
+	}
+}
+
+func TestCertificateChainHeadingsAlign(t *testing.T) {
+	certificate := CertificateDetails{IssuerCertificate: &CertificateDetails{
+		CA: true,
+		IssuerCertificate: &CertificateDetails{
+			CA: true,
+		},
+	}}
+	got := strings.Join(certificate.chain("  "), "\n")
+	for _, heading := range []string{"Certificate:", "Intermediate CA:", "Root CA:"} {
+		if !strings.Contains("\n"+got, "\n  "+heading+"\n") {
+			t.Errorf("%s is not aligned with the certificate chain:\n%s", heading, got)
+		}
+	}
+}
+
+func TestSignatureOutputFieldsAlignValuesWithinSection(t *testing.T) {
+	got := strings.Join(signatureOutputFields("  ", []signatureOutputField{
+		{label: "Document modified", value: "false"},
+		{label: "Status", value: "unknown"},
+		{label: "Reason", value: "certificate path not resolved"},
+	}), "\n")
+	want := "  Document modified: false\n" +
+		"  Status:            unknown\n" +
+		"  Reason:            certificate path not resolved"
+	if got != want {
+		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
 	}
 }
 
@@ -288,17 +391,16 @@ func TestDTSPresentationUsesLocalValidationLanguage(t *testing.T) {
 	got := result.String()
 	for _, want := range []string{
 		"document timestamp (locally validated, invisible, signed)",
-		"Local Path:",
-		"Revocation: Local:  ok",
+		"Local path:",
+		"Revocation:",
+		"Status: ok",
 		"CRL: certificate status good",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("DTS presentation missing %q:\n%s", want, got)
 		}
 	}
-	if strings.Contains(got, "document timestamp (trusted") ||
-		strings.Contains(got, "                             Trust:") ||
-		strings.Contains(got, "Revocation: Status:") {
+	if strings.Contains(got, "document timestamp (trusted") || strings.Contains(got, "Trust:") {
 		t.Fatalf("DTS presentation implies a trust decision:\n%s", got)
 	}
 }
@@ -359,7 +461,7 @@ func TestSignaturePresentationUsesStoredConclusions(t *testing.T) {
 			for _, want := range []string{
 				tt.typeString,
 				SignatureReasonCertNotTrusted.String(),
-				"Local Path:",
+				"Local path:",
 				pathReason,
 				SignatureReasonCertRevocationUnknown.String(),
 				signerProblem,
@@ -386,7 +488,7 @@ func TestSignaturePresentationUsesConsistentFailureReasons(t *testing.T) {
 		want := reason.String()
 		for _, sigType := range []int{SigTypeForm, SigTypeDTS, SigTypeUR} {
 			result := presentationResult(sigType, reason, "signer evidence", "result evidence")
-			if got := result.String(); !strings.Contains(got, "     Reason: "+want) {
+			if got := result.String(); !strings.Contains(got, "  Reason:            "+want) {
 				t.Errorf("type %d changed reason %q:\n%s", sigType, want, got)
 			}
 		}

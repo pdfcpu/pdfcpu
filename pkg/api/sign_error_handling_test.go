@@ -111,7 +111,8 @@ func TestDigestAndModelUseStoredSignatureText(t *testing.T) {
 				"model": modelOutput,
 			} {
 				if !strings.Contains(output, tt.typeString) ||
-					!strings.Contains(output, "Reason: "+reason) {
+					!strings.Contains(output, "Reason:") ||
+					!strings.Contains(output, reason) {
 					t.Errorf("%s output changed structured conclusion:\n%s", name, output)
 				}
 			}
@@ -126,7 +127,7 @@ func TestDigestAndModelUseStoredSignatureText(t *testing.T) {
 			if !strings.Contains(apiOutput, "Reason: "+problem) {
 				t.Fatalf("API digest rewrote stored Problem:\n%s", apiOutput)
 			}
-			if modelOutput = result.String(); !strings.Contains(modelOutput, "Problems: "+problem) {
+			if modelOutput = result.String(); !strings.Contains(modelOutput, "Problems:\n  "+problem) {
 				t.Fatalf("model output rewrote stored Problem:\n%s", modelOutput)
 			}
 		})
@@ -159,9 +160,10 @@ func TestCompactDigestPreservesDetailedEvidenceText(t *testing.T) {
 		got := strings.Join(lines, "\n")
 		want := "\n" +
 			"1 form signature (invisible, signed)\n" +
-			"   Status: validity of the signature is unknown\n" +
-			"   Reason: " + tt.problem + "\n" +
-			"   Signed: not available"
+			"  Integrity: signature unknown, signed content digest unknown\n" +
+			"     Status: validity of the signature is unknown\n" +
+			"     Reason: " + tt.problem + "\n" +
+			"     Signed: not available"
 		if got != want {
 			t.Errorf("compact output:\ngot:\n%q\nwant:\n%q", got, want)
 		}
@@ -171,8 +173,9 @@ func TestCompactDigestPreservesDetailedEvidenceText(t *testing.T) {
 			t.Fatal(err)
 		}
 		full := strings.Join(lines, "\n")
-		if !strings.Contains(full, "Reason: "+tt.reason.String()) ||
-			!strings.Contains(full, "Problems: "+tt.problem) {
+		if !strings.Contains(full, "Reason:") ||
+			!strings.Contains(full, tt.reason.String()) ||
+			!strings.Contains(full, "Problems:\n  "+tt.problem) {
 			t.Errorf("full output did not separate structured reason and Problem:\n%s", full)
 		}
 	}
@@ -276,6 +279,81 @@ func rawSignatureEvidence(t *testing.T, pdf []byte) (*model.SignatureValidationR
 		}
 	}
 	return results[0], strings.Join(problems, "\n")
+}
+
+func requireSignatureFailurePresentation(t *testing.T, result *model.SignatureValidationResult, compact, full string) {
+	t.Helper()
+	lines, err := digest(t.Context(), []*model.SignatureValidationResult{result}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output := strings.Join(lines, "\n")
+	for _, want := range []string{
+		compact,
+		"     Status: " + result.Status.String(),
+		"     Reason: " + result.Reason.String(),
+	} {
+		if !strings.Contains(output, want) {
+			t.Errorf("compact output missing %q:\n%s", want, output)
+		}
+	}
+
+	lines, err = digest(t.Context(), []*model.SignatureValidationResult{result}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output = strings.Join(lines, "\n")
+	if !strings.Contains(output, full) {
+		t.Errorf("full output missing failure evidence:\n%s", output)
+	}
+}
+
+func expectedFullIntegrityEvidence(signature, digest, profile, certificate string) string {
+	return strings.Join(fullSignatureFields("  ", []fullSignatureField{
+		{label: "Cryptographic signature", value: signature},
+		{label: "Signed content digest", value: digest},
+		{label: "Signature profile", value: profile},
+		{label: "Signer certificate", value: certificate},
+	}), "\n")
+}
+
+func requireIncompleteSignaturePresentation(
+	t *testing.T,
+	result *model.SignatureValidationResult,
+	problem,
+	fullEvidence string,
+) {
+	t.Helper()
+	lines, err := digest(t.Context(), []*model.SignatureValidationResult{result}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output := strings.Join(lines, "\n")
+	for _, want := range []string{
+		"  Integrity: signature unknown, signed content digest unknown",
+		"     Status: validity of the signature is unknown",
+		"     Reason: " + problem,
+	} {
+		if !strings.Contains(output, want) {
+			t.Errorf("compact output missing %q:\n%s", want, output)
+		}
+	}
+
+	lines, err = digest(t.Context(), []*model.SignatureValidationResult{result}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output = strings.Join(lines, "\n")
+	for _, want := range []string{
+		fullEvidence,
+		"  Status:            validity of the signature is unknown",
+		"  Reason:            " + result.Reason.String(),
+		problem,
+	} {
+		if !strings.Contains(output, want) {
+			t.Errorf("full output missing %q:\n%s", want, output)
+		}
+	}
 }
 
 // TestSignAPIMissingArgumentsPreserveSentinels verifies public sign API argument guards.
@@ -544,8 +622,9 @@ func TestValidateSignaturesRawInitializesOperationState(t *testing.T) {
 	}
 }
 
-// TestValidateSignaturesRawReportsMalformedSignatureEvidence verifies malformed signature metadata is nonfatal.
-func TestValidateSignaturesRawReportsMalformedSignatureEvidence(t *testing.T) {
+// TestValidateSignaturesRawReportsUnsupportedSubFilterEvidence verifies an
+// unsupported signature profile remains nonfatal.
+func TestValidateSignaturesRawReportsUnsupportedSubFilterEvidence(t *testing.T) {
 	pdf := signedPDFBytes(t)
 	oldValue := []byte("ETSI.CAdES.detached")
 	newValue := []byte("Unknown.Filter.Test")
@@ -560,12 +639,20 @@ func TestValidateSignaturesRawReportsMalformedSignatureEvidence(t *testing.T) {
 	copy(pdf[index:index+len(oldValue)], newValue)
 
 	result, problems := rawSignatureEvidence(t, pdf)
-	if result.Status != model.SignatureStatusUnknown {
-		t.Fatalf("got status %s, want unknown", result.Status)
+	if result.Status != model.SignatureStatusUnknown ||
+		result.Reason != model.SignatureReasonUnsupported {
+		t.Fatalf("got status=%s reason=%s, want unknown and unsupported", result.Status, result.Reason)
 	}
-	if want := "signature dict entry SubFilter: unsupported: value Unknown.Filter.Test"; !strings.Contains(problems, want) {
+	want := "signature dict entry SubFilter: unsupported: value Unknown.Filter.Test"
+	if !strings.Contains(problems, want) {
 		t.Fatalf("expected %q, got %q", want, problems)
 	}
+	requireIncompleteSignaturePresentation(
+		t,
+		result,
+		want,
+		expectedFullIntegrityEvidence("unknown", "unknown", "unknown", "unknown"),
+	)
 }
 
 // TestValidateSignaturesRawReportsUnsupportedAlgorithmEvidence verifies unknown PKCS#7 algorithms do not panic.
@@ -587,9 +674,57 @@ func TestValidateSignaturesRawReportsUnsupportedAlgorithmEvidence(t *testing.T) 
 		result.Reason != model.SignatureReasonUnsupported {
 		t.Fatalf("got status=%s reason=%s, want unknown and unsupported", result.Status, result.Reason)
 	}
-	if want := "pkcs7: verify signature unsupported"; !strings.Contains(problems, want) {
+	want := "pkcs7: verify signature unsupported"
+	if !strings.Contains(problems, want) {
 		t.Fatalf("expected %q, got %q", want, problems)
 	}
+	if len(result.Details.Signers) != 1 {
+		t.Fatalf("got %d signers, want one", len(result.Details.Signers))
+	}
+	evidence := result.Details.Signers[0].Evidence
+	if evidence.CertificateIdentified != model.True ||
+		evidence.SignatureAuthenticated != model.Unknown ||
+		evidence.DigestVerified != model.Unknown ||
+		evidence.ProfileValidated != model.Unknown {
+		t.Fatalf("unsupported algorithm produced incorrect evidence: %+v", evidence)
+	}
+	requireIncompleteSignaturePresentation(
+		t,
+		result,
+		want,
+		expectedFullIntegrityEvidence("unknown", "unknown", "unknown", "identified"),
+	)
+}
+
+// TestValidateSignaturesRawReportsMalformedContainerPresentation verifies
+// malformed PKCS#7 data remains distinct from unsupported algorithms and does
+// not manufacture evidence for checks that could not run.
+func TestValidateSignaturesRawReportsMalformedContainerPresentation(t *testing.T) {
+	pdf := mutateSignatureContents(t, signedPDFBytes(t), func(contents []byte) {
+		if len(contents) == 0 {
+			t.Fatal("missing PKCS#7 data")
+		}
+		contents[0] = byte(asn1.TagSet)
+	})
+
+	result, problems := rawSignatureEvidence(t, pdf)
+	if result.Status != model.SignatureStatusUnknown ||
+		result.Reason != model.SignatureReasonMalformed {
+		t.Fatalf("got status=%s reason=%s, want unknown and malformed", result.Status, result.Reason)
+	}
+	const want = "pkcs7: parse PKCS#7"
+	if !strings.Contains(problems, want) {
+		t.Fatalf("expected %q, got %q", want, problems)
+	}
+	if len(result.Details.Signers) != 0 {
+		t.Fatalf("malformed container produced %d signers", len(result.Details.Signers))
+	}
+	requireIncompleteSignaturePresentation(
+		t,
+		result,
+		want,
+		expectedFullIntegrityEvidence("unknown", "unknown", "unknown", "unknown"),
+	)
 }
 
 // TestValidateSignaturesRawReportsCertificateParseEvidence verifies malformed embedded certificates remain evidence.
@@ -659,6 +794,69 @@ func TestValidateSignaturesRawReportsDigestMismatchEvidence(t *testing.T) {
 	if want := "pkcs7: verify signature content mismatch"; !strings.Contains(problems, want) {
 		t.Fatalf("expected %q, got %q", want, problems)
 	}
+	if len(result.Details.Signers) != 1 {
+		t.Fatalf("got %d signers, want one", len(result.Details.Signers))
+	}
+	evidence := result.Details.Signers[0].Evidence
+	if evidence.SignatureAuthenticated != model.Unknown ||
+		evidence.DigestVerified != model.False {
+		t.Fatalf("digest mismatch produced incorrect evidence: %+v", evidence)
+	}
+	requireSignatureFailurePresentation(
+		t,
+		result,
+		"  Integrity: signature unknown, signed content digest mismatch",
+		expectedFullIntegrityEvidence("unknown", "mismatch", "unknown", "identified"),
+	)
+}
+
+// TestValidateSignaturesRawReportsForgedSignatureEvidence verifies a
+// cryptographic signature mismatch remains distinct from signed-content
+// modification evidence in the public result and presentation.
+func TestValidateSignaturesRawReportsForgedSignatureEvidence(t *testing.T) {
+	pdf := mutateSignatureContents(t, signedPDFBytes(t), func(contents []byte) {
+		p7, err := pkcs7.Parse(contents)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(p7.Signers) != 1 || len(p7.Signers[0].EncryptedDigest) == 0 {
+			t.Fatal("missing PKCS#7 signer signature")
+		}
+		index := bytes.LastIndex(contents, p7.Signers[0].EncryptedDigest)
+		if index < 0 {
+			t.Fatal("PKCS#7 signer signature not found")
+		}
+		contents[index] ^= 0xff
+	})
+
+	result, problems := rawSignatureEvidence(t, pdf)
+	if result.Status != model.SignatureStatusInvalid ||
+		result.Reason != model.SignatureReasonSignatureForged ||
+		result.DocModified != model.Unknown {
+		t.Fatalf(
+			"got status=%s reason=%s modified=%d, want invalid, forged and unknown",
+			result.Status,
+			result.Reason,
+			result.DocModified,
+		)
+	}
+	if want := "pkcs7: verify signature failure"; !strings.Contains(problems, want) {
+		t.Fatalf("expected %q, got %q", want, problems)
+	}
+	if len(result.Details.Signers) != 1 {
+		t.Fatalf("got %d signers, want one", len(result.Details.Signers))
+	}
+	evidence := result.Details.Signers[0].Evidence
+	if evidence.SignatureAuthenticated != model.False ||
+		evidence.DigestVerified != model.Unknown {
+		t.Fatalf("forged signature produced incorrect evidence: %+v", evidence)
+	}
+	requireSignatureFailurePresentation(
+		t,
+		result,
+		"  Integrity: signature not authentic, signed content digest unknown",
+		expectedFullIntegrityEvidence("not authentic", "unknown", "unknown", "identified"),
+	)
 }
 
 // TestValidateSignaturesRawDomainErrorPreservesCauseAndPhase verifies API-domain boundary wrapping.

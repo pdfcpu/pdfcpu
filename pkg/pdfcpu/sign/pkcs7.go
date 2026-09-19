@@ -44,6 +44,10 @@ func applyTimestampEvidence(evidence timestampEvidence, application timestampApp
 	if application.signer == nil {
 		return
 	}
+	application.signer.Evidence.Timestamp = publicTimestampValidationEvidence(
+		evidence,
+		application.signer.CertificatePathStatus,
+	)
 	if evidence.Err != nil {
 		application.signer.HasTimestamp = evidence.Present
 		application.signer.AddProblem(fmt.Sprintf("%s: %v", application.problemPrefix, evidence.Err))
@@ -67,6 +71,45 @@ func applyTimestampEvidence(evidence timestampEvidence, application timestampApp
 	if application.setResultSigningTime && application.result != nil {
 		application.result.Details.SigningTime = evidence.SigningTime
 	}
+}
+
+func publicTimestampValidationEvidence(
+	evidence timestampEvidence,
+	certificatePathStatus int,
+) model.TimestampValidationEvidence {
+	if !evidence.Present {
+		return model.TimestampValidationEvidence{}
+	}
+	result := model.TimestampValidationEvidence{
+		Kind:    publicTimestampKind(evidence.Kind),
+		Present: true,
+		Time:    evidence.SigningTime,
+	}
+	if evidence.Kind != timestampKindDocument {
+		return result
+	}
+	result.DigestVerified = establishedEvidenceStatus(evidence.DigestVerified)
+	result.SignatureAuthenticated = establishedEvidenceStatus(evidence.SignatureVerified)
+	result.ProfileValidated = establishedEvidenceStatus(evidence.CorrectProfile)
+	result.CertificatePathValidated = certificatePathStatus
+	if evidence.LocalTSAPathValidated {
+		result.CertificatePathValidated = model.True
+	}
+	return result
+}
+
+func publicTimestampKind(kind timestampKind) model.TimestampKind {
+	if kind == timestampKindDocument {
+		return model.TimestampKindDocument
+	}
+	return model.TimestampKindSignature
+}
+
+func establishedEvidenceStatus(established bool) int {
+	if established {
+		return model.True
+	}
+	return model.Unknown
 }
 
 func embeddedSignatureTimestampEvidence(p7Signer pkcs7.SignerInfo) timestampEvidence {
@@ -368,21 +411,25 @@ func verifyP7SignerWithContentType(
 
 	signerCert, err := pkcs7.GetCertFromCertsByIssuerAndSerial(p7Certs, p7Signer.IssuerAndSerialNumber)
 	if err != nil {
+		signer.Evidence.CertificateIdentified = model.False
 		markCertificateInvalidEvidence(result)
 		signer.AddProblem(fmt.Sprintf("pkcs7: signer %d identifier: %v", i+1, err))
 		return nil
 	}
 	if signerCert == nil {
+		signer.Evidence.CertificateIdentified = model.False
 		markCertificateInvalidEvidence(result)
 		signer.AddProblem(fmt.Sprintf("pkcs7: missing certificate for signer %d", i+1))
 		return nil
 	}
+	signer.Evidence.CertificateIdentified = model.True
 	localAssessment.CertificateIdentified = true
 
 	if err := verifyP7Signature(p7Signer, signerCert, p7Content, contentType); err != nil {
 		reportP7SignatureError(err, signer, result)
 		return nil
 	}
+	signer.Evidence.SignatureAuthenticated = model.True
 	localAssessment.SignatureAuthenticated = true
 	if err := c.Err(); err != nil {
 		return err
@@ -476,16 +523,19 @@ func applyP7ProfileAssessment(
 	switch subFilter {
 	case "adbe.pkcs7.detached", "adbe.pkcs7.sha1":
 		if err := validateAdobePKCS7Profile(subFilter, detached, contentType); err != nil {
+			signer.Evidence.ProfileValidated = model.False
 			markMalformedEvidence(result)
 			signer.AddProblem(fmt.Sprintf("SubFilter %s: validate profile: %v", subFilter, err))
 			return
 		}
+		signer.Evidence.ProfileValidated = model.True
 		assessment.ProfileValidated = true
 	case "ETSI.CAdES.detached":
 		if err := validateCAdESBaselineBProfile(detached, contentType, p7Signer, signerCert); err != nil {
 			reportCAdESBaselineBProfileError(err, signer, result)
 			return
 		}
+		signer.Evidence.ProfileValidated = model.True
 		assessment.ProfileValidated = true
 		signer.PAdES = "B-B"
 	}
@@ -547,6 +597,9 @@ func reportCAdESBaselineBProfileError(
 	signer *model.Signer,
 	result *model.SignatureValidationResult,
 ) {
+	if !errors.Is(err, errUnsupportedCAdESBaselineBProfile) {
+		signer.Evidence.ProfileValidated = model.False
+	}
 	switch {
 	case errors.Is(err, errCAdESCertificateBindingMismatch):
 		markInvalidEvidence(result, model.SignatureReasonCertInvalid, model.Unknown)
@@ -573,11 +626,13 @@ func applyP7DigestEvidence(
 	result *model.SignatureValidationResult,
 ) bool {
 	if err == nil {
+		signer.Evidence.DigestVerified = model.True
 		return true
 	}
 
 	switch reason {
 	case model.SignatureReasonDocModified:
+		signer.Evidence.DigestVerified = model.False
 		markInvalidEvidence(result, model.SignatureReasonDocModified, model.True)
 	case model.SignatureReasonUnsupported:
 		markUnsupportedEvidence(result)
@@ -680,6 +735,13 @@ func reportP7SignatureError(
 	signer *model.Signer,
 	result *model.SignatureValidationResult,
 ) {
+	var digestMismatchErr *pkcs7.MessageDigestMismatchError
+	switch {
+	case errors.As(err, &digestMismatchErr):
+		signer.Evidence.DigestVerified = model.False
+	case errors.Is(err, pkcs7.ErrSignatureMismatch):
+		signer.Evidence.SignatureAuthenticated = model.False
+	}
 	reportSignatureVerificationError(
 		"pkcs7: verify signature",
 		err,

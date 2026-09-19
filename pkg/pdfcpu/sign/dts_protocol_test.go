@@ -100,33 +100,38 @@ func TestTimestampingEKUProfiles(t *testing.T) {
 // before document timestamp evidence can be authenticated.
 func TestTSTInfoProfileRequirements(t *testing.T) {
 	tests := []struct {
-		name   string
-		info   *TSTInfo
-		reason model.SignatureReason
-		want   string
-		ok     bool
+		name         string
+		info         *TSTInfo
+		reason       model.SignatureReason
+		want         string
+		ok           bool
+		wantEvidence int
 	}{
 		{
-			name:   "Missing",
-			reason: model.SignatureReasonTimestampTokenInvalid,
-			want:   "timestamp info missing",
+			name:         "Missing",
+			reason:       model.SignatureReasonTimestampTokenInvalid,
+			want:         "timestamp info missing",
+			wantEvidence: model.False,
 		},
 		{
-			name:   "UnsupportedVersion",
-			info:   &TSTInfo{Version: 2, GenTime: time.Now()},
-			reason: model.SignatureReasonUnsupported,
-			want:   "unsupported timestamp info version 2",
+			name:         "UnsupportedVersion",
+			info:         &TSTInfo{Version: 2, GenTime: time.Now()},
+			reason:       model.SignatureReasonUnsupported,
+			want:         "unsupported timestamp info version 2",
+			wantEvidence: model.Unknown,
 		},
 		{
-			name:   "MissingGenTime",
-			info:   &TSTInfo{Version: 1},
-			reason: model.SignatureReasonTimestampTokenInvalid,
-			want:   "timestamp info genTime missing",
+			name:         "MissingGenTime",
+			info:         &TSTInfo{Version: 1},
+			reason:       model.SignatureReasonTimestampTokenInvalid,
+			want:         "timestamp info genTime missing",
+			wantEvidence: model.False,
 		},
 		{
-			name: "Valid",
-			info: &TSTInfo{Version: 1, GenTime: time.Now()},
-			ok:   true,
+			name:         "Valid",
+			info:         &TSTInfo{Version: 1, GenTime: time.Now()},
+			ok:           true,
+			wantEvidence: model.Unknown,
 		},
 	}
 
@@ -137,6 +142,10 @@ func TestTSTInfoProfileRequirements(t *testing.T) {
 
 			if got := checkTSTInfoProfile(tt.info, signer, result); got != tt.ok {
 				t.Fatalf("got accepted=%t, want %t", got, tt.ok)
+			}
+			if signer.Evidence.ProfileValidated != tt.wantEvidence ||
+				signer.Evidence.Timestamp.ProfileValidated != tt.wantEvidence {
+				t.Fatalf("unexpected timestamp profile evidence: %+v", signer.Evidence)
 			}
 			if tt.ok {
 				return
@@ -165,6 +174,57 @@ func TestDTSSignedAttributesRequired(t *testing.T) {
 		len(signer.Problems) != 1 ||
 		!strings.Contains(signer.Problems[0], "signed attributes missing") {
 		t.Fatalf("missing signed-attribute evidence: signer=%+v result=%+v", signer, result)
+	}
+}
+
+// TestAuthenticateDTSEvidencePreservesPositiveChecks verifies successful RFC
+// 3161 authentication remains available independently of local path evidence.
+func TestAuthenticateDTSEvidencePreservesPositiveChecks(t *testing.T) {
+	fixture := newDetachedP7SignerFixtureWithAttributes(
+		t,
+		func(cert *x509.Certificate) []pkcs7.Attribute {
+			return []pkcs7.Attribute{timestampSigningCertificateAttributeV2(
+				t,
+				cert,
+				crypto.SHA256,
+				pkcs7.OIDDigestAlgorithmSHA256,
+				true,
+			)}
+		},
+		nil,
+	)
+	fixture.cert.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping}
+	foundEKU := false
+	for i := range fixture.cert.Extensions {
+		if fixture.cert.Extensions[i].Id.Equal(oidExtensionExtendedKeyUsage) {
+			fixture.cert.Extensions[i].Critical = true
+			foundEKU = true
+		}
+	}
+	if !foundEKU {
+		fixture.cert.Extensions = append(fixture.cert.Extensions, pkix.Extension{
+			Id:       oidExtensionExtendedKeyUsage,
+			Critical: true,
+		})
+	}
+	p7, err := pkcs7.Parse(fixture.raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p7.Content = fixture.content
+	signer := &model.Signer{}
+	result := unknownSignatureResult()
+
+	if !authenticateDTSEvidence(p7, p7.Signers[0], fixture.cert, nil, signer, result) {
+		t.Fatalf("valid DTS evidence was not authenticated: signer=%+v result=%+v", signer, result)
+	}
+	if signer.Evidence.SignatureAuthenticated != model.True ||
+		signer.Evidence.DigestVerified != model.True ||
+		signer.Evidence.ProfileValidated != model.True ||
+		signer.Evidence.Timestamp.SignatureAuthenticated != model.True ||
+		signer.Evidence.Timestamp.DigestVerified != model.True ||
+		signer.Evidence.Timestamp.ProfileValidated != model.True {
+		t.Fatalf("positive DTS evidence was not preserved: %+v", signer.Evidence)
 	}
 }
 

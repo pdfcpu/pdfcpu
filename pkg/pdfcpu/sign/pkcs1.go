@@ -70,6 +70,7 @@ func ValidateX509RSASHA1Signature(
 
 	p1Certs, err := parseP1Certificates(sigDict)
 	if err != nil {
+		signer.Evidence.CertificateIdentified = model.False
 		markCertificateInvalidEvidence(result)
 		if errors.Is(err, errCertificateParse) {
 			handleCertParseErr(err, result)
@@ -81,23 +82,31 @@ func ValidateX509RSASHA1Signature(
 
 	cert, rsaPubKey, err := p1SigningCertificate(p1Certs)
 	if err != nil {
+		signer.Evidence.CertificateIdentified = model.False
 		result.Reason = model.SignatureReasonCertInvalid
 		result.AddProblem(err.Error())
 		result.AddProblem("skipped certificate revocation check")
 		return nil
 	}
+	signer.Evidence.CertificateIdentified = model.True
 	localAssessment.CertificateIdentified = true
 
 	reason, err := verifyRSASHA1Signature(ra, sigDict, rsaPubKey)
 	if err != nil {
+		if reason == model.SignatureReasonDocModified {
+			signer.Evidence.SignatureAuthenticated = model.False
+		}
 		return handleP1VerificationError(reason, err, result)
 	}
+	signer.Evidence.SignatureAuthenticated = model.True
 	localAssessment.SignatureAuthenticated = true
 
 	if reason == model.SignatureReasonDocNotModified {
+		signer.Evidence.DigestVerified = model.True
 		localAssessment.DigestVerified = true
 		markDocumentUnmodified(result)
 	}
+	signer.Evidence.ProfileValidated = model.True
 	localAssessment.ProfileValidated = true
 	if err := c.Err(); err != nil {
 		return err

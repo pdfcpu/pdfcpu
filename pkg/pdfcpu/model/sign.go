@@ -56,6 +56,38 @@ const SignTSFormat = "2006-01-02 15:04:05 -0700"
 
 const signatureOutputMaxWidth = 120
 
+type signatureOutputField struct {
+	label string
+	value string
+}
+
+func signatureOutputFields(indent string, fields []signatureOutputField) []string {
+	labelWidth := 0
+	for _, field := range fields {
+		if len(field.label) > labelWidth {
+			labelWidth = len(field.label)
+		}
+	}
+
+	var ss []string
+	for _, field := range fields {
+		prefix := indent + field.label + ":" + strings.Repeat(" ", labelWidth-len(field.label)+1)
+		ss = appendWrappedSignatureText(ss, prefix, field.value)
+	}
+	return ss
+}
+
+func signatureOutputProblems(ss []string, headingIndent, valueIndent string, problems []string) []string {
+	if len(problems) == 0 {
+		return ss
+	}
+	ss = append(ss, "", headingIndent+"Problems:")
+	for _, problem := range problems {
+		ss = appendWrappedSignatureText(ss, valueIndent, problem)
+	}
+	return ss
+}
+
 // RevocationDetails contains observed CRL and OCSP evidence together with a
 // local revocation assessment. Its Status and Reason fields are compatibility
 // representations, not legal, regulatory, enterprise-policy or policy-based
@@ -144,12 +176,11 @@ type OCSPEvidence struct {
 
 // String returns the string value of rd.
 func (rd RevocationDetails) String() string {
-	ss := []string{}
-	ss = append(ss, fmt.Sprintf(" Local:  %s", validString(rd.Status)))
+	fields := []signatureOutputField{{label: "Status", value: validString(rd.Status)}}
 	if len(rd.Reason) > 0 {
-		ss = appendWrappedSignatureText(ss, "                                         Reason: ", rd.Reason)
+		fields = append(fields, signatureOutputField{label: "Reason", value: rd.Reason})
 	}
-	return strings.Join(ss, "\n")
+	return strings.Join(signatureOutputFields("", fields), "\n")
 }
 
 func appendWrappedSignatureText(ss []string, prefix, text string) []string {
@@ -270,6 +301,42 @@ type ValidationTimeEvidence struct {
 	AssessmentScope AssessmentScope
 }
 
+// TimestampKind identifies the role of observed timestamp evidence.
+type TimestampKind uint8
+
+const (
+	// TimestampKindUnspecified identifies absent or unclassified timestamp evidence.
+	TimestampKindUnspecified TimestampKind = iota
+
+	// TimestampKindSignature identifies an embedded timestamp over a signature value.
+	TimestampKindSignature
+
+	// TimestampKindDocument identifies an ETSI.RFC3161 document timestamp.
+	TimestampKindDocument
+)
+
+// TimestampValidationEvidence records independent timestamp checks. Check
+// fields use Unknown, False and True; the zero value establishes no conclusion.
+type TimestampValidationEvidence struct {
+	Kind                     TimestampKind
+	Present                  bool
+	Time                     time.Time
+	DigestVerified           int
+	SignatureAuthenticated   int
+	ProfileValidated         int
+	CertificatePathValidated int
+}
+
+// SignerValidationEvidence records independent signer checks. Check fields use
+// Unknown, False and True; the zero value establishes no conclusion.
+type SignerValidationEvidence struct {
+	SignatureAuthenticated int
+	DigestVerified         int
+	ProfileValidated       int
+	CertificateIdentified  int
+	Timestamp              TimestampValidationEvidence
+}
+
 // CertificatePathMethod identifies how a certificate-path conclusion was reached.
 type CertificatePathMethod uint8
 
@@ -311,10 +378,9 @@ type CertificatePathEvidence struct {
 
 // String returns the string value of td.
 func (td TrustDetails) String() string {
-	ss := []string{}
-	ss = append(ss, fmt.Sprintf(" Status: %s", validString(td.Status)))
+	fields := []signatureOutputField{{label: "Status", value: validString(td.Status)}}
 	if len(td.Reason) > 0 {
-		ss = appendWrappedSignatureText(ss, "                                         Reason: ", td.Reason)
+		fields = append(fields, signatureOutputField{label: "Reason", value: td.Reason})
 	}
 	// if td.Status == True {
 	// 	ss = append(ss, fmt.Sprintf("                                         SourceObtainedFrom:                    %s", td.SourceObtainedFrom))
@@ -324,7 +390,7 @@ func (td TrustDetails) String() string {
 	// 	ss = append(ss, fmt.Sprintf("                                         AllowExecuteJavaScript:                %t", td.AllowExecuteJavaScript))
 	// 	ss = append(ss, fmt.Sprintf("                                         AllowExecutePrivilegedSystemOperation: %t", td.AllowExecutePrivilegedSystemOperation))
 	// }
-	return strings.Join(ss, "\n")
+	return strings.Join(signatureOutputFields("", fields), "\n")
 }
 
 // CertificateDetails contains observed certificate, path, validation-time and
@@ -355,41 +421,106 @@ type CertificateDetails struct {
 
 // String returns the string value of cd.
 func (cd CertificateDetails) String() string {
-	return cd.string()
+	return cd.string("")
 }
 
-func (cd CertificateDetails) string() string {
-	ss := []string{}
-	ss = append(ss, fmt.Sprintf("                             Subject:    %s", cd.Subject))
-	ss = append(ss, fmt.Sprintf("                             Issuer:     %s", cd.Issuer))
-	ss = append(ss, fmt.Sprintf("                             SerialNr:   %s", cd.SerialNumber))
-	ss = append(ss, fmt.Sprintf("                             Valid From: %s", cd.ValidFrom.Format(SignTSFormat)))
-	ss = append(ss, fmt.Sprintf("                             Valid Thru: %s", cd.ValidThru.Format(SignTSFormat)))
-	ss = append(ss, fmt.Sprintf("                             Expired:    %t", cd.Expired))
-	ss = append(ss, fmt.Sprintf("                             QC Policy:  %t", cd.Qualified))
-	ss = append(ss, fmt.Sprintf("                             CA:         %t", cd.CA))
-	ss = append(ss, fmt.Sprintf("                             Usage:      %s", cd.Usage))
-	ss = append(ss, fmt.Sprintf("                             Version:    %d", cd.Version))
-	ss = append(ss, fmt.Sprintf("                             SignAlg:    %s", cd.SignAlg))
-	ss = append(ss, fmt.Sprintf("                             Key Size:   %d bits", cd.KeySize))
-	ss = append(ss, fmt.Sprintf("                             SelfSigned: %t", cd.SelfSigned))
-	ss = append(ss, fmt.Sprintf("                             Local Path:%s", cd.Trust))
-	if cd.Leaf && !cd.SelfSigned {
-		ss = append(ss, fmt.Sprintf("                             Revocation:%s", cd.Revocation))
-	}
-
-	if cd.IssuerCertificate != nil {
-		s := "             Intermediate"
-		if cd.IssuerCertificate.IssuerCertificate == nil {
-			s = "             Root"
+func (cd CertificateDetails) string(indent string) string {
+	ss := cd.output(indent)
+	for issuer := cd.IssuerCertificate; issuer != nil; issuer = issuer.IssuerCertificate {
+		s := "Intermediate"
+		if issuer.IssuerCertificate == nil {
+			s = "Root"
 		}
-		if cd.IssuerCertificate.CA {
-			s += "CA"
+		if issuer.CA {
+			s += " CA"
 		}
-		ss = append(ss, s+":")
-		ss = append(ss, cd.IssuerCertificate.string())
+		ss = append(ss, "", indent+s+":")
+		ss = append(ss, issuer.output(indent+"  ")...)
 	}
 	return strings.Join(ss, "\n")
+}
+
+func (cd CertificateDetails) chain(indent string) []string {
+	heading := "Certificate"
+	if cd.CA {
+		heading += " (CA)"
+	}
+	ss := []string{indent + heading + ":"}
+	ss = append(ss, cd.output(indent+"  ")...)
+	for issuer := cd.IssuerCertificate; issuer != nil; issuer = issuer.IssuerCertificate {
+		heading = "Intermediate"
+		if issuer.IssuerCertificate == nil {
+			heading = "Root"
+		}
+		if issuer.CA {
+			heading += " CA"
+		}
+		ss = append(ss, "", indent+heading+":")
+		ss = append(ss, issuer.output(indent+"  ")...)
+	}
+	return ss
+}
+
+func (cd CertificateDetails) output(indent string) []string {
+	var fields []signatureOutputField
+	if cd.Subject != "" {
+		fields = append(fields, signatureOutputField{label: "Subject", value: cd.Subject})
+	}
+	if cd.Issuer != "" {
+		fields = append(fields, signatureOutputField{label: "Issuer", value: cd.Issuer})
+	}
+	if cd.SerialNumber != "" {
+		fields = append(fields, signatureOutputField{label: "Serial number", value: cd.SerialNumber})
+	}
+	if !cd.ValidFrom.IsZero() {
+		fields = append(fields, signatureOutputField{label: "Valid from", value: cd.ValidFrom.Format(SignTSFormat)})
+	}
+	if !cd.ValidThru.IsZero() {
+		fields = append(fields, signatureOutputField{label: "Valid thru", value: cd.ValidThru.Format(SignTSFormat)})
+	}
+	fields = append(fields,
+		signatureOutputField{label: "Expired", value: fmt.Sprintf("%t", cd.Expired)},
+		signatureOutputField{label: "QC policy", value: fmt.Sprintf("%t", cd.Qualified)},
+		signatureOutputField{label: "CA", value: fmt.Sprintf("%t", cd.CA)},
+	)
+	if cd.Usage != "" {
+		fields = append(fields, signatureOutputField{label: "Usage", value: cd.Usage})
+	}
+	if cd.Version > 0 {
+		fields = append(fields, signatureOutputField{label: "Version", value: fmt.Sprintf("%d", cd.Version)})
+	}
+	if cd.SignAlg != "" {
+		fields = append(fields, signatureOutputField{label: "Signing algorithm", value: cd.SignAlg})
+	}
+	if cd.KeySize > 0 {
+		fields = append(fields, signatureOutputField{label: "Key size", value: fmt.Sprintf("%d bits", cd.KeySize)})
+	}
+	fields = append(fields, signatureOutputField{label: "Self-signed", value: fmt.Sprintf("%t", cd.SelfSigned)})
+	ss := signatureOutputFields(indent, fields)
+
+	ss = append(ss, "", indent+"Local path:")
+	ss = append(ss, signatureOutputFields(indent+"  ", trustOutputFields(cd.Trust))...)
+	if cd.Leaf && !cd.SelfSigned {
+		ss = append(ss, "", indent+"Revocation:")
+		ss = append(ss, signatureOutputFields(indent+"  ", revocationOutputFields(cd.Revocation))...)
+	}
+	return ss
+}
+
+func trustOutputFields(td TrustDetails) []signatureOutputField {
+	fields := []signatureOutputField{{label: "Status", value: validString(td.Status)}}
+	if td.Reason != "" {
+		fields = append(fields, signatureOutputField{label: "Reason", value: td.Reason})
+	}
+	return fields
+}
+
+func revocationOutputFields(rd RevocationDetails) []signatureOutputField {
+	fields := []signatureOutputField{{label: "Status", value: validString(rd.Status)}}
+	if rd.Reason != "" {
+		fields = append(fields, signatureOutputField{label: "Reason", value: rd.Reason})
+	}
+	return fields
 }
 
 // Signature represents a digital signature.
@@ -583,6 +714,7 @@ type Signer struct {
 	Authoritative         bool      // true if certified or first (youngest) signature
 	Permissions           int       // see table 257
 	Problems              []string
+	Evidence              SignerValidationEvidence
 }
 
 // AddProblem adds problem to signer.
@@ -604,43 +736,40 @@ func permString(i int) string {
 
 // String returns a string representation.
 func (signer Signer) String(dts bool) string {
-	ss := []string{}
-	s := "false"
+	return signer.string(dts, "")
+}
+
+func (signer Signer) string(dts bool, indent string) string {
+	var fields []signatureOutputField
 	if signer.HasTimestamp {
-		if signer.Timestamp.IsZero() {
-			s = "invalid"
-		} else {
+		s := "invalid"
+		if !signer.Timestamp.IsZero() {
 			s = signer.Timestamp.Format(SignTSFormat)
 		}
+		fields = append(fields, signatureOutputField{label: "Timestamp", value: s})
 	}
 
-	ss = append(ss, fmt.Sprintf("             Timestamp:      %s", s))
 	if !dts {
 		if signer.PAdES != "" {
-			ss = append(ss, fmt.Sprintf("             PAdES:          %s", signer.PAdES))
+			fields = append(fields, signatureOutputField{label: "PAdES", value: signer.PAdES})
 		}
-		ss = append(ss, fmt.Sprintf("             Certified:      %t", signer.Certified))
-		ss = append(ss, fmt.Sprintf("             Authoritative:  %t", signer.Authoritative))
+		fields = append(fields,
+			signatureOutputField{label: "Authoritative", value: fmt.Sprintf("%t", signer.Authoritative)},
+			signatureOutputField{label: "Certified", value: fmt.Sprintf("%t", signer.Certified)},
+		)
 		if signer.Certified && signer.Permissions > 0 {
-			ss = append(ss, fmt.Sprintf("             Permissions:    %s", permString(signer.Permissions)))
+			fields = append(fields, signatureOutputField{label: "Permissions", value: permString(signer.Permissions)})
 		}
 	}
+	ss := signatureOutputFields(indent, fields)
 	if signer.Certificate != nil {
-		s := "             Certificate"
-		if signer.Certificate.CA {
-			s += "(CA)"
+		if len(ss) > 0 {
+			ss = append(ss, "")
 		}
-		ss = append(ss, s+":")
-		ss = append(ss, signer.Certificate.String())
+		ss = append(ss, signer.Certificate.chain(indent)...)
 	}
 
-	for i, s := range signer.Problems {
-		prefix := "                             "
-		if i == 0 {
-			prefix = "             Problems:       "
-		}
-		ss = appendWrappedSignatureText(ss, prefix, s)
-	}
+	ss = signatureOutputProblems(ss, indent, indent+"  ", signer.Problems)
 
 	return strings.Join(ss, "\n")
 }
@@ -685,29 +814,59 @@ func (sd *SignatureDetails) Permissions() int {
 
 // String returns the string value of sd.
 func (sd SignatureDetails) String() string {
-	ss := []string{}
-	ss = append(ss, fmt.Sprintf("             SubFilter:      %s", sd.SubFilter))
-	ss = append(ss, fmt.Sprintf("             SignerIdentity: %s", sd.SignerIdentity))
-	ss = append(ss, fmt.Sprintf("             SignerName:     %s", sd.SignerName))
-	if !sd.IsETSI_RFC3161() {
-		ss = append(ss, fmt.Sprintf("             ContactInfo:    %s", sd.ContactInfo))
-		ss = append(ss, fmt.Sprintf("             Location:       %s", sd.Location))
-		ss = append(ss, fmt.Sprintf("             Reason:         %s", sd.Reason))
-	}
-	ss = append(ss, fmt.Sprintf("             SigningTime:    %s", sd.SigningTime.Format(SignTSFormat)))
-	ss = append(ss, fmt.Sprintf("             Field:          %s", sd.FieldName))
+	ss := signatureOutputFields("", sd.outputFields())
+	ss = append(ss, sd.signerOutput()...)
+	return strings.Join(ss, "\n")
+}
 
-	if len(sd.Signers) == 1 {
-		ss = append(ss, "     Signer:")
-		ss = append(ss, sd.Signers[0].String(sd.IsETSI_RFC3161()))
-	} else {
-		for i, signer := range sd.Signers {
-			ss = append(ss, fmt.Sprintf("   Signer %d:", i+1))
-			ss = append(ss, signer.String(sd.IsETSI_RFC3161()))
+func (sd SignatureDetails) outputFields() []signatureOutputField {
+	var fields []signatureOutputField
+	if sd.SubFilter != "" {
+		fields = append(fields, signatureOutputField{label: "SubFilter", value: sd.SubFilter})
+	}
+	if sd.SignerIdentity != "" {
+		identity := sd.SignerIdentity
+		if strings.EqualFold(identity, "unknown") {
+			identity = "unknown"
+		}
+		fields = append(fields, signatureOutputField{label: "Signer identity", value: identity})
+	}
+	if sd.SignerName != "" {
+		fields = append(fields, signatureOutputField{label: "Signer name", value: sd.SignerName})
+	}
+	if !sd.IsETSI_RFC3161() {
+		if sd.ContactInfo != "" {
+			fields = append(fields, signatureOutputField{label: "Contact info", value: sd.ContactInfo})
+		}
+		if sd.Location != "" {
+			fields = append(fields, signatureOutputField{label: "Location", value: sd.Location})
+		}
+		if sd.Reason != "" {
+			fields = append(fields, signatureOutputField{label: "Reason", value: sd.Reason})
 		}
 	}
+	if sd.FieldName != "" {
+		fields = append(fields, signatureOutputField{label: "Field", value: sd.FieldName})
+	}
+	return fields
+}
 
-	return strings.Join(ss, "\n")
+func (sd SignatureDetails) signerOutput() []string {
+	var ss []string
+	for i, signer := range sd.Signers {
+		heading := "Signer:"
+		if len(sd.Signers) > 1 {
+			heading = fmt.Sprintf("Signer %d:", i+1)
+		}
+		if len(ss) > 0 || len(sd.outputFields()) > 0 {
+			ss = append(ss, "")
+		}
+		ss = append(ss, heading)
+		if signer != nil {
+			ss = append(ss, signer.string(sd.IsETSI_RFC3161(), "  "))
+		}
+	}
+	return ss
 }
 
 // SignatureValidationResult contains observed signature, certificate,
@@ -747,26 +906,37 @@ func (svr *SignatureValidationResult) SigningTime() string {
 
 // String returns the string value of svr.
 func (svr SignatureValidationResult) String() string {
-	ss := []string{}
-
-	ss = append(ss, fmt.Sprintf("       Type: %s", svr.Signature.String(svr.Status)))
+	ss := []string{svr.Signature.String(svr.Status)}
 	if !svr.Signed {
 		return strings.Join(ss, "\n")
 	}
 
-	ss = append(ss, fmt.Sprintf("     Status: %s", svr.Status.String()))
-	ss = append(ss, fmt.Sprintf("     Reason: %s", svr.Reason.String()))
-	ss = append(ss, fmt.Sprintf("     Signed: %s", svr.SigningTime()))
-	ss = append(ss, fmt.Sprintf("DocModified: %s", statusString(svr.DocModified)))
-	ss = append(ss, fmt.Sprintf("    Details:\n%s", svr.Details))
+	ss = append(ss, "", "Assessment:")
+	ss = append(ss, signatureOutputFields("  ", []signatureOutputField{
+		{label: "Status", value: svr.Status.String()},
+		{label: "Reason", value: svr.Reason.String()},
+		{label: "Signed", value: svr.SigningTime()},
+		{label: "Document modified", value: statusString(svr.DocModified)},
+	})...)
 
-	for i, s := range svr.Problems {
-		prefix := "             "
-		if i == 0 {
-			prefix = "   Problems: "
-		}
-		ss = appendWrappedSignatureText(ss, prefix, s)
+	details := signatureOutputFields("  ", svr.Details.outputFields())
+	if len(details) > 0 {
+		ss = append(ss, "", "Details:")
+		ss = append(ss, details...)
 	}
+
+	for i, signer := range svr.Details.Signers {
+		heading := "Signer:"
+		if len(svr.Details.Signers) > 1 {
+			heading = fmt.Sprintf("Signer %d:", i+1)
+		}
+		ss = append(ss, "", heading)
+		if signer != nil {
+			ss = append(ss, signer.string(svr.Details.IsETSI_RFC3161(), "  "))
+		}
+	}
+
+	ss = signatureOutputProblems(ss, "", "  ", svr.Problems)
 
 	return strings.Join(ss, "\n")
 }

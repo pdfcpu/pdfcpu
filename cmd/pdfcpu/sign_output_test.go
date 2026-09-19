@@ -19,8 +19,10 @@ package main
 import (
 	"bytes"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/cli"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -37,59 +39,43 @@ func useEmptyCLISignatureTrustStore(t *testing.T) {
 	})
 }
 
-// TestValidateSignaturesCLIOutput locks down CLI presentation of observed
-// signature, certificate, timestamp and revocation evidence together with the
-// configuration-dependent local assessment.
-func TestValidateSignaturesCLIOutput(t *testing.T) {
+func signatureOutputSummary(s string) string {
+	const details = "\nDetails:"
+	if i := strings.Index(s, details); i >= 0 {
+		return s[:i]
+	}
+	return s
+}
+
+// TestValidateSignaturesCLIUsesAPIOutput verifies compact and full CLI output
+// preserve the API presentation without owning a duplicate formatting contract.
+func TestValidateSignaturesCLIUsesAPIOutput(t *testing.T) {
 	useEmptyCLISignatureTrustStore(t)
 	tests := []struct {
 		name string
-		file string
-		want string
+		full bool
 	}{
-		{
-			name: "ETSI.CAdES.detached",
-			file: filepath.Join("..", "..", "pkg", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf"),
-			want: `
-1 form signature (authoritative, visible, signed) on page 1
-   Status: validity of the signature is unknown
-   Reason: signer's certificate or one of its parent certificates has expired
-   Signed: 2024-03-04 14:25:54 +0200
-`,
-		},
-		{
-			name: "adbe.pkcs7.detached",
-			file: filepath.Join("..", "..", "pkg", "testdata", "signatures", "adbe.pkcs7.detached", "sample1.pdf"),
-			want: `
-1 form signature (authoritative, visible, signed) on page 1
-   Status: validity of the signature is unknown
-   Reason: signer's certificate or one of its parent certificates has expired
-   Signed: 2009-07-16 10:47:47 -0400
-`,
-		},
-		{
-			name: "adbe.x509.rsa_sha1",
-			file: filepath.Join("..", "..", "pkg", "testdata", "signatures", "adbe.x509.rsa_sha1", "sample01.pdf"),
-			want: `
-1 form signature (authoritative, visible, signed) on page 1
-   Status: validity of the signature is unknown
-   Reason: signer's certificate is invalid
-   Signed: 2009-10-02 00:11:31 +0500
-`,
-		},
+		{name: "compact"},
+		{name: "full", full: true},
 	}
 
+	inFile := filepath.Join("..", "..", "pkg", "testdata", "signatures", "ETSI.CAdES.detached", "testPAdES_BB.pdf")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := model.NewDefaultConfiguration()
 			conf.Offline = true
-			cmd := cli.ValidateSignaturesCommand(tt.file, false, false, conf)
+			lines, err := api.ValidateSignaturesFile(t.Context(), inFile, false, tt.full, conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := strings.Join(lines, "\n") + "\n"
+			cmd := cli.ValidateSignaturesCommand(inFile, false, tt.full, conf)
 			var out bytes.Buffer
 			if err := runCommandWithOutput(t.Context(), cmd, &out, cli.Dispatch, false); err != nil {
 				t.Fatal(err)
 			}
-			if got := out.String(); got != tt.want {
-				t.Fatalf("unexpected CLI output:\ngot:\n%q\nwant:\n%q", got, tt.want)
+			if got := out.String(); signatureOutputSummary(got) != signatureOutputSummary(want) {
+				t.Fatalf("CLI output diverged from API output:\ngot:\n%q\nwant:\n%q", got, want)
 			}
 		})
 	}

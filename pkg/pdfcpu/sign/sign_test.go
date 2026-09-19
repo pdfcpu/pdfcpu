@@ -363,6 +363,53 @@ func requireTimestampEvidence(
 	}
 }
 
+type publicTimestampEvidenceExpectation struct {
+	Kind                     model.TimestampKind
+	Present                  bool
+	Time                     time.Time
+	DigestVerified           int
+	SignatureAuthenticated   int
+	ProfileValidated         int
+	CertificatePathValidated int
+}
+
+func requirePublicTimestampEvidence(
+	t *testing.T,
+	evidence model.TimestampValidationEvidence,
+	want publicTimestampEvidenceExpectation,
+) {
+	t.Helper()
+	if evidence.Kind != want.Kind ||
+		evidence.Present != want.Present ||
+		!evidence.Time.Equal(want.Time) ||
+		evidence.DigestVerified != want.DigestVerified ||
+		evidence.SignatureAuthenticated != want.SignatureAuthenticated ||
+		evidence.ProfileValidated != want.ProfileValidated ||
+		evidence.CertificatePathValidated != want.CertificatePathValidated {
+		t.Fatalf("got public timestamp evidence %+v, want %+v", evidence, want)
+	}
+}
+
+func requireEmbeddedTimestampContainment(
+	t *testing.T,
+	signer *model.Signer,
+	result *model.SignatureValidationResult,
+	tokenTime time.Time,
+	crls,
+	ocsps [][]byte,
+) {
+	t.Helper()
+	if !signer.HasTimestamp ||
+		!signer.Timestamp.Equal(tokenTime) ||
+		signer.PAdES != "B-B" ||
+		signer.LTVEnabled ||
+		len(crls) != 1 ||
+		len(ocsps) != 0 ||
+		result.Reason != model.SignatureReasonUnknown {
+		t.Fatalf("embedded timestamp escaped containment: signer=%+v CRLs=%d OCSPs=%d", signer, len(crls), len(ocsps))
+	}
+}
+
 type exportedValidationFunc func(
 	context.Context,
 	io.ReaderAt,
@@ -1045,6 +1092,17 @@ func TestPAdESBaselineBClassification(t *testing.T) {
 			}
 
 			signer := result.Details.Signers[0]
+			wantEvidence := model.False
+			if tt.wantProfileValidated {
+				wantEvidence = model.True
+			}
+			if signer.Evidence.ProfileValidated != wantEvidence {
+				t.Fatalf(
+					"got public profile evidence=%d, want %d",
+					signer.Evidence.ProfileValidated,
+					wantEvidence,
+				)
+			}
 			if signer.PAdES != tt.want {
 				t.Fatalf("got PAdES level %q, want %q", signer.PAdES, tt.want)
 			}
@@ -1251,28 +1309,32 @@ func TestCAdESBaselineBProfileValidationMatrix(t *testing.T) {
 // deliberately converted into evidence only after their causes are classified.
 func TestCAdESBaselineBProfileProblemClassification(t *testing.T) {
 	tests := []struct {
-		name       string
-		err        error
-		wantStatus model.SignatureStatus
-		wantReason model.SignatureReason
+		name        string
+		err         error
+		wantStatus  model.SignatureStatus
+		wantReason  model.SignatureReason
+		wantProfile int
 	}{
 		{
 			"Malformed",
 			fmt.Errorf("%w: %w", errMalformedCAdESBaselineBProfile, pkcs7.ErrMalformedAttribute),
 			model.SignatureStatusUnknown,
 			model.SignatureReasonMalformed,
+			model.False,
 		},
 		{
 			"Unsupported",
 			fmt.Errorf("%w: %w", errUnsupportedCAdESBaselineBProfile, pkcs7.ErrUnsupportedAlgorithm),
 			model.SignatureStatusUnknown,
 			model.SignatureReasonUnsupported,
+			model.Unknown,
 		},
 		{
 			"CertificateBindingMismatch",
 			fmt.Errorf("%w: %w", errCAdESCertificateBindingMismatch, errESSCertificateMismatch),
 			model.SignatureStatusInvalid,
 			model.SignatureReasonCertInvalid,
+			model.False,
 		},
 	}
 
@@ -1287,6 +1349,13 @@ func TestCAdESBaselineBProfileProblemClassification(t *testing.T) {
 					result.Reason,
 					tt.wantStatus,
 					tt.wantReason,
+				)
+			}
+			if signer.Evidence.ProfileValidated != tt.wantProfile {
+				t.Fatalf(
+					"got profile evidence=%d, want %d",
+					signer.Evidence.ProfileValidated,
+					tt.wantProfile,
 				)
 			}
 			if len(signer.Problems) != 1 ||
@@ -1348,6 +1417,12 @@ func TestVerifyP7SignerStopsAfterDigestFailure(t *testing.T) {
 		)
 	}
 	signer := result.Details.Signers[0]
+	if signer.Evidence.CertificateIdentified != model.True ||
+		signer.Evidence.SignatureAuthenticated != model.Unknown ||
+		signer.Evidence.DigestVerified != model.False ||
+		signer.Evidence.ProfileValidated != model.Unknown {
+		t.Fatalf("unexpected signer evidence after digest mismatch: %+v", signer.Evidence)
+	}
 	if signer.Certificate != nil {
 		t.Fatal("digest failure unexpectedly reached certificate processing")
 	}
@@ -1364,6 +1439,7 @@ func TestVerifyP7SignerUsesFallbackChainAsEvidence(t *testing.T) {
 		Reason:      model.SignatureReasonUnknown,
 		DocModified: model.Unknown,
 	}
+	result.Details.SubFilter = "adbe.pkcs7.detached"
 
 	verifyP7Signer(
 		t.Context(),
@@ -1385,6 +1461,12 @@ func TestVerifyP7SignerUsesFallbackChainAsEvidence(t *testing.T) {
 		t.Fatalf("got reason %s, want %s", result.Reason, model.SignatureReasonCertNotTrusted)
 	}
 	signer := result.Details.Signers[0]
+	if signer.Evidence.CertificateIdentified != model.True ||
+		signer.Evidence.SignatureAuthenticated != model.True ||
+		signer.Evidence.DigestVerified != model.True ||
+		signer.Evidence.ProfileValidated != model.True {
+		t.Fatalf("positive PKCS#7 evidence was not preserved: %+v", signer.Evidence)
+	}
 	if signer.Certificate == nil {
 		t.Fatal("expected fallback certificate details")
 	}
@@ -1534,7 +1616,14 @@ func TestVerifyP7SignerMissingCertificateIsCertificateEvidence(t *testing.T) {
 	if result.Reason != model.SignatureReasonCertInvalid {
 		t.Fatalf("got reason %s, want %s", result.Reason, model.SignatureReasonCertInvalid)
 	}
-	problems := result.Details.Signers[0].Problems
+	signer := result.Details.Signers[0]
+	if signer.Evidence.CertificateIdentified != model.False ||
+		signer.Evidence.SignatureAuthenticated != model.Unknown ||
+		signer.Evidence.DigestVerified != model.Unknown ||
+		signer.Evidence.ProfileValidated != model.Unknown {
+		t.Fatalf("missing certificate produced incorrect signer evidence: %+v", signer.Evidence)
+	}
+	problems := signer.Problems
 	if len(problems) != 1 || !strings.Contains(problems[0], "missing certificate for signer 2") {
 		t.Fatalf("got problems %v, want missing signer certificate evidence", problems)
 	}
@@ -1867,26 +1956,40 @@ func TestVerifyP7SignaturePreservesVerificationCause(t *testing.T) {
 // digest evidence does not mutate document-integrity conclusions.
 func TestP7DigestEvidenceIsAppliedAfterObservation(t *testing.T) {
 	fixture := newDetachedP7SignerFixture(t, nil, nil)
+	t.Run("Verified", func(t *testing.T) {
+		signer := &model.Signer{}
+		result := unknownSignatureResult()
+		if !applyP7DigestEvidence(model.SignatureReasonDocNotModified, nil, signer, result) {
+			t.Fatal("verified digest evidence was rejected")
+		}
+		if signer.Evidence.DigestVerified != model.True {
+			t.Fatalf("got digest evidence=%d, want True", signer.Evidence.DigestVerified)
+		}
+	})
+
 	tests := []struct {
-		name    string
-		signer  pkcs7.SignerInfo
-		content []byte
-		reason  model.SignatureReason
-		status  model.SignatureStatus
+		name     string
+		signer   pkcs7.SignerInfo
+		content  []byte
+		reason   model.SignatureReason
+		status   model.SignatureStatus
+		evidence int
 	}{
 		{
-			name:    "MissingAttributes",
-			signer:  pkcs7.SignerInfo{},
-			content: fixture.content,
-			reason:  model.SignatureReasonMalformed,
-			status:  model.SignatureStatusUnknown,
+			name:     "MissingAttributes",
+			signer:   pkcs7.SignerInfo{},
+			content:  fixture.content,
+			reason:   model.SignatureReasonMalformed,
+			status:   model.SignatureStatusUnknown,
+			evidence: model.Unknown,
 		},
 		{
-			name:    "DigestMismatch",
-			signer:  fixture.signer,
-			content: []byte("modified"),
-			reason:  model.SignatureReasonDocModified,
-			status:  model.SignatureStatusInvalid,
+			name:     "DigestMismatch",
+			signer:   fixture.signer,
+			content:  []byte("modified"),
+			reason:   model.SignatureReasonDocModified,
+			status:   model.SignatureStatusInvalid,
+			evidence: model.False,
 		},
 		{
 			name: "UnsupportedDigest",
@@ -1895,9 +1998,10 @@ func TestP7DigestEvidenceIsAppliedAfterObservation(t *testing.T) {
 				signer.DigestAlgorithm.Algorithm = asn1.ObjectIdentifier{1, 2, 3}
 				return signer
 			}(),
-			content: fixture.content,
-			reason:  model.SignatureReasonUnsupported,
-			status:  model.SignatureStatusUnknown,
+			content:  fixture.content,
+			reason:   model.SignatureReasonUnsupported,
+			status:   model.SignatureStatusUnknown,
+			evidence: model.Unknown,
 		},
 	}
 
@@ -1932,6 +2036,13 @@ func TestP7DigestEvidenceIsAppliedAfterObservation(t *testing.T) {
 					tt.reason,
 				)
 			}
+			if signer.Evidence.DigestVerified != tt.evidence {
+				t.Fatalf(
+					"got digest evidence=%d, want %d",
+					signer.Evidence.DigestVerified,
+					tt.evidence,
+				)
+			}
 			if len(signer.Problems) != 1 {
 				t.Fatalf("got problems %v, want one digest problem", signer.Problems)
 			}
@@ -1944,8 +2055,9 @@ func TestP7DigestEvidenceIsAppliedAfterObservation(t *testing.T) {
 func TestP7AuthenticationFailureRetainsUnknownDocumentIntegrity(t *testing.T) {
 	fixture := newDetachedP7SignerFixture(t, nil, nil)
 	tests := []struct {
-		name   string
-		mutate func(*pkcs7.SignerInfo)
+		name          string
+		mutate        func(*pkcs7.SignerInfo)
+		wantSignature int
 	}{
 		{
 			name: "Forged",
@@ -1953,6 +2065,7 @@ func TestP7AuthenticationFailureRetainsUnknownDocumentIntegrity(t *testing.T) {
 				signer.EncryptedDigest = append([]byte(nil), signer.EncryptedDigest...)
 				signer.EncryptedDigest[0] ^= 0xff
 			},
+			wantSignature: model.False,
 		},
 		{
 			name: "Malformed",
@@ -1963,6 +2076,7 @@ func TestP7AuthenticationFailureRetainsUnknownDocumentIntegrity(t *testing.T) {
 					contentType,
 				)
 			},
+			wantSignature: model.Unknown,
 		},
 	}
 
@@ -1995,6 +2109,13 @@ func TestP7AuthenticationFailureRetainsUnknownDocumentIntegrity(t *testing.T) {
 			}
 			if result.DocModified != model.Unknown {
 				t.Fatalf("authentication failure concluded document integrity: %+v", result)
+			}
+			evidence := result.Details.Signers[0].Evidence
+			if evidence.CertificateIdentified != model.True ||
+				evidence.SignatureAuthenticated != tt.wantSignature ||
+				evidence.DigestVerified != model.Unknown ||
+				evidence.ProfileValidated != model.Unknown {
+				t.Fatalf("unexpected authentication-failure evidence: %+v", evidence)
 			}
 		})
 	}
@@ -2080,7 +2201,14 @@ func TestValidateDTSReportsMissingTimestampInfo(t *testing.T) {
 		t.Fatalf("got %d signers, want 1", len(result.Details.Signers))
 	}
 	const want = "SubFilter ETSI.RFC3161: missing timestamp info"
-	problems := result.Details.Signers[0].Problems
+	signer := result.Details.Signers[0]
+	if signer.Evidence.ProfileValidated != model.False ||
+		signer.Evidence.Timestamp.Kind != model.TimestampKindDocument ||
+		!signer.Evidence.Timestamp.Present ||
+		signer.Evidence.Timestamp.ProfileValidated != model.False {
+		t.Fatalf("missing timestamp info produced incorrect evidence: %+v", signer.Evidence)
+	}
+	problems := signer.Problems
 	if len(problems) != 1 || problems[0] != want {
 		t.Fatalf("got problems %v, want %q", problems, want)
 	}
@@ -2178,6 +2306,9 @@ func TestDTSSignerCertificateReportsMissingEvidence(t *testing.T) {
 		result.Reason != model.SignatureReasonCertInvalid {
 		t.Fatalf("got status=%s reason=%s, want unknown and certificate invalid", result.Status, result.Reason)
 	}
+	if signer.Evidence.CertificateIdentified != model.False {
+		t.Fatalf("missing DTS certificate produced incorrect evidence: %+v", signer.Evidence)
+	}
 	if problems := strings.Join(signer.Problems, "\n"); !strings.Contains(problems, "SubFilter ETSI.RFC3161: missing certificate for signer") {
 		t.Fatalf("unexpected problems %q", problems)
 	}
@@ -2201,6 +2332,9 @@ func TestDTSSignerCertificateReportsMissingIdentifierEvidence(t *testing.T) {
 	if result.Reason != model.SignatureReasonCertInvalid {
 		t.Fatalf("got reason %s, want %s", result.Reason, model.SignatureReasonCertInvalid)
 	}
+	if signer.Evidence.CertificateIdentified != model.False {
+		t.Fatalf("invalid DTS signer identifier produced incorrect evidence: %+v", signer.Evidence)
+	}
 	problems := strings.Join(signer.Problems, "\n")
 	for _, want := range []string{"signer identifier", "missing signer identifier"} {
 		if !strings.Contains(problems, want) {
@@ -2212,11 +2346,12 @@ func TestDTSSignerCertificateReportsMissingIdentifierEvidence(t *testing.T) {
 // TestDTSSignatureErrorClassification verifies unsupported encodings remain distinct from cryptographic mismatch.
 func TestDTSSignatureErrorClassification(t *testing.T) {
 	tests := []struct {
-		name       string
-		err        error
-		wantStatus model.SignatureStatus
-		wantReason model.SignatureReason
-		wantPhase  string
+		name          string
+		err           error
+		wantStatus    model.SignatureStatus
+		wantReason    model.SignatureReason
+		wantPhase     string
+		wantSignature int
 	}{
 		{
 			name:       "UnsupportedAlgorithm",
@@ -2264,11 +2399,12 @@ func TestDTSSignatureErrorClassification(t *testing.T) {
 			wantPhase:  "verify signature content mismatch",
 		},
 		{
-			name:       "CryptographicMismatch",
-			err:        fmt.Errorf("%w: %w", pkcs7.ErrSignatureMismatch, rsa.ErrVerification),
-			wantStatus: model.SignatureStatusInvalid,
-			wantReason: model.SignatureReasonSignatureForged,
-			wantPhase:  "verify signature failure",
+			name:          "CryptographicMismatch",
+			err:           fmt.Errorf("%w: %w", pkcs7.ErrSignatureMismatch, rsa.ErrVerification),
+			wantStatus:    model.SignatureStatusInvalid,
+			wantReason:    model.SignatureReasonSignatureForged,
+			wantPhase:     "verify signature failure",
+			wantSignature: model.False,
 		},
 	}
 
@@ -2294,6 +2430,10 @@ func TestDTSSignatureErrorClassification(t *testing.T) {
 			}
 			if result.DocModified != model.Unknown {
 				t.Fatalf("CMS failure concluded document integrity: %+v", result)
+			}
+			if signer.Evidence.SignatureAuthenticated != tt.wantSignature ||
+				signer.Evidence.Timestamp.SignatureAuthenticated != tt.wantSignature {
+				t.Fatalf("unexpected DTS signature evidence: %+v", signer.Evidence)
 			}
 			problems := strings.Join(signer.Problems, "\n")
 			for _, want := range []string{"SubFilter ETSI.RFC3161", tt.wantPhase, tt.err.Error()} {
@@ -2367,6 +2507,10 @@ func TestDTSDigestMismatchIsAppliedAfterObservation(t *testing.T) {
 		result.DocModified != model.True {
 		t.Fatalf("unexpected result state: status=%s reason=%s modified=%v", result.Status, result.Reason, result.DocModified)
 	}
+	if signer.Evidence.DigestVerified != model.False ||
+		signer.Evidence.Timestamp.DigestVerified != model.False {
+		t.Fatalf("digest mismatch produced incorrect evidence: %+v", signer.Evidence)
+	}
 	if problems := strings.Join(signer.Problems, "\n"); !strings.Contains(problems, "SubFilter ETSI.RFC3161: message digest mismatch") {
 		t.Fatalf("unexpected problems %q", problems)
 	}
@@ -2392,6 +2536,10 @@ func TestDTSDigestUnsupportedAlgorithmIsAppliedAfterObservation(t *testing.T) {
 	}
 	if result.Reason != model.SignatureReasonUnsupported {
 		t.Fatalf("got reason %s, want %s", result.Reason, model.SignatureReasonUnsupported)
+	}
+	if signer.Evidence.DigestVerified != model.Unknown ||
+		signer.Evidence.Timestamp.DigestVerified != model.Unknown {
+		t.Fatalf("unsupported digest produced a conclusion: %+v", signer.Evidence)
 	}
 	if problems := strings.Join(signer.Problems, "\n"); !strings.Contains(problems, "SubFilter ETSI.RFC3161: verify message digest") {
 		t.Fatalf("unexpected problems %q", problems)
@@ -2647,14 +2795,17 @@ func requireP1ValidationProblem(t *testing.T, sigDict types.Dict, want string) {
 	if result.Reason != model.SignatureReasonCertInvalid {
 		t.Fatalf("got reason %s, want %s", result.Reason, model.SignatureReasonCertInvalid)
 	}
+	if len(result.Details.Signers) != 1 ||
+		result.Details.Signers[0].Evidence.CertificateIdentified != model.False {
+		t.Fatalf("malformed legacy certificate produced incorrect evidence: %+v", result.Details.Signers)
+	}
 	if problems := strings.Join(result.Problems, "\n"); !strings.Contains(problems, want) {
 		t.Fatalf("expected problem containing %q, got %q", want, problems)
 	}
 }
 
-// TestValidateX509RSASHA1SignatureRequiresRevocationConclusion verifies
-// cryptographic success alone does not establish local validity.
-func TestValidateX509RSASHA1SignatureRequiresRevocationConclusion(t *testing.T) {
+func p1ValidationEvidenceResult(t *testing.T, mutateSignature func([]byte)) *model.SignatureValidationResult {
+	t.Helper()
 	key := testRSAKey(t)
 	template := testCertTemplate("Legacy RSA Signer", true)
 	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
@@ -2671,6 +2822,9 @@ func TestValidateX509RSASHA1SignatureRequiresRevocationConclusion(t *testing.T) 
 	signature, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA1, digest[:])
 	if err != nil {
 		t.Fatal(err)
+	}
+	if mutateSignature != nil {
+		mutateSignature(signature)
 	}
 	contents, err := asn1.Marshal(signature)
 	if err != nil {
@@ -2712,6 +2866,13 @@ func TestValidateX509RSASHA1SignatureRequiresRevocationConclusion(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	return result
+}
+
+// TestValidateX509RSASHA1SignatureRequiresRevocationConclusion verifies
+// cryptographic success alone does not establish local validity.
+func TestValidateX509RSASHA1SignatureRequiresRevocationConclusion(t *testing.T) {
+	result := p1ValidationEvidenceResult(t, nil)
 	if result.Status != model.SignatureStatusUnknown ||
 		result.Reason != model.SignatureReasonUnknown ||
 		result.DocModified != model.False {
@@ -2721,6 +2882,37 @@ func TestValidateX509RSASHA1SignatureRequiresRevocationConclusion(t *testing.T) 
 			result.Reason,
 			result.DocModified,
 		)
+	}
+	if len(result.Details.Signers) != 1 {
+		t.Fatalf("got %d signers, want one", len(result.Details.Signers))
+	}
+	evidence := result.Details.Signers[0].Evidence
+	if evidence.CertificateIdentified != model.True ||
+		evidence.SignatureAuthenticated != model.True ||
+		evidence.DigestVerified != model.True ||
+		evidence.ProfileValidated != model.True {
+		t.Fatalf("positive PKCS#1 evidence was not preserved: %+v", evidence)
+	}
+}
+
+// TestValidateX509RSASHA1SignaturePreservesCryptographicFailure verifies the
+// combined legacy RSA check does not invent a separate digest conclusion.
+func TestValidateX509RSASHA1SignaturePreservesCryptographicFailure(t *testing.T) {
+	result := p1ValidationEvidenceResult(t, func(signature []byte) {
+		signature[0] ^= 0xff
+	})
+
+	if result.Status != model.SignatureStatusInvalid ||
+		result.Reason != model.SignatureReasonSignatureForged ||
+		result.DocModified != model.True {
+		t.Fatalf("unexpected compatibility result for forged PKCS#1 signature: %+v", result)
+	}
+	evidence := result.Details.Signers[0].Evidence
+	if evidence.CertificateIdentified != model.True ||
+		evidence.SignatureAuthenticated != model.False ||
+		evidence.DigestVerified != model.Unknown ||
+		evidence.ProfileValidated != model.Unknown {
+		t.Fatalf("forged PKCS#1 signature produced incorrect evidence: %+v", evidence)
 	}
 }
 
@@ -4135,6 +4327,13 @@ func TestValidatePKCS1ReportsTrailingASN1Data(t *testing.T) {
 		result.Reason != model.SignatureReasonMalformed {
 		t.Fatalf("got status=%s reason=%s, want unknown and malformed", result.Status, result.Reason)
 	}
+	evidence := result.Details.Signers[0].Evidence
+	if evidence.CertificateIdentified != model.True ||
+		evidence.SignatureAuthenticated != model.Unknown ||
+		evidence.DigestVerified != model.Unknown ||
+		evidence.ProfileValidated != model.Unknown {
+		t.Fatalf("malformed PKCS#1 signature produced incorrect evidence: %+v", evidence)
+	}
 	if problems := strings.Join(result.Problems, "\n"); !strings.Contains(problems, "trailing data") {
 		t.Fatalf("expected trailing ASN.1 evidence, got %q", problems)
 	}
@@ -4631,6 +4830,11 @@ func TestTimestampPreparationIsPureAndEvidenceAppliedCentrally(t *testing.T) {
 	if !signer.HasTimestamp || !signer.Timestamp.Equal(signingTime) || signer.PAdES != "B-B" {
 		t.Fatalf("unexpected signer state: %+v", signer)
 	}
+	requirePublicTimestampEvidence(t, signer.Evidence.Timestamp, publicTimestampEvidenceExpectation{
+		Kind:    model.TimestampKindDocument,
+		Present: true,
+		Time:    signingTime,
+	})
 	if !result.Details.SigningTime.IsZero() {
 		t.Fatalf("timestamp without local validation selected signing time %v", result.Details.SigningTime)
 	}
@@ -4648,6 +4852,15 @@ func TestTimestampPreparationIsPureAndEvidenceAppliedCentrally(t *testing.T) {
 	if !result.Details.SigningTime.Equal(signingTime) {
 		t.Fatalf("locally validated timestamp did not select signing time: %v", result.Details.SigningTime)
 	}
+	requirePublicTimestampEvidence(t, signer.Evidence.Timestamp, publicTimestampEvidenceExpectation{
+		Kind:                     model.TimestampKindDocument,
+		Present:                  true,
+		Time:                     signingTime,
+		DigestVerified:           model.True,
+		SignatureAuthenticated:   model.True,
+		ProfileValidated:         model.True,
+		CertificatePathValidated: model.True,
+	})
 }
 
 // TestEmbeddedTimestampEvidenceIsContained verifies observed embedded
@@ -4683,19 +4896,16 @@ func TestEmbeddedTimestampEvidenceIsContained(t *testing.T) {
 	})
 	crls, ocsps := handleArchivedRevocationInfo(fixture.signer, signer)
 
-	if !signer.HasTimestamp ||
-		!signer.Timestamp.Equal(tokenTime) ||
-		signer.PAdES != "B-B" ||
-		signer.LTVEnabled ||
-		len(crls) != 1 ||
-		len(ocsps) != 0 ||
-		result.Reason != model.SignatureReasonUnknown {
-		t.Fatalf("embedded timestamp escaped containment: signer=%+v CRLs=%d OCSPs=%d", signer, len(crls), len(ocsps))
-	}
+	requireEmbeddedTimestampContainment(t, signer, result, tokenTime, crls, ocsps)
 	if len(signer.Problems) != 1 ||
 		!strings.Contains(signer.Problems[0], embeddedTimestampNotAuthenticated) {
 		t.Fatalf("missing unauthenticated-token problem: %v", signer.Problems)
 	}
+	requirePublicTimestampEvidence(t, signer.Evidence.Timestamp, publicTimestampEvidenceExpectation{
+		Kind:    model.TimestampKindSignature,
+		Present: true,
+		Time:    tokenTime,
+	})
 }
 
 // TestLocalTimestampEvidenceBoundary documents reported observed
@@ -4722,6 +4932,16 @@ func TestLocalTimestampEvidenceBoundary(t *testing.T) {
 		len(signer.Problems) != 1 ||
 		!strings.Contains(signer.Problems[0], cause.Error()) {
 		t.Fatalf("malformed timestamp application changed: signer=%+v result=%+v", signer, result)
+	}
+	publicEvidence := signer.Evidence.Timestamp
+	if publicEvidence.Kind != model.TimestampKindSignature ||
+		!publicEvidence.Present ||
+		!publicEvidence.Time.IsZero() ||
+		publicEvidence.DigestVerified != model.Unknown ||
+		publicEvidence.SignatureAuthenticated != model.Unknown ||
+		publicEvidence.ProfileValidated != model.Unknown ||
+		publicEvidence.CertificatePathValidated != model.Unknown {
+		t.Fatalf("malformed embedded timestamp produced incorrect evidence: %+v", publicEvidence)
 	}
 }
 

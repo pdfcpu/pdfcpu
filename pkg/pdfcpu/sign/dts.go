@@ -151,10 +151,13 @@ func validateDTS(
 
 	signer := &model.Signer{}
 	result.Details.AddSigner(signer)
+	signer.Evidence.Timestamp.Kind = model.TimestampKindDocument
+	signer.Evidence.Timestamp.Present = true
 
 	certs, crls, ocsps := dtsValidationMaterial(ctx, signer, result, p7.Certificates)
 
 	if !p7.ContentType.Equal(oidTSTInfo) {
+		setDTSProfileEvidence(signer, model.False)
 		result.Reason = model.SignatureReasonTimestampTokenInvalid
 		signer.AddProblem("SubFilter ETSI.RFC3161: missing timestamp info")
 		return nil
@@ -162,10 +165,12 @@ func validateDTS(
 
 	tstInfo, err := parseTSTInfo(p7.Content)
 	if err != nil {
+		setDTSProfileEvidence(signer, model.False)
 		result.Reason = model.SignatureReasonTimestampTokenInvalid
 		signer.AddProblem(fmt.Sprintf("SubFilter ETSI.RFC3161: invalid timestamp info: %v", err))
 		return nil
 	}
+	signer.Evidence.Timestamp.Time = tstInfo.GenTime
 	if !checkTSTInfoProfile(tstInfo, signer, result) {
 		return nil
 	}
@@ -234,11 +239,14 @@ func authenticateDTSEvidence(
 		reportDTSSignatureError(err, signer, result)
 		return false
 	}
+	signer.Evidence.SignatureAuthenticated = model.True
+	signer.Evidence.Timestamp.SignatureAuthenticated = model.True
 	if !applyDTSDigestEvidence(digestErr, signer, result) ||
 		!checkTimestampingEKU(signerCert, signer, result) ||
 		!checkTimestampSigningCertificate(p7Signer, signerCert, signer, result) {
 		return false
 	}
+	setDTSProfileEvidence(signer, model.True)
 	markDocumentUnmodified(result)
 	return true
 }
@@ -354,18 +362,26 @@ func dtsSignerCertificate(
 ) *x509.Certificate {
 	cert, err := pkcs7.GetCertFromCertsByIssuerAndSerial(certs, p7Signer.IssuerAndSerialNumber)
 	if err != nil {
+		signer.Evidence.CertificateIdentified = model.False
 		markCertificateInvalidEvidence(result)
 		signer.AddProblem(fmt.Sprintf("SubFilter ETSI.RFC3161: signer identifier: %v", err))
 		return nil
 	}
 	if cert == nil {
+		signer.Evidence.CertificateIdentified = model.False
 		markCertificateInvalidEvidence(result)
 		signer.AddProblem("SubFilter ETSI.RFC3161: missing certificate for signer")
+		return nil
 	}
+	signer.Evidence.CertificateIdentified = model.True
 	return cert
 }
 
 func reportDTSSignatureError(err error, signer *model.Signer, result *model.SignatureValidationResult) {
+	if errors.Is(err, pkcs7.ErrSignatureMismatch) {
+		signer.Evidence.SignatureAuthenticated = model.False
+		signer.Evidence.Timestamp.SignatureAuthenticated = model.False
+	}
 	reportSignatureVerificationError(
 		"SubFilter ETSI.RFC3161: verify signature",
 		err,
@@ -377,6 +393,7 @@ func reportDTSSignatureError(err error, signer *model.Signer, result *model.Sign
 
 func checkTSTInfoProfile(tstInfo *TSTInfo, signer *model.Signer, result *model.SignatureValidationResult) bool {
 	if tstInfo == nil {
+		setDTSProfileEvidence(signer, model.False)
 		result.Reason = model.SignatureReasonTimestampTokenInvalid
 		signer.AddProblem("SubFilter ETSI.RFC3161: timestamp info missing")
 		return false
@@ -390,11 +407,17 @@ func checkTSTInfoProfile(tstInfo *TSTInfo, signer *model.Signer, result *model.S
 		return false
 	}
 	if tstInfo.GenTime.IsZero() {
+		setDTSProfileEvidence(signer, model.False)
 		result.Reason = model.SignatureReasonTimestampTokenInvalid
 		signer.AddProblem("SubFilter ETSI.RFC3161: timestamp info genTime missing")
 		return false
 	}
 	return true
+}
+
+func setDTSProfileEvidence(signer *model.Signer, status int) {
+	signer.Evidence.ProfileValidated = status
+	signer.Evidence.Timestamp.ProfileValidated = status
 }
 
 func checkDTSSignedAttributes(p7Signer pkcs7.SignerInfo, signer *model.Signer, result *model.SignatureValidationResult) bool {
@@ -448,11 +471,13 @@ func checkTimestampSigningCertificate(
 	}
 	switch {
 	case errors.Is(err, errESSCertificateMismatch):
+		setDTSProfileEvidence(signer, model.False)
 		markInvalidEvidence(result, model.SignatureReasonTimestampTokenInvalid, model.Unknown)
 	case errors.Is(err, pkcs7.ErrUnsupportedAlgorithm),
 		errors.Is(err, errUnsupportedESSCertificateProfile):
 		markUnsupportedEvidence(result)
 	default:
+		setDTSProfileEvidence(signer, model.False)
 		markMalformedEvidence(result)
 	}
 	signer.AddProblem(fmt.Sprintf("SubFilter ETSI.RFC3161: authenticate TSA certificate: %v", err))
@@ -757,6 +782,8 @@ func applyDTSDigestEvidence(err error, signer *model.Signer, result *model.Signa
 	if err != nil {
 		var mdErr *pkcs7.MessageDigestMismatchError
 		if errors.As(err, &mdErr) {
+			signer.Evidence.DigestVerified = model.False
+			signer.Evidence.Timestamp.DigestVerified = model.False
 			markInvalidEvidence(result, model.SignatureReasonDocModified, model.True)
 			signer.AddProblem(fmt.Sprintf("SubFilter ETSI.RFC3161: message digest mismatch: %v", err))
 			return false
@@ -765,6 +792,8 @@ func applyDTSDigestEvidence(err error, signer *model.Signer, result *model.Signa
 		signer.AddProblem(fmt.Sprintf("SubFilter ETSI.RFC3161: verify message digest: %v", err))
 		return false
 	}
+	signer.Evidence.DigestVerified = model.True
+	signer.Evidence.Timestamp.DigestVerified = model.True
 	return true
 }
 
