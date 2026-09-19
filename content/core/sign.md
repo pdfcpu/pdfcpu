@@ -9,14 +9,26 @@ Signature commands inspect or remove digital signatures present in a PDF.
 
 pdfcpu validates signature integrity, reports available trust evidence and performs a best-effort local assessment.
 
-Signature validation is under active development. The current implementation focuses on:
+The cryptographic evidence and the broader trust assessment are reported separately. A signature may authenticate and
+its signed-content digest may verify even when the configured local certificate store cannot establish a certificate
+path or revocation status.
+
+Signature validation is under active development.<br>
+The current implementation focuses on:
 
 * signed byte ranges
 * CMS/PKCS#7 processing
 * signer and certificate extraction
+* local RFC 3161 document-timestamp validation
+* detection and reporting of embedded signature timestamp tokens
 * best-effort checks against the configured local certificate store and available revocation information
 
-This is not a legal-validity, eIDAS, enterprise policy, or full long-term validation statement.
+Embedded signature timestamp tokens are not yet authenticated.<br>
+This is a current implementation gap in the validation
+coverage.
+
+The reported assessment is not a legal-validity, eIDAS, qualified-signature, enterprise-policy, or full
+long-term-validation statement.
 
 ## Usage
 

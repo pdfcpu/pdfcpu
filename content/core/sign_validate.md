@@ -5,15 +5,18 @@ title: "Validate Signatures"
 
 # Validate Signatures
 
+Signature validation is under active development.
+Support for additional signature formats, validation rules, and trust evidence is being expanded.
+
 Validate signature integrity, report available trust evidence and perform a best-effort local assessment.
 
 This command checks whether signed byte ranges still match their signatures and reports available signer, certificate, timestamp, revocation, DSS, and PAdES evidence.
 
 Certificate-path and revocation output is based on pdfcpu's configured local certificate store and available revocation information.
-It is useful for inspection and automation, but it is not a legal-validity, eIDAS, enterprise policy, or full long-term validation statement.
+pdfcpu performs technical signature authentication and reports each independently established result.<br><br>
+It does not make enterprise-policy, legal-validity, eIDAS, qualified-signature, or full long-term-validation decisions.
 
-Signature validation is under active development.
-Support for additional signature formats, validation rules, and trust evidence is being expanded.
+
 
 ```
 pdfcpu signatures validate inFile [flags]
@@ -106,6 +109,20 @@ This is certificate inspection, not a legal, eIDAS, trusted-list or qualificatio
 
 These checks are useful for inspection and automation, but they are not a substitute for a dedicated trust policy, compliance profile, or legal-validity assessment.
 
+### 4. Check Timestamp Evidence
+
+Both document timestamps and embedded signature timestamps use RFC 3161 timestamp tokens, but they bind different data.
+A document timestamp binds a PDF revision's signed byte ranges; an embedded signature timestamp binds the signer's
+cryptographic signature value.
+
+pdfcpu currently validates document timestamps within its supported local technical scope. This includes the CMS
+signature, PDF message imprint, supported timestamp profile, TSA certificate, and the configured-local certificate path
+and available revocation evidence.
+
+Embedded signature timestamp tokens are currently located and parsed, including their generation time, but are not yet
+authenticated. Their signature, message imprint, profile, and TSA certificate path therefore remain `unknown` in the
+evidence report. This difference is a current implementation gap, not a trust-policy or product boundary.
+
 ## Checking Revocation
 
 Certificates may be revoked for various reasons.
@@ -142,27 +159,33 @@ The PAdES baseline levels are defined in [ETSI EN 319 142-1 V1.2.1 (2024-01)](ht
 | PAdES level | description | pdfcpu handling |
 |:------------|:------------|:-------------|
 | B-B | Basic electronic signature | supported profile result |
-| B-T | B-B with validated signature timestamp | not classified or validated |
+| B-T | B-B with validated signature timestamp | embedded token reported, but not authenticated or classified |
 | B-LT | B-T with validation material | not classified or validated |
 | B-LTA | B-LT with archive timestamp evidence | not classified or validated |
 
 ## Limitations
 
-Current limitations mostly involve either older cryptographic standards restricted by the Go runtime for security reasons, missing checks for permission violations after successful signature validation, or trust evidence that is detected but not fully policy-validated.
+Current limitations mostly involve older cryptographic standards restricted by the Go runtime, missing checks for
+permission violations after successful signature validation, incomplete embedded-signature-timestamp authentication,
+and trust evidence that is not evaluated under a maintained external policy.
 
 * Permissions handling:
   * DocMDP: missing document checks for permissions levels 2 and 3.
   * FieldMDP: not yet processed.
   * UR3: missing document checks for permissions defined by the UR transform method in the UR3 reference dictionary.
 * Catalog DSS: missing processing of the VRI structure.
-* Timestamps and LTV: timestamp, DSS, CRL and OCSP evidence may be detected and reported, but pdfcpu does not perform full RFC3161 trust validation, VRI processing, PAdES-B-T/B-LT/B-LTA classification or validation, or enterprise policy validation.
+* Embedded signature timestamps: RFC 3161 tokens are located and parsed, but their cryptographic signature, message
+  imprint, profile, and TSA certificate path are not yet authenticated.
+* Document timestamps: supported RFC 3161 checks are performed locally, but pdfcpu does not establish historical trust
+  at the token's generation time or apply a maintained trusted-list, qualified-TSA, legal, or enterprise policy.
+* LTV: pdfcpu does not process VRI entries or classify and validate PAdES-B-T, B-LT, or B-LTA.
 * Elliptic curve encryption algorithms: support needs to be extended as standards keep evolving.
 * Legacy signatures: `adbe.x509.rsa_sha1` and `adbe.pkcs7.sha1` use SHA-1 and are supported only for validating existing PDFs. They are deprecated in PDF 2.0 and must not be used for new signatures.
 * Go runtime restrictions: certificate chains using SHA-1 signatures may be rejected by the Go runtime.
 
 ## Examples
 
-The following commands use fixtures from `pkg/samples/signatures`.
+The following commands use signature fixtures from the pdfcpu test corpus.
 Results depend on the current time, configured local certificate store, available revocation services and build configuration.
 
 ### Baseline B Profile
@@ -170,13 +193,13 @@ Results depend on the current time, configured local certificate store, availabl
 The certificate in `testPAdES_BB.pdf` has expired, so current validation reports an unknown result rather than presenting stale success output:
 
 ```text
-$ pdfcpu signatures validate pkg/samples/signatures/ETSI.CAdES.detached/testPAdES_BB.pdf
-optimizing...
+$ pdfcpu signatures validate testPAdES_BB.pdf
 
 1 form signature (authoritative, visible, signed) on page 1
-   Status: validity of the signature is unknown
-   Reason: signer's certificate or one of its parent certificates has expired
-   Signed: 2024-03-04 14:25:54 +0200
+  Integrity: signature authenticated, signed content digest verified
+     Status: validity of the signature is unknown
+     Reason: signer's certificate or one of its parent certificates has expired
+     Signed: 2024-03-04 14:25:54 +0200
 ```
 
 Use `--full` to inspect the Baseline B profile, certificate dates, local path and revocation evidence.
@@ -185,83 +208,76 @@ Use `--full` to inspect the Baseline B profile, certificate dates, local path an
 ### Embedded Timestamp Evidence
 
 `testPAdES_BT.pdf` contains an embedded timestamp token.
-The detailed output reports the observed time separately and explains the current assessment:
+The detailed output separates the authenticated document signature from the observed, but not yet authenticated,
+signature timestamp:
 
 ```text
-$ pdfcpu signatures validate pkg/samples/signatures/ETSI.CAdES.detached/testPAdES_BT.pdf -a -f
-optimizing...
+$ pdfcpu signatures validate --all --full testPAdES_BT.pdf
 
 1:
-       Type: form signature (authoritative, visible, signed) on page 1
-     Status: validity of the signature is unknown
-     Reason: signer's certificate or one of its parent certificates has expired
-     Signed: 2024-03-04 14:25:31 +0200
-DocModified: unknown
-    Details:
-             SubFilter:      ETSI.CAdES.detached
-             SignerIdentity: Unknown
-             SignerName:
-             ContactInfo:
-             Location:
-             Reason:
-             SigningTime:    2024-03-04 14:25:31 +0200
-             Field:          SignatureFieldName 25
-     Signer:
-             Timestamp:      2024-03-04 12:25:32 +0000
-             Certified:      false
-             Authoritative:  true
-             Certificate:
-                             Subject:    TEST Testovyi Test
-                             Issuer:     Administrator ITS CCA (CA TEST)
-                             SerialNr:   233277b9179888b4040000000b080000fd780000
-                             Valid From: 2024-03-03 22:00:00 +0000
-                             Valid Thru: 2026-03-03 21:59:59 +0000
-                             Expired:    true
-                             QC Policy:  false
-                             CA:         false
-                             Usage:
-                             Version:    3
-                             SignAlg:    RSA
-                             Key Size:   2048 bits
-                             SelfSigned: false
-                             Local Path: Status: unknown
-                                         Reason: certificate path was not resolved using the configured local
-                                                 certificate store
-                             Revocation: Local:  unknown
-             Problems:       pkcs7: embedded timestamp token observed but not fully authenticated
-                             certificate verification failed for serial="233277b9179888b4040000000b080000fd780000":
-                             pkcs7: verify certificate chain: x509: certificate has expired or is not yet valid: current
-                             time 2026-08-10T00:48:58+02:00 is after 2026-03-03T21:59:59Z
+form signature (authoritative, visible, signed) on page 1
+
+Evidence:
+  Cryptographic signature: authenticated
+  Signed content digest:   verified
+  Signature profile:       validated
+  Signer certificate:      identified
+  Certificate path:        unknown
+  Revocation status:       unknown
+  Timestamp:               signature timestamp observed at 2024-03-04 12:25:32 +0000
+
+  Timestamp evidence:
+    Cryptographic signature: unknown
+    Message imprint:         unknown
+    Profile:                 unknown
+    Certificate path:        unknown
+
+Assessment:
+  Status:            validity of the signature is unknown
+  Reason:            signer's certificate or one of its parent certificates has expired
+  Signed:            2024-03-04 14:25:31 +0200
+  Document modified: false
 ```
 
-Timestamp presence does not establish or report PAdES-B-T.
+Timestamp presence does not authenticate the token or establish PAdES-B-T.
 
 ### Document Timestamp
 
 `testPAdES_BLTA.pdf` contains a document timestamp and a form signature.
-When the TSA certificate path cannot be resolved using the configured local certificate store, the summary says so directly:
+The document timestamp receives the supported RFC 3161 checks. In this example, its signature, message imprint, and
+profile validate, while the configured local certificate store cannot resolve the TSA certificate path:
 
 ```text
-$ pdfcpu signatures validate pkg/samples/signatures/ETSI.CAdES.detached/testPAdES_BLTA.pdf --all
-optimizing...
-
-2 signatures present:
-1 signed form signature (1 visible)
-1 signed doc timestamp signature (0 visible)
+$ pdfcpu signatures validate --all --full testPAdES_BLTA.pdf
 
 1:
-     Type: document timestamp (not locally validated, invisible, signed)
-   Status: validity of the signature is unknown
-   Reason: signer's certificate path was not resolved using the configured local certificate store
+document timestamp (not locally validated, invisible, signed)
 
-2:
-     Type: form signature (authoritative, visible, signed) on page 1
-   Status: validity of the signature is unknown
-   Reason: signer's certificate or one of its parent certificates has expired
+Evidence:
+  Cryptographic signature: authenticated
+  Signed content digest:   verified
+  Signature profile:       validated
+  Signer certificate:      identified
+  Certificate path:        unknown
+  Revocation status:       unknown
+  Timestamp:               document timestamp observed at 2024-03-04 12:24:33 +0000
+
+  Timestamp evidence:
+    Cryptographic signature: authenticated
+    Message imprint:         verified
+    Profile:                 validated
+    Certificate path:        unknown
+
+Assessment:
+  Status:            validity of the signature is unknown
+  Reason:            signer's certificate path was not resolved using the configured local certificate store
+  Signed:            2024-03-04 14:24:32 +0200
+  Document modified: false
 ```
 
-If the supported cryptographic and best-effort local checks succeed, the type is shown as `locally validated`.
-This remains a local assessment, not a policy-based trust or legal-validity conclusion.
+If all supported cryptographic and best-effort local checks succeed, the type is shown as `locally validated`.
+This means locally validated within pdfcpu's technical scope. It does not establish historical trust at the generation
+time or a policy-based, qualified-TSA, or legal-validity conclusion.
 
 ### Usage Rights Signature
 
@@ -269,105 +285,25 @@ This remains a local assessment, not a policy-based trust or legal-validity conc
 Its detailed output distinguishes the unresolved local certificate path from the signature evidence:
 
 ```text
-$ pdfcpu signatures validate pkg/samples/signatures/adbe.pkcs7.detached/usageRights.pdf -f
-optimizing...
+$ pdfcpu signatures validate --full usageRights.pdf
 
 1:
-       Type: usage rights signature (invisible, signed)
-     Status: validity of the signature is unknown
-     Reason: signer's certificate path was not resolved using the configured local certificate store
-     Signed: 2022-12-15 12:08:57 -0500
-DocModified: unknown
-    Details:
-             SubFilter:      adbe.pkcs7.detached
-             SignerIdentity: Unknown
-             SignerName:     ARE Production V8.1 G3 P24 1007685
-             ContactInfo:
-             Location:
-             Reason:
-             SigningTime:    2022-12-15 12:08:57 -0500
-             Field:
-     Signer:
-             Timestamp:      false
-             Certified:      false
-             Authoritative:  false
-             Certificate:
-                             Subject:    ARE Production V8.1 G3 P24 1007685
-                             Issuer:     Adobe Product Services G3
-                             SerialNr:   901357a46c30d17b2f7d64b453c0818
-                             Valid From: 2022-02-11 00:00:00 +0000
-                             Valid Thru: 2035-12-31 23:59:59 +0000
-                             Expired:    false
-                             QC Policy:  false
-                             CA:         false
-                             Usage:
-                             Version:    3
-                             SignAlg:    RSA
-                             Key Size:   2048 bits
-                             SelfSigned: false
-                             Local Path: Status: unknown
-                                         Reason: certificate path was not resolved using the configured local
-                                                 certificate store
-                             Revocation: Local:  unknown
-                                         Reason: OCSP: no conclusive current response: responder 1
-                                                 (http://pki-ocsp.symauth.com): OCSP: send request to
-                                                 http://pki-ocsp.symauth.com: Post "http://pki-ocsp.symauth.com": lookup
-                                                 pki-ocsp.symauth.com: no such host
-                                                 CRL: fetch
-                                                 http://pki-crl.symauth.com/ca_7a5c3a0c73117406add19312bc1bc23f/
-                                                 LatestCRL.crl: Get
-                                                 "http://pki-crl.symauth.com/ca_7a5c3a0c73117406add19312bc1bc23f/
-                                                 LatestCRL.crl": lookup pki-crl.symauth.com: no such host
-             IntermediateCA:
-                             Subject:    Adobe Product Services G3
-                             Issuer:     Adobe Root CA G2
-                             SerialNr:   ca8b6547b89e6d2068975cd8b9b89e2
-                             Valid From: 2016-11-29 00:00:00 +0000
-                             Valid Thru: 2041-11-28 23:59:59 +0000
-                             Expired:    false
-                             QC Policy:  false
-                             CA:         true
-                             Usage:
-                             Version:    3
-                             SignAlg:    RSA
-                             Key Size:   4096 bits
-                             SelfSigned: false
-                             Local Path: Status: unknown
-                                         Reason: certificate path was not resolved using the configured local
-                                                 certificate store
-             RootCA:
-                             Subject:    Adobe Root CA G2
-                             Issuer:     Adobe Root CA G2
-                             SerialNr:   5df12f5f57a7c3e1b002d893270cdde1
-                             Valid From: 2016-11-29 00:00:00 +0000
-                             Valid Thru: 2046-11-28 23:59:59 +0000
-                             Expired:    false
-                             QC Policy:  false
-                             CA:         true
-                             Usage:
-                             Version:    3
-                             SignAlg:    RSA
-                             Key Size:   4096 bits
-                             SelfSigned: true
-                             Local Path: Status: unknown
-                                         Reason: certificate path was not resolved using the configured local
-                                                 certificate store
-             Problems:       certificate path was not resolved using the configured local certificate store for
-                             serial="901357a46c30d17b2f7d64b453c0818": pkcs7: verify certificate chain: x509:
-                             certificate signed by unknown authority
-                             import missing certificates into pdfcpu's local certificate store with "pdfcpu certificates
-                             import <file>"
-                             certificate revocation check for serial="901357a46c30d17b2f7d64b453c0818" using CRL: CRL:
-                             fetch http://pki-crl.symauth.com/ca_7a5c3a0c73117406add19312bc1bc23f/LatestCRL.crl: Get
-                             "http://pki-crl.symauth.com/ca_7a5c3a0c73117406add19312bc1bc23f/LatestCRL.crl": lookup
-                             pki-crl.symauth.com: no such host
-                             certificate revocation check for serial="901357a46c30d17b2f7d64b453c0818": OCSP: no
-                             conclusive current response: responder 1 (http://pki-ocsp.symauth.com): OCSP: send request
-                             to http://pki-ocsp.symauth.com: Post "http://pki-ocsp.symauth.com": lookup
-                             pki-ocsp.symauth.com: no such host
-                             CRL: fetch http://pki-crl.symauth.com/ca_7a5c3a0c73117406add19312bc1bc23f/LatestCRL.crl:
-                             Get "http://pki-crl.symauth.com/ca_7a5c3a0c73117406add19312bc1bc23f/LatestCRL.crl": lookup
-                             pki-crl.symauth.com: no such host
+usage rights signature (invisible, signed)
+
+Evidence:
+  Cryptographic signature: authenticated
+  Signed content digest:   verified
+  Signature profile:       validated
+  Signer certificate:      identified
+  Certificate path:        unknown
+  Revocation status:       unknown
+  Timestamp:               not observed
+
+Assessment:
+  Status:            validity of the signature is unknown
+  Reason:            signer's certificate path was not resolved using the configured local certificate store
+  Signed:            2022-12-15 12:08:57 -0500
+  Document modified: false
 ```
 
 Importing an accepted missing issuer or root certificate with [pdfcpu certificates import](/core/certs_import) may allow pdfcpu to resolve the local certificate path.

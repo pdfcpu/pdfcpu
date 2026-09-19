@@ -71,6 +71,17 @@ apply a safe, unambiguous repair to the in-memory document.
 Relaxed mode broadens compatibility; it does not relax security or resource limits. Unreadable input, ambiguous
 corruption, unsafe structures, and violations outside the supported compatibility exceptions still fail validation.
 
+#### Compatibility notices
+
+A compatibility notice explains when relaxed validation accepts a PDF condition that strict validation would reject. It
+reports whether the condition was accepted as-is, skipped or repaired in memory. `--quiet` suppresses these notices.
+
+Not every compatibility rule produces a notice yet. To determine whether a PDF is strictly compliant, run strict
+validation instead of relying on the absence of notices.
+
+Go callers can obtain structured notices using `api.ValidateWithReport`, `api.ValidateFileWithReport` or
+`api.ValidateContextWithReport`.
+
 #### Reader recovery
 
 Validation mode controls conformance decisions, not every aspect of PDF parsing. The reader may perform bounded
