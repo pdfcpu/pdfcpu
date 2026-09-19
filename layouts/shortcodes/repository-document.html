@@ -1,0 +1,20 @@
+{{- $page := .Page -}}
+{{- $file := .Get 0 -}}
+{{- $url := printf "https://raw.githubusercontent.com/pdfcpu/pdfcpu/master/%s" $file -}}
+{{- if site.Params.localRepositoryDocuments -}}
+  {{- with resources.Get (printf "repository-documents/%s" $file) -}}
+    {{- $page.RenderString (dict "display" "block") .Content -}}
+  {{- else -}}
+    {{- errorf "Local preview document not mounted: %s" $file -}}
+  {{- end -}}
+{{- else -}}
+{{- with try (resources.GetRemote $url (dict "timeout" "30s")) -}}
+  {{- with .Err -}}
+    {{- errorf "Unable to load repository document %s: %s" $url . -}}
+  {{- else with .Value -}}
+    {{- $page.RenderString (dict "display" "block") .Content -}}
+  {{- else -}}
+    {{- errorf "Repository document not found: %s" $url -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}

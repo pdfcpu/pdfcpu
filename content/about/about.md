@@ -88,12 +88,15 @@ Use the CLI to build PDF processing pipelines, including workflows for encrypted
 
 ### Go Library
 
-Use the API to integrate PDF processing into Go applications. Most operations are available in file-based and stream-based forms:
+Use the API to integrate PDF processing into Go applications. Most operations are available in file-based and stream-based
+forms and accept the application's context.
+
+See [API Installation](/getting_started/install_api/?src=docs) for setup instructions and an explanation of context, configuration
+and progress parameters. These optimization examples pass `nil` for their optional progress argument:
 
 ```go
-func OptimizeFile(inFile, outFile string, conf *pdf.Configuration) error
-
-func Optimize(rs io.ReadSeeker, w io.Writer, conf *pdf.Configuration) error
+err := api.OptimizeFile(ctx, "input.pdf", "output.pdf", conf, nil)
+err := api.Optimize(ctx, input, output, conf, nil)
 ```
 
 More examples are available at [pkg.go.dev](https://pkg.go.dev/github.com/pdfcpu/pdfcpu/pkg/api).

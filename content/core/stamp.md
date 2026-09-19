@@ -80,6 +80,9 @@ specify the page number after the stamp file and use ':' as separator:
 $ pdfcpu stamp add --mode pdf -- 'stamp.pdf:1' '' in.pdf out.pdf
 ```
 
+Rotated pages in the stamp PDF keep their displayed orientation when pdfcpu sizes and positions them. You do not need to
+rotate the source PDF beforehand.
+
 <br>
 
 You can also apply a `multistamp`.

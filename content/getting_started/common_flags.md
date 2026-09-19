@@ -68,6 +68,14 @@ It is also known as the *open doc password*.
 Use `-` in PDF input and output positions to read from `stdin` or write to `stdout`.
 See [Piping](/getting_started/piping) for examples and the [piping support matrix](/getting_started/piping/#support-matrix) for command-specific stdin/stdout support.
 
+## Stopping a command
+
+Press `Ctrl+C` once to ask pdfcpu to stop cleanly. A large operation may take a moment to reach a safe stopping point.
+When possible, pdfcpu preserves an existing destination and removes unfinished temporary output.
+
+Press `Ctrl+C` again if you need to stop immediately. Services and containers receive the same clean-stop behavior from
+their normal termination signal.
+
 ## Password files
 Use `--upw-file` or `--opw-file` wherever the corresponding literal flag is available.
 Supply each password either directly or through a file, but not both.
@@ -120,4 +128,3 @@ pdfcpu changeupw input.pdf \
 
 File inputs work without shell expansion and suit mounted secrets in containers or other automated environments.
 Restrict access to the secret files to the accounts that need them.
-

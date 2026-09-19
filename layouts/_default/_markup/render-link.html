@@ -1,0 +1,13 @@
+{{- $destination := .Destination -}}
+{{- if .Page.Params.repositoryDocument -}}
+  {{- $url := urls.Parse $destination -}}
+  {{- if and (not $url.IsAbs) (not $url.Host) -}}
+    {{- $pages := dict "SECURITY.md" "/security" "CONTRIBUTING.md" "/contributing" -}}
+    {{- with index $pages (strings.TrimPrefix "./" $url.Path) -}}
+      {{- $destination = $.Page.RelRef (dict "path" .) -}}
+      {{- with $url.RawQuery -}}{{- $destination = printf "%s?%s" $destination . -}}{{- end -}}
+      {{- with $url.Fragment -}}{{- $destination = printf "%s#%s" $destination . -}}{{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+<a href="{{ $destination | safeURL }}"{{ with .Title }} title="{{ . }}"{{ end }}>{{ .Text }}</a>

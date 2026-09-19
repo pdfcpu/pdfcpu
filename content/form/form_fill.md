@@ -22,7 +22,12 @@ pdfcpu generates all appearance streams for form fields, but if you do have form
 issues then the following configuration option may help:
 `needAppearances: true`
 
-When filling radio button groups you may either provide the text or the array index as value.
+When filling radio button groups you may provide either the displayed choice or its array index. Export the form first if
+you need to see the exact choices. Choice names containing spaces or `#` characters are supported, including in forms
+created with older pdfcpu releases.
+
+When pdfcpu generates field appearances, it uses the font encoding stored in the form. If the form does not define a
+usable glyph for a value, filling reports an error instead of silently displaying the wrong character.
 
 
 Have a look at some [examples](#examples). 

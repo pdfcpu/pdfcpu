@@ -314,6 +314,9 @@ $ pdfcpu watermark add -m image -- 'pic.jpg' 'rot:-30, scale:.25 abs' in.pdf out
 
 ### PDF Based Watermarks
 
+Rotated pages in the watermark PDF keep their displayed orientation when pdfcpu sizes and positions them. You do not need
+to rotate the source PDF beforehand.
+
 Create a watermark using defaults only. This will apply page 1 of `some.pdf`:
 
 ```sh

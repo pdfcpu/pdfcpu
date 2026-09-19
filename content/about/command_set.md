@@ -32,7 +32,7 @@ title: "Command Set"
 * [Split](/core/split) multi-page PDF into several PDFs according to split span
 * [Trim](/core/trim) (generate a custom version of a PDF including selected pages)
 * [Validate](/core/validate) PDF files up to version 1.7 + basic validation version 2.0
-* [Version](/getting_started/config_dir) print version 
+* [Version](/getting_started/usage/#version) print version and build identity
 * [Zoom](/core/zoom) in/out of selected pages by magnification factor or corresponding margin
 
 Manage

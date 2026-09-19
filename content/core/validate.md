@@ -71,15 +71,15 @@ apply a safe, unambiguous repair to the in-memory document.
 Relaxed mode broadens compatibility; it does not relax security or resource limits. Unreadable input, ambiguous
 corruption, unsafe structures, and violations outside the supported compatibility exceptions still fail validation.
 
-#### Compatibility notices
+#### Compatibility warnings
 
-A compatibility notice explains when relaxed validation accepts a PDF condition that strict validation would reject. It
-reports whether the condition was accepted as-is, skipped or repaired in memory. `--quiet` suppresses these notices.
+A compatibility warning explains when relaxed validation accepts a PDF condition that strict validation would reject. It
+reports whether the condition was accepted as-is, skipped or repaired in memory. `--quiet` suppresses these warnings.
 
-Not every compatibility rule produces a notice yet. To determine whether a PDF is strictly compliant, run strict
-validation instead of relying on the absence of notices.
+Not every compatibility rule produces a warning yet. To determine whether a PDF is strictly compliant, run strict
+validation instead of relying on the absence of warnings.
 
-Go callers can obtain structured notices using `api.ValidateWithReport`, `api.ValidateFileWithReport` or
+Go callers can obtain structured warnings using `api.ValidateWithReport`, `api.ValidateFileWithReport` or
 `api.ValidateContextWithReport`.
 
 #### Reader recovery
@@ -95,6 +95,10 @@ document pdfcpu reconstructed passed the strict checks currently implemented.
 
 Strict and relaxed are validation policies. They do not select a PDF/A profile, provide complete PDF 2.0 validation, or
 constitute a signature trust, legal-validity, or regulatory-compliance assessment.
+
+Validation coverage grows between releases. A PDF that passed strict validation in an older release may fail when pdfcpu
+adds a check for a previously uncovered rule. Use relaxed mode for broad real-world compatibility and strict mode when
+detected specification violations must be rejected.
 
 #### Progress
 

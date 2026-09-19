@@ -90,6 +90,15 @@ Applications using stateless configuration require no migration.
 The no-argument `api.LoadConfiguration()` wrapper has been removed. Existing callers must pass configuration options
 and handle the returned error.
 
+A configuration passed to an operation remains owned by the application and can be reused after the call. Clone it before
+applying different settings for another job.
+
+## Operation contexts in v0.16
+
+Long-running API operations now take a Go context as their first argument. Pass the context belonging to the request or
+job so cancellation can stop the work safely. Use `context.Background()` when cancellation is not needed, and do not pass
+a nil context.
+
 ## Progress options in v0.16
 
 `Validate`, `ValidateFile`, `ValidateFiles`, `Optimize`, `OptimizeFile` and `ReadValidateAndOptimize` accept a final

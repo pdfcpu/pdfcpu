@@ -34,20 +34,26 @@ Entries link to GitHub releases or commits where available.
 
 <article class="changelog-entry">
   <div class="changelog-meta">
-    <time datetime="2026-08-15">2026-08-15</time>
-    <span class="changelog-kind">Release</span>
-    <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.0">v0.16.0</a>
+    <time datetime="2026-09-19">2026-09-19</time>
+    <span class="changelog-kind">Release Candidate</span>
+    <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.0-rc1">v0.16.0-rc1</a>
   </div>
   <p>
-  Reduce the published Go module archive by 94% while keeping module-cache builds supported; the complete test suite remains
-  checkout-only.<br>
-  Add <code>Configuration.PreserveInfoDict</code>, support direct trailer Info dictionaries in PDF 2.0, preserve AcroForm
-  field hierarchies during page extraction and tighten terminal-field validation.<br>
-  Introduce schema-versioned configuration with automatic, read-only and stateless modes, typed compatibility errors and
-  <a href="/getting_started/configuration_v016">guided legacy reset handling</a>.<br>
-  Keep reusable APIs and filters silent while exposing structured progress and result metadata for validation, optimization
-  and font tooling.<br>
-  Fix #1449, #1457, #1460, #1461.
+  Add predictable <a href="/config/config_modes">configuration modes</a>, schema-aware migration, inspection commands,
+  resource limits and reliable offline operation.<br><br>
+  Allow commands and Go operations to stop cleanly, add transactional output replacement and file-based password input,
+  and improve operation in containers and automated jobs.<br><br>
+  Add structured <a href="/core/validate#compatibility-notices">compatibility notices</a>, expand strict validation and
+  harden malformed PDF, object graph, cross-reference and page-tree handling.<br><br>
+  Redesign <a href="/core/sign_validate">signature validation output</a> around independently established cryptographic,
+  certificate, revocation and timestamp evidence.<br><br>
+  Add optional no-rotation resize fitting and improve PDF stamps and watermarks, form appearances, radio-button choices,
+  image handling and LZW decoding.<br><br>
+  Preserve document information and form field hierarchies more reliably, including PDF 2.0 document information.<br><br>
+  Keep reusable Go APIs quiet, add contexts and progress reporting, protect caller-owned configuration.<br><br>
+  Reduce the published Go module archive by 94%.<br><br>
+  Fix #1407, #1444, #1449, #1457, #1460, #1461, #1465-#1467, #1470, #1472-#1474, #1477, #1479, #1484,
+  #1485, #1487.
   </p>
 </article>
 
@@ -59,9 +65,9 @@ Entries link to GitHub releases or commits where available.
   </div>
   <p>
   Improve large-corpus validation diagnostics by streaming per-file failures, reporting a compact summary, and adding
-  <code>validate --progress</code> for quiet runs.<br>
-  Harden malformed PDF reading, validation, optimization, encryption handling, and signature diagnostics.<br>
-  Add automatic CJK wrapping for text watermarks.<br>
+  <code>validate --progress</code> for quiet runs.<br><br>
+  Harden malformed PDF reading, validation, optimization, encryption handling, and signature diagnostics.<br><br>
+  Add automatic CJK wrapping for text watermarks.<br><br>
   Fix #1427, #1459.
   </p>
 </article>
@@ -73,8 +79,8 @@ Entries link to GitHub releases or commits where available.
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.14.0">v0.14.0</a>
   </div>
   <p>
-  Harden API and CLI error handling.<br>
-  Harden signature, timestamp, PKCS#7, certificate-path, and revocation processing.<br>
+  Harden API and CLI error handling.<br><br>
+  Harden signature, timestamp, PKCS#7, certificate-path, and revocation processing.<br><br>
   Eliminate dependencies by using standard-library error handling and internal LZW and PKCS#7
   implementations.<br><br>
   Fix #415, #866, #990, #1051, #1088, #1091, #1101, #1123, #1127, #1161, #1265, #1274, #1279, #1282, #1289,
@@ -89,10 +95,10 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.13.0">v0.13.0</a>
   </div>
-  <p>CLI: Add stdin/stdout support and --force.<br> 
+  <p>CLI: Add stdin/stdout support and --force.<br>
   Refactor command plumbing and parameter handling. <br>
   Harden stream parsing, filter decoding, file path handling, and parser limits. <br>
-  Reduce default binary size by moving bundled EUTL trust-list certificates behind the pdfcpu_eutl build tag.<br> 
+  Reduce default binary size by moving bundled EUTL trust-list certificates behind the pdfcpu_eutl build tag.<br><br>
   Fix #513, #801, #1291, #1296, #1316, #1317, #1327, #1359, #1364, #1373, #1375, #1393, #1394, #1396, #1402, #1410, #1411. </p>
 </article>
 
@@ -111,7 +117,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.12.0">v0.12.0</a>
   </div>
-  <p>Migrate cli to cobra.<br>Fix #399, #642, #1055, #1201, #1211, #1215, #1229, #1231, #1255, #1261, #1263, #1267, #1268, #1276, #1278, #1280, #1285, #1292, #1297-#1299, #1307, #1329-#1331, #1334, #1341, #1345, #1353, #1382</p>
+  <p>Migrate cli to cobra.<br><br>Fix #399, #642, #1055, #1201, #1211, #1215, #1229, #1231, #1255, #1261, #1263, #1267, #1268, #1276, #1278, #1280, #1285, #1292, #1297-#1299, #1307, #1329-#1331, #1334, #1341, #1345, #1353, #1382</p>
 </article>
 
 
@@ -132,7 +138,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.11.0">v0.11.0</a>
   </div>
-  <p>Add cert inspect command.<br> Fix #1056, #1085, #1107, #1113, #1117-#1119, #1142, #1149, #1152, #1163, #1165, #1168, #1171</p>
+  <p>Add cert inspect command.<br><br> Fix #1056, #1085, #1107, #1113, #1117-#1119, #1142, #1149, #1152, #1163, #1165, #1168, #1171</p>
 </article>
 
 <article class="changelog-entry">
@@ -141,7 +147,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.10.2">v0.10.2</a>
   </div>
-  <p>Add signature &amp; cert commands.<br> Fix #888, #972, #973, #984, #985, #987, #988, #991, #999, #1001, #1007, #1008, #1010, #1013, #1015-#1017, #1019, #1021, #1025, #1027, #1029, #1034, #1036, #1041, #1047, #1049, #1058, #1064, #1065, #1066, #1067, #1072, #1073, #1076, #1077, #1080, #1081, #1089, #1090, #1098, #1099, #1100, #1111, #1114, #1116</p>
+  <p>Add signature &amp; cert commands.<br><br> Fix #888, #972, #973, #984, #985, #987, #988, #991, #999, #1001, #1007, #1008, #1010, #1013, #1015-#1017, #1019, #1021, #1025, #1027, #1029, #1034, #1036, #1041, #1047, #1049, #1058, #1064, #1065, #1066, #1067, #1072, #1073, #1076, #1077, #1080, #1081, #1089, #1090, #1098, #1099, #1100, #1111, #1114, #1116</p>
 </article>
 
 
@@ -162,7 +168,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.9.0">v0.9.0</a>
   </div>
-  <p>Add images list, extract, update cmds.<br> Add config list, reset cmds. <br> Add offline flag.<br> Fix #455, #859, #868, #897, #935, #940, #941, #947, #948, #953, #951, #953, #955, #961, #965</p>
+  <p>Add images list, extract, update cmds.<br> Add config list, reset cmds. <br> Add offline flag.<br><br> Fix #455, #859, #868, #897, #935, #940, #941, #947, #948, #953, #951, #953, #955, #961, #965</p>
 </article>
 
 <article class="changelog-entry">
@@ -171,7 +177,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.8.1">v0.8.1</a>
   </div>
-  <p>Improve CJK, annotation support.<br> Fix #628, #687, #767, #819, #830, #862, #867, #871, #881, #884-#887, #890, #891, #895, #898, #903, #907, #908, #910-#912, #914, #915, #918, #921, #924, #926, #930-#932</p>
+  <p>Improve CJK, annotation support.<br><br> Fix #628, #687, #767, #819, #830, #862, #867, #871, #881, #884-#887, #890, #891, #895, #898, #903, #907, #908, #910-#912, #914, #915, #918, #921, #924, #926, #930-#932</p>
 </article>
 
 <article class="changelog-entry">
@@ -180,7 +186,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.8.0">v0.8.0</a>
   </div>
-  <p>PDF 2.0 encryption, parser speedup, booklet enhancements.<br> Fix #821, #823, #826, #828, #832, #834, #835, #838, #839, #841, #844, #849, #851, #852, #855</p>
+  <p>PDF 2.0 encryption, parser speedup, booklet enhancements.<br><br> Fix #821, #823, #826, #828, #832, #834, #835, #838, #839, #841, #844, #849, #851, #852, #855</p>
 </article>
 
 <article class="changelog-entry">
@@ -189,7 +195,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.7.0">v0.7.0</a>
   </div>
-  <p>Add zoom command, basic PDF 2.0 updating.<br> Fix #628, #724, #756, #758-#760, #765-#766, #769-#774, #780, #783-#784, #786-#787, #793-#796, #798, #802, #805-#811, #813-815, #818</p>
+  <p>Add zoom command, basic PDF 2.0 updating.<br><br> Fix #628, #724, #756, #758-#760, #765-#766, #769-#774, #780, #783-#784, #786-#787, #793-#796, #798, #802, #805-#811, #813-815, #818</p>
 </article>
 
 
@@ -201,7 +207,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.6.0">v0.6.0</a>
   </div>
-  <p>Add pagelayout, pagemode, viewerpref cmds, basic PDF 2.0 validation.<br> Fix #373, #472, #473, #635, #665, #689, #701, #705, #706, #708, #710, #711, #713, #716, #717, #722, #723, #727, #731-733, #734, #736-740, #742,747</p>
+  <p>Add pagelayout, pagemode, viewerpref cmds, basic PDF 2.0 validation.<br><br> Fix #373, #472, #473, #635, #665, #689, #701, #705, #706, #708, #710, #711, #713, #716, #717, #722, #723, #727, #731-733, #734, #736-740, #742,747</p>
 </article>
 
 <article class="changelog-entry">
@@ -210,7 +216,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.5.0">v0.5.0</a>
   </div>
-  <p>Add bookmarks command.<br> Fix #506, #604, #621, #657, #659, #660, #663, #664, #666, #667, #669, #671</p>
+  <p>Add bookmarks command.<br><br> Fix #506, #604, #621, #657, #659, #660, #663, #664, #666, #667, #669, #671</p>
 </article>
 
 <article class="changelog-entry">
@@ -219,7 +225,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.4.2">v0.4.2</a>
   </div>
-  <p>Bookmark support for merging.<br> Fix #606, #608, #617, #618, #622, #623, #624, #626, #627, #630-#632, #635-#637, #644, #649, #650, #654</p>
+  <p>Bookmark support for merging.<br><br> Fix #606, #608, #617, #618, #622, #623, #624, #626, #627, #630-#632, #635-#637, #644, #649, #650, #654</p>
 </article>
 
 <article class="changelog-entry">
@@ -267,7 +273,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.13">v0.3.13</a>
   </div>
-  <p>Add create command.<br> Fix 335, #349, #353, #354, #356, #358, #362, #366, #371, #380, #381, #386, #387, #394, #388</p>
+  <p>Add create command.<br><br> Fix 335, #349, #353, #354, #356, #358, #362, #366, #371, #380, #381, #386, #387, #394, #388</p>
 </article>
 
 <article class="changelog-entry">
@@ -276,7 +282,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.12">v0.3.12</a>
   </div>
-  <p>Add annotations, images commands.<br> Fix #300, #302, #323, #324, #329, #331-336, #338, #341-343, #347, #350</p>
+  <p>Add annotations, images commands.<br><br> Fix #300, #302, #323, #324, #329, #331-336, #338, #341-343, #347, #350</p>
 </article>
 
 <article class="changelog-entry">
@@ -294,7 +300,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.10">v0.3.10</a>
   </div>
-  <p>Support webp, RTL Unicode Text.<br> Fix #271, #273, #285, #287, #293-#299, #301, #303, #305, #307, #311, #313, #316, #319</p>
+  <p>Support webp, RTL Unicode Text.<br><br> Fix #271, #273, #285, #287, #293-#299, #301, #303, #305, #307, #311, #313, #316, #319</p>
 </article>
 
 <article class="changelog-entry">
@@ -303,7 +309,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.9">v0.3.9</a>
   </div>
-  <p>Add booklet cmd.<br> Fix #276, #279, #280, #285, #288, #290, #291</p>
+  <p>Add booklet cmd.<br><br> Fix #276, #279, #280, #285, #288, #290, #291</p>
 </article>
 
 
@@ -315,7 +321,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.8">v0.3.8</a>
   </div>
-  <p>Add boxes, crop commands.<br> Fix #210, #216, #236, #238, #241, #244, #245, #250, #252, #256, #258, #259, #262, #264, #265, #268</p>
+  <p>Add boxes, crop commands.<br><br> Fix #210, #216, #236, #238, #241, #244, #245, #250, #252, #256, #258, #259, #262, #264, #265, #268</p>
 </article>
 
 <article class="changelog-entry">
@@ -324,7 +330,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.7">v0.3.7</a>
   </div>
-  <p>Add CJKV font support.<br> Fix #233</p>
+  <p>Add CJKV font support.<br><br> Fix #233</p>
 </article>
 
 <article class="changelog-entry">
@@ -378,7 +384,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.3">v0.3.3</a>
   </div>
-  <p>stamps: Add hAlign, margins, border.<br> Fix #157,#170,#173,#175,#181-184,#188</p>
+  <p>stamps: Add hAlign, margins, border.<br><br> Fix #157,#170,#173,#175,#181-184,#188</p>
 </article>
 
 <article class="changelog-entry">
@@ -387,7 +393,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.2">v0.3.2</a>
   </div>
-  <p>Support multi-stamping.<br> Add keywords, properties commands.<br> Add collect, portfolio commands.<br> Fix #112,#140,#143,#144,#146,#148,#152</p>
+  <p>Support multi-stamping.<br> Add keywords, properties commands.<br> Add collect, portfolio commands.<br><br> Fix #112,#140,#143,#144,#146,#148,#152</p>
 </article>
 
 
@@ -399,7 +405,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.3.1">v0.3.1</a>
   </div>
-  <p>TrueType support.<br> Fix #126,133,137,138</p>
+  <p>TrueType support.<br><br> Fix #126,133,137,138</p>
 </article>
 
 <article class="changelog-entry">
@@ -471,7 +477,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.2">v0.2</a>
   </div>
-  <p>Redesign API, info cmd.<br> Fix #87,#89-#91</p>
+  <p>Redesign API, info cmd.<br><br> Fix #87,#89-#91</p>
 </article>
 
 <article class="changelog-entry">
@@ -552,7 +558,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.23">v0.1.23</a>
   </div>
-  <p>Support multiline watermarks.<br> fix #27, #61, #63</p>
+  <p>Support multiline watermarks.<br><br> fix #27, #61, #63</p>
 </article>
 
 <article class="changelog-entry">
@@ -624,7 +630,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.21">v0.1.21</a>
   </div>
-  <p>Add N-Up, Grid commands.<br> Fix #51, #58.</p>
+  <p>Add N-Up, Grid commands.<br><br> Fix #51, #58.</p>
 </article>
 
 
@@ -645,7 +651,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.19">v0.1.19</a>
   </div>
-  <p>Add JPEG support.<br> Fix #52,#53,#54,#56.</p>
+  <p>Add JPEG support.<br><br> Fix #52,#53,#54,#56.</p>
 </article>
 
 <article class="changelog-entry">
@@ -654,7 +660,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.18">v0.1.18</a>
   </div>
-  <p>Add ReadSeeker support.<br> Fix #5,#39,#44.</p>
+  <p>Add ReadSeeker support.<br><br> Fix #5,#39,#44.</p>
 </article>
 
 <article class="changelog-entry">
@@ -672,7 +678,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.16">v0.1.16</a>
   </div>
-  <p>CCITT fax decoding.<br> Fix #38, #40, #41.</p>
+  <p>CCITT fax decoding.<br><br> Fix #38, #40, #41.</p>
 </article>
 
 <article class="changelog-entry">
@@ -690,7 +696,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.14">v0.1.14</a>
   </div>
-  <p>Extract: Write Flate as PNG.<br> Fix #25.</p>
+  <p>Extract: Write Flate as PNG.<br><br> Fix #25.</p>
 </article>
 
 <article class="changelog-entry">
@@ -726,7 +732,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.10">v0.1.10</a>
   </div>
-  <p>Add name tree caching.<br> Fix #18.</p>
+  <p>Add name tree caching.<br><br> Fix #18.</p>
 </article>
 
 <article class="changelog-entry">
@@ -735,7 +741,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.9">v0.1.9</a>
   </div>
-  <p>Redesign extraction API. <br>Fix #7.</p>
+  <p>Redesign extraction API. <br><br>Fix #7.</p>
 </article>
 
 <article class="changelog-entry">
@@ -753,7 +759,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.7">v0.1.7</a>
   </div>
-  <p>Add logging interface.<br> Merge PR #15.</p>
+  <p>Add logging interface.<br><br> Merge PR #15.</p>
 </article>
 
 <article class="changelog-entry">
@@ -810,7 +816,7 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.1.1">v0.1.1</a>
   </div>
-  <p>Add examples.<br> Fix #10.</p>
+  <p>Add examples.<br><br> Fix #10.</p>
 </article>
 
 </div>
