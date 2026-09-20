@@ -5,13 +5,20 @@ title: API Installation
 
 # API Installation
 
-Use pdfcpu as a Go library.
+Use pdfcpu as a Go library. v0.16 requires Go 1.26.0 or later.
 
 ---
 
 ## Install
 
     go get github.com/pdfcpu/pdfcpu@latest
+
+To test v0.16.0-rc.1 select it explicitly:
+
+    go get github.com/pdfcpu/pdfcpu@v0.16.0-rc.1
+
+The v0.16 API examples below apply to that candidate.<br>
+`@latest` may select an earlier stable release with different API signatures.
 
 ---
 
@@ -31,7 +38,7 @@ func ValidateFile(c context.Context, inFile string, conf *model.Configuration, o
 | --- | --- | --- |
 | `c` | Context for cancellation; must not be `nil`. | `context.Background()` |
 | `inFile` | Path to the PDF to validate. | `"input.pdf"` |
-| `conf` | Configuration; `nil` uses the defaults. | First `nil` |
+| `conf` | `nil` loads the default configuration and may initialize files on disk. | First `nil` |
 | `options` | Optional progress reporting; `nil` disables it. | Second `nil` |
 
 `model.Configuration` is defined in `github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model`.<br><br>
@@ -70,9 +77,13 @@ Do not pass a nil context.
 
 ## Configuration
 
-Pass `nil` to use the defaults, or load an explicit configuration when your application needs custom settings, fonts or
-trusted certificates. A configuration supplied by your application remains yours and can be reused after an operation.
-Clone it before applying different settings for another job.
+Pass `nil` to load the default configuration; this may initialize files on disk. <br>
+Load an explicit configuration to control its mode, settings, fonts or trusted certificates. <br><br>
+For execution without filesystem state, use:<br>
+`api.LoadConfiguration(api.ConfigurationOptions{Mode: api.ConfigurationModeStateless})` <br> 
+and pass the returned configuration.<br><br>
+A configuration supplied by your application remains yours and can be reused after an operation.
+Clone it before applying different settings for another job; do not mutate it while concurrent operations use it.
 
 See [Configuration Modes](/config/config_modes) for loading options and
 [Configuration Reset Required in v0.16](/getting_started/configuration_v016) when upgrading an existing application.
