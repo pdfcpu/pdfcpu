@@ -53,6 +53,7 @@ func replaceConfigurationSetting(t *testing.T, path, old, replacement string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bb = bytes.ReplaceAll(bb, []byte("\r\n"), []byte("\n"))
 	updated := bytes.Replace(bb, []byte(old), []byte(replacement), 1)
 	if bytes.Equal(updated, bb) {
 		t.Fatalf("configuration does not contain %q", old)
@@ -119,7 +120,7 @@ func configurationTreeSnapshot(t *testing.T, root string) map[string]configurati
 		if err != nil {
 			return err
 		}
-		info, err := entry.Info()
+		info, err := configurationSnapshotInfo(path)
 		if err != nil {
 			return err
 		}
@@ -276,4 +277,14 @@ func TestLoadConfigurationIsolatesReadOnlyRoots(t *testing.T) {
 	if afterB := configurationTreeSnapshot(t, rootB); !maps.Equal(beforeB, afterB) {
 		t.Fatal("read-only loading modified configuration root B")
 	}
+}
+
+// configurationSnapshotInfo reads metadata from an open handle to avoid stale Windows directory enumeration metadata.
+func configurationSnapshotInfo(path string) (fs.FileInfo, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return f.Stat()
 }

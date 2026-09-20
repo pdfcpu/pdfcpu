@@ -19,6 +19,7 @@ package api
 import (
 	"errors"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -105,7 +106,7 @@ func TestLoadConfigurationSchemaUpgradeContract(t *testing.T) {
 			if schemaErr.Path != path || schemaErr.Detected != tt.detected || schemaErr.Current != tt.current {
 				t.Fatalf("configuration schema error: %+v", schemaErr)
 			}
-			for _, want := range append([]string{path}, tt.wantOutput...) {
+			for _, want := range append([]string{strconv.Quote(path)}, tt.wantOutput...) {
 				if !strings.Contains(err.Error(), want) {
 					t.Fatalf("configuration error does not contain %q: %v", want, err)
 				}

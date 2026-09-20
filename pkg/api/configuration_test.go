@@ -215,6 +215,7 @@ func replaceConfigurationSetting(t *testing.T, path, old, replacement string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	bb = bytes.ReplaceAll(bb, []byte("\r\n"), []byte("\n"))
 	updated := bytes.Replace(bb, []byte(old), []byte(replacement), 1)
 	if bytes.Equal(updated, bb) {
 		t.Fatalf("configuration does not contain %q", old)

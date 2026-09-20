@@ -41,7 +41,7 @@ func inspectionTreeSnapshot(t *testing.T, root string) map[string]inspectionTree
 		if walkErr != nil {
 			return walkErr
 		}
-		info, err := entry.Info()
+		info, err := inspectionSnapshotInfo(path)
 		if err != nil {
 			return err
 		}
@@ -434,4 +434,14 @@ func TestInspectConfigurationReportsIncompatibleSchemaWithoutWrites(t *testing.T
 			}
 		})
 	}
+}
+
+// inspectionSnapshotInfo reads metadata from an open handle to avoid stale Windows directory enumeration metadata.
+func inspectionSnapshotInfo(path string) (fs.FileInfo, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return f.Stat()
 }

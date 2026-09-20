@@ -113,7 +113,7 @@ func configurationTreeSnapshot(t *testing.T, root string) map[string]configurati
 		if walkErr != nil {
 			return walkErr
 		}
-		info, err := entry.Info()
+		info, err := configurationSnapshotInfo(path)
 		if err != nil {
 			return err
 		}
@@ -177,6 +177,7 @@ func rewriteCommandConfiguration(t *testing.T, root string, old, replacement []b
 	if err != nil {
 		t.Fatal(err)
 	}
+	bb = bytes.ReplaceAll(bb, []byte("\r\n"), []byte("\n"))
 	updated := bytes.Replace(bb, old, replacement, 1)
 	if bytes.Equal(updated, bb) {
 		t.Fatalf("configuration does not contain %q", old)
@@ -208,4 +209,14 @@ func runConfigReset(t *testing.T, root, input string, args ...string) ([]byte, [
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	return stdout.Bytes(), stderr.Bytes(), err
+}
+
+// configurationSnapshotInfo reads metadata from an open handle to avoid stale Windows directory enumeration metadata.
+func configurationSnapshotInfo(path string) (fs.FileInfo, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return f.Stat()
 }
