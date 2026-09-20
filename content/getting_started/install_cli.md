@@ -11,6 +11,9 @@ Download a prebuilt binary for your platform and run `pdfcpu version` to verify 
 
 ## Download
 
+These downloads are for **v0.16.0-rc.1**, a prerelease intended for testing.<br>
+For stable releases, visit [GitHub Releases](https://github.com/pdfcpu/pdfcpu/releases/latest).
+
 ### macOS
 
 * [Apple Silicon (arm64)](https://dl.pdfcpu.io/releases/download/v0.16.0-rc.1/pdfcpu_0.16.0-rc.1_Darwin_arm64.tar.xz)
@@ -34,6 +37,20 @@ Download a prebuilt binary for your platform and run `pdfcpu version` to verify 
 
 ---
 
+### Software Bill of Materials (SBOMs)
+
+Each download archive has a corresponding `.sbom.json` asset on the
+[release page](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.0-rc.1). <br>
+These JSON files describe application dependencies and are included
+in `checksums.txt`.
+
+The WebAssembly (`js/wasm`) SBOM is generated from the tagged source with
+the WASM build settings. Its dependency inventory is source-derived rather
+than extracted from the binary. <br>It includes SHA-256 hashes identifying the
+WASM binary and its archive.
+
+---
+
 ## Install
 
 1. Extract the archive.
@@ -49,6 +66,16 @@ Download a prebuilt binary for your platform and run `pdfcpu version` to verify 
 
 ## Using Go
 
+To test the release candidate:
+
+    go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@v0.16.0-rc.1
+    pdfcpu version
+
+To test with the embedded EU Trusted List certificate bundles:
+
+    go install -tags pdfcpu_eutl github.com/pdfcpu/pdfcpu/cmd/pdfcpu@v0.16.0-rc.1
+
+The commands below install the latest stable release:
 Install the CLI tool:
 
     go install github.com/pdfcpu/pdfcpu/cmd/pdfcpu@latest
