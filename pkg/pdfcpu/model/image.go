@@ -82,7 +82,14 @@ func validateImageResourceLimits(xRefTable *XRefTable, c image.Config) error {
 		return fmt.Errorf("image pixel count %d exceeds limit %d", pixels, limits.MaxImagePixels)
 	}
 
-	renderBytes, err := safemath.MultiplyInt64(pixels, 4)
+	bytesPerPixel := int64(4)
+	if _, ok := c.ColorModel.(color.Palette); !ok {
+		switch c.ColorModel {
+		case color.RGBA64Model, color.NRGBA64Model:
+			bytesPerPixel = 8
+		}
+	}
+	renderBytes, err := safemath.MultiplyInt64(pixels, bytesPerPixel)
 	if err != nil {
 		return fmt.Errorf("image render byte size: %w", err)
 	}
@@ -268,12 +275,35 @@ func CreateDCTImageStreamDict(xRefTable *XRefTable, buf []byte, w, h, bpc int, c
 	return sd, nil
 }
 
-func writeRGBAImageBuf(img image.Image) ([]byte, []byte) {
+func imageBufferSize(xRefTable *XRefTable, w, h, bytesPerPixel int) (int, error) {
+	pixels, err := safemath.MultiplyInt(w, h)
+	if err != nil {
+		return 0, fmt.Errorf("image pixel count: %w", err)
+	}
+	size, err := safemath.MultiplyInt(pixels, bytesPerPixel)
+	if err != nil {
+		return 0, fmt.Errorf("image byte size: %w", err)
+	}
+	maxBytes := DefaultResourceLimits().MaxImageBytes
+	if xRefTable != nil && xRefTable.Conf != nil {
+		maxBytes = xRefTable.Conf.Limits.MaxImageBytes
+	}
+	if int64(size) > maxBytes {
+		return 0, fmt.Errorf("image byte size %d exceeds limit %d", size, maxBytes)
+	}
+	return size, nil
+}
+
+func writeRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte, error) {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
+	size, err := imageBufferSize(xRefTable, w, h, 3)
+	if err != nil {
+		return nil, nil, err
+	}
 	i := 0
 	var sm []byte
-	buf := make([]byte, w*h*3)
+	buf := make([]byte, size)
 	var softMask bool
 
 	for y := range h {
@@ -298,14 +328,18 @@ func writeRGBAImageBuf(img image.Image) ([]byte, []byte) {
 		}
 	}
 
-	return buf, sm
+	return buf, sm, nil
 }
 
-func writeRGBA64ImageBuf(img image.Image) ([]byte, []byte) {
+func writeRGBA64ImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte, error) {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
+	size, err := imageBufferSize(xRefTable, w, h, 6)
+	if err != nil {
+		return nil, nil, err
+	}
 	i := 0
-	buf := make([]byte, w*h*6)
+	buf := make([]byte, size)
 	var sm []byte
 	var softMask bool
 
@@ -330,14 +364,18 @@ func writeRGBA64ImageBuf(img image.Image) ([]byte, []byte) {
 			i += 6
 		}
 	}
-	return buf, sm
+	return buf, sm, nil
 }
 
-func writeNRGBAImageBuf(_ *XRefTable, img image.Image) ([]byte, []byte) {
+func writeNRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte, error) {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
+	size, err := imageBufferSize(xRefTable, w, h, 3)
+	if err != nil {
+		return nil, nil, err
+	}
 	i := 0
-	buf := make([]byte, w*h*3)
+	buf := make([]byte, size)
 	var sm []byte
 	var softMask bool
 
@@ -364,14 +402,18 @@ func writeNRGBAImageBuf(_ *XRefTable, img image.Image) ([]byte, []byte) {
 		}
 	}
 
-	return buf, sm
+	return buf, sm, nil
 }
 
-func writeNRGBA64ImageBuf(_ *XRefTable, img image.Image) ([]byte, []byte) {
+func writeNRGBA64ImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte, error) {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
+	size, err := imageBufferSize(xRefTable, w, h, 6)
+	if err != nil {
+		return nil, nil, err
+	}
 	i := 0
-	buf := make([]byte, w*h*6)
+	buf := make([]byte, size)
 	var sm []byte
 	var softMask bool
 
@@ -404,7 +446,7 @@ func writeNRGBA64ImageBuf(_ *XRefTable, img image.Image) ([]byte, []byte) {
 		}
 	}
 
-	return buf, sm
+	return buf, sm, nil
 }
 
 func writeSoftmask16(_ *XRefTable, img *image.Alpha16) []byte {
@@ -464,11 +506,15 @@ func writeSoftmask(_ *XRefTable, img *image.Alpha) []byte {
 	return sm
 }
 
-func writeGrayImageBuf(img image.Image) []byte {
+func writeGrayImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, error) {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
+	size, err := imageBufferSize(xRefTable, w, h, 1)
+	if err != nil {
+		return nil, err
+	}
 	i := 0
-	buf := make([]byte, w*h)
+	buf := make([]byte, size)
 
 	for y := range h {
 		for x := range w {
@@ -478,14 +524,18 @@ func writeGrayImageBuf(img image.Image) []byte {
 		}
 	}
 
-	return buf
+	return buf, nil
 }
 
-func writeGray16ImageBuf(img image.Image) []byte {
+func writeGray16ImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, error) {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
+	size, err := imageBufferSize(xRefTable, w, h, 2)
+	if err != nil {
+		return nil, err
+	}
 	i := 0
-	buf := make([]byte, 2*w*h)
+	buf := make([]byte, size)
 
 	for y := range h {
 		for x := range w {
@@ -496,14 +546,18 @@ func writeGray16ImageBuf(img image.Image) []byte {
 		}
 	}
 
-	return buf
+	return buf, nil
 }
 
-func writeCMYKImageBuf(img image.Image) []byte {
+func writeCMYKImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, error) {
 	w := img.Bounds().Dx()
 	h := img.Bounds().Dy()
+	size, err := imageBufferSize(xRefTable, w, h, 4)
+	if err != nil {
+		return nil, err
+	}
 	i := 0
-	buf := make([]byte, w*h*4)
+	buf := make([]byte, size)
 
 	for y := range h {
 		for x := range w {
@@ -517,16 +571,20 @@ func writeCMYKImageBuf(img image.Image) []byte {
 		}
 	}
 
-	return buf
+	return buf, nil
 }
 
-func writePalettedImageBuf(_ *XRefTable, img *image.Paletted) ([]byte, []byte, error) {
+func writePalettedImageBuf(xRefTable *XRefTable, img *image.Paletted) ([]byte, []byte, error) {
 	b := img.Bounds()
 	w, h := b.Dx(), b.Dy()
 	if len(img.Palette) == 0 {
 		return nil, nil, errors.New("missing palette")
 	}
-	buf := make([]byte, w*h)
+	size, err := imageBufferSize(xRefTable, w, h, 1)
+	if err != nil {
+		return nil, nil, err
+	}
+	buf := make([]byte, size)
 	var sm []byte
 	var softMask bool
 
@@ -734,6 +792,7 @@ func handleRGBImage(xRefTable *XRefTable, img image.Image) ([]byte, []byte, int,
 		buf, sm []byte
 		cs      = DeviceRGBCS
 		bpc     int
+		err     error
 	)
 
 	switch im := img.(type) {
@@ -741,41 +800,44 @@ func handleRGBImage(xRefTable *XRefTable, img image.Image) ([]byte, []byte, int,
 		// A 32-bit alpha-premultiplied color, having 8 bits for each of red, green, blue and alpha.
 		// An alpha-premultiplied color component C has been scaled by alpha (A), so it has valid values 0 <= C <= A.
 		bpc = 8
-		buf, sm = writeRGBAImageBuf(im)
+		buf, sm, err = writeRGBAImageBuf(xRefTable, im)
 
 	case *image.RGBA64:
 		// A 64-bit alpha-premultiplied color, having 16 bits for each of red, green, blue and alpha.
 		// An alpha-premultiplied color component C has been scaled by alpha (A), so it has valid values 0 <= C <= A.
 		bpc = 16
-		buf, sm = writeRGBA64ImageBuf(im)
+		buf, sm, err = writeRGBA64ImageBuf(xRefTable, im)
 
 	case *image.NRGBA:
 		// Non-alpha-premultiplied 32-bit color.
 		bpc = 8
-		buf, sm = writeNRGBAImageBuf(xRefTable, im)
+		buf, sm, err = writeNRGBAImageBuf(xRefTable, im)
 
 	case *image.NRGBA64:
 		// Non-alpha-premultiplied 64-bit color.
 		bpc = 16
-		buf, sm = writeNRGBA64ImageBuf(xRefTable, im)
+		buf, sm, err = writeNRGBA64ImageBuf(xRefTable, im)
 
 	case *image.YCbCr:
 		bpc = 8
-		buf, sm = writeRGBAImageBuf(convertToRGBA(im))
+		buf, sm, err = writeRGBAImageBuf(xRefTable, convertToRGBA(im))
 
 	case *image.NYCbCrA:
 		bpc = 8
-		buf, sm = writeRGBAImageBuf(convertNYCbCrAToRGBA(im))
+		buf, sm, err = writeRGBAImageBuf(xRefTable, convertNYCbCrAToRGBA(im))
 
 	case *image.Paletted:
 		// In-memory image of uint8 indices into a given palette.
 		bpc = 8
-		buf, sm = writeRGBAImageBuf(convertToRGBA(im))
+		buf, sm, err = writeRGBAImageBuf(xRefTable, convertToRGBA(im))
 
 	default:
 		return nil, nil, 0, "", fmt.Errorf("unexpected RGB image type: %T", img)
 	}
 
+	if err != nil {
+		return nil, nil, 0, "", err
+	}
 	return buf, sm, bpc, cs, nil
 }
 
@@ -784,6 +846,7 @@ func handleGrayImage(xRefTable *XRefTable, img image.Image, imgA image.Image) ([
 		buf, sm []byte
 		cs      = DeviceGrayCS
 		bpc     int
+		err     error
 	)
 
 	writeSoftmaskIfNeeded := func() {
@@ -802,25 +865,30 @@ func handleGrayImage(xRefTable *XRefTable, img image.Image, imgA image.Image) ([
 	case *image.Gray:
 		// 8-bit grayscale color.
 		bpc = 8
-		writeSoftmaskIfNeeded()
-		buf = writeGrayImageBuf(im)
+		buf, err = writeGrayImageBuf(xRefTable, im)
 
 	case *image.Gray16:
 		// 16-bit grayscale color.
 		bpc = 16
-		writeSoftmaskIfNeeded()
-		buf = writeGray16ImageBuf(im)
+		buf, err = writeGray16ImageBuf(xRefTable, im)
 
 	default:
 		return nil, nil, 0, "", fmt.Errorf("unexpected gray image type: %T", img)
 	}
 
+	if err != nil {
+		return nil, nil, 0, "", err
+	}
+	writeSoftmaskIfNeeded()
 	return buf, sm, bpc, cs, nil
 }
 
-func handleCMYKImage(img *image.CMYK) ([]byte, []byte, int, string, error) {
+func handleCMYKImage(xRefTable *XRefTable, img *image.CMYK) ([]byte, []byte, int, string, error) {
 	// Opaque CMYK color, having 8 bits for each of cyan, magenta, yellow and black.
-	buf := writeCMYKImageBuf(img)
+	buf, err := writeCMYKImageBuf(xRefTable, img)
+	if err != nil {
+		return nil, nil, 0, "", err
+	}
 	return buf, nil, 8, DeviceCMYKCS, nil
 }
 
@@ -930,7 +998,7 @@ func createImageBuf(xRefTable *XRefTable, img image.Image, imgA image.Image, for
 		return handleGrayImage(xRefTable, im, imgA)
 
 	case *image.CMYK:
-		return handleCMYKImage(im)
+		return handleCMYKImage(xRefTable, im)
 
 	default:
 		return nil, nil, 0, "", fmt.Errorf("unsupported image type: %T", im)
@@ -974,8 +1042,27 @@ func createImageResourcesForJPEG(xRefTable *XRefTable, c image.Config, bb bytes.
 	return []ImageResource{ir}, err
 }
 
-func decodeImage(xRefTable *XRefTable, buf *bytes.Reader, currentOffset int64, gray, sepia bool, byteOrder binary.ByteOrder, imgResources *[]ImageResource) (int64, error) {
+func decodeTIFFPage(xRefTable *XRefTable, buf *bytes.Reader, currentOffset int64) (image.Image, error) {
+	c, err := tiff.DecodeConfigAt(buf, currentOffset)
+	if err != nil {
+		return nil, fmt.Errorf("decode TIFF configuration at offset %d: %w", currentOffset, err)
+	}
+	if err := validateImageResourceLimits(xRefTable, c); err != nil {
+		return nil, fmt.Errorf("validate TIFF image at offset %d: %w", currentOffset, err)
+	}
 	img, err := tiff.DecodeAt(buf, currentOffset)
+	if err != nil {
+		return nil, fmt.Errorf("decode TIFF image at offset %d: %w", currentOffset, err)
+	}
+	b := img.Bounds()
+	if b.Dx() != c.Width || b.Dy() != c.Height {
+		return nil, fmt.Errorf("decoded TIFF dimensions %dx%d, expected %dx%d", b.Dx(), b.Dy(), c.Width, c.Height)
+	}
+	return img, nil
+}
+
+func decodeImage(xRefTable *XRefTable, buf *bytes.Reader, currentOffset int64, gray, sepia bool, byteOrder binary.ByteOrder, imgResources *[]ImageResource) (int64, error) {
+	img, err := decodeTIFFPage(xRefTable, buf, currentOffset)
 	if err != nil {
 		return 0, err
 	}
