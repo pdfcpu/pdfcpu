@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/internal/fileutil"
@@ -549,7 +550,11 @@ func DefaultResourceLimits() ResourceLimits {
 // you are encouraged to use api.DisableConfigDir().
 var ConfigPath string = "default"
 
-var loadedDefaultConfig *Configuration
+var (
+	defaultConfigMu sync.RWMutex
+	// Cached configurations are immutable after publication; callers receive clones.
+	loadedDefaultConfig *Configuration
+)
 
 //go:embed resources/config.yml
 var configFileBytes []byte
@@ -630,30 +635,28 @@ func loadOrInitializeConfigurationFile(path string) (*Configuration, bool, error
 	return conf, true, err
 }
 
-func ensureConfigFileAt(path string, override bool) error {
+func ensureConfigFileAt(path string, override bool) (*Configuration, error) {
 	if !override {
 		f, err := os.Open(path)
 		if err == nil {
 			conf, err := readOpenConfigurationFile(f, path)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			conf.resources = resourcesForConfigurationDir(configurationResourceModeAuto, filepath.Dir(path))
-			loadedDefaultConfig = conf
-			return nil
+			return conf, nil
 		}
 	}
 
 	if err := initializeConfigurationFile(path); err != nil {
-		return err
+		return nil, err
 	}
 	conf, err := readConfigurationFile(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	conf.resources = resourcesForConfigurationDir(configurationResourceModeAuto, filepath.Dir(path))
-	loadedDefaultConfig = conf
-	return nil
+	return conf, nil
 }
 
 func onlyHidden(files []os.DirEntry) bool {
@@ -686,10 +689,6 @@ func ensureFontDirInitializedAt(userFontDir string) error {
 	return nil
 }
 
-func ensureFontDirInitialized() error {
-	return ensureFontDirInitializedAt(font.UserFontDir)
-}
-
 func initCertificatesAt(trustedCertDir string) error {
 	files, err := os.ReadDir(trustedCertDir)
 	if err != nil {
@@ -706,11 +705,10 @@ func initCertificatesAt(trustedCertDir string) error {
 	return installDefaultCertificates(trustedCertDir)
 }
 
-func initCertificates() error {
-	return initCertificatesAt(TrustedCertDir)
-}
-
 func initializeConfigurationResourcesAt(configDir string) error {
+	// Initialize the user-font directory and install Roboto for Unicode form filling.
+	// Other user fonts are installed with `pdfcpu font install` or copied from another configuration directory.
+	// User fonts are loaded into memory lazily.
 	userFontDir := filepath.Join(configDir, "fonts")
 	if err := os.MkdirAll(userFontDir, 0755); err != nil {
 		return err
@@ -719,6 +717,7 @@ func initializeConfigurationResourcesAt(configDir string) error {
 		return err
 	}
 
+	// Initialize the certificate directory and install build defaults. Certificates are loaded into memory lazily.
 	trustedCertDir := filepath.Join(configDir, "certs")
 	if err := os.MkdirAll(trustedCertDir, 0755); err != nil {
 		return err
@@ -785,40 +784,31 @@ func ResetConfiguration(root string) (*Configuration, error) {
 }
 
 // EnsureDefaultConfigAt tries to load the default configuration from path.
-// If path/pdfcpu/config.yaml is not found, it will be created.
+// If path/pdfcpu/config.yml is not found, it will be created.
 func EnsureDefaultConfigAt(path string, override bool) error {
+	defaultConfigMu.Lock()
+	defer defaultConfigMu.Unlock()
+	return ensureDefaultConfigAt(path, override)
+}
+
+// ensureDefaultConfigAt requires defaultConfigMu to be held for writing.
+func ensureDefaultConfigAt(path string, override bool) error {
 	configDir := filepath.Join(path, "pdfcpu")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return err
 	}
-	if err := ensureConfigFileAt(filepath.Join(configDir, "config.yml"), override); err != nil {
+	conf, err := ensureConfigFileAt(filepath.Join(configDir, "config.yml"), override)
+	if err != nil {
 		return err
 	}
 
-	// Initialize pdfcpu config/fonts dir for userfonts then extract and install Roboto as default Unicode font for form
-	// filling.
-	// Other userfonts have to be installed via `pdfcpu font install` or copied over from another pdfcpu config dir.
-	// Userfonts are loaded into memory lazily.
-	font.UserFontDir = filepath.Join(configDir, "fonts")
-	if err := os.MkdirAll(font.UserFontDir, 0755); err != nil {
-		return err
-	}
-	if err := ensureFontDirInitialized(); err != nil {
+	if err := initializeConfigurationResourcesAt(configDir); err != nil {
 		return err
 	}
 
-	// Initialize pdfcpu config/cert dir, then extract and install certificates.
-	// Certificates are loaded into memory lazily.
-	TrustedCertDir = filepath.Join(configDir, "certs")
-	if err := os.MkdirAll(TrustedCertDir, 0755); err != nil {
-		return err
-	}
-	if err := initCertificates(); err != nil {
-		return err
-	}
-
-	//fmt.Println(loadedDefaultConfig)
-
+	font.UserFontDir = conf.resources.userFontDir
+	TrustedCertDir = conf.resources.trustedCertDir
+	loadedDefaultConfig = conf
 	return nil
 }
 
@@ -897,22 +887,27 @@ func ResetConfig() error {
 	return EnsureDefaultConfigAt(path, true)
 }
 
-// NewDefaultConfiguration returns the default pdfcpu configuration.
+// NewDefaultConfiguration returns an independent copy of the default pdfcpu configuration.
 func NewDefaultConfiguration() *Configuration {
+	defaultConfigMu.RLock()
+	conf := loadedDefaultConfig
+	defaultConfigMu.RUnlock()
+	if conf != nil {
+		return conf.Clone()
+	}
+
+	defaultConfigMu.Lock()
+	defer defaultConfigMu.Unlock()
 	if loadedDefaultConfig != nil {
-		c := *loadedDefaultConfig
-		c.AllowedRevocationHosts = slices.Clone(loadedDefaultConfig.AllowedRevocationHosts)
-		return &c
+		return loadedDefaultConfig.Clone()
 	}
 	if ConfigPath != "disable" {
 		path, err := os.UserConfigDir()
 		if err != nil {
 			path = os.TempDir()
 		}
-		if err = EnsureDefaultConfigAt(path, false); err == nil {
-			c := *loadedDefaultConfig
-			c.AllowedRevocationHosts = slices.Clone(loadedDefaultConfig.AllowedRevocationHosts)
-			return &c
+		if err = ensureDefaultConfigAt(path, false); err == nil {
+			return loadedDefaultConfig.Clone()
 		}
 		fault.Fail("config problem: %w", err)
 	}

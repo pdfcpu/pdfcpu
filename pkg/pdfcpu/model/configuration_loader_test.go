@@ -175,6 +175,7 @@ func TestReadConfigurationAtDoesNotInitializeTreeOrGlobals(t *testing.T) {
 	requireMissingResourceDirectories(t, configDir)
 }
 
+// TestEnsureConfigFileAtRecordsAutomaticResources verifies compatibility resource selection for loaded defaults.
 func TestEnsureConfigFileAtRecordsAutomaticResources(t *testing.T) {
 	preserveConfigurationGlobals(t)
 
@@ -184,15 +185,16 @@ func TestEnsureConfigFileAtRecordsAutomaticResources(t *testing.T) {
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatalf("create configuration directory: %v", err)
 	}
-	if err := ensureConfigFileAt(filepath.Join(configDir, "config.yml"), false); err != nil {
+	conf, err := ensureConfigFileAt(filepath.Join(configDir, "config.yml"), false)
+	if err != nil {
 		t.Fatalf("ensure configuration file: %v", err)
 	}
 
 	want := resourcesForConfigurationDir(configurationResourceModeAuto, configDir)
-	if loadedDefaultConfig.resources != want {
-		t.Fatalf("configuration resources: got %+v, want %+v", loadedDefaultConfig.resources, want)
+	if conf.resources != want {
+		t.Fatalf("configuration resources: got %+v, want %+v", conf.resources, want)
 	}
-	trustedCertDir, available := loadedDefaultConfig.TrustedCertificateStore()
+	trustedCertDir, available := conf.TrustedCertificateStore()
 	if !available || trustedCertDir != TrustedCertDir {
 		t.Fatalf(
 			"trusted certificate store: got %q, available=%t; want %q, available=true",
@@ -201,7 +203,7 @@ func TestEnsureConfigFileAtRecordsAutomaticResources(t *testing.T) {
 			TrustedCertDir,
 		)
 	}
-	userFontDir, available := loadedDefaultConfig.UserFontStore()
+	userFontDir, available := conf.UserFontStore()
 	if !available || userFontDir != font.UserFontDir {
 		t.Fatalf(
 			"user font store: got %q, available=%t; want %q, available=true",
@@ -316,6 +318,7 @@ func TestConfigurationLoadRejectsLegacySchemaWithoutRewriting(t *testing.T) {
 	}
 }
 
+// TestEnsureConfigFileAtDoesNotReplaceInvalidExistingFile verifies invalid files and cached defaults remain unchanged.
 func TestEnsureConfigFileAtDoesNotReplaceInvalidExistingFile(t *testing.T) {
 	preserveConfigurationGlobals(t)
 
@@ -327,7 +330,7 @@ func TestEnsureConfigFileAtDoesNotReplaceInvalidExistingFile(t *testing.T) {
 	cached := &Configuration{Path: "cached.yml"}
 	loadedDefaultConfig = cached
 
-	if err := ensureConfigFileAt(path, false); err == nil {
+	if _, err := ensureConfigFileAt(path, false); err == nil {
 		t.Fatal("expected invalid configuration error")
 	}
 	if loadedDefaultConfig != cached {

@@ -647,6 +647,8 @@ func parseConfigFile(r io.Reader, configPath string) error {
 	if err != nil {
 		return err
 	}
+	defaultConfigMu.Lock()
+	defer defaultConfigMu.Unlock()
 	loadedDefaultConfig = conf
 	return nil
 }
