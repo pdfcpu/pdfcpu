@@ -34,24 +34,17 @@ Entries link to GitHub releases or commits where available.
 
 <article class="changelog-entry">
   <div class="changelog-meta">
-    <time datetime="2026-09-20">2026-09-20</time>
-    <span class="changelog-kind">Release Candidate</span>
-    <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.0-rc.1">v0.16.0-rc.1</a>
+    <time datetime="2026-09-28">2026-09-28</time>
+    <span class="changelog-kind">Release</span>
+    <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.0">v0.16.0</a>
   </div>
   <p>
-  Add predictable <a href="/config/config_modes">configuration modes</a>, schema-aware migration, inspection commands,
-  resource limits and reliable offline operation.<br><br>
-  Allow commands and Go operations to stop cleanly, add transactional output replacement and file-based password input,
-  and improve operation in containers and automated jobs.<br><br>
-  Add structured <a href="/core/validate#compatibility-notices">compatibility notices</a>, expand strict validation and
-  harden malformed PDF, object graph, cross-reference and page-tree handling.<br><br>
-  Redesign <a href="/core/sign_validate">signature validation output</a> around independently established cryptographic,
-  certificate, revocation and timestamp evidence.<br><br>
-  Add optional no-rotation resize fitting and improve PDF stamps and watermarks, form appearances, radio-button choices,
-  image handling and LZW decoding.<br><br>
-  Preserve document information and form field hierarchies more reliably, including PDF 2.0 document information.<br><br>
-  Keep reusable Go APIs quiet, add contexts and progress reporting, protect caller-owned configuration.<br><br>
-  Reduce the published Go module archive by 94%.<br><br>
+  Update the Go API and configuration model, with cancellation, progress reporting and safer automation.<br><br>
+  Strengthen PDF validation, clarify signature evidence, fix PDF processing issues and address six security advisories.
+  Reduce the Go module download size.<br><br>
+  See the <a href="/getting_started/configuration_v016">upgrade guide</a> for required API and configuration changes,
+  and the <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.0">release notes</a> for details.<br><br>
+
   Fix #1407, #1444, #1449, #1457, #1460, #1461, #1465-#1467, #1470, #1472-#1474, #1477, #1479, #1484,
   #1485, #1487.
   </p>

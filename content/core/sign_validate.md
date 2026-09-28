@@ -183,6 +183,14 @@ and trust evidence that is not evaluated under a maintained external policy.
 * Legacy signatures: `adbe.x509.rsa_sha1` and `adbe.pkcs7.sha1` use SHA-1 and are supported only for validating existing PDFs. They are deprecated in PDF 2.0 and must not be used for new signatures.
 * Go runtime restrictions: certificate chains using SHA-1 signatures may be rejected by the Go runtime.
 
+## Reading the Output
+
+Compact output includes an `Integrity:` line reporting the cryptographic signature and signed-content digest results.<br><br>
+With `--full`, the `Evidence` section reports signature, digest, profile, signer certificate, certificate path,
+revocation and timestamp results separately.<br><br> The `Assessment` section presents the overall local result and reason.
+
+`unknown` means that evidence was unavailable, inconclusive or not checked - it does not mean success.<br><br>
+
 ## Examples
 
 The following commands use signature fixtures from the pdfcpu test corpus.

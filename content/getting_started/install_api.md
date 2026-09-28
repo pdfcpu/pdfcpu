@@ -13,12 +13,7 @@ Use pdfcpu as a Go library. v0.16 requires Go 1.26.0 or later.
 
     go get github.com/pdfcpu/pdfcpu@latest
 
-To test v0.16.0-rc.1 select it explicitly:
-
-    go get github.com/pdfcpu/pdfcpu@v0.16.0-rc.1
-
-The v0.16 API examples below apply to that candidate.<br>
-`@latest` may select an earlier stable release with different API signatures.
+The examples below use the v0.16 API.
 
 ---
 

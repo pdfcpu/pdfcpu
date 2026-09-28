@@ -5,12 +5,14 @@ title: "Configuration Reset Required in v0.16"
 
 # Configuration Reset Required in v0.16
 
-This guide covers Go API and file-backed configuration changes when upgrading from v0.15 or earlier to v0.16,
-including v0.16.0-rc.1.
-The module requires Go 1.26.0 or later. <br><br>
-Once the candidate is published, select it explicitly with:<br>
-`go get github.com/pdfcpu/pdfcpu@v0.16.0-rc.1`<br>
-`@latest` may select an earlier stable release.
+This guide covers Go API and file-backed configuration changes when upgrading from v0.15 or earlier to v0.16.
+The module requires Go 1.26.0 or later.
+
+To install the latest stable release:
+
+```sh
+go get github.com/pdfcpu/pdfcpu@latest
+```
 
 Configuration compatibility is determined by `schemaVersion` instead of the pdfcpu release version.
 Future pdfcpu releases therefore require a reset only when the configuration schema changes.
