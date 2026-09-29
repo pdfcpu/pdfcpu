@@ -441,38 +441,33 @@ func renderDeviceGrayToPNG(im *PDFImage) (io.Reader, string, error) {
 		log.Debug.Printf("renderDeviceGrayToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
 	}
 
-	// Validate buflen.
+	if !types.IntMemberOf(im.bpc, []int{1, 2, 4, 8, 16}) {
+		return nil, "", fmt.Errorf("renderDeviceGrayToPNG: objNr=%d unsupported bits per component %d", im.objNr, im.bpc)
+	}
+	rowBytes, err := checkedImageRowBytes(im.w, 1, im.bpc)
+	if err != nil {
+		return nil, "", fmt.Errorf("renderDeviceGrayToPNG: objNr=%d: %w", im.objNr, err)
+	}
+	imageBytes, err := safemath.MultiplyInt64(rowBytes, int64(im.h))
+	if err != nil {
+		return nil, "", fmt.Errorf("renderDeviceGrayToPNG: objNr=%d: %w", im.objNr, err)
+	}
+
 	// For streams not using compression there is a trailing 0x0A in addition to the imagebytes.
-	if len(b) < (im.bpc*im.w*im.h+7)/8 {
+	if int64(len(b)) < imageBytes {
 		return nil, "", fmt.Errorf("renderDeviceGrayToPNG: objNr=%d corrupt image object %v", im.objNr, *im.sd)
 	}
 
-	cvr := colValRange{0, 1}
-	if im.decode != nil {
-		cvr = im.decode[0]
-	}
-
 	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
-
-	i := 0
 	for y := 0; y < im.h; y++ {
-		for x := 0; x < im.w; {
-			p := b[i]
-			for j := 0; j < 8/im.bpc && x < im.w; j++ {
-				pix := p >> (8 - uint8(im.bpc))
-				v := decodePixelValue(pix, im.bpc, cvr)
-				if im.bpc < 8 {
-					v = scaleToBPC8(v, im.bpc)
-				}
-				alpha := uint8(255)
-				if im.softMask != nil {
-					alpha = im.softMask[y*im.w+x]
-				}
-				img.Set(x, y, color.NRGBA{R: v, G: v, B: v, A: alpha})
-				p <<= uint8(im.bpc)
-				x++
+		rowOffset := y * int(rowBytes)
+		for x := 0; x < im.w; x++ {
+			v := decodedImageSample(im, rowOffset, x, 0)
+			alpha := uint8(255)
+			if im.softMask != nil {
+				alpha = im.softMask[y*im.w+x]
 			}
-			i++
+			img.Set(x, y, color.NRGBA{R: v, G: v, B: v, A: alpha})
 		}
 	}
 
@@ -812,89 +807,114 @@ func unsupportedIndexedArrayCS(im *PDFImage, csa types.Array) (io.Reader, string
 	return unsupportedImageRender(im.objNr, fmt.Sprintf("indexed base colorspace %s", csa))
 }
 
-func renderIndexedArrayCS(xRefTable *model.XRefTable, im *PDFImage, csa types.Array, maxInd int, lookup []byte) (io.Reader, string, error) {
-	b := im.sd.Content
+func renderIndexedICCGrayToPNG(im *PDFImage, lookup []byte) (io.Reader, string, error) {
+	// TODO handle decode and softmask.
+	img := image.NewGray(image.Rect(0, 0, im.w, im.h))
+	rowBytes, err := checkedImageRowBytes(im.w, 1, im.bpc)
+	if err != nil {
+		return nil, "", fmt.Errorf("renderIndexedArrayCS: objNr=%d: %w", im.objNr, err)
+	}
+	for y := 0; y < im.h; y++ {
+		rowOffset := y * int(rowBytes)
+		for x := 0; x < im.w; x++ {
+			ind := packedImageSample(im.sd.Content, rowOffset, x, im.bpc)
+			img.Set(x, y, color.Gray{Y: lookup[ind]})
+		}
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		return nil, "", err
+	}
+	return &buf, "png", nil
+}
 
+func renderIndexedICCBasedCS(xRefTable *model.XRefTable, im *PDFImage, csa types.Array, maxInd int, lookup []byte) (io.Reader, string, error) {
+	iccProfileStream, err := dereferenceRequiredStreamDict(xRefTable, csa[1], "indexed ICCBased profile")
+	if err != nil {
+		return nil, "", err
+	}
+
+	// 1,3 or 4 color components.
+	nValue, err := integerEntryValue(
+		xRefTable,
+		iccProfileStream.Dict,
+		"N",
+		fmt.Sprintf("image obj#%d indexed ICC profile", im.objNr),
+		true,
+	)
+	if err != nil {
+		return nil, "", err
+	}
+	n := *nValue
+	if !types.IntMemberOf(n, []int{1, 3, 4}) {
+		return nil, "", fmt.Errorf("renderIndexedArrayCS: objNr=%d, N must be 1,3 or 4, got:%d", im.objNr, n)
+	}
+	if len(lookup) < n*(maxInd+1) {
+		return nil, "", fmt.Errorf("renderIndexedArrayCS: objNr=%d, corrupt ICCBased lookup table", im.objNr)
+	}
+
+	// TODO: Transform linear XYZ to RGB according to ICC profile.
+	// For now we fall back to appropriate color spaces for n
+	// regardless of a specified alternate color space.
+	switch n {
+	case 1:
+		return renderIndexedICCGrayToPNG(im, lookup)
+	case 3:
+		return renderIndexedRGBToPNG(im, lookup)
+	case 4:
+		if log.DebugEnabled() {
+			log.Debug.Printf("renderIndexedArrayCS: CMYK objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(im.sd.Content))
+		}
+		return renderIndexedCMYKToTIFF(im, lookup)
+	}
+	return unsupportedIndexedArrayCS(im, csa)
+}
+
+func renderIndexedArrayCS(xRefTable *model.XRefTable, im *PDFImage, csa types.Array, maxInd int, lookup []byte) (io.Reader, string, error) {
 	cs, err := imageColorSpaceName(xRefTable, csa[0], "indexed base colorspace[0]")
 	if err != nil {
 		return nil, "", err
 	}
 
 	switch cs {
-
-	//case CalGrayCS:
-
 	case model.CalRGBCS:
+		if len(lookup) < 3*(maxInd+1) {
+			return nil, "", fmt.Errorf("renderIndexedArrayCS: objNr=%d, corrupt CalRGB lookup table", im.objNr)
+		}
 		return renderIndexedRGBToPNG(im, lookup)
-
-	//case LabCS:
-	//	return renderIndexedRGBToPNG(im, resourceName, lookup)
-
 	case model.ICCBasedCS:
+		return renderIndexedICCBasedCS(xRefTable, im, csa, maxInd, lookup)
+	}
+	return unsupportedIndexedArrayCS(im, csa)
+}
 
-		iccProfileStream, err := dereferenceRequiredStreamDict(xRefTable, csa[1], "indexed ICCBased profile")
-		if err != nil {
-			return nil, "", err
-		}
-
-		// 1,3 or 4 color components.
-		nValue, err := integerEntryValue(
-			xRefTable,
-			iccProfileStream.Dict,
-			"N",
-			fmt.Sprintf("image obj#%d indexed ICC profile", im.objNr),
-			true,
-		)
-		if err != nil {
-			return nil, "", err
-		}
-		n := *nValue
-		if !types.IntMemberOf(n, []int{1, 3, 4}) {
-			return nil, "", fmt.Errorf("renderIndexedArrayCS: objNr=%d, N must be 1,3 or 4, got:%d", im.objNr, n)
-		}
-
-		// Validate the lookup table.
-		if len(lookup) < n*(maxInd+1) {
-			return nil, "", fmt.Errorf("renderIndexedArrayCS: objNr=%d, corrupt ICCBased lookup table", im.objNr)
-		}
-
-		// TODO: Transform linear XYZ to RGB according to ICC profile.
-		// For now we fall back to approriate color spaces for n
-		// regardless of a specified alternate color space.
-
-		switch n {
-		case 1:
-			// Gray
-			// TODO use lookupTable!
-			// TODO handle bpc, decode and softmask.
-			img := image.NewGray(image.Rect(0, 0, im.w, im.h))
-			i := 0
-			for y := 0; y < im.h; y++ {
-				for x := 0; x < im.w; x++ {
-					img.Set(x, y, color.Gray{Y: b[i]})
-					i++
-				}
+func validateIndexedImageSamples(im *PDFImage, maxInd int) error {
+	if !types.IntMemberOf(im.bpc, []int{1, 2, 4, 8}) {
+		return fmt.Errorf("renderIndexed: objNr=%d unsupported bits per component %d", im.objNr, im.bpc)
+	}
+	if maxInd < 0 || maxInd > 255 {
+		return fmt.Errorf("renderIndexed: objNr=%d invalid HiVal %d", im.objNr, maxInd)
+	}
+	rowBytes, err := checkedImageRowBytes(im.w, 1, im.bpc)
+	if err != nil {
+		return fmt.Errorf("renderIndexed: objNr=%d: %w", im.objNr, err)
+	}
+	imageBytes, err := safemath.MultiplyInt64(rowBytes, int64(im.h))
+	if err != nil {
+		return fmt.Errorf("renderIndexed: objNr=%d: %w", im.objNr, err)
+	}
+	if int64(len(im.sd.Content)) < imageBytes {
+		return fmt.Errorf("renderIndexed: objNr=%d corrupt image object %v", im.objNr, *im.sd)
+	}
+	for y := 0; y < im.h; y++ {
+		rowOffset := y * int(rowBytes)
+		for x := 0; x < im.w; x++ {
+			if ind := packedImageSample(im.sd.Content, rowOffset, x, im.bpc); int(ind) > maxInd {
+				return fmt.Errorf("renderIndexed: objNr=%d palette index %d exceeds HiVal %d", im.objNr, ind, maxInd)
 			}
-			var buf bytes.Buffer
-			if err := png.Encode(&buf, img); err != nil {
-				return nil, "", err
-			}
-			return &buf, "png", nil
-
-		case 3:
-			// RGB
-			return renderIndexedRGBToPNG(im, lookup)
-
-		case 4:
-			// CMYK
-			if log.DebugEnabled() {
-				log.Debug.Printf("renderIndexedArrayCS: CMYK objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
-			}
-			return renderIndexedCMYKToTIFF(im, lookup)
 		}
 	}
-
-	return unsupportedIndexedArrayCS(im, csa)
+	return nil
 }
 
 func renderIndexed(xRefTable *model.XRefTable, im *PDFImage, cs types.Array) (io.Reader, string, error) {
@@ -902,11 +922,20 @@ func renderIndexed(xRefTable *model.XRefTable, im *PDFImage, cs types.Array) (io
 	baseCS, _ := xRefTable.Dereference(cs[1])
 
 	// Identify the max index into the color lookup table.
-	maxInd, _ := xRefTable.DereferenceInteger(cs[2])
+	maxInd, err := xRefTable.DereferenceInteger(cs[2])
+	if err != nil {
+		return nil, "", fmt.Errorf("renderIndexed: objNr=%d HiVal: %w", im.objNr, err)
+	}
+	if maxInd == nil {
+		return nil, "", fmt.Errorf("renderIndexed: objNr=%d missing HiVal", im.objNr)
+	}
+	if err := validateIndexedImageSamples(im, maxInd.Value()); err != nil {
+		return nil, "", err
+	}
 
 	// Identify the color lookup table.
 	var lookup []byte
-	lookup, err := colorLookupTable(xRefTable, cs[3])
+	lookup, err = colorLookupTable(xRefTable, cs[3])
 	if err != nil {
 		return nil, "", err
 	}
@@ -919,13 +948,6 @@ func renderIndexed(xRefTable *model.XRefTable, im *PDFImage, cs types.Array) (io
 
 	if log.DebugEnabled() {
 		log.Debug.Printf("renderIndexed: objNr=%d w=%d h=%d bpc=%d buflen=%d maxInd=%d\n", im.objNr, im.w, im.h, im.bpc, len(b), maxInd)
-	}
-
-	// Validate buflen.
-	// The image data is a sequence of index values for pixels.
-	// Sometimes there is a trailing 0x0A.
-	if len(b) < (im.bpc*im.w*im.h+7)/8 {
-		return nil, "", fmt.Errorf("renderIndexed: objNr=%d corrupt image object %v", im.objNr, *im.sd)
 	}
 
 	switch cs := baseCS.(type) {
