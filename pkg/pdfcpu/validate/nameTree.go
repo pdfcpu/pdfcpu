@@ -118,13 +118,16 @@ func validateURLAliasDict(xRefTable *model.XRefTable, d types.Dict) error {
 	dictName := "urlAliasDict"
 
 	// U, required, ASCII string
-	_, err := validateStringEntry(xRefTable, d, 0, dictName, "U", REQUIRED, model.V10, nil)
+	u, err := validateStringEntry(xRefTable, d, 0, dictName, "U", REQUIRED, model.V10, nil)
 	if err != nil {
 		return err
 	}
 
 	// C, optional, array of strings
 	_, err = validateStringArrayEntry(xRefTable, d, 0, dictName, "C", OPTIONAL, model.V10, nil)
+	if err == nil && u != nil {
+		collectDocumentLinkTarget(xRefTable, *u, linkSourceWebCaptureSource)
+	}
 
 	return err
 }
@@ -150,7 +153,7 @@ func validateCaptureCommandDict(xRefTable *model.XRefTable, d types.Dict, ownerO
 	dictName := "captureCommandDict"
 
 	// URL, required, string
-	_, err := validateStringEntry(xRefTable, d, 0, dictName, "URL", REQUIRED, model.V10, nil)
+	commandURL, err := validateStringEntry(xRefTable, d, 0, dictName, "URL", REQUIRED, model.V10, nil)
 	if err != nil {
 		return fmt.Errorf("%s.URL: %w", dictName, err)
 	}
@@ -196,6 +199,9 @@ func validateCaptureCommandDict(xRefTable *model.XRefTable, d types.Dict, ownerO
 			return fmt.Errorf("%s.S: %w", dictName, err)
 		}
 	}
+	if commandURL != nil {
+		collectDocumentLinkTarget(xRefTable, *commandURL, linkSourceWebCaptureCommand)
+	}
 
 	return nil
 }
@@ -209,7 +215,11 @@ func validateSourceInfoDictEntryAU(xRefTable *model.XRefTable, d types.Dict, dic
 	switch o := o.(type) {
 
 	case types.StringLiteral, types.HexLiteral:
-		// no further processing
+		s, err := model.Text(o)
+		if err != nil {
+			return fmt.Errorf("dict=%s entry=%s: %w", dictName, entryName, err)
+		}
+		collectDocumentLinkTarget(xRefTable, s, linkSourceWebCaptureSource)
 
 	case types.Dict:
 		err = validateURLAliasDict(xRefTable, o)
@@ -763,6 +773,9 @@ func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTabl
 		err = validateNameTreeValueContext(c, name, xRefTable, o, namesObjNr)
 		if err != nil {
 			return "", "", fmt.Errorf("name tree %s key %q: %w", name, key, err)
+		}
+		if name == "URLS" {
+			collectDocumentLinkTarget(xRefTable, key, linkSourceWebCaptureURL)
 		}
 
 		node.AppendToNames(key, o)
