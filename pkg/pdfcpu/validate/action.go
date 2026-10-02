@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"strings"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -44,7 +43,7 @@ func validateGoToRActionDict(xRefTable *model.XRefTable, d types.Dict, ownerObjN
 	// see 12.6.4.3 Remote Go-To Actions
 
 	// F, required, file specification
-	_, err := validateFileSpecEntry(xRefTable, d, dictName, "F", REQUIRED, model.V11)
+	f, err := validateFileSpecEntry(xRefTable, d, dictName, "F", REQUIRED, model.V11)
 	if err != nil {
 		return err
 	}
@@ -57,8 +56,11 @@ func validateGoToRActionDict(xRefTable *model.XRefTable, d types.Dict, ownerObjN
 
 	// NewWindow, optional, boolean, since V1.2
 	_, err = validateBooleanEntry(xRefTable, d, 0, dictName, "NewWindow", OPTIONAL, model.V12, nil)
-
-	return err
+	if err != nil {
+		return err
+	}
+	collectFileSpecificationTarget(xRefTable, f, linkTargetFile, linkSourceRemoteGoTo)
+	return nil
 }
 
 type targetTraversal map[int]bool
@@ -183,7 +185,11 @@ func validateGoToEActionDict(c context.Context, xRefTable *model.XRefTable, d ty
 	}
 
 	// T, required unless entry F is present, target dict
-	return validateTargetDictEntry(c, xRefTable, d, dictName, "T", f == nil, model.V10)
+	if err := validateTargetDictEntry(c, xRefTable, d, dictName, "T", f == nil, model.V10); err != nil {
+		return err
+	}
+	collectFileSpecificationTarget(xRefTable, f, linkTargetFile, linkSourceEmbeddedGoTo)
+	return nil
 }
 
 func validateWinDict(xRefTable *model.XRefTable, d types.Dict) error {
@@ -219,7 +225,7 @@ func validateLaunchActionDict(xRefTable *model.XRefTable, d types.Dict, dictName
 	// see 12.6.4.5
 
 	// F, optional, file specification
-	_, err := validateFileSpecEntry(xRefTable, d, dictName, "F", OPTIONAL, model.V11)
+	f, err := validateFileSpecEntry(xRefTable, d, dictName, "F", OPTIONAL, model.V11)
 	if err != nil {
 		return err
 	}
@@ -231,13 +237,18 @@ func validateLaunchActionDict(xRefTable *model.XRefTable, d types.Dict, dictName
 	}
 	if d1 != nil {
 		err = validateWinDict(xRefTable, d1)
+		if err != nil {
+			return err
+		}
+		collectFileSpecificationTarget(xRefTable, d1["F"], linkTargetExecutable, linkSourceLaunch)
 	}
 
 	// Mac, optional, undefined dict
 
 	// Unix, optional, undefined dict
 
-	return err
+	collectFileSpecificationTarget(xRefTable, f, linkTargetExecutable, linkSourceLaunch)
+	return nil
 }
 
 func validateDestinationThreadEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
@@ -287,7 +298,7 @@ func validateThreadActionDict(xRefTable *model.XRefTable, d types.Dict, dictName
 	//see 12.6.4.6
 
 	// F, optional, file specification
-	_, err := validateFileSpecEntry(xRefTable, d, dictName, "F", OPTIONAL, model.V11)
+	f, err := validateFileSpecEntry(xRefTable, d, dictName, "F", OPTIONAL, model.V11)
 	if err != nil {
 		return err
 	}
@@ -299,18 +310,13 @@ func validateThreadActionDict(xRefTable *model.XRefTable, d types.Dict, dictName
 	}
 
 	// B, optional, indRef to bead dict or integer.
-	return validateDestinationBeadEntry(xRefTable, d, dictName, "B", OPTIONAL, model.V10)
-}
-
-func hasURIForChecking(xRefTable *model.XRefTable, s string) bool {
-	for _, links := range xRefTable.URIs {
-		for uri := range links {
-			if uri == s {
-				return true
-			}
-		}
+	if err = validateDestinationBeadEntry(xRefTable, d, dictName, "B", OPTIONAL, model.V10); err != nil {
+		return err
 	}
-	return false
+	if !isEmbeddedFileSpecification(xRefTable, f) {
+		collectFileSpecificationTarget(xRefTable, f, linkTargetFile, linkSourceThread)
+	}
+	return nil
 }
 
 func validateURIActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -322,13 +328,8 @@ func validateURIActionDict(xRefTable *model.XRefTable, d types.Dict, dictName st
 		return err
 	}
 
-	// Record URIs for link checking.
-	if xRefTable.ValidateLinks && uri != nil &&
-		strings.HasPrefix(*uri, "http") && !hasURIForChecking(xRefTable, *uri) {
-		if len(xRefTable.URIs[xRefTable.CurPage]) == 0 {
-			xRefTable.URIs[xRefTable.CurPage] = map[string]string{}
-		}
-		xRefTable.URIs[xRefTable.CurPage][*uri] = ""
+	if uri != nil {
+		collectLinkTarget(xRefTable, *uri, linkTargetURI, linkSourceURIAction)
 	}
 
 	// IsMap, optional, boolean
@@ -649,7 +650,7 @@ func validateSubmitFormActionDict(xRefTable *model.XRefTable, d types.Dict, dict
 	// see 12.7.5.2
 
 	// F, required, URL specification
-	_, err := validateURLSpecEntry(xRefTable, d, dictName, "F", REQUIRED, model.V10)
+	f, err := validateURLSpecEntry(xRefTable, d, dictName, "F", REQUIRED, model.V10)
 	if err != nil {
 		return err
 	}
@@ -689,8 +690,11 @@ func validateSubmitFormActionDict(xRefTable *model.XRefTable, d types.Dict, dict
 
 	// Flags, optional, integer
 	_, err = validateIntegerEntry(xRefTable, d, 0, dictName, "Flags", OPTIONAL, model.V10, nil)
-
-	return err
+	if err != nil {
+		return err
+	}
+	collectFileSpecificationTarget(xRefTable, f, linkTargetURI, linkSourceSubmitForm)
+	return nil
 }
 
 func validateResetFormActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -739,9 +743,12 @@ func validateImportDataActionDict(xRefTable *model.XRefTable, d types.Dict, dict
 	// see 12.7.5.4
 
 	// F, required, file specification
-	_, err := validateFileSpecEntry(xRefTable, d, dictName, "F", OPTIONAL, model.V11)
-
-	return err
+	f, err := validateFileSpecEntry(xRefTable, d, dictName, "F", OPTIONAL, model.V11)
+	if err != nil {
+		return err
+	}
+	collectFileSpecificationTarget(xRefTable, f, linkTargetFile, linkSourceImportData)
+	return nil
 }
 
 func validateJavaScript(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool) error {

@@ -189,7 +189,7 @@ type XRefTable struct {
 	CurPage          int                       // current page during validation
 	Conf             *Configuration            // current command being executed
 	ValidationMode   int                       // see Configuration
-	ValidateLinks    bool                      // check for broken links in LinkAnnotations/URIDicts.
+	ValidateLinks    bool                      // check and report external references.
 	Valid            bool                      // true means successful validated against ISO 32000.
 	URIs             map[int]map[string]string // URIs for link checking
 	validationReport *ValidationReport

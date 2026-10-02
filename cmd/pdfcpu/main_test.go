@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	stdlog "log"
 	"os"
@@ -86,6 +87,262 @@ func TestRunCommandConfiguresValidationNoticeOutput(t *testing.T) {
 	_ = runCommand(t.Context(), cmd)
 	if cmd.NoticeOutput != nil {
 		t.Fatal("expected validation notice output suppression in quiet mode")
+	}
+}
+
+// TestRotation verifies command-line rotation parsing across signed integer boundaries.
+func validationTestPDF(objects []string) []byte {
+	var b bytes.Buffer
+	b.WriteString("%PDF-1.7\n")
+	offsets := make([]int, len(objects))
+	for i, object := range objects {
+		offsets[i] = b.Len()
+		fmt.Fprintf(&b, "%d 0 obj\n%s\nendobj\n", i+1, object)
+	}
+	xrefOffset := b.Len()
+	fmt.Fprintf(&b, "xref\n0 %d\n0000000000 65535 f \n", len(objects)+1)
+	for _, offset := range offsets {
+		fmt.Fprintf(&b, "%010d 00000 n \n", offset)
+	}
+	fmt.Fprintf(&b, "trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", len(objects)+1, xrefOffset)
+	return b.Bytes()
+}
+
+func linkValidationTestPDF() []byte {
+	return validationTestPDF([]string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources <<>> /Annots [5 0 R 6 0 R] >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources <<>> /Annots [7 0 R 8 0 R] >>",
+		"<< /Type /Annot /Subtype /Link /Rect [0 0 10 10] /A << /S /URI /URI (HTTP://127.0.0.1/admin) >> >>",
+		"<< /Type /Annot /Subtype /Link /Rect [0 0 10 10] /A << /S /URI /URI (file:///tmp/private) >> >>",
+		"<< /Type /Annot /Subtype /Link /Rect [0 0 10 10] /A << /S /URI /URI (javascript:evil) >> >>",
+		"<< /Type /Annot /Subtype /Link /Rect [0 0 10 10] /A << /S /URI /URI (mailto:user@example.com) >> >>",
+	})
+}
+
+func externalReferenceValidationTestPDF() []byte {
+	return validationTestPDF([]string{
+		"<< /Type /Catalog /Pages 2 0 R /URI << /Base (http://127.0.0.1/base/) >> >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources <<>> /Annots [4 0 R 5 0 R 6 0 R 7 0 R 8 0 R 9 0 R] >>",
+		"<< /Type /Annot /Subtype /Link /Rect [0 0 10 10] /A << /S /GoToR /F (remote.pdf) /D (destination) >> >>",
+		"<< /Type /Annot /Subtype /Link /Rect [10 0 20 10] /A << /S /GoToE /F (embedded.pdf) /D (destination) >> >>",
+		"<< /Type /Annot /Subtype /Link /Rect [20 0 30 10] /A << /S /Launch /F (viewer.exe) >> >>",
+		"<< /Type /Annot /Subtype /Link /Rect [30 0 40 10] /A << /S /SubmitForm /F << /FS /URL /F (http://127.0.0.1/submit) >> >> >>",
+		"<< /Type /Annot /Subtype /Link /Rect [40 0 50 10] /A << /S /ImportData /F (form.fdf) >> >>",
+		"<< /Type /Annot /Subtype /Link /Rect [50 0 60 10] /A << /S /URI /URI (child) >> >>",
+	})
+}
+
+func offlineLinkValidationTestPDF() []byte {
+	return validationTestPDF([]string{
+		"<< /Type /Catalog /Pages 2 0 R /URI << /Base (https://example.com/base/) >> >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources <<>> /Annots [4 0 R 5 0 R 6 0 R 7 0 R] >>",
+		"<< /Type /Annot /Subtype /Link /Rect [0 0 10 10] /A << /S /URI /URI (child) >> >>",
+		"<< /Type /Annot /Subtype /Link /Rect [10 0 20 10] /A << /S /URI /URI (https://example.com/public) >> >>",
+		"<< /Type /Annot /Subtype /Link /Rect [20 0 30 10] /A << /S /GoToR /F (remote.pdf) /D (destination) >> >>",
+		"<< /Type /Annot /Subtype /Link /Rect [30 0 40 10] /A << /S /Launch /F (viewer.exe) >> >>",
+	})
+}
+
+func linkValidationTestFile(t *testing.T) string {
+	t.Helper()
+	fn := filepath.Join(t.TempDir(), "mixed-links.pdf")
+	if err := os.WriteFile(fn, linkValidationTestPDF(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return fn
+}
+
+func externalReferenceValidationTestFile(t *testing.T) string {
+	t.Helper()
+	fn := filepath.Join(t.TempDir(), "external-references.pdf")
+	if err := os.WriteFile(fn, externalReferenceValidationTestPDF(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return fn
+}
+
+func offlineLinkValidationTestFile(t *testing.T) string {
+	t.Helper()
+	fn := filepath.Join(t.TempDir(), "offline-links.pdf")
+	if err := os.WriteFile(fn, offlineLinkValidationTestPDF(), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return fn
+}
+
+func runLinkValidationCLIWithOffline(t *testing.T, inFile, mode string, quietMode bool, verbosity int, offlineMode bool) (string, error) {
+	t.Helper()
+	quietSave, verboseSave := quiet, verbose
+	quiet, verbose = quietMode, verbosity
+	defer func() {
+		quiet, verbose = quietSave, verboseSave
+		pdfcpuLog.SetCLILogger(nil)
+		pdfcpuLog.SetInfoLogger(nil)
+	}()
+
+	var validationErr error
+	stderr := captureStderr(t, func() {
+		if quietMode {
+			pdfcpuLog.SetCLILogger(nil)
+		} else {
+			pdfcpuLog.SetCLILogger(stdlog.New(os.Stderr, "", 0))
+		}
+		if verbosity > 0 {
+			pdfcpuLog.SetInfoLogger(stdlog.New(io.Discard, "", 0))
+		} else {
+			pdfcpuLog.SetInfoLogger(nil)
+		}
+		conf := model.NewStatelessConfiguration()
+		conf.Offline = offlineMode
+		validationErr = handleValidateCommand(
+			t.Context(),
+			conf,
+			[]string{inFile},
+			&validateOptions{mode: mode, links: true},
+		)
+	})
+	return stderr, validationErr
+}
+
+func runLinkValidationCLI(t *testing.T, inFile, mode string, quietMode bool, verbosity int) (string, error) {
+	t.Helper()
+	return runLinkValidationCLIWithOffline(t, inFile, mode, quietMode, verbosity, false)
+}
+
+func TestValidateLinksCLIReportsMixedSchemes(t *testing.T) {
+	inFile := linkValidationTestFile(t)
+	warnings := []string{
+		"pdfcpu skipped: page 1: HTTP://127.0.0.1/admin - blocked by security policy\n",
+		"pdfcpu skipped: page 1: file:///tmp/private - blocked by security policy\n",
+		"pdfcpu skipped: page 2: javascript:evil - blocked by security policy\n",
+		"pdfcpu skipped: page 2: mailto:user@example.com - URI scheme is not checked: URL scheme \"mailto\"\n",
+	}
+
+	normalOutput, err := runLinkValidationCLI(t, inFile, "relaxed", false, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, warning := range warnings {
+		if count := strings.Count(normalOutput, warning); count != 1 {
+			t.Fatalf("normal output contains %q %d times, want once: %q", warning, count, normalOutput)
+		}
+	}
+
+	verboseOutput, err := runLinkValidationCLI(t, inFile, "relaxed", false, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if verboseOutput != normalOutput {
+		t.Fatalf(
+			"verbose mixed-scheme output differs without successful links:\ngot  %q\nwant %q",
+			verboseOutput,
+			normalOutput,
+		)
+	}
+
+	strictOutput, err := runLinkValidationCLI(t, inFile, "strict", false, 0)
+	if err == nil || !strings.Contains(err.Error(), "link verification failed") {
+		t.Fatalf("strict validation: got %v, want link verification error", err)
+	}
+	for _, finding := range []string{
+		"Page 1: HTTP://127.0.0.1/admin - blocked by security policy\n",
+		"Page 1: file:///tmp/private - blocked by security policy\n",
+		"Page 2: javascript:evil - blocked by security policy\n",
+		"Page 2: mailto:user@example.com - skipped\n",
+	} {
+		if count := strings.Count(strictOutput, finding); count != 1 {
+			t.Fatalf("strict output contains %q %d times, want once: %q", finding, count, strictOutput)
+		}
+	}
+
+	quietOutput, err := runLinkValidationCLI(t, inFile, "relaxed", true, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if quietOutput != "" {
+		t.Fatalf("quiet relaxed output: got %q, want empty", quietOutput)
+	}
+
+	quietOutput, err = runLinkValidationCLI(t, inFile, "strict", true, 0)
+	if err == nil || !strings.Contains(err.Error(), "link verification failed") {
+		t.Fatalf("quiet strict validation: got %v, want link verification error", err)
+	}
+	if quietOutput != "" {
+		t.Fatalf("quiet strict output: got %q, want empty", quietOutput)
+	}
+}
+
+func TestValidateLinksCLIReportsExternalReferences(t *testing.T) {
+	inFile := externalReferenceValidationTestFile(t)
+	warnings := []string{
+		"pdfcpu skipped: page 1: child - blocked by security policy\n",
+		"pdfcpu skipped: page 1: embedded.pdf - GoToE action target is not opened\n",
+		"pdfcpu skipped: page 1: form.fdf - ImportData action target is not opened\n",
+		"pdfcpu skipped: page 1: http://127.0.0.1/submit - blocked by security policy\n",
+		"pdfcpu skipped: page 1: remote.pdf - GoToR action target is not opened\n",
+		"pdfcpu skipped: page 1: viewer.exe - Launch action target is not executed\n",
+	}
+
+	relaxedOutput, err := runLinkValidationCLI(t, inFile, "relaxed", false, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, warning := range warnings {
+		if count := strings.Count(relaxedOutput, warning); count != 1 {
+			t.Fatalf("relaxed output contains %q %d times, want once: %q", warning, count, relaxedOutput)
+		}
+	}
+
+	strictOutput, err := runLinkValidationCLI(t, inFile, "strict", false, 0)
+	if err == nil || !strings.Contains(err.Error(), "link verification failed") {
+		t.Fatalf("strict validation: got %v, want link verification error", err)
+	}
+	for _, finding := range []string{
+		"Page 1: child - blocked by security policy\n",
+		"Page 1: embedded.pdf - skipped\n",
+		"Page 1: form.fdf - skipped\n",
+		"Page 1: http://127.0.0.1/submit - blocked by security policy\n",
+		"Page 1: remote.pdf - skipped\n",
+		"Page 1: viewer.exe - skipped\n",
+	} {
+		if count := strings.Count(strictOutput, finding); count != 1 {
+			t.Fatalf("strict output contains %q %d times, want once: %q", finding, count, strictOutput)
+		}
+	}
+}
+
+func TestValidateLinksCLIOfflineReportsEveryTarget(t *testing.T) {
+	inFile := offlineLinkValidationTestFile(t)
+	warnings := []string{
+		"pdfcpu skipped: page 1: child - offline mode: HTTP link was not checked\n",
+		"pdfcpu skipped: page 1: https://example.com/public - offline mode: HTTP link was not checked\n",
+		"pdfcpu skipped: page 1: remote.pdf - GoToR action target is not opened\n",
+		"pdfcpu skipped: page 1: viewer.exe - Launch action target is not executed\n",
+	}
+
+	relaxedOutput, err := runLinkValidationCLIWithOffline(t, inFile, "relaxed", false, 0, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, warning := range warnings {
+		if count := strings.Count(relaxedOutput, warning); count != 1 {
+			t.Fatalf("relaxed output contains %q %d times, want once: %q", warning, count, relaxedOutput)
+		}
+	}
+
+	strictOutput, err := runLinkValidationCLIWithOffline(t, inFile, "strict", false, 0, true)
+	if err == nil || !strings.Contains(err.Error(), "link verification failed") {
+		t.Fatalf("strict validation: got %v, want link verification error", err)
+	}
+	for _, uri := range []string{"child", "https://example.com/public", "remote.pdf", "viewer.exe"} {
+		finding := fmt.Sprintf("Page 1: %s - skipped\n", uri)
+		if count := strings.Count(strictOutput, finding); count != 1 {
+			t.Fatalf("strict output contains %q %d times, want once: %q", finding, count, strictOutput)
+		}
 	}
 }
 
