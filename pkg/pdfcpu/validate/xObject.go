@@ -63,7 +63,7 @@ func validateReferenceDict(xRefTable *model.XRefTable, d types.Dict) error {
 	dictName := "refDict"
 
 	// F, file spec, required
-	_, err := validateFileSpecEntry(xRefTable, d, dictName, "F", REQUIRED, model.V10)
+	f, err := validateFileSpecEntry(xRefTable, d, dictName, "F", REQUIRED, model.V10)
 	if err != nil {
 		return fmt.Errorf("%s.F: %w", dictName, err)
 	}
@@ -84,6 +84,9 @@ func validateReferenceDict(xRefTable *model.XRefTable, d types.Dict) error {
 
 	if err != nil {
 		return fmt.Errorf("%s.ID: %w", dictName, err)
+	}
+	if !isEmbeddedFileSpecification(xRefTable, f) {
+		collectFileSpecificationTarget(xRefTable, f, linkTargetFile, linkSourceReferenceXObject)
 	}
 	return nil
 }
