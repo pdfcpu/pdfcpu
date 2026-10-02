@@ -511,49 +511,159 @@ func isEmptyEmbeddedFileSpecification(xRefTable *model.XRefTable, o types.Object
 	return err == nil && ef != nil && len(ef) == 0
 }
 
-func validateSlideShowResources(xRefTable *model.XRefTable, d types.Dict) error {
-	const (
-		dictName  = "slideShowDict"
-		entryName = "Resources"
-	)
-	a, err := validateArrayEntry(xRefTable, d, 0, dictName, entryName, REQUIRED, model.V14, nil)
+func validateSlideShowResource(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+	if err := xRefTable.ValidateVersion("SlideShowResource", sinceVersion); err != nil {
+		return err
+	}
+
+	resource, err := xRefTable.Dereference(o)
+	if err != nil {
+		return fmt.Errorf("slide show resource: dereference: %w", err)
+	}
+	if resource == nil {
+		return errors.New("slide show resource: missing object")
+	}
+
+	var d types.Dict
+	switch resource := resource.(type) {
+	case types.Dict:
+		d = resource
+	case types.StreamDict:
+		d = resource.Dict
+	default:
+		return fmt.Errorf("slide show resource: expected dictionary or stream, got %T", resource)
+	}
+
+	typeName, err := validateNameEntry(xRefTable, d, 0, "slideShowResource", "Type", REQUIRED, model.V10, nil)
 	if err != nil {
 		return err
 	}
-	objNr := validationEntryObjectNumber(0, d, entryName)
-	if err = validateArrayPairs(a, objNr, dictName, entryName, 1); err != nil {
-		return err
+	isFileSpec := typeName.Value() == "Filespec" || typeName.Value() == "FileSpec"
+	if xRefTable.ValidationMode == model.ValidationRelaxed && typeName.Value() == "F" {
+		isFileSpec = true
 	}
-	for i, o := range a {
-		entryObjNr := validationObjectNumber(objNr, o)
-		if i%2 == 0 {
-			o, err = xRefTable.Dereference(o)
-			if err == nil {
-				_, err = types.StringOrHexLiteral(o)
-			}
-			if err != nil {
-				err = fmt.Errorf("%s.%s[%d]: expected string: %w", dictName, entryName, i, err)
-				return model.WithValidationErrorObject(err, entryObjNr)
-			}
-			continue
-		}
-		if _, ok := o.(types.IndirectRef); !ok {
-			err = fmt.Errorf("%s.%s[%d]: expected indirect reference", dictName, entryName, i)
-			return model.WithValidationErrorObject(err, entryObjNr)
-		}
-		o, err = xRefTable.Dereference(o)
-		if err != nil || o == nil {
-			if err == nil {
-				err = errors.New("missing referenced resource")
-			}
-			err = fmt.Errorf("%s.%s[%d]: %w", dictName, entryName, i, err)
-			return model.WithValidationErrorObject(err, entryObjNr)
-		}
+	if !isFileSpec {
+		return nil
+	}
+
+	f, err := validateFileSpecificationWithoutLinkCollection(xRefTable, o)
+	if err != nil {
+		return fmt.Errorf("slide show resource file specification: %w", err)
+	}
+	if !isEmbeddedFileSpecification(xRefTable, f) {
+		collectDocumentFileSpecificationTarget(
+			xRefTable, f, linkTargetFile, linkSourceAlternatePresentation,
+		)
 	}
 	return nil
 }
 
-func validateSlideShowDict(xRefTable *model.XRefTable, d types.Dict) error {
+func validateLegacySlideShowResource(xRefTable *model.XRefTable, o types.Object) error {
+	resource, err := xRefTable.Dereference(o)
+	if err != nil {
+		return fmt.Errorf("slide show resource: dereference: %w", err)
+	}
+	if resource == nil {
+		return errors.New("slide show resource: missing object")
+	}
+
+	var d types.Dict
+	switch resource := resource.(type) {
+	case types.Dict:
+		d = resource
+	case types.StreamDict:
+		d = resource.Dict
+	default:
+		return nil
+	}
+	if _, found := d.Find("Type"); !found {
+		return nil
+	}
+	return validateSlideShowResource(xRefTable, o, model.V14)
+}
+
+func validateLegacySlideShowResources(c context.Context, xRefTable *model.XRefTable, a types.Array, objNr int, startResource string) error {
+	const (
+		dictName  = "slideShowDict"
+		entryName = "Resources"
+	)
+	if err := validateArrayPairs(a, objNr, dictName, entryName, 1); err != nil {
+		return err
+	}
+	message := "slideShowDict.Resources: accepted legacy flat resource array"
+	cause := model.WithValidationErrorObject(errors.New(message), objNr)
+	xRefTable.AddValidationNotice(model.NewValidationNotice(
+		model.NoticePhaseValidate, model.NoticeSkipped, message, cause,
+	))
+	found := false
+	for i := 0; i < len(a); i += 2 {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		keyObjNr := validationObjectNumber(objNr, a[i])
+		o, err := xRefTable.Dereference(a[i])
+		if err != nil {
+			return model.WithValidationErrorObject(fmt.Errorf("%s.%s[%d]: dereference key: %w", dictName, entryName, i, err), keyObjNr)
+		}
+		key, err := types.StringOrHexLiteral(o)
+		if err != nil {
+			return model.WithValidationErrorObject(fmt.Errorf("%s.%s[%d]: expected string: %w", dictName, entryName, i, err), keyObjNr)
+		}
+		found = found || *key == startResource
+		resource := a[i+1]
+		resourceObjNr := validationObjectNumber(objNr, resource)
+		if _, ok := resource.(types.IndirectRef); !ok {
+			return model.WithValidationErrorObject(
+				fmt.Errorf("%s.%s[%d]: expected indirect reference", dictName, entryName, i+1), resourceObjNr,
+			)
+		}
+		if err = validateLegacySlideShowResource(xRefTable, resource); err != nil {
+			return model.WithValidationErrorObject(
+				fmt.Errorf("%s.%s[%d]: %w", dictName, entryName, i+1, err), resourceObjNr,
+			)
+		}
+	}
+	if !found {
+		return fmt.Errorf("%s.StartResource: resource %q not found", dictName, startResource)
+	}
+	return nil
+}
+
+func validateSlideShowResources(c context.Context, xRefTable *model.XRefTable, d types.Dict, startResource string) error {
+	const (
+		dictName  = "slideShowDict"
+		entryName = "Resources"
+	)
+	rawResources := d[entryName]
+	resourcesObjNr := validationObjectNumber(0, rawResources)
+	resources, err := validateEntry(xRefTable, d, 0, dictName, entryName, REQUIRED, model.V14)
+	if err != nil {
+		return err
+	}
+	if a, ok := resources.(types.Array); ok && xRefTable.ValidationMode == model.ValidationRelaxed {
+		return validateLegacySlideShowResources(c, xRefTable, a, resourcesObjNr, startResource)
+	}
+	resourcesDict, ok := resources.(types.Dict)
+	if !ok {
+		return model.WithValidationErrorObject(
+			fmt.Errorf("dict=%s entry=%s invalid type %T", dictName, entryName, resources), resourcesObjNr,
+		)
+	}
+	_, _, tree, err := validateNameTree(
+		c, xRefTable, "SlideShowResources", resourcesDict, resourcesObjNr, true, rawResources,
+	)
+	if err != nil {
+		return err
+	}
+	if _, found, err := tree.Value(c, startResource); err != nil {
+		return err
+	} else if !found {
+		return fmt.Errorf("%s.StartResource: resource %q not found", dictName, startResource)
+	}
+	return nil
+}
+
+func validateSlideShowDict(c context.Context, xRefTable *model.XRefTable, d types.Dict) error {
 	// see 13.5, table 297
 
 	dictName := "slideShowDict"
@@ -570,19 +680,17 @@ func validateSlideShowDict(xRefTable *model.XRefTable, d types.Dict) error {
 		return err
 	}
 
-	// Resources, required array of string and indirect-reference pairs, since V1.4
-	err = validateSlideShowResources(xRefTable, d)
+	// StartResource, required, byte string, since V1.4
+	startResource, err := validateStringEntry(xRefTable, d, 0, dictName, "StartResource", REQUIRED, model.V14, nil)
 	if err != nil {
 		return err
 	}
 
-	// StartResource, required, byte string, since V1.4
-	_, err = validateStringEntry(xRefTable, d, 0, dictName, "StartResource", REQUIRED, model.V14, nil)
-
-	return err
+	// Resources, required name tree, since V1.4
+	return validateSlideShowResources(c, xRefTable, d, *startResource)
 }
 
-func validateAlternatePresentationsNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+func validateAlternatePresentationsNameTreeValue(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	// see 13.5
 
 	// Value is a slide show dict.
@@ -599,7 +707,7 @@ func validateAlternatePresentationsNameTreeValue(xRefTable *model.XRefTable, o t
 	}
 
 	if d != nil {
-		err = validateSlideShowDict(xRefTable, d)
+		err = validateSlideShowDict(c, xRefTable, d)
 	}
 
 	return err
@@ -693,8 +801,13 @@ func validateNameTreeValue(c context.Context, name string, xRefTable *model.XRef
 		"URLS": {func(x *model.XRefTable, o types.Object, version model.Version) error {
 			return validateURLSNameTreeValue(c, x, o, version)
 		}, model.V13, model.V13},
-		"EmbeddedFiles":          {validateEmbeddedFilesNameTreeValue, model.V14, model.V11},
-		"AlternatePresentations": {validateAlternatePresentationsNameTreeValue, model.V14, model.V14},
+		"EmbeddedFiles": {validateEmbeddedFilesNameTreeValue, model.V14, model.V11},
+		"SlideShowResources": {func(x *model.XRefTable, o types.Object, version model.Version) error {
+			return validateSlideShowResource(x, o, version)
+		}, model.V14, model.V14},
+		"AlternatePresentations": {func(x *model.XRefTable, o types.Object, version model.Version) error {
+			return validateAlternatePresentationsNameTreeValue(c, x, o, version)
+		}, model.V14, model.V14},
 		"Renditions": {func(x *model.XRefTable, o types.Object, version model.Version) error {
 			return validateRenditionsNameTreeValue(c, x, o, version)
 		}, model.V15, model.V15},

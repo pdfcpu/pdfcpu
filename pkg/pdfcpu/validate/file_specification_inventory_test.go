@@ -17,6 +17,8 @@ limitations under the License.
 package validate
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -216,5 +218,176 @@ func TestURLFileSpecificationIsCheckedAsURI(t *testing.T) {
 	}
 	if got := ctx.URIs[ctx.CurPage][uri]; got != "" {
 		t.Fatalf("link status: got %q, want success", got)
+	}
+}
+
+func TestAlternatePresentationsResourceInventory(t *testing.T) {
+	const uri = "https://example.invalid/slideshow.svg"
+
+	newContext := func(t *testing.T) *model.Context {
+		t.Helper()
+		ctx := externalReferenceContext(t)
+		fileSpec := urlSpecification(uri)
+		fileSpec["Type"] = types.Name("Filespec")
+		ctx.XRefTable.Table[30] = model.NewXRefTableEntryGen0(fileSpec)
+		return ctx
+	}
+
+	t.Run("specification name tree", func(t *testing.T) {
+		ctx := newContext(t)
+		d := types.Dict{
+			"Type":    types.Name("SlideShow"),
+			"Subtype": types.Name("Embedded"),
+			"Resources": types.Dict{
+				"Names": types.Array{types.StringLiteral("slideshow.svg"), *types.NewIndirectRef(30, 0)},
+			},
+			"StartResource": types.StringLiteral("slideshow.svg"),
+		}
+		if err := validateAlternatePresentationsNameTreeValue(t.Context(), ctx.XRefTable, d, model.V14); err != nil {
+			t.Fatal(err)
+		}
+		want := linkTarget{kind: linkTargetURI, source: linkSourceAlternatePresentation}
+		if got, found := inventoryTargetAtPage(ctx, 0, uri); !found || got != want {
+			t.Fatalf("slide show URL resource: got %+v, found=%t, want %+v", got, found, want)
+		}
+		if _, found := inventoryTarget(ctx, uri); found {
+			t.Fatal("document resource assigned to current page")
+		}
+	})
+
+	t.Run("image XObject", func(t *testing.T) {
+		ctx := externalReferenceContext(t)
+		ctx.XRefTable.Table[31] = model.NewXRefTableEntryGen0(types.StreamDict{
+			Dict: types.Dict{"Type": types.Name("XObject"), "Subtype": types.Name("Image")},
+		})
+		d := types.Dict{
+			"Type":    types.Name("SlideShow"),
+			"Subtype": types.Name("Embedded"),
+			"Resources": types.Dict{
+				"Names": types.Array{types.StringLiteral("image.jpg"), *types.NewIndirectRef(31, 0)},
+			},
+			"StartResource": types.StringLiteral("image.jpg"),
+		}
+		if err := validateAlternatePresentationsNameTreeValue(t.Context(), ctx.XRefTable, d, model.V14); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("embedded file", func(t *testing.T) {
+		ctx := externalReferenceContext(t)
+		fileName := "slideshow.svg"
+		ctx.XRefTable.Table[31] = model.NewXRefTableEntryGen0(types.StreamDict{
+			Dict: types.Dict{"Type": types.Name("EmbeddedFile")},
+		})
+		ctx.XRefTable.Table[30] = model.NewXRefTableEntryGen0(types.Dict{
+			"Type": types.Name("Filespec"),
+			"F":    types.StringLiteral(fileName),
+			"EF":   types.Dict{"F": *types.NewIndirectRef(31, 0)},
+		})
+		d := types.Dict{
+			"Type":    types.Name("SlideShow"),
+			"Subtype": types.Name("Embedded"),
+			"Resources": types.Dict{
+				"Names": types.Array{types.StringLiteral(fileName), *types.NewIndirectRef(30, 0)},
+			},
+			"StartResource": types.StringLiteral(fileName),
+		}
+		if err := validateAlternatePresentationsNameTreeValue(t.Context(), ctx.XRefTable, d, model.V14); err != nil {
+			t.Fatal(err)
+		}
+		if target, found := inventoryTarget(ctx, fileName); found {
+			t.Fatalf("embedded slide show resource unexpectedly collected as external: %+v", target)
+		}
+	})
+
+	t.Run("missing start resource", func(t *testing.T) {
+		ctx := newContext(t)
+		d := types.Dict{
+			"Type":    types.Name("SlideShow"),
+			"Subtype": types.Name("Embedded"),
+			"Resources": types.Dict{
+				"Names": types.Array{types.StringLiteral("slideshow.svg"), *types.NewIndirectRef(30, 0)},
+			},
+			"StartResource": types.StringLiteral("missing.svg"),
+		}
+		if err := validateAlternatePresentationsNameTreeValue(t.Context(), ctx.XRefTable, d, model.V14); err == nil {
+			t.Fatal("missing StartResource accepted")
+		}
+	})
+
+	t.Run("missing resource type", func(t *testing.T) {
+		ctx := externalReferenceContext(t)
+		ctx.XRefTable.Table[31] = model.NewXRefTableEntryGen0(types.StreamDict{Dict: types.Dict{}})
+		d := types.Dict{
+			"Type":    types.Name("SlideShow"),
+			"Subtype": types.Name("Embedded"),
+			"Resources": types.Dict{
+				"Names": types.Array{types.StringLiteral("image.jpg"), *types.NewIndirectRef(31, 0)},
+			},
+			"StartResource": types.StringLiteral("image.jpg"),
+		}
+		if err := validateAlternatePresentationsNameTreeValue(t.Context(), ctx.XRefTable, d, model.V14); err == nil {
+			t.Fatal("slide show resource without Type accepted")
+		}
+	})
+
+	t.Run("cancellation", func(t *testing.T) {
+		ctx := newContext(t)
+		d := types.Dict{
+			"Type":    types.Name("SlideShow"),
+			"Subtype": types.Name("Embedded"),
+			"Resources": types.Dict{
+				"Names": types.Array{types.StringLiteral("slideshow.svg"), *types.NewIndirectRef(30, 0)},
+			},
+			"StartResource": types.StringLiteral("slideshow.svg"),
+		}
+		c, cancel := context.WithCancel(t.Context())
+		cancel()
+		err := validateAlternatePresentationsNameTreeValue(c, ctx.XRefTable, d, model.V14)
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("got %v, want context cancellation", err)
+		}
+	})
+}
+
+func TestAlternatePresentationsLegacyResourceArray(t *testing.T) {
+	const uri = "https://example.invalid/slideshow.svg"
+	d := types.Dict{
+		"Type":          types.Name("SlideShow"),
+		"Subtype":       types.Name("Embedded"),
+		"Resources":     types.Array{types.StringLiteral("slideshow.svg"), *types.NewIndirectRef(30, 0)},
+		"StartResource": types.StringLiteral("slideshow.svg"),
+	}
+	newContext := func(t *testing.T, resource types.Object) *model.Context {
+		t.Helper()
+		ctx := externalReferenceContext(t)
+		ctx.XRefTable.Table[30] = model.NewXRefTableEntryGen0(resource)
+		return ctx
+	}
+
+	ctx := newContext(t, urlSpecification(uri))
+	if err := validateAlternatePresentationsNameTreeValue(t.Context(), ctx.XRefTable, d, model.V14); err == nil {
+		t.Fatal("legacy flat Resources array accepted")
+	}
+
+	ctx = newContext(t, urlSpecification(uri))
+	ctx.XRefTable.ValidationMode = model.ValidationRelaxed
+	if err := validateAlternatePresentationsNameTreeValue(t.Context(), ctx.XRefTable, d, model.V14); err != nil {
+		t.Fatalf("relaxed legacy Resources array rejected: %v", err)
+	}
+	want := linkTarget{kind: linkTargetURI, source: linkSourceAlternatePresentation}
+	if got, found := inventoryTargetAtPage(ctx, 0, uri); !found || got != want {
+		t.Fatalf("legacy slide show URL resource: got %+v, found=%t, want %+v", got, found, want)
+	}
+	notices := ctx.ValidationReport().Notices()
+	if len(notices) != 1 || notices[0].Disposition != model.NoticeSkipped ||
+		notices[0].Message != "slideShowDict.Resources: accepted legacy flat resource array" {
+		t.Fatalf("legacy slide show notices: %+v", notices)
+	}
+
+	ctx = newContext(t, types.StreamDict{Dict: types.Dict{}})
+	ctx.XRefTable.ValidationMode = model.ValidationRelaxed
+	if err := validateAlternatePresentationsNameTreeValue(t.Context(), ctx.XRefTable, d, model.V14); err != nil {
+		t.Fatalf("relaxed untyped legacy resource rejected: %v", err)
 	}
 }
