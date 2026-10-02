@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -118,6 +119,48 @@ func TestURLSNameTreeArrayValueInventory(t *testing.T) {
 	c, cancel := context.WithCancel(t.Context())
 	cancel()
 	if err := validateURLSNameTreeValue(c, ctx.XRefTable, value, model.V13); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context cancellation", err)
+	}
+}
+
+func TestIDSNameTreeArrayValueInventory(t *testing.T) {
+	ctx := externalReferenceContext(t)
+	contentSet := func(id, sourceURL string, subtype types.Name) types.Dict {
+		d := types.Dict{
+			"S":  subtype,
+			"ID": types.StringLiteral(id),
+			"O":  types.Array{*types.NewIndirectRef(10, 0)},
+			"SI": types.Dict{"AU": types.StringLiteral(sourceURL)},
+		}
+		if subtype == "SIS" {
+			d["R"] = types.Integer(1)
+		}
+		return d
+	}
+	sources := []string{"https://example.invalid/one", "https://example.invalid/two"}
+	value := types.Array{
+		contentSet("one", sources[0], types.Name("SPS")),
+		contentSet("two", sources[1], types.Name("SIS")),
+	}
+	if err := validateIDSNameTreeValue(t.Context(), ctx.XRefTable, value, model.V13); err != nil {
+		t.Fatal(err)
+	}
+	want := linkTarget{kind: linkTargetURI, source: linkSourceWebCaptureSource}
+	for _, source := range sources {
+		if got, found := inventoryTargetAtPage(ctx, 0, source); !found || got != want {
+			t.Fatalf("IDS array source %q: got %+v, found=%t, want %+v", source, got, found, want)
+		}
+	}
+	if err := validateIDSNameTreeValue(t.Context(), ctx.XRefTable, types.Array{}, model.V13); err != nil {
+		t.Fatalf("empty IDS array rejected: %v", err)
+	}
+	err := validateIDSNameTreeValue(t.Context(), ctx.XRefTable, types.Array{types.Integer(1)}, model.V13)
+	if err == nil || !strings.Contains(err.Error(), "IDS name tree value[0]") {
+		t.Fatalf("invalid IDS array member: got %v", err)
+	}
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := validateIDSNameTreeValue(c, ctx.XRefTable, value, model.V13); !errors.Is(err, context.Canceled) {
 		t.Fatalf("got %v, want context cancellation", err)
 	}
 }

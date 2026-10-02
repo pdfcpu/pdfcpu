@@ -404,28 +404,7 @@ func validateWebCaptureContentSetDict(XRefTable *model.XRefTable, d types.Dict, 
 	return err
 }
 
-func validateIDSNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
-	// see 14.10.4
-
-	// Version check
-	err := xRefTable.ValidateVersion("IDSNameTreeValue", sinceVersion)
-	if err != nil {
-		return err
-	}
-
-	// Value is a web capture content set.
-	d, err := xRefTable.DereferenceDict(o)
-	if err != nil {
-		return fmt.Errorf("IDS name tree value: dereference content set dict: %w", err)
-	}
-	if d == nil {
-		return errors.New("IDS name tree value: missing content set dict")
-	}
-
-	return validateWebCaptureContentSetDict(xRefTable, d, validationObjectNumber(0, o))
-}
-
-func validateURLSContentSet(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) error {
+func validateWebCaptureContentSet(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) error {
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil {
 		return fmt.Errorf("dereference content set dict: %w", err)
@@ -436,35 +415,45 @@ func validateURLSContentSet(xRefTable *model.XRefTable, o types.Object, ownerObj
 	return validateWebCaptureContentSetDict(xRefTable, d, validationObjectNumber(ownerObjNr, o))
 }
 
-func validateURLSNameTreeValue(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
-	// see 14.10.4
-
-	// Version check
-	err := xRefTable.ValidateVersion("URLSNameTreeValue", sinceVersion)
-	if err != nil {
-		return err
-	}
-
+func validateWebCaptureNameTreeValue(c context.Context, xRefTable *model.XRefTable, o types.Object, name string) error {
 	value, err := xRefTable.Dereference(o)
 	if err != nil {
-		return fmt.Errorf("URLS name tree value: dereference: %w", err)
+		return fmt.Errorf("%s name tree value: dereference: %w", name, err)
 	}
 	ownerObjNr := validationObjectNumber(0, o)
 	switch value := value.(type) {
 	case types.Dict:
-		return validateURLSContentSet(xRefTable, value, ownerObjNr)
+		return validateWebCaptureContentSet(xRefTable, value, ownerObjNr)
 	case types.Array:
 		for i, contentSet := range value {
 			if err := contextutil.Check(c); err != nil {
 				return err
 			}
-			if err := validateURLSContentSet(xRefTable, contentSet, ownerObjNr); err != nil {
-				return fmt.Errorf("URLS name tree value[%d]: %w", i, err)
+			if err := validateWebCaptureContentSet(xRefTable, contentSet, ownerObjNr); err != nil {
+				return fmt.Errorf("%s name tree value[%d]: %w", name, i, err)
 			}
 		}
 		return nil
 	}
-	return fmt.Errorf("URLS name tree value: expected content set dict or array, got %T", value)
+	return fmt.Errorf("%s name tree value: expected content set dict or array, got %T", name, value)
+}
+
+func validateIDSNameTreeValue(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+	// see 14.10.4
+
+	if err := xRefTable.ValidateVersion("IDSNameTreeValue", sinceVersion); err != nil {
+		return err
+	}
+	return validateWebCaptureNameTreeValue(c, xRefTable, o, "IDS")
+}
+
+func validateURLSNameTreeValue(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+	// see 14.10.4
+
+	if err := xRefTable.ValidateVersion("URLSNameTreeValue", sinceVersion); err != nil {
+		return err
+	}
+	return validateWebCaptureNameTreeValue(c, xRefTable, o, "URLS")
 }
 
 func validateEmbeddedFilesNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
@@ -698,7 +687,9 @@ func validateNameTreeValue(c context.Context, name string, xRefTable *model.XRef
 		"JavaScript": {validateJavaScriptNameTreeValue, model.V13, model.V13},
 		"Pages":      {validatePagesNameTreeValue, model.V13, model.V13},
 		"Templates":  {validateTemplatesNameTreeValue, model.V13, model.V13},
-		"IDS":        {validateIDSNameTreeValue, model.V13, model.V13},
+		"IDS": {func(x *model.XRefTable, o types.Object, version model.Version) error {
+			return validateIDSNameTreeValue(c, x, o, version)
+		}, model.V13, model.V13},
 		"URLS": {func(x *model.XRefTable, o types.Object, version model.Version) error {
 			return validateURLSNameTreeValue(c, x, o, version)
 		}, model.V13, model.V13},
