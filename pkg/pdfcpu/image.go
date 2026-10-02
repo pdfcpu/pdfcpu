@@ -362,6 +362,13 @@ func prepareImageDecode(xRefTable *model.XRefTable, sd *types.StreamDict, contex
 	return nil
 }
 
+func imageDecodeLimit(xRefTable *model.XRefTable) int64 {
+	if xRefTable == nil || xRefTable.Conf == nil {
+		return model.DefaultResourceLimits().MaxDecodeBytes
+	}
+	return xRefTable.Conf.Limits.MaxDecodeBytes
+}
+
 func validateImageDimensions(ctx *model.Context, objNr, w, h int) error {
 	imgObj := ctx.Optimize.ImageObjects[objNr]
 	if imgObj == nil {

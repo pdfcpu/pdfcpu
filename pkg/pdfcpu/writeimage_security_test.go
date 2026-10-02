@@ -19,11 +19,27 @@ package pdfcpu
 import (
 	"fmt"
 	"image/png"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func TestRenderDeviceCMYKRejectsShortSoftMaskedImage(t *testing.T) {
+	im := &PDFImage{
+		objNr:    7,
+		sd:       &types.StreamDict{Content: []byte{0}},
+		bpc:      8,
+		w:        1,
+		h:        1,
+		softMask: []byte{255},
+	}
+	_, _, err := renderDeviceCMYKToTIFF(im)
+	if err == nil || !strings.Contains(err.Error(), "image obj#7 CMYK: corrupt image object") {
+		t.Fatalf("got %v, want CMYK sample error", err)
+	}
+}
 
 // TestRenderDeviceGray16BPC verifies that a valid 16-bit grayscale image renders without a panic.
 func TestRenderDeviceGray16BPC(t *testing.T) {

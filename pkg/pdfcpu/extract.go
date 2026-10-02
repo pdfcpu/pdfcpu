@@ -461,7 +461,7 @@ func decodeImage(ctx *model.Context, sd *types.StreamDict, filters, lastFilter s
 	switch lastFilter {
 
 	case filter.DCT, filter.JPX, filter.JBIG2, filter.Flate, filter.LZW, filter.CCITTFax, filter.RunLength:
-		if err := sd.Decode(); errors.Is(err, filter.ErrUnsupportedFilter) {
+		if err := sd.DecodeWithLimit(imageDecodeLimit(ctx.XRefTable)); errors.Is(err, filter.ErrUnsupportedFilter) {
 			return fmt.Errorf("image obj#%d filter %s: %w (%w)", objNr, filters, ErrUnsupportedResource, err)
 		} else if err != nil {
 			return fmt.Errorf("image obj#%d decode: %w", objNr, err)

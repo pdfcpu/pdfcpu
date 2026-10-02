@@ -248,8 +248,8 @@ func streamBytes(xRefTable *model.XRefTable, sd *types.StreamDict, context strin
 		if log.InfoEnabled() {
 			log.Info.Printf("streamBytes: no filter pipeline\n")
 		}
-		if err := sd.Decode(); err != nil {
-			return nil, err
+		if err := sd.DecodeWithLimit(imageDecodeLimit(xRefTable)); err != nil {
+			return nil, fmt.Errorf("%s decode: %w", context, err)
 		}
 		return sd.Content, nil
 	}
@@ -268,8 +268,8 @@ func streamBytes(xRefTable *model.XRefTable, sd *types.StreamDict, context strin
 
 	case filter.DCT, filter.Flate, filter.CCITTFax, filter.ASCII85, filter.RunLength, filter.JPX, filter.JBIG2:
 		// If color space is CMYK then write .tif else write .png
-		if err := sd.Decode(); err != nil {
-			return nil, err
+		if err := sd.DecodeWithLimit(imageDecodeLimit(xRefTable)); err != nil {
+			return nil, fmt.Errorf("%s decode: %w", context, err)
 		}
 
 	default:
@@ -356,7 +356,7 @@ func imageForCMYKWithoutSoftMask(im *PDFImage) image.Image {
 	for y := 0; y < im.h; y++ {
 		for x := 0; x < im.w; x++ {
 			img.Set(x, y, color.CMYK{C: b[i], M: b[i+1], Y: b[i+2], K: b[i+3]})
-			i += im.comp
+			i += 4
 		}
 	}
 
@@ -388,6 +388,16 @@ func renderDeviceCMYKToTIFF(im *PDFImage) (io.Reader, string, error) {
 	b := im.sd.Content
 	if log.DebugEnabled() {
 		log.Debug.Printf("renderDeviceCMYKToTIFF: CMYK objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
+	}
+	if im.bpc != 8 {
+		return nil, "", fmt.Errorf("image obj#%d CMYK: unsupported bits per component %d", im.objNr, im.bpc)
+	}
+	imageBytes, err := checkedImageBytes(im.w, im.h, 4, im.bpc)
+	if err != nil {
+		return nil, "", fmt.Errorf("image obj#%d CMYK: %w", im.objNr, err)
+	}
+	if int64(len(b)) < imageBytes {
+		return nil, "", fmt.Errorf("image obj#%d CMYK: corrupt image object: need %d bytes, have %d", im.objNr, imageBytes, len(b))
 	}
 
 	var img image.Image
