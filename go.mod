@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/google/jsonschema-go v0.4.3
-	github.com/hhrutter/tiff v1.0.6
+	github.com/hhrutter/tiff v1.0.7
 	github.com/mattn/go-runewidth v0.0.30
 	github.com/spf13/cobra v1.10.2
 	go.yaml.in/yaml/v3 v3.0.5
