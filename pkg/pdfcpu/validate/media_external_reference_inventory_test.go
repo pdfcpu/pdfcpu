@@ -17,6 +17,8 @@ limitations under the License.
 package validate
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -76,5 +78,46 @@ func TestURLSNameTreeExternalReferenceInventory(t *testing.T) {
 		if status := ctx.URIs[0][target]; status != "" {
 			t.Fatalf("URLS target %q: got status %q, want success", target, status)
 		}
+	}
+}
+
+func TestURLSNameTreeArrayValueInventory(t *testing.T) {
+	ctx := externalReferenceContext(t)
+	contentSet := func(id, sourceURL string, subtype types.Name) types.Dict {
+		d := types.Dict{
+			"S":  subtype,
+			"ID": types.StringLiteral(id),
+			"O":  types.Array{*types.NewIndirectRef(10, 0)},
+			"SI": types.Dict{"AU": types.StringLiteral(sourceURL)},
+		}
+		if subtype == "SIS" {
+			d["R"] = types.Integer(1)
+		}
+		return d
+	}
+	sources := []string{"https://example.invalid/one", "https://example.invalid/two"}
+	value := types.Array{
+		contentSet("one", sources[0], types.Name("SPS")),
+		contentSet("two", sources[1], types.Name("SIS")),
+	}
+	if err := validateURLSNameTreeValue(t.Context(), ctx.XRefTable, value, model.V13); err != nil {
+		t.Fatal(err)
+	}
+	want := linkTarget{kind: linkTargetURI, source: linkSourceWebCaptureSource}
+	for _, source := range sources {
+		if got, found := inventoryTargetAtPage(ctx, 0, source); !found || got != want {
+			t.Fatalf("URLS array source %q: got %+v, found=%t, want %+v", source, got, found, want)
+		}
+	}
+	if err := validateURLSNameTreeValue(t.Context(), ctx.XRefTable, types.Array{}, model.V13); err != nil {
+		t.Fatalf("empty URLS array rejected: %v", err)
+	}
+	if err := validateURLSNameTreeValue(t.Context(), ctx.XRefTable, types.Array{types.Integer(1)}, model.V13); err == nil {
+		t.Fatal("invalid URLS array member accepted")
+	}
+	c, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := validateURLSNameTreeValue(c, ctx.XRefTable, value, model.V13); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want context cancellation", err)
 	}
 }
