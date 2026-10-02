@@ -17,7 +17,6 @@
 package pdfcpu
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -28,6 +27,7 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
+	"github.com/pdfcpu/pdfcpu/internal/inputlimit"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -1005,12 +1005,12 @@ func ImportBookmarks(c context.Context, ctx *model.Context, rd io.Reader, replac
 		return false, errMissingBookmarkJSONReader
 	}
 
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, contextReader{ctx: c, r: rd}); err != nil {
+	bb, err := inputlimit.ReadJSON(contextReader{ctx: c, r: rd})
+	if err != nil {
 		return false, fmt.Errorf("read bookmark JSON: %w", err)
 	}
 
-	bmTree, err := parseBookmarksFromJSON(buf.Bytes())
+	bmTree, err := parseBookmarksFromJSON(bb)
 	if err != nil {
 		return false, fmt.Errorf("parse bookmark JSON: %w", err)
 	}

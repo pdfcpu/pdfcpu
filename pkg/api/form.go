@@ -586,11 +586,10 @@ func formGroupFromReader(c context.Context, rd io.Reader) (*form.FormGroup, erro
 	if err := contextutil.Check(c); err != nil {
 		return nil, err
 	}
-	var buf bytes.Buffer
-	if err := copyStream(c, &buf, rd); err != nil {
+	bb, err := readJSONInput(c, rd)
+	if err != nil {
 		return nil, fmt.Errorf("fill form: read form data: %w", err)
 	}
-	bb := buf.Bytes()
 
 	formGroup := form.FormGroup{}
 	if err := json.Unmarshal(bb, &formGroup); err != nil {
@@ -740,11 +739,10 @@ func parseFormGroup(c context.Context, rd io.Reader) (*form.FormGroup, error) {
 	if err := contextutil.Check(c); err != nil {
 		return nil, err
 	}
-	var buf bytes.Buffer
-	if err := copyStream(c, &buf, rd); err != nil {
+	bb, err := readJSONInput(c, rd)
+	if err != nil {
 		return nil, fmt.Errorf("multi-fill form: read form data: %w", err)
 	}
-	bb := buf.Bytes()
 
 	formGroup := &form.FormGroup{}
 	if err := json.Unmarshal(bb, formGroup); err != nil {

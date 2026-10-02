@@ -26,7 +26,28 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/internal/fileutil"
+	"github.com/pdfcpu/pdfcpu/internal/inputlimit"
 )
+
+type contextReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (r contextReader) Read(p []byte) (int, error) {
+	if err := contextutil.Check(r.ctx); err != nil {
+		return 0, err
+	}
+	return r.r.Read(p)
+}
+
+func readJSONInput(c context.Context, rd io.Reader) ([]byte, error) {
+	return inputlimit.ReadJSON(contextReader{ctx: c, r: rd})
+}
+
+func checkJSONInputSize(jsonBytes []byte) error {
+	return inputlimit.CheckJSONSize(int64(len(jsonBytes)))
+}
 
 type fileOperations struct {
 	openExclusiveFn func(string, int, os.FileMode) (*os.File, error)

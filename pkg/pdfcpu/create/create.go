@@ -18,7 +18,6 @@
 package create
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -28,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
+	"github.com/pdfcpu/pdfcpu/internal/inputlimit"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	pdffont "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -820,12 +820,12 @@ func FromJSON(c context.Context, ctx *model.Context, rd io.Reader) error {
 	if rd == nil {
 		return ErrMissingJSONReader
 	}
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, contextReader{ctx: c, r: rd}); err != nil {
+	bb, err := inputlimit.ReadJSON(contextReader{ctx: c, r: rd})
+	if err != nil {
 		return fmt.Errorf("read JSON: %w", err)
 	}
 
-	pdf, err := parseFromJSON(c, ctx, buf.Bytes())
+	pdf, err := parseFromJSON(c, ctx, bb)
 	if err != nil {
 		return fmt.Errorf("parse JSON: %w", err)
 	}

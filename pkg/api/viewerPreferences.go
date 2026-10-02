@@ -17,7 +17,6 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -272,6 +271,9 @@ func SetViewerPreferencesFromJSONBytes(c context.Context, rs io.ReadSeeker, w io
 	if w == nil {
 		return ErrMissingPDFWriter
 	}
+	if err := checkJSONInputSize(jsonBytes); err != nil {
+		return fmt.Errorf("set viewer preferences: read JSON: %w", err)
+	}
 
 	vp := model.ViewerPreferences{}
 	if err := json.Unmarshal(jsonBytes, &vp); err != nil {
@@ -302,12 +304,12 @@ func SetViewerPreferencesFromJSONReader(c context.Context, rs io.ReadSeeker, w i
 		return fmt.Errorf("set viewer preferences: read JSON: %w", ErrMissingJSONReader)
 	}
 
-	var buf bytes.Buffer
-	if err := copyStream(c, &buf, rd); err != nil {
+	bb, err := readJSONInput(c, rd)
+	if err != nil {
 		return fmt.Errorf("set viewer preferences: read JSON: %w", err)
 	}
 
-	return SetViewerPreferencesFromJSONBytes(c, rs, w, buf.Bytes(), conf)
+	return SetViewerPreferencesFromJSONBytes(c, rs, w, bb, conf)
 }
 
 // SetViewerPreferencesFile sets inFile's viewer preferences,
@@ -423,12 +425,12 @@ func readViewerPreferencesJSON(c context.Context, fileName string) (bb []byte, e
 		err = errors.Join(err, closeFile(f, "set viewer preferences: close JSON input"))
 	}()
 
-	var buf bytes.Buffer
-	if err := copyStream(c, &buf, f); err != nil {
+	bb, err = readJSONInput(c, f)
+	if err != nil {
 		return nil, fmt.Errorf("set viewer preferences: read JSON %s: %w", fileName, err)
 	}
 
-	return buf.Bytes(), contextutil.Check(c)
+	return bb, contextutil.Check(c)
 }
 
 // SetViewerPreferencesFileFromJSONFile sets inFile's viewer preferences corresponding to inFileJSON,
