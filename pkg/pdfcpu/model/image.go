@@ -1122,13 +1122,11 @@ func decodeImage(xRefTable *XRefTable, buf *bytes.Reader, currentOffset int64, g
 		return 0, err
 	}
 
-	// if nextIFDOffset >= uint32(bb.Len()) {
-	// 	fmt.Println("Invalid next IFD offset, stopping.")
-	// 	break
-	// }
-
 	return int64(nextIFDOffset), nil
 }
+
+// maxTIFFPages bounds the number of image resources created from a single TIFF input.
+const maxTIFFPages = 10_000
 
 func createImageResourcesForTIFF(xRefTable *XRefTable, bb bytes.Buffer, gray, sepia bool) ([]ImageResource, error) {
 	imgResources := []ImageResource{}
@@ -1154,11 +1152,24 @@ func createImageResourcesForTIFF(xRefTable *XRefTable, bb bytes.Buffer, gray, se
 		return nil, fmt.Errorf("invalid TIFF file: no valid IFD")
 	}
 
-	var err error
-
 	off := int64(firstIFDOffset)
-
-	for off != 0 && off < int64(bb.Len()) {
+	visited := map[int64]bool{}
+	pageLimit := maxTIFFPages
+	if xRefTable.Conf != nil && xRefTable.Conf.Limits.MaxObjectCount < pageLimit {
+		pageLimit = xRefTable.Conf.Limits.MaxObjectCount
+	}
+	for off != 0 {
+		if off >= int64(bb.Len()) {
+			return nil, fmt.Errorf("invalid TIFF IFD offset %d", off)
+		}
+		if visited[off] {
+			return nil, fmt.Errorf("cyclic TIFF IFD offset %d", off)
+		}
+		if len(imgResources) >= pageLimit {
+			return nil, fmt.Errorf("TIFF page count exceeds limit %d", pageLimit)
+		}
+		visited[off] = true
+		var err error
 		off, err = decodeImage(xRefTable, buf, off, gray, sepia, byteOrder, &imgResources)
 		if err != nil {
 			return nil, err
