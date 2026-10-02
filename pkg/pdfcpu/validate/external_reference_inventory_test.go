@@ -213,3 +213,174 @@ func TestOPIExternalReferenceInventory(t *testing.T) {
 		})
 	}
 }
+
+func TestExternalReferenceActionsAreCollectedForLinkReporting(t *testing.T) {
+	for _, tt := range []struct {
+		name          string
+		action        types.Dict
+		target        string
+		kind          linkTargetKind
+		source        linkSource
+		category      linkResultCategory
+		transportCall int
+	}{
+		{
+			name: "URI",
+			action: types.Dict{
+				"S":   types.Name("URI"),
+				"URI": types.StringLiteral("https://example.invalid/uri-action"),
+			},
+			target:        "https://example.invalid/uri-action",
+			kind:          linkTargetURI,
+			source:        linkSourceURIAction,
+			category:      linkResultOK,
+			transportCall: 1,
+		},
+		{
+			name: "remote go-to",
+			action: types.Dict{
+				"S": types.Name("GoToR"),
+				"F": types.StringLiteral("remote.pdf"),
+				"D": types.StringLiteral("destination"),
+			},
+			target:   "remote.pdf",
+			kind:     linkTargetFile,
+			source:   linkSourceRemoteGoTo,
+			category: linkResultSkipped,
+		},
+		{
+			name: "embedded go-to",
+			action: types.Dict{
+				"S": types.Name("GoToE"),
+				"F": types.StringLiteral("embedded.pdf"),
+				"D": types.StringLiteral("destination"),
+			},
+			target:   "embedded.pdf",
+			kind:     linkTargetFile,
+			source:   linkSourceEmbeddedGoTo,
+			category: linkResultSkipped,
+		},
+		{
+			name: "launch",
+			action: types.Dict{
+				"S": types.Name("Launch"),
+				"F": types.StringLiteral("viewer.exe"),
+			},
+			target:   "viewer.exe",
+			kind:     linkTargetExecutable,
+			source:   linkSourceLaunch,
+			category: linkResultSkipped,
+		},
+		{
+			name: "Windows launch",
+			action: types.Dict{
+				"S":   types.Name("Launch"),
+				"Win": types.Dict{"F": types.StringLiteral("windows.exe")},
+			},
+			target:   "windows.exe",
+			kind:     linkTargetExecutable,
+			source:   linkSourceLaunch,
+			category: linkResultSkipped,
+		},
+		{
+			name: "submit form",
+			action: types.Dict{
+				"S": types.Name("SubmitForm"),
+				"F": urlSpecification("https://example.invalid/submit"),
+			},
+			target:        "https://example.invalid/submit",
+			kind:          linkTargetURI,
+			source:        linkSourceSubmitForm,
+			category:      linkResultOK,
+			transportCall: 1,
+		},
+		{
+			name: "import data",
+			action: types.Dict{
+				"S": types.Name("ImportData"),
+				"F": types.StringLiteral("form.fdf"),
+			},
+			target:   "form.fdf",
+			kind:     linkTargetFile,
+			source:   linkSourceImportData,
+			category: linkResultSkipped,
+		},
+		{
+			name: "thread",
+			action: types.Dict{
+				"S": types.Name("Thread"),
+				"F": types.StringLiteral("articles.pdf"),
+				"D": types.StringLiteral("article"),
+			},
+			target:   "articles.pdf",
+			kind:     linkTargetFile,
+			source:   linkSourceThread,
+			category: linkResultSkipped,
+		},
+		{
+			name: "thread URL",
+			action: types.Dict{
+				"S": types.Name("Thread"),
+				"F": urlSpecification("https://example.invalid/articles.pdf"),
+				"D": types.StringLiteral("article"),
+			},
+			target:        "https://example.invalid/articles.pdf",
+			kind:          linkTargetURI,
+			source:        linkSourceThread,
+			category:      linkResultOK,
+			transportCall: 1,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := externalReferenceContext(t)
+			if err := validateActionDictObject(t.Context(), ctx.XRefTable, tt.action, tt.action, tt.name); err != nil {
+				t.Fatal(err)
+			}
+			wantTarget := linkTarget{kind: tt.kind, source: tt.source}
+			if got, found := inventoryTarget(ctx, tt.target); !found || got != wantTarget {
+				t.Fatalf("collected target: got %+v, want %+v", got, wantTarget)
+			}
+			tr := &successfulLinkTransport{}
+			failed, err := checkLinks(t.Context(), ctx.XRefTable, http.Client{Transport: tr}, []int{ctx.CurPage})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if failed != (tt.category != linkResultOK) {
+				t.Fatalf("failed: got %t, category %d", failed, tt.category)
+			}
+			if tr.calls != tt.transportCall {
+				t.Fatalf("transport calls: got %d, want %d", tr.calls, tt.transportCall)
+			}
+			wantStatus := ""
+			if tt.category == linkResultSkipped {
+				wantStatus = "k"
+			}
+			if got := ctx.URIs[ctx.CurPage][tt.target]; got != wantStatus {
+				t.Fatalf("link status: got %q, want %q", got, wantStatus)
+			}
+		})
+	}
+}
+
+func TestEmbeddedThreadActionIsNotExternal(t *testing.T) {
+	ctx := externalReferenceContext(t)
+	fileName := "articles.pdf"
+	ctx.XRefTable.Table[20] = model.NewXRefTableEntryGen0(types.StreamDict{
+		Dict: types.Dict{"Type": types.Name("EmbeddedFile")},
+	})
+	action := types.Dict{
+		"S": types.Name("Thread"),
+		"F": types.Dict{
+			"Type": types.Name("Filespec"),
+			"F":    types.StringLiteral(fileName),
+			"EF":   types.Dict{"F": *types.NewIndirectRef(20, 0)},
+		},
+		"D": types.StringLiteral("article"),
+	}
+	if err := validateActionDictObject(t.Context(), ctx.XRefTable, action, action, "thread"); err != nil {
+		t.Fatal(err)
+	}
+	if target, found := inventoryTarget(ctx, fileName); found {
+		t.Fatalf("embedded thread target unexpectedly collected as external: %+v", target)
+	}
+}
