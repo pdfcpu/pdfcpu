@@ -1021,6 +1021,16 @@ func parseTrailerSize(xRefTable *model.XRefTable, d types.Dict) error {
 	// Not reliable!
 	// Patched after all read in.
 	v := i.Value()
+	if v <= 0 {
+		return fmt.Errorf("invalid trailer Size %d: %w", v, errCorruptTrailerDict)
+	}
+	limit := model.DefaultResourceLimits().MaxObjectCount
+	if xRefTable.Conf != nil {
+		limit = xRefTable.Conf.Limits.MaxObjectCount
+	}
+	if v > limit {
+		return fmt.Errorf("trailer Size %d exceeds limit %d: %w", v, limit, errCorruptTrailerDict)
+	}
 	xRefTable.Size = &v
 	return nil
 }
@@ -1978,11 +1988,17 @@ func postProcess(ctx *model.Context, xrefSectionCount int) {
 		// Fix for #250
 		e := ctx.Table[1]
 		if e != nil && e.Free {
-			// Create free object 0 by shifting down all objects by one.
-			for i := 1; i <= *ctx.Size; i++ {
-				ctx.Table[i-1] = ctx.Table[i]
+			// Create free object 0 by shifting down parsed objects by one.
+			for _, objNr := range slices.Sorted(maps.Keys(ctx.Table)) {
+				if objNr == 0 {
+					continue
+				}
+				entry := ctx.Table[objNr]
+				delete(ctx.Table, objNr)
+				if entry != nil {
+					ctx.Table[objNr-1] = entry
+				}
 			}
-			delete(ctx.Table, *ctx.Size)
 		} else {
 			// Create free object 0 from scratch if the free list head is missing.
 			g0 := types.FreeHeadGeneration
@@ -3685,13 +3701,17 @@ func loadStreamDict(c context.Context, ctx *model.Context, sd *types.StreamDict,
 }
 
 func updateBinaryTotalSize(ctx *model.Context, o types.Object) {
+	var streamLength *int64
 	switch o := o.(type) {
 	case types.StreamDict:
-		ctx.Read.BinaryTotalSize += *o.StreamLength
+		streamLength = o.StreamLength
 	case types.ObjectStreamDict:
-		ctx.Read.BinaryTotalSize += *o.StreamLength
+		streamLength = o.StreamLength
 	case types.XRefStreamDict:
-		ctx.Read.BinaryTotalSize += *o.StreamLength
+		streamLength = o.StreamLength
+	}
+	if streamLength != nil {
+		ctx.Read.BinaryTotalSize += *streamLength
 	}
 }
 
@@ -3756,6 +3776,9 @@ func dereferenceObject(c context.Context, ctx *model.Context, objNr int) error {
 }
 
 func dereferenceObjectEntry(c context.Context, ctx *model.Context, objNr int, entry *model.XRefTableEntry) error {
+	if entry == nil {
+		return fmt.Errorf("xref entry for object %d is nil: %w", objNr, errCorruptXRefSubsection)
+	}
 	if log.ReadEnabled() {
 		log.Read.Printf("dereferenceObject: begin, dereferencing object %d\n", objNr)
 	}

@@ -282,6 +282,37 @@ func TestParseXRefStreamDictRequiresDirectSize(t *testing.T) {
 	}
 }
 
+// TestParseXRefStreamDictAllocatesForIndexedEntries verifies a sparse xref stream reserves capacity for its checked
+// Index entry count instead of its declared object-number range.
+func TestParseXRefStreamDictAllocatesForIndexedEntries(t *testing.T) {
+	sd := types.StreamDict{Dict: types.Dict{
+		"Size":  types.Integer(1_000_000),
+		"Index": types.Array{types.Integer(0), types.Integer(4)},
+		"W":     types.Array{types.Integer(1), types.Integer(1), types.Integer(1)},
+	}}
+	limits := DefaultResourceLimits()
+	limits.MaxObjectCount = 1_000_000
+	limits.MaxXRefEntries = 4
+
+	for _, tt := range []struct {
+		name  string
+		parse func(*types.StreamDict, ResourceLimits) (*types.XRefStreamDict, error)
+	}{
+		{"strict", ParseXRefStreamDictWithLimits},
+		{"relaxed", ParseXRefStreamDictRelaxedWithLimits},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			xsd, err := tt.parse(&sd, limits)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(xsd.Objects) != 4 || cap(xsd.Objects) != 4 {
+				t.Fatalf("got xref object length %d and capacity %d, want 4 and 4", len(xsd.Objects), cap(xsd.Objects))
+			}
+		})
+	}
+}
+
 // TestParseXRefStreamDictRepairsIndexSizeMismatch verifies relaxed parsing repairs
 // an undersized Size entry without weakening strict parsing or resource limits.
 func TestParseXRefStreamDictRepairsIndexSizeMismatch(t *testing.T) {

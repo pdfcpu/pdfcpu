@@ -1170,8 +1170,6 @@ func xRefStreamSize(sd *types.StreamDict, limits ResourceLimits, relaxed bool) (
 }
 
 func xRefStreamObjectsFromIndex(indArr types.Array, size int, limits ResourceLimits, relaxed bool) ([]int, int, error) {
-	objs := make([]int, 0, size)
-
 	if len(indArr)%2 != 0 {
 		return nil, 0, errXrefStreamCorruptIndex
 	}
@@ -1204,12 +1202,16 @@ func xRefStreamObjectsFromIndex(indArr types.Array, size int, limits ResourceLim
 		if n > limits.MaxXRefEntries-total {
 			return nil, 0, fmt.Errorf("xref entry count exceeds limit %d", limits.MaxXRefEntries)
 		}
+		total += n
+	}
 
+	objs := make([]int, 0, total)
+	for i := 0; i < len(indArr)/2; i++ {
+		start := indArr[i*2].(types.Integer).Value()
+		n := indArr[i*2+1].(types.Integer).Value()
 		for j := 0; j < n; j++ {
 			objs = append(objs, start+j)
 		}
-
-		total += n
 	}
 
 	return objs, size, nil

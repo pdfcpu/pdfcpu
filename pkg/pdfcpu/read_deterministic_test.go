@@ -54,6 +54,33 @@ func sparseDereferenceTestContext() *model.Context {
 	}}}
 }
 
+func TestPostProcessShiftsOnlyParsedXRefEntries(t *testing.T) {
+	free := model.NewFreeHeadXRefTableEntry()
+	used := model.NewXRefTableEntryGen0(types.Integer(7))
+	ctx := &model.Context{XRefTable: &model.XRefTable{Table: map[int]*model.XRefTableEntry{
+		1: free,
+		3: used,
+		5: nil,
+	}}}
+
+	postProcess(ctx, 1)
+
+	if len(ctx.Table) != 2 || ctx.Table[0] != free || ctx.Table[2] != used {
+		t.Fatalf("unexpected repaired xref entries: %v", ctx.Table)
+	}
+}
+
+func TestDereferenceObjectsAscendingRejectsNilEntry(t *testing.T) {
+	for _, objNr := range []int{0, 99} {
+		ctx := &model.Context{XRefTable: &model.XRefTable{Table: map[int]*model.XRefTableEntry{
+			objNr: nil,
+		}}}
+		if err := dereferenceObjectsAscending(t.Context(), ctx); !errors.Is(err, errCorruptXRefSubsection) {
+			t.Fatalf("object %d: got %v, want corrupt xref subsection", objNr, err)
+		}
+	}
+}
+
 func TestDereferenceObjectsAscendingSelectsLowestDenseObjectError(t *testing.T) {
 	for range 25 {
 		ctx := denseDereferenceTestContext()
