@@ -462,7 +462,7 @@ func validateFileSpecDictPart2(xRefTable *model.XRefTable, d types.Dict, ownerOb
 	return nil
 }
 
-func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (err error) {
+func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, collectURL bool) (err error) {
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
 	}()
@@ -478,11 +478,14 @@ func validateFileSpecDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr i
 	if err := validateFileSpecDictPart2(xRefTable, d, ownerObjNr, dictName); err != nil {
 		return err
 	}
+	if collectURL && isURLFileSpecification(xRefTable, d) {
+		collectFileSpecificationTarget(xRefTable, d, linkTargetURI, linkSourceURLFileSpecification)
+	}
 
 	return nil
 }
 
-func validateFileSpecification(xRefTable *model.XRefTable, o types.Object) (result types.Object, err error) {
+func validateFileSpecificationInternal(xRefTable *model.XRefTable, o types.Object, collectURL bool) (result types.Object, err error) {
 	// See 7.11
 
 	rawObject := o
@@ -505,7 +508,7 @@ func validateFileSpecification(xRefTable *model.XRefTable, o types.Object) (resu
 		}
 
 	case types.Dict:
-		if err = validateFileSpecDict(xRefTable, o, objNr); err != nil {
+		if err = validateFileSpecDict(xRefTable, o, objNr, collectURL); err != nil {
 			return nil, fmt.Errorf("%s dict: %w", objectContext("file specification", rawObject), err)
 		}
 
@@ -515,6 +518,14 @@ func validateFileSpecification(xRefTable *model.XRefTable, o types.Object) (resu
 	}
 
 	return o, nil
+}
+
+func validateFileSpecification(xRefTable *model.XRefTable, o types.Object) (result types.Object, err error) {
+	return validateFileSpecificationInternal(xRefTable, o, true)
+}
+
+func validateFileSpecificationWithoutLinkCollection(xRefTable *model.XRefTable, o types.Object) (result types.Object, err error) {
+	return validateFileSpecificationInternal(xRefTable, o, false)
 }
 
 func validateURLSpecification(xRefTable *model.XRefTable, o types.Object) (result types.Object, err error) {
@@ -543,9 +554,12 @@ func validateURLSpecification(xRefTable *model.XRefTable, o types.Object) (resul
 	}
 
 	// F, required, string, URL (Internet RFC 1738)
-	_, err = validateStringEntry(xRefTable, d, 0, dictName, "F", REQUIRED, model.V10, validateURLString)
+	f, err := validateStringEntry(xRefTable, d, 0, dictName, "F", REQUIRED, model.V10, validateURLString)
 	if err != nil {
 		return nil, fmt.Errorf("%s F: %w", objectContext("URL specification", rawObject), err)
+	}
+	if f != nil {
+		collectLinkTarget(xRefTable, *f, linkTargetURI, linkSourceURLFileSpecification)
 	}
 
 	return o, nil

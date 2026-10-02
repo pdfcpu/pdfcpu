@@ -450,13 +450,45 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *model.XRefTable, o types.Obje
 		return err
 	}
 
-	if o == nil {
-		return nil
+	objNr := validationObjectNumber(0, o)
+	f, err := validateFileSpecificationWithoutLinkCollection(xRefTable, o)
+	if err != nil {
+		return fmt.Errorf("EmbeddedFiles name tree value: %w", err)
 	}
+	if !isEmbeddedFileSpecification(xRefTable, f) {
+		if xRefTable.ValidationMode == model.ValidationRelaxed && isEmptyEmbeddedFileSpecification(xRefTable, f) {
+			target, found := fileSpecificationTarget(xRefTable, f)
+			if !found {
+				target = "unnamed"
+			}
+			model.ShowSkipped(fmt.Sprintf(
+				`EmbeddedFiles name tree value %q (obj#:%d): empty EF dictionary`, target, objNr,
+			))
+			return nil
+		}
+		return errors.New("EmbeddedFiles name tree value: expected matching embedded file stream")
+	}
+	return nil
+}
 
-	_, err = validateFileSpecification(xRefTable, o)
-
-	return err
+func isEmptyEmbeddedFileSpecification(xRefTable *model.XRefTable, o types.Object) bool {
+	if isURLFileSpecification(xRefTable, o) {
+		return false
+	}
+	o, err := xRefTable.Dereference(o)
+	if err != nil {
+		return false
+	}
+	d, ok := o.(types.Dict)
+	if !ok {
+		return false
+	}
+	rawEF, found := d.Find("EF")
+	if !found {
+		return false
+	}
+	ef, err := xRefTable.DereferenceDict(rawEF)
+	return err == nil && ef != nil && len(ef) == 0
 }
 
 func validateSlideShowResources(xRefTable *model.XRefTable, d types.Dict) error {

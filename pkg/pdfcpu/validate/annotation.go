@@ -857,8 +857,12 @@ func validateAnnotationDictFileAttachment(xRefTable *model.XRefTable, d types.Di
 	// see 12.5.6.15
 
 	// FS, required, file specification
-	if _, err := validateFileSpecEntry(xRefTable, d, dictName, "FS", REQUIRED, model.V10); err != nil {
+	f, err := validateFileSpecEntry(xRefTable, d, dictName, "FS", REQUIRED, model.V10)
+	if err != nil {
 		return err
+	}
+	if !isEmbeddedFileSpecification(xRefTable, f) {
+		collectFileSpecificationTarget(xRefTable, f, linkTargetFile, linkSourceFileAttachment)
 	}
 
 	// Name, optional, name
