@@ -13,35 +13,91 @@ import (
 	"fmt"
 )
 
+const (
+	maxBERDepth   = 64
+	maxBERObjects = 100_000
+	maxBERBytes   = 64 << 20
+)
+
 type asn1Object interface {
 	EncodeTo(writer *bytes.Buffer) error
+	encodedLen() (int, error)
 }
 
 type asn1Structured struct {
-	tagBytes []byte
-	content  []asn1Object
+	tagBytes      []byte
+	content       []asn1Object
+	contentLength int
 }
 
 func (s asn1Structured) EncodeTo(out *bytes.Buffer) error {
-	inner := new(bytes.Buffer)
-	for i, obj := range s.content {
-		if obj == nil {
-			return fmt.Errorf("encode child %d: missing ASN.1 object", i+1)
-		}
-		if err := obj.EncodeTo(inner); err != nil {
-			return fmt.Errorf("encode child %d: %w", i+1, err)
+	contentLength := s.contentLength
+	if contentLength == 0 && len(s.content) > 0 {
+		var err error
+		contentLength, err = structuredContentLength(s.content)
+		if err != nil {
+			return err
 		}
 	}
 	if _, err := out.Write(s.tagBytes); err != nil {
 		return fmt.Errorf("write tag: %w", err)
 	}
-	if err := encodeLength(out, inner.Len()); err != nil {
+	if err := encodeLength(out, contentLength); err != nil {
 		return fmt.Errorf("write length: %w", err)
 	}
-	if _, err := out.Write(inner.Bytes()); err != nil {
-		return fmt.Errorf("write content: %w", err)
+	for i, obj := range s.content {
+		if obj == nil {
+			return fmt.Errorf("encode child %d: missing ASN.1 object", i+1)
+		}
+		if err := obj.EncodeTo(out); err != nil {
+			return fmt.Errorf("encode child %d: %w", i+1, err)
+		}
 	}
 	return nil
+}
+
+func (s asn1Structured) encodedLen() (int, error) {
+	contentLength := s.contentLength
+	if contentLength == 0 && len(s.content) > 0 {
+		var err error
+		contentLength, err = structuredContentLength(s.content)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return encodedObjectLength(len(s.tagBytes), contentLength)
+}
+
+func structuredContentLength(content []asn1Object) (int, error) {
+	length := 0
+	for i, obj := range content {
+		if obj == nil {
+			return 0, fmt.Errorf("encode child %d: missing ASN.1 object", i+1)
+		}
+		n, err := obj.encodedLen()
+		if err != nil {
+			return 0, fmt.Errorf("encode child %d: %w", i+1, err)
+		}
+		if n > maxBERBytes-length {
+			return 0, fmt.Errorf("DER content exceeds limit %d", maxBERBytes)
+		}
+		length += n
+	}
+	return length, nil
+}
+
+func encodedObjectLength(tagLength, contentLength int) (int, error) {
+	if tagLength < 1 || contentLength < 0 || contentLength > maxBERBytes {
+		return 0, fmt.Errorf("invalid DER size or exceeds limit %d", maxBERBytes)
+	}
+	lengthOctets := 1
+	if contentLength >= 128 {
+		lengthOctets += lengthLength(contentLength)
+	}
+	if tagLength > maxBERBytes-contentLength-lengthOctets {
+		return 0, fmt.Errorf("DER object exceeds limit %d", maxBERBytes)
+	}
+	return tagLength + lengthOctets + contentLength, nil
 }
 
 type asn1Primitive struct {
@@ -63,11 +119,17 @@ func (p asn1Primitive) EncodeTo(out *bytes.Buffer) error {
 	return nil
 }
 
+func (p asn1Primitive) encodedLen() (int, error) {
+	return encodedObjectLength(len(p.tagBytes), len(p.content))
+}
+
 func ber2der(ber []byte) ([]byte, error) {
 	if len(ber) == 0 {
 		return nil, errors.New("ber2der: input ber is empty")
 	}
-	out := new(bytes.Buffer)
+	if len(ber) > maxBERBytes {
+		return nil, fmt.Errorf("ber2der: input exceeds limit %d", maxBERBytes)
+	}
 
 	obj, next, err := readObject(ber, 0)
 	if err != nil {
@@ -76,8 +138,16 @@ func ber2der(ber []byte) ([]byte, error) {
 	if next != len(ber) && !allZero(ber[next:]) {
 		return nil, fmt.Errorf("ber2der: trailing data at offset %d", next)
 	}
+	size, err := obj.encodedLen()
+	if err != nil {
+		return nil, fmt.Errorf("ber2der: DER size: %w", err)
+	}
+	out := bytes.NewBuffer(make([]byte, 0, size))
 	if err := obj.EncodeTo(out); err != nil {
 		return nil, fmt.Errorf("ber2der: encode DER: %w", err)
+	}
+	if out.Len() != size {
+		return nil, fmt.Errorf("ber2der: encoded DER size %d differs from expected %d", out.Len(), size)
 	}
 
 	return out.Bytes(), nil
@@ -153,7 +223,32 @@ func encodeLength(out *bytes.Buffer, length int) (err error) {
 	return
 }
 
+type berParseState struct {
+	objects int
+}
+
 func readObject(ber []byte, offset int) (asn1Object, int, error) {
+	return readObjectWithState(ber, offset, 0, &berParseState{})
+}
+
+func validateBERContentBounds(ber []byte, tagStart, tagEnd, offset, length int, indefinite, constructed bool) error {
+	if tagEnd-tagStart == 1 && ber[tagStart] == 0 && !indefinite && length == 0 {
+		return errors.New("unexpected end-of-content marker")
+	}
+	if length > len(ber)-offset {
+		return errors.New("content length exceeds available data")
+	}
+	if indefinite && !constructed {
+		return errors.New("indefinite length requires constructed encoding")
+	}
+	return nil
+}
+
+func readObjectWithState(ber []byte, offset, depth int, state *berParseState) (asn1Object, int, error) {
+	if state.objects >= maxBERObjects {
+		return nil, 0, fmt.Errorf("BER object count exceeds limit %d", maxBERObjects)
+	}
+	state.objects++
 	start := offset
 	tagStart, tagEnd, constructed, next, err := readTag(ber, offset)
 	if err != nil {
@@ -163,29 +258,34 @@ func readObject(ber []byte, offset int) (asn1Object, int, error) {
 	if err != nil {
 		return nil, 0, fmt.Errorf("read length at offset %d: %w", next, err)
 	}
-	if tagEnd-tagStart == 1 && ber[tagStart] == 0 && !indefinite && length == 0 {
-		return nil, 0, errors.New("unexpected end-of-content marker")
-	}
-	if length > len(ber)-offset {
-		return nil, 0, errors.New("content length exceeds available data")
+	if err := validateBERContentBounds(ber, tagStart, tagEnd, offset, length, indefinite, constructed); err != nil {
+		return nil, 0, err
 	}
 	contentEnd := offset + length
-	if indefinite && !constructed {
-		return nil, 0, errors.New("indefinite length requires constructed encoding")
-	}
 
 	if !constructed {
-		return asn1Primitive{
+		obj := asn1Primitive{
 			tagBytes: ber[tagStart:tagEnd],
 			content:  ber[offset:contentEnd],
-		}, contentEnd, nil
+		}
+		if _, err := obj.encodedLen(); err != nil {
+			return nil, 0, err
+		}
+		return obj, contentEnd, nil
+	}
+	if depth >= maxBERDepth {
+		return nil, 0, fmt.Errorf("BER depth exceeds limit %d", maxBERDepth)
 	}
 
-	content, contentEnd, err := readStructuredContent(ber, offset, contentEnd, indefinite)
+	content, contentEnd, contentLength, err := readStructuredContentWithState(ber, offset, contentEnd, indefinite, depth+1, state)
 	if err != nil {
 		return nil, 0, fmt.Errorf("read constructed content at offset %d: %w", offset, err)
 	}
-	return asn1Structured{tagBytes: ber[tagStart:tagEnd], content: content}, contentEnd, nil
+	obj := asn1Structured{tagBytes: ber[tagStart:tagEnd], content: content, contentLength: contentLength}
+	if _, err := obj.encodedLen(); err != nil {
+		return nil, 0, err
+	}
+	return obj, contentEnd, nil
 }
 
 func readTag(ber []byte, offset int) (start, end int, constructed bool, next int, err error) {
@@ -251,34 +351,54 @@ func readStructuredContent(
 	offset, contentEnd int,
 	indefinite bool,
 ) ([]asn1Object, int, error) {
+	content, end, _, err := readStructuredContentWithState(ber, offset, contentEnd, indefinite, 0, &berParseState{})
+	return content, end, err
+}
+
+func readStructuredContentWithState(
+	ber []byte,
+	offset, contentEnd int,
+	indefinite bool,
+	depth int,
+	state *berParseState,
+) ([]asn1Object, int, int, error) {
 	if offset < 0 || contentEnd < offset || contentEnd > len(ber) {
-		return nil, 0, errors.New("constructed-content boundary outside BER data")
+		return nil, 0, 0, errors.New("constructed-content boundary outside BER data")
 	}
 	var content []asn1Object
+	contentLength := 0
 	for indefinite || offset < contentEnd {
 		if indefinite {
 			terminated, err := isIndefiniteTermination(ber, offset)
 			if err != nil {
-				return nil, 0, err
+				return nil, 0, 0, err
 			}
 			if terminated {
-				return content, offset + 2, nil
+				return content, offset + 2, contentLength, nil
 			}
 		}
-		obj, next, err := readObject(ber, offset)
+		obj, next, err := readObjectWithState(ber, offset, depth, state)
 		if err != nil {
-			return nil, 0, fmt.Errorf("read child at offset %d: %w", offset, err)
+			return nil, 0, 0, fmt.Errorf("read child at offset %d: %w", offset, err)
 		}
 		if next <= offset {
-			return nil, 0, fmt.Errorf("child at offset %d did not advance", offset)
+			return nil, 0, 0, fmt.Errorf("child at offset %d did not advance", offset)
 		}
 		if !indefinite && next > contentEnd {
-			return nil, 0, fmt.Errorf("child at offset %d exceeds parent boundary %d", offset, contentEnd)
+			return nil, 0, 0, fmt.Errorf("child at offset %d exceeds parent boundary %d", offset, contentEnd)
 		}
+		size, err := obj.encodedLen()
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		if size > maxBERBytes-contentLength {
+			return nil, 0, 0, fmt.Errorf("DER content exceeds limit %d", maxBERBytes)
+		}
+		contentLength += size
 		content = append(content, obj)
 		offset = next
 	}
-	return content, contentEnd, nil
+	return content, contentEnd, contentLength, nil
 }
 
 func isIndefiniteTermination(ber []byte, offset int) (bool, error) {
