@@ -1211,11 +1211,91 @@ func validateActionDictCore(c context.Context, xRefTable *model.XRefTable, n *ty
 	return fmt.Errorf("action %s: unsupported action type %q", n.Value(), n.Value())
 }
 
-func validateActionDictObject(c context.Context, xRefTable *model.XRefTable, d types.Dict, o types.Object, context string) error {
-	return validateActionDictObjectDepth(c, xRefTable, d, o, context, 0, model.NewActionVisit())
+type activeContentOrigin struct {
+	owner      activeContentOwner
+	source     activeContentSource
+	trigger    string
+	ownerObjNr int
 }
 
-func validateActionDictObjectDepth(c context.Context, xRefTable *model.XRefTable, d types.Dict, o types.Object, context string, depth int, visit *model.ActionVisit) (err error) {
+func defaultActiveContentOrigin() activeContentOrigin {
+	return activeContentOrigin{
+		owner:  activeContentOwnerAction,
+		source: activeContentSourceAction,
+	}
+}
+
+func activeContentPageNumber(xRefTable *model.XRefTable, owner activeContentOwner) int {
+	switch owner {
+	case activeContentOwnerDocument, activeContentOwnerNameTree, activeContentOwnerOutline:
+		return 0
+	default:
+		return xRefTable.CurPage
+	}
+}
+
+func hasJavaScriptPayload(xRefTable *model.XRefTable, d types.Dict) bool {
+	o, found := d.Find("JS")
+	if !found {
+		return false
+	}
+	o, err := xRefTable.Dereference(o)
+	return err == nil && o != nil
+}
+
+func hasRenditionOperation(xRefTable *model.XRefTable, d types.Dict) bool {
+	i, found, err := xRefTable.DereferenceIntegerEntry(d, "OP")
+	return err == nil && found && i != nil
+}
+
+func addActionActiveContent(xRefTable *model.XRefTable, kind activeContentKind, source activeContentSource, o types.Object, depth int, origin activeContentOrigin) {
+	addActiveContentNotice(xRefTable, activeContentFinding{
+		kind:       kind,
+		owner:      origin.owner,
+		source:     source,
+		trigger:    origin.trigger,
+		pageNr:     activeContentPageNumber(xRefTable, origin.owner),
+		objNr:      validationObjectNumber(origin.ownerObjNr, o),
+		ownerObjNr: origin.ownerObjNr,
+		depth:      depth,
+	})
+}
+
+func collectActionActiveContent(xRefTable *model.XRefTable, d types.Dict, o types.Object, depth int, origin activeContentOrigin) {
+	n, found, err := xRefTable.DereferenceNameEntry(d, "S")
+	if err != nil || !found || n == nil {
+		return
+	}
+	switch n.Value() {
+	case "JavaScript":
+		if hasJavaScriptPayload(xRefTable, d) {
+			addActionActiveContent(xRefTable, activeContentJavaScript, origin.source, o, depth, origin)
+		}
+	case "Rendition":
+		if hasJavaScriptPayload(xRefTable, d) {
+			addActionActiveContent(
+				xRefTable, activeContentJavaScript, activeContentSourceRenditionAction, o, depth, origin,
+			)
+		}
+		if hasRenditionOperation(xRefTable, d) {
+			addActionActiveContent(xRefTable, activeContentRendition, origin.source, o, depth, origin)
+		}
+	case "Sound":
+		addActionActiveContent(xRefTable, activeContentSound, origin.source, o, depth, origin)
+	case "Movie":
+		addActionActiveContent(xRefTable, activeContentMovie, origin.source, o, depth, origin)
+	}
+}
+
+func validateActionDictObject(c context.Context, xRefTable *model.XRefTable, d types.Dict, o types.Object, context string) error {
+	return validateActionDictObjectWithOrigin(c, xRefTable, d, o, context, defaultActiveContentOrigin())
+}
+
+func validateActionDictObjectWithOrigin(c context.Context, xRefTable *model.XRefTable, d types.Dict, o types.Object, context string, origin activeContentOrigin) error {
+	return validateActionDictObjectDepth(c, xRefTable, d, o, context, 0, model.NewActionVisit(), origin)
+}
+
+func validateActionDictObjectDepth(c context.Context, xRefTable *model.XRefTable, d types.Dict, o types.Object, context string, depth int, visit *model.ActionVisit, origin activeContentOrigin) (err error) {
 	objNr := validationObjectNumber(0, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -1238,14 +1318,15 @@ func validateActionDictObjectDepth(c context.Context, xRefTable *model.XRefTable
 		return nil
 	}
 
-	if err := validateActionDict(c, xRefTable, d, objNr, depth, visit); err != nil {
+	if err := validateActionDict(c, xRefTable, d, objNr, depth, visit, origin); err != nil {
 		return model.WrapRecursionError(objectContext(context, o), err)
 	}
+	collectActionActiveContent(xRefTable, d, o, depth, origin)
 	visit.MarkValidated(objNr, depth)
 	return nil
 }
 
-func validateNextAction(c context.Context, xRefTable *model.XRefTable, o types.Object, depth int, visit *model.ActionVisit) (err error) {
+func validateNextAction(c context.Context, xRefTable *model.XRefTable, o types.Object, depth int, visit *model.ActionVisit, origin activeContentOrigin) (err error) {
 	objNr := validationObjectNumber(0, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -1256,7 +1337,7 @@ func validateNextAction(c context.Context, xRefTable *model.XRefTable, o types.O
 		if d == nil {
 			return nil
 		}
-		if err := validateActionDictObjectDepth(c, xRefTable, d, o, "action Next", depth+1, visit); err != nil {
+		if err := validateActionDictObjectDepth(c, xRefTable, d, o, "action Next", depth+1, visit, origin); err != nil {
 			return err
 		}
 		return nil
@@ -1283,7 +1364,7 @@ func validateNextAction(c context.Context, xRefTable *model.XRefTable, o types.O
 		if d == nil {
 			continue
 		}
-		if err := validateActionDictObjectDepth(c, xRefTable, d, v, fmt.Sprintf("action Next[%d]", i), depth+1, visit); err != nil {
+		if err := validateActionDictObjectDepth(c, xRefTable, d, v, fmt.Sprintf("action Next[%d]", i), depth+1, visit, origin); err != nil {
 			return err
 		}
 	}
@@ -1291,7 +1372,7 @@ func validateNextAction(c context.Context, xRefTable *model.XRefTable, o types.O
 	return nil
 }
 
-func validateActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr, depth int, visit *model.ActionVisit) error {
+func validateActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr, depth int, visit *model.ActionVisit, origin activeContentOrigin) error {
 	dictName := "actionDict"
 
 	// Type, optional, name
@@ -1323,7 +1404,7 @@ func validateActionDict(c context.Context, xRefTable *model.XRefTable, d types.D
 	}
 
 	if o, ok := d.Find("Next"); ok {
-		if err := validateNextAction(c, xRefTable, o, depth, visit); err != nil {
+		if err := validateNextAction(c, xRefTable, o, depth, visit, origin); err != nil {
 			return err
 		}
 	}
@@ -1336,11 +1417,33 @@ func validateActionDict(c context.Context, xRefTable *model.XRefTable, d types.D
 }
 
 func validateRootAdditionalActions(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
-	return validateAdditionalActions(c, xRefTable, rootDict, "rootDict", "AA", required, sinceVersion, "root")
+	return validateAdditionalActionsWithOwner(
+		c, xRefTable, rootDict, validationRootObjectNumber(xRefTable), "rootDict", "AA", required, sinceVersion, "root",
+	)
+}
+
+func additionalActionOwner(source, trigger string) activeContentOwner {
+	switch source {
+	case "root":
+		return activeContentOwnerDocument
+	case "page":
+		return activeContentOwnerPage
+	case "fieldOrAnnot":
+		if types.MemberOf(trigger, []string{"K", "F", "V", "C"}) {
+			return activeContentOwnerFormField
+		}
+		return activeContentOwnerAnnotation
+	default:
+		return activeContentOwnerAction
+	}
 }
 
 func validateAdditionalActions(c context.Context, xRefTable *model.XRefTable, dict types.Dict, dictName, entryName string, required bool, sinceVersion model.Version, source string) (err error) {
-	actionsObjNr := validationEntryObjectNumber(0, dict, entryName)
+	return validateAdditionalActionsWithOwner(c, xRefTable, dict, 0, dictName, entryName, required, sinceVersion, source)
+}
+
+func validateAdditionalActionsWithOwner(c context.Context, xRefTable *model.XRefTable, dict types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version, source string) (err error) {
+	actionsObjNr := validationEntryObjectNumber(ownerObjNr, dict, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, actionsObjNr)
 	}()
@@ -1399,7 +1502,15 @@ func validateAdditionalActions(c context.Context, xRefTable *model.XRefTable, di
 			continue
 		}
 
-		err = validateActionDictObject(c, xRefTable, d, v, fmt.Sprintf("additional action %s.%s.%s", dictName, entryName, k))
+		origin := activeContentOrigin{
+			owner:      additionalActionOwner(source, k),
+			source:     activeContentSourceAdditionalAction,
+			trigger:    k,
+			ownerObjNr: ownerObjNr,
+		}
+		err = validateActionDictObjectWithOrigin(
+			c, xRefTable, d, v, fmt.Sprintf("additional action %s.%s.%s", dictName, entryName, k), origin,
+		)
 		if err != nil {
 			return err
 		}

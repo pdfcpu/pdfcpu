@@ -584,7 +584,12 @@ func validateOpenAction(c context.Context, xRefTable *model.XRefTable, rootDict 
 	switch o := o.(type) {
 
 	case types.Dict:
-		err = validateActionDictObject(c, xRefTable, o, rawOpenAction, "rootDict.OpenAction")
+		origin := activeContentOrigin{
+			owner:      activeContentOwnerDocument,
+			source:     activeContentSourceOpenAction,
+			ownerObjNr: validationRootObjectNumber(xRefTable),
+		}
+		err = validateActionDictObjectWithOrigin(c, xRefTable, o, rawOpenAction, "rootDict.OpenAction", origin)
 
 	case types.Array:
 		err = validateDestinationArray(

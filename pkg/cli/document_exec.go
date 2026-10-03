@@ -25,6 +25,7 @@ import (
 	"os"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"encoding/json"
@@ -91,11 +92,29 @@ func validationNoticeText(notice model.ValidationNotice) string {
 	return fmt.Sprintf("pdfcpu %s: %s", notice.Disposition, message)
 }
 
+func isActiveContentNotice(notice model.ValidationNotice) bool {
+	if notice.Phase != model.NoticePhaseValidate || notice.Disposition != model.NoticeSkipped {
+		return false
+	}
+	prefix := "document: active content: "
+	if notice.PageNumber > 0 {
+		prefix = fmt.Sprintf("page %d: active content: ", notice.PageNumber)
+	}
+	return strings.HasPrefix(notice.Message, prefix)
+}
+
 func reportValidationNotices(w io.Writer, report model.ValidationReport) error {
 	if w == nil {
 		return nil
 	}
+	activeContent := map[string]struct{}{}
 	for i, notice := range report.Notices() {
+		if isActiveContentNotice(notice) {
+			if _, found := activeContent[notice.Message]; found {
+				continue
+			}
+			activeContent[notice.Message] = struct{}{}
+		}
 		if _, err := fmt.Fprintln(w, validationNoticeText(notice)); err != nil {
 			return fmt.Errorf("write validation notice %d: %w", i+1, err)
 		}

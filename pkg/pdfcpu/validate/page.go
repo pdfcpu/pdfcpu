@@ -1200,7 +1200,7 @@ func validatePageDict(c context.Context, xRefTable *model.XRefTable, d types.Dic
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		sinceVersion = model.V11
 	}
-	err = validateAdditionalActions(c, xRefTable, d, dictName, "AA", OPTIONAL, sinceVersion, "page")
+	err = validateAdditionalActionsWithOwner(c, xRefTable, d, ownerObjNr, dictName, "AA", OPTIONAL, sinceVersion, "page")
 	if err != nil {
 		return nil, model.WithValidationErrorObject(err, validationEntryObjectNumber(ownerObjNr, d, "AA"))
 	}

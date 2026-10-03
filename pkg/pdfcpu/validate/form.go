@@ -443,7 +443,9 @@ func validateFormFieldDictEntries(c context.Context, xRefTable *model.XRefTable,
 	}
 
 	// AA, optional, dict, since V1.2
-	err = validateAdditionalActions(c, xRefTable, d, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot")
+	err = validateAdditionalActionsWithOwner(
+		c, xRefTable, d, objNr, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot",
+	)
 	if err != nil {
 		return nil, false, err
 	}

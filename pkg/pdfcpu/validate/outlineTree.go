@@ -59,7 +59,7 @@ func validateOutlineItemDictParent(xRefTable *model.XRefTable, d types.Dict, dic
 	return nil
 }
 
-func validateOutlineItemDict(c context.Context, xRefTable *model.XRefTable, d types.Dict) error {
+func validateOutlineItemDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
 	dictName := "outlineItemDict"
 
 	// Title, required, text string
@@ -103,7 +103,10 @@ func validateOutlineItemDict(c context.Context, xRefTable *model.XRefTable, d ty
 	}
 
 	// Optional A or Dest, since V1.1
-	destName, err := validateActionOrDestination(c, xRefTable, d, dictName, model.V11)
+	destName, err := validateActionOrDestination(
+		c, xRefTable, d, ownerObjNr, dictName, model.V11,
+		activeContentOwnerOutline, activeContentSourceOutlineAction,
+	)
 	if err != nil {
 		model.ShowMsg("outlineItemDict: corrupt action or destination entry")
 		return err
@@ -140,7 +143,7 @@ func handleOutlineItemDict(c context.Context, xRefTable *model.XRefTable, ir typ
 		return nil, errors.New("outline item: missing dict")
 	}
 
-	if err = validateOutlineItemDict(c, xRefTable, d); err != nil {
+	if err = validateOutlineItemDict(c, xRefTable, d, objNumber); err != nil {
 		return nil, fmt.Errorf("%s: %w", outlineItemContext(err, objNumber), err)
 	}
 

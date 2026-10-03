@@ -49,7 +49,7 @@ func validateAPNameTreeValue(c context.Context, xRefTable *model.XRefTable, o ty
 	return validateXObjectStreamDict(c, xRefTable, o)
 }
 
-func validateJavaScriptNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+func validateJavaScriptNameTreeValueContext(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	// Version check
 	err := xRefTable.ValidateVersion("JavaScriptNameTreeValue", sinceVersion)
 	if err != nil {
@@ -61,8 +61,20 @@ func validateJavaScriptNameTreeValue(xRefTable *model.XRefTable, o types.Object,
 		return fmt.Errorf("JavaScript name tree value: dereference dict: %w", err)
 	}
 
-	// Javascript Action:
-	return validateJavaScriptActionDict(xRefTable, d, "JavaScript")
+	// S, required, name
+	_, err = validateNameEntry(xRefTable, d, 0, "JavaScript", "S", REQUIRED, model.V10, func(s string) bool {
+		return s == "JavaScript"
+	})
+	if err != nil {
+		return err
+	}
+
+	origin := activeContentOrigin{owner: activeContentOwnerNameTree, source: activeContentSourceJavaScriptNameTree}
+	return validateActionDictObjectWithOrigin(c, xRefTable, d, o, "JavaScript name tree value", origin)
+}
+
+func validateJavaScriptNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+	return validateJavaScriptNameTreeValueContext(context.Background(), xRefTable, o, sinceVersion)
 }
 
 func validatePagesNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
@@ -839,9 +851,11 @@ func validateNameTreeValue(c context.Context, name string, xRefTable *model.XRef
 		"AP": {func(x *model.XRefTable, o types.Object, version model.Version) error {
 			return validateAPNameTreeValue(c, x, o, version)
 		}, model.V13, model.V13},
-		"JavaScript": {validateJavaScriptNameTreeValue, model.V13, model.V13},
-		"Pages":      {validatePagesNameTreeValue, model.V13, model.V13},
-		"Templates":  {validateTemplatesNameTreeValue, model.V13, model.V13},
+		"JavaScript": {func(x *model.XRefTable, o types.Object, version model.Version) error {
+			return validateJavaScriptNameTreeValueContext(c, x, o, version)
+		}, model.V13, model.V13},
+		"Pages":     {validatePagesNameTreeValue, model.V13, model.V13},
+		"Templates": {validateTemplatesNameTreeValue, model.V13, model.V13},
 		"IDS": {func(x *model.XRefTable, o types.Object, version model.Version) error {
 			return validateIDSNameTreeValue(c, x, o, version)
 		}, model.V13, model.V13},

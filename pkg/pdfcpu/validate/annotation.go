@@ -265,14 +265,15 @@ func validateAnnotationDictText(xRefTable *model.XRefTable, d types.Dict, dictNa
 	return validateTextAnnotationState(xRefTable, dictName, state, stateModel)
 }
 
-func validateActionOrDestination(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) (string, error) {
+func validateActionOrDestination(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, sinceVersion model.Version, owner activeContentOwner, source activeContentSource) (string, error) {
 	// The action that shall be performed when this item is activated.
 	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "A", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return "", err
 	}
 	if d1 != nil {
-		return "", validateActionDictObject(c, xRefTable, d1, d["A"], dictName+".A")
+		origin := activeContentOrigin{owner: owner, source: source, ownerObjNr: ownerObjNr}
+		return "", validateActionDictObjectWithOrigin(c, xRefTable, d1, d["A"], dictName+".A", origin)
 	}
 
 	// A destination that shall be displayed when this item is activated.
@@ -319,11 +320,14 @@ func validateURIActionDictEntry(xRefTable *model.XRefTable, d types.Dict, dictNa
 	return validateURIActionDict(xRefTable, d1, dictName)
 }
 
-func validateAnnotationDictLink(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictLink(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.5.6.5
 
 	// A or Dest, required either or
-	if _, err := validateActionOrDestination(c, xRefTable, d, dictName, model.V11); err != nil {
+	if _, err := validateActionOrDestination(
+		c, xRefTable, d, ownerObjNr, dictName, model.V11,
+		activeContentOwnerAnnotation, activeContentSourceAnnotationAction,
+	); err != nil {
 		if xRefTable.ValidationMode == model.ValidationStrict {
 			return err
 		}
@@ -869,7 +873,7 @@ func validateAnnotationDictFileAttachment(xRefTable *model.XRefTable, d types.Di
 	return validateNameOrStringEntry(xRefTable, d, 0, dictName, "Name", OPTIONAL, model.V10)
 }
 
-func validateAnnotationDictSound(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictSound(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.5.6.16
 
 	// Sound, required, stream dict
@@ -879,8 +883,20 @@ func validateAnnotationDictSound(xRefTable *model.XRefTable, d types.Dict, dictN
 
 	// Name, optional, name
 	_, err := validateNameEntry(xRefTable, d, 0, dictName, "Name", OPTIONAL, model.V10, nil)
+	if err != nil {
+		return err
+	}
 
-	return err
+	addActiveContentNotice(xRefTable, activeContentFinding{
+		kind:       activeContentSound,
+		owner:      activeContentOwnerAnnotation,
+		source:     activeContentSourceSoundAnnotation,
+		pageNr:     xRefTable.CurPage,
+		objNr:      validationEntryObjectNumber(ownerObjNr, d, "Sound"),
+		ownerObjNr: ownerObjNr,
+	})
+
+	return nil
 }
 
 func validateMoviePoster(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
@@ -991,6 +1007,15 @@ func validateAnnotationDictMovie(c context.Context, xRefTable *model.XRefTable, 
 
 	}
 
+	addActiveContentNotice(xRefTable, activeContentFinding{
+		kind:       activeContentMovie,
+		owner:      activeContentOwnerAnnotation,
+		source:     activeContentSourceMovieAnnotation,
+		pageNr:     xRefTable.CurPage,
+		objNr:      movieObjNr,
+		ownerObjNr: ownerObjNr,
+	})
+
 	return nil
 }
 
@@ -1017,14 +1042,21 @@ func validateAnnotationDictWidget(c context.Context, xRefTable *model.XRefTable,
 		return err
 	}
 	if d1 != nil {
-		if err = validateActionDictObject(c, xRefTable, d1, d["A"], dictName+".A"); err != nil {
+		origin := activeContentOrigin{
+			owner:      activeContentOwnerAnnotation,
+			source:     activeContentSourceAnnotationAction,
+			ownerObjNr: ownerObjNr,
+		}
+		if err = validateActionDictObjectWithOrigin(c, xRefTable, d1, d["A"], dictName+".A", origin); err != nil {
 			return err
 		}
 	}
 
 	// AA, optional, dict, since V1.2
 	// An additional-actions dictionary defining the annotation’s behaviour in response to various trigger events.
-	if err = validateAdditionalActions(c, xRefTable, d, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot"); err != nil {
+	if err = validateAdditionalActionsWithOwner(
+		c, xRefTable, d, ownerObjNr, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot",
+	); err != nil {
 		return err
 	}
 
@@ -1068,13 +1100,20 @@ func validateAnnotationDictScreen(c context.Context, xRefTable *model.XRefTable,
 		return err
 	}
 	if d1 != nil {
-		if err = validateActionDictObject(c, xRefTable, d1, d["A"], dictName+".A"); err != nil {
+		origin := activeContentOrigin{
+			owner:      activeContentOwnerAnnotation,
+			source:     activeContentSourceAnnotationAction,
+			ownerObjNr: ownerObjNr,
+		}
+		if err = validateActionDictObjectWithOrigin(c, xRefTable, d1, d["A"], dictName+".A", origin); err != nil {
 			return err
 		}
 	}
 
 	// AA, optional, additional-actions dict, since V1.2
-	return validateAdditionalActions(c, xRefTable, d, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot")
+	return validateAdditionalActionsWithOwner(
+		c, xRefTable, d, ownerObjNr, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot",
+	)
 }
 
 func validateRenditionScreenAnnotationStructure(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
@@ -1888,6 +1927,9 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 	polyLine := func(x *model.XRefTable, d types.Dict, name string) error {
 		return validateAnnotationDictPolyLine(x, d, ownerObjNr, name)
 	}
+	link := func(x *model.XRefTable, d types.Dict, name string) error {
+		return validateAnnotationDictLink(c, x, d, ownerObjNr, name)
+	}
 	circleOrSquare := func(x *model.XRefTable, d types.Dict, name string) error {
 		return validateAnnotationDictCircleOrSquare(x, d, ownerObjNr, name)
 	}
@@ -1900,6 +1942,9 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 	richMedia := func(x *model.XRefTable, d types.Dict, name string) error {
 		return validateRichMediaAnnotation(c, x, d, name)
 	}
+	sound := func(x *model.XRefTable, d types.Dict, name string) error {
+		return validateAnnotationDictSound(x, d, ownerObjNr, name)
+	}
 	movie := func(x *model.XRefTable, d types.Dict, name string) error {
 		return validateAnnotationDictMovie(c, x, d, ownerObjNr, name)
 	}
@@ -1911,7 +1956,7 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 		markup              bool
 	}{
 		"Text":           {validateAnnotationDictText, model.V10, model.V10, true},
-		"Link":           {bindAnnotationContext(c, validateAnnotationDictLink), model.V10, model.V10, false},
+		"Link":           {link, model.V10, model.V10, false},
 		"FreeText":       {validateAnnotationDictFreeText, model.V13, model.V12, true},
 		"Line":           {line, model.V13, model.V13, true},
 		"Polygon":        {polyLine, model.V15, model.V14, true},
@@ -1927,7 +1972,7 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 		"Ink":            {validateAnnotationDictInk, model.V13, model.V13, true},
 		"Popup":          {validateAnnotationDictPopup, model.V13, model.V12, false},
 		"FileAttachment": {validateAnnotationDictFileAttachment, model.V13, model.V13, true},
-		"Sound":          {validateAnnotationDictSound, model.V12, model.V12, true},
+		"Sound":          {sound, model.V12, model.V12, true},
 		"Movie":          {movie, model.V12, model.V12, false},
 		"Widget":         {widget, model.V12, model.V11, false},
 		"Screen":         {screen, model.V15, model.V14, false},
