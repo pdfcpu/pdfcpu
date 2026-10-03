@@ -55,7 +55,6 @@ func doParseDateTimeFail(s string, t *testing.T) {
 
 // TestParseDateTime verifies parse date time.
 func TestParseDateTime(t *testing.T) {
-
 	// (D:YYYYMMDDHHmmSSOHH'mm)
 	// O = -,+,Z
 
@@ -79,7 +78,7 @@ func TestParseDateTime(t *testing.T) {
 	doParseDateTimeOK(s, t)
 
 	s = "D:20170430155901Z"
-	doParseDateTimeRelaxedOK(s, t)
+	doParseDateTimeOK(s, t)
 
 	s = "D:20170430155901"
 	doParseDateTimeOK(s, t)
@@ -161,6 +160,57 @@ func TestParseDateTime(t *testing.T) {
 
 	s = "\357\273\277D:20160404061414+65'53'"
 	doParseDateTimeRelaxedOK(s, t)
+}
+
+// TestDateTimeTimezone verifies strict timezone validation and relaxed compatibility.
+func TestDateTimeTimezone(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		suffix  string
+		strict  bool
+		relaxed bool
+		offset  int
+	}{
+		{"terminal Z", "Z", true, true, 0},
+		{"Z hours", "Z00", true, true, 0},
+		{"Z hours and minutes", "Z00'00", true, true, 0},
+		{"Z full offset", "Z00'00'", true, true, 0},
+		{"no timezone", "", true, true, 0},
+		{"positive offset", "+02'00'", true, true, 2 * 60 * 60},
+		{"negative offset", "-02'00'", true, true, -2 * 60 * 60},
+		{"terminal plus", "+", false, true, 0},
+		{"terminal minus", "-", false, true, 0},
+		{"Z apostrophe", "Z'", false, true, 0},
+		{"Z apostrophe and zero", "Z'0", false, true, 0},
+		{"Z nonzero hours", "Z01", false, false, 0},
+		{"Z nonzero minutes", "Z00'01'", false, false, 0},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, mode := range []struct {
+				name    string
+				relaxed bool
+				wantOK  bool
+			}{
+				{"strict", false, tt.strict},
+				{"relaxed", true, tt.relaxed},
+			} {
+				t.Run(mode.name, func(t *testing.T) {
+					got, ok := DateTime("D:20260713095358"+tt.suffix, mode.relaxed)
+					if ok != mode.wantOK {
+						t.Fatalf("DateTime success = %t, want %t", ok, mode.wantOK)
+					}
+					if !ok {
+						return
+					}
+					want := time.Date(2026, time.July, 13, 9, 53, 58, 0, time.FixedZone("", tt.offset))
+					_, offset := got.Zone()
+					if !got.Equal(want) || offset != tt.offset {
+						t.Errorf("DateTime = %v (offset %d), want %v (offset %d)", got, offset, want, tt.offset)
+					}
+				})
+			}
+		})
+	}
 }
 
 // TestWriteDateTime verifies write date time.

@@ -115,11 +115,10 @@ func emptyTimeZone(t string, relaxed bool) bool {
 }
 
 func parseTimezone(s string, off int, relaxed bool) (h, m int, ok bool) {
-
 	o := s[off]
 
-	if !timezoneSeparator(o) || len(s) == off+1 {
-		// Ignore timezone on corrupt timezone separator if relaxed.
+	if !timezoneSeparator(o) || len(s) == off+1 && o != 'Z' {
+		// Ignore an invalid separator or incomplete signed offset if relaxed.
 		return 0, 0, relaxed
 	}
 
