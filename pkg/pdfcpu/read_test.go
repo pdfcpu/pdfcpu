@@ -1521,3 +1521,53 @@ func TestReadLargeDictObjectStream(t *testing.T) {
 		t.Errorf("expected stream content %s, got %s", expected, string(d.Content))
 	}
 }
+
+// TestParseXRefTableEntryZeroOffsetPolicy verifies strict rejection and relaxed notices for in-use entries.
+func TestParseXRefTableEntryZeroOffsetPolicy(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		mode       int
+		objNr      int
+		offset     string
+		entryType  string
+		wantError  bool
+		wantNotice bool
+	}{
+		{"strict", model.ValidationStrict, 4, "0000000000", "n", true, false},
+		{"relaxed", model.ValidationRelaxed, 4, "0000000000", "n", false, true},
+		{"free", model.ValidationStrict, 4, "0000000000", "f", false, false},
+		{"object zero", model.ValidationStrict, 0, "0000000000", "n", false, false},
+		{"valid", model.ValidationStrict, 4, "0000000020", "n", false, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			conf := model.NewStatelessConfiguration()
+			conf.ValidationMode = tt.mode
+			ctx, err := model.NewContext(bytes.NewReader(nil), conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = parseXRefTableEntry(ctx.XRefTable, []string{tt.offset, "00000", tt.entryType}, tt.objNr, 0, 1)
+			if tt.wantError {
+				var validationErr *model.ValidationError
+				if !errors.As(err, &validationErr) || validationErr.ObjectNumber() != tt.objNr {
+					t.Fatalf("expected attributed error for object %d, got %v", tt.objNr, err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			notices := ctx.ValidationReport().Notices()
+			if tt.wantNotice {
+				if len(notices) != 1 || notices[0].ObjectNumber != tt.objNr ||
+					notices[0].Phase != model.NoticePhaseRead || notices[0].Disposition != model.NoticeSkipped {
+					t.Fatalf("unexpected notices: %+v", notices)
+				}
+			} else if len(notices) != 0 {
+				t.Fatalf("unexpected notices: %+v", notices)
+			}
+			wantEntry := !tt.wantError && !tt.wantNotice
+			if ctx.Exists(tt.objNr) != wantEntry {
+				t.Fatalf("entry present = %t, want %t", ctx.Exists(tt.objNr), wantEntry)
+			}
+		})
+	}
+}
