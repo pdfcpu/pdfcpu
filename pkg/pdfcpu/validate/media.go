@@ -29,6 +29,49 @@ func mediaEntryError(d types.Dict, entryName string, err error) error {
 	return model.WithValidationErrorObject(err, validationEntryObjectNumber(0, d, entryName))
 }
 
+func validateNonNegativeIntegerArray(xRefTable *model.XRefTable, a types.Array, length int) bool {
+	if len(a) != length {
+		return false
+	}
+	for _, raw := range a {
+		o, err := xRefTable.Dereference(raw)
+		if err != nil {
+			return false
+		}
+		i, ok := o.(types.Integer)
+		if !ok || i.Value() < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func mediaNumberInRange(o types.Object, minValue, maxValue float64) bool {
+	switch o := o.(type) {
+	case types.Integer:
+		value := float64(o.Value())
+		return value >= minValue && value <= maxValue
+	case types.Float:
+		value := o.Value()
+		return value >= minValue && value <= maxValue
+	default:
+		return false
+	}
+}
+
+func validateNumberArrayRange(xRefTable *model.XRefTable, a types.Array, length int, minValue, maxValue float64) bool {
+	if len(a) != length {
+		return false
+	}
+	for _, raw := range a {
+		o, err := xRefTable.Dereference(raw)
+		if err != nil || !mediaNumberInRange(o, minValue, maxValue) {
+			return false
+		}
+	}
+	return true
+}
+
 func validateMinimumBitDepthDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 	// see table 269
 
@@ -53,9 +96,9 @@ func validateMinimumBitDepthDict(xRefTable *model.XRefTable, d types.Dict, since
 }
 
 func validateMinimumScreenSizeDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
-	// see table 269
+	// see table 270
 
-	dictName := "minBitDepthDict"
+	dictName := "minScreenSizeDict"
 
 	// Type, optional, name
 	_, err := validateNameEntry(xRefTable, d, 0, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "MinScreenSize" })
@@ -64,7 +107,10 @@ func validateMinimumScreenSizeDict(xRefTable *model.XRefTable, d types.Dict, sin
 	}
 
 	// V, required, integer array, length 2
-	_, err = validateIntegerArrayEntry(xRefTable, d, 0, dictName, "V", REQUIRED, sinceVersion, func(a types.Array) bool { return len(a) == 2 })
+	validate := func(a types.Array) bool {
+		return validateNonNegativeIntegerArray(xRefTable, a, 2)
+	}
+	_, err = validateIntegerArrayEntry(xRefTable, d, 0, dictName, "V", REQUIRED, sinceVersion, validate)
 	if err != nil {
 		return err
 	}
@@ -164,7 +210,7 @@ func validateMediaCriteriaDictEntryZ(xRefTable *model.XRefTable, d types.Dict, d
 	return nil
 }
 
-func validateMediaCriteriaDictEntryV(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version) (err error) {
+func validateMediaCriteriaDictEntryVContext(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version) (err error) {
 	arrayObjNr := validationEntryObjectNumber(0, d, "V")
 	defer func() {
 		err = model.WithValidationErrorObject(err, arrayObjNr)
@@ -177,6 +223,10 @@ func validateMediaCriteriaDictEntryV(xRefTable *model.XRefTable, d types.Dict, d
 
 	for i, v := range a {
 		objNr := validationObjectNumber(arrayObjNr, v)
+		if err := contextutil.Check(c); err != nil {
+			err = fmt.Errorf("%s.V[%d]: %w", dictName, i, err)
+			return model.WithValidationErrorObject(err, objNr)
+		}
 
 		if v == nil {
 			continue
@@ -201,7 +251,13 @@ func validateMediaCriteriaDictEntryV(xRefTable *model.XRefTable, d types.Dict, d
 	return nil
 }
 
-func validateMediaCriteriaDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+func validateMediaCriteriaDictEntryV(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version) error {
+	return validateMediaCriteriaDictEntryVContext(
+		context.Background(), xRefTable, d, dictName, required, sinceVersion,
+	)
+}
+
+func validateMediaCriteriaDictContext(c context.Context, xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
 	// see table 268
 
 	dictName := "mediaCritDict"
@@ -255,7 +311,7 @@ func validateMediaCriteriaDict(xRefTable *model.XRefTable, d types.Dict, sinceVe
 	}
 
 	// V, optional, array
-	err = validateMediaCriteriaDictEntryV(xRefTable, d, dictName, OPTIONAL, sinceVersion)
+	err = validateMediaCriteriaDictEntryVContext(c, xRefTable, d, dictName, OPTIONAL, sinceVersion)
 	if err != nil {
 		return err
 	}
@@ -270,6 +326,10 @@ func validateMediaCriteriaDict(xRefTable *model.XRefTable, d types.Dict, sinceVe
 	_, err = validateStringArrayEntry(xRefTable, d, 0, dictName, "L", OPTIONAL, sinceVersion, nil)
 
 	return err
+}
+
+func validateMediaCriteriaDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+	return validateMediaCriteriaDictContext(context.Background(), xRefTable, d, sinceVersion)
 }
 
 func validateMediaPermissionsDict(xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) (err error) {
@@ -333,7 +393,48 @@ func validateMediaPlayerInfoDict(xRefTable *model.XRefTable, d types.Dict, since
 	return err
 }
 
-func validateMediaPlayersDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) (err error) {
+func validateMediaPlayerInfoArray(c context.Context, xRefTable *model.XRefTable, d types.Dict, entryName string, sinceVersion model.Version) (count int, err error) {
+	dictName := "mediaPlayersDict"
+	arrayObjNr := validationEntryObjectNumber(0, d, entryName)
+	defer func() {
+		err = model.WithValidationErrorObject(err, arrayObjNr)
+	}()
+
+	a, err := validateArrayEntry(xRefTable, d, 0, dictName, entryName, OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return 0, fmt.Errorf("%s.%s: %w", dictName, entryName, err)
+	}
+
+	for i, v := range a {
+		objNr := validationObjectNumber(arrayObjNr, v)
+		if err := contextutil.Check(c); err != nil {
+			err = fmt.Errorf("%s.%s[%d]: %w", dictName, entryName, i, err)
+			return 0, model.WithValidationErrorObject(err, objNr)
+		}
+		if v == nil {
+			err = fmt.Errorf("%s.%s[%d]: missing media player info dict", dictName, entryName, i)
+			return 0, model.WithValidationErrorObject(err, objNr)
+		}
+
+		d1, err := xRefTable.DereferenceDict(v)
+		if err != nil {
+			err = fmt.Errorf("%s.%s[%d]: dereference media player info dict: %w", dictName, entryName, i, err)
+			return 0, model.WithValidationErrorObject(err, objNr)
+		}
+		if d1 == nil {
+			err = fmt.Errorf("%s.%s[%d]: missing media player info dict", dictName, entryName, i)
+			return 0, model.WithValidationErrorObject(err, objNr)
+		}
+		if err = validateMediaPlayerInfoDict(xRefTable, d1, sinceVersion); err != nil {
+			err = fmt.Errorf("%s.%s[%d]: %w", dictName, entryName, i, err)
+			return 0, model.WithValidationErrorObject(err, objNr)
+		}
+	}
+
+	return len(a), nil
+}
+
+func validateMediaPlayersDictContext(c context.Context, xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) (hasInputPlayer bool, err error) {
 	// see 13.2.7.2
 
 	dictName := "mediaPlayersDict"
@@ -341,61 +442,95 @@ func validateMediaPlayersDict(xRefTable *model.XRefTable, d types.Dict, sinceVer
 	// Type, optional, name
 	_, err = validateNameEntry(xRefTable, d, 0, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "MediaPlayers" })
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// MU, optional, array of media player info dicts
-	arrayObjNr := validationEntryObjectNumber(0, d, "MU")
-	defer func() {
-		err = model.WithValidationErrorObject(err, arrayObjNr)
-	}()
-
-	a, err := validateArrayEntry(xRefTable, d, 0, dictName, "MU", OPTIONAL, sinceVersion, nil)
+	muCount, err := validateMediaPlayerInfoArray(c, xRefTable, d, "MU", sinceVersion)
 	if err != nil {
-		return fmt.Errorf("%s.MU: %w", dictName, err)
+		return false, err
 	}
 
-	for i, v := range a {
-		objNr := validationObjectNumber(arrayObjNr, v)
-
-		if v == nil {
-			continue
-		}
-
-		d, err := xRefTable.DereferenceDict(v)
-		if err != nil {
-			err = fmt.Errorf("%s.MU[%d]: dereference media player info dict: %w", dictName, i, err)
-			return model.WithValidationErrorObject(err, objNr)
-		}
-
-		if d == nil {
-			continue
-		}
-
-		err = validateMediaPlayerInfoDict(xRefTable, d, sinceVersion)
-		if err != nil {
-			err = fmt.Errorf("%s.MU[%d]: %w", dictName, i, err)
-			return model.WithValidationErrorObject(err, objNr)
-		}
-
+	// A, optional, array of media player info dicts
+	aCount, err := validateMediaPlayerInfoArray(c, xRefTable, d, "A", sinceVersion)
+	if err != nil {
+		return false, err
 	}
 
-	return nil
+	// NU, optional, array of media player info dicts
+	if _, err = validateMediaPlayerInfoArray(c, xRefTable, d, "NU", sinceVersion); err != nil {
+		return false, err
+	}
 
+	return muCount > 0 || aCount > 0, nil
 }
 
-func validateFileSpecOrFormXObjectEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
+func validateMediaPlayersDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+	_, err := validateMediaPlayersDictContext(context.Background(), xRefTable, d, sinceVersion)
+	return err
+}
+
+func validateFileSpecOrFormXObjectEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) (bool, error) {
 	rawEntry := d[entryName]
 	o, err := validateEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion)
 	if err != nil || o == nil {
 		if err != nil {
-			return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
+			return false, fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
+		}
+		return false, nil
+	}
+
+	fileSpec, err := validateFileSpecificationOrFormObject(c, xRefTable, rawEntry)
+	if err != nil {
+		return false, fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
+	}
+	return fileSpec, nil
+}
+
+func validateMediaClipPlayers(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) error {
+	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "PL", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return fmt.Errorf("%s.PL: %w", dictName, err)
+	}
+	if d1 == nil {
+		return nil
+	}
+	if _, err = validateMediaPlayersDictContext(c, xRefTable, d1, sinceVersion); err != nil {
+		err = fmt.Errorf("%s.PL: %w", dictName, err)
+		return mediaEntryError(d, "PL", err)
+	}
+	return nil
+}
+
+func validateMediaClipContentType(xRefTable *model.XRefTable, d types.Dict, dictName string, fileSpec bool, sinceVersion model.Version) error {
+	rawEntry := d["CT"]
+	if !fileSpec {
+		entry, err := xRefTable.Dereference(rawEntry)
+		if err != nil {
+			return mediaEntryError(d, "CT", err)
+		}
+		if entry != nil {
+			err := fmt.Errorf("%s: not allowed for a Form XObject", dictEntryContext(dictName, "CT", rawEntry))
+			return mediaEntryError(d, "CT", err)
 		}
 		return nil
 	}
+	_, err := validateStringEntry(xRefTable, d, 0, dictName, "CT", OPTIONAL, sinceVersion, nil)
+	return err
+}
 
-	if err := validateFileSpecificationOrFormObject(c, xRefTable, rawEntry); err != nil {
-		return fmt.Errorf("%s: %w", dictEntryContext(dictName, entryName, rawEntry), err)
+func validateMediaClipBaseURL(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, sinceVersion model.Version) error {
+	d1, err := validateDictEntry(xRefTable, d, 0, dictName, entryName, OPTIONAL, sinceVersion, nil)
+	if err != nil || d1 == nil {
+		return err
+	}
+	// BU, optional, ASCII string
+	baseURL, err := validateStringEntry(xRefTable, d1, 0, "", "BU", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return mediaEntryError(d, entryName, err)
+	}
+	if baseURL != nil {
+		collectLinkTarget(xRefTable, *baseURL, linkTargetURIReference, linkSourceMediaClipBaseURL)
 	}
 	return nil
 }
@@ -406,14 +541,16 @@ func validateMediaClipDataDict(c context.Context, xRefTable *model.XRefTable, d 
 	dictName := "mediaClipDataDict"
 
 	// D, required, file specification or stream
-	err := validateFileSpecOrFormXObjectEntry(c, xRefTable, d, dictName, "D", REQUIRED, sinceVersion)
+	fileSpec, err := validateFileSpecOrFormXObjectEntry(c, xRefTable, d, dictName, "D", REQUIRED, sinceVersion)
 	if err != nil {
 		return err
 	}
+	if fileSpec && !isEmbeddedFileSpecification(xRefTable, d["D"]) {
+		collectFileSpecificationTarget(xRefTable, d["D"], linkTargetFile, linkSourceMediaClip)
+	}
 
 	// CT, optional, ASCII string
-	_, err = validateStringEntry(xRefTable, d, 0, dictName, "CT", OPTIONAL, sinceVersion, nil)
-	if err != nil {
+	if err = validateMediaClipContentType(xRefTable, d, dictName, fileSpec, sinceVersion); err != nil {
 		return err
 	}
 
@@ -430,43 +567,17 @@ func validateMediaClipDataDict(c context.Context, xRefTable *model.XRefTable, d 
 	}
 
 	// PL, optional, media players dict
-	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "PL", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return fmt.Errorf("%s.PL: %w", dictName, err)
-	}
-	if d1 != nil {
-		err = validateMediaPlayersDict(xRefTable, d1, sinceVersion)
-		if err != nil {
-			err = fmt.Errorf("%s.PL: %w", dictName, err)
-			return mediaEntryError(d, "PL", err)
-		}
+	if err = validateMediaClipPlayers(c, xRefTable, d, dictName, sinceVersion); err != nil {
+		return err
 	}
 
 	// MH, optional, dict
-	d1, err = validateDictEntry(xRefTable, d, 0, dictName, "MH", OPTIONAL, sinceVersion, nil)
-	if err != nil {
+	if err = validateMediaClipBaseURL(xRefTable, d, dictName, "MH", sinceVersion); err != nil {
 		return err
 	}
-	if d1 != nil {
-		// BU, optional, ASCII string
-		_, err = validateStringEntry(xRefTable, d1, 0, "", "BU", OPTIONAL, sinceVersion, nil)
-		if err != nil {
-			return mediaEntryError(d, "MH", err)
-		}
-	}
 
-	// BE. optional, dict
-	d1, err = validateDictEntry(xRefTable, d, 0, dictName, "BE", OPTIONAL, sinceVersion, nil)
-	if err != nil {
-		return err
-	}
-	if d1 != nil {
-		// BU, optional, ASCII string
-		_, err = validateStringEntry(xRefTable, d1, 0, "", "BU", OPTIONAL, sinceVersion, nil)
-		return mediaEntryError(d, "BE", err)
-	}
-
-	return err
+	// BE, optional, dict
+	return validateMediaClipBaseURL(xRefTable, d, dictName, "BE", sinceVersion)
 }
 
 func validateTimespanDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
@@ -803,52 +914,52 @@ func validateMediaPlayParamsMHBEDict(xRefTable *model.XRefTable, d types.Dict, s
 	return err
 }
 
-func validateMediaPlayParamsDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+func validateMediaPlayParamsDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) (hasInputPlayer bool, err error) {
 	// see 13.2.5
 
 	dictName := "mediaPlayParamsDict"
 
 	// Type, optional, name
-	_, err := validateNameEntry(xRefTable, d, 0, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "MediaPlayParams" })
+	_, err = validateNameEntry(xRefTable, d, 0, dictName, "Type", OPTIONAL, sinceVersion, func(s string) bool { return s == "MediaPlayParams" })
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// PL, optional, media players dict
 	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "PL", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if d1 != nil {
-		err = validateMediaPlayersDict(xRefTable, d1, sinceVersion)
+		hasInputPlayer, err = validateMediaPlayersDictContext(c, xRefTable, d1, sinceVersion)
 		if err != nil {
-			return mediaEntryError(d, "PL", err)
+			return false, mediaEntryError(d, "PL", err)
 		}
 	}
 
 	// MH, optional, dict
 	d1, err = validateDictEntry(xRefTable, d, 0, dictName, "MH", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if d1 != nil {
 		err = validateMediaPlayParamsMHBEDict(xRefTable, d1, sinceVersion)
 		if err != nil {
-			return mediaEntryError(d, "MH", err)
+			return false, mediaEntryError(d, "MH", err)
 		}
 	}
 
 	// BE, optional, dict
 	d1, err = validateDictEntry(xRefTable, d, 0, dictName, "BE", OPTIONAL, sinceVersion, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if d1 != nil {
 		err = validateMediaPlayParamsMHBEDict(xRefTable, d1, sinceVersion)
-		return mediaEntryError(d, "BE", err)
+		return hasInputPlayer, mediaEntryError(d, "BE", err)
 	}
 
-	return err
+	return hasInputPlayer, nil
 }
 
 func validateFloatingWindowsParameterDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
@@ -863,7 +974,10 @@ func validateFloatingWindowsParameterDict(xRefTable *model.XRefTable, d types.Di
 	}
 
 	// D, required, array of integers
-	_, err = validateIntegerArrayEntry(xRefTable, d, 0, dictName, "D", REQUIRED, sinceVersion, func(a types.Array) bool { return len(a) == 2 })
+	validateDimensions := func(a types.Array) bool {
+		return validateNonNegativeIntegerArray(xRefTable, a, 2)
+	}
+	_, err = validateIntegerArrayEntry(xRefTable, d, 0, dictName, "D", REQUIRED, sinceVersion, validateDimensions)
 	if err != nil {
 		return err
 	}
@@ -925,13 +1039,18 @@ func validateScreenParametersMHBEDict(xRefTable *model.XRefTable, d types.Dict, 
 	}
 
 	// B, optional, array of 3 numbers
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "B", OPTIONAL, sinceVersion, func(a types.Array) bool { return len(a) == 3 })
+	validateColor := func(a types.Array) bool {
+		return validateNumberArrayRange(xRefTable, a, 3, 0, 1)
+	}
+	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "B", OPTIONAL, sinceVersion, validateColor)
 	if err != nil {
 		return err
 	}
 
 	// O, optional, number
-	_, err = validateNumberEntry(xRefTable, d, 0, dictName, "O", OPTIONAL, sinceVersion, nil)
+	_, err = validateNumberEntry(xRefTable, d, 0, dictName, "O", OPTIONAL, sinceVersion, func(f float64) bool {
+		return f >= 0 && f <= 1
+	})
 	if err != nil {
 		return err
 	}
@@ -1002,19 +1121,33 @@ func validateMediaRenditionDict(c context.Context, xRefTable *model.XRefTable, d
 	); err != nil {
 		return err
 	}
+	rawClip, found := d.Find("C")
+	hasClip := found && rawClip != nil
+	if hasClip {
+		clip, err := xRefTable.Dereference(rawClip)
+		if err != nil {
+			return mediaClipEntryError(d, dictName, "C", rawClip, err)
+		}
+		hasClip = clip != nil
+	}
 
 	// P, required if C not present, dict
 	rawEntry := d["P"]
-	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "P", OPTIONAL, sinceVersion, nil)
+	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "P", !hasClip, sinceVersion, nil)
 	if err != nil {
 		return fmt.Errorf("%s: %w", dictEntryContext(dictName, "P", rawEntry), err)
 	}
+	hasInputPlayer := false
 	if d1 != nil {
-		err = validateMediaPlayParamsDict(xRefTable, d1, sinceVersion)
+		hasInputPlayer, err = validateMediaPlayParamsDict(c, xRefTable, d1, sinceVersion)
 		if err != nil {
 			err = fmt.Errorf("%s: %w", dictEntryContext(dictName, "P", rawEntry), err)
 			return mediaEntryError(d, "P", err)
 		}
+	}
+	if !hasClip && !hasInputPlayer {
+		err = fmt.Errorf("%s.P.PL: missing non-empty MU or A player array", dictName)
+		return mediaEntryError(d, "P", err)
 	}
 
 	// SP, optional, dict
@@ -1080,7 +1213,7 @@ func validateSelectorRenditionDict(c context.Context, xRefTable *model.XRefTable
 	return nil
 }
 
-func validateRenditionDictEntryMH(xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) (err error) {
+func validateRenditionDictEntryMH(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) (err error) {
 	defer func() {
 		err = mediaEntryError(d, "MH", err)
 	}()
@@ -1098,7 +1231,7 @@ func validateRenditionDictEntryMH(xRefTable *model.XRefTable, d types.Dict, dict
 		}
 
 		if d2 != nil {
-			if err := validateMediaCriteriaDict(xRefTable, d2, sinceVersion); err != nil {
+			if err := validateMediaCriteriaDictContext(c, xRefTable, d2, sinceVersion); err != nil {
 				err = fmt.Errorf("%s.MH.C: %w", dictName, err)
 				return mediaEntryError(d1, "C", err)
 			}
@@ -1109,7 +1242,7 @@ func validateRenditionDictEntryMH(xRefTable *model.XRefTable, d types.Dict, dict
 	return nil
 }
 
-func validateRenditionDictEntryBE(xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) (err error) {
+func validateRenditionDictEntryBE(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string, sinceVersion model.Version) (err error) {
 	defer func() {
 		err = mediaEntryError(d, "BE", err)
 	}()
@@ -1127,7 +1260,7 @@ func validateRenditionDictEntryBE(xRefTable *model.XRefTable, d types.Dict, dict
 		}
 
 		if d2 != nil {
-			if err := validateMediaCriteriaDict(xRefTable, d2, sinceVersion); err != nil {
+			if err := validateMediaCriteriaDictContext(c, xRefTable, d2, sinceVersion); err != nil {
 				err = fmt.Errorf("%s.BE.C: %w", dictName, err)
 				return mediaEntryError(d1, "C", err)
 			}
@@ -1182,13 +1315,13 @@ func validateRenditionDictDepth(c context.Context, xRefTable *model.XRefTable, d
 	}
 
 	// MH, optional, dict
-	err = validateRenditionDictEntryMH(xRefTable, d, dictName, sinceVersion)
+	err = validateRenditionDictEntryMH(c, xRefTable, d, dictName, sinceVersion)
 	if err != nil {
 		return err
 	}
 
 	// BE, optional, dict
-	err = validateRenditionDictEntryBE(xRefTable, d, dictName, sinceVersion)
+	err = validateRenditionDictEntryBE(c, xRefTable, d, dictName, sinceVersion)
 	if err != nil {
 		return err
 	}
