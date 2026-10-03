@@ -470,6 +470,8 @@ func validateMediaClipDataDict(c context.Context, xRefTable *model.XRefTable, d 
 }
 
 func validateTimespanDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion model.Version) error {
+	// see 13.2.6.3 and table 289
+	// The callers validate durations and media offsets, which prohibit negative values (tables 281 and 286).
 	dictName := "timespanDict"
 
 	// Type, optional, name
@@ -485,7 +487,9 @@ func validateTimespanDict(xRefTable *model.XRefTable, d types.Dict, sinceVersion
 	}
 
 	// V, required, number
-	_, err = validateNumberEntry(xRefTable, d, 0, dictName, "V", REQUIRED, sinceVersion, nil)
+	_, err = validateNumberEntry(xRefTable, d, 0, dictName, "V", REQUIRED, sinceVersion, func(f float64) bool {
+		return f >= 0
+	})
 
 	return err
 }
@@ -732,8 +736,13 @@ func validateMediaDurationDict(xRefTable *model.XRefTable, d types.Dict, sinceVe
 		return err
 	}
 
-	// T, required if S == "T", timespann dict
-	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "T", *s == "T", sinceVersion, nil)
+	// T is ignored for intrinsic and infinite durations (see table 281).
+	if *s != "T" {
+		return nil
+	}
+
+	// T, required, timespan dict
+	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "T", REQUIRED, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
