@@ -338,8 +338,20 @@ func validateURIActionDict(xRefTable *model.XRefTable, d types.Dict, dictName st
 	return err
 }
 
-func validateSoundDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
+func soundStreamDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) (*types.StreamDict, error) {
 	sd, err := validateStreamDictEntry(xRefTable, d, 0, dictName, entryName, required, sinceVersion, nil)
+	if err != nil || sd != nil {
+		return sd, err
+	}
+	o, found := d.Find(entryName)
+	if !found || o == nil {
+		return nil, nil
+	}
+	return validateStreamDictForObject(xRefTable, o, 0)
+}
+
+func validateSoundDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
+	sd, err := soundStreamDictEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
 	if err != nil || sd == nil {
 		return err
 	}
@@ -352,20 +364,35 @@ func validateSoundDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, 
 		return err
 	}
 
-	// R, required, number - sampling rate
-	_, err = validateNumberEntry(xRefTable, sd.Dict, 0, dictName, "R", OPTIONAL, model.V10, nil)
+	// F, optional, file specification for self-describing external sound data.
+	f, err := validateFileSpecEntry(xRefTable, sd.Dict, dictName, "F", OPTIONAL, model.V12)
+	if err != nil {
+		return err
+	}
+	if f != nil && !isEmbeddedFileSpecification(xRefTable, f) {
+		collectFileSpecificationTarget(xRefTable, f, linkTargetFile, linkSourceSound)
+	}
+
+	// R, required without F, number - sampling rate
+	_, err = validateNumberEntry(xRefTable, sd.Dict, 0, dictName, "R", f == nil, model.V10, func(f float64) bool {
+		return f > 0
+	})
 	if err != nil {
 		return err
 	}
 
-	// C, required, integer - # of sound channels
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "C", OPTIONAL, model.V10, nil)
+	// C, optional, integer - number of sound channels
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "C", OPTIONAL, model.V10, func(i int) bool {
+		return i > 0
+	})
 	if err != nil {
 		return err
 	}
 
-	// B, required, integer - bits per sample value per channel
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "B", OPTIONAL, model.V10, nil)
+	// B, optional, integer - bits per sample value per channel
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "B", OPTIONAL, model.V10, func(i int) bool {
+		return i > 0
+	})
 	if err != nil {
 		return err
 	}
@@ -374,7 +401,14 @@ func validateSoundDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, 
 	validateSampleDataEncoding := func(s string) bool {
 		return types.MemberOf(s, []string{"Raw", "Signed", "muLaw", "ALaw"})
 	}
-	_, err = validateNameEntry(xRefTable, sd.Dict, 0, dictName, "E", OPTIONAL, model.V10, validateSampleDataEncoding)
+	if _, err = validateNameEntry(
+		xRefTable, sd.Dict, 0, dictName, "E", OPTIONAL, model.V10, validateSampleDataEncoding,
+	); err != nil {
+		return err
+	}
+
+	// CO, optional, name - sound compression format
+	_, err = validateNameEntry(xRefTable, sd.Dict, 0, dictName, "CO", OPTIONAL, model.V10, nil)
 
 	return err
 }
