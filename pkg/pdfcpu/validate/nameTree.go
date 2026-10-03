@@ -511,6 +511,53 @@ func isEmptyEmbeddedFileSpecification(xRefTable *model.XRefTable, o types.Object
 	return err == nil && ef != nil && len(ef) == 0
 }
 
+func validateRichMediaAssetNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+	if err := xRefTable.ValidateVersion("RichMediaAssetNameTreeValue", sinceVersion); err != nil {
+		return err
+	}
+
+	d, err := xRefTable.DereferenceDict(o)
+	if err != nil {
+		return fmt.Errorf("RichMedia Assets name tree value: dereference file specification: %w", err)
+	}
+	if d == nil {
+		return errors.New("RichMedia Assets name tree value: missing file specification")
+	}
+	if isURLFileSpecification(xRefTable, d) {
+		return errors.New("RichMedia Assets name tree value: expected embedded file specification")
+	}
+	if _, err = validateFileSpecificationWithoutLinkCollection(xRefTable, o); err != nil {
+		return fmt.Errorf("RichMedia Assets name tree value: %w", err)
+	}
+
+	rawEF, found := d.Find("EF")
+	if !found {
+		return errors.New("RichMedia Assets name tree value: missing EF dictionary")
+	}
+	ef, err := xRefTable.DereferenceDict(rawEF)
+	if err != nil {
+		return fmt.Errorf("RichMedia Assets name tree value EF: %w", err)
+	}
+	if ef == nil {
+		return errors.New("RichMedia Assets name tree value: missing EF dictionary")
+	}
+	for _, key := range []string{"F", "UF"} {
+		raw, found := ef.Find(key)
+		if !found {
+			continue
+		}
+		embeddedFile, err := xRefTable.Dereference(raw)
+		if err != nil {
+			return fmt.Errorf("RichMedia Assets name tree value EF.%s: %w", key, err)
+		}
+		if _, ok := embeddedFile.(types.StreamDict); ok {
+			return nil
+		}
+	}
+
+	return errors.New("RichMedia Assets name tree value: missing embedded file stream reference")
+}
+
 func validateSlideShowResource(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	if err := xRefTable.ValidateVersion("SlideShowResource", sinceVersion); err != nil {
 		return err
@@ -801,7 +848,8 @@ func validateNameTreeValue(c context.Context, name string, xRefTable *model.XRef
 		"URLS": {func(x *model.XRefTable, o types.Object, version model.Version) error {
 			return validateURLSNameTreeValue(c, x, o, version)
 		}, model.V13, model.V13},
-		"EmbeddedFiles": {validateEmbeddedFilesNameTreeValue, model.V14, model.V11},
+		"EmbeddedFiles":   {validateEmbeddedFilesNameTreeValue, model.V14, model.V11},
+		"RichMediaAssets": {validateRichMediaAssetNameTreeValue, model.V10, model.V10},
 		"SlideShowResources": {func(x *model.XRefTable, o types.Object, version model.Version) error {
 			return validateSlideShowResource(x, o, version)
 		}, model.V14, model.V14},

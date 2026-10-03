@@ -1269,9 +1269,37 @@ func validateAnnotationDictRedact(xRefTable *model.XRefTable, d types.Dict, dict
 	return err
 }
 
-func validateRichMediaAnnotation(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
-	// TODO See extension level 3.
-	return nil
+func validateRichMediaAnnotation(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	// See Adobe Supplement to ISO 32000, extension level 3, 9.6.1.
+	rawContent := d["RichMediaContent"]
+	contentObjNr := validationObjectNumber(0, rawContent)
+	content, err := validateDictEntry(xRefTable, d, 0, dictName, "RichMediaContent", REQUIRED, model.V10, nil)
+	if err != nil {
+		return err
+	}
+	if _, err = validateNameEntry(
+		xRefTable,
+		content,
+		contentObjNr,
+		"RichMediaContent",
+		"Type",
+		OPTIONAL,
+		model.V10,
+		func(s string) bool { return s == "RichMediaContent" },
+	); err != nil {
+		return err
+	}
+
+	rawAssets := content["Assets"]
+	assetsObjNr := validationObjectNumber(contentObjNr, rawAssets)
+	assets, err := validateDictEntry(
+		xRefTable, content, contentObjNr, "RichMediaContent", "Assets", OPTIONAL, model.V10, nil,
+	)
+	if err != nil || assets == nil {
+		return err
+	}
+	_, _, _, err = validateNameTree(c, xRefTable, "RichMediaAssets", assets, assetsObjNr, true, rawAssets)
+	return err
 }
 
 func validateExDataDict(xRefTable *model.XRefTable, d types.Dict) error {
@@ -1800,6 +1828,9 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 	screen := func(x *model.XRefTable, d types.Dict, name string) error {
 		return validateAnnotationDictScreen(c, x, d, ownerObjNr, name)
 	}
+	richMedia := func(x *model.XRefTable, d types.Dict, name string) error {
+		return validateRichMediaAnnotation(c, x, d, name)
+	}
 
 	for k, v := range map[string]struct {
 		validate            func(xRefTable *model.XRefTable, d types.Dict, dictName string) error
@@ -1833,7 +1864,7 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 		"Watermark":      {validateAnnotationDictWatermark, model.V16, model.V13, false},
 		"3D":             {validateAnnotationDict3D, model.V16, model.V16, false},
 		"Redact":         {validateAnnotationDictRedact, model.V17, model.V17, true},
-		"RichMedia":      {validateRichMediaAnnotation, model.V17, model.V14, false},
+		"RichMedia":      {richMedia, model.V17, model.V14, false},
 	} {
 		if subtype.Value() == k {
 

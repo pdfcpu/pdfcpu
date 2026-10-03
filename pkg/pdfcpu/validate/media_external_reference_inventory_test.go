@@ -164,3 +164,134 @@ func TestIDSNameTreeArrayValueInventory(t *testing.T) {
 		t.Fatalf("got %v, want context cancellation", err)
 	}
 }
+
+func TestRichMediaAssetInventory(t *testing.T) {
+	ctx := externalReferenceContext(t)
+	assetName := "media/player.swf"
+	asset := types.Dict{
+		"Type": types.Name("Filespec"),
+		"F":    types.StringLiteral(assetName),
+		"UF":   types.StringLiteral(assetName),
+		"EF":   types.Dict{"F": *types.NewIndirectRef(20, 0)},
+	}
+	embeddedFile := types.StreamDict{Dict: types.Dict{"Type": types.Name("EmbeddedFile")}}
+	ctx.XRefTable.Table[20] = model.NewXRefTableEntryGen0(embeddedFile)
+	ctx.XRefTable.Table[21] = model.NewXRefTableEntryGen0(asset)
+	annotation := types.Dict{
+		"RichMediaContent": types.Dict{
+			"Type":   types.Name("RichMediaContent"),
+			"Assets": types.Dict{"Names": types.Array{types.StringLiteral(assetName), *types.NewIndirectRef(21, 0)}},
+		},
+	}
+	if err := validateRichMediaAnnotation(t.Context(), ctx.XRefTable, annotation, "RichMedia"); err != nil {
+		t.Fatal(err)
+	}
+	if _, found := inventoryTarget(ctx, assetName); found {
+		t.Fatalf("embedded RichMedia asset was classified as an external target: %q", assetName)
+	}
+}
+
+func TestRichMediaValidationInventory(t *testing.T) {
+	ctx := externalReferenceContext(t)
+	err := validateRichMediaAnnotation(t.Context(), ctx.XRefTable, types.Dict{}, "RichMedia")
+	if err == nil || !strings.Contains(err.Error(), "RichMediaContent") {
+		t.Fatalf("missing RichMediaContent: got %v", err)
+	}
+
+	annotation := types.Dict{
+		"Type":              types.Name("Annot"),
+		"Subtype":           types.Name("RichMedia"),
+		"Rect":              types.Array{types.Integer(0), types.Integer(0), types.Integer(10), types.Integer(10)},
+		"RichMediaSettings": types.Integer(1),
+		"RichMediaContent": types.Dict{
+			"Type":           types.Name("RichMediaContent"),
+			"Configurations": types.Integer(1),
+			"Views":          types.Integer(1),
+		},
+	}
+	if _, err := validateAnnotationDict(t.Context(), ctx.XRefTable, annotation, 0); err != nil {
+		t.Fatalf("minimal RichMedia validation: %v", err)
+	}
+}
+
+func TestRichMediaAssetRequiresEmbeddedFile(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		asset types.Dict
+		want  string
+	}{
+		{
+			name:  "missing EF",
+			asset: types.Dict{"Type": types.Name("Filespec"), "F": types.StringLiteral("media.swf")},
+			want:  "missing EF dictionary",
+		},
+		{
+			name:  "URL file specification",
+			asset: urlSpecification("https://example.invalid/media.swf"),
+			want:  "expected embedded file specification",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := externalReferenceContext(t)
+			annotation := types.Dict{
+				"RichMediaContent": types.Dict{
+					"Assets": types.Dict{"Names": types.Array{types.StringLiteral("media.swf"), tt.asset}},
+				},
+			}
+			err := validateRichMediaAnnotation(t.Context(), ctx.XRefTable, annotation, "RichMedia")
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("got %v, want error containing %q", err, tt.want)
+			}
+			if len(ctx.URIs) != 0 {
+				t.Fatalf("rejected RichMedia asset entered external reference inventory: %v", ctx.URIs)
+			}
+		})
+	}
+}
+
+func TestRichMediaAssetTraversalGuards(t *testing.T) {
+	t.Run("cycle", func(t *testing.T) {
+		ctx := externalReferenceContext(t)
+		ctx.XRefTable.Table[30] = model.NewXRefTableEntryGen0(types.Dict{
+			"Kids": types.Array{*types.NewIndirectRef(30, 0)},
+		})
+		annotation := types.Dict{
+			"RichMediaContent": types.Dict{"Assets": *types.NewIndirectRef(30, 0)},
+		}
+		err := validateRichMediaAnnotation(t.Context(), ctx.XRefTable, annotation, "RichMedia")
+		if !errors.Is(err, model.ErrNameTreeCycle) {
+			t.Fatalf("got %v, want name-tree cycle", err)
+		}
+	})
+
+	t.Run("object context", func(t *testing.T) {
+		ctx := externalReferenceContext(t)
+		asset := types.Dict{
+			"Type": types.Name("Filespec"),
+			"F":    types.StringLiteral("media.swf"),
+			"EF":   types.Dict{"F": *types.NewIndirectRef(20, 0)},
+		}
+		annotation := types.Dict{
+			"RichMediaContent": types.Dict{
+				"Assets": types.Dict{"Names": types.Array{types.StringLiteral("media.swf"), asset}},
+			},
+		}
+		err := validateRichMediaAnnotation(t.Context(), ctx.XRefTable, annotation, "RichMedia")
+		if err == nil || !strings.Contains(err.Error(), "obj#20") {
+			t.Fatalf("got %v, want object context for object 20", err)
+		}
+	})
+
+	t.Run("cancellation", func(t *testing.T) {
+		ctx := externalReferenceContext(t)
+		c, cancel := context.WithCancel(t.Context())
+		cancel()
+		annotation := types.Dict{
+			"RichMediaContent": types.Dict{"Assets": types.Dict{"Names": types.Array{}}},
+		}
+		err := validateRichMediaAnnotation(c, ctx.XRefTable, annotation, "RichMedia")
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("got %v, want context cancellation", err)
+		}
+	})
+}
