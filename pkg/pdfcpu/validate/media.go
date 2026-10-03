@@ -749,7 +749,9 @@ func validateMediaPlayParamsMHBEDict(xRefTable *model.XRefTable, d types.Dict, s
 	dictName := "mediaPlayParamsMHBEDict"
 
 	// V, optional, integer
-	_, err := validateIntegerEntry(xRefTable, d, 0, dictName, "V", OPTIONAL, sinceVersion, nil)
+	_, err := validateIntegerEntry(xRefTable, d, 0, dictName, "V", OPTIONAL, sinceVersion, func(i int) bool {
+		return i >= 0
+	})
 	if err != nil {
 		return err
 	}
@@ -760,8 +762,8 @@ func validateMediaPlayParamsMHBEDict(xRefTable *model.XRefTable, d types.Dict, s
 		return err
 	}
 
-	// F, optional, integer
-	_, err = validateIntegerEntry(xRefTable, d, 0, dictName, "RT", OPTIONAL, sinceVersion, nil)
+	// F, optional, integer. Unrecognized values follow the MH/BE viability rules in table 280.
+	_, err = validateIntegerEntry(xRefTable, d, 0, dictName, "F", OPTIONAL, sinceVersion, nil)
 	if err != nil {
 		return err
 	}
@@ -785,7 +787,9 @@ func validateMediaPlayParamsMHBEDict(xRefTable *model.XRefTable, d types.Dict, s
 	}
 
 	// RC, optional, number
-	_, err = validateNumberEntry(xRefTable, d, 0, dictName, "RC", OPTIONAL, sinceVersion, nil)
+	_, err = validateNumberEntry(xRefTable, d, 0, dictName, "RC", OPTIONAL, sinceVersion, func(f float64) bool {
+		return f >= 0
+	})
 
 	return err
 }
