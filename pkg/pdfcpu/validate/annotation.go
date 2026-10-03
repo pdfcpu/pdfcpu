@@ -883,29 +883,62 @@ func validateAnnotationDictSound(xRefTable *model.XRefTable, d types.Dict, dictN
 	return err
 }
 
-func validateMovieDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+func validateMoviePoster(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+	const dictName = "movieDict"
+	o, err := validateEntry(xRefTable, d, ownerObjNr, dictName, "Poster", OPTIONAL, model.V10)
+	if err != nil || o == nil {
+		return err
+	}
+	posterObjNr := validationEntryObjectNumber(ownerObjNr, d, "Poster")
+	if _, ok := o.(types.Boolean); ok {
+		return nil
+	}
+	sd, ok := o.(types.StreamDict)
+	if !ok {
+		err := fmt.Errorf("dict=%s entry=Poster invalid type %T", dictName, o)
+		return model.WithValidationErrorObject(err, posterObjNr)
+	}
+	if err := validateXObjectType(xRefTable, &sd); err != nil {
+		return model.WithValidationErrorObject(err, posterObjNr)
+	}
+	if _, err := validateNameEntry(
+		xRefTable, sd.Dict, posterObjNr, "posterStreamDict", "Subtype", REQUIRED, model.V10,
+		func(s string) bool { return s == "Image" },
+	); err != nil {
+		return err
+	}
+	return validateImageStreamDict(c, xRefTable, &sd, posterObjNr, isNoAlternateImageStreamDict)
+}
+
+func validateMovieDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
 	dictName := "movieDict"
 
 	// F, required, file specification
-	if _, err := validateFileSpecEntry(xRefTable, d, dictName, "F", REQUIRED, model.V10); err != nil {
+	f, err := validateFileSpecEntry(xRefTable, d, dictName, "F", REQUIRED, model.V10)
+	if err != nil {
 		return err
+	}
+	if !isEmbeddedFileSpecification(xRefTable, f) {
+		collectFileSpecificationTarget(xRefTable, f, linkTargetFile, linkSourceMovie)
 	}
 
 	// Aspect, optional, integer array, length 2
-	if _, err := validateIntegerArrayEntry(xRefTable, d, 0, dictName, "Aspect", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 }); err != nil {
+	if err := validateMoviePositiveIntegerArrayEntry(xRefTable, d, dictName, "Aspect"); err != nil {
 		return err
 	}
 
-	// Rotate, optional, integer
-	if _, err := validateIntegerEntry(xRefTable, d, 0, dictName, "Rotate", OPTIONAL, model.V10, nil); err != nil {
+	// Rotate, optional, integer multiple of 90
+	if _, err := validateIntegerEntry(xRefTable, d, 0, dictName, "Rotate", OPTIONAL, model.V10, func(i int) bool {
+		return i%90 == 0
+	}); err != nil {
 		return err
 	}
 
 	// Poster, optional boolean or stream
-	return validateBooleanOrStreamEntry(xRefTable, d, ownerObjNr, dictName, "Poster", OPTIONAL, model.V10)
+	return validateMoviePoster(c, xRefTable, d, ownerObjNr)
 }
 
-func validateAnnotationDictMovie(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateAnnotationDictMovie(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.5.6.17 Movie Annotations
 	// 13.4 Movies
 	// The features described in this sub-clause are obsolescent and their use is no longer recommended.
@@ -918,13 +951,13 @@ func validateAnnotationDictMovie(xRefTable *model.XRefTable, d types.Dict, dictN
 
 	// Movie, required, movie dict
 	rawMovie := d["Movie"]
-	movieObjNr := validationObjectNumber(0, rawMovie)
+	movieObjNr := validationObjectNumber(ownerObjNr, rawMovie)
 	d1, err := validateDictEntry(xRefTable, d, 0, dictName, "Movie", REQUIRED, model.V10, nil)
 	if err != nil {
 		return err
 	}
 
-	if err = validateMovieDict(xRefTable, d1, movieObjNr); err != nil {
+	if err = validateMovieDict(c, xRefTable, d1, movieObjNr); err != nil {
 		return err
 	}
 
@@ -1831,6 +1864,9 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 	richMedia := func(x *model.XRefTable, d types.Dict, name string) error {
 		return validateRichMediaAnnotation(c, x, d, name)
 	}
+	movie := func(x *model.XRefTable, d types.Dict, name string) error {
+		return validateAnnotationDictMovie(c, x, d, ownerObjNr, name)
+	}
 
 	for k, v := range map[string]struct {
 		validate            func(xRefTable *model.XRefTable, d types.Dict, dictName string) error
@@ -1856,7 +1892,7 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 		"Popup":          {validateAnnotationDictPopup, model.V13, model.V12, false},
 		"FileAttachment": {validateAnnotationDictFileAttachment, model.V13, model.V13, true},
 		"Sound":          {validateAnnotationDictSound, model.V12, model.V12, true},
-		"Movie":          {validateAnnotationDictMovie, model.V12, model.V12, false},
+		"Movie":          {movie, model.V12, model.V12, false},
 		"Widget":         {widget, model.V12, model.V11, false},
 		"Screen":         {screen, model.V15, model.V14, false},
 		"PrinterMark":    {bindAnnotationContext(c, validateAnnotationDictPrinterMark), model.V14, model.V14, false},

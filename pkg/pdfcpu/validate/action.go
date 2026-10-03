@@ -452,17 +452,93 @@ func validateMovieStartOrDurationEntry(xRefTable *model.XRefTable, d types.Dict,
 		return err
 	}
 
+	a, ok := o.(types.Array)
+	if !ok {
+		return validateMovieTimeValue(xRefTable, o, 0, dictName+"."+entryName)
+	}
+	if len(a) != 2 {
+		return fmt.Errorf("%s.%s: expected array length 2, got %d", dictName, entryName, len(a))
+	}
+	if err := validateMovieTimeValue(xRefTable, a[0], 0, dictName+"."+entryName+"[0]"); err != nil {
+		return err
+	}
+	_, err = validateIntegerForObject(xRefTable, a[1], 0, func(i int) bool { return i > 0 })
+	return err
+}
+
+func validateMovieTimeValue(xRefTable *model.XRefTable, o types.Object, ownerObjNr int, context string) error {
+	objNr := validationObjectNumber(ownerObjNr, o)
+	o, err := xRefTable.Dereference(o)
+	if err != nil {
+		return model.WithValidationErrorObject(fmt.Errorf("%s: dereference: %w", context, err), objNr)
+	}
 	switch o := o.(type) {
+	case types.Integer:
+		if o.Value() >= 0 {
+			return nil
+		}
+	case types.StringLiteral:
+		bb, err := types.Unescape(o.Value())
+		if err != nil {
+			return model.WithValidationErrorObject(fmt.Errorf("%s: decode string: %w", context, err), objNr)
+		}
+		if len(bb) == 8 {
+			return nil
+		}
+	case types.HexLiteral:
+		bb, err := o.Bytes()
+		if err != nil {
+			return model.WithValidationErrorObject(fmt.Errorf("%s: decode string: %w", context, err), objNr)
+		}
+		if len(bb) == 8 {
+			return nil
+		}
+	default:
+		return model.WithValidationErrorObject(
+			fmt.Errorf("%s: expected non-negative integer or 8-byte string", context), objNr,
+		)
+	}
+	return model.WithValidationErrorObject(fmt.Errorf("%s: invalid time value", context), objNr)
+}
 
-	case types.Integer, types.StringLiteral:
-		// no further processing
-
-	case types.Array:
-		if len(o) != 2 {
-			return fmt.Errorf("%s.%s: expected array length 2, got %d", dictName, entryName, len(o))
+func validateMoviePositiveIntegerArrayEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string) error {
+	a, err := validateIntegerArrayEntry(
+		xRefTable, d, 0, dictName, entryName, OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 },
+	)
+	if err != nil {
+		return err
+	}
+	for _, o := range a {
+		if _, err := validateIntegerForObject(xRefTable, o, 0, func(i int) bool { return i > 0 }); err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
+func validateMovieUnitIntervalArrayEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string) error {
+	a, err := validateNumberArrayEntry(
+		xRefTable, d, 0, dictName, entryName, OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 },
+	)
+	if err != nil {
+		return err
+	}
+	for _, o := range a {
+		n, err := validateNumberForObject(xRefTable, o, 0)
+		if err != nil {
+			return err
+		}
+		var f float64
+		switch n := n.(type) {
+		case types.Integer:
+			f = float64(n.Value())
+		case types.Float:
+			f = n.Value()
+		}
+		if f < 0 || f > 1 {
+			return fmt.Errorf("dict=%s entry=%s invalid dict entry: %g", dictName, entryName, f)
+		}
+	}
 	return nil
 }
 
@@ -487,8 +563,10 @@ func validateMovieActivationDict(xRefTable *model.XRefTable, d types.Dict) error
 		return err
 	}
 
-	// Volume, optional, number
-	_, err = validateNumberEntry(xRefTable, d, 0, dictName, "Volume", OPTIONAL, model.V10, nil)
+	// Volume, optional, number: -1.0 .. +1.0
+	_, err = validateNumberEntry(xRefTable, d, 0, dictName, "Volume", OPTIONAL, model.V10, func(f float64) bool {
+		return -1 <= f && f <= 1
+	})
 	if err != nil {
 		return err
 	}
@@ -515,13 +593,13 @@ func validateMovieActivationDict(xRefTable *model.XRefTable, d types.Dict) error
 	}
 
 	// FWScale, optional, array of 2 positive integers
-	_, err = validateIntegerArrayEntry(xRefTable, d, 0, dictName, "FWScale", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 })
+	err = validateMoviePositiveIntegerArrayEntry(xRefTable, d, dictName, "FWScale")
 	if err != nil {
 		return err
 	}
 
 	// FWPosition, optional, array of 2 numbers [0.0 .. 1.0]
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "FWPosition", OPTIONAL, model.V10, func(a types.Array) bool { return len(a) == 2 })
+	err = validateMovieUnitIntervalArrayEntry(xRefTable, d, dictName, "FWPosition")
 
 	return err
 }
@@ -535,15 +613,32 @@ func validateMovieActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 		return err
 	}
 
-	// Needs either Annotation or T entry but not both.
-
-	// T, text string
-	_, err = validateStringEntry(xRefTable, d, 0, dictName, "T", OPTIONAL, model.V10, nil)
-	if err == nil {
-		return nil
+	// Exactly one of T or Annotation is required.
+	_, hasTitle := d.Find("T")
+	_, hasAnnotation := d.Find("Annotation")
+	if hasTitle == hasAnnotation {
+		return errors.New("movie action: exactly one of \"T\" and \"Annotation\" is required")
 	}
 
-	// Annotation, indRef of movie annotation dict
+	if hasTitle {
+		_, err = validateStringEntry(xRefTable, d, 0, dictName, "T", REQUIRED, model.V10, nil)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = validateMovieActionAnnotation(xRefTable, d, dictName)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = validateNameEntry(xRefTable, d, 0, dictName, "Operation", OPTIONAL, model.V10, func(s string) bool {
+		return types.MemberOf(s, []string{"Play", "Stop", "Pause", "Resume"})
+	})
+	return err
+}
+
+func validateMovieActionAnnotation(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
 	ir, err := validateIndRefEntry(xRefTable, d, 0, dictName, "Annotation", REQUIRED, model.V10)
 	if err != nil || ir == nil {
 		return err
@@ -563,7 +658,6 @@ func validateMovieActionDict(xRefTable *model.XRefTable, d types.Dict, dictName 
 	_, err = validateNameEntry(
 		xRefTable, d, annotationObjNr, "annotDict", "Subtype", REQUIRED, model.V10, func(s string) bool { return s == "Movie" },
 	)
-
 	return model.WithValidationErrorObject(err, annotationObjNr)
 }
 
