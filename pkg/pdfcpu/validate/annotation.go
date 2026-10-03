@@ -1042,9 +1042,7 @@ func validateAnnotationDictWidget(c context.Context, xRefTable *model.XRefTable,
 	return err
 }
 
-func validateAnnotationDictScreen(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
-	// see 12.5.6.18
-
+func validateAnnotationDictScreenStatic(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// T, optional, text string
 	if _, err := validateStringEntry(xRefTable, d, 0, dictName, "T", OPTIONAL, model.V10, nil); err != nil {
 		return err
@@ -1052,6 +1050,15 @@ func validateAnnotationDictScreen(c context.Context, xRefTable *model.XRefTable,
 
 	// MK, optional, appearance characteristics dict
 	if err := validateAppearanceCharacteristicsDictEntry(xRefTable, d, ownerObjNr, dictName, "MK", OPTIONAL, model.V10); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateAnnotationDictScreen(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
+	// see 12.5.6.18
+
+	if err := validateAnnotationDictScreenStatic(xRefTable, d, ownerObjNr, dictName); err != nil {
 		return err
 	}
 
@@ -1068,6 +1075,35 @@ func validateAnnotationDictScreen(c context.Context, xRefTable *model.XRefTable,
 
 	// AA, optional, additional-actions dict, since V1.2
 	return validateAdditionalActions(c, xRefTable, d, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot")
+}
+
+func validateRenditionScreenAnnotationStructure(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+	const dictName = "annotDict"
+	if _, err := validateAnnotationType(xRefTable, d, dictName); err != nil {
+		return err
+	}
+	subtype, err := validateAnnotationDictGeneral(c, xRefTable, d, ownerObjNr, dictName)
+	if err != nil {
+		return err
+	}
+	if subtype.Value() != "Screen" {
+		return fmt.Errorf("dict=%s entry=Subtype invalid value %s", dictName, subtype.Value())
+	}
+	screenSinceVersion := model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		screenSinceVersion = model.V14
+	}
+	if err := xRefTable.ValidateVersion("Screen annotation", screenSinceVersion); err != nil {
+		return err
+	}
+	optionalContentSinceVersion := model.V15
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		optionalContentSinceVersion = model.V13
+	}
+	if err := validateOptionalContent(xRefTable, d, dictName, "OC", OPTIONAL, optionalContentSinceVersion); err != nil {
+		return err
+	}
+	return validateAnnotationDictScreenStatic(xRefTable, d, ownerObjNr, dictName)
 }
 
 func validateAnnotationDictPrinterMark(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {

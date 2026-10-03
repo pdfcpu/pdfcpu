@@ -1004,7 +1004,73 @@ func validateSetOCGStateActionDict(xRefTable *model.XRefTable, d types.Dict, dic
 	return err
 }
 
-func validateRenditionActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+func validateRenditionScreenPage(c context.Context, xRefTable *model.XRefTable, annotationRef, pageRef types.IndirectRef) error {
+	pageObjNr := pageRef.ObjectNumber.Value()
+	pageDict, err := xRefTable.DereferenceDict(pageRef)
+	if err != nil {
+		return model.WithValidationErrorObject(fmt.Errorf("Rendition.AN.P: dereference page: %w", err), pageObjNr)
+	}
+	if pageDict == nil {
+		return model.WithValidationErrorObject(errors.New("Rendition.AN.P: page is null"), pageObjNr)
+	}
+	if _, err = validateNameEntry(
+		xRefTable, pageDict, pageObjNr, "pageDict", "Type", REQUIRED, model.V10, func(s string) bool { return s == "Page" },
+	); err != nil {
+		return err
+	}
+	pageNumber, err := xRefTable.PageNumber(c, pageObjNr)
+	if err != nil {
+		return model.WithValidationErrorObject(fmt.Errorf("Rendition.AN.P: locate page: %w", err), pageObjNr)
+	}
+	if pageNumber == 0 {
+		return model.WithValidationErrorObject(errors.New("Rendition.AN.P: page is not in the page tree"), pageObjNr)
+	}
+	annots, err := validateArrayEntry(xRefTable, pageDict, pageObjNr, "pageDict", "Annots", REQUIRED, model.V10, nil)
+	if err != nil {
+		return err
+	}
+	for _, o := range annots {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		if ir, ok := o.(types.IndirectRef); ok && ir == annotationRef {
+			return nil
+		}
+	}
+	return model.WithValidationErrorObject(
+		errors.New("Rendition.AN: annotation is not in the page Annots array"), pageObjNr,
+	)
+}
+
+func validateRenditionScreenTarget(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, required bool) error {
+	annotationRef, err := validateIndRefEntry(xRefTable, d, ownerObjNr, dictName, "AN", required, model.V10)
+	if err != nil || annotationRef == nil {
+		return err
+	}
+	annotationObjNr := annotationRef.ObjectNumber.Value()
+	annotationDict, err := xRefTable.DereferenceDict(*annotationRef)
+	if err != nil {
+		return model.WithValidationErrorObject(
+			fmt.Errorf("Rendition.AN: dereference Screen annotation: %w", err), annotationObjNr,
+		)
+	}
+	if annotationDict == nil {
+		return model.WithValidationErrorObject(errors.New("Rendition.AN: Screen annotation is null"), annotationObjNr)
+	}
+	if err := validateRenditionScreenAnnotationStructure(c, xRefTable, annotationDict, annotationObjNr); err != nil {
+		return model.WithValidationErrorObject(fmt.Errorf("Rendition.AN: %w", err), annotationObjNr)
+	}
+	pageRef, err := validateIndRefEntry(xRefTable, annotationDict, annotationObjNr, "annotDict", "P", REQUIRED, model.V10)
+	if err != nil {
+		return err
+	}
+	if pageRef == nil {
+		return model.WithValidationErrorObject(errors.New("Rendition.AN: missing Screen annotation P entry"), annotationObjNr)
+	}
+	return validateRenditionScreenPage(c, xRefTable, *annotationRef, *pageRef)
+}
+
+func validateRenditionActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
 	// see 12.6.4.13
 
 	// OP or JS need to be present.
@@ -1053,18 +1119,7 @@ func validateRenditionActionDict(c context.Context, xRefTable *model.XRefTable, 
 	}
 
 	// AN, required for any OP 0..4, indRef of screen annotation dict
-	d1, err = validateDictEntry(xRefTable, d, 0, dictName, "AN", op != nil, model.V10, nil)
-	if err != nil {
-		return err
-	}
-	if d1 != nil {
-		_, err = validateNameEntry(xRefTable, d1, 0, dictName, "Subtype", REQUIRED, model.V10, func(s string) bool { return s == "Screen" })
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return validateRenditionScreenTarget(c, xRefTable, d, ownerObjNr, dictName, op != nil)
 }
 
 func validateTransActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -1127,7 +1182,7 @@ func validateActionDictCore(c context.Context, xRefTable *model.XRefTable, n *ty
 		"JavaScript":  {validateJavaScriptActionDict, model.V13, model.V12},
 		"SetOCGState": {validateSetOCGStateActionDict, model.V15, model.V15},
 		"Rendition": {func(x *model.XRefTable, d types.Dict, name string) error {
-			return validateRenditionActionDict(c, x, d, name)
+			return validateRenditionActionDict(c, x, d, ownerObjNr, name)
 		}, model.V15, model.V14},
 		"Trans": {validateTransActionDict, model.V15, model.V15},
 		"GoTo3DView": {func(x *model.XRefTable, d types.Dict, name string) error {
