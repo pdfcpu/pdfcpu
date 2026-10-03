@@ -77,6 +77,14 @@ func validateJavaScriptNameTreeValue(xRefTable *model.XRefTable, o types.Object,
 	return validateJavaScriptNameTreeValueContext(context.Background(), xRefTable, o, sinceVersion)
 }
 
+func validate3DResourcesNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+	if err := xRefTable.ValidateVersion("3DResourcesNameTreeValue", sinceVersion); err != nil {
+		return err
+	}
+	_, err := xRefTable.Dereference(o)
+	return err
+}
+
 func validatePagesNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	// see 12.7.6
 
@@ -854,8 +862,9 @@ func validateNameTreeValue(c context.Context, name string, xRefTable *model.XRef
 		"JavaScript": {func(x *model.XRefTable, o types.Object, version model.Version) error {
 			return validateJavaScriptNameTreeValueContext(c, x, o, version)
 		}, model.V13, model.V13},
-		"Pages":     {validatePagesNameTreeValue, model.V13, model.V13},
-		"Templates": {validateTemplatesNameTreeValue, model.V13, model.V13},
+		"3DResources": {validate3DResourcesNameTreeValue, model.V16, model.V16},
+		"Pages":       {validatePagesNameTreeValue, model.V13, model.V13},
+		"Templates":   {validateTemplatesNameTreeValue, model.V13, model.V13},
 		"IDS": {func(x *model.XRefTable, o types.Object, version model.Version) error {
 			return validateIDSNameTreeValue(c, x, o, version)
 		}, model.V13, model.V13},

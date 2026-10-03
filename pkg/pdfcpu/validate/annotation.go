@@ -1267,32 +1267,6 @@ func validateAnnotationDictWatermark(xRefTable *model.XRefTable, d types.Dict, d
 	return validateFixedPrintDict(xRefTable, fixedPrint)
 }
 
-func validateAnnotationDict3D(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
-	// see 13.6.2
-
-	// AP with entry N, required
-
-	// 3DD, required, 3D stream or 3D reference dict
-	if err := validateStreamDictOrDictEntry(xRefTable, d, 0, dictName, "3DD", REQUIRED, model.V16); err != nil {
-		return err
-	}
-
-	// 3DV, optional, various
-	if _, err := validateEntry(xRefTable, d, 0, dictName, "3DV", OPTIONAL, model.V16); err != nil {
-		return err
-	}
-
-	// 3DA, optional, activation dict
-	if _, err := validateDictEntry(xRefTable, d, 0, dictName, "3DA", OPTIONAL, model.V16, nil); err != nil {
-		return err
-	}
-
-	// 3DI, optional, boolean
-	_, err := validateBooleanEntry(xRefTable, d, 0, dictName, "3DI", OPTIONAL, model.V16, nil)
-
-	return err
-}
-
 func validateEntryIC(xRefTable *model.XRefTable, d types.Dict, dictName string, required bool, sinceVersion model.Version) error {
 	// IC, optional, number array, length:3 [0.0 .. 1.0]
 	validateICArray := func(a types.Array) bool {
@@ -1942,6 +1916,9 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 	richMedia := func(x *model.XRefTable, d types.Dict, name string) error {
 		return validateRichMediaAnnotation(c, x, d, name)
 	}
+	threeD := func(x *model.XRefTable, d types.Dict, name string) error {
+		return validateAnnotationDict3D(c, x, d, ownerObjNr, name)
+	}
 	sound := func(x *model.XRefTable, d types.Dict, name string) error {
 		return validateAnnotationDictSound(x, d, ownerObjNr, name)
 	}
@@ -1979,7 +1956,7 @@ func validateAnnotationDictConcrete(c context.Context, xRefTable *model.XRefTabl
 		"PrinterMark":    {bindAnnotationContext(c, validateAnnotationDictPrinterMark), model.V14, model.V14, false},
 		"TrapNet":        {bindAnnotationContext(c, validateAnnotationDictTrapNet), model.V13, model.V13, false},
 		"Watermark":      {validateAnnotationDictWatermark, model.V16, model.V13, false},
-		"3D":             {validateAnnotationDict3D, model.V16, model.V16, false},
+		"3D":             {threeD, model.V16, model.V16, false},
 		"Redact":         {validateAnnotationDictRedact, model.V17, model.V17, true},
 		"RichMedia":      {richMedia, model.V17, model.V14, false},
 	} {

@@ -54,6 +54,7 @@ const (
 	activeContentSourceOutlineAction      activeContentSource = "outline action"
 	activeContentSourceJavaScriptNameTree activeContentSource = "JavaScript name tree"
 	activeContentSourceRenditionAction    activeContentSource = "Rendition action"
+	activeContentSource3DOnInstantiate    activeContentSource = "3D OnInstantiate"
 	activeContentSourceSoundAnnotation    activeContentSource = "Sound annotation"
 	activeContentSourceMovieAnnotation    activeContentSource = "Movie annotation"
 )
@@ -91,6 +92,8 @@ func activeContentSourceDescription(f activeContentFinding) string {
 			s += " /" + f.trigger
 		}
 		return s
+	case activeContentSource3DOnInstantiate:
+		return "3D OnInstantiate"
 	case activeContentSourceSoundAnnotation:
 		return "sound annotation"
 	case activeContentSourceMovieAnnotation:

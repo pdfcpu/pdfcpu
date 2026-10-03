@@ -1148,12 +1148,14 @@ func validateGoTo3DViewActionDict(c context.Context, xRefTable *model.XRefTable,
 	if err != nil {
 		return err
 	}
+	if _, err = validateNameEntry(xRefTable, d1, taObjNr, dictName, "Subtype", REQUIRED, model.V16, func(s string) bool {
+		return s == "3D"
+	}); err != nil {
+		return err
+	}
 
 	// V, required, the view to use: 3DViewDict or integer or text string or name
-	// TODO Validation.
-	_, err = validateEntry(xRefTable, d, 0, dictName, "V", REQUIRED, model.V16)
-
-	return err
+	return validate3DViewSelector(c, xRefTable, d, ownerObjNr, dictName, "V", REQUIRED, threeDActionViewSelector)
 }
 
 func validateActionDictCore(c context.Context, xRefTable *model.XRefTable, n *types.Name, d types.Dict, ownerObjNr int) error {

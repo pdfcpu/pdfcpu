@@ -866,6 +866,36 @@ func createWaterMarkAnnotation(c context.Context, xRefTable *model.XRefTable, pa
 }
 
 func create3DAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef, annotRect types.Array) (*types.IndirectRef, error) {
+	threeD, err := xRefTable.NewStreamDictForBuf(nil)
+	if err != nil {
+		return nil, err
+	}
+	threeD.InsertName("Type", "3D")
+	threeD.InsertName("Subtype", "U3D")
+	if err = threeD.Encode(); err != nil {
+		return nil, err
+	}
+	threeDRef, err := xRefTable.IndRefForNewObject(*threeD)
+	if err != nil {
+		return nil, err
+	}
+
+	appearance, err := xRefTable.NewStreamDictForBuf(nil)
+	if err != nil {
+		return nil, err
+	}
+	appearance.InsertName("Type", "XObject")
+	appearance.InsertName("Subtype", "Form")
+	appearance.Insert("BBox", types.NewNumberArray(0, 0, 100, 100))
+	appearance.Insert("Resources", types.NewDict())
+	if err = appearance.Encode(); err != nil {
+		return nil, err
+	}
+	appearanceRef, err := xRefTable.IndRefForNewObject(*appearance)
+	if err != nil {
+		return nil, err
+	}
+
 	d := types.Dict(
 		map[string]types.Object{
 			"Type":     types.Name("Annot"),
@@ -876,10 +906,11 @@ func create3DAnnotation(xRefTable *model.XRefTable, pageIndRef types.IndirectRef
 			"Border":   types.NewIntegerArray(0, 0, 3),
 			"C":        types.NewNumberArray(0.2, 0.8, 0.5),
 			"F":        types.Integer(0),
-			"3DD":      types.NewDict(), // stream or 3D reference dict
+			"3DD":      *threeDRef,
 			"3DV":      types.Name("F"),
 			"3DA":      types.NewDict(), // activation dict
 			"3DI":      types.Boolean(true),
+			"AP":       types.Dict{"N": *appearanceRef},
 		},
 	)
 
