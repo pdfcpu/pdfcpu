@@ -624,7 +624,6 @@ func validateURI(xRefTable *model.XRefTable, rootDict types.Dict, required bool,
 
 	// Base, optional, ASCII string
 	_, err = validateStringEntry(xRefTable, d, uriObjNr, "URIdict", "Base", OPTIONAL, model.V10, nil)
-
 	return err
 }
 
@@ -1359,6 +1358,7 @@ func validateDSS(xRefTable *model.XRefTable, rootDict types.Dict, required bool,
 
 func validateAF(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
 	// => 14.13 Associated Files
+	// TODO v0.17.0: Support PDF 2.0 associated files.
 
 	rootObjNr := validationRootObjectNumber(xRefTable)
 	afObjNr := validationEntryObjectNumber(rootObjNr, rootDict, "AF")
@@ -1942,6 +1942,10 @@ func validateRootObject(c context.Context, ctx *model.Context, rootDict types.Di
 		if err := validateFormFieldsAgainstPageAnnotations(xRefTable); err != nil {
 			return fmt.Errorf("form fields/page annotations: %w", err)
 		}
+	}
+
+	if log.ValidateEnabled() {
+		log.Validate.Println("*** validateRootObject end ***")
 	}
 
 	return nil

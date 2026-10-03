@@ -90,7 +90,6 @@ func TestRunCommandConfiguresValidationNoticeOutput(t *testing.T) {
 	}
 }
 
-// TestRotation verifies command-line rotation parsing across signed integer boundaries.
 func validationTestPDF(objects []string) []byte {
 	var b bytes.Buffer
 	b.WriteString("%PDF-1.7\n")
