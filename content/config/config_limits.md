@@ -117,6 +117,16 @@ auxiliary JSON/CSV/image/font inputs, total temporary storage or process memory.
 Go callers set `Configuration.Limits.MaxInputBytes` and can recognize overflow with
 `errors.Is(err, model.ErrInputSizeLimit)`. Zero also means unlimited in the Go API.
 
+## JSON input limit
+
+**Fixed limit since v0.16.1: 64 MiB (67,108,864 bytes).**
+
+Limits each JSON input used for PDF creation, bookmark import, form filling, and viewer preferences.
+Reader inputs are limited while reading; byte-slice inputs are checked before decoding. Inputs exactly at the limit
+are accepted; readers must reach EOF to confirm the size.
+
+This limit is not configurable through YAML or the Go API in v0.16.1.
+
 ## Object buffer limit
 
 **`maxObjectBytes` — default: `64 MB` (67,108,864 bytes).**

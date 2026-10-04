@@ -91,6 +91,27 @@ unambiguous.
 Consequently, strict validation does not mean that the original byte stream was free of defects. It means that the
 document pdfcpu reconstructed passed the strict checks currently implemented.
 
+#### JavaScript and media presence
+
+Starting with v0.16.1, validation reports JavaScript and supported sound, movie and Rendition content in both modes.
+These notices identify content presence; they do not display script code. `--quiet` suppresses the notices, and Go callers
+can obtain them through the report-returning validation APIs listed above.
+
+Validation checks the implemented structural rules without executing JavaScript or playing media. A PDF containing this
+content can still produce `validation ok`; that result does not certify the behavior or safety of its contents.
+
+#### External links
+
+Use `--links` to assess external targets collected during validation. <br>Starting with v0.16.1, HTTP and HTTPS checks block
+private and local network addresses, including redirect destinations. Link checking has a fixed budget of 100 HTTP
+attempts per document, including redirects. <br>File targets are not opened and executable targets are not run.
+
+URL passwords are redacted from CLI output and validation notices. <br>With `--offline`, targets are assessed without HTTP
+requests, and HTTP checks are reported as skipped.
+
+Strict validation with `--links` fails if a link is blocked, skipped or fails its check. Relaxed validation records these
+results as skipped notices and can complete successfully. Successful HTTP checks are listed with `--verbose`.
+
 #### Scope
 
 Strict and relaxed are validation policies. They do not select a PDF/A profile, provide complete PDF 2.0 validation, or

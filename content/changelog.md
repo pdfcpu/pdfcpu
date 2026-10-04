@@ -34,6 +34,26 @@ Entries link to GitHub releases or commits where available.
 
 <article class="changelog-entry">
   <div class="changelog-meta">
+    <time datetime="2026-10-04">2026-10-04</time>
+    <span class="changelog-kind">Release</span>
+    <span>v0.16.1</span>
+  </div>
+  <p>
+  Security and stability update.<br><br>
+  Prevent grayscale, Indexed and CMYK image-rendering panics. <br><br>Harden cross-reference parsing and repair, image decoding,
+  multi-page TIFF traversal, and CMS BER parsing.<br><br>
+  Limit JSON input to <a href="/config/config_limits/#json-input-limit">64 MiB</a>. Strengthen external-link checking
+  and redact URL passwords in reports and CLI output.<br><br>
+  Improve structural validation of embedded files, 3D annotations and multimedia dictionaries. <br><br>
+  Report JavaScript and
+  supported media presence during validation without executing content or displaying script code.<br><br>
+  Update TIFF dependency to v1.0.7.<br><br>
+  Fix #612, #1493
+  </p>
+</article>
+
+<article class="changelog-entry">
+  <div class="changelog-meta">
     <time datetime="2026-09-28">2026-09-28</time>
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.0">v0.16.0</a>

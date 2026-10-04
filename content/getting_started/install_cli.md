@@ -11,36 +11,36 @@ Download a prebuilt binary for your platform and run `pdfcpu version` to verify 
 
 ## Download
 
-These downloads are for **v0.16.0**.
+These downloads are for **v0.16.1**.
 See [GitHub Releases](https://github.com/pdfcpu/pdfcpu/releases) for other versions.
 
 ### macOS
 
-* [Apple Silicon (arm64)](https://dl.pdfcpu.io/releases/download/v0.16.0/pdfcpu_0.16.0_Darwin_arm64.tar.xz)
-* [Intel (x86_64)](https://dl.pdfcpu.io/releases/download/v0.16.0/pdfcpu_0.16.0_Darwin_x86_64.tar.xz)
+* [Apple Silicon (arm64)](https://dl.pdfcpu.io/releases/download/v0.16.1/pdfcpu_0.16.1_Darwin_arm64.tar.xz)
+* [Intel (x86_64)](https://dl.pdfcpu.io/releases/download/v0.16.1/pdfcpu_0.16.1_Darwin_x86_64.tar.xz)
 
 ### Linux
 
-* [x86_64](https://dl.pdfcpu.io/releases/download/v0.16.0/pdfcpu_0.16.0_Linux_x86_64.tar.xz)
-* [arm64](https://dl.pdfcpu.io/releases/download/v0.16.0/pdfcpu_0.16.0_Linux_arm64.tar.xz)
-* [armv7](https://dl.pdfcpu.io/releases/download/v0.16.0/pdfcpu_0.16.0_Linux_armv7.tar.xz)
-* [i386](https://dl.pdfcpu.io/releases/download/v0.16.0/pdfcpu_0.16.0_Linux_i386.tar.xz)
+* [x86_64](https://dl.pdfcpu.io/releases/download/v0.16.1/pdfcpu_0.16.1_Linux_x86_64.tar.xz)
+* [arm64](https://dl.pdfcpu.io/releases/download/v0.16.1/pdfcpu_0.16.1_Linux_arm64.tar.xz)
+* [armv7](https://dl.pdfcpu.io/releases/download/v0.16.1/pdfcpu_0.16.1_Linux_armv7.tar.xz)
+* [i386](https://dl.pdfcpu.io/releases/download/v0.16.1/pdfcpu_0.16.1_Linux_i386.tar.xz)
 
 ### Windows
 
-* [x86_64](https://dl.pdfcpu.io/releases/download/v0.16.0/pdfcpu_0.16.0_Windows_x86_64.zip)
-* [i386](https://dl.pdfcpu.io/releases/download/v0.16.0/pdfcpu_0.16.0_Windows_i386.zip)
+* [x86_64](https://dl.pdfcpu.io/releases/download/v0.16.1/pdfcpu_0.16.1_Windows_x86_64.zip)
+* [i386](https://dl.pdfcpu.io/releases/download/v0.16.1/pdfcpu_0.16.1_Windows_i386.zip)
 
 ### Checksums
 
-* [checksums.txt](https://dl.pdfcpu.io/releases/download/v0.16.0/checksums.txt)
+* [checksums.txt](https://dl.pdfcpu.io/releases/download/v0.16.1/checksums.txt)
 
 ---
 
 ### Software Bill of Materials (SBOMs)
 
 Each download archive has a corresponding `.sbom.json` asset on the
-[release page](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.0). <br>
+[release page](https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.1). <br>
 These JSON files describe application dependencies and are included
 in `checksums.txt`.
 
