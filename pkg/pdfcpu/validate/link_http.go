@@ -155,9 +155,16 @@ func linkRequestURL(s string) (string, error) {
 	return linkRequestURLWithBase(s, "")
 }
 
-func validateLinkURLString(s string) error {
-	_, err := linkRequestURL(s)
-	return err
+func redactedLinkURI(s string) string {
+	u, err := url.Parse(s)
+	if err != nil {
+		// A malformed URI may contain credentials that cannot be reliably isolated.
+		return "[invalid URI]"
+	}
+	if u.User == nil {
+		return s
+	}
+	return u.Redacted()
 }
 
 func validateLinkIPs(host string, ips []net.IPAddr) error {

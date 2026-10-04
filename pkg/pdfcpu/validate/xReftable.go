@@ -1415,7 +1415,7 @@ func logURIError(xRefTable *model.XRefTable, pages []int) {
 					if page == 0 {
 						location = "Document"
 					}
-					log.CLI.Printf("%s: %s - %s\n", location, uri, s)
+					log.CLI.Printf("%s: %s - %s\n", location, redactedLinkURI(uri), s)
 				}
 			}
 		}
@@ -1435,7 +1435,7 @@ func logURISuccesses(xRefTable *model.XRefTable, pages []int) {
 			if page == 0 {
 				location = "document"
 			}
-			log.CLI.Printf("pdfcpu checked: %s: %s - HTTP status 200\n", location, uri)
+			log.CLI.Printf("pdfcpu checked: %s: %s - HTTP status 200\n", location, redactedLinkURI(uri))
 		}
 	}
 }
@@ -1465,7 +1465,8 @@ func linkResultDescription(category linkResultCategory, httpStatus int, reason s
 	case linkResultTimeout:
 		return "timeout"
 	case linkResultNetworkError:
-		return "network error: " + reason
+		// Transport errors may embed credentials from request URLs or malformed redirect locations.
+		return "network error"
 	case linkResultHTTPStatus:
 		return fmt.Sprintf("HTTP status %d", httpStatus)
 	}
@@ -1478,7 +1479,7 @@ func addSkippedLinkNotice(xRefTable *model.XRefTable, page int, uri string, resu
 		location = "document"
 	}
 	message := fmt.Sprintf(
-		"%s: %s - %s", location, uri,
+		"%s: %s - %s", location, redactedLinkURI(uri),
 		linkResultDescription(result.category, result.httpStatus, result.reason),
 	)
 	notice := model.NewValidationNotice(model.NoticePhaseValidate, model.NoticeSkipped, message, nil)
