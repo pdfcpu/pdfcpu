@@ -25,6 +25,7 @@ import (
 	"image/color"
 	"image/png"
 	"io"
+	"math"
 	"strings"
 
 	"github.com/hhrutter/tiff"
@@ -415,10 +416,6 @@ func renderDeviceCMYKToTIFF(im *PDFImage) (io.Reader, string, error) {
 	return &buf, "tif", nil
 }
 
-func scaleToBPC8(v uint8, bpc int) uint8 {
-	return uint8(float64(v) * 255.0 / float64(maxValForBits(bpc)))
-}
-
 func packedImageSample(b []byte, rowOffset, sample, bpc int) uint16 {
 	bitOffset := sample * bpc
 	byteOffset := rowOffset + bitOffset/8
@@ -615,7 +612,24 @@ func unsupportedImageRender(objNr int, detail string) (io.Reader, string, error)
 	return nil, "", fmt.Errorf("image obj#%d render %s: %w", objNr, detail, ErrUnsupportedResource)
 }
 
-func renderIndexedGrayToPNG(im *PDFImage, lookup []byte) (io.Reader, string, error) {
+func indexedImageIndex(im *PDFImage, sample uint16, maxInd int) int {
+	// Decode samples before rounding and clamping palette indices (8.9.5.2 and 8.6.6.3).
+	f := float64(sample)
+	if len(im.decode) > 0 {
+		r := im.decode[0]
+		t := f / float64(maxValForBits(im.bpc))
+		f = (1-t)*r.min + t*r.max
+	}
+	if f <= 0 {
+		return 0
+	}
+	if f >= float64(maxInd) {
+		return maxInd
+	}
+	return int(f + 0.5)
+}
+
+func renderIndexedGrayToPNG(im *PDFImage, maxInd int, lookup []byte) (io.Reader, string, error) {
 	b := im.sd.Content
 	if log.DebugEnabled() {
 		log.Debug.Printf("renderIndexedGrayToPNG: objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
@@ -627,11 +641,6 @@ func renderIndexedGrayToPNG(im *PDFImage, lookup []byte) (io.Reader, string, err
 		return nil, "", fmt.Errorf("renderIndexedGrayToPNG: objNr=%d corrupt image object %v", im.objNr, *im.sd)
 	}
 
-	cvr := colValRange{0, 1}
-	if im.decode != nil {
-		cvr = im.decode[0]
-	}
-
 	img := image.NewGray(image.Rect(0, 0, im.w, im.h))
 
 	// TODO support softmask.
@@ -640,11 +649,8 @@ func renderIndexedGrayToPNG(im *PDFImage, lookup []byte) (io.Reader, string, err
 		for x := 0; x < im.w; {
 			p := b[i]
 			for j := 0; j < 8/im.bpc && x < im.w; j++ {
-				ind := p >> (8 - uint8(im.bpc))
-				v := decodePixelValue(lookup[ind], im.bpc, cvr)
-				if im.bpc < 8 {
-					v = scaleToBPC8(v, im.bpc)
-				}
+				ind := indexedImageIndex(im, uint16(p>>(8-uint8(im.bpc))), maxInd)
+				v := lookup[ind]
 				//fmt.Printf("x=%d y=%d pix=#%02x v=#%02x\n", x, y, pix, v)
 				img.Set(x, y, color.Gray{Y: v})
 				p <<= uint8(im.bpc)
@@ -662,7 +668,7 @@ func renderIndexedGrayToPNG(im *PDFImage, lookup []byte) (io.Reader, string, err
 	return &buf, "png", nil
 }
 
-func renderIndexedRGBToPNG(im *PDFImage, lookup []byte) (io.Reader, string, error) {
+func renderIndexedRGBToPNG(im *PDFImage, maxInd int, lookup []byte) (io.Reader, string, error) {
 	b := im.sd.Content
 
 	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
@@ -673,7 +679,7 @@ func renderIndexedRGBToPNG(im *PDFImage, lookup []byte) (io.Reader, string, erro
 		for x := 0; x < im.w; {
 			p := b[i]
 			for j := 0; j < 8/im.bpc && x < im.w; j++ {
-				ind := p >> (8 - uint8(im.bpc))
+				ind := indexedImageIndex(im, uint16(p>>(8-uint8(im.bpc))), maxInd)
 				//fmt.Printf("x=%d y=%d i=%d j=%d p=#%02x ind=#%02x\n", x, y, i, j, p, ind)
 				alpha := uint8(255)
 				if im.softMask != nil {
@@ -696,11 +702,8 @@ func renderIndexedRGBToPNG(im *PDFImage, lookup []byte) (io.Reader, string, erro
 	return &buf, "png", nil
 }
 
-func imageForIndexedCMYKWithoutSoftMask(im *PDFImage, lookup []byte) image.Image {
-
+func imageForIndexedCMYKWithoutSoftMask(im *PDFImage, maxInd int, lookup []byte) image.Image {
 	// Preserve CMYK color model for print applications.
-
-	// TODO handle decode
 
 	img := image.NewCMYK(image.Rect(0, 0, im.w, im.h))
 	b := im.sd.Content
@@ -710,7 +713,7 @@ func imageForIndexedCMYKWithoutSoftMask(im *PDFImage, lookup []byte) image.Image
 		for x := 0; x < im.w; {
 			p := b[i]
 			for j := 0; j < 8/im.bpc && x < im.w; j++ {
-				ind := p >> (8 - uint8(im.bpc))
+				ind := indexedImageIndex(im, uint16(p>>(8-uint8(im.bpc))), maxInd)
 				//fmt.Printf("x=%d y=%d i=%d j=%d p=#%02x ind=#%02x\n", x, y, i, j, p, ind)
 				l := 4 * int(ind)
 				img.Set(x, y, color.CMYK{C: lookup[l], M: lookup[l+1], Y: lookup[l+2], K: lookup[l+3]})
@@ -724,10 +727,7 @@ func imageForIndexedCMYKWithoutSoftMask(im *PDFImage, lookup []byte) image.Image
 	return img
 }
 
-func imageForIndexedCMYKWithSoftMask(im *PDFImage, lookup []byte) image.Image {
-
-	// TODO handle decode
-
+func imageForIndexedCMYKWithSoftMask(im *PDFImage, maxInd int, lookup []byte) image.Image {
 	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
 	b := im.sd.Content
 	i := 0
@@ -736,7 +736,7 @@ func imageForIndexedCMYKWithSoftMask(im *PDFImage, lookup []byte) image.Image {
 		for x := 0; x < im.w; {
 			p := b[i]
 			for j := 0; j < 8/im.bpc && x < im.w; j++ {
-				ind := p >> (8 - uint8(im.bpc))
+				ind := indexedImageIndex(im, uint16(p>>(8-uint8(im.bpc))), maxInd)
 				//fmt.Printf("x=%d y=%d i=%d j=%d p=#%02x ind=#%02x\n", x, y, i, j, p, ind)
 				l := 4 * int(ind)
 				cr, cg, cb := color.CMYKToRGB(lookup[l], lookup[l+1], lookup[l+2], lookup[l+3])
@@ -752,13 +752,12 @@ func imageForIndexedCMYKWithSoftMask(im *PDFImage, lookup []byte) image.Image {
 	return img
 }
 
-func renderIndexedCMYKToTIFF(im *PDFImage, lookup []byte) (io.Reader, string, error) {
-
+func renderIndexedCMYKToTIFF(im *PDFImage, maxInd int, lookup []byte) (io.Reader, string, error) {
 	var img image.Image
 	if im.softMask != nil {
-		img = imageForIndexedCMYKWithSoftMask(im, lookup)
+		img = imageForIndexedCMYKWithSoftMask(im, maxInd, lookup)
 	} else {
-		img = imageForIndexedCMYKWithoutSoftMask(im, lookup)
+		img = imageForIndexedCMYKWithoutSoftMask(im, maxInd, lookup)
 	}
 
 	var buf bytes.Buffer
@@ -776,19 +775,19 @@ func renderIndexedNameCS(im *PDFImage, cs types.Name, maxInd int, lookup []byte)
 		if len(lookup) < 1*(maxInd+1) {
 			return nil, "", fmt.Errorf("renderIndexedNameCS: objNr=%d, corrupt DeviceGray lookup table", im.objNr)
 		}
-		return renderIndexedGrayToPNG(im, lookup)
+		return renderIndexedGrayToPNG(im, maxInd, lookup)
 
 	case model.DeviceRGBCS:
 		if len(lookup) < 3*(maxInd+1) {
 			return nil, "", fmt.Errorf("renderIndexedNameCS: objNr=%d, corrupt DeviceRGB lookup table", im.objNr)
 		}
-		return renderIndexedRGBToPNG(im, lookup)
+		return renderIndexedRGBToPNG(im, maxInd, lookup)
 
 	case model.DeviceCMYKCS:
 		if len(lookup) < 4*(maxInd+1) {
 			return nil, "", fmt.Errorf("renderIndexedNameCS: objNr=%d, corrupt DeviceCMYK lookup table", im.objNr)
 		}
-		return renderIndexedCMYKToTIFF(im, lookup)
+		return renderIndexedCMYKToTIFF(im, maxInd, lookup)
 	}
 
 	if log.InfoEnabled() {
@@ -817,8 +816,8 @@ func unsupportedIndexedArrayCS(im *PDFImage, csa types.Array) (io.Reader, string
 	return unsupportedImageRender(im.objNr, fmt.Sprintf("indexed base colorspace %s", csa))
 }
 
-func renderIndexedICCGrayToPNG(im *PDFImage, lookup []byte) (io.Reader, string, error) {
-	// TODO handle decode and softmask.
+func renderIndexedICCGrayToPNG(im *PDFImage, maxInd int, lookup []byte) (io.Reader, string, error) {
+	// TODO handle softmask.
 	img := image.NewGray(image.Rect(0, 0, im.w, im.h))
 	rowBytes, err := checkedImageRowBytes(im.w, 1, im.bpc)
 	if err != nil {
@@ -827,7 +826,7 @@ func renderIndexedICCGrayToPNG(im *PDFImage, lookup []byte) (io.Reader, string, 
 	for y := 0; y < im.h; y++ {
 		rowOffset := y * int(rowBytes)
 		for x := 0; x < im.w; x++ {
-			ind := packedImageSample(im.sd.Content, rowOffset, x, im.bpc)
+			ind := indexedImageIndex(im, packedImageSample(im.sd.Content, rowOffset, x, im.bpc), maxInd)
 			img.Set(x, y, color.Gray{Y: lookup[ind]})
 		}
 	}
@@ -868,14 +867,14 @@ func renderIndexedICCBasedCS(xRefTable *model.XRefTable, im *PDFImage, csa types
 	// regardless of a specified alternate color space.
 	switch n {
 	case 1:
-		return renderIndexedICCGrayToPNG(im, lookup)
+		return renderIndexedICCGrayToPNG(im, maxInd, lookup)
 	case 3:
-		return renderIndexedRGBToPNG(im, lookup)
+		return renderIndexedRGBToPNG(im, maxInd, lookup)
 	case 4:
 		if log.DebugEnabled() {
 			log.Debug.Printf("renderIndexedArrayCS: CMYK objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(im.sd.Content))
 		}
-		return renderIndexedCMYKToTIFF(im, lookup)
+		return renderIndexedCMYKToTIFF(im, maxInd, lookup)
 	}
 	return unsupportedIndexedArrayCS(im, csa)
 }
@@ -891,7 +890,7 @@ func renderIndexedArrayCS(xRefTable *model.XRefTable, im *PDFImage, csa types.Ar
 		if len(lookup) < 3*(maxInd+1) {
 			return nil, "", fmt.Errorf("renderIndexedArrayCS: objNr=%d, corrupt CalRGB lookup table", im.objNr)
 		}
-		return renderIndexedRGBToPNG(im, lookup)
+		return renderIndexedRGBToPNG(im, maxInd, lookup)
 	case model.ICCBasedCS:
 		return renderIndexedICCBasedCS(xRefTable, im, csa, maxInd, lookup)
 	}
@@ -899,6 +898,7 @@ func renderIndexedArrayCS(xRefTable *model.XRefTable, im *PDFImage, csa types.Ar
 }
 
 func validateIndexedImageSamples(im *PDFImage, maxInd int) error {
+	// see 8.9.5.2
 	if !types.IntMemberOf(im.bpc, []int{1, 2, 4, 8}) {
 		return fmt.Errorf("renderIndexed: objNr=%d unsupported bits per component %d", im.objNr, im.bpc)
 	}
@@ -916,12 +916,9 @@ func validateIndexedImageSamples(im *PDFImage, maxInd int) error {
 	if int64(len(im.sd.Content)) < imageBytes {
 		return fmt.Errorf("renderIndexed: objNr=%d corrupt image object %v", im.objNr, *im.sd)
 	}
-	for y := 0; y < im.h; y++ {
-		rowOffset := y * int(rowBytes)
-		for x := 0; x < im.w; x++ {
-			if ind := packedImageSample(im.sd.Content, rowOffset, x, im.bpc); int(ind) > maxInd {
-				return fmt.Errorf("renderIndexed: objNr=%d palette index %d exceeds HiVal %d", im.objNr, ind, maxInd)
-			}
+	for _, r := range im.decode {
+		if math.IsNaN(r.min) || math.IsNaN(r.max) || math.IsInf(r.min, 0) || math.IsInf(r.max, 0) {
+			return fmt.Errorf("renderIndexed: objNr=%d invalid Decode range", im.objNr)
 		}
 	}
 	return nil

@@ -17,7 +17,9 @@ limitations under the License.
 package pdfcpu
 
 import (
+	"bytes"
 	"fmt"
+	"image"
 	"image/png"
 	"strings"
 	"testing"
@@ -78,7 +80,7 @@ func TestRenderDeviceGray16BPC(t *testing.T) {
 	}
 }
 
-// TestRenderIndexedPaletteBounds verifies that a short valid palette renders and an invalid index returns an error.
+// TestRenderIndexedPaletteBounds verifies that samples are clamped to the declared palette range.
 func TestRenderIndexedPaletteBounds(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -112,13 +114,134 @@ func TestRenderIndexedPaletteBounds(t *testing.T) {
 						Content: []byte{pixel},
 					}
 					_, _, err := RenderImage(xRefTable, sd, false, "", 7)
-					if pixel == 0 && err != nil {
-						t.Fatalf("valid palette index: %v", err)
-					}
-					if pixel != 0 && err == nil {
-						t.Fatal("expected error for palette index beyond HiVal")
+					if err != nil {
+						t.Fatalf("clamped palette index: %v", err)
 					}
 				})
+			}
+		})
+	}
+}
+
+// TestRenderIndexedDecode verifies Decode mapping, rounding, and clamping in supported Indexed colour spaces.
+func TestRenderIndexedDecode(t *testing.T) {
+	gray := types.HexLiteral("00ff")
+	rgb := types.HexLiteral("000000ffffff")
+	cmyk := types.HexLiteral("000000ff00000000")
+	bases := []struct {
+		name   string
+		cs     types.Object
+		lookup types.HexLiteral
+		masked bool
+	}{
+		{"DeviceGray", types.Name(model.DeviceGrayCS), gray, false},
+		{"DeviceRGB", types.Name(model.DeviceRGBCS), rgb, false},
+		{"DeviceCMYK", types.Name(model.DeviceCMYKCS), cmyk, false},
+		{"CalRGB", types.Array{types.Name(model.CalRGBCS), types.Dict{}}, rgb, false},
+		{"ICCGray", indexedTestICCBase(1), gray, false},
+		{"ICCRGB", indexedTestICCBase(3), rgb, false},
+		{"ICCCMYK", indexedTestICCBase(4), cmyk, false},
+		{"DeviceRGBMasked", types.Name(model.DeviceRGBCS), rgb, true},
+		{"DeviceCMYKMasked", types.Name(model.DeviceCMYKCS), cmyk, true},
+	}
+	tests := []struct {
+		name    string
+		decode  types.Array
+		samples []byte
+		white   []bool
+	}{
+		{"default", nil, []byte{0, 1, 255}, []bool{false, true, true}},
+		{"scaled", types.NewNumberArray(0, 1), []byte{0, 127, 128, 255}, []bool{false, false, true, true}},
+		{"scaled_max", types.NewNumberArray(0, 1), []byte{255}, []bool{true}},
+		{"inverted", types.NewNumberArray(1, 0), []byte{0, 127, 128, 255}, []bool{true, true, false, false}},
+		{"half_up", types.NewNumberArray(0, 1.5), []byte{0, 85, 170, 255}, []bool{false, true, true, true}},
+		{"below_half", types.NewNumberArray(0.25, 0.49), []byte{0, 255}, []bool{false, false}},
+		{"clipped", types.NewNumberArray(-1, 2), []byte{0, 85, 170, 255}, []bool{false, false, true, true}},
+	}
+	for _, base := range bases {
+		for _, tt := range tests {
+			t.Run(base.name+"/"+tt.name, func(t *testing.T) {
+				sd := indexedTestStream(base.cs, base.lookup, 8, len(tt.samples), 1, tt.samples)
+				if tt.decode != nil {
+					sd.Dict["Decode"] = tt.decode
+				}
+				alpha := uint32(0xffff)
+				if base.masked {
+					alpha = 0x8080
+					mask := indexedTestStream(types.Name(model.DeviceGrayCS), "", 8, len(tt.samples), 1,
+						bytes.Repeat([]byte{128}, len(tt.samples)))
+					mask.Dict["ColorSpace"] = types.Name(model.DeviceGrayCS)
+					sd.Dict["SMask"] = *mask
+				}
+				r, _, err := RenderImage(xRefTable, sd, false, "", 7)
+				if err != nil {
+					t.Fatal(err)
+				}
+				img, _, err := image.Decode(r)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for x, white := range tt.white {
+					want := uint32(0)
+					if white {
+						want = alpha
+					}
+					r, g, b, a := img.At(x, 0).RGBA()
+					if r != want || g != want || b != want || a != alpha {
+						t.Errorf("pixel %d: got RGBA (%d,%d,%d,%d), want (%d,%d,%d,%d)", x, r, g, b, a, want, want, want, alpha)
+					}
+				}
+			})
+		}
+	}
+}
+
+func indexedTestICCBase(n int) types.Array {
+	return types.Array{types.Name(model.ICCBasedCS), types.StreamDict{Dict: types.Dict{"N": types.Integer(n)}}}
+}
+
+func indexedTestStream(base types.Object, lookup types.HexLiteral, bpc, w, h int, samples []byte) *types.StreamDict {
+	return &types.StreamDict{
+		Dict: types.Dict{
+			"BitsPerComponent": types.Integer(bpc),
+			"ColorSpace":       types.Array{types.Name(model.IndexedCS), base, types.Integer(1), lookup},
+			"Height":           types.Integer(h),
+			"Width":            types.Integer(w),
+		},
+		Content: samples,
+	}
+}
+
+// TestRenderIndexedPackedDecode verifies row padding and eight-bit palette values at every supported sample depth.
+func TestRenderIndexedPackedDecode(t *testing.T) {
+	tests := []struct {
+		bpc     int
+		samples []byte
+	}{
+		{1, []byte{0x5f, 0xbf}},
+		{2, []byte{0x33, 0xcf}},
+		{4, []byte{0x0f, 0x0f, 0xf0, 0xff}},
+		{8, []byte{0, 255, 0, 255, 0, 255}},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("bpc_%d", tt.bpc), func(t *testing.T) {
+			sd := indexedTestStream(types.Name(model.DeviceGrayCS), types.HexLiteral("4080"), tt.bpc, 3, 2, tt.samples)
+			sd.Dict["Decode"] = types.NewNumberArray(0, 1)
+			r, _, err := RenderImage(xRefTable, sd, false, "", 7)
+			if err != nil {
+				t.Fatal(err)
+			}
+			img, err := png.Decode(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for y, row := range [][]uint32{{0x4040, 0x8080, 0x4040}, {0x8080, 0x4040, 0x8080}} {
+				for x, want := range row {
+					got, _, _, _ := img.At(x, y).RGBA()
+					if got != want {
+						t.Errorf("pixel (%d,%d): got gray %d, want %d", x, y, got, want)
+					}
+				}
 			}
 		})
 	}
