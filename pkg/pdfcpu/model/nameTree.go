@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
@@ -566,7 +567,11 @@ func (n *Node) removeKid(c context.Context, xRefTable *XRefTable, k string, kid 
 		}
 
 		if xRefTable != nil {
-			if err := xRefTable.DeleteObject(c, n.D); err != nil {
+			// Preserve the surviving subtree, still referenced by the dictionary until the tree is rebound.
+			d := maps.Clone(n.D)
+			delete(d, "Kids")
+			delete(d, "Names")
+			if err := xRefTable.DeleteObject(c, d); err != nil {
 				return false, fmt.Errorf("name tree key %q: delete parent node: %w", k, err)
 			}
 		}

@@ -17,10 +17,112 @@ limitations under the License.
 package model
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+func removalTreeObject(t *testing.T, x *XRefTable, obj types.Object) types.IndirectRef {
+	t.Helper()
+	ir, err := x.IndRefForNewObject(obj)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return *ir
+}
+
+func removalTreeLeaf(t *testing.T, x *XRefTable, key string, values map[string][]int) *Node {
+	t.Helper()
+	stream := removalTreeObject(t, x, types.StreamDict{
+		Dict: types.Dict{"Type": types.Name("EmbeddedFile")}, Content: []byte(key),
+	})
+	value := removalTreeObject(t, x, types.Dict{
+		"Type": types.Name("Filespec"), "F": types.StringLiteral(key),
+		"EF": types.Dict{"F": stream},
+	})
+	values[key] = []int{value.ObjectNumber.Value(), stream.ObjectNumber.Value()}
+	return &Node{
+		Kmin: key, Kmax: key,
+		D: types.Dict{
+			"Limits": types.NewStringLiteralArray(key, key),
+			"Names":  types.Array{types.StringLiteral(key), value},
+		},
+		Names: []entry{{k: key, v: value}},
+	}
+}
+
+func removalTreeBranch(t *testing.T, x *XRefTable, kids ...*Node) *Node {
+	t.Helper()
+	refs := types.Array{}
+	for _, kid := range kids {
+		refs = append(refs, removalTreeObject(t, x, kid.D))
+	}
+	min, max := kids[0].Kmin, kids[len(kids)-1].Kmax
+	return &Node{
+		Kmin: min, Kmax: max, Kids: kids,
+		D: types.Dict{"Kids": refs, "Limits": types.NewStringLiteralArray(min, max)},
+	}
+}
+
+func checkRemovalTreeValues(t *testing.T, x *XRefTable, root *Node, removed string, values map[string][]int) {
+	t.Helper()
+	for key, ids := range values {
+		_, found := nameTreeValue(t, root, key)
+		if found != (key != removed) {
+			t.Errorf("key %q present: %t", key, found)
+		}
+		for _, id := range ids {
+			if x.Table[id].Free != (key == removed) {
+				t.Errorf("key %q object %d free: %t", key, id, x.Table[id].Free)
+			}
+		}
+		if key == removed {
+			continue
+		}
+		stream, ok := x.Table[ids[1]].Object.(types.StreamDict)
+		if !ok || string(stream.Content) != key {
+			t.Errorf("key %q: embedded content lost or changed", key)
+		}
+	}
+}
+
+// TestNameTreeCollapsePreservesSurvivors verifies removal preserves sibling values and their referenced streams.
+func TestNameTreeCollapsePreservesSurvivors(t *testing.T) {
+	for _, nested := range []bool{false, true} {
+		for _, branchSurvivor := range []bool{false, true} {
+			for _, removed := range []string{"a", "z"} {
+				t.Run(fmt.Sprintf("nested=%t/branch=%t/remove=%s", nested, branchSurvivor, removed), func(t *testing.T) {
+					x := locateNameTreeXRefTable()
+					values := map[string][]int{}
+					survivor := removalTreeLeaf(t, x, "m", values)
+					if branchSurvivor {
+						survivor = removalTreeBranch(t, x, survivor, removalTreeLeaf(t, x, "n", values))
+					}
+					target := removalTreeLeaf(t, x, removed, values)
+					kids := []*Node{target, survivor}
+					if removed == "z" {
+						kids = []*Node{survivor, target}
+					}
+					root := removalTreeBranch(t, x, kids...)
+					parentDict := root.D
+					if nested {
+						root = removalTreeBranch(t, x, removalTreeLeaf(t, x, "0", values), root)
+					}
+					delete(root.D, "Limits")
+					empty, ok, err := root.Remove(t.Context(), x, removed)
+					if err != nil || empty || !ok {
+						t.Fatalf("remove: empty=%t ok=%t error=%v", empty, ok, err)
+					}
+					checkRemovalTreeValues(t, x, root, removed, values)
+					if len(parentDict.ArrayEntry("Kids")) != 2 {
+						t.Fatal("cleanup mutated the original parent dictionary")
+					}
+				})
+			}
+		}
+	}
+}
 
 func checkAddResult(t *testing.T, r *Node, exp string, root bool) {
 
