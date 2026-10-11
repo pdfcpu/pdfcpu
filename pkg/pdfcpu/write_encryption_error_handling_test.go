@@ -112,7 +112,7 @@ func TestPrepareContextForWritingAddsEncryptionContext(t *testing.T) {
 	ctx.EncryptUsingAES = false
 	ctx.EncryptKeyLength = 256
 
-	err := prepareContextForWriting(ctx)
+	err := prepareContextForWriting(t.Context(), ctx)
 	if !errors.Is(err, ErrUnsupportedEncryptionFeature) {
 		t.Fatalf("got %v, want %v", err, ErrUnsupportedEncryptionFeature)
 	}

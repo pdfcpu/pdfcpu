@@ -301,10 +301,13 @@ func (xRefTable *XRefTable) IsMerging() bool {
 	return cmd == MERGECREATE || cmd == MERGEAPPEND
 }
 
-// EnsureVersionForWriting sets the version to the highest supported PDF Version 1.7.
+// EnsureVersionForWriting raises the effective version to at least PDF 1.7.
 // This is necessary to allow validation after adding features not supported
 // by the original version of a document as during watermarking.
 func (xRefTable *XRefTable) EnsureVersionForWriting() {
+	if (xRefTable.HeaderVersion != nil || xRefTable.RootVersion != nil) && xRefTable.Version() >= V17 {
+		return
+	}
 	v := V17
 	xRefTable.RootVersion = &v
 }

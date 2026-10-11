@@ -35,6 +35,7 @@ import (
 	"golang.org/x/text/encoding/charmap"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
+	"github.com/pdfcpu/pdfcpu/internal/corefont/metrics"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -410,6 +411,185 @@ func PDFDocEncoding(xRefTable *model.XRefTable) (*types.IndirectRef, error) {
 	return insertFontObject(xRefTable, "", "create PDFDoc encoding", d)
 }
 
+func coreFontDescriptor(xRefTable *model.XRefTable, fontName string) (*types.IndirectRef, error) {
+	fm, ok := metrics.CoreFontMetrics[fontName]
+	if !ok {
+		return nil, fmt.Errorf("unknown core font: %s", fontName)
+	}
+	flags := 32 // Nonsymbolic.
+	ascent, descent := fm.Ascent, fm.Descent
+	if fontName == "Symbol" || fontName == "ZapfDingbats" {
+		flags = 4 // Symbolic; these AFMs omit ascender and descender metrics.
+		ascent, descent = fm.FBox.UR.Y, fm.FBox.LL.Y
+	}
+	if strings.HasPrefix(fontName, "Courier") {
+		flags |= 3 // FixedPitch and Serif.
+	}
+	if strings.HasPrefix(fontName, "Times") {
+		flags |= 2 // Serif.
+	}
+	if fm.ItalicAngle != 0 {
+		flags |= 64 // Italic.
+	}
+	d := types.Dict{
+		"Type":        types.Name("FontDescriptor"),
+		"FontName":    types.Name(fontName),
+		"Flags":       types.Integer(flags),
+		"FontBBox":    fm.FBox.Array(),
+		"ItalicAngle": types.Float(fm.ItalicAngle),
+		"Ascent":      types.Float(ascent),
+		"Descent":     types.Float(descent),
+		"StemV":       types.Float(fm.StemV),
+	}
+	if fm.CapHeight != 0 {
+		d["CapHeight"] = types.Float(fm.CapHeight)
+	}
+	return insertFontObject(xRefTable, fontName, "create core font descriptor", d)
+}
+
+func coreFontGlyphMap(fontName, encoding string) (map[int]string, error) {
+	if encoding == "WinAnsiEncoding" {
+		return metrics.WinAnsiGlyphMap, nil
+	}
+	if encoding != "" {
+		return nil, fmt.Errorf("font %s: cannot reconstruct metrics for encoding %s", fontName, encoding)
+	}
+	switch fontName {
+	case "Symbol":
+		return metrics.SymbolGlyphMap, nil
+	case "ZapfDingbats":
+		return metrics.ZapfDingbatsGlyphMap, nil
+	}
+	return metrics.StandardGlyphMap, nil
+}
+
+func coreFontEncoding(xRefTable *model.XRefTable, d types.Dict) (string, types.Array, error) {
+	o, err := xRefTable.Dereference(d["Encoding"])
+	if err != nil {
+		return "", nil, err
+	}
+	switch o := o.(type) {
+	case nil:
+		return "", nil, nil
+	case types.Name:
+		return o.Value(), nil, nil
+	case types.Dict:
+		base, _, err := xRefTable.DereferenceNameEntry(o, "BaseEncoding")
+		if err != nil {
+			return "", nil, err
+		}
+		encoding := ""
+		if base != nil {
+			encoding = base.Value()
+		}
+		diff, err := xRefTable.DereferenceArray(o["Differences"])
+		return encoding, diff, err
+	}
+	return "", nil, errors.New("invalid core font encoding")
+}
+
+func applyCoreFontDifferences(xRefTable *model.XRefTable, glyphs *[256]string, diff types.Array) error {
+	c := -1
+	for _, o := range diff {
+		o, err := xRefTable.Dereference(o)
+		if err != nil {
+			return err
+		}
+		switch o := o.(type) {
+		case types.Integer:
+			c = int(o)
+			if c < 0 || c > 255 {
+				return errors.New("core font Differences code outside 0..255")
+			}
+		case types.Name:
+			if c < 0 || c > 255 {
+				return errors.New("core font Differences name without valid code")
+			}
+			glyphs[c] = o.Value()
+			c++
+		default:
+			return errors.New("invalid core font Differences entry")
+		}
+	}
+	return nil
+}
+
+func coreFontWidths(xRefTable *model.XRefTable, d types.Dict, fontName string) (types.Array, error) {
+	encoding, diff, err := coreFontEncoding(xRefTable, d)
+	if err != nil {
+		return nil, err
+	}
+	m, err := coreFontGlyphMap(fontName, encoding)
+	if err != nil {
+		return nil, err
+	}
+	var glyphs [256]string
+	for c, name := range m {
+		glyphs[c] = name
+	}
+	if err := applyCoreFontDifferences(xRefTable, &glyphs, diff); err != nil {
+		return nil, err
+	}
+	fm := metrics.CoreFontMetrics[fontName]
+	widths := make(types.Array, 256)
+	for c := range widths {
+		name := glyphs[c]
+		w, ok := fm.W[name]
+		if !ok && name != "" && name != ".notdef" {
+			return nil, fmt.Errorf("font %s: no metrics for glyph %s", fontName, name)
+		}
+		widths[c] = types.Integer(w)
+	}
+	return widths, nil
+}
+
+func missingCoreFontMetrics(xRefTable *model.XRefTable, d types.Dict) (int, error) {
+	missing := 0
+	for _, key := range []string{"FirstChar", "LastChar", "Widths", "FontDescriptor"} {
+		o, err := xRefTable.Dereference(d[key])
+		if err != nil {
+			return 0, err
+		}
+		if o == nil {
+			missing++
+		}
+	}
+	return missing, nil
+}
+
+// EnsureCoreFontMetrics completes omitted standard-font metrics for PDF 2.0 and returns any new descriptor reference.
+// Complete metrics are preserved; partial metrics and unsupported encodings return an error.
+func EnsureCoreFontMetrics(xRefTable *model.XRefTable, d types.Dict) (*types.IndirectRef, error) {
+	subtype, _, err := xRefTable.DereferenceNameEntry(d, "Subtype")
+	if err != nil || subtype == nil || *subtype != "Type1" {
+		return nil, err
+	}
+	name, _, err := xRefTable.DereferenceNameEntry(d, "BaseFont")
+	if err != nil || name == nil || !font.IsCoreFont(name.Value()) {
+		return nil, err
+	}
+	missing, err := missingCoreFontMetrics(xRefTable, d)
+	if err != nil || missing == 0 {
+		return nil, err
+	}
+	if missing != 4 {
+		return nil, fmt.Errorf("font %s: cannot reconstruct partial standard-font metrics", name.Value())
+	}
+	widths, err := coreFontWidths(xRefTable, d, name.Value())
+	if err != nil {
+		return nil, err
+	}
+	fd, err := coreFontDescriptor(xRefTable, name.Value())
+	if err != nil {
+		return nil, err
+	}
+	d.InsertInt("FirstChar", 0)
+	d.InsertInt("LastChar", 255)
+	d["Widths"] = widths
+	d["FontDescriptor"] = *fd
+	return fd, nil
+}
+
 // CoreFontDict returns an indirect reference to a Type 1 font.
 func CoreFontDict(xRefTable *model.XRefTable, coreFontName string) (*types.IndirectRef, error) {
 	if err := requireFontXRef(xRefTable, coreFontName, "create core font dictionary"); err != nil {
@@ -421,6 +601,12 @@ func CoreFontDict(xRefTable *model.XRefTable, coreFontName string) (*types.Indir
 	d.InsertName("BaseFont", coreFontName)
 	if coreFontName != "Symbol" && coreFontName != "ZapfDingbats" {
 		d.InsertName("Encoding", "WinAnsiEncoding")
+	}
+	// See 9.6.2.1, Table 109: the standard 14 metrics exception ends with PDF 1.7.
+	if (xRefTable.HeaderVersion != nil || xRefTable.RootVersion != nil) && xRefTable.Version() >= model.V20 {
+		if _, err := EnsureCoreFontMetrics(xRefTable, d); err != nil {
+			return nil, err
+		}
 	}
 	return insertFontObject(xRefTable, coreFontName, "create core font dictionary", d)
 }
