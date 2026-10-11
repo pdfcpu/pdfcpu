@@ -465,7 +465,31 @@ func validateWebCaptureContentSetDict(XRefTable *model.XRefTable, d types.Dict, 
 	return err
 }
 
-func validateWebCaptureContentSet(xRefTable *model.XRefTable, o types.Object, ownerObjNr int) error {
+type webCaptureNameTreeVisitKey struct{}
+
+// Tree values may be arrays, but their members must validate as content-set dictionaries.
+type webCaptureNameTreeVisit struct {
+	values      map[int]bool
+	contentSets map[int]bool
+}
+
+func newWebCaptureNameTreeVisit() *webCaptureNameTreeVisit {
+	return &webCaptureNameTreeVisit{values: map[int]bool{}, contentSets: map[int]bool{}}
+}
+
+func webCaptureNameTreeTraversal(c context.Context) *webCaptureNameTreeVisit {
+	if visit, ok := c.Value(webCaptureNameTreeVisitKey{}).(*webCaptureNameTreeVisit); ok {
+		return visit
+	}
+	return newWebCaptureNameTreeVisit()
+}
+
+func validateWebCaptureContentSet(xRefTable *model.XRefTable, o types.Object, ownerObjNr int, validated map[int]bool) error {
+	// see 14.10.4
+	objNr := validationObjectNumber(0, o)
+	if validated[objNr] {
+		return nil
+	}
 	d, err := xRefTable.DereferenceDict(o)
 	if err != nil {
 		return fmt.Errorf("dereference content set dict: %w", err)
@@ -473,30 +497,50 @@ func validateWebCaptureContentSet(xRefTable *model.XRefTable, o types.Object, ow
 	if d == nil {
 		return errors.New("missing content set dict")
 	}
-	return validateWebCaptureContentSetDict(xRefTable, d, validationObjectNumber(ownerObjNr, o))
+	if err := validateWebCaptureContentSetDict(xRefTable, d, validationObjectNumber(ownerObjNr, o)); err != nil {
+		return err
+	}
+	if objNr > 0 {
+		validated[objNr] = true
+	}
+	return nil
 }
 
 func validateWebCaptureNameTreeValue(c context.Context, xRefTable *model.XRefTable, o types.Object, name string) error {
+	// see 14.10.3.1
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	visit := webCaptureNameTreeTraversal(c)
+	ownerObjNr := validationObjectNumber(0, o)
+	if visit.values[ownerObjNr] {
+		return nil
+	}
 	value, err := xRefTable.Dereference(o)
 	if err != nil {
 		return fmt.Errorf("%s name tree value: dereference: %w", name, err)
 	}
-	ownerObjNr := validationObjectNumber(0, o)
 	switch value := value.(type) {
 	case types.Dict:
-		return validateWebCaptureContentSet(xRefTable, value, ownerObjNr)
+		if err := validateWebCaptureContentSet(xRefTable, o, ownerObjNr, visit.contentSets); err != nil {
+			return err
+		}
 	case types.Array:
 		for i, contentSet := range value {
 			if err := contextutil.Check(c); err != nil {
 				return err
 			}
-			if err := validateWebCaptureContentSet(xRefTable, contentSet, ownerObjNr); err != nil {
+			if err := validateWebCaptureContentSet(xRefTable, contentSet, ownerObjNr, visit.contentSets); err != nil {
 				return fmt.Errorf("%s name tree value[%d]: %w", name, i, err)
 			}
 		}
-		return nil
+	default:
+		return fmt.Errorf("%s name tree value: expected content set dict or array, got %T", name, value)
 	}
-	return fmt.Errorf("%s name tree value: expected content set dict or array, got %T", name, value)
+	if ownerObjNr > 0 {
+		visit.values[ownerObjNr] = true
+	}
+	return nil
 }
 
 func validateIDSNameTreeValue(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
@@ -1211,6 +1255,9 @@ func validateNameTreeDepth(c context.Context, xRefTable *model.XRefTable, name s
 	// see 7.9.6
 	if name == "JavaScript" && c != nil {
 		c = context.WithValue(c, javaScriptNameTreeVisitKey{}, newJavaScriptNameTreeVisit())
+	}
+	if (name == "IDS" || name == "URLS") && c != nil {
+		c = context.WithValue(c, webCaptureNameTreeVisitKey{}, newWebCaptureNameTreeVisit())
 	}
 	var specViolations []error
 	kmin, kmax, node, err := validateNameTreeDepthWithViolations(c,
