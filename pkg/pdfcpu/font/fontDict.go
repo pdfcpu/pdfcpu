@@ -32,6 +32,8 @@ import (
 	"time"
 	"unicode/utf16"
 
+	"golang.org/x/text/encoding/charmap"
+
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -789,7 +791,23 @@ func CIDWidths(xRefTable *model.XRefTable, ttf font.TTFLight, fontName string, s
 	return indRef, nil
 }
 
-// Widths returns the value for Widths in a TrueType FontDict.
+// winAnsiCodePoint maps PDF WinAnsi codes to Unicode (Annex D.2, including notes 3, 5, and 6).
+func winAnsiCodePoint(code int) uint32 {
+	switch code {
+	case 0x7f, 0x81, 0x8d, 0x8f, 0x90, 0x9d:
+		return 0x2022 // Unassigned printable codes select bullet.
+	case 0xa0:
+		return 0x20 // WinAnsi uses space, not the CP1252 non-breaking space.
+	case 0xad:
+		return 0x2d // WinAnsi uses hyphen, not the CP1252 soft hyphen.
+	}
+	if code >= 0x80 && code <= 0x9f {
+		return uint32(charmap.Windows1252.DecodeByte(byte(code)))
+	}
+	return uint32(code)
+}
+
+// Widths returns the WinAnsiEncoding widths for a TrueType FontDict.
 func Widths(xRefTable *model.XRefTable, ttf font.TTFLight, first, last int) (*types.IndirectRef, error) {
 	fontName := ttfFontName(ttf, "")
 	if err := requireFontXRef(xRefTable, fontName, "create TrueType widths"); err != nil {
@@ -803,7 +821,7 @@ func Widths(xRefTable *model.XRefTable, ttf font.TTFLight, first, last int) (*ty
 	}
 	a := types.Array{}
 	for i := first; ; i++ {
-		pos, ok := ttf.Chars[uint32(i)]
+		pos, ok := ttf.Chars[winAnsiCodePoint(i)]
 		if !ok {
 			pos = 0 // should be the "invalid char"
 		}

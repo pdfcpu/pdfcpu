@@ -207,3 +207,85 @@ func checkBFCharBlocks(t *testing.T, content string, want []string) {
 		t.Fatalf("got %d mappings in %d blocks for %d glyphs", mappings, blocks, len(want))
 	}
 }
+
+// TestWidthsUsesWinAnsiGlyphs checks the glyph selected by each high WinAnsi code and its aliases.
+func TestWidthsUsesWinAnsiGlyphs(t *testing.T) {
+	// Annex D.2, Table D.1: codes 0x80 through 0x9f, including unused-code bullet aliases.
+	high := []uint32{
+		0x20ac, 0x2022, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021,
+		0x02c6, 0x2030, 0x0160, 0x2039, 0x0152, 0x2022, 0x017d, 0x2022,
+		0x2022, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014,
+		0x02dc, 0x2122, 0x0161, 0x203a, 0x0153, 0x2022, 0x017e, 0x0178,
+	}
+	cases := []struct {
+		code    int
+		unicode uint32
+	}{
+		{0x41, 0x41}, {0xe4, 0xe4}, {0x7f, 0x2022}, {0xa0, 0x20}, {0xad, 0x2d},
+		{0x20ac, 0x20ac}, // Preserve the existing behavior for calls outside the byte range.
+	}
+	for i, u := range high {
+		cases = append(cases, struct {
+			code    int
+			unicode uint32
+		}{0x80 + i, u})
+	}
+	for _, tt := range cases {
+		t.Run(fmt.Sprintf("%X", tt.code), func(t *testing.T) {
+			ttf := validTTFLight()
+			ttf.GlyphCount, ttf.HorMetricsCount = 3, 3
+			ttf.GlyphWidths = []int{500, 600, 900}
+			ttf.Chars = map[uint32]uint16{uint32(tt.code): 2}
+			ttf.Chars[tt.unicode] = 1
+			ttf.LastChar = 0x20ac
+			a := testTrueTypeWidths(t, ttf, tt.code, tt.code)
+			if len(a) != 1 || a[0] != types.Integer(600) {
+				t.Fatalf("widths for code %X = %v, want [600] for U+%04X", tt.code, a, tt.unicode)
+			}
+		})
+	}
+}
+
+// TestWidthsWinAnsiRangeAndMissingGlyph preserves code positions and the missing-glyph fallback.
+func TestWidthsWinAnsiRangeAndMissingGlyph(t *testing.T) {
+	ttf := validTTFLight()
+	ttf.Chars[0x20ac] = 1
+	ttf.Chars[0x0178] = 1
+	a := testTrueTypeWidths(t, ttf, 0x80, 0x9f)
+	if len(a) != 32 {
+		t.Fatalf("got %d widths, want 32", len(a))
+	}
+	for i, w := range a {
+		want := types.Integer(500)
+		if i == 0 || i == 31 {
+			want = 600
+		}
+		if w != want {
+			t.Fatalf("width for code %X = %v, want %v", 0x80+i, w, want)
+		}
+	}
+	delete(ttf.Chars, 0x20ac)
+	ttf.Chars[0x80] = 1 // A control-code glyph must not substitute for a missing Euro glyph.
+	a = testTrueTypeWidths(t, ttf, 0x80, 0x80)
+	if a[0] != types.Integer(500) {
+		t.Fatalf("missing Euro width = %v, want 500", a[0])
+	}
+}
+
+func testTrueTypeWidths(t *testing.T, ttf corefont.TTFLight, first, last int) types.Array {
+	t.Helper()
+	size := 1
+	x := &model.XRefTable{
+		Table: map[int]*model.XRefTableEntry{0: model.NewFreeHeadXRefTableEntry()},
+		Size:  &size,
+	}
+	ir, err := Widths(x, ttf, first, last)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := x.DereferenceArray(*ir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return a
+}
