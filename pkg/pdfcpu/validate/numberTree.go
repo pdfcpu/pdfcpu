@@ -80,7 +80,8 @@ func validatePageLabelDict(xRefTable *model.XRefTable, o types.Object) (err erro
 	return err
 }
 
-func validateNumberTreeKey(xRefTable *model.XRefTable, o types.Object, ownerObjNr int, name string) (key int, valid bool, err error) {
+func validateNumberTreeKey(xRefTable *model.XRefTable, o types.Object, ownerObjNr int, name string, previous int, havePrevious bool) (key int, valid bool, err error) {
+	// see 7.9.7
 	objNr := validationObjectNumber(ownerObjNr, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -93,7 +94,14 @@ func validateNumberTreeKey(xRefTable *model.XRefTable, o types.Object, ownerObjN
 
 	i, ok := o.(types.Integer)
 	if ok {
-		return i.Value(), true, nil
+		key = i.Value()
+		if havePrevious && key <= previous {
+			if xRefTable.ValidationMode == model.ValidationStrict {
+				return 0, false, fmt.Errorf("key %d not in ascending order after %d", key, previous)
+			}
+			model.ShowDigestedSpecViolation("number tree keys not sorted in ascending order")
+		}
+		return key, true, nil
 	}
 
 	err = fmt.Errorf("number tree %s key: expected integer, got %T", name, o)
@@ -151,7 +159,7 @@ func validateNumberTreeDictNumsEntry(c context.Context, xRefTable *model.XRefTab
 		if i%2 == 0 {
 			var key int
 			var valid bool
-			key, valid, err = validateNumberTreeKey(xRefTable, o, numsObjNr, name)
+			key, valid, err = validateNumberTreeKey(xRefTable, o, numsObjNr, name, lastKey, haveFirstKey)
 			if err != nil {
 				return 0, 0, fmt.Errorf("number tree %s Nums[%d]: %w", name, i, err)
 			}

@@ -132,3 +132,70 @@ func checkNameTreeFirstKey(t *testing.T, x *model.XRefTable, root types.Dict, wa
 		t.Fatalf("empty key lookup: found=%t, error=%v", found, err)
 	}
 }
+
+// TestTreeKeyOrder checks strict ordering and relaxed compatibility using PDF string bytes.
+func TestTreeKeyOrder(t *testing.T) {
+	for _, version := range []model.Version{model.V17, model.V20} {
+		for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+			for _, tt := range []struct {
+				name      string
+				names     bool
+				keys      types.Array
+				strictErr bool
+			}{
+				{"numbers sorted", false, types.NewIntegerArray(0, 2, 10), false},
+				{"numbers descending", false, types.NewIntegerArray(7, 2), true},
+				{"numbers later descending", false, types.NewIntegerArray(0, 10, 2), true},
+				{"numbers duplicate zero", false, types.NewIntegerArray(0, 0), true},
+				{"numbers duplicate nonzero", false, types.NewIntegerArray(2, 2), true},
+				{"names sorted", true, types.Array{types.StringLiteral(""), types.StringLiteral("a"), types.StringLiteral("aa")}, false},
+				{"names descending", true, types.Array{types.StringLiteral("z"), types.StringLiteral("a")}, true},
+				{"names shorter prefix after longer", true, types.Array{types.StringLiteral("aa"), types.StringLiteral("a")}, true},
+				{"names empty after nonempty", true, types.Array{types.StringLiteral("a"), types.StringLiteral("")}, true},
+				{"names duplicate compatibility", true, types.Array{types.StringLiteral("a"), types.StringLiteral("a")}, false},
+				{"names mixed representation", true, types.Array{types.StringLiteral("a"), types.HexLiteral("62")}, false},
+				{"names PDFDocEncoding sorted", true, types.Array{types.HexLiteral("80"), types.HexLiteral("81")}, false},
+				{"names PDFDocEncoding descending", true, types.Array{types.HexLiteral("81"), types.HexLiteral("80")}, true},
+				{"names octal sorted", true, types.Array{types.StringLiteral(`\200`), types.StringLiteral(`\201`)}, false},
+				{"names UTF16 sorted", true, types.Array{types.HexLiteral("FEFFD800DC00"), types.HexLiteral("FEFFE000")}, false},
+				{"names UTF16 descending", true, types.Array{types.HexLiteral("FEFFE000"), types.HexLiteral("FEFFD800DC00")}, true},
+			} {
+				t.Run(fmt.Sprintf("%s/mode=%d/%s", version, mode, tt.name), func(t *testing.T) {
+					x := treeRangeTestContext(t, version, mode)
+					err := validateTreeOrderTestKeys(t, x, tt.names, tt.keys)
+					wantErr := mode == model.ValidationStrict && tt.strictErr
+					if !wantErr {
+						if err != nil {
+							t.Fatal(err)
+						}
+						return
+					}
+					if err == nil || !strings.Contains(err.Error(), "order after") {
+						t.Fatalf("got %v, want key order error", err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func validateTreeOrderTestKeys(t *testing.T, x *model.XRefTable, names bool, keys types.Array) error {
+	t.Helper()
+	entry := "Nums"
+	value := types.Dict{"S": types.Name("D")}
+	if names {
+		entry = "Names"
+		value = types.Dict{"S": types.Name("JavaScript"), "JS": types.StringLiteral("1;")}
+	}
+	a := types.Array{}
+	for _, key := range keys {
+		a = append(a, key, value)
+	}
+	root := types.Dict{entry: a}
+	if names {
+		_, _, _, err := validateNameTree(t.Context(), x, "JavaScript", root, 0, true)
+		return err
+	}
+	_, _, err := validateNumberTree(t.Context(), x, "PageLabel", root, 0, true, false)
+	return err
+}

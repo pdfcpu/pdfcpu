@@ -17,6 +17,7 @@ limitations under the License.
 package validate
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -902,6 +903,39 @@ func validateNameTreeValueContext(c context.Context, name string, x *model.XRefT
 	return validateNameTreeValue(c, name, x, o, owner)
 }
 
+// validateNameTreeKey compares decoded string bytes before converting the key to display text.
+func validateNameTreeKey(xRefTable *model.XRefTable, o types.Object, previous []byte, havePrevious bool) (string, []byte, error) {
+	// see 7.9.6
+	o, err := xRefTable.Dereference(o)
+	if err != nil {
+		return "", nil, fmt.Errorf("dereference key: %w", err)
+	}
+	var raw []byte
+	switch key := o.(type) {
+	case types.StringLiteral:
+		raw, err = types.Unescape(key.Value())
+	case types.HexLiteral:
+		raw, err = key.Bytes()
+	default:
+		return "", nil, fmt.Errorf("expected string key, got %T", o)
+	}
+	if err != nil {
+		return "", nil, fmt.Errorf("decode key bytes: %w", err)
+	}
+	// Lexical ordering uses the string bytes, regardless of their text encoding.
+	if havePrevious && bytes.Compare(raw, previous) < 0 {
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return "", nil, fmt.Errorf("key %q not in lexical order after %q", raw, previous)
+		}
+		model.ShowDigestedSpecViolation("name tree keys not sorted in lexical order")
+	}
+	key, err := types.StringOrHexLiteral(o)
+	if err != nil {
+		return "", nil, fmt.Errorf("expected string key: %w", err)
+	}
+	return *key, raw, nil
+}
+
 func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, name string, node *model.Node) (string, string, error) {
 	// see 7.9.6
 	//fmt.Printf("validateNameTreeDictNamesEntry begin %s\n", d)
@@ -936,6 +970,7 @@ func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTabl
 
 	var key, firstKey, lastKey string
 	var haveFirstKey bool
+	var previous []byte
 
 	for i := 0; i < entries; i++ {
 		if err := contextutil.Check(c); err != nil {
@@ -946,20 +981,11 @@ func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTabl
 		if i%2 == 0 {
 			keyObjNr := validationObjectNumber(namesObjNr, o)
 
-			// TODO Do we really need to process indRefs here?
-			o, err = xRefTable.Dereference(o)
+			key, previous, err = validateNameTreeKey(xRefTable, o, previous, haveFirstKey)
 			if err != nil {
-				err = fmt.Errorf("name tree %s Names[%d]: dereference key: %w", name, i, err)
+				err = fmt.Errorf("name tree %s Names[%d]: %w", name, i, err)
 				return "", "", model.WithValidationErrorObject(err, keyObjNr)
 			}
-
-			k, err := types.StringOrHexLiteral(o)
-			if err != nil {
-				err = fmt.Errorf("name tree %s Names[%d]: expected string key: %w", name, i, err)
-				return "", "", model.WithValidationErrorObject(err, keyObjNr)
-			}
-
-			key = *k
 
 			if !haveFirstKey {
 				firstKey = key
