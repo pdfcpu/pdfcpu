@@ -158,6 +158,10 @@ func linkRequestURL(s string) (string, error) {
 func redactedLinkURI(s string) string {
 	u, err := url.Parse(s)
 	if err != nil {
+		// File specifications need not be URIs. Without @ there can be no URI userinfo.
+		if !strings.Contains(s, "@") {
+			return s
+		}
 		// A malformed URI may contain credentials that cannot be reliably isolated.
 		return "[invalid URI]"
 	}

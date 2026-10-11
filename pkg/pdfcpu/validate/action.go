@@ -351,6 +351,7 @@ func soundStreamDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, en
 }
 
 func validateSoundDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, entryName string, required bool, sinceVersion model.Version) error {
+	// see 13.3
 	sd, err := soundStreamDictEntry(xRefTable, d, dictName, entryName, required, sinceVersion)
 	if err != nil || sd == nil {
 		return err
@@ -374,10 +375,7 @@ func validateSoundDictEntry(xRefTable *model.XRefTable, d types.Dict, dictName, 
 	}
 
 	// R, required without F, number - sampling rate
-	_, err = validateNumberEntry(xRefTable, sd.Dict, 0, dictName, "R", f == nil, model.V10, func(f float64) bool {
-		return f > 0
-	})
-	if err != nil {
+	if err := validateSoundSamplingRate(xRefTable, sd.Dict, validationObjectNumber(0, d[entryName]), f == nil); err != nil {
 		return err
 	}
 
@@ -605,37 +603,85 @@ func validateMovieActivationDict(xRefTable *model.XRefTable, d types.Dict) error
 }
 
 func validateMovieActionDict(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
-	// see 12.6.4.9
-
-	// is a movie activation dict
-	err := validateMovieActivationDict(xRefTable, d)
-	if err != nil {
+	// see 12.6.4.10
+	if err := validateMovieActivationDict(xRefTable, d); err != nil {
 		return err
 	}
-
-	// Exactly one of T or Annotation is required.
-	_, hasTitle := d.Find("T")
-	_, hasAnnotation := d.Find("Annotation")
-	if hasTitle == hasAnnotation {
-		return errors.New("movie action: exactly one of \"T\" and \"Annotation\" is required")
+	if err := validateMovieActionTarget(xRefTable, d, dictName); err != nil {
+		return err
 	}
-
-	if hasTitle {
-		_, err = validateStringEntry(xRefTable, d, 0, dictName, "T", REQUIRED, model.V10, nil)
-		if err != nil {
-			return err
-		}
-	} else {
-		err = validateMovieActionAnnotation(xRefTable, d, dictName)
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err = validateNameEntry(xRefTable, d, 0, dictName, "Operation", OPTIONAL, model.V10, func(s string) bool {
+	_, err := validateNameEntry(xRefTable, d, 0, dictName, "Operation", OPTIONAL, model.V10, func(s string) bool {
 		return types.MemberOf(s, []string{"Play", "Stop", "Pause", "Resume"})
 	})
 	return err
+}
+
+func validateMovieActionTarget(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	// see 12.6.4.10
+	title, err := validateEntry(xRefTable, d, 0, dictName, "T", OPTIONAL, model.V10)
+	if err != nil {
+		return err
+	}
+	annotation, err := validateEntry(xRefTable, d, 0, dictName, "Annotation", OPTIONAL, model.V10)
+	if err != nil {
+		return err
+	}
+	var selectionErr error
+	if (title != nil) == (annotation != nil) {
+		selectionErr = errors.New("movie action: exactly one of \"T\" and \"Annotation\" is required")
+	}
+	if selectionErr != nil && xRefTable.ValidationMode == model.ValidationStrict {
+		return selectionErr
+	}
+	_, titleErr := validateStringEntry(xRefTable, d, 0, dictName, "T", OPTIONAL, model.V10, nil)
+	var annotationErr error
+	if annotation != nil {
+		annotationErr = validateMovieActionAnnotation(xRefTable, d, dictName)
+	}
+	if xRefTable.ValidationMode == model.ValidationStrict {
+		if titleErr != nil {
+			return titleErr
+		}
+		return annotationErr
+	}
+	if titleErr != nil && (annotation == nil || annotationErr != nil) {
+		return titleErr
+	}
+	for _, err := range []error{selectionErr, titleErr, annotationErr} {
+		if err != nil {
+			recordMultimediaCompatibility(xRefTable, err)
+		}
+	}
+	return nil
+}
+
+func recordMultimediaCompatibility(xRefTable *model.XRefTable, err error) {
+	notice := model.NewValidationNotice(model.NoticePhaseValidate, model.NoticeDigested, err.Error(), err)
+	notice.PageNumber = xRefTable.CurPage
+	xRefTable.AddValidationNotice(notice)
+}
+
+func validateSoundSamplingRate(xRefTable *model.XRefTable, d types.Dict, objNr int, required bool) error {
+	// see 13.3
+	rate, err := validateEntry(xRefTable, d, objNr, "soundDict", "R", OPTIONAL, model.V10)
+	if err != nil {
+		return err
+	}
+	if rate != nil {
+		_, err := validateNumberEntry(xRefTable, d, objNr, "soundDict", "R", OPTIONAL, model.V10, func(f float64) bool {
+			return f > 0
+		})
+		return err
+	}
+	if !required {
+		return nil
+	}
+	err = model.WithValidationErrorObject(missingRequiredEntryError("soundDict", "R", ""), objNr)
+	if xRefTable.ValidationMode == model.ValidationStrict {
+		return err
+	}
+	recordMultimediaCompatibility(xRefTable, err)
+	return nil
 }
 
 func validateMovieActionAnnotation(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
@@ -1004,24 +1050,34 @@ func validateSetOCGStateActionDict(xRefTable *model.XRefTable, d types.Dict, dic
 	return err
 }
 
-func validateRenditionScreenPage(c context.Context, xRefTable *model.XRefTable, annotationRef, pageRef types.IndirectRef) error {
+func renditionScreenPage(c context.Context, xRefTable *model.XRefTable, pageRef types.IndirectRef) (types.Dict, error) {
 	// see 12.6.4.14
 	pageObjNr := pageRef.ObjectNumber.Value()
 	pageDict, err := xRefTable.DereferenceDict(pageRef)
 	if err != nil {
-		return model.WithValidationErrorObject(fmt.Errorf("Rendition.AN.P: dereference page: %w", err), pageObjNr)
+		return nil, model.WithValidationErrorObject(fmt.Errorf("Rendition.AN.P: dereference page: %w", err), pageObjNr)
 	}
 	if pageDict == nil {
-		return model.WithValidationErrorObject(errors.New("Rendition.AN.P: page is null"), pageObjNr)
+		return nil, model.WithValidationErrorObject(errors.New("Rendition.AN.P: page is null"), pageObjNr)
 	}
 	if _, err = validateNameEntry(
 		xRefTable, pageDict, pageObjNr, "pageDict", "Type", REQUIRED, model.V10, func(s string) bool { return s == "Page" },
 	); err != nil {
-		return err
+		return nil, err
 	}
 	if err := validateRenditionPageMembership(c, xRefTable, pageObjNr); err != nil {
+		return nil, err
+	}
+	return pageDict, nil
+}
+
+func validateRenditionScreenPage(c context.Context, xRefTable *model.XRefTable, annotationRef, pageRef types.IndirectRef) error {
+	// see 12.6.4.14
+	pageDict, err := renditionScreenPage(c, xRefTable, pageRef)
+	if err != nil {
 		return err
 	}
+	pageObjNr := pageRef.ObjectNumber.Value()
 	annots, err := renditionPageAnnotations(c, xRefTable, pageDict, pageObjNr)
 	if err != nil {
 		return err
@@ -1035,35 +1091,61 @@ func validateRenditionScreenPage(c context.Context, xRefTable *model.XRefTable, 
 }
 
 func validateRenditionScreenTarget(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string, required bool) error {
-	annotationRef, err := validateIndRefEntry(xRefTable, d, ownerObjNr, dictName, "AN", required, model.V10)
-	if err != nil || annotationRef == nil {
+	// see 12.6.4.14
+	if err := contextutil.Check(c); err != nil {
 		return err
 	}
-	annotationObjNr := annotationRef.ObjectNumber.Value()
-	annotationDict, err := xRefTable.DereferenceDict(*annotationRef)
-	if err != nil {
-		return model.WithValidationErrorObject(
-			fmt.Errorf("Rendition.AN: dereference Screen annotation: %w", err), annotationObjNr,
-		)
+	annotationRef, indirect := d["AN"].(types.IndirectRef)
+	if xRefTable.ValidationMode == model.ValidationStrict {
+		if _, err := validateIndRefEntry(xRefTable, d, ownerObjNr, dictName, "AN", required, model.V10); err != nil {
+			return err
+		}
 	}
-	if annotationDict == nil {
-		return model.WithValidationErrorObject(errors.New("Rendition.AN: Screen annotation is null"), annotationObjNr)
+	annotationObjNr := validationEntryObjectNumber(ownerObjNr, d, "AN")
+	annotationDict, err := validateDictEntry(xRefTable, d, ownerObjNr, dictName, "AN", required, model.V10, nil)
+	if err != nil || annotationDict == nil {
+		return err
 	}
 	if err := validateRenditionScreenAnnotationStructure(c, xRefTable, annotationDict, annotationObjNr); err != nil {
 		return model.WithValidationErrorObject(fmt.Errorf("Rendition.AN: %w", err), annotationObjNr)
 	}
-	pageRef, err := validateIndRefEntry(xRefTable, annotationDict, annotationObjNr, "annotDict", "P", REQUIRED, model.V10)
+	pageRef, err := validateIndRefEntry(xRefTable, annotationDict, annotationObjNr, "annotDict", "P",
+		xRefTable.ValidationMode == model.ValidationStrict, model.V10)
 	if err != nil {
 		return err
 	}
-	if pageRef == nil {
-		return model.WithValidationErrorObject(errors.New("Rendition.AN: missing Screen annotation P entry"), annotationObjNr)
+	if !indirect || pageRef == nil {
+		return validateRenditionScreenCompatibility(c, xRefTable, annotationDict, annotationObjNr, indirect, pageRef)
 	}
-	return validateRenditionScreenPage(c, xRefTable, *annotationRef, *pageRef)
+	return validateRenditionScreenPage(c, xRefTable, annotationRef, *pageRef)
+}
+
+func validateRenditionScreenCompatibility(c context.Context, xRefTable *model.XRefTable, d types.Dict, objNr int, indirect bool, pageRef *types.IndirectRef) error {
+	// see 12.6.4.14
+	if _, err := validateRectangleEntry(xRefTable, d, objNr, "annotDict", "Rect", REQUIRED, model.V10, nil); err != nil {
+		return err
+	}
+	if pageRef != nil {
+		if _, err := renditionScreenPage(c, xRefTable, *pageRef); err != nil {
+			return err
+		}
+	}
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
+	if !indirect {
+		recordMultimediaCompatibility(xRefTable, model.WithValidationErrorObject(
+			errors.New("Rendition.AN: expected an indirect reference to a Screen annotation"), objNr))
+	}
+	if pageRef == nil {
+		recordMultimediaCompatibility(xRefTable, model.WithValidationErrorObject(
+			errors.New("Rendition.AN: missing Screen annotation P entry"), objNr))
+	}
+	return nil
 }
 
 func validateRenditionActionDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
-	// see 12.6.4.13
+	// see 12.6.4.14
 
 	// OP or JS need to be present.
 

@@ -926,7 +926,38 @@ func validateMoviePoster(c context.Context, xRefTable *model.XRefTable, d types.
 	return validateImageStreamDict(c, xRefTable, &sd, posterObjNr, isNoAlternateImageStreamDict)
 }
 
+func validateMovieAspect(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+	// see 13.4
+	a, err := validateIntegerArrayEntry(xRefTable, d, ownerObjNr, "movieDict", "Aspect", OPTIONAL, model.V10,
+		func(a types.Array) bool { return len(a) == 2 })
+	if err != nil {
+		return err
+	}
+	objNr := validationEntryObjectNumber(ownerObjNr, d, "Aspect")
+	negative := false
+	for _, value := range a {
+		i, err := xRefTable.DereferenceInteger(value)
+		if err != nil {
+			return model.WithValidationErrorObject(err, objNr)
+		}
+		if i == nil {
+			return model.WithValidationErrorObject(errors.New("movieDict.Aspect: expected two integers"), objNr)
+		}
+		negative = negative || i.Value() < 0
+	}
+	if !negative {
+		return nil
+	}
+	err = model.WithValidationErrorObject(errors.New("movieDict.Aspect: negative dimension"), objNr)
+	if xRefTable.ValidationMode == model.ValidationStrict {
+		return err
+	}
+	recordMultimediaCompatibility(xRefTable, err)
+	return nil
+}
+
 func validateMovieDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+	// see 13.4
 	dictName := "movieDict"
 
 	// F, required, file specification
@@ -939,7 +970,7 @@ func validateMovieDict(c context.Context, xRefTable *model.XRefTable, d types.Di
 	}
 
 	// Aspect, optional, integer array, length 2
-	if err := validateMoviePositiveIntegerArrayEntry(xRefTable, d, dictName, "Aspect"); err != nil {
+	if err := validateMovieAspect(xRefTable, d, ownerObjNr); err != nil {
 		return err
 	}
 

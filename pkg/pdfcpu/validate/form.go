@@ -403,6 +403,7 @@ func validateFormFieldType(xRefTable *model.XRefTable) func(string) bool {
 }
 
 func validateFormFieldDictEntries(c context.Context, xRefTable *model.XRefTable, objNr, incr int, d types.Dict, terminalNode, oneKid bool, inFieldType *types.Name, requiresDA bool) (outFieldType *types.Name, hasDA bool, err error) {
+	// see 12.7.3
 	dictName := "formFieldDict"
 
 	// FT: name, Btn,Tx,Ch,Sig
@@ -463,9 +464,11 @@ func validateFormFieldDictEntries(c context.Context, xRefTable *model.XRefTable,
 	}
 
 	// AA, optional, dict, since V1.2
-	err = validateAdditionalActionsWithOwner(
-		c, xRefTable, d, objNr, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot",
-	)
+	err = validateFormActionsOnPage(c, xRefTable, objNr, d, terminalNode, func() error {
+		return validateAdditionalActionsWithOwner(
+			c, xRefTable, d, objNr, dictName, "AA", OPTIONAL, model.V12, "fieldOrAnnot",
+		)
+	})
 	if err != nil {
 		return nil, false, err
 	}
@@ -479,6 +482,7 @@ func validateFormFieldDictEntries(c context.Context, xRefTable *model.XRefTable,
 }
 
 func validateFormFieldParts(c context.Context, xRefTable *model.XRefTable, objNr, incr int, d types.Dict, inFieldType *types.Name, requiresDA bool) (err error) {
+	// see 12.7.3
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
 	}()
@@ -498,11 +502,10 @@ func validateFormFieldParts(c context.Context, xRefTable *model.XRefTable, objNr
 	}
 
 	// Validate widget annotation - Validation of AA redundant because of merged acrofield with widget annotation.
-	if _, err = validateAnnotationDict(c, xRefTable, d, objNr); err != nil {
+	return validateFormActionsOnPage(c, xRefTable, objNr, d, true, func() error {
+		_, err := validateAnnotationDict(c, xRefTable, d, objNr)
 		return err
-	}
-
-	return nil
+	})
 }
 
 func formFieldCycleError(err error) error {
@@ -927,12 +930,7 @@ func handleSelfReferentialAcroForm(xRefTable *model.XRefTable, rootDict types.Di
 	return false, nil
 }
 
-func acroFormFieldsArray(
-	xRefTable *model.XRefTable,
-	d types.Dict,
-	o types.Object,
-	formObjNr int,
-) (types.Array, error) {
+func acroFormFieldsArray(xRefTable *model.XRefTable, d types.Dict, o types.Object, formObjNr int) (types.Array, error) {
 	arr, err := xRefTable.DereferenceArray(o)
 	if err != nil {
 		err = fmt.Errorf("Fields: dereference array: %w", err)
@@ -950,7 +948,9 @@ func acroFormFieldsArray(
 }
 
 func validateFormContext(c context.Context, xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) error {
+	// see 12.7.2
 	// => 12.7.2 Interactive Form Dictionary
+	c = withFormActionPages(c)
 
 	handled, err := handleSelfReferentialAcroForm(xRefTable, rootDict)
 	if handled {
