@@ -19,10 +19,52 @@ package pdfcpu
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
+
+// TestReadEffectiveVersion checks catalog upgrades, lower catalog versions and reader compatibility.
+func TestReadEffectiveVersion(t *testing.T) {
+	for _, tc := range []struct {
+		header, catalog string
+		want            model.Version
+	}{
+		{"1.4", "", model.V14},
+		{"1.3", "2.0", model.V20},
+		{"1.7", "", model.V17},
+		{"1.4", "2.0", model.V20},
+		{"2.0", "1.7", model.V20},
+	} {
+		for _, reader15 := range []bool{false, true} {
+			t.Run(fmt.Sprintf("header%s/catalog%s/reader15=%t", tc.header, tc.catalog, reader15), func(t *testing.T) {
+				pdf := directInfoPDF20(tc.header, tc.catalog != "")
+				if tc.catalog != "" {
+					pdf = bytes.Replace(pdf, []byte("/Version/2.0"), []byte("/Version/"+tc.catalog), 1)
+				}
+				conf := model.NewDefaultConfiguration()
+				conf.Reader15 = reader15
+				ctx, err := Read(t.Context(), bytes.NewReader(pdf), conf)
+				if !reader15 && tc.want >= model.V15 {
+					if err == nil || !strings.Contains(err.Error(), "incompatible version") {
+						t.Fatalf("got %v, want reader compatibility error", err)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got := ctx.XRefTable.Version(); got != tc.want {
+					t.Fatalf("got version %s, want %s", got, tc.want)
+				}
+				if got := newPDFInfo(ctx, "test.pdf").Version; got != tc.want.String() {
+					t.Fatalf("reported version %s, want %s", got, tc.want)
+				}
+			})
+		}
+	}
+}
 
 func catalogEndobjPDF(omitEndobj bool) []byte {
 	var buf bytes.Buffer

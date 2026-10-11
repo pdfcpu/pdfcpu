@@ -238,11 +238,10 @@ func (xRefTable *XRefTable) FontRepository() *font.Repository {
 	return font.RepositoryForDir(dir)
 }
 
-// Version returns the PDF version of the PDF writer that created this file.
-// Before V1.4 this is the header version.
-// Since V1.4 the catalog may contain a Version entry which takes precedence over the header version.
+// Version returns the effective PDF version.
+// A catalog Version entry takes precedence only when it is later than the header version (7.7.2).
 func (xRefTable *XRefTable) Version() Version {
-	if xRefTable.RootVersion != nil {
+	if xRefTable.RootVersion != nil && (xRefTable.HeaderVersion == nil || *xRefTable.RootVersion > *xRefTable.HeaderVersion) {
 		return *xRefTable.RootVersion
 	}
 

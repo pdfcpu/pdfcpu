@@ -57,21 +57,19 @@ func TestValidateVersionAcceptsSupportedVersions(t *testing.T) {
 	}
 }
 
-// TestValidateVersionUsesRootVersion verifies the catalog version overrides the header version.
+// TestValidateVersionUsesRootVersion verifies only a later catalog version overrides the header version.
 func TestValidateVersionUsesRootVersion(t *testing.T) {
-	headerVersion := V17
-	rootVersion := V12
-	xRefTable := &XRefTable{
-		HeaderVersion: &headerVersion,
-		RootVersion:   &rootVersion,
-	}
-
-	err := xRefTable.ValidateVersion("Example", V13)
-	var versionErr *VersionRequirementError
-	if !errors.As(err, &versionErr) {
-		t.Fatalf("got %v, want *VersionRequirementError", err)
-	}
-	if versionErr.ActualVersion != rootVersion {
-		t.Fatalf("got actual version %s, want root version %s", versionErr.ActualVersion, rootVersion)
+	for _, tc := range []struct{ header, root, want Version }{
+		{V17, V20, V20},
+		{V20, V17, V20},
+		{V17, V17, V17},
+	} {
+		x := &XRefTable{HeaderVersion: &tc.header, RootVersion: &tc.root}
+		if got := x.Version(); got != tc.want {
+			t.Fatalf("header=%s catalog=%s: got %s, want %s", tc.header, tc.root, got, tc.want)
+		}
+		if err := x.ValidateVersion("Example", tc.want); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

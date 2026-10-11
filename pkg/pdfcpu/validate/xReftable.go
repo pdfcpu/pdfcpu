@@ -240,17 +240,11 @@ func setRootVersion(xRefTable *model.XRefTable, s string) error {
 
 	xRefTable.RootVersion = &rootVersion
 
-	// since V1.4 the header version may be overridden by a Version entry in the catalog.
-	if *xRefTable.HeaderVersion < model.V14 {
-		if log.InfoEnabled() {
-			log.Info.Printf("identifyRootVersion: PDF version is %s - will ignore root version: %s\n", xRefTable.HeaderVersion, s)
-		}
-	}
-
 	return nil
 }
 
 func validateRootVersion(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) (err error) {
+	// see 7.7.2
 	rootObjNr := validationRootObjectNumber(xRefTable)
 	defer func() {
 		err = model.WithValidationErrorObject(err, rootObjNr)

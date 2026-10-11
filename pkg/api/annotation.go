@@ -147,7 +147,7 @@ func AddAnnotationsAsIncrement(c context.Context, rws io.ReadWriteSeeker, select
 		return fmt.Errorf("add annotations: prepare PDF context: %w", err)
 	}
 
-	if *ctx.HeaderVersion < model.V14 {
+	if ctx.XRefTable.Version() < model.V14 {
 		return errors.New("incremental writing not supported for PDF version < V1.4")
 	}
 
@@ -289,7 +289,7 @@ func AddAnnotationsMapAsIncrement(c context.Context, rws io.ReadWriteSeeker, m m
 		return fmt.Errorf("add annotations: prepare PDF context: %w", err)
 	}
 
-	if *ctx.HeaderVersion < model.V14 {
+	if ctx.XRefTable.Version() < model.V14 {
 		return errors.New("incremental writing not supported for PDF version < V1.4")
 	}
 
@@ -434,7 +434,7 @@ func RemoveAnnotationsAsIncrement(c context.Context, rws io.ReadWriteSeeker, sel
 		return fmt.Errorf("remove annotations: prepare PDF context: %w", err)
 	}
 
-	if *ctx.HeaderVersion < model.V14 {
+	if ctx.XRefTable.Version() < model.V14 {
 		return errors.New("incremental writing not supported for PDF version < V1.4")
 	}
 

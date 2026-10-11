@@ -423,6 +423,55 @@ func TestValidateCryptFilterRejectsEFOpenForNonEmbeddedFiles(t *testing.T) {
 	}
 }
 
+// TestCryptFilterLengthsIgnoresIdentity preserves the predefined Identity filter even if CF tries to redefine it.
+func TestCryptFilterLengthsIgnoresIdentity(t *testing.T) {
+	ctx, err := model.NewContext(bytes.NewReader(nil), model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := model.V20
+	ctx.HeaderVersion = &v
+	ctx.E = &model.Enc{V: 5, R: 6}
+	ctx.Encrypt = types.NewIndirectRef(1, 0)
+	ctx.Table[1] = model.NewXRefTableEntryGen0(types.Dict{
+		"CF": types.Dict{"Identity": types.Integer(42)},
+	})
+	if err := validateEncryptionVersion(t.Context(), ctx); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestEncryptionSetupWithoutPDFVersion ensures bootstrap checks do not consult an undiscovered input version.
+func TestEncryptionSetupWithoutPDFVersion(t *testing.T) {
+	for _, tc := range []struct {
+		name                string
+		keyLength, revision int
+		wantErr             error
+	}{
+		{"AES128", 128, 4, nil},
+		{"Adobe AES256", 256, 5, nil},
+		{"AES256 revision 6", 256, 6, nil},
+		{"unsupported revision", 256, 7, ErrUnsupportedEncryptionFeature},
+		{"invalid revision", 256, 8, ErrMalformedEncryption},
+		{"incompatible V and R", 256, 4, ErrMalformedEncryption},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, err := model.NewContext(bytes.NewReader(nil), model.NewDefaultConfiguration())
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx.HeaderVersion = nil
+			ctx.XRefTable.ValidationMode = model.ValidationStrict
+			d := newEncryptDict(false, true, tc.keyLength, -4)
+			d["R"] = types.Integer(tc.revision)
+			_, err = supportedEncryption(ctx, d)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("got %v, want %v", err, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestDecryptKeyDoesNotMutateInput(t *testing.T) {
 	backing := bytes.Repeat([]byte{0xA5}, 32)
 	key := backing[:5]

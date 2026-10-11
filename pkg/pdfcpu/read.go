@@ -1361,9 +1361,6 @@ func parseTrailerDict(c context.Context, ctx *model.Context, trailerDict types.D
 	}
 	if offsetXRefStream == nil {
 		// No cross reference stream.
-		if !ctx.Reader15 && xRefTable.Version() >= model.V15 && !ctx.Read.Hybrid {
-			return nil, fmt.Errorf("parseTrailerDict: PDF1.4 conformant reader: found incompatible version: %s", xRefTable.VersionString())
-		}
 		if log.ReadEnabled() {
 			log.Read.Println("parseTrailerDict end")
 		}
@@ -4140,14 +4137,6 @@ func identifyRootVersion(xRefTable *model.XRefTable) error {
 		return nil
 	}
 
-	// Since PDF 1.4 the header version may be overridden by a Version entry in the catalog.
-	if *xRefTable.HeaderVersion < model.V14 {
-		if log.InfoEnabled() {
-			log.Info.Printf("identifyRootVersion: PDF version is %s - will ignore root version: %s\n", xRefTable.HeaderVersion, *rootVersionStr)
-		}
-		return nil
-	}
-
 	// Validate version and save corresponding constant to xRefTable.
 	rootVersion, err := model.PDFVersion(*rootVersionStr)
 	if err != nil {
@@ -4197,6 +4186,9 @@ func dereferenceXRefTable(c context.Context, ctx *model.Context) error {
 	if err := identifyRootVersion(xRefTable); err != nil {
 		return err
 	}
+	if err := validateInputVersion(c, ctx); err != nil {
+		return err
+	}
 	if err := materializeDirectInfoDict(xRefTable); err != nil {
 		return err
 	}
@@ -4206,6 +4198,14 @@ func dereferenceXRefTable(c context.Context, ctx *model.Context) error {
 	}
 
 	return nil
+}
+
+func validateInputVersion(c context.Context, ctx *model.Context) error {
+	// see 7.7.2
+	if !ctx.Reader15 && ctx.XRefTable.Version() >= model.V15 && !ctx.Read.Hybrid {
+		return fmt.Errorf("PDF1.4 conformant reader: found incompatible version: %s", ctx.XRefTable.VersionString())
+	}
+	return validateEncryptionVersion(c, ctx)
 }
 
 func handleUnencryptedFile(ctx *model.Context) error {

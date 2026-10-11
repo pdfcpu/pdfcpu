@@ -573,15 +573,12 @@ func setupFontInfos(c context.Context, ctx *model.Context, fontInfos *[]model.Fo
 }
 
 func newPDFInfo(ctx *model.Context, fileName string) *PDFInfo {
-	v := ctx.HeaderVersion
-	if ctx.RootVersion != nil {
-		v = ctx.RootVersion
-	}
+	v := ctx.XRefTable.Version()
 	info := &PDFInfo{
 		FileName:         fileName,
 		Unit:             ctx.Unit,
 		UnitString:       ctx.UnitString(),
-		Version:          (*v).String(),
+		Version:          v.String(),
 		PageCount:        ctx.PageCount,
 		Title:            ctx.Title,
 		Author:           ctx.Author,

@@ -417,3 +417,192 @@ func TestReadAdobeAES256CryptFilters(t *testing.T) {
 		}
 	}
 }
+
+func cryptFilterLengthPDF(t *testing.T, method string, revision int, catalogVersion string, explicit bool, length *int) []byte {
+	t.Helper()
+	ctx, err := model.NewContext(bytes.NewReader(nil), model.NewDefaultConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := model.V17
+	ctx.HeaderVersion = &v
+	keyLength := 128
+	if revision >= 5 {
+		keyLength = 256
+	}
+	d := newEncryptDict(false, method != "V2", keyLength, -4)
+	d["R"] = types.Integer(revision)
+	ctx.E, err = supportedEncryption(ctx, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx.E.ID = bytes.Repeat([]byte{1}, 16)
+	if err := calcOAndU(ctx, d); err != nil {
+		t.Fatal(err)
+	}
+	if err := writePermissions(ctx, d); err != nil {
+		t.Fatal(err)
+	}
+	d["StrF"] = types.Name("Identity")
+	cf := d.DictEntry("CF").DictEntry("StdCF")
+	cf.Delete("Length")
+	if length != nil {
+		cf["Length"] = types.Integer(*length)
+	}
+	filter := ""
+	if explicit {
+		d["StmF"] = types.Name("Identity")
+		filter = "/Filter /Crypt /DecodeParms << /Name /StdCF >>"
+	}
+	raw, err := encryptStream([]byte("q Q"), 4, 0, ctx.EncKey, method != "V2", revision)
+	if err != nil {
+		t.Fatal(err)
+	}
+	objects := []string{
+		"<< /Type /Catalog /Pages 2 0 R " + catalogVersion + " >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources <<>> /Contents 4 0 R >>",
+		fmt.Sprintf("<< /Length %d %s >>\nstream\n%s\nendstream", len(raw), filter, raw),
+		d.PDFString(),
+	}
+	return cryptFilterObjectsPDF(objects, ctx.E.ID)
+}
+
+func checkReadCryptFilterWithoutLength(t *testing.T, pdf []byte, mode int, pdf20 bool) {
+	t.Helper()
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = mode
+	ctx, err := Read(t.Context(), bytes.NewReader(pdf), conf)
+	if pdf20 {
+		if !errors.Is(err, ErrMalformedEncryption) {
+			t.Fatalf("got %v, want missing crypt-filter Length error", err)
+		}
+		return
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	sd, _, err := ctx.DereferenceStreamDict(*types.NewIndirectRef(4, 0))
+	if err != nil || sd == nil {
+		t.Fatalf("stream: %v", err)
+	}
+	if err := sd.Decode(); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(sd.Content, []byte("q Q")) {
+		t.Fatalf("content: got %q, want q Q", sd.Content)
+	}
+}
+
+// TestReadCryptFilterWithoutLength checks complete inputs, including a catalog upgrade to PDF 2.0.
+func TestReadCryptFilterWithoutLength(t *testing.T) {
+	for _, tc := range []struct {
+		name, method, catalog string
+		revision              int
+		pdf20                 bool
+	}{
+		{"PDF 1.7 RC4", "V2", "", 4, false},
+		{"PDF 1.7 AES128", "AESV2", "", 4, false},
+		{"PDF 1.7 Adobe AES256", "AESV3", "/Extensions << /ADBE << /BaseVersion /1.7 /ExtensionLevel 3 >> >>", 5, false},
+		{"PDF 2.0 AES128", "AESV2", "", 4, true},
+		{"PDF 2.0 AES256", "AESV3", "", 6, true},
+		{"catalog PDF 2.0 AES128", "AESV2", "/Version /2.0", 4, true},
+		{"PDF 2.0 RC4", "V2", "", 4, true},
+	} {
+		for _, explicit := range []bool{false, true} {
+			pdf := cryptFilterLengthPDF(t, tc.method, tc.revision, tc.catalog, explicit, nil)
+			if tc.pdf20 && tc.catalog == "" {
+				pdf = bytes.Replace(pdf, []byte("%PDF-1.7"), []byte("%PDF-2.0"), 1)
+			}
+			for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+				t.Run(fmt.Sprintf("%s/explicit%t/mode%d", tc.name, explicit, mode), func(t *testing.T) {
+					checkReadCryptFilterWithoutLength(t, pdf, mode, tc.pdf20)
+				})
+			}
+		}
+	}
+}
+
+// TestReadCryptFilterEffectiveVersion checks length values only after the effective PDF version is known.
+func TestReadCryptFilterEffectiveVersion(t *testing.T) {
+	for _, tc := range []struct {
+		header, catalog string
+		length          int
+		wantErr         bool
+	}{
+		{"2.0", "", 16, false},
+		{"1.7", "/Version /2.0", 16, false},
+		{"2.0", "", 128, true},
+		{"1.7", "/Version /2.0", 128, true},
+	} {
+		for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+			t.Run(fmt.Sprintf("header%s/catalog%s/length%d/mode%d", tc.header, tc.catalog, tc.length, mode), func(t *testing.T) {
+				pdf := cryptFilterLengthPDF(t, "AESV2", 4, tc.catalog, false, &tc.length)
+				pdf = bytes.Replace(pdf, []byte("%PDF-1.7"), []byte("%PDF-"+tc.header), 1)
+				conf := model.NewDefaultConfiguration()
+				conf.ValidationMode = mode
+				ctx, err := Read(t.Context(), bytes.NewReader(pdf), conf)
+				if tc.wantErr {
+					if !errors.Is(err, ErrMalformedEncryption) {
+						t.Fatalf("got %v, want malformed encryption", err)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				if ctx.XRefTable.Version() != model.V20 {
+					t.Fatalf("got effective version %s, want 2.0", ctx.XRefTable.Version())
+				}
+				sd, _, err := ctx.DereferenceStreamDict(*types.NewIndirectRef(4, 0))
+				if err != nil || sd == nil {
+					t.Fatalf("stream: %v", err)
+				}
+				if err := sd.Decode(); err != nil || string(sd.Content) != "q Q" {
+					t.Fatalf("content=%q error=%v", sd.Content, err)
+				}
+			})
+		}
+	}
+}
+
+// TestReadEncryptedObjectStreamCatalog resolves the version only after decrypting the catalog's object stream.
+func TestReadEncryptedObjectStreamCatalog(t *testing.T) {
+	length := 128
+	pdf := cryptFilterLengthPDF(t, "AESV2", 4, "", false, &length)
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = model.ValidationStrict
+	conf.WriteObjectStream, conf.WriteXRefStream = true, true
+	ctx, err := Read(t.Context(), bytes.NewReader(pdf), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx.RootDict["Version"] = types.Name("2.0")
+	d, err := ctx.EncryptDict()
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.DictEntry("CF").DictEntry("StdCF")["Length"] = types.Integer(16)
+	// Enable the encrypted xref-stream writer when constructing this object-stream fixture.
+	ctx.Read.UsingXRefStreams = true
+	var out bytes.Buffer
+	ctx.Write.Writer = bufio.NewWriter(&out)
+	ctx.Write.WriteToObjectStream = true
+	if err := WriteContext(t.Context(), ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := ctx.Write.Flush(); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Read(t.Context(), bytes.NewReader(out.Bytes()), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *got.HeaderVersion != model.V17 || got.XRefTable.Version() != model.V20 {
+		t.Fatalf("header=%s effective=%s, want 1.7 and 2.0", got.HeaderVersion, got.XRefTable.Version())
+	}
+	root := got.Table[got.Root.ObjectNumber.Value()]
+	if root.ObjectStream == nil || got.E == nil || got.E.V != 4 {
+		t.Fatal("fixture must have an encrypted object stream containing the catalog")
+	}
+}
