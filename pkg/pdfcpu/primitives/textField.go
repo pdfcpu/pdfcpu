@@ -711,7 +711,7 @@ func (tf *TextField) prepareDict(fonts model.FontMap) (types.Dict, error) {
 	tf.handleBorderAndMK(d)
 
 	if tf.Value != "" {
-		if tf.MaxLen > 0 && len(tf.Value) > tf.MaxLen {
+		if tf.MaxLen > 0 && utf8.RuneCountInString(tf.Value) > tf.MaxLen {
 			return nil, fmt.Errorf("field overflow at %s, maxLen = %d", tf.ID, tf.MaxLen)
 		}
 		s, err := types.EscapedUTF16String(tf.Value)

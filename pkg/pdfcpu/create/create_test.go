@@ -19,6 +19,7 @@ package create
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
@@ -385,5 +386,76 @@ func TestFromJSONValidationContext(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestFromJSONTextFieldMaxLen counts Unicode code points rather than UTF-8 bytes.
+func TestFromJSONTextFieldMaxLen(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		value   string
+		maxLen  int
+		wantErr bool
+	}{
+		{"ascii at limit", "abc", 3, false},
+		{"ascii overflow", "abcd", 3, true},
+		{"umlauts at limit", "äöü", 3, false},
+		{"umlauts overflow", "äöü", 2, true},
+		{"cjk at limit", "日本語", 3, false},
+		{"cjk overflow", "日本語", 2, true},
+		{"supplementary at limit", "😀", 1, false},
+		{"supplementary overflow", "😀😀", 1, true},
+		{"mixed at limit", "Aä日😀", 4, false},
+		{"mixed overflow", "Aä日😀", 3, true},
+		{"unlimited", "Aä日😀", 0, false},
+		{"empty", "", 1, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			input := fmt.Sprintf(`{"pages":{"1":{"content":{"textfield":[
+				{"id":"f","value":%q,"maxlen":%d,"pos":[100,100],"width":100,
+				"font":{"name":"Helvetica","size":12}}]}}}}`, tt.value, tt.maxLen)
+			ctx := newCreateTestContext(t)
+			err := FromJSON(t.Context(), ctx, strings.NewReader(input))
+			if tt.wantErr {
+				if err == nil || !strings.Contains(err.Error(), "field overflow at f") {
+					t.Fatalf("got %v, want field overflow", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			checkCreatedTextFieldValue(t, ctx, tt.value)
+		})
+	}
+}
+
+func checkCreatedTextFieldValue(t *testing.T, ctx *model.Context, want string) {
+	t.Helper()
+	form, err := ctx.DereferenceDict(ctx.RootDict["AcroForm"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	fields := form.ArrayEntry("Fields")
+	if len(fields) != 1 {
+		t.Fatalf("got %d fields, want 1", len(fields))
+	}
+	d, err := ctx.DereferenceDict(fields[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want == "" && !d.HasEntry("V") {
+		return
+	}
+	s, ok := d["V"].(types.StringLiteral)
+	if !ok {
+		t.Fatalf("unexpected field value: %v", d["V"])
+	}
+	got, err := types.StringLiteralToString(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("field value = %q, want %q", got, want)
 	}
 }
