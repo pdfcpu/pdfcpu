@@ -102,6 +102,7 @@ func iccColorSpaceComponents(x *model.XRefTable, a types.Array, ownerObjNr int) 
 }
 
 func validateImageArrays(c context.Context, x *model.XRefTable, sd *types.StreamDict, ownerObjNr int, dictName string, imageMask bool, bpc *types.Integer) error {
+	// see 8.9.5
 	components := 1
 	if !imageMask {
 		var err error
@@ -110,14 +111,14 @@ func validateImageArrays(c context.Context, x *model.XRefTable, sd *types.Stream
 			return fmt.Errorf("%s.ColorSpace: %w", dictName, err)
 		}
 		bits := bpc
-		if sd.HasSoleFilterNamed(filter.JPX) {
+		if imageSampleFilter(sd).Name == filter.JPX {
 			bits = nil
 		}
 		if err = validateMaskEntry(c, x, sd.Dict, ownerObjNr, dictName, "Mask", OPTIONAL, model.V13, components, bits); err != nil {
 			return err
 		}
 		// JPX without an explicit colour space ignores Decode; its component count comes from the codestream.
-		if components == 0 && sd.HasSoleFilterNamed(filter.JPX) {
+		if components == 0 && imageSampleFilter(sd).Name == filter.JPX {
 			cs, err := x.Dereference(sd.Dict["ColorSpace"])
 			if err != nil {
 				return err

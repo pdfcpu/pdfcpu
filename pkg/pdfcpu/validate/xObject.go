@@ -623,24 +623,108 @@ func validateAlternateImageStreamDicts(c context.Context, xRefTable *model.XRefT
 	return nil
 }
 
-func validateImageStreamDictPart1(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, dictName string) (isImageMask bool, err error) {
-	// Width, integer, required
-	required := true
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		required = false
+func imageSampleFilter(sd *types.StreamDict) types.PDFFilter {
+	if len(sd.FilterPipeline) == 0 {
+		return types.PDFFilter{}
 	}
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "Width", required, model.V10, nil)
+	return sd.FilterPipeline[len(sd.FilterPipeline)-1]
+}
+
+func validateImageMaskEntries(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	// see 8.9.5
+	for _, key := range []string{"ColorSpace", "Mask"} {
+		o, err := validateEntry(xRefTable, d, 0, dictName, key, OPTIONAL, model.V10)
+		if err != nil {
+			return err
+		}
+		if o != nil {
+			err := fmt.Errorf("%s.%s: not permitted for an image mask", dictName, key)
+			err = model.WithValidationErrorObject(err, validationEntryObjectNumber(0, d, key))
+			if xRefTable.ValidationMode != model.ValidationRelaxed || key != "ColorSpace" {
+				return err
+			}
+			xRefTable.AddValidationNotice(model.NewValidationNotice(
+				model.NoticePhaseValidate, model.NoticeDigested, err.Error(), err))
+		}
+	}
+	return nil
+}
+
+func imageFilterBits(xRefTable *model.XRefTable, f types.PDFFilter) (int, error) {
+	switch f.Name {
+	case filter.CCITTFax, filter.JBIG2:
+		return 1, nil
+	case filter.RunLength, filter.DCT:
+		return 8, nil
+	case filter.Flate, filter.LZW:
+		pred, err := xRefTable.DereferenceInteger(f.DecodeParms["Predictor"])
+		if err != nil || pred == nil || *pred <= 1 {
+			return 0, err
+		}
+		bits, err := validateIntegerEntry(xRefTable, f.DecodeParms, 0, "image DecodeParms", "BitsPerComponent", OPTIONAL, model.V10, func(i int) bool {
+			return types.IntMemberOf(i, []int{1, 2, 4, 8, 16})
+		})
+		if err != nil {
+			return 0, err
+		}
+		if bits != nil {
+			return bits.Value(), nil
+		}
+		return 8, nil
+	}
+	return 0, nil
+}
+
+func validateImageFilterBits(xRefTable *model.XRefTable, sd *types.StreamDict, bpc *types.Integer, isImageMask bool) error {
+	// see 8.9.5
+	if bpc == nil && !isImageMask {
+		return nil
+	}
+	bits := 1
+	if bpc != nil {
+		bits = bpc.Value()
+	}
+	f := imageSampleFilter(sd)
+	expected, err := imageFilterBits(xRefTable, f)
 	if err != nil {
+		return fmt.Errorf("image %s DecodeParms: %w", f.Name, err)
+	}
+	if expected != 0 && bits != expected {
+		err := fmt.Errorf("image BitsPerComponent %d incompatible with %s sample size %d", bits, f.Name, expected)
+		err = model.WithValidationErrorObject(err, validationEntryObjectNumber(0, sd.Dict, "BitsPerComponent"))
+		if xRefTable.ValidationMode != model.ValidationRelaxed ||
+			(f.Name != filter.Flate && f.Name != filter.LZW && f.Name != filter.RunLength) {
+			return err
+		}
+		xRefTable.AddValidationNotice(model.NewValidationNotice(
+			model.NoticePhaseValidate, model.NoticeDigested, err.Error(), err))
+	}
+	return nil
+}
+
+func validateImageDimension(xRefTable *model.XRefTable, d types.Dict, dictName, key string) error {
+	// see 8.9.5
+	required := xRefTable.ValidationMode != model.ValidationRelaxed
+	n, err := validateIntegerEntry(xRefTable, d, 0, dictName, key, required, model.V10, func(i int) bool { return i >= 0 })
+	if err != nil || n == nil || *n > 0 {
+		return err
+	}
+	err = fmt.Errorf("dict=%s entry=%s invalid dict entry: zero image dimension", dictName, key)
+	err = model.WithValidationErrorObject(err, validationEntryObjectNumber(0, d, key))
+	if xRefTable.ValidationMode != model.ValidationRelaxed {
+		return err
+	}
+	xRefTable.AddValidationNotice(model.NewValidationNotice(
+		model.NoticePhaseValidate, model.NoticeDigested, err.Error(), err))
+	return nil
+}
+
+func validateImageStreamDictPart1(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, dictName string) (isImageMask bool, err error) {
+	// see 8.9.5
+	if err = validateImageDimension(xRefTable, sd.Dict, dictName, "Width"); err != nil {
 		return false, err
 	}
-
-	// Height, integer, required
-	required = true
-	if xRefTable.ValidationMode == model.ValidationRelaxed {
-		required = false
-	}
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "Height", required, model.V10, nil)
-	if err != nil {
+	if err = validateImageDimension(xRefTable, sd.Dict, dictName, "Height"); err != nil {
 		return false, err
 	}
 
@@ -651,16 +735,19 @@ func validateImageStreamDictPart1(c context.Context, xRefTable *model.XRefTable,
 	}
 
 	isImageMask = (imageMask != nil) && *imageMask
+	if isImageMask {
+		return true, validateImageMaskEntries(xRefTable, sd.Dict, dictName)
+	}
 
 	// ColorSpace, name or array, required unless used filter is JPXDecode; not allowed for imagemasks.
 	if !isImageMask {
 
-		required = REQUIRED
+		required := REQUIRED
 		if xRefTable.ValidationMode == model.ValidationRelaxed {
 			required = OPTIONAL
 		}
 
-		if sd.HasSoleFilterNamed(filter.JPX) {
+		if imageSampleFilter(sd).Name == filter.JPX {
 			required = OPTIONAL
 		}
 
@@ -678,15 +765,17 @@ func validateImageStreamDictPart1(c context.Context, xRefTable *model.XRefTable,
 	return isImageMask, nil
 }
 
-func validateImageStreamDictPart2(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, ownerObjNr int, dictName string, isImageMask, isAlternate bool) error {
+func validateImageBitsPerComponent(xRefTable *model.XRefTable, sd *types.StreamDict, dictName string, isImageMask bool) (*types.Integer, error) {
+	// see 8.9.5
 	// BitsPerComponent, integer
 	required := REQUIRED
-	if sd.HasSoleFilterNamed(filter.JPX) || isImageMask || xRefTable.ValidationMode == model.ValidationRelaxed {
+	jpx := imageSampleFilter(sd).Name == filter.JPX
+	if jpx || isImageMask || xRefTable.ValidationMode == model.ValidationRelaxed {
 		required = OPTIONAL
 	}
 
 	validateBPC := func(i int) bool {
-		return types.IntMemberOf(i, []int{1, 2, 4, 8, 16})
+		return jpx || types.IntMemberOf(i, []int{1, 2, 4, 8, 16})
 	}
 	// For imageMasks BitsPerComponent must be 1.
 	if isImageMask {
@@ -696,7 +785,30 @@ func validateImageStreamDictPart2(c context.Context, xRefTable *model.XRefTable,
 	}
 	bpc, err := validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "BitsPerComponent", required, model.V10, validateBPC)
 	if err != nil {
-		return fmt.Errorf("%s: invalid BitsPerComponent: %w", dictName, err)
+		return nil, fmt.Errorf("%s: invalid BitsPerComponent: %w", dictName, err)
+	}
+	if jpx {
+		return bpc, nil
+	}
+	if bpc != nil && *bpc == 16 {
+		err = xRefTable.ValidateVersion(dictName+" BitsPerComponent 16", model.V15)
+		if err != nil {
+			err = model.WithValidationErrorObject(err, validationEntryObjectNumber(0, sd.Dict, "BitsPerComponent"))
+			if xRefTable.ValidationMode != model.ValidationRelaxed {
+				return nil, err
+			}
+			xRefTable.AddValidationNotice(model.NewValidationNotice(
+				model.NoticePhaseValidate, model.NoticeDigested, err.Error(), err))
+		}
+	}
+	return bpc, validateImageFilterBits(xRefTable, sd, bpc, isImageMask)
+}
+
+func validateImageStreamDictPart2(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, ownerObjNr int, dictName string, isImageMask, isAlternate bool) error {
+	// see 8.9.5
+	bpc, err := validateImageBitsPerComponent(xRefTable, sd, dictName, isImageMask)
+	if err != nil {
+		return err
 	}
 
 	// Note 8.6.5.8: If a PDF processor does not recognise the specified name, it shall use the RelativeColorimetric
