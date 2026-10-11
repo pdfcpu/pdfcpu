@@ -50,6 +50,9 @@ const (
 	RootRequirements
 	RootCollection
 	RootNeedsRendering
+	RootDSS
+	RootAF
+	RootDPartRoot
 )
 
 // The PDF page object fields.

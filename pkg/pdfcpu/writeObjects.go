@@ -867,7 +867,8 @@ func writeIndirectObject(c context.Context, ctx *model.Context, ir types.Indirec
 		return nil
 	}
 
-	o, err := ctx.DereferenceForWrite(ir)
+	// Decode compressed objects so their references are traversed and their strings can be encrypted.
+	o, err := ctx.Dereference(ir)
 	if err != nil {
 		return fmt.Errorf("unable to dereference indirect object #%d: %w", objNr, err)
 	}

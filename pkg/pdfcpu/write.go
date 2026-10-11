@@ -372,6 +372,9 @@ func writeRootAttrsBatch2(c context.Context, ctx *model.Context, d types.Dict, d
 		{"Requirements", model.RootRequirements},
 		{"Collection", model.RootCollection},
 		{"NeedsRendering", model.RootNeedsRendering},
+		{"DSS", model.RootDSS},
+		{"AF", model.RootAF},
+		{"DPartRoot", model.RootDPartRoot},
 	} {
 		if err := contextutil.Check(c); err != nil {
 			return err
@@ -381,7 +384,9 @@ func writeRootAttrsBatch2(c context.Context, ctx *model.Context, d types.Dict, d
 		}
 	}
 
-	return nil
+	// Preserve remaining catalog references, including developer extensions.
+	// Already written objects are skipped, preserving the specialized page-tree output.
+	return writeDirectDict(c, ctx, d)
 }
 
 func writeRootObject(c context.Context, ctx *model.Context) error {

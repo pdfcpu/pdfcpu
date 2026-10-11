@@ -1272,7 +1272,7 @@ func patchFreeListHead(ctxSrc *model.Context, lookup map[int]int) error {
 	return nil
 }
 
-func patchSourceXRefEntries(ctxSrc *model.Context, objNrs types.IntSet, lookup map[int]int) error {
+func patchSourceXRefEntries(c context.Context, ctxSrc *model.Context, objNrs types.IntSet, lookup map[int]int) error {
 	for k := range objNrs {
 		entry := ctxSrc.Table[k]
 		if entry == nil {
@@ -1300,6 +1300,12 @@ func patchSourceXRefEntries(ctxSrc *model.Context, objNrs types.IntSet, lookup m
 				log.Debug.Printf("patch free entry: new offset:%d\n", *entry.Offset)
 			}
 			continue
+		}
+
+		if _, ok := entry.Object.(types.LazyObjectStreamObject); ok {
+			if _, err := dereferencedObject(c, ctxSrc, k); err != nil {
+				return err
+			}
 		}
 
 		patchObject(entry.Object, lookup)
@@ -1361,7 +1367,7 @@ func patchSourceObjectNumbers(c context.Context, ctxSrc, ctxDest *model.Context)
 	if err := patchFreeListHead(ctxSrc, lookup); err != nil {
 		return err
 	}
-	if err := patchSourceXRefEntries(ctxSrc, objNrs, lookup); err != nil {
+	if err := patchSourceXRefEntries(c, ctxSrc, objNrs, lookup); err != nil {
 		return err
 	}
 	remapSourceXRefTable(ctxSrc, lookup)
