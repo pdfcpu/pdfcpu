@@ -267,8 +267,12 @@ func cleanObjProlog(s string) (string, error) {
 
 	var b strings.Builder
 	for _, r := range s {
-		if r >= '0' && r <= '9' || r == ' ' {
+		switch {
+		case r >= '0' && r <= '9' || r == ' ':
 			b.WriteRune(r)
+		case r == 0x00 || r == '\t' || r == '\n' || r == '\f' || r == '\r':
+			// Preserve PDF whitespace as a separator between numbers (7.2.3).
+			b.WriteRune(' ')
 		}
 	}
 	return b.String(), nil
