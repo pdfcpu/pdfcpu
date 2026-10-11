@@ -17,6 +17,7 @@ limitations under the License.
 package model
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -104,5 +105,69 @@ func TestDetectKeywordsLongInput(t *testing.T) {
 	large := run(80000)
 	if large > 8*small && large > 200*time.Millisecond {
 		t.Fatalf("4x input took %v vs %v", large, small)
+	}
+}
+
+// TestDetectKeywordsPDFWhitespace checks each PDF whitespace byte after recovery markers.
+func TestDetectKeywordsPDFWhitespace(t *testing.T) {
+	for _, ws := range []byte{0, 9, 10, 12, 13, 32} {
+		for _, marker := range []string{"endobj", "stream"} {
+			t.Run(fmt.Sprintf("%s/%02x", marker, ws), func(t *testing.T) {
+				line := "<<>>\n" + marker + string(ws)
+				end, stream, err := DetectKeywords(t.Context(), line)
+				if err != nil {
+					t.Fatal(err)
+				}
+				wantEnd, wantStream := -1, -1
+				if marker == "endobj" {
+					wantEnd = 5
+				} else {
+					wantStream = 5
+				}
+				if end != wantEnd || stream != wantStream {
+					t.Fatalf("got endobj=%d stream=%d, want %d and %d", end, stream, wantEnd, wantStream)
+				}
+			})
+		}
+	}
+}
+
+// TestDetectKeywordsNonPDFWhitespace keeps regular byte suffixes within names.
+func TestDetectKeywordsNonPDFWhitespace(t *testing.T) {
+	for _, suffix := range []string{"\x0b", "\x85", "\xa0", "\u0085", "\u00a0", "\u2003", "\u2028", "\xff"} {
+		for _, marker := range []string{"endobj", "stream"} {
+			t.Run(fmt.Sprintf("%s/%x", marker, suffix), func(t *testing.T) {
+				line := "<</N /" + marker + suffix + "x>>\nendobj\n"
+				end, stream, err := DetectKeywords(t.Context(), line)
+				if err != nil {
+					t.Fatal(err)
+				}
+				want := strings.LastIndex(line, "endobj")
+				if end != want || stream != -1 {
+					t.Fatalf("got endobj=%d stream=%d, want %d and -1", end, stream, want)
+				}
+			})
+		}
+	}
+}
+
+// TestDetectKeywordsXrefWhitespace preserves xref recovery only for PDF whitespace boundaries.
+func TestDetectKeywordsXrefWhitespace(t *testing.T) {
+	for _, tt := range []struct {
+		suffix  string
+		wantEnd int
+	}{
+		{"\x00", 0}, {"\t", 0}, {"\n", 0}, {"\f", 0}, {"\r", 0}, {" ", 0},
+		{"\x0b", -1}, {"\x85", -1}, {"\xa0", -1}, {"\u00a0", -1}, {"", -1},
+	} {
+		t.Run(fmt.Sprintf("%x", tt.suffix), func(t *testing.T) {
+			end, stream, err := DetectKeywords(t.Context(), "endobjxref"+tt.suffix)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if end != tt.wantEnd || stream != -1 {
+				t.Fatalf("got endobj=%d stream=%d, want %d and -1", end, stream, tt.wantEnd)
+			}
+		})
 	}
 }

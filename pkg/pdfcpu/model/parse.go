@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"unicode"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -1351,8 +1350,9 @@ func objectStreamDict(sd *types.StreamDict, limits ResourceLimits, n, first *int
 	return &osd, nil
 }
 
-func isMarkerTerminated(r rune) bool {
-	return r == 0x00 || unicode.IsSpace(r)
+// isMarkerTerminated recognizes PDF whitespace after a recovery marker (see 7.2.3).
+func isMarkerTerminated(b byte) bool {
+	return pdfWhitespace(b)
 }
 
 func detectMarker(line, marker string) int {
@@ -1365,13 +1365,12 @@ func detectMarker(line, marker string) int {
 	}
 	off := i + len(marker)
 	ind := i
-	for !isMarkerTerminated(rune(line[off])) {
+	for !isMarkerTerminated(line[off]) {
 		line = line[off:]
 		if marker == "endobj" {
 			j := strings.Index(line, "xref")
 			if j >= 0 && j+len("xref") < len(line) {
-				r := rune(line[j+len("xref")])
-				if isMarkerTerminated(r) {
+				if isMarkerTerminated(line[j+len("xref")]) {
 					return ind
 				}
 			}
