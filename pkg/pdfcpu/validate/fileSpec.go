@@ -23,6 +23,7 @@ import (
 	"maps"
 	"net/url"
 	"slices"
+	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -406,7 +407,21 @@ func validateFileSpecDictPart1(xRefTable *model.XRefTable, d types.Dict, dictNam
 	return nil
 }
 
+func isSecondClassName(s string) bool {
+	// see Annex E.2, including the 2020 prefix clarification
+	if len(s) < 4 {
+		return false
+	}
+	for i := range 4 {
+		if s[i] > 127 {
+			return false
+		}
+	}
+	return strings.ContainsAny(s[:min(5, len(s))], "_:")
+}
+
 func validateFileSpecDictPart2(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
+	// see 7.11.3
 	// ID, optional, array of strings
 	if _, err := validateStringArrayEntry(xRefTable, d, 0, dictName, "ID", OPTIONAL, model.V11, func(a types.Array) bool { return len(a) == 2 }); err != nil {
 		return err
@@ -451,6 +466,9 @@ func validateFileSpecDictPart2(xRefTable *model.XRefTable, d types.Dict, ownerOb
 
 	// AFRelationship, optional, associated file semantics, since V2.0
 	validateAFRelationship := func(s string) bool {
+		if xRefTable.PDF20() && isSecondClassName(s) {
+			return true
+		}
 		return types.MemberOf(s, []string{"Source", "Data", "Alternative", "Supplement", "EncryptedPayload", "FormData", "Schema", "Unspecified"})
 	}
 	sinceVersion = model.V20
