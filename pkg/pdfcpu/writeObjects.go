@@ -578,19 +578,22 @@ func writeStreamDictObject(ctx *model.Context, objNr, genNr int, sd types.Stream
 
 	var err error
 
-	// Unless the "Identity" crypt filter is used we have to encrypt.
+	// Use the stream's explicit crypt filter, if any, rather than the default stream filter.
 	isXRefStreamDict := sd.Type() != nil && *sd.Type() == "XRef"
-	if ctx.EncKey != nil &&
-		!isXRefStreamDict &&
-		!(len(sd.FilterPipeline) == 1 && sd.FilterPipeline[0].Name == "Crypt") {
-
-		if sd.Raw, err = encryptStream(sd.Raw, objNr, genNr, ctx.EncKey, ctx.AES4Streams, ctx.E.R); err != nil {
+	if ctx.EncKey != nil && !isXRefStreamDict {
+		encrypted, aes, err := streamCryptMethod(ctx, &sd)
+		if err != nil {
 			return err
 		}
+		if encrypted {
+			if sd.Raw, err = encryptStream(sd.Raw, objNr, genNr, ctx.EncKey, aes, ctx.E.R); err != nil {
+				return err
+			}
 
-		l := int64(len(sd.Raw))
-		sd.StreamLength = &l
-		sd.Update("Length", types.Integer(l))
+			l := int64(len(sd.Raw))
+			sd.StreamLength = &l
+			sd.Update("Length", types.Integer(l))
+		}
 	}
 
 	ctx.Write.SetWriteOffset(objNr)

@@ -1636,6 +1636,59 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (enc *model.Enc, err 
 	return enc, nil
 }
 
+func streamCryptFilterName(ctx *model.Context, sd *types.StreamDict) (string, bool, error) {
+	if len(sd.FilterPipeline) == 0 || sd.FilterPipeline[0].Name != "Crypt" {
+		return "", false, nil
+	}
+	dp := sd.FilterPipeline[0].DecodeParms
+	if dp == nil {
+		return "Identity", true, nil
+	}
+	n, _, err := ctx.DereferenceNameEntry(dp, "Name")
+	if err != nil {
+		return "", true, fmt.Errorf("%w: stream Crypt filter Name: %w", ErrMalformedEncryption, err)
+	}
+	if n == nil {
+		return "Identity", true, nil
+	}
+	return n.Value(), true, nil
+}
+
+func streamCryptMethod(ctx *model.Context, sd *types.StreamDict) (encrypted, aes bool, err error) {
+	name, hasCrypt, err := streamCryptFilterName(ctx, sd)
+	if err != nil {
+		return false, false, err
+	}
+	if !hasCrypt {
+		return true, ctx.AES4Streams, nil
+	}
+	if name == "Identity" {
+		return false, false, nil
+	}
+	d, err := ctx.EncryptDict()
+	if err != nil {
+		return false, false, classifyEncryptionDictionaryError(err)
+	}
+	cfd := d.DictEntry("CF").DictEntry(name)
+	if cfd == nil {
+		return false, false, fmt.Errorf("%w: stream crypt filter %q missing from CF", ErrMalformedEncryption, name)
+	}
+	cfm, _, err := ctx.DereferenceNameEntry(cfd, "CFM")
+	if err != nil {
+		return false, false, fmt.Errorf("%w: stream crypt filter %q CFM: %w", ErrMalformedEncryption, name, err)
+	}
+	if cfm == nil || cfm.Value() == "None" {
+		return false, false, fmt.Errorf("%w: stream crypt filter %q uses security-handler decryption", ErrUnsupportedEncryptionFeature, name)
+	}
+	switch cfm.Value() {
+	case "V2":
+		return true, false, nil
+	case "AESV2", "AESV3":
+		return true, true, nil
+	}
+	return false, false, fmt.Errorf("%w: stream crypt filter %q CFM %s", ErrUnsupportedEncryptionFeature, name, cfm.Value())
+}
+
 func decryptKey(objNumber, generation int, key []byte, aes bool) ([]byte, error) {
 	const maxObjectNumber = int64(^uint32(0))
 

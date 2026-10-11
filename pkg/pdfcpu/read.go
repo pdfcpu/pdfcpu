@@ -2568,7 +2568,8 @@ func singleFilter(c context.Context, ctx *model.Context, filterName string, d ty
 
 func filterArraySupportsDecodeParms(ctx *model.Context, names []string) bool {
 	for _, name := range names {
-		if filter.SupportsDecodeParms(streamFilterName(ctx, name)) {
+		name = streamFilterName(ctx, name)
+		if name == "Crypt" || filter.SupportsDecodeParms(name) {
 			return true
 		}
 	}
@@ -3353,7 +3354,14 @@ func decryptStreamContent(ctx *model.Context, sd *types.StreamDict, objNr, genNr
 		return nil
 	}
 
-	raw, err := decryptStream(sd.Raw, objNr, genNr, ctx.EncKey, ctx.AES4Streams, ctx.E.R)
+	encrypted, aes, err := streamCryptMethod(ctx, sd)
+	if err != nil {
+		return err
+	}
+	if !encrypted {
+		return nil
+	}
+	raw, err := decryptStream(sd.Raw, objNr, genNr, ctx.EncKey, aes, ctx.E.R)
 	if err != nil {
 		if repairablePlaintextMetadata(ctx, metadata, err) && validPlaintextMetadata(ctx, sd) {
 			model.ShowRepaired(fmt.Sprintf("plaintext metadata obj#%d", objNr))
@@ -3393,14 +3401,6 @@ func saveDecodedStreamContent(ctx *model.Context, sd *types.StreamDict, objNr, g
 		log.Read.Printf("saveDecodedStreamContent: begin decode=%t\n", decode)
 	}
 
-	// If the "Identity" crypt filter is used we do not need to decrypt.
-	if ctx != nil && ctx.EncKey != nil {
-		if len(sd.FilterPipeline) == 1 && sd.FilterPipeline[0].Name == "Crypt" {
-			sd.Content = sd.Raw
-			return nil
-		}
-	}
-
 	// Special case: If the length of the encoded data is 0, we do not need to decode anything.
 	if len(sd.Raw) == 0 {
 		sd.Content = sd.Raw
@@ -3411,6 +3411,12 @@ func saveDecodedStreamContent(ctx *model.Context, sd *types.StreamDict, objNr, g
 	// XRefStreams are not encrypted.
 	if err := decryptStreamContent(ctx, sd, objNr, genNr); err != nil {
 		return fmt.Errorf("decrypt stream content: %w", err)
+	}
+
+	// A sole Crypt filter needs no further decoding once its crypt method has been applied.
+	if ctx != nil && ctx.EncKey != nil && len(sd.FilterPipeline) == 1 && sd.FilterPipeline[0].Name == "Crypt" {
+		sd.Content = sd.Raw
+		return nil
 	}
 
 	if !decode {
