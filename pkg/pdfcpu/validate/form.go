@@ -233,14 +233,19 @@ func validateDARelaxed(s string) bool {
 }
 
 func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName string, terminalNode bool, outFieldType *types.Name, requiresDA bool) (bool, error) {
+	// see 12.7.4.3
 	validate := validateDA
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		validate = validateDARelaxed
 	}
 
-	if outFieldType == nil || (*outFieldType).Value() == "Tx" {
+	choiceField := outFieldType != nil && (*outFieldType).Value() == "Ch"
+	if outFieldType == nil || (*outFieldType).Value() == "Tx" || choiceField {
 		required := requiresDA
 		if terminalNode && outFieldType == nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+			required = OPTIONAL
+		}
+		if choiceField && xRefTable.ValidationMode == model.ValidationRelaxed {
 			required = OPTIONAL
 		}
 		da, err := validateStringEntry(xRefTable, d, 0, dictName, "DA", required, model.V10, validate)
@@ -255,7 +260,11 @@ func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName stri
 			d["DA"] = types.StringLiteral(*da)
 		}
 
-		return da != nil && *da != "", nil
+		hasDA := da != nil && *da != ""
+		if choiceField && xRefTable.ValidationMode == model.ValidationRelaxed && terminalNode && requiresDA && !hasDA {
+			model.ShowDigestedSpecViolation("choice field without required entry DA")
+		}
+		return hasDA, nil
 	}
 
 	return false, nil
@@ -450,7 +459,7 @@ func validateFormFieldDictEntries(c context.Context, xRefTable *model.XRefTable,
 		return nil, false, err
 	}
 
-	// DA, required for text fields, since ?
+	// DA, required for variable-text fields if not inherited or supplied by the AcroForm dictionary.
 	// The default appearance string contains valid page-content graphics or text-state operators
 	// that define properties such as the field's text size and colour.
 	hasDA, err = validateFormFieldDA(xRefTable, d, dictName, terminalNode, outFieldType, requiresDA)
