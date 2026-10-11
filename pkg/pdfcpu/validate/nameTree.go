@@ -50,7 +50,8 @@ func validateAPNameTreeValue(c context.Context, xRefTable *model.XRefTable, o ty
 	return validateXObjectStreamDict(c, xRefTable, o)
 }
 
-func validateJavaScriptNameTreeValueContext(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+func validateJavaScriptNameTreeValue(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
+	// see 12.6.4.17
 	// Version check
 	err := xRefTable.ValidateVersion("JavaScriptNameTreeValue", sinceVersion)
 	if err != nil {
@@ -62,20 +63,28 @@ func validateJavaScriptNameTreeValueContext(c context.Context, xRefTable *model.
 		return fmt.Errorf("JavaScript name tree value: dereference dict: %w", err)
 	}
 
-	// S, required, name
-	_, err = validateNameEntry(xRefTable, d, 0, "JavaScript", "S", REQUIRED, model.V10, func(s string) bool {
+	// S, required in strict mode, name
+	required := xRefTable.ValidationMode == model.ValidationStrict
+	s, err := validateNameEntry(xRefTable, d, 0, "JavaScript", "S", required, model.V10, func(s string) bool {
 		return s == "JavaScript"
 	})
 	if err != nil {
 		return err
 	}
+	if s == nil {
+		if err := validateJavaScriptActionDict(xRefTable, d, "JavaScript"); err != nil {
+			return err
+		}
+	}
 
 	origin := activeContentOrigin{owner: activeContentOwnerNameTree, source: activeContentSourceJavaScriptNameTree}
-	return validateActionDictObjectWithOrigin(c, xRefTable, d, o, "JavaScript name tree value", origin)
-}
-
-func validateJavaScriptNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
-	return validateJavaScriptNameTreeValueContext(context.Background(), xRefTable, o, sinceVersion)
+	if err := validateActionDictObjectWithOrigin(c, xRefTable, d, o, "JavaScript name tree value", origin); err != nil {
+		return err
+	}
+	if s == nil && hasJavaScriptPayload(xRefTable, d) {
+		addActionActiveContent(xRefTable, activeContentJavaScript, origin.source, o, 0, origin)
+	}
+	return nil
 }
 
 func validate3DResourcesNameTreeValue(xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
@@ -492,24 +501,64 @@ func validateEmbeddedFilesNameTreeValue(xRefTable *model.XRefTable, o types.Obje
 	}
 
 	objNr := validationObjectNumber(0, o)
+	value, err := xRefTable.Dereference(o)
+	if err != nil {
+		return model.WithValidationErrorObject(fmt.Errorf("EmbeddedFiles name tree value: dereference: %w", err), objNr)
+	}
+	if value == nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+		model.ShowSkipped("EmbeddedFiles name tree value: null")
+		return nil
+	}
 	f, err := validateFileSpecificationWithoutLinkCollection(xRefTable, o)
 	if err != nil {
 		return fmt.Errorf("EmbeddedFiles name tree value: %w", err)
 	}
-	if !isEmbeddedFileSpecification(xRefTable, f) {
-		if xRefTable.ValidationMode == model.ValidationRelaxed && isEmptyEmbeddedFileSpecification(xRefTable, f) {
-			target, found := fileSpecificationTarget(xRefTable, f)
-			if !found {
-				target = "unnamed"
-			}
+	if isEmbeddedFileSpecification(xRefTable, f) {
+		return nil
+	}
+	if xRefTable.ValidationMode == model.ValidationRelaxed {
+		target, found := fileSpecificationTarget(xRefTable, f)
+		if !found {
+			target = "unnamed"
+		}
+		if isEmptyEmbeddedFileSpecification(xRefTable, f) {
 			model.ShowSkipped(fmt.Sprintf(
 				`EmbeddedFiles name tree value %q (obj#:%d): empty EF dictionary`, target, objNr,
 			))
 			return nil
 		}
-		return errors.New("EmbeddedFiles name tree value: expected matching embedded file stream")
+		if hasEmbeddedFileStream(xRefTable, f) {
+			model.ShowDigestedSpecViolation(fmt.Sprintf(
+				`EmbeddedFiles name tree value %q (obj#:%d): EF entry does not match a file name entry`, target, objNr,
+			))
+			return nil
+		}
 	}
-	return nil
+	return errors.New("EmbeddedFiles name tree value: expected matching embedded file stream")
+}
+
+func hasEmbeddedFileStream(xRefTable *model.XRefTable, o types.Object) bool {
+	if isURLFileSpecification(xRefTable, o) {
+		return false
+	}
+	d, ok := o.(types.Dict)
+	if !ok {
+		return false
+	}
+	ef, err := xRefTable.DereferenceDict(d["EF"])
+	if err != nil {
+		return false
+	}
+	for _, key := range []string{"UF", "F", "DOS", "Mac", "Unix"} {
+		o, err := xRefTable.Dereference(ef[key])
+		if err != nil {
+			return false
+		}
+		if _, ok := o.(types.StreamDict); ok {
+			return true
+		}
+	}
+	return false
 }
 
 func isEmptyEmbeddedFileSpecification(xRefTable *model.XRefTable, o types.Object) bool {
@@ -865,7 +914,7 @@ func validateNameTreeValue(c context.Context, name string, xRefTable *model.XRef
 			return validateAPNameTreeValue(c, x, o, version)
 		}, model.V13, model.V13},
 		"JavaScript": {func(x *model.XRefTable, o types.Object, version model.Version) error {
-			return validateJavaScriptNameTreeValueContext(c, x, o, version)
+			return validateJavaScriptNameTreeValue(c, x, o, version)
 		}, model.V13, model.V13},
 		"3DResources": {validate3DResourcesNameTreeValue, model.V16, model.V16},
 		"Pages":       {validatePagesNameTreeValue, model.V13, model.V13},
