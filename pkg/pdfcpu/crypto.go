@@ -1115,7 +1115,7 @@ func validateCFLength(length *int, cfm *string, pdf20, relaxed bool) (specViolat
 	// see 7.6.6
 	// See table 25 Length
 	// The Standard security handler uses bytes in earlier versions too (PDF 1.7 errata, page 134).
-	// v = 4
+	// v = 4,5
 
 	if length == nil || cfm == nil {
 		return nil, nil
@@ -1127,6 +1127,15 @@ func validateCFLength(length *int, cfm *string, pdf20, relaxed bool) (specViolat
 
 	case "AESV2":
 		return checkCFLengthAESV2(*length, pdf20, relaxed)
+
+	case "AESV3":
+		if *length != 32 {
+			err := fmt.Errorf("%w: invalid CF length, got %d want 32", ErrMalformedEncryption, *length)
+			if relaxed {
+				return err, nil
+			}
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -1287,7 +1296,7 @@ func validateCryptFilter(ctx *model.Context, d types.Dict, v int, pubKeySecHandl
 		return false, fmt.Errorf("%w: crypt filter missing entry \"Length\"", ErrMalformedEncryption)
 	}
 
-	if v == 4 {
+	if v == 4 || v == 5 {
 		specViolation, err := validateCFLength(length, cfm, pdf20, relaxed)
 		if err != nil {
 			return false, err
@@ -1315,16 +1324,27 @@ func validateEncryptionVersion(c context.Context, ctx *model.Context) (err error
 	if err := validateCryptFilters(ctx, d, ctx.E.V, false, &violations); err != nil {
 		return err
 	}
+	if ctx.PDF20() || ctx.E.V == 5 {
+		if err := validateCryptFilterLengths(c, ctx, d.DictEntry("CF"), &violations); err != nil {
+			// Earlier inputs did not check unselected filters here; retain their relaxed acceptance.
+			if ctx.PDF20() || ctx.XRefTable.ValidationMode != model.ValidationRelaxed || c.Err() != nil {
+				return err
+			}
+			appendSpecViolation(&violations, err)
+		}
+	}
 	for _, violation := range violations {
-		model.ShowDigestedSpecViolationError(attributeEncryptionError(ctx, violation))
+		violation = attributeEncryptionError(ctx, violation)
+		if ctx.E.V == 5 {
+			ctx.AddValidationNotice(model.NewValidationNotice(model.NoticePhaseRead, model.NoticeDigested, violation.Error(), violation))
+		} else {
+			model.ShowDigestedSpecViolationError(violation)
+		}
 	}
-	if !ctx.PDF20() {
-		return nil
-	}
-	return validateCryptFilterLengths(c, ctx, d.DictEntry("CF"))
+	return nil
 }
 
-func validateCryptFilterLengths(c context.Context, ctx *model.Context, cf types.Dict) error {
+func validateCryptFilterLengths(c context.Context, ctx *model.Context, cf types.Dict, specViolations *[]error) error {
 	// see 7.6.6
 	// PDF 2.0 also requires Length for filters not selected through StmF, StrF or EFF.
 
@@ -1348,8 +1368,21 @@ func validateCryptFilterLengths(c context.Context, ctx *model.Context, cf types.
 			return fmt.Errorf("crypt filter %q: %w", name, err)
 		}
 
-		if length == nil {
+		if length == nil && ctx.PDF20() {
 			return fmt.Errorf("%w: crypt filter %q missing entry \"Length\"", ErrMalformedEncryption, name)
+		}
+		if ctx.E.V == 5 {
+			// Method checks belong to filter selection; this pass only adds AESV3 length validation.
+			cfm, _, err := ctx.DereferenceNameEntry(filter, "CFM")
+			if err != nil || cfm == nil || cfm.Value() != "AESV3" {
+				continue
+			}
+			method := cfm.Value()
+			violation, err := validateCFLength(length, &method, ctx.PDF20(), ctx.XRefTable.ValidationMode == model.ValidationRelaxed)
+			if err != nil {
+				return fmt.Errorf("crypt filter %q: %w", name, err)
+			}
+			appendSpecViolation(specViolations, violation)
 		}
 	}
 
