@@ -154,7 +154,36 @@ func validateDestinationArray(xRefTable *model.XRefTable, a types.Array, ownerOb
 	return validateDestinationArrayMode(xRefTable, a, ownerObjNr)
 }
 
+func validateDestinationOperands(x *model.XRefTable, a types.Array, name types.Name, ownerObjNr int) error {
+	// see 12.3.2.2, Table 149
+	length := 2
+	switch name {
+	case "FitH", "FitV", "FitBH", "FitBV":
+		length = 3
+	case "XYZ":
+		length = 5
+	case "FitR":
+		length = 6
+	}
+	if len(a) != length {
+		err := fmt.Errorf("destination array mode %s: invalid length %d, expected %d", name, len(a), length)
+		return model.WithValidationErrorObject(err, ownerObjNr)
+	}
+	for i := 2; i < len(a); i++ {
+		o, err := x.Dereference(a[i])
+		if err == nil && (o != nil || name == "FitR") {
+			_, err = x.DereferenceNumber(o)
+		}
+		if err != nil {
+			err = fmt.Errorf("destination array mode %s operand[%d]: %w", name, i, err)
+			return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, a[i]))
+		}
+	}
+	return nil
+}
+
 func validateDestinationArrayMode(xRefTable *model.XRefTable, a types.Array, ownerObjNr int) error {
+	// see 12.3.2.2, Table 149
 	o, err := xRefTable.Dereference(a[1])
 	if err != nil {
 		err = fmt.Errorf("destination array[1]: %w", err)
@@ -166,7 +195,15 @@ func validateDestinationArrayMode(xRefTable *model.XRefTable, a types.Array, own
 		return model.WithValidationErrorObject(err, validationObjectNumber(ownerObjNr, a[1]))
 	}
 
-	return validateDestType(a, name)
+	if err := validateDestType(a, name); err != nil {
+		return err
+	}
+	err = validateDestinationOperands(xRefTable, a, name, ownerObjNr)
+	if err != nil && xRefTable.ValidationMode == model.ValidationRelaxed {
+		xRefTable.AddValidationNotice(model.NewValidationNotice(model.NoticePhaseValidate, model.NoticeDigested, err.Error(), err))
+		return nil
+	}
+	return err
 }
 
 func validateDestinationDict(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) (err error) {
