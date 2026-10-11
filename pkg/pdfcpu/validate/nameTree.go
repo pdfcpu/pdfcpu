@@ -1032,11 +1032,11 @@ func validateNameTreeValueContext(c context.Context, name string, x *model.XRefT
 }
 
 // validateNameTreeKey compares decoded string bytes before converting the key to display text.
-func validateNameTreeKey(xRefTable *model.XRefTable, o types.Object, previous []byte, havePrevious bool) (string, []byte, error) {
+func validateNameTreeKey(xRefTable *model.XRefTable, o types.Object, previous []byte, havePrevious bool) (string, []byte, types.Object, error) {
 	// see 7.9.6
 	o, err := xRefTable.Dereference(o)
 	if err != nil {
-		return "", nil, fmt.Errorf("dereference key: %w", err)
+		return "", nil, nil, fmt.Errorf("dereference key: %w", err)
 	}
 	var raw []byte
 	switch key := o.(type) {
@@ -1045,23 +1045,23 @@ func validateNameTreeKey(xRefTable *model.XRefTable, o types.Object, previous []
 	case types.HexLiteral:
 		raw, err = key.Bytes()
 	default:
-		return "", nil, fmt.Errorf("expected string key, got %T", o)
+		return "", nil, nil, fmt.Errorf("expected string key, got %T", o)
 	}
 	if err != nil {
-		return "", nil, fmt.Errorf("decode key bytes: %w", err)
+		return "", nil, nil, fmt.Errorf("decode key bytes: %w", err)
 	}
 	// Lexical ordering uses the string bytes, regardless of their text encoding.
 	if havePrevious && bytes.Compare(raw, previous) < 0 {
 		if xRefTable.ValidationMode == model.ValidationStrict {
-			return "", nil, fmt.Errorf("key %q not in lexical order after %q", raw, previous)
+			return "", nil, nil, fmt.Errorf("key %q not in lexical order after %q", raw, previous)
 		}
 		model.ShowDigestedSpecViolation("name tree keys not sorted in lexical order")
 	}
 	key, err := types.StringOrHexLiteral(o)
 	if err != nil {
-		return "", nil, fmt.Errorf("expected string key: %w", err)
+		return "", nil, nil, fmt.Errorf("expected string key: %w", err)
 	}
-	return *key, raw, nil
+	return *key, raw, o, nil
 }
 
 func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, name string, node *model.Node) (string, string, error) {
@@ -1085,6 +1085,8 @@ func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTabl
 		err = fmt.Errorf("name tree %s: missing Names array", name)
 		return "", "", model.WithValidationErrorObject(err, namesObjNr)
 	}
+	// Keep resolved key objects available to the model when it retains their original string bytes.
+	d["Names"] = a
 
 	// arr length needs to be even because of contained key value pairs.
 	entries := len(a)
@@ -1109,18 +1111,20 @@ func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTabl
 		if i%2 == 0 {
 			keyObjNr := validationObjectNumber(namesObjNr, o)
 
-			key, previous, err = validateNameTreeKey(xRefTable, o, previous, haveFirstKey)
+			key, previous, a[i], err = validateNameTreeKey(xRefTable, o, previous, haveFirstKey)
 			if err != nil {
 				err = fmt.Errorf("name tree %s Names[%d]: %w", name, i, err)
 				return "", "", model.WithValidationErrorObject(err, keyObjNr)
 			}
 
 			if !haveFirstKey {
-				firstKey = key
+				firstKey = string(previous)
+				node.Kmin = key
 				haveFirstKey = true
 			}
 
-			lastKey = key
+			lastKey = string(previous)
+			node.Kmax = key
 
 			continue
 		}
@@ -1141,6 +1145,7 @@ func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTabl
 }
 
 func validateNameTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, firstKey, lastKey string) error {
+	// see 7.9.6
 	a, err := validateStringArrayEntry(
 		xRefTable, d, ownerObjNr, "nameTreeDict", "Limits", REQUIRED, model.V10,
 		func(a types.Array) bool { return len(a) == 2 },
@@ -1153,21 +1158,21 @@ func validateNameTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict, o
 	if err != nil {
 		return fmt.Errorf("name tree Limits[0]: dereference: %w", err)
 	}
-	s, err := types.StringOrHexLiteral(o)
+	_, raw, _, err := validateNameTreeKey(xRefTable, o, nil, false)
 	if err != nil {
 		return fmt.Errorf("name tree Limits[0]: expected string: %w", err)
 	}
-	fkv := *s
+	fkv := string(raw)
 
 	o, err = xRefTable.Dereference(a[1])
 	if err != nil {
 		return fmt.Errorf("name tree Limits[1]: dereference: %w", err)
 	}
-	s, err = types.StringOrHexLiteral(o)
+	_, raw, _, err = validateNameTreeKey(xRefTable, o, nil, false)
 	if err != nil {
 		return fmt.Errorf("name tree Limits[1]: expected string: %w", err)
 	}
-	lkv := *s
+	lkv := string(raw)
 
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		if fkv != firstKey {
@@ -1239,9 +1244,14 @@ func validateNameTreeKids(c context.Context, xRefTable *model.XRefTable, name st
 			}
 			continue
 		}
+		if kidNode == nil {
+			continue
+		}
 		kmax = kmaxKid
+		node.Kmax = kidNode.Kmax
 		if !haveKmin {
 			kmin = kminKid
+			node.Kmin = kidNode.Kmin
 			haveKmin = true
 		}
 
@@ -1346,9 +1356,7 @@ func validateNameTreeDepthWithViolations(c context.Context, xRefTable *model.XRe
 		}
 	}
 
-	// We track limits for all nodes internally.
-	node.Kmin = kmin
-	node.Kmax = kmax
+	// Node limits retain decoded text for callers; validation above compares the original PDF bytes.
 
 	//fmt.Println("validateNameTree end")
 

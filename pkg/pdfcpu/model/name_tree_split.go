@@ -58,6 +58,8 @@ func promoteNameTreeSplit(c context.Context, path []*Node, n *Node) error {
 		// Retain the original node and its PDF dictionary as the left half.
 		n.Kids, n.Names = left.Kids, left.Names
 		n.Kmin, n.Kmax = left.Kmin, left.Kmax
+		n.clearTextIndex()
+		parent.clearTextIndex()
 		parent.Kmin, parent.Kmax = parent.Kids[0].Kmin, parent.Kids[len(parent.Kids)-1].Kmax
 		if len(parent.Kids) != nameTreeMaxKids+1 {
 			return nil

@@ -1627,7 +1627,8 @@ func (xRefTable *XRefTable) bindNameTreeNodeDict(name string, n *Node, root bool
 
 func bindNameTreeNodeLimits(dict types.Dict, n *Node, root bool) {
 	if !root {
-		dict.Update("Limits", types.NewHexLiteralArray(n.Kmin, n.Kmax))
+		lo, hi := n.rawLimits()
+		dict.Update("Limits", types.NewHexLiteralArray(lo, hi))
 		return
 	}
 	dict.Delete("Limits")
@@ -1636,7 +1637,7 @@ func bindNameTreeNodeLimits(dict types.Dict, n *Node, root bool) {
 func bindNameTreeLeafNode(dict types.Dict, n *Node) {
 	a := types.Array{}
 	for _, e := range n.Names {
-		a = append(a, types.NewHexLiteral([]byte(e.k)))
+		a = append(a, types.NewHexLiteral([]byte(e.key())))
 		a = append(a, e.v)
 	}
 	dict.Update("Names", a)
