@@ -17,7 +17,10 @@ limitations under the License.
 package validate
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -355,5 +358,78 @@ func TestMetadataAuthorityControlsCachedInfoValues(t *testing.T) {
 			assertInfoReference(t, xRefTable, true)
 			assertInfoObjectUnchanged(t, xRefTable, before)
 		})
+	}
+}
+
+type metadataEntryCase struct {
+	name, entry           string
+	value                 types.Object
+	omit                  bool
+	strictErr, relaxedErr bool
+}
+
+func checkMetadataEntryValidation(t *testing.T, tc metadataEntryCase, version model.Version, mode int) {
+	t.Helper()
+	x, _ := metadataInfoXRefTable(mode, "", "")
+	x.HeaderVersion = &version
+	sd := x.Table[2].Object.(types.StreamDict)
+	if tc.entry != "" {
+		sd.Dict[tc.entry] = tc.value
+		if tc.omit {
+			delete(sd.Dict, tc.entry)
+		}
+	}
+	wantErr := tc.relaxedErr
+	if mode == model.ValidationStrict {
+		wantErr = tc.strictErr || version < model.V14
+	}
+	got, err := validateMetadataStream(x, x.RootDict, 1, OPTIONAL, model.V14)
+	if (err != nil) != wantErr {
+		t.Fatalf("error = %v, want error: %t", err, wantErr)
+	}
+	if !wantErr {
+		if got == nil {
+			t.Fatal("valid metadata stream was discarded")
+		}
+		return
+	}
+	var validationErr *model.ValidationError
+	if !errors.As(err, &validationErr) || validationErr.ObjectNumber() != 2 {
+		t.Fatalf("error must identify metadata object 2: %v", err)
+	}
+	if mode == model.ValidationStrict && version < model.V14 {
+		var versionErr *model.VersionRequirementError
+		if !errors.As(err, &versionErr) {
+			t.Fatalf("expected PDF 1.4 version requirement: %v", err)
+		}
+		return
+	}
+	if !strings.Contains(err.Error(), tc.entry) {
+		t.Fatalf("error does not identify entry %s: %v", tc.entry, err)
+	}
+}
+
+// TestMetadataStreamEntries checks required names across PDF versions and strict/relaxed validation modes.
+func TestMetadataStreamEntries(t *testing.T) {
+	tests := []metadataEntryCase{
+		{name: "valid"},
+		{name: "missing Type", entry: "Type", omit: true, strictErr: true},
+		{name: "missing Subtype", entry: "Subtype", omit: true, strictErr: true},
+		{name: "null Type", entry: "Type", strictErr: true},
+		{name: "null Subtype", entry: "Subtype", strictErr: true},
+		{name: "wrong Type", entry: "Type", value: types.Name("Other"), strictErr: true, relaxedErr: true},
+		{name: "wrong Subtype", entry: "Subtype", value: types.Name("Other"), strictErr: true, relaxedErr: true},
+		{name: "string Type", entry: "Type", value: types.StringLiteral("Metadata"), strictErr: true, relaxedErr: true},
+		{name: "string Subtype", entry: "Subtype", value: types.StringLiteral("XML"), strictErr: true, relaxedErr: true},
+		{name: "XMP tolerance", entry: "Subtype", value: types.Name("XMP"), strictErr: true},
+	}
+	for _, version := range []model.Version{model.V13, model.V14, model.V17, model.V20} {
+		for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+			for _, tc := range tests {
+				t.Run(fmt.Sprintf("%s/mode%d/%s", version, mode, tc.name), func(t *testing.T) {
+					checkMetadataEntryValidation(t, tc, version, mode)
+				})
+			}
+		}
 	}
 }
