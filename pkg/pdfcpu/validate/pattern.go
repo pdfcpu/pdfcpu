@@ -29,6 +29,7 @@ import (
 )
 
 func validateTilingPatternDict(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, sinceVersion model.Version) error {
+	// see 8.7.3.1
 	dictName := "tilingPatternDict"
 
 	if err := xRefTable.ValidateVersion(dictName, sinceVersion); err != nil {
@@ -45,12 +46,16 @@ func validateTilingPatternDict(c context.Context, xRefTable *model.XRefTable, sd
 		return fmt.Errorf("%s.PatternType: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "PaintType", REQUIRED, sinceVersion, nil)
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "PaintType", REQUIRED, sinceVersion, func(i int) bool {
+		return validGraphicsValue(xRefTable, i == 1 || i == 2, validationEntryObjectNumber(0, sd.Dict, "PaintType"), dictName, "PaintType")
+	})
 	if err != nil {
 		return fmt.Errorf("%s.PaintType: %w", dictName, err)
 	}
 
-	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "TilingType", REQUIRED, sinceVersion, nil)
+	_, err = validateIntegerEntry(xRefTable, sd.Dict, 0, dictName, "TilingType", REQUIRED, sinceVersion, func(i int) bool {
+		return validGraphicsValue(xRefTable, i >= 1 && i <= 3, validationEntryObjectNumber(0, sd.Dict, "TilingType"), dictName, "TilingType")
+	})
 	if err != nil {
 		return fmt.Errorf("%s.TilingType: %w", dictName, err)
 	}

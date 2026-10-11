@@ -38,7 +38,29 @@ func validateBlendMode(s string) bool {
 		"Hue", "Saturation", "Color", "Luminosity"})
 }
 
+func validGraphicsValue(x *model.XRefTable, valid bool, objNr int, dictName, entryName string) bool {
+	if valid || x.ValidationMode != model.ValidationRelaxed {
+		return valid
+	}
+	err := model.WithValidationErrorObject(fmt.Errorf("%s.%s: invalid graphics value", dictName, entryName), objNr)
+	x.AddValidationNotice(model.NewValidationNotice(model.NoticePhaseValidate, model.NoticeDigested, err.Error(), err))
+	return true
+}
+
+func validLineDashArray(x *model.XRefTable, a types.Array) bool {
+	nonzero := len(a) == 0
+	for _, o := range a {
+		n, err := x.DereferenceNumber(o)
+		if err != nil || n < 0 {
+			return false
+		}
+		nonzero = nonzero || n > 0
+	}
+	return nonzero
+}
+
 func validateLineDashPatternEntry(xRefTable *model.XRefTable, d types.Dict, dictName string, entryName string, required bool, sinceVersion model.Version) (err error) {
+	// see 8.4.3.6
 	objNr := validationEntryObjectNumber(0, d, entryName)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -52,9 +74,7 @@ func validateLineDashPatternEntry(xRefTable *model.XRefTable, d types.Dict, dict
 		return nil
 	}
 
-	// We are dealing with integers which may be represented by Integer or Float objects.
-
-	_, err = validateNumberArray(xRefTable, a[0], objNr)
+	dash, err := validateNumberArray(xRefTable, a[0], objNr)
 	if err != nil {
 		err = fmt.Errorf("%s.%s[0]: %w", dictName, entryName, err)
 		return model.WithValidationErrorObject(err, validationObjectNumber(objNr, a[0]))
@@ -64,6 +84,10 @@ func validateLineDashPatternEntry(xRefTable *model.XRefTable, d types.Dict, dict
 	if err != nil {
 		err = fmt.Errorf("%s.%s[1]: %w", dictName, entryName, err)
 		return model.WithValidationErrorObject(err, validationObjectNumber(objNr, a[1]))
+	}
+
+	if !validGraphicsValue(xRefTable, validLineDashArray(xRefTable, dash), validationObjectNumber(objNr, a[0]), dictName, entryName) {
+		return fmt.Errorf("%s.%s: dash lengths must be nonnegative and not all zero", dictName, entryName)
 	}
 
 	return nil
@@ -967,8 +991,11 @@ func validateExtGStateFontReference(x *model.XRefTable, o types.Object, dictName
 }
 
 func validateExtGStateDictPart1(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	// see 8.4.5
 	// LW, number, optional, since V1.3
-	_, err := validateNumberEntry(xRefTable, d, 0, dictName, "LW", OPTIONAL, model.V13, nil)
+	_, err := validateNumberEntry(xRefTable, d, 0, dictName, "LW", OPTIONAL, model.V13, func(f float64) bool {
+		return validGraphicsValue(xRefTable, f >= 0, validationEntryObjectNumber(0, d, "LW"), dictName, "LW")
+	})
 	if err != nil {
 		return err
 	}
