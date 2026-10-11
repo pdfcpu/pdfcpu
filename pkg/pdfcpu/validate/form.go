@@ -232,6 +232,25 @@ func validateDARelaxed(s string) bool {
 	return true
 }
 
+func formFieldDARequired(xRefTable *model.XRefTable, terminalNode bool, outFieldType *types.Name, requiresDA bool) bool {
+	if xRefTable.ValidationMode != model.ValidationRelaxed {
+		return requiresDA
+	}
+	if outFieldType != nil && (*outFieldType).Value() == "Ch" {
+		return OPTIONAL
+	}
+	if terminalNode && outFieldType == nil {
+		return OPTIONAL
+	}
+	return requiresDA
+}
+
+func reportMissingChoiceFieldDA(xRefTable *model.XRefTable, choiceField, terminalNode, requiresDA, hasDA bool) {
+	if choiceField && xRefTable.ValidationMode == model.ValidationRelaxed && terminalNode && requiresDA && !hasDA {
+		model.ShowDigestedSpecViolation("choice field without required entry DA")
+	}
+}
+
 func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName string, terminalNode bool, outFieldType *types.Name, requiresDA bool) (bool, error) {
 	// see 12.7.4.3
 	validate := validateDA
@@ -241,13 +260,7 @@ func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName stri
 
 	choiceField := outFieldType != nil && (*outFieldType).Value() == "Ch"
 	if outFieldType == nil || (*outFieldType).Value() == "Tx" || choiceField {
-		required := requiresDA
-		if terminalNode && outFieldType == nil && xRefTable.ValidationMode == model.ValidationRelaxed {
-			required = OPTIONAL
-		}
-		if choiceField && xRefTable.ValidationMode == model.ValidationRelaxed {
-			required = OPTIONAL
-		}
+		required := formFieldDARequired(xRefTable, terminalNode, outFieldType, requiresDA)
 		da, err := validateStringEntry(xRefTable, d, 0, dictName, "DA", required, model.V10, validate)
 		if err != nil {
 			if !terminalNode && requiresDA {
@@ -261,9 +274,7 @@ func validateFormFieldDA(xRefTable *model.XRefTable, d types.Dict, dictName stri
 		}
 
 		hasDA := da != nil && *da != ""
-		if choiceField && xRefTable.ValidationMode == model.ValidationRelaxed && terminalNode && requiresDA && !hasDA {
-			model.ShowDigestedSpecViolation("choice field without required entry DA")
-		}
+		reportMissingChoiceFieldDA(xRefTable, choiceField, terminalNode, requiresDA, hasDA)
 		return hasDA, nil
 	}
 
