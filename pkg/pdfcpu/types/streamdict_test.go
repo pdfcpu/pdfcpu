@@ -84,3 +84,20 @@ func TestDecodeRejectsNonTerminalOpaqueImageStream(t *testing.T) {
 		t.Fatalf("got %v, want %v", err, filter.ErrUnsupportedFilter)
 	}
 }
+
+// TestDecodeLengthWithLimitRejectsOversizedPrefixWithoutFilters covers raw and previously decoded streams.
+func TestDecodeLengthWithLimitRejectsOversizedPrefixWithoutFilters(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		sd   StreamDict
+	}{
+		{"raw", StreamDict{Dict: NewDict(), Raw: []byte("hello")}},
+		{"cached", StreamDict{Dict: NewDict(), Content: []byte("hello")}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := tc.sd.DecodeLengthWithLimit(5, 4); !errors.Is(err, filter.ErrDecodeLimitExceeded) {
+				t.Fatalf("got %v, want %v", err, filter.ErrDecodeLimitExceeded)
+			}
+		})
+	}
+}

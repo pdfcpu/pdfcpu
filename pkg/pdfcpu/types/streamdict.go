@@ -444,6 +444,13 @@ func (sd *StreamDict) DecodeLength(maxLen int64) ([]byte, error) {
 
 // DecodeLengthWithLimit decodes sd with a maximum output length and resource limits.
 func (sd *StreamDict) DecodeLengthWithLimit(maxLen, maxDecodeBytes int64) ([]byte, error) {
+	limit := maxDecodeBytes
+	if limit == 0 {
+		limit = filter.DefaultMaxDecodeBytes
+	}
+	if maxLen >= 0 && limit >= 0 && maxLen > limit {
+		return nil, filter.ErrDecodeLimitExceeded
+	}
 	if sd.Content != nil {
 		// This stream has already been decoded.
 		if maxLen < 0 {

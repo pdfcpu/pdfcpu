@@ -152,7 +152,19 @@ func (f baseFilter) decodeLimit(maxLen int64) int64 {
 	return f.maxDecodeBytes
 }
 
+func (f baseFilter) checkDecodeLength(maxLen int64) error {
+	if maxLen >= 0 {
+		if limit := f.decodeLimit(-1); limit >= 0 && maxLen > limit {
+			return ErrDecodeLimitExceeded
+		}
+	}
+	return nil
+}
+
 func (f baseFilter) copyDecoded(r io.Reader, maxLen int64) (*bytes.Buffer, error) {
+	if err := f.checkDecodeLength(maxLen); err != nil {
+		return nil, err
+	}
 	if maxLen >= 0 {
 		var b bytes.Buffer
 		_, err := io.CopyN(&b, r, maxLen)

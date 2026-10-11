@@ -193,6 +193,9 @@ func (f flate) Decode(r io.Reader) (io.Reader, error) {
 
 // DecodeLength implements decoding for a Flate filter with a maximum output length.
 func (f flate) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) {
+	if err := f.checkDecodeLength(maxLen); err != nil {
+		return nil, err
+	}
 	if log.TraceEnabled() {
 		log.Trace.Println("DecodeFlate begin")
 	}
@@ -428,10 +431,13 @@ func checkBufLen(b bytes.Buffer, maxLen int64) bool {
 	return maxLen < 0 || int64(b.Len()) < maxLen
 }
 
-func process(w io.Writer, pr, cr []byte, predictor, colors, bytesPerPixel int) error {
+func process(w io.Writer, pr, cr []byte, predictor, colors, bytesPerPixel int, remaining int64) error {
 	d, err := processRow(pr, cr, predictor, colors, bytesPerPixel)
 	if err != nil {
 		return err
+	}
+	if remaining >= 0 && int64(len(d)) > remaining {
+		d = d[:remaining]
 	}
 
 	_, err = w.Write(d)
@@ -469,7 +475,11 @@ func (f flate) decodePostProcessRows(r io.Reader, maxLen int64, m, predictor, co
 			return nil, fmt.Errorf("flate decode: read error, expected %d bytes, got: %d", m, n)
 		}
 
-		if err := process(&b, pr, cr, predictor, colors, bytesPerPixel); err != nil {
+		remaining := int64(-1)
+		if maxLen >= 0 {
+			remaining = maxLen - int64(b.Len())
+		}
+		if err := process(&b, pr, cr, predictor, colors, bytesPerPixel, remaining); err != nil {
 			return nil, err
 		}
 
