@@ -544,15 +544,16 @@ func parseXRefTableSubSection(xRefTable *model.XRefTable, limits model.ResourceL
 }
 
 // Parse compressed object.
-func compressedObject(c context.Context, s string) (types.Object, error) {
+func compressedObject(c context.Context, s string, validationMode int) (types.Object, error) {
 	if log.ReadEnabled() {
 		log.Read.Println("compressedObject: begin")
 	}
 
-	o, err := model.ParseObject(c, &s, 0)
+	result, err := model.ParseObjectWithPolicy(c, &s, 0, validationMode)
 	if err != nil {
 		return nil, err
 	}
+	o := result.Object
 
 	d, ok := o.(types.Dict)
 	if !ok {
@@ -575,12 +576,7 @@ func compressedObject(c context.Context, s string) (types.Object, error) {
 	return nil, errObjectStreamContainsStream
 }
 
-func buildObjectArrayForObjectStream(
-	c context.Context,
-	osd *types.ObjectStreamDict,
-	objs []string,
-	fullContent bool,
-	decodedContent []byte) (types.Array, error) {
+func buildObjectArrayForObjectStream(c context.Context, osd *types.ObjectStreamDict, objs []string, fullContent bool, decodedContent []byte, decode types.DecodeLazyObjectStreamObjectFunc) (types.Array, error) {
 	var objArray types.Array
 	var offsetOld int
 
@@ -607,12 +603,12 @@ func buildObjectArrayForObjectStream(
 		}
 
 		if i > 0 {
-			o := types.NewLazyObjectStreamObject(osd, offsetOld, offset, compressedObject)
+			o := types.NewLazyObjectStreamObject(osd, offsetOld, offset, decode)
 			objArray = append(objArray, o)
 		}
 
 		if i == len(objs)-2 {
-			o := types.NewLazyObjectStreamObject(osd, offset, -1, compressedObject)
+			o := types.NewLazyObjectStreamObject(osd, offset, -1, decode)
 			objArray = append(objArray, o)
 		}
 
@@ -623,7 +619,7 @@ func buildObjectArrayForObjectStream(
 }
 
 // Parse all objects of an object stream and save them into objectStreamDict.ObjArray.
-func parseObjectStream(c context.Context, osd *types.ObjectStreamDict, limits model.ResourceLimits) error {
+func parseObjectStream(c context.Context, osd *types.ObjectStreamDict, limits model.ResourceLimits, validationMode int) error {
 	if log.ReadEnabled() {
 		log.Read.Printf("parseObjectStream begin: decoding %d objects.\n", osd.ObjCount)
 	}
@@ -676,7 +672,10 @@ func parseObjectStream(c context.Context, osd *types.ObjectStreamDict, limits mo
 
 	// e.g., 10 0 11 25 = 2 Objects: #10 @ offset 0, #11 @ offset 25
 
-	objArray, err := buildObjectArrayForObjectStream(c, osd, objs, fullContent, decodedContent)
+	decode := func(c context.Context, s string) (types.Object, error) {
+		return compressedObject(c, s, validationMode)
+	}
+	objArray, err := buildObjectArrayForObjectStream(c, osd, objs, fullContent, decodedContent, decode)
 	if err != nil {
 		return fmt.Errorf("build object stream object array: %w", err)
 	}
@@ -994,7 +993,7 @@ func parseXRefStream(c context.Context, ctx *model.Context, rd io.Reader, offset
 		log.Read.Printf("parseXRefStream: dereferencing object %d\n", *objNr)
 	}
 
-	o, err := model.ParseObject(c, &l, 0, recursionLimit(ctx))
+	o, err := parseObjectWithValidationPolicy(c, ctx, &l, *objNr)
 	if err != nil {
 		return nil, fmt.Errorf("parseXRefStream: no object: %w", err)
 	}
@@ -1501,7 +1500,7 @@ func processTrailer(c context.Context, ctx *model.Context, s *bufio.Scanner, lin
 		log.Read.Printf("processTrailer: trailerString: (len:%d) <%s>\n", len(trailerString), trailerString)
 	}
 
-	o, err := model.ParseObject(c, &trailerString, 0, recursionLimit(ctx))
+	o, err := parseObjectWithValidationPolicy(c, ctx, &trailerString, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -3536,7 +3535,7 @@ func decodeObjectStreamObjects(c context.Context, ctx *model.Context, sd *types.
 	}
 
 	// Parse all objects of this object stream and save them to ObjectStreamDict.ObjArray.
-	if err = parseObjectStream(c, osd, ctx.Configuration.Limits); err != nil {
+	if err = parseObjectStream(c, osd, ctx.Configuration.Limits, ctx.XRefTable.ValidationMode); err != nil {
 		return nil, fmt.Errorf("object stream obj#%d: parse objects: %w", objNr, err)
 	}
 

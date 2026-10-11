@@ -694,7 +694,7 @@ func TestDecompressXRefTableEntryClassifiesObjectStreamErrors(t *testing.T) {
 }
 
 func TestCompressedObjectRejectsStreamObjects(t *testing.T) {
-	_, err := compressedObject(t.Context(), "<< /Length 1 >>")
+	_, err := compressedObject(t.Context(), "<< /Length 1 >>", model.ValidationRelaxed)
 	if !errors.Is(err, errObjectStreamContainsStream) {
 		t.Fatalf("got %v, want %v", err, errObjectStreamContainsStream)
 	}
@@ -706,7 +706,7 @@ func TestParseObjectStreamClassifiesCorruptDict(t *testing.T) {
 		FirstObjOffset: 1,
 	}
 
-	err := parseObjectStream(t.Context(), osd, model.DefaultResourceLimits())
+	err := parseObjectStream(t.Context(), osd, model.DefaultResourceLimits(), model.ValidationRelaxed)
 	if !errors.Is(err, errCorruptObjectStreamDict) {
 		t.Fatalf("got %v, want %v", err, errCorruptObjectStreamDict)
 	}
@@ -721,7 +721,7 @@ func TestParseObjectStreamClassifiesObjectCountLimit(t *testing.T) {
 	limits := model.DefaultResourceLimits()
 	limits.MaxObjectStreamCount = 1
 
-	err := parseObjectStream(t.Context(), osd, limits)
+	err := parseObjectStream(t.Context(), osd, limits, model.ValidationRelaxed)
 	if !errors.Is(err, errObjectStreamObjectCountLimit) {
 		t.Fatalf("got %v, want %v", err, errObjectStreamObjectCountLimit)
 	}
@@ -739,7 +739,7 @@ func TestParseObjectStreamRejectsFirstBeyondDecodeLimit(t *testing.T) {
 	}
 	limits := model.DefaultResourceLimits()
 	limits.MaxDecodeBytes = 3
-	if err := parseObjectStream(t.Context(), osd, limits); !errors.Is(err, filter.ErrDecodeLimitExceeded) {
+	if err := parseObjectStream(t.Context(), osd, limits, model.ValidationRelaxed); !errors.Is(err, filter.ErrDecodeLimitExceeded) {
 		t.Fatalf("got %v, want %v", err, filter.ErrDecodeLimitExceeded)
 	}
 }

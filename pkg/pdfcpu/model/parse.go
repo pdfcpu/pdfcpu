@@ -39,6 +39,7 @@ var (
 	errArrayNotTerminated      = errors.New("parse: unterminated array")
 	errDictionaryNotTerminated = fmt.Errorf("parse: unterminated dictionary: %w", ErrDictionaryCorrupt)
 	errDictionaryDuplicateKey  = errors.New("parse: duplicate key")
+	errInvalidBooleanOrNull    = errors.New("parse: invalid boolean or null keyword")
 	errHexLiteralCorrupt       = errors.New("parse: corrupt hex literal")
 	errHexLiteralNotTerminated = errors.New("parse: hex literal not terminated")
 	errNameObjectCorrupt       = errors.New("parse: corrupt name object")
@@ -113,7 +114,7 @@ func positionToNextEOL(s string) (string, int) {
 }
 
 // trimLeftSpace trims leading whitespace and trailing comment.
-func trimLeftSpace(s string, relaxed bool) (string, bool) {
+func trimLeftSpace(s string, repair bool) (string, bool) {
 	if log.ParseEnabled() {
 		log.Parse.Printf("TrimLeftSpace: begin %s\n", s)
 	}
@@ -123,7 +124,7 @@ func trimLeftSpace(s string, relaxed bool) (string, bool) {
 	for {
 		i := 0
 		for i < len(s) && pdfWhitespace(s[i]) {
-			if relaxed && (s[i] == '\n' || s[i] == '\r') {
+			if repair && (s[i] == '\n' || s[i] == '\r') {
 				eol = true
 			}
 			i++
@@ -337,7 +338,7 @@ func ParseObjectAttributes(line *string) (*int, *int, error) {
 	return &objNr, &genNr, nil
 }
 
-func parseArray(c context.Context, line *string, level, maxDepth int, relaxed bool) (*types.Array, error) {
+func parseArray(c context.Context, line *string, level, maxDepth, validationMode int, repair bool) (*types.Array, error) {
 	if err := CheckRecursionDepth("parse object", level, maxDepth); err != nil {
 		return nil, err
 	}
@@ -377,7 +378,7 @@ func parseArray(c context.Context, line *string, level, maxDepth int, relaxed bo
 
 	for !strings.HasPrefix(l, "]") {
 
-		obj, err := parseObject(c, &l, level+1, maxDepth, relaxed)
+		obj, err := parseObject(c, &l, level+1, maxDepth, validationMode, repair)
 		if err != nil {
 			return nil, err
 		}
@@ -553,18 +554,16 @@ func parseName(line *string) (*types.Name, error) {
 	return &nameObj, nil
 }
 
-func insertKey(d types.Dict, key string, val types.Object, relaxed bool) error {
+func insertKey(d types.Dict, key string, val types.Object, validationMode int) error {
 	if _, found := d[key]; !found {
 		d[key] = val
 	} else {
-
-		// was: for now we ignore duplicate keys - config flag ?
-
-		// if !relaxed {
-		// 	return errDictionaryDuplicateKey
-		// }
-
-		d[key] = val
+		if validationMode != ValidationRelaxed {
+			return fmt.Errorf("%w: %q", errDictionaryDuplicateKey, key)
+		}
+		if val != nil {
+			d[key] = val
+		}
 		ShowDigestedSpecViolation(fmt.Sprintf("duplicate key \"%s\"", key))
 	}
 
@@ -579,7 +578,7 @@ func dictString(l string) bool {
 	return len(l) > 0 && !strings.HasPrefix(l, ">>")
 }
 
-func processDictKeys(c context.Context, line *string, level, maxDepth int, relaxed bool) (types.Dict, error) {
+func processDictKeys(c context.Context, line *string, level, maxDepth, validationMode int, repair bool) (types.Dict, error) {
 	l := *line
 	var eol bool
 	d := types.NewDict()
@@ -592,7 +591,7 @@ func processDictKeys(c context.Context, line *string, level, maxDepth int, relax
 
 		keyName, err := parseName(&l)
 		if err != nil {
-			if !relaxed {
+			if !repair {
 				return nil, &dictionaryKeyError{err: err}
 			}
 			// Skip junk.
@@ -604,9 +603,9 @@ func processDictKeys(c context.Context, line *string, level, maxDepth int, relax
 		}
 
 		// Position to first non whitespace after key.
-		l, eol = trimLeftSpace(l, relaxed)
+		l, eol = trimLeftSpace(l, repair)
 
-		if err != nil && relaxed {
+		if err != nil && repair {
 			// Skip junk.
 			continue
 		}
@@ -622,17 +621,16 @@ func processDictKeys(c context.Context, line *string, level, maxDepth int, relax
 			// #252: For dicts with kv pairs terminated by eol we accept a missing value as an empty string.
 			val = types.StringLiteral("")
 		} else {
-			if val, err = parseObject(c, &l, level+1, maxDepth, relaxed); err != nil {
+			if val, err = parseObject(c, &l, level+1, maxDepth, validationMode, repair); err != nil {
 				return nil, err
 			}
 		}
 
 		// Specifying the null object as the value of a dictionary entry (7.3.7, "Dictionary Objects")
 		// shall be equivalent to omitting the entry entirely.
-		if val != nil {
-			if err := insertKey(d, string(*keyName), val, relaxed); err != nil {
-				return nil, err
-			}
+		// Retain null entries until duplicate keys have been checked.
+		if err := insertKey(d, string(*keyName), val, validationMode); err != nil {
+			return nil, err
 		}
 
 		// We are positioned on the char behind the last parsed dict value.
@@ -651,7 +649,7 @@ func processDictKeys(c context.Context, line *string, level, maxDepth int, relax
 	return d, nil
 }
 
-func parseDict(c context.Context, line *string, level, maxDepth int, relaxed bool) (types.Dict, error) {
+func parseDict(c context.Context, line *string, level, maxDepth, validationMode int, repair bool) (types.Dict, error) {
 	if line == nil || len(*line) == 0 {
 		return nil, errNoDictionary
 	}
@@ -677,9 +675,14 @@ func parseDict(c context.Context, line *string, level, maxDepth int, relaxed boo
 		return nil, errDictionaryNotTerminated
 	}
 
-	d, err := processDictKeys(c, &l, level, maxDepth, relaxed)
+	d, err := processDictKeys(c, &l, level, maxDepth, validationMode, repair)
 	if err != nil {
 		return nil, err
+	}
+	for key, val := range d {
+		if val == nil {
+			delete(d, key)
+		}
 	}
 
 	// position behind '>>'
@@ -887,7 +890,7 @@ func parseNumericOrIndRef(line *string) (types.Object, error) {
 	return parseIndRef(s, l, l1, line, i, i2)
 }
 
-func parseHexLiteralOrDict(c context.Context, l *string, level, maxDepth int, relaxed bool) (val types.Object, err error) {
+func parseHexLiteralOrDict(c context.Context, l *string, level, maxDepth, validationMode int, repair bool) (val types.Object, err error) {
 	if len(*l) < 2 {
 		return nil, errBufNotAvailable
 	}
@@ -900,7 +903,7 @@ func parseHexLiteralOrDict(c context.Context, l *string, level, maxDepth int, re
 		if err := CheckRecursionDepth("parse object", level, maxDepth); err != nil {
 			return nil, err
 		}
-		d, err := parseDict(c, l, level, maxDepth, relaxed)
+		d, err := parseDict(c, l, level, maxDepth, validationMode, repair)
 		if err != nil {
 			return nil, err
 		}
@@ -966,11 +969,11 @@ func parseObjectDepthLimit(maxDepth []int) int {
 	return depthLimit
 }
 
-func parseObjectValue(c context.Context, l *string, level, depthLimit int, relaxed bool) (types.Object, error) {
+func parseObjectValue(c context.Context, l *string, level, depthLimit, validationMode int, repair bool) (types.Object, error) {
 	switch (*l)[0] {
 
 	case '[': // array
-		a, err := parseArray(c, l, level, depthLimit, relaxed)
+		a, err := parseArray(c, l, level, depthLimit, validationMode, repair)
 		if err != nil {
 			return nil, err
 		}
@@ -984,7 +987,7 @@ func parseObjectValue(c context.Context, l *string, level, depthLimit int, relax
 		return *nameObj, nil
 
 	case '<': // hex literal or dict
-		return parseHexLiteralOrDict(c, l, level, depthLimit, relaxed)
+		return parseHexLiteralOrDict(c, l, level, depthLimit, validationMode, repair)
 
 	case '(': // string literal
 		return parseStringLiteral(l)
@@ -992,6 +995,12 @@ func parseObjectValue(c context.Context, l *string, level, depthLimit int, relax
 	default:
 		value, valStr, ok := parseBooleanOrNull(*l)
 		if ok {
+			if token := (*l)[:len(valStr)]; token != valStr {
+				if validationMode != ValidationRelaxed {
+					return nil, fmt.Errorf("%w: %q", errInvalidBooleanOrNull, token)
+				}
+				ShowDigestedSpecViolation(fmt.Sprintf("noncanonical keyword %q", token))
+			}
 			*l = forwardParseBuf(*l, len(valStr))
 			return value, nil
 		}
@@ -1003,7 +1012,8 @@ func parseObjectValue(c context.Context, l *string, level, depthLimit int, relax
 	}
 }
 
-func parseObject(c context.Context, line *string, level, depthLimit int, relaxed bool) (types.Object, error) {
+// parseObject applies validationMode independently of the missing-value and junk recovery enabled by repair.
+func parseObject(c context.Context, line *string, level, depthLimit, validationMode int, repair bool) (types.Object, error) {
 	if noBuf(line) {
 		return nil, errBufNotAvailable
 	}
@@ -1028,7 +1038,7 @@ func parseObject(c context.Context, line *string, level, depthLimit int, relaxed
 		return nil, errBufNotAvailable
 	}
 
-	value, err := parseObjectValue(c, &l, level, depthLimit, relaxed)
+	value, err := parseObjectValue(c, &l, level, depthLimit, validationMode, repair)
 	if err != nil {
 		return nil, err
 	}
@@ -1067,16 +1077,20 @@ func ParseObjectWithPolicy(c context.Context, line *string, level, validationMod
 
 	depthLimit := parseObjectDepthLimit(maxDepth)
 	original := *line
-	value, err := parseObject(c, line, level, depthLimit, false)
+	value, err := parseObject(c, line, level, depthLimit, validationMode, false)
 	if err == nil {
 		return ParseObjectResult{Object: value}, nil
 	}
 	if errors.Is(err, ErrMaxRecursionDepthExceeded) || c.Err() != nil {
 		return ParseObjectResult{}, err
 	}
+	if validationMode != ValidationRelaxed &&
+		(errors.Is(err, errDictionaryDuplicateKey) || errors.Is(err, errInvalidBooleanOrNull)) {
+		return ParseObjectResult{StrictFailure: err}, err
+	}
 	if !policyManagedParseError(err) {
 		*line = original
-		value, err = parseObject(c, line, level, depthLimit, true)
+		value, err = parseObject(c, line, level, depthLimit, validationMode, true)
 		return ParseObjectResult{Object: value}, err
 	}
 
@@ -1086,7 +1100,7 @@ func ParseObjectWithPolicy(c context.Context, line *string, level, validationMod
 	}
 
 	*line = original
-	result.Object, err = parseObject(c, line, level, depthLimit, true)
+	result.Object, err = parseObject(c, line, level, depthLimit, validationMode, true)
 	return result, err
 }
 
@@ -1102,13 +1116,13 @@ func ParseObject(c context.Context, line *string, level int, maxDepth ...int) (t
 
 	depthLimit := parseObjectDepthLimit(maxDepth)
 	original := *line
-	value, err := parseObject(c, line, level, depthLimit, false)
+	value, err := parseObject(c, line, level, depthLimit, ValidationRelaxed, false)
 	if err == nil || errors.Is(err, ErrMaxRecursionDepthExceeded) || c.Err() != nil {
 		return value, err
 	}
 
 	*line = original
-	return parseObject(c, line, level, depthLimit, true)
+	return parseObject(c, line, level, depthLimit, ValidationRelaxed, true)
 }
 
 func createXRefStreamDict(sd *types.StreamDict, objs []int, size int) (*types.XRefStreamDict, error) {
