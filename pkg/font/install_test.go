@@ -18,6 +18,7 @@ package font
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -61,5 +62,38 @@ func TestInstallTrueTypeCollectionRejectsInvalidCounts(t *testing.T) {
 				t.Fatal("expected corrupt TTC error")
 			}
 		})
+	}
+}
+
+// TestParseWindowsMetricsBold uses fsSelection BOLD independently of regular and other style flags.
+func TestParseWindowsMetricsBold(t *testing.T) {
+	for _, version := range []uint16{0, 1, 2, 3, 4, 5} {
+		for _, tt := range []struct {
+			name  string
+			flags uint16
+			bold  bool
+		}{
+			{"unset", 0, false},
+			{"bold", 0x20, true},
+			{"regular", 0x40, false},
+			{"italic", 0x01, false},
+			{"bold italic", 0x21, true},
+			{"other styles", 0x1e, false},
+			{"bold with other styles", 0x3e, true},
+		} {
+			t.Run(fmt.Sprintf("version=%d/%s", version, tt.name), func(t *testing.T) {
+				data := make([]byte, 100)
+				binary.BigEndian.PutUint16(data, version)
+				binary.BigEndian.PutUint16(data[4:], 700) // Weight class does not replace the selection flag.
+				binary.BigEndian.PutUint16(data[62:], tt.flags)
+				fd := ttf{UnitsPerEm: 1000, Bold: !tt.bold}
+				if err := tableForTestData(data).parseWindowsMetricsTable(&fd); err != nil {
+					t.Fatal(err)
+				}
+				if fd.Bold != tt.bold {
+					t.Fatalf("fsSelection %#04x: Bold = %t, want %t", tt.flags, fd.Bold, tt.bold)
+				}
+			})
+		}
 	}
 }

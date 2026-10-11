@@ -106,7 +106,7 @@ type ttf struct {
 	LLx, LLy, URx, URy float64           // head: xMin, yMin, xMax, yMax (fontbox)
 	ItalicAngle        float64           // post: italicAngle
 	FixedPitch         bool              // post: isFixedPitch
-	Bold               bool              // OS/2: usWeightClass == 7
+	Bold               bool              // OS/2: fsSelection bit 5 (BOLD)
 	HorMetricsCount    int               // hhea: numOfLongHorMetrics
 	GlyphCount         int               // maxp: numGlyphs
 	GlyphWidths        []int             // hmtx: fd.HorMetricsCount.advanceWidth
@@ -452,7 +452,7 @@ func (t table) parseWindowsMetricsTable(fd *ttf) error {
 	}
 
 	fsSelection := t.uint16(62)
-	fd.Bold = fsSelection&0x40 > 0
+	fd.Bold = fsSelection&0x20 != 0 // bit 5 BOLD (bit 6 is REGULAR)
 
 	fsFirstCharIndex := t.uint16(64)
 	fd.FirstChar = fsFirstCharIndex
