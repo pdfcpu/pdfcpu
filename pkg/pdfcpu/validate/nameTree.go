@@ -903,6 +903,7 @@ func validateNameTreeValueContext(c context.Context, name string, x *model.XRefT
 }
 
 func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, name string, node *model.Node) (string, string, error) {
+	// see 7.9.6
 	//fmt.Printf("validateNameTreeDictNamesEntry begin %s\n", d)
 
 	// Names: array of the form [key1 value1 key2 value2 ... key n value n]
@@ -934,6 +935,7 @@ func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTabl
 	}
 
 	var key, firstKey, lastKey string
+	var haveFirstKey bool
 
 	for i := 0; i < entries; i++ {
 		if err := contextutil.Check(c); err != nil {
@@ -959,8 +961,9 @@ func validateNameTreeDictNamesEntry(c context.Context, xRefTable *model.XRefTabl
 
 			key = *k
 
-			if firstKey == "" {
+			if !haveFirstKey {
 				firstKey = key
+				haveFirstKey = true
 			}
 
 			lastKey = key
@@ -1041,8 +1044,10 @@ func nameTreeKidContext(name string, o types.Object, i int) string {
 }
 
 func validateNameTreeKids(c context.Context, xRefTable *model.XRefTable, name string, a types.Array, ownerObjNr int, node *model.Node, depth int, specViolations *[]error, visits ...*treeVisit) (string, string, error) {
+	// see 7.9.6
 	visit := treeTraversal(visits, true)
 	var kmin, kmax string
+	var haveKmin bool
 
 	for i, o := range a {
 		if err := contextutil.Check(c); err != nil {
@@ -1081,8 +1086,9 @@ func validateNameTreeKids(c context.Context, xRefTable *model.XRefTable, name st
 			continue
 		}
 		kmax = kmaxKid
-		if kmin == "" {
+		if !haveKmin {
 			kmin = kminKid
+			haveKmin = true
 		}
 
 		node.Kids = append(node.Kids, kidNode)

@@ -107,6 +107,7 @@ func validateNumberTreeKey(xRefTable *model.XRefTable, o types.Object, ownerObjN
 }
 
 func validateNumberTreeDictNumsEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, name string, useIDs bool) (firstKey, lastKey int, err error) {
+	// see 7.9.7
 	// Nums: array of the form [key1 value1 key2 value2 ... key n value n]
 	o, found := d.Find("Nums")
 	if !found {
@@ -141,6 +142,8 @@ func validateNumberTreeDictNumsEntry(c context.Context, xRefTable *model.XRefTab
 	// or
 	// value = indRef of structElementDict.
 
+	var haveFirstKey bool
+
 	for i, o := range a {
 		if err := contextutil.Check(c); err != nil {
 			return 0, 0, err
@@ -156,8 +159,9 @@ func validateNumberTreeDictNumsEntry(c context.Context, xRefTable *model.XRefTab
 				continue
 			}
 
-			if firstKey == 0 {
+			if !haveFirstKey {
 				firstKey = key
+				haveFirstKey = true
 			}
 
 			lastKey = key
@@ -235,6 +239,7 @@ func numberTreeKidContext(name string, o types.Object, i int) string {
 }
 
 func validateNumberTreeDepth(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root, useIDs bool, depth int, visits ...*treeVisit) (firstKey, lastKey int, err error) {
+	// see 7.9.7
 	visit := treeTraversal(visits, false)
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
@@ -259,6 +264,8 @@ func validateNumberTreeDepth(c context.Context, xRefTable *model.XRefTable, name
 			return 0, 0, fmt.Errorf("number tree %s: missing Kids array", name)
 		}
 
+		var haveFirstKey bool
+
 		for i, o := range a {
 			if err := contextutil.Check(c); err != nil {
 				return 0, 0, err
@@ -280,8 +287,9 @@ func validateNumberTreeDepth(c context.Context, xRefTable *model.XRefTable, name
 			if err != nil {
 				return 0, 0, model.WrapRecursionError(numberTreeKidContext(name, o, i), err)
 			}
-			if firstKey == 0 {
+			if !haveFirstKey {
 				firstKey = fk
+				haveFirstKey = true
 			}
 		}
 
