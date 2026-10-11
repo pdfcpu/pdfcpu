@@ -745,6 +745,15 @@ func createXRefTableEntryFromXRefStream(entryType int64, objNr int, c2, c3, offE
 				Incr:            incr}
 
 		objStreams[objNumberRef] = true
+
+	default:
+		// See 7.5.8.3: unknown entry types resolve to null, represented here by a free entry.
+		if log.ReadEnabled() {
+			log.Read.Printf("createXRefTableEntryFromXRefStream: Object #%d has unknown type %d, treated as null\n", objNr, entryType)
+		}
+		var next int64
+		var g int
+		xRefTableEntry = model.XRefTableEntry{Free: true, Offset: &next, Generation: &g, Incr: incr}
 	}
 
 	return xRefTableEntry
