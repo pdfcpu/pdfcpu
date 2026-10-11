@@ -308,7 +308,8 @@ func writeRGBAImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte, e
 
 	for y := range h {
 		for x := range w {
-			c := img.At(x, y).(color.RGBA)
+			// Store unassociated colors alongside the soft mask (11.6.5.2).
+			c := color.NRGBAModel.Convert(img.At(x, y)).(color.NRGBA)
 			if !softMask {
 				if c.A != 0xFF {
 					softMask = true
@@ -345,7 +346,8 @@ func writeRGBA64ImageBuf(xRefTable *XRefTable, img image.Image) ([]byte, []byte,
 
 	for y := range h {
 		for x := range w {
-			c := img.At(x, y).(color.RGBA64)
+			// Store unassociated colors alongside the soft mask (11.6.5.2).
+			c := color.NRGBA64Model.Convert(img.At(x, y)).(color.NRGBA64)
 			if !softMask {
 				if c.A != 0xFFFF {
 					softMask = true
@@ -639,9 +641,9 @@ func convertToRGBA(img image.Image) *image.RGBA {
 	return m
 }
 
-func convertNYCbCrAToRGBA(img *image.NYCbCrA) *image.RGBA {
+func convertNYCbCrAToNRGBA(img *image.NYCbCrA) *image.NRGBA {
 	b := img.Bounds()
-	m := image.NewRGBA(b)
+	m := image.NewNRGBA(b)
 	for y := b.Min.Y; y < b.Max.Y; y++ {
 		for x := b.Min.X; x < b.Max.X; x++ {
 			ycbr := img.YCbCrAt(x, y)
@@ -649,7 +651,7 @@ func convertNYCbCrAToRGBA(img *image.NYCbCrA) *image.RGBA {
 			alphaOffset := (y-b.Min.Y)*stride + (x - b.Min.X)
 			alpha := img.A[alphaOffset]
 			r, g, b := color.YCbCrToRGB(ycbr.Y, ycbr.Cb, ycbr.Cr)
-			m.Set(x, y, color.RGBA{R: r, G: g, B: b, A: alpha})
+			m.Set(x, y, color.NRGBA{R: r, G: g, B: b, A: alpha})
 		}
 	}
 	return m
@@ -824,7 +826,7 @@ func handleRGBImage(xRefTable *XRefTable, img image.Image) ([]byte, []byte, int,
 
 	case *image.NYCbCrA:
 		bpc = 8
-		buf, sm, err = writeRGBAImageBuf(xRefTable, convertNYCbCrAToRGBA(im))
+		buf, sm, err = writeNRGBAImageBuf(xRefTable, convertNYCbCrAToNRGBA(im))
 
 	case *image.Paletted:
 		// In-memory image of uint8 indices into a given palette.

@@ -324,3 +324,70 @@ func TestValidateImageResourceLimitsAddsOverflowContext(t *testing.T) {
 		t.Fatalf("expected render-size overflow context, got %v", err)
 	}
 }
+
+// TestHandleRGBImageStoresUnassociatedColors checks color and mask bytes for premultiplied Go images.
+func TestHandleRGBImageStoresUnassociatedColors(t *testing.T) {
+	img8 := image.NewRGBA(image.Rect(0, 0, 4, 1))
+	for x, c := range []color.RGBA{
+		{R: 0x12, G: 0x34, B: 0x56, A: 0xff},
+		{R: 0x80, G: 0x40, B: 0x20, A: 0x80},
+		{},
+		{R: 1, B: 1, A: 1},
+	} {
+		img8.SetRGBA(x, 0, c)
+	}
+	img16 := image.NewRGBA64(image.Rect(0, 0, 4, 1))
+	for x, c := range []color.RGBA64{
+		{R: 0x1234, G: 0x2345, B: 0x3456, A: 0xffff},
+		{R: 0x8000, G: 0x4000, B: 0x2000, A: 0x8000},
+		{},
+		{R: 1, B: 1, A: 1},
+	} {
+		img16.SetRGBA64(x, 0, c)
+	}
+	for _, tc := range []struct {
+		name         string
+		img, opaque  image.Image
+		colors, mask []byte
+		bpc          int
+	}{
+		{"RGBA", img8, img8.SubImage(image.Rect(0, 0, 1, 1)),
+			[]byte{0x12, 0x34, 0x56, 0xff, 0x7f, 0x3f, 0, 0, 0, 0xff, 0, 0xff}, []byte{0xff, 0x80, 0, 1}, 8},
+		{"RGBA64", img16, img16.SubImage(image.Rect(0, 0, 1, 1)),
+			[]byte{0x12, 0x34, 0x23, 0x45, 0x34, 0x56, 0xff, 0xff, 0x7f, 0xff, 0x3f, 0xff,
+				0, 0, 0, 0, 0, 0, 0xff, 0xff, 0, 0, 0xff, 0xff}, []byte{0xff, 0xff, 0x80, 0, 0, 0, 0, 1}, 16},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			buf, mask, bpc, cs, err := handleRGBImage(nil, tc.img)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(buf, tc.colors) || !bytes.Equal(mask, tc.mask) || bpc != tc.bpc || cs != DeviceRGBCS {
+				t.Fatalf("got colors=%x mask=%x bpc=%d cs=%s; want colors=%x mask=%x bpc=%d DeviceRGB",
+					buf, mask, bpc, cs, tc.colors, tc.mask, tc.bpc)
+			}
+			buf, mask, _, _, err = handleRGBImage(nil, tc.opaque)
+			if err != nil || mask != nil || !bytes.Equal(buf, tc.colors[:3*tc.bpc/8]) {
+				t.Fatalf("opaque image: colors=%x mask=%x err=%v", buf, mask, err)
+			}
+		})
+	}
+}
+
+// TestHandleRGBImagePreservesNYCbCrAColors checks that unassociated YCbCr colors are not unpremultiplied again.
+func TestHandleRGBImagePreservesNYCbCrAColors(t *testing.T) {
+	img := image.NewNYCbCrA(image.Rect(0, 0, 3, 1), image.YCbCrSubsampleRatio444)
+	for x := range 3 {
+		img.Y[x], img.Cb[x], img.Cr[x] = 128, 128, 255
+	}
+	copy(img.A, []byte{255, 128, 0})
+	r, g, b := color.YCbCrToRGB(128, 128, 255)
+	want := bytes.Repeat([]byte{r, g, b}, 3)
+	buf, mask, bpc, cs, err := handleRGBImage(nil, img)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(buf, want) || !bytes.Equal(mask, []byte{255, 128, 0}) || bpc != 8 || cs != DeviceRGBCS {
+		t.Fatalf("got colors=%x mask=%x bpc=%d cs=%s; want colors=%x mask=ff8000 bpc=8 DeviceRGB", buf, mask, bpc, cs, want)
+	}
+}
