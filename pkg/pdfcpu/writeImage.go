@@ -344,44 +344,53 @@ func softMask(xRefTable *model.XRefTable, d *types.StreamDict, w, h, objNr int) 
 	return sm, nil
 }
 
-func imageForCMYKWithoutSoftMask(im *PDFImage) image.Image {
-
-	// Preserve CMYK color model for print applications.
-
-	// TODO support bpc, decode.
-
-	img := image.NewCMYK(image.Rect(0, 0, im.w, im.h))
-	b := im.sd.Content
-	i := 0
-
-	for y := 0; y < im.h; y++ {
-		for x := 0; x < im.w; x++ {
-			img.Set(x, y, color.CMYK{C: b[i], M: b[i+1], Y: b[i+2], K: b[i+3]})
-			i += 4
-		}
+func cmykSample(im *PDFImage, rowOffset, sample int) uint8 {
+	v := packedImageSample(im.sd.Content, rowOffset, sample, im.bpc)
+	switch im.bpc {
+	case 8:
+		return uint8(v)
+	case 16:
+		return uint8(v >> 8)
 	}
-
-	return img
-
+	return uint8(int(v) * 255 / maxValForBits(im.bpc))
 }
 
-func imageForCMYKWithSoftMask(im *PDFImage) image.Image {
-
-	// TODO support bpc, decode.
-
-	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
-	b := im.sd.Content
-	i := 0
-
+func imageForCMYKWithoutSoftMask(im *PDFImage, rowBytes int) image.Image {
+	// Preserve CMYK color model for print applications.
+	// TODO support decode.
+	img := image.NewCMYK(image.Rect(0, 0, im.w, im.h))
 	for y := 0; y < im.h; y++ {
+		rowOffset := y * rowBytes
 		for x := 0; x < im.w; x++ {
-			cr, cg, cb := color.CMYKToRGB(b[i], b[i+1], b[i+2], b[i+3])
-			alpha := im.softMask[y*im.w+x]
-			img.Set(x, y, color.NRGBA{cr, cg, cb, alpha})
-			i += 4
+			sample := x * im.comp
+			img.Set(x, y, color.CMYK{
+				C: cmykSample(im, rowOffset, sample),
+				M: cmykSample(im, rowOffset, sample+1),
+				Y: cmykSample(im, rowOffset, sample+2),
+				K: cmykSample(im, rowOffset, sample+3),
+			})
 		}
 	}
+	return img
+}
 
+func imageForCMYKWithSoftMask(im *PDFImage, rowBytes int) image.Image {
+	// TODO support decode.
+	img := image.NewNRGBA(image.Rect(0, 0, im.w, im.h))
+	for y := 0; y < im.h; y++ {
+		rowOffset := y * rowBytes
+		for x := 0; x < im.w; x++ {
+			sample := x * im.comp
+			cr, cg, cb := color.CMYKToRGB(
+				cmykSample(im, rowOffset, sample),
+				cmykSample(im, rowOffset, sample+1),
+				cmykSample(im, rowOffset, sample+2),
+				cmykSample(im, rowOffset, sample+3),
+			)
+			alpha := im.softMask[y*im.w+x]
+			img.Set(x, y, color.NRGBA{cr, cg, cb, alpha})
+		}
+	}
 	return img
 }
 
@@ -390,10 +399,17 @@ func renderDeviceCMYKToTIFF(im *PDFImage) (io.Reader, string, error) {
 	if log.DebugEnabled() {
 		log.Debug.Printf("renderDeviceCMYKToTIFF: CMYK objNr=%d w=%d h=%d bpc=%d buflen=%d\n", im.objNr, im.w, im.h, im.bpc, len(b))
 	}
-	if im.bpc != 8 {
+	if !types.IntMemberOf(im.bpc, []int{1, 2, 4, 8, 16}) {
 		return nil, "", fmt.Errorf("image obj#%d CMYK: unsupported bits per component %d", im.objNr, im.bpc)
 	}
-	imageBytes, err := checkedImageBytes(im.w, im.h, 4, im.bpc)
+	if im.comp < 4 {
+		return nil, "", fmt.Errorf("image obj#%d CMYK: need at least 4 components, have %d", im.objNr, im.comp)
+	}
+	rowBytes, err := checkedImageRowBytes(im.w, im.comp, im.bpc)
+	if err != nil {
+		return nil, "", fmt.Errorf("image obj#%d CMYK: %w", im.objNr, err)
+	}
+	imageBytes, err := safemath.MultiplyInt64(rowBytes, int64(im.h))
 	if err != nil {
 		return nil, "", fmt.Errorf("image obj#%d CMYK: %w", im.objNr, err)
 	}
@@ -403,9 +419,9 @@ func renderDeviceCMYKToTIFF(im *PDFImage) (io.Reader, string, error) {
 
 	var img image.Image
 	if im.softMask != nil {
-		img = imageForCMYKWithSoftMask(im)
+		img = imageForCMYKWithSoftMask(im, int(rowBytes))
 	} else {
-		img = imageForCMYKWithoutSoftMask(im)
+		img = imageForCMYKWithoutSoftMask(im, int(rowBytes))
 	}
 
 	var buf bytes.Buffer

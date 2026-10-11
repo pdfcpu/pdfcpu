@@ -28,7 +28,11 @@ import (
 
 func cmykExtractionPDF(bpc int, pixels []byte) []byte {
 	var pdf bytes.Buffer
-	pdf.WriteString("%PDF-1.4\n")
+	version := "1.4"
+	if bpc == 16 {
+		version = "1.5"
+	}
+	fmt.Fprintf(&pdf, "%%PDF-%s\n", version)
 	off := make([]int, 6)
 	objects := []string{
 		"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
@@ -54,6 +58,7 @@ func cmykExtractionPDF(bpc int, pixels []byte) []byte {
 	return pdf.Bytes()
 }
 
+// TestExtractImagesRawRejectsInvalidCMYKSamples checks truncated component data.
 func TestExtractImagesRawRejectsInvalidCMYKSamples(t *testing.T) {
 	for _, tt := range []struct {
 		name   string
@@ -62,7 +67,7 @@ func TestExtractImagesRawRejectsInvalidCMYKSamples(t *testing.T) {
 		want   string
 	}{
 		{"short 8-bit", 8, []byte{0}, "corrupt image object: need 4 bytes, have 1"},
-		{"packed 1-bit", 1, []byte{0}, "unsupported bits per component 1"},
+		{"short 4-bit", 4, []byte{0}, "corrupt image object: need 2 bytes, have 1"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := model.NewStatelessConfiguration()
@@ -75,25 +80,30 @@ func TestExtractImagesRawRejectsInvalidCMYKSamples(t *testing.T) {
 	}
 }
 
+// TestExtractImagesRawAcceptsValidCMYKSamples checks extraction at all supported sample depths.
 func TestExtractImagesRawAcceptsValidCMYKSamples(t *testing.T) {
-	conf := model.NewStatelessConfiguration()
-	conf.ValidationMode = model.ValidationStrict
-	images, err := ExtractImagesRaw(t.Context(), bytes.NewReader(cmykExtractionPDF(8, []byte{1, 2, 3, 4})), nil, conf)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(images) != 1 || len(images[0]) != 1 {
-		t.Fatalf("got %d pages of images, want one image on one page", len(images))
-	}
-	im, ok := images[0][4]
-	if !ok || im.FileType != "tif" {
-		t.Fatalf("got image %v, want TIFF for object 4", im)
-	}
-	decoded, err := tiff.Decode(im.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if decoded.Bounds().Dx() != 1 || decoded.Bounds().Dy() != 1 {
-		t.Fatalf("got image bounds %v, want 1x1", decoded.Bounds())
+	for _, bpc := range []int{1, 2, 4, 8, 16} {
+		t.Run(fmt.Sprintf("bpc=%d", bpc), func(t *testing.T) {
+			conf := model.NewStatelessConfiguration()
+			conf.ValidationMode = model.ValidationStrict
+			images, err := ExtractImagesRaw(t.Context(), bytes.NewReader(cmykExtractionPDF(bpc, make([]byte, (4*bpc+7)/8))), nil, conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(images) != 1 || len(images[0]) != 1 {
+				t.Fatalf("got %d pages of images, want one image on one page", len(images))
+			}
+			im, ok := images[0][4]
+			if !ok || im.FileType != "tif" {
+				t.Fatalf("got image %v, want TIFF for object 4", im)
+			}
+			decoded, err := tiff.Decode(im.Reader)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if decoded.Bounds().Dx() != 1 || decoded.Bounds().Dy() != 1 {
+				t.Fatalf("got image bounds %v, want 1x1", decoded.Bounds())
+			}
+		})
 	}
 }
