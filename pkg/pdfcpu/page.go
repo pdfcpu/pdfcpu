@@ -156,6 +156,9 @@ func addPage(c context.Context, ctxSrc, ctxDest *model.Context, pageNr int, page
 	d["Resources"] = inhPAttrs.Resources.Clone()
 	d["Parent"] = pagesIndRef
 	d["MediaBox"] = inhPAttrs.MediaBox.Array()
+	if _, found := d.Find("CropBox"); !found && inhPAttrs.CropBox != nil {
+		d["CropBox"] = inhPAttrs.CropBox.Array()
+	}
 	if inhPAttrs.Rotate%360 > 0 {
 		d["Rotate"] = types.Integer(inhPAttrs.Rotate)
 	}
