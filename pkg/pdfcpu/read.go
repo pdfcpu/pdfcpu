@@ -79,6 +79,7 @@ var (
 	// ErrWrongPassword reports supplied PDF credentials that fail password authentication.
 	ErrWrongPassword = errors.New("please provide the correct password")
 
+	errCircularObjectReference      = errors.New("circular object reference")
 	errCorruptDecodeParms           = errors.New("corrupt decode parameters")
 	errCorruptDictObject            = errors.New("corrupt dict object")
 	errCorruptFilterArray           = errors.New("corrupt filter array")
@@ -182,6 +183,8 @@ func Read(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (*mode
 	}
 	// Share one parsing budget across xref construction and object loading.
 	c = context.WithValue(c, objectReadBudgetKey{}, &objectReadBudgetState{limit: objectReadBudgetLimit(ctx)})
+	// Share active-object tracking across nested reads.
+	c = context.WithValue(c, objectParseKey{}, types.IntSet{})
 
 	if log.InfoEnabled() {
 		if ctx.Reader15 {
@@ -2905,11 +2908,26 @@ func resolveObject(c context.Context, ctx *model.Context, obj types.Object, offs
 	}
 }
 
+type objectParseKey struct{}
+
 // ParseObject parses an object at offset using c for cancellation.
 func ParseObject(c context.Context, ctx *model.Context, offset int64, objNr, genNr int) (types.Object, error) {
 	if log.ReadEnabled() {
 		log.Read.Printf("ParseObject: begin, obj#%d, offset:%d\n", objNr, offset)
 	}
+	inParse, ok := c.Value(objectParseKey{}).(types.IntSet)
+	if !ok {
+		inParse = types.IntSet{}
+		c = context.WithValue(c, objectParseKey{}, inParse)
+	}
+	if inParse[objNr] {
+		return nil, fmt.Errorf("obj#%d: %w", objNr, errCircularObjectReference)
+	}
+	if err := model.CheckRecursionDepth("ParseObject", len(inParse)+1, recursionLimit(ctx)); err != nil {
+		return nil, err
+	}
+	inParse[objNr] = true
+	defer delete(inParse, objNr)
 
 	obj, endInd, streamInd, streamOffset, err := object(c, ctx, offset, objNr, genNr)
 	if err != nil {
