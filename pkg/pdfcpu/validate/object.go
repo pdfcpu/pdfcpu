@@ -1053,7 +1053,29 @@ func validateNumberArrayEntry(xRefTable *model.XRefTable, d types.Dict, ownerObj
 	return a, nil
 }
 
+func validateRectangleCoordinates(xRefTable *model.XRefTable, a types.Array, ownerObjNr int, dictName, entryName string) error {
+	// see 7.9.5
+	for i, raw := range a {
+		objNr := validationObjectNumber(ownerObjNr, raw)
+		o, err := xRefTable.Dereference(raw)
+		if err != nil {
+			return model.WithValidationErrorObject(err, objNr)
+		}
+		if o != nil {
+			continue
+		}
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			err := fmt.Errorf("dict=%s entry=%s missing rectangle coordinate at index %d", dictName, entryName, i)
+			return model.WithValidationErrorObject(err, objNr)
+		}
+		a[i] = types.Integer(0)
+		model.ShowRepaired(fmt.Sprintf("dict=%s entry=%s missing rectangle coordinate at index %d replaced with zero", dictName, entryName, i))
+	}
+	return nil
+}
+
 func validateRectangleEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName, entryName string, required bool, sinceVersion model.Version, validate func(types.Array) bool) (types.Array, error) {
+	// see 7.9.5
 	if log.ValidateEnabled() {
 		log.Validate.Printf("validateRectangleEntry begin: entry=%s\n", entryName)
 	}
@@ -1062,6 +1084,11 @@ func validateRectangleEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr
 		xRefTable, d, ownerObjNr, dictName, entryName, required, sinceVersion, func(a types.Array) bool { return len(a) == 4 },
 	)
 	if err != nil || a == nil {
+		return nil, err
+	}
+
+	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
+	if err := validateRectangleCoordinates(xRefTable, a, objNr, dictName, entryName); err != nil {
 		return nil, err
 	}
 

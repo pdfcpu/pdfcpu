@@ -19,12 +19,73 @@ package model
 import (
 	"context"
 	"errors"
+	"math"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+// TestParseFloatRejectsNonPDFNumbers checks Go-only syntax cannot produce PDF real objects.
+func TestParseFloatRejectsNonPDFNumbers(t *testing.T) {
+	for _, input := range []string{
+		"NaN", "nan", "NAN", "Inf", "+Inf", "-Inf", "Infinity", "-Infinity", "iNfInItY",
+		"1e5", "-1E-5", "0x1p2", "0X1.FP+3", "1_000.0", "1.2.3", "1,2,3", "1.-2.-3",
+		"", ".", "+.", "-", "+", "1a", "١.٥", strings.Repeat("9", 400) + ".0",
+	} {
+		t.Run(input, func(t *testing.T) {
+			got, err := parseFloat(input)
+			if err != nil || got != nil {
+				t.Fatalf("parseFloat = %v, %v; want skipped token", got, err)
+			}
+		})
+	}
+}
+
+// TestParseFloatDecimals preserves valid decimal syntax and existing tolerated spellings.
+func TestParseFloatDecimals(t *testing.T) {
+	for _, tc := range []struct {
+		input string
+		want  float64
+	}{
+		{"0", 0}, {"+17", 17}, {"-98", -98}, {"34.5", 34.5}, {"-3.62", -3.62},
+		{"+123.6", 123.6}, {"4.", 4}, {"-.002", -.002}, {".5", .5}, {"00.50", .5},
+		{"1,5", 1.5}, {"-2,75", -2.75}, {".-5", .5}, {"1.-5", 1.5}, {"1,-5", 1.5},
+		{"0." + strings.Repeat("0", 400) + "1", 0},
+	} {
+		t.Run(tc.input, func(t *testing.T) {
+			got, err := parseFloat(tc.input)
+			f, ok := got.(types.Float)
+			if err != nil || !ok || f.Value() != tc.want {
+				t.Fatalf("parseFloat = %v, %v; want Float %v", got, err, tc.want)
+			}
+		})
+	}
+	got, err := parseFloat("-0.0")
+	f, ok := got.(types.Float)
+	if err != nil || !ok || !math.Signbit(f.Value()) {
+		t.Fatalf("negative zero lost: %v, %v", got, err)
+	}
+}
+
+// TestParseObjectSkipsNonPDFNumbers checks discarded tokens do not consume the next object.
+func TestParseObjectSkipsNonPDFNumbers(t *testing.T) {
+	for _, input := range []string{"NaN", "+Inf", "-Infinity", "1e5", "0x1p2", "1_000.0"} {
+		t.Run(input, func(t *testing.T) {
+			line := input + " 17"
+			got, err := ParseObject(t.Context(), &line, 0)
+			if err != nil || got != nil || line != " 17" {
+				t.Fatalf("first object = %v, %v; remaining = %q", got, err, line)
+			}
+			got, err = ParseObject(t.Context(), &line, 0)
+			n, ok := got.(types.Integer)
+			if err != nil || !ok || n != 17 || line != "" {
+				t.Fatalf("next object = %v, %v; remaining = %q", got, err, line)
+			}
+		})
+	}
+}
 
 // TestParseHexStringWhitespace verifies whitespace does not interrupt digit pairs or final padding.
 func TestParseHexStringWhitespace(t *testing.T) {

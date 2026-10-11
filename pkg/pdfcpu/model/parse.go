@@ -779,23 +779,38 @@ func parseIndRef(s, l, l1 string, line *string, i, i2 int) (types.Object, error)
 	return types.Integer(i), nil
 }
 
+// isPDFReal reports whether s contains decimal digits, an optional sign, and at most one period (7.3.3).
+func isPDFReal(s string) bool {
+	digits, period := false, false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c >= '0' && c <= '9':
+			digits = true
+		case c == '.' && !period:
+			period = true
+		case (c == '+' || c == '-') && i == 0:
+		default:
+			return false
+		}
+	}
+	return digits
+}
+
 func parseFloat(s string) (types.Object, error) {
 	// Replace ',' with '.' to accept comma as decimal separator
 	s = strings.Replace(s, ",", ".", 1)
 
-	f, n := strconv.ParseFloat(s, 64)
-	if n != nil {
-		// Fallback: handle ".-" case (e.g., ".-5")
-		s = strings.Replace(s, ".-", ".", 1)
-		f, err := strconv.ParseFloat(s, 64)
-		if err != nil {
-			// Skip junk
-			return nil, nil
-		}
-		if log.ParseEnabled() {
-			log.Parse.Printf("parseFloat: value is: %f\n", f)
-		}
-		return types.Float(f), nil
+	// Preserve the existing tolerance for ".-" (e.g., ".-5").
+	s = strings.Replace(s, ".-", ".", 1)
+	if !isPDFReal(s) {
+		return nil, nil
+	}
+
+	// With decimal syntax established, ParseFloat reports overflow as a range error.
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return nil, nil
 	}
 
 	if log.ParseEnabled() {

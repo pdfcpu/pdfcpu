@@ -636,7 +636,7 @@ func (ib *ImageBox) render(p *model.Page, pageNr int, images model.ImageMap) err
 
 	missingImg := w == 0 && h == 0
 	if missingImg {
-		w = 200
+		w, h = 200, 200
 	}
 
 	rSrc := types.RectForDim(float64(w), float64(h))

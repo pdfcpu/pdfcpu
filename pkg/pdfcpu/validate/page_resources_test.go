@@ -37,6 +37,91 @@ type pageResourcesTestCase struct {
 	contents           bool
 }
 
+func TestRectangleMissingCoordinates(t *testing.T) {
+	for _, version := range []model.Version{model.V14, model.V17, model.V20} {
+		for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+			modeName := map[int]string{model.ValidationStrict: "strict", model.ValidationRelaxed: "relaxed"}[mode]
+			for _, entryName := range []string{"MediaBox", "BBox"} {
+				for _, tc := range []struct {
+					name     string
+					a        types.Array
+					want     types.Array
+					indirect bool
+					objNr    int
+				}{
+					{"cairo", types.Array{types.Integer(0), types.Integer(0), types.Integer(0), nil},
+						types.NewIntegerArray(0, 0, 0, 0), false, 5},
+					{"all missing", types.Array{nil, nil, nil, nil}, types.NewIntegerArray(0, 0, 0, 0), false, 5},
+					{"indirect array", types.Array{nil, types.Integer(2), types.Float(3.5), types.Integer(4)},
+						types.Array{types.Integer(0), types.Integer(2), types.Float(3.5), types.Integer(4)}, true, 9},
+					{"indirect coordinates", types.Array{*types.NewIndirectRef(7, 0), types.Integer(2), *types.NewIndirectRef(8, 0), types.Integer(4)},
+						types.Array{types.Integer(0), types.Integer(2), *types.NewIndirectRef(8, 0), types.Integer(4)}, false, 7},
+				} {
+					t.Run(version.String()+"/"+modeName+"/"+entryName+"/"+tc.name, func(t *testing.T) {
+						conf := model.NewDefaultConfiguration()
+						conf.ValidationMode = mode
+						ctx, err := model.NewContext(strings.NewReader(""), conf)
+						if err != nil {
+							t.Fatal(err)
+						}
+						ctx.HeaderVersion = &version
+						ctx.Table[7] = model.NewXRefTableEntryGen0(nil)
+						ctx.Table[8] = model.NewXRefTableEntryGen0(types.Float(3.5))
+						ctx.Table[9] = model.NewXRefTableEntryGen0(tc.a)
+						d := types.Dict{entryName: tc.a}
+						if tc.indirect {
+							d[entryName] = *types.NewIndirectRef(9, 0)
+						}
+						before := append(types.Array(nil), tc.a...)
+						_, err = validateRectangleEntry(ctx.XRefTable, d, 5, "testDict", entryName, REQUIRED, model.V10, nil)
+						want := tc.want
+						if mode == model.ValidationStrict {
+							var validationErr *model.ValidationError
+							if !errors.As(err, &validationErr) || validationErr.ObjectNumber() != tc.objNr {
+								t.Fatalf("expected missing-coordinate error attributed to object %d, got %v", tc.objNr, err)
+							}
+							want = before
+						} else if err != nil {
+							t.Fatal(err)
+						}
+						for i, o := range tc.a {
+							if o != want[i] {
+								t.Fatalf("coordinate %d: got %v, want %v", i, o, want[i])
+							}
+						}
+						if ctx.Table[7].Object != nil {
+							t.Fatal("repair modified the referenced null object")
+						}
+					})
+				}
+			}
+		}
+	}
+}
+
+func TestRectangleRejectsInvalidShapeAndType(t *testing.T) {
+	for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+		for _, a := range []types.Array{
+			types.NewIntegerArray(0, 0, 0),
+			types.NewIntegerArray(0, 0, 0, 0, 0),
+			{types.Integer(0), types.Integer(0), types.Integer(0), types.Name("nan")},
+		} {
+			conf := model.NewDefaultConfiguration()
+			conf.ValidationMode = mode
+			ctx, err := model.NewContext(strings.NewReader(""), conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			version := model.V14
+			ctx.HeaderVersion = &version
+			d := types.Dict{"MediaBox": a}
+			if _, err := validateRectangleEntry(ctx.XRefTable, d, 5, "pageDict", "MediaBox", REQUIRED, model.V10, nil); err == nil {
+				t.Fatalf("mode=%d: accepted malformed rectangle %v", mode, a)
+			}
+		}
+	}
+}
+
 func validatePageResourcesTestCase(t *testing.T, tc pageResourcesTestCase, mode int) error {
 	t.Helper()
 	conf := model.NewDefaultConfiguration()
