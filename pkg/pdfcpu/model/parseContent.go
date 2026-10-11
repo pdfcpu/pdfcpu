@@ -45,61 +45,52 @@ func skipDict(l *string) error {
 		return ErrDictionaryCorrupt
 	}
 	s = s[2:]
-	j := 0
-	for {
-		i := strings.IndexAny(s, "<>")
+	depth := 1
+	for len(s) > 0 {
+		i := strings.IndexAny(s, "<>(%")
 		if i < 0 {
 			return ErrDictionaryCorrupt
 		}
-		if s[i] == '<' {
-			if i == len(s)-1 {
+		s = s[i:]
+		var err error
+		switch s[0] {
+		case '(':
+			// Delimiters within strings do not affect dictionary nesting (7.3.4).
+			err = skipStringLiteral(&s)
+		case '%':
+			s, _ = positionToNextEOL(s)
+		case '<':
+			if strings.HasPrefix(s, "<<") {
+				depth++
+				s = s[2:]
+			} else {
+				err = skipHexStringLiteral(&s)
+			}
+		case '>':
+			if !strings.HasPrefix(s, ">>") {
 				return ErrDictionaryCorrupt
 			}
-			if s[i+1] == '<' {
-				j++
-				s = s[i+2:]
-				continue
+			depth--
+			s = s[2:]
+			if depth == 0 {
+				*l = s
+				return nil
 			}
-			s = s[i+1:]
-			continue
 		}
-		if s[i] == '>' {
-			if i == len(s)-1 {
-				return ErrDictionaryCorrupt
-			}
-			if s[i+1] == '>' {
-				if j > 0 {
-					j--
-					s = s[i+2:]
-					continue
-				}
-				*l = s[i+2:]
-				break
-			}
-			s = s[i+1:]
+		if err != nil {
+			return ErrDictionaryCorrupt
 		}
 	}
-	return nil
+	return ErrDictionaryCorrupt
 }
 
 func skipStringLiteral(l *string) error {
+	// Literal strings may contain balanced, unescaped parentheses (7.3.4.2).
 	s := *l
-	i := 0
-	for {
-		i = strings.IndexByte(s, byte(')'))
-		if i <= 0 || i > 0 && s[i-1] != '\\' {
-			break
-		}
-		k := 0
-		for j := i - 1; j >= 0 && s[j] == '\\'; j-- {
-			k++
-		}
-		if k%2 == 0 {
-			break
-		}
-		// Skip \)
-		s = s[i+1:]
+	if !strings.HasPrefix(s, "(") {
+		return errStringLiteralCorrupt
 	}
+	i := balancedParenthesesPrefix(s)
 	if i < 0 {
 		return errStringLiteralCorrupt
 	}
@@ -151,53 +142,125 @@ func skipTJ(l *string) error {
 	}
 }
 
-func lookupEI(l *string) (int, error) {
+// relaxedEIEnd preserves the legacy tolerance for omitted whitespace before EI, as in issue 1080.
+func relaxedEIEnd(s string) bool {
+	if s == "" {
+		return true
+	}
+	if !whitespaceOrEOL(rune(s[0])) {
+		return false
+	}
+	s = strings.TrimLeftFunc(s, whitespaceOrEOL)
+	return s == "" || s[0] == 'Q' && (len(s) == 1 || whitespaceOrEOL(rune(s[1])) || delimiter(s[1]) || s[1] == '%')
+}
+
+func inlineImageEnd(s string, i int, relaxed bool) bool {
+	if !whitespaceOrEOL(rune(s[i-1])) {
+		return relaxed && relaxedEIEnd(s[i+2:])
+	}
+	return i+2 == len(s) || whitespaceOrEOL(rune(s[i+2])) || delimiter(s[i+2]) || s[i+2] == '%'
+}
+
+func lookupASCII85EI(s string, relaxed bool) (int, error) {
+	// ASCII85 image bytes may contain EI tokens; only ~> terminates encoded data (7.4.3).
+	i := strings.Index(s, "~>")
+	if i < 0 {
+		return 0, errBIExpressionCorrupt
+	}
+	tail := strings.TrimLeftFunc(s[i+2:], whitespaceOrEOL)
+	i = len(s) - len(tail)
+	if strings.HasPrefix(tail, "EI") && inlineImageEnd(s, i, relaxed) {
+		return i, nil
+	}
+	return 0, errBIExpressionCorrupt
+}
+
+func lookupEI(l *string, relaxed bool, firstFilter string) (int, error) {
 	s := *l
-	//fmt.Printf("\n%s\n", hex.Dump([]byte(s)))
-	for i := 2; i <= len(s)-2; i++ {
-		if s[i:i+2] != "EI" {
-			continue
-		}
-		j := i + 2
-		ws := 0
-		for j < len(s) && unicode.IsSpace(rune(s[j])) && ws < 2 {
-			j++
-			ws++
-		}
-		switch {
-		case j == len(s) && ws <= 2:
-			// "EI" at end or followed by 1–2 spaces till end
-			return i, nil
-		case ws >= 1 && ws <= 2 && j < len(s) && s[j] == 'Q':
-			// "EI" followed by 1–2 spaces, then 'Q'
-			return i, nil
-		case ws == 0 && j == len(s):
-			// suffix "EI"
+	if firstFilter == "ASCII85Decode" || firstFilter == "A85" {
+		return lookupASCII85EI(s, relaxed)
+	}
+	// Any content operator may follow EI (8.9.7). Do not skip ahead to a later EI Q.
+	for i := 3; i <= len(s)-2; i++ {
+		if s[i:i+2] == "EI" && inlineImageEnd(s, i, relaxed) {
 			return i, nil
 		}
 	}
 	return 0, errBIExpressionCorrupt
 }
 
+// skipBIColorSpaceArray skips an Indexed colour space and its string lookup table (8.9.7).
+func skipBIColorSpaceArray(s string, prn PageResourceNames) (string, error) {
+	s = s[1:]
+	for {
+		s, _ = trimLeftSpace(s, false)
+		if len(s) == 0 {
+			return "", errBIExpressionCorrupt
+		}
+		var err error
+		switch s[0] {
+		case ']':
+			return s[1:], nil
+		case '(':
+			err = skipStringLiteral(&s)
+		case '<':
+			err = skipHexStringLiteral(&s)
+		case '/':
+			s, err = skipBIColorSpaceName(s, prn)
+		default:
+			i, _ := positionToNextWhitespaceOrChar(s, "/[]<>()%")
+			if i <= 0 {
+				return "", errBIExpressionCorrupt
+			}
+			s = s[i:]
+		}
+		if err != nil {
+			return "", err
+		}
+	}
+}
+
 func skipBIColorSpaceName(s string, prn PageResourceNames) (string, error) {
 	s, _ = trimLeftSpace(s, false)
+	if strings.HasPrefix(s, "[") {
+		return skipBIColorSpaceArray(s, prn)
+	}
 	if len(s) < 2 || s[0] != '/' {
 		return "", errBIExpressionCorrupt
 	}
 	s = s[1:]
-	i, _ := positionToNextWhitespaceOrChar(s, "/")
+	i, _ := positionToNextWhitespaceOrChar(s, "/[]<>()%")
 	if i < 0 {
 		return "", errBIExpressionCorrupt
 	}
-	name := s[:i]
+	name, err := types.DecodeName(s[:i])
+	if err != nil {
+		return "", errBIExpressionCorrupt
+	}
 	if !types.MemberOf(name, []string{"DeviceGray", "DeviceRGB", "DeviceCMYK", "Indexed", "G", "RGB", "CMYK", "I"}) {
 		prn["ColorSpace"][name] = true
 	}
 	return s[i:], nil
 }
 
-func skipBI(l *string, prn PageResourceNames) error {
+func firstInlineImageFilter(s string) (string, error) {
+	s, _ = trimLeftSpace(s, false)
+	if strings.HasPrefix(s, "[") {
+		s, _ = trimLeftSpace(s[1:], false)
+		if strings.HasPrefix(s, "]") {
+			return "", nil
+		}
+	}
+	name, err := parseName(&s)
+	if err != nil {
+		return "", errBIExpressionCorrupt
+	}
+	return string(*name), nil
+}
+
+func skipBI(l *string, prn PageResourceNames, relaxed bool) error {
 	s := *l
+	var firstFilter string
 	//fmt.Printf("skipBI <%s>\n", s)
 	for {
 		s = strings.TrimLeftFunc(s, whitespaceOrEOLOrClosingBracket)
@@ -205,7 +268,7 @@ func skipBI(l *string, prn PageResourceNames) error {
 			return errBIExpressionCorrupt
 		}
 		if len(s) > 2 && strings.HasPrefix(s, "ID") && whitespaceOrEOL(rune(s[2])) {
-			i, err := lookupEI(&s)
+			i, err := lookupEI(&s, relaxed, firstFilter)
 			if err != nil {
 				return err
 			}
@@ -219,13 +282,20 @@ func skipBI(l *string, prn PageResourceNames) error {
 				return errBIExpressionCorrupt
 			}
 			token := s[:i]
-			if token == "CS" || token == "ColorSpace" {
+			switch token {
+			case "CS", "ColorSpace":
 				s1, err := skipBIColorSpaceName(s[i:], prn)
 				if err != nil {
 					return err
 				}
 				s = s1
 				continue
+			case "F", "Filter":
+				var err error
+				firstFilter, err = firstInlineImageFilter(s[i:])
+				if err != nil {
+					return err
+				}
 			}
 			s = s[i:]
 			continue
@@ -240,7 +310,7 @@ func skipBI(l *string, prn PageResourceNames) error {
 	return nil
 }
 
-func skipInlineImage(l *string, prn PageResourceNames) (bool, error) {
+func skipInlineImage(l *string, prn PageResourceNames, relaxed bool) (bool, error) {
 	s := *l
 	if !strings.HasPrefix(s, "BI") {
 		return false, nil
@@ -252,14 +322,14 @@ func skipInlineImage(l *string, prn PageResourceNames) (bool, error) {
 		return false, nil
 	}
 	s = s[2:]
-	if err := skipBI(&s, prn); err != nil {
+	if err := skipBI(&s, prn, relaxed); err != nil {
 		return false, err
 	}
 	*l = s
 	return true, nil
 }
 
-func positionToNextContentToken(line *string, prn PageResourceNames) (bool, error) {
+func positionToNextContentToken(line *string, prn PageResourceNames, relaxed bool) (bool, error) {
 	l := *line
 	for {
 		l = strings.TrimLeftFunc(l, whitespaceOrEOL)
@@ -296,7 +366,7 @@ func positionToNextContentToken(line *string, prn PageResourceNames) (bool, erro
 			}
 			continue
 		}
-		ok, err := skipInlineImage(&l, prn)
+		ok, err := skipInlineImage(&l, prn, relaxed)
 		if err != nil {
 			return true, err
 		}
@@ -308,7 +378,7 @@ func positionToNextContentToken(line *string, prn PageResourceNames) (bool, erro
 	}
 }
 
-func nextContentToken(pre string, line *string, prn PageResourceNames) (string, error) {
+func nextContentToken(pre string, line *string, prn PageResourceNames, relaxed bool) (string, error) {
 	// A token is either a name or some chunk terminated by white space or one of /, (, [
 	if noBuf(line) {
 		return "", nil
@@ -319,7 +389,7 @@ func nextContentToken(pre string, line *string, prn PageResourceNames) (string, 
 	//log.Parse.Printf("nextContentToken: start buf= <%s>\n", *line)
 
 	// Skip Tj, TJ and inline images.
-	done, err := positionToNextContentToken(&l, prn)
+	done, err := positionToNextContentToken(&l, prn, relaxed)
 	if err != nil {
 		return t, err
 	}
@@ -339,6 +409,11 @@ func nextContentToken(pre string, line *string, prn PageResourceNames) (string, 
 		l1 = l1[i:]
 		l1 = strings.TrimLeftFunc(l1, whitespaceOrEOL)
 		if !strings.HasPrefix(l1, "<<") {
+			// Resource dictionary keys use decoded names (7.3.5).
+			t, err = types.DecodeName(t)
+			if err != nil {
+				return "", errPageContentCorrupt
+			}
 			t = "/" + t
 			*line = l1
 			return t, nil
@@ -445,7 +520,7 @@ func resourceNameAtPos2(s, name string, prn PageResourceNames) (string, bool) {
 	return "", false
 }
 
-func parseContent(s string) (PageResourceNames, error) {
+func parseContent(s string, relaxed bool) (PageResourceNames, error) {
 	var (
 		pre  string
 		name string
@@ -457,7 +532,7 @@ func parseContent(s string) (PageResourceNames, error) {
 	//fmt.Printf("parseContent:\n%s\n", hex.Dump([]byte(s)))
 
 	for pos := 0; ; {
-		t, err := nextContentToken(pre, &s, prn)
+		t, err := nextContentToken(pre, &s, prn, relaxed)
 		pre = ""
 		if log.ParseEnabled() {
 			log.Parse.Printf("t = <%s>\n", t)

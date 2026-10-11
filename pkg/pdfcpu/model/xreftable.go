@@ -2346,7 +2346,7 @@ func (xRefTable *XRefTable) consolidateResourcesWithContent(pageDict, resDict ty
 	}
 
 	// Calculate resources required by the content stream of this page.
-	prn, err := parseContent(string(bb))
+	prn, err := parseContent(string(bb), xRefTable.ValidationMode == ValidationRelaxed)
 	if err != nil {
 		return fmt.Errorf("%s: %w", contentContext, &contentParseError{err})
 	}
