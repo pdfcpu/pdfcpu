@@ -28,7 +28,6 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/internal/inputlimit"
-	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -584,12 +583,24 @@ func ExportBookmarksJSON(c context.Context, ctx *model.Context, source string, w
 	return true, contextutil.Check(c)
 }
 
-func bmDict(
-	c context.Context,
-	ctx *model.Context,
-	bm Bookmark,
-	parent types.IndirectRef,
-) (types.Dict, error) {
+func bookmarkDestinationName(c context.Context, ctx *model.Context, name string) (string, error) {
+	for {
+		if err := contextutil.Check(c); err != nil {
+			return "", err
+		}
+		_, legacy := ctx.Dests[name]
+		_, found, err := ctx.Names["Dests"].Value(c, name)
+		if err != nil {
+			return "", err
+		}
+		if !legacy && !found {
+			return name, nil
+		}
+		name += "\x01"
+	}
+}
+
+func bmDict(c context.Context, ctx *model.Context, bm Bookmark, parent types.IndirectRef) (types.Dict, error) {
 	if err := contextutil.Check(c); err != nil {
 		return nil, err
 	}
@@ -611,14 +622,18 @@ func bmDict(
 		return nil, fmt.Errorf("bookmark %q: encode title: %w", bm.Title, err)
 	}
 
+	name, err := bookmarkDestinationName(c, ctx, bm.Title)
+	if err != nil {
+		return nil, fmt.Errorf("bookmark %q: destination name: %w", bm.Title, err)
+	}
 	d := types.Dict(map[string]types.Object{
-		"Dest":   types.NewHexLiteral([]byte(bm.Title)),
+		"Dest":   types.NewHexLiteral([]byte(name)),
 		"Title":  types.StringLiteral(*s),
 		"Parent": parent},
 	)
 
-	m := model.NameMap{bm.Title: []types.Dict{d}}
-	if err := ctx.Names["Dests"].Add(c, ctx.XRefTable, bm.Title, o, m, []string{"D", "Dest"}); err != nil {
+	m := model.NameMap{name: []types.Dict{d}}
+	if err := ctx.Names["Dests"].Add(c, ctx.XRefTable, name, o, m, []string{"D", "Dest"}); err != nil {
 		return nil, fmt.Errorf("bookmark %q: add named destination: %w", bm.Title, err)
 	}
 
@@ -737,145 +752,41 @@ func createOutlineItemDict(
 	return createOutlineItemDictDepth(c, ctx, bms, parent, parentPageNr, 0)
 }
 
-func cleanupDestinations(c context.Context, ctx *model.Context, dNamesEmpty bool) error {
-	if dNamesEmpty {
-		delete(ctx.Names, "Dests")
-		if err := ctx.RemoveNameTree(c, "Dests"); err != nil {
-			return fmt.Errorf("remove destinations name tree: %w", err)
-		}
-	}
-
-	if ctx.Dests != nil && len(ctx.Dests) == 0 {
-		delete(ctx.RootDict, "Dests")
-	}
-
-	return nil
-}
-
-func removeDest(c context.Context, ctx *model.Context, name string) (bool, bool, error) {
-	var (
-		dNamesEmpty, ok bool
-		err             error
-	)
-	if dNames := ctx.Names["Dests"]; dNames != nil {
-		// Remove destName from dest nametree.
-		dNamesEmpty, ok, err = dNames.Remove(c, ctx.XRefTable, name)
-		if err != nil {
-			return false, false, fmt.Errorf("remove destination %q from name tree: %w", name, err)
-		}
-	}
-
-	if !ok {
-		if ctx.Dests != nil {
-			// Remove destName from named destinations.
-			ok = ctx.Dests.Delete(name) != nil
-		}
-	}
-
-	return dNamesEmpty, ok, err
-}
-
-func removeNamedDestForOutlineItem(
-	c context.Context,
-	ctx *model.Context,
-	d types.Dict,
-	ir *types.IndirectRef,
-	depth int,
-	visited map[int]bool,
-) (bool, bool, error) {
-	if err := contextutil.Check(c); err != nil {
-		return false, false, err
-	}
-	dest, destFound, err := outlineItemDestination(ctx, d)
-	if err != nil {
-		return false, false, fmt.Errorf("bookmark destination %s action: %w", *ir, err)
-	}
-	if !destFound {
-		return false, false, nil
-	}
-
-	s, err := ctx.DestName(dest)
-	if err != nil {
-		return false, false, fmt.Errorf("bookmark destination %s: resolve destination name: %w", *ir, err)
-	}
-
-	if len(s) == 0 {
-		return false, false, nil
-	}
-
-	dNamesEmpty, ok, err := removeDest(c, ctx, s)
-	if err != nil {
-		return false, false, fmt.Errorf("bookmark destination %s: %w", *ir, err)
-	}
-	if !ok {
-		if log.DebugEnabled() {
-			log.Debug.Printf("unable to remove bookmark destination name: %s\n", s)
-		}
-	}
-
-	first := d["First"]
-	if first != nil {
-		indRef, ok := first.(types.IndirectRef)
-		if !ok {
-			return false, false, fmt.Errorf("bookmark destination %s first kid: expected indirect reference, got %T", *ir, first)
-		}
-		if err := removeNamedDests(c, ctx, &indRef, depth+1, visited); err != nil {
-			return false, false, fmt.Errorf("bookmark destination %s kids: %w", *ir, err)
-		}
-	}
-
-	return dNamesEmpty, true, nil
-}
-
-func removeNamedDests(
-	c context.Context,
-	ctx *model.Context,
-	item *types.IndirectRef,
-	depth int,
-	visited map[int]bool,
-) error {
+func checkBookmarkTree(c context.Context, ctx *model.Context, item *types.IndirectRef, depth int, visited map[int]bool) error {
+	// see 12.3.3
 	if err := contextutil.Check(c); err != nil {
 		return err
 	}
-	if err := checkBookmarkRecursionDepth(ctx, "bookmark destinations", depth); err != nil {
-		return fmt.Errorf("bookmark destinations depth %d: %w", depth, err)
+	if err := checkBookmarkRecursionDepth(ctx, "bookmark tree", depth); err != nil {
+		return err
 	}
 
-	var (
-		d           types.Dict
-		err         error
-		dNamesEmpty bool
-	)
+	var d types.Dict
 	for ir := item; ir != nil; ir = d.IndirectRefEntry("Next") {
 		if err := contextutil.Check(c); err != nil {
 			return err
 		}
-
-		if err := checkBookmarkCycle(ir, visited); err != nil {
-			return fmt.Errorf("bookmark destination %s: %w", *ir, err)
-		}
-
-		if d, err = ctx.DereferenceDict(*ir); err != nil {
-			return fmt.Errorf("bookmark destination %s: dereference outline item: %w", *ir, err)
-		}
-
-		dNamesEmpty1, dNamesChanged, err := removeNamedDestForOutlineItem(c, ctx, d, ir, depth, visited)
-		if err != nil {
+		var err error
+		if d, err = outlineItemDict(ctx, ir, visited); err != nil {
 			return err
 		}
-		if !dNamesChanged {
+		first := d["First"]
+		if first == nil {
 			continue
 		}
-		dNamesEmpty = dNamesEmpty1
-	}
-
-	if err := cleanupDestinations(c, ctx, dNamesEmpty); err != nil {
-		return fmt.Errorf("cleanup bookmark destinations: %w", err)
+		child, ok := first.(types.IndirectRef)
+		if !ok {
+			return fmt.Errorf("outline item %s first kid: expected indirect reference, got %T", *ir, first)
+		}
+		if err := checkBookmarkTree(c, ctx, &child, depth+1, visited); err != nil {
+			return fmt.Errorf("outline item %s kids: %w", *ir, err)
+		}
 	}
 	return nil
 }
 
 // RemoveBookmarks erases all bookmarks from ctx and supports cancellation.
+// Named destinations are retained because other documents may link to them (12.3.2.4).
 // On failure, ctx may contain partial changes and callers must discard it.
 func RemoveBookmarks(c context.Context, ctx *model.Context) (bool, error) {
 	if err := contextutil.Check(c); err != nil {
@@ -896,7 +807,7 @@ func RemoveBookmarks(c context.Context, ctx *model.Context) (bool, error) {
 		return false, nil
 	}
 
-	if err := removeNamedDests(c, ctx, first, 0, map[int]bool{}); err != nil {
+	if err := checkBookmarkTree(c, ctx, first, 0, map[int]bool{}); err != nil {
 		return false, err
 	}
 
@@ -906,6 +817,7 @@ func RemoveBookmarks(c context.Context, ctx *model.Context) (bool, error) {
 	}
 
 	rootDict["Outlines"] = nil
+	ctx.Outlines = nil
 
 	return true, nil
 }
@@ -964,6 +876,7 @@ func AddBookmarks(c context.Context, ctx *model.Context, bms []Bookmark, replace
 	outlinesDict["Count"] = types.Integer(total + visible)
 
 	rootDict["Outlines"] = *outlinesir
+	ctx.Outlines = outlinesDict
 
 	return nil
 }

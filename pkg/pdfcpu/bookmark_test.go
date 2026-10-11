@@ -17,8 +17,10 @@
 package pdfcpu
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -342,12 +344,167 @@ func TestBookmarksForOutlineItemRejectsCycle(t *testing.T) {
 	}
 }
 
-// TestRemoveNamedDestsRejectsCycle verifies named destination removal rejects cycles.
-func TestRemoveNamedDestsRejectsCycle(t *testing.T) {
+// TestRemoveBookmarksRejectsCycle verifies bookmark removal rejects cycles.
+func TestRemoveBookmarksRejectsCycle(t *testing.T) {
 	ctx := cyclicBookmarkContext(t)
+	ctx.Outlines = types.Dict{"First": *types.NewIndirectRef(1, 0)}
 
-	err := removeNamedDests(t.Context(), ctx, types.NewIndirectRef(1, 0), 0, map[int]bool{})
+	_, err := RemoveBookmarks(t.Context(), ctx)
 	if !errors.Is(err, ErrCircularBookmarks) {
 		t.Fatalf("got %v, want ErrCircularBookmarks", err)
+	}
+}
+
+func bookmarkDestinationTestContext(t *testing.T, legacy, link bool) (*model.Context, types.Dict) {
+	t.Helper()
+	ctx, err := CreateContextWithXRefTable(model.NewStatelessConfiguration(), types.PaperSize["A4"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	appendExtractionTestPage(t, ctx)
+	appendExtractionTestPage(t, ctx)
+	if err := AddBookmarks(t.Context(), ctx, []Bookmark{{Title: "shared", PageFrom: 1}}, false); err != nil {
+		t.Fatal(err)
+	}
+	ctx.Outlines, err = ctx.DereferenceDict(ctx.RootDict["Outlines"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	var name types.Object = types.StringLiteral("shared")
+	if legacy {
+		dest, _, err := ctx.Names["Dests"].Value(t.Context(), "shared")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx.Dests = types.Dict{"shared": dest}
+		ctx.RootDict["Dests"] = ctx.Dests
+		delete(ctx.Names, "Dests")
+		delete(ctx.RootDict, "Names")
+		name = types.Name("shared")
+		d, err := ctx.DereferenceDict(*ctx.Outlines.IndirectRefEntry("First"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		d["Dest"] = name
+	}
+	annotation := types.Dict{"Type": types.Name("Annot"), "Subtype": types.Name("Link"), "Dest": name}
+	if link {
+		page, _, _, err := ctx.PageDict(t.Context(), 1, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		page["Annots"] = types.Array{annotation}
+	}
+	return ctx, annotation
+}
+
+// TestBookmarkChangesPreserveNamedDestinations checks removal and replacement retain document-level targets.
+func TestBookmarkChangesPreserveNamedDestinations(t *testing.T) {
+	for _, legacy := range []bool{false, true} {
+		for _, link := range []bool{false, true} {
+			for _, replace := range []bool{false, true} {
+				t.Run(fmt.Sprintf("legacy=%t/link=%t/replace=%t", legacy, link, replace), func(t *testing.T) {
+					ctx, annotation := bookmarkDestinationTestContext(t, legacy, link)
+					ctx.XRefTable.ValidationMode = model.ValidationStrict
+					if replace {
+						if err := AddBookmarks(t.Context(), ctx, []Bookmark{{Title: "shared", PageFrom: 2}}, true); err != nil {
+							t.Fatal(err)
+						}
+					} else if removed, err := RemoveBookmarks(t.Context(), ctx); err != nil || !removed {
+						t.Fatalf("remove: %t, %v", removed, err)
+					}
+					page, err := PageNrFromDestination(t.Context(), ctx, annotation["Dest"])
+					if err != nil || page != 1 {
+						t.Fatalf("original target: page %d, %v; want page 1", page, err)
+					}
+					checkBookmarkChange(t, ctx, replace)
+				})
+			}
+		}
+	}
+}
+
+func checkBookmarkChange(t *testing.T, ctx *model.Context, replace bool) {
+	t.Helper()
+	bms, err := Bookmarks(t.Context(), ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if replace {
+		if len(bms) != 1 || bms[0].PageFrom != 2 {
+			t.Fatalf("replacement bookmarks: %v", bms)
+		}
+	} else if len(bms) != 0 || ctx.RootDict["Outlines"] != nil {
+		t.Fatal("outlines remain after removal")
+	}
+}
+
+// TestBookmarkReplacementAvoidsLegacyNameCollision checks generated names against both destination stores.
+func TestBookmarkReplacementAvoidsLegacyNameCollision(t *testing.T) {
+	ctx, _ := bookmarkDestinationTestContext(t, false, true)
+	dest, _, err := ctx.Names["Dests"].Value(t.Context(), "shared")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx.Dests = types.Dict{"shared\x01": dest}
+	ctx.RootDict["Dests"] = ctx.Dests
+	if err := AddBookmarks(t.Context(), ctx, []Bookmark{{Title: "shared", PageFrom: 2}}, true); err != nil {
+		t.Fatal(err)
+	}
+	ctx.XRefTable.ValidationMode = model.ValidationStrict
+	for _, name := range []types.Object{types.StringLiteral("shared"), types.Name("shared\x01")} {
+		page, err := PageNrFromDestination(t.Context(), ctx, name)
+		if err != nil || page != 1 {
+			t.Fatalf("original target %v: page %d, %v; want page 1", name, page, err)
+		}
+	}
+	checkBookmarkChange(t, ctx, true)
+}
+
+// TestRemoveBookmarksTraversalChecks retains cycle, depth, and cancellation checks without changing destinations.
+func TestRemoveBookmarksTraversalChecks(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		want error
+	}{
+		{"child cycle", ErrCircularBookmarks},
+		{"depth", model.ErrMaxRecursionDepthExceeded},
+		{"canceled", context.Canceled},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, annotation := bookmarkDestinationTestContext(t, false, true)
+			first := ctx.Outlines.IndirectRefEntry("First")
+			d, err := ctx.DereferenceDict(*first)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c := t.Context()
+			switch tc.name {
+			case "child cycle":
+				d["First"] = *first
+			case "depth":
+				ctx.Configuration.Limits.MaxRecursionDepth = 1
+				for range 2 {
+					child := types.Dict{"Dest": types.StringLiteral("shared")}
+					ir, err := ctx.IndRefForNewObject(child)
+					if err != nil {
+						t.Fatal(err)
+					}
+					d["First"] = *ir
+					d = child
+				}
+			case "canceled":
+				var cancel context.CancelFunc
+				c, cancel = context.WithCancel(c)
+				cancel()
+			}
+			if _, err := RemoveBookmarks(c, ctx); !errors.Is(err, tc.want) {
+				t.Fatalf("got %v, want %v", err, tc.want)
+			}
+			page, err := PageNrFromDestination(t.Context(), ctx, annotation["Dest"])
+			if err != nil || page != 1 {
+				t.Fatalf("destination changed on failure: page %d, %v", page, err)
+			}
+		})
 	}
 }
