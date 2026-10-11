@@ -61,6 +61,28 @@ func TestDetectKeywordsKeepsEndobjAfterLiteral(t *testing.T) {
 	}
 }
 
+// TestDetectKeywordsTrailingXref checks that an unterminated xref suffix cannot read past the buffer.
+func TestDetectKeywordsTrailingXref(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		line    string
+		wantEnd int
+	}{
+		{"trailing xref", "endobjxref", -1},
+		{"xref after nonterminator", "endobjXxref", -1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			end, stream, err := DetectKeywords(t.Context(), tc.line)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if end != tc.wantEnd || stream != -1 {
+				t.Fatalf("got endobj=%d stream=%d, want endobj=%d stream=-1", end, stream, tc.wantEnd)
+			}
+		})
+	}
+}
+
 // TestDetectKeywordsLongInput checks that scanning many literals does not repeatedly rescan a trailing comment.
 func TestDetectKeywordsLongInput(t *testing.T) {
 	if testing.Short() {

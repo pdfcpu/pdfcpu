@@ -1355,8 +1355,8 @@ func detectMarker(line, marker string) int {
 		line = line[off:]
 		if marker == "endobj" {
 			j := strings.Index(line, "xref")
-			if j >= 0 {
-				r := rune(line[j+4])
+			if j >= 0 && j+len("xref") < len(line) {
+				r := rune(line[j+len("xref")])
 				if isMarkerTerminated(r) {
 					return ind
 				}
