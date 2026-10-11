@@ -18,6 +18,7 @@ package filter
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -61,10 +62,14 @@ func (f ccittDecode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) 
 	if ok {
 		cols = col
 	}
+	if cols <= 0 {
+		return nil, fmt.Errorf("CCITT decode: \"Columns\" must be > 0, got %d", cols)
+	}
 
 	rows, ok := f.parms["Rows"]
-	if !ok {
-		return nil, errors.New("CCITT decode: missing DecodeParam \"Rows\"")
+	if !ok || rows <= 0 {
+		// An unknown height requires decoding through the end of the data.
+		rows = ccitt.AutoDetectHeight
 	}
 
 	blackIs1 := false

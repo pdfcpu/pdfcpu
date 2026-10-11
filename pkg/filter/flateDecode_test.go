@@ -260,7 +260,7 @@ func TestFilterErrorsUseOperationContext(t *testing.T) {
 			want:       "CCITT decode",
 			mechanical: "ccittDecode",
 			decode: func() error {
-				_, err := (ccittDecode{baseFilter{parms: map[string]int{}}}).Decode(bytes.NewReader(nil))
+				_, err := (ccittDecode{baseFilter{parms: map[string]int{"Columns": 0}}}).Decode(bytes.NewReader(nil))
 				return err
 			},
 		},
