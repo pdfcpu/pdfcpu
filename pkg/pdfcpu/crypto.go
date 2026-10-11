@@ -45,8 +45,6 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
-	"golang.org/x/text/secure/precis"
-	"golang.org/x/text/unicode/norm"
 )
 
 var (
@@ -490,13 +488,9 @@ func validateOwnerPasswordAES256(ctx *model.Context) (ok bool, err error) {
 		return false, nil
 	}
 
-	opw, err := processInput(ctx.OwnerPW)
+	opw, err := preparePassword(ctx.OwnerPW, false)
 	if err != nil {
 		return false, err
-	}
-
-	if len(opw) > 127 {
-		opw = opw[:127]
 	}
 
 	// Algorithm 3.2a 3.
@@ -533,13 +527,9 @@ func decryptUE(ctx *model.Context, upw []byte) error {
 }
 
 func validateUserPasswordAES256(ctx *model.Context) (ok bool, err error) {
-	upw, err := processInput(ctx.UserPW)
+	upw, err := preparePassword(ctx.UserPW, false)
 	if err != nil {
 		return false, err
-	}
-
-	if len(upw) > 127 {
-		upw = upw[:127]
 	}
 
 	// Algorithm 3.2a 4,
@@ -554,21 +544,6 @@ func validateUserPasswordAES256(ctx *model.Context) (ok bool, err error) {
 	}
 
 	return true, nil
-}
-
-func processInput(input string) ([]byte, error) {
-	// Create a new Precis profile for SASLprep
-	p := precis.NewIdentifier(
-		precis.BidiRule,
-		precis.Norm(norm.NFKC),
-	)
-
-	output, err := p.String(input)
-	if err != nil {
-		return nil, err
-	}
-
-	return []byte(output), nil
 }
 
 func hashRev6(input, pw, U []byte) ([]byte, int, error) {
@@ -628,13 +603,9 @@ func validateOwnerPasswordAES256Rev6(ctx *model.Context) (ok bool, err error) {
 	}
 
 	// Process PW with SASLPrep profile (RFC 4013) of stringprep (RFC 3454).
-	opw, err := processInput(ctx.OwnerPW)
+	opw, err := preparePassword(ctx.OwnerPW, false)
 	if err != nil {
 		return false, err
-	}
-
-	if len(opw) > 127 {
-		opw = opw[:127]
 	}
 
 	// Algorithm 12
@@ -675,12 +646,9 @@ func validateUserPasswordAES256Rev6(ctx *model.Context) (bool, error) {
 		return false, errors.New("UE: invalid length")
 	}
 
-	upw, err := processInput(ctx.UserPW)
+	upw, err := preparePassword(ctx.UserPW, false)
 	if err != nil {
 		return false, err
-	}
-	if len(upw) > 127 {
-		upw = upw[:127]
 	}
 
 	// Validate U prefix
@@ -2184,7 +2152,10 @@ func calcOAndUAES256(ctx *model.Context, d types.Dict) (err error) {
 	}
 
 	u := append(make([]byte, 32), b...)
-	upw := []byte(ctx.UserPW)
+	upw, err := preparePassword(ctx.UserPW, true)
+	if err != nil {
+		return fmt.Errorf("user password: %w", err)
+	}
 	h := sha256.Sum256(append(upw, validationSalt(u)...))
 
 	ctx.E.U = append(h[:], b...)
@@ -2199,7 +2170,10 @@ func calcOAndUAES256(ctx *model.Context, d types.Dict) (err error) {
 	}
 
 	o := append(make([]byte, 32), b...)
-	opw := []byte(ctx.OwnerPW)
+	opw, err := preparePassword(ctx.OwnerPW, true)
+	if err != nil {
+		return fmt.Errorf("owner password: %w", err)
+	}
 	c := append(opw, validationSalt(o)...)
 	h = sha256.Sum256(append(c, ctx.E.U...))
 	ctx.E.O = append(h[:], b...)
@@ -2248,7 +2222,10 @@ func calcOAndUAES256Rev6(ctx *model.Context, d types.Dict) (err error) {
 	}
 
 	u := append(make([]byte, 32), b...)
-	upw := []byte(ctx.UserPW)
+	upw, err := preparePassword(ctx.UserPW, true)
+	if err != nil {
+		return fmt.Errorf("user password: %w", err)
+	}
 	h, _, err := hashRev6(append(upw, validationSalt(u)...), upw, nil)
 	if err != nil {
 		return err
@@ -2266,7 +2243,10 @@ func calcOAndUAES256Rev6(ctx *model.Context, d types.Dict) (err error) {
 	}
 
 	o := append(make([]byte, 32), b...)
-	opw := []byte(ctx.OwnerPW)
+	opw, err := preparePassword(ctx.OwnerPW, true)
+	if err != nil {
+		return fmt.Errorf("owner password: %w", err)
+	}
 	c := append(opw, validationSalt(o)...)
 	h, _, err = hashRev6(append(c, ctx.E.U...), opw, ctx.E.U)
 	if err != nil {
