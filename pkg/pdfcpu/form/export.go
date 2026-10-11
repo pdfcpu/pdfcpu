@@ -593,13 +593,17 @@ func header(xRefTable *model.XRefTable, source string) Header {
 	return h
 }
 
-func fieldsForAnnots(c context.Context, xRefTable *model.XRefTable, annots, fields types.Array) (map[string]fieldInfo, error) {
-	m := map[string]fieldInfo{}
-	var prevId string
+func fieldsForAnnots(c context.Context, xRefTable *model.XRefTable, annots, fields types.Array) ([]fieldInfo, error) {
+	var result []fieldInfo
+	seen := map[string]bool{}
 
 	for i, v := range annots {
 		if err := contextutil.Check(c); err != nil {
 			return nil, err
+		}
+		if _, ok := v.(types.Dict); ok {
+			// Relaxed validation may retain direct annotations, but form widgets are referenced indirectly.
+			continue
 		}
 		indRef, err := indirectRef(v, "page Annots", i)
 		if err != nil {
@@ -618,13 +622,13 @@ func fieldsForAnnots(c context.Context, xRefTable *model.XRefTable, annots, fiel
 			fi.indRef = &indRef
 		}
 
-		if fi.id != prevId {
-			m[fi.id] = *fi
-			prevId = fi.id
+		if !seen[fi.id] {
+			seen[fi.id] = true
+			result = append(result, *fi)
 		}
 	}
 
-	return m, nil
+	return result, nil
 }
 
 func exportBtn(xRefTable *model.XRefTable, i int, form *Form, d types.Dict, id, name, altName string, locked bool, ok *bool, ff *types.Integer) error {
@@ -774,12 +778,12 @@ func exportPageField(c context.Context, ft string, xRefTable *model.XRefTable, i
 	return err
 }
 
-func exportPageFields(c context.Context, xRefTable *model.XRefTable, i int, form *Form, m map[string]fieldInfo, ok *bool) error {
-	for id, fi := range m {
+func exportPageFields(c context.Context, xRefTable *model.XRefTable, i int, form *Form, fields []fieldInfo, ok *bool) error {
+	for _, fi := range fields {
 		if err := contextutil.Check(c); err != nil {
 			return err
 		}
-		name := fi.name
+		id, name := fi.id, fi.name
 
 		d, err := xRefTable.DereferenceDict(*fi.indRef)
 		if err != nil {
@@ -864,12 +868,12 @@ func ExportForm(c context.Context, xRefTable *model.XRefTable, source string) (*
 			return nil, false, fmt.Errorf("page %d: Annots: %w", i, err)
 		}
 
-		m, err := fieldsForAnnots(c, xRefTable, arr, fields)
+		pageFields, err := fieldsForAnnots(c, xRefTable, arr, fields)
 		if err != nil {
 			return nil, false, fmt.Errorf("page %d: resolve fields: %w", i, err)
 		}
 
-		if err := exportPageFields(c, xRefTable, i, &form, m, &ok); err != nil {
+		if err := exportPageFields(c, xRefTable, i, &form, pageFields, &ok); err != nil {
 			return nil, false, fmt.Errorf("page %d: export fields: %w", i, err)
 		}
 	}
