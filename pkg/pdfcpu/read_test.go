@@ -467,6 +467,31 @@ func TestDereferencedObjectClassifiesUnregisteredObject(t *testing.T) {
 	}
 }
 
+// TestDereferencedObjectKeepsEndobjAfterLiteral covers keyword scanning through the indexed-object read path.
+func TestDereferencedObjectKeepsEndobjAfterLiteral(t *testing.T) {
+	input := "4 0 obj\n(abc)endobj\n5 0 obj\n<</T (def)/Length 3>>\nstream\nxyz\nendstream\nendobj\n"
+	ctx, err := model.NewContext(strings.NewReader(input), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	offset, generation := int64(0), 0
+	ctx.Table[4] = &model.XRefTableEntry{Offset: &offset, Generation: &generation}
+	obj, err := dereferencedObject(t.Context(), ctx, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, ok := obj.(types.StringLiteral); !ok || got != "abc" {
+		t.Fatalf("got %T %v, want string literal abc", obj, obj)
+	}
+	_, end, _, _, err := object(t.Context(), ctx, offset, 4, generation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := strings.Index(input, "endobj"); end != want {
+		t.Fatalf("endobj at %d, want %d", end, want)
+	}
+}
+
 func TestRegisterXRefObjectsTracksEOLOffsets(t *testing.T) {
 	for _, eol := range []string{"\n", "\r\n"} {
 		t.Run(fmt.Sprintf("EOL=%q", eol), func(t *testing.T) {

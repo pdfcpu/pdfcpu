@@ -426,28 +426,6 @@ func TestDecodeNameHexValid(t *testing.T) {
 	}
 }
 
-// TestDetectNonEscaped verifies detection of non-escaped delimiters.
-func TestDetectNonEscaped(t *testing.T) {
-	testcases := []struct {
-		input string
-		want  int
-	}{
-		{"", -1},
-		{" ( ", 1},
-		{" \\( )", -1},
-		{"\\(", -1},
-		{"   \\(   ", -1},
-		{"\\()(", 3},
-		{" \\(\\((abc)", 5},
-	}
-	for _, tc := range testcases {
-		got := detectNonEscaped(tc.input, "(")
-		if tc.want != got {
-			t.Errorf("%s, want: %d, got: %d", tc.input, tc.want, got)
-		}
-	}
-}
-
 // TestDetectKeywords verifies keyword detection.
 func TestDetectKeywords(t *testing.T) {
 	msg := "detectKeywords"
