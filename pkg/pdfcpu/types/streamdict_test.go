@@ -85,6 +85,39 @@ func TestDecodeRejectsNonTerminalOpaqueImageStream(t *testing.T) {
 	}
 }
 
+// TestStreamDictReencodesFlatePredictor verifies edits retain the original predictor parameters.
+func TestStreamDictReencodesFlatePredictor(t *testing.T) {
+	sd := StreamDict{
+		Dict:    NewDict(),
+		Content: []byte("abcdef"),
+		FilterPipeline: []PDFFilter{{
+			Name: filter.Flate,
+			DecodeParms: Dict{
+				"Predictor": Integer(filter.PredictorUp),
+				"Columns":   Integer(3),
+			},
+		}},
+	}
+	if err := sd.Encode(); err != nil {
+		t.Fatal(err)
+	}
+	sd.Content = nil
+	if err := sd.Decode(); err != nil {
+		t.Fatal(err)
+	}
+	sd.Content = append(sd.Content, []byte("ghi")...)
+	if err := sd.Encode(); err != nil {
+		t.Fatal(err)
+	}
+	sd.Content = nil
+	if err := sd.Decode(); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := string(sd.Content), "abcdefghi"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
 // TestDecodeLengthWithLimitRejectsOversizedPrefixWithoutFilters covers raw and previously decoded streams.
 func TestDecodeLengthWithLimitRejectsOversizedPrefixWithoutFilters(t *testing.T) {
 	for _, tc := range []struct {

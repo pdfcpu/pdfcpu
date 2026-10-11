@@ -165,12 +165,10 @@ func (f flate) Encode(r io.Reader) (io.Reader, error) {
 		log.Trace.Println("EncodeFlate begin")
 	}
 
-	// TODO Optional decode parameters may need predictor preprocessing.
-
 	var b bytes.Buffer
 	w := acquireZlibWriter(&b)
 
-	written, err := io.Copy(w, r)
+	written, err := f.encodePreProcess(w, r)
 	if err != nil {
 		_ = releaseZlibWriter(w, false)
 		return nil, err
@@ -184,6 +182,119 @@ func (f flate) Encode(r io.Reader) (io.Reader, error) {
 	}
 
 	return &b, nil
+}
+
+// encodePreProcess applies the forward predictor before Flate compression (see 7.4.4.4).
+func (f flate) encodePreProcess(w io.Writer, r io.Reader) (int64, error) {
+	predictor, found := f.parms["Predictor"]
+	if !found || predictor == PredictorNo {
+		return io.Copy(w, r)
+	}
+	if err := validatePredictor(predictor); err != nil {
+		return 0, err
+	}
+	colors, bpc, columns, err := f.parameters()
+	if err != nil {
+		return 0, err
+	}
+	if predictor == PredictorTIFF && bpc != 8 {
+		return 0, fmt.Errorf("flate encode: TIFF predictor with BitsPerComponent %d unsupported", bpc)
+	}
+	rowSize, rowLen, bytesPerPixel, err := predictorRowParams(predictor, colors, bpc, columns)
+	if err != nil {
+		return 0, err
+	}
+	if limit := f.decodeLimit(-1); limit >= 0 && int64(rowLen) > limit {
+		return 0, ErrDecodeLimitExceeded
+	}
+	return encodePredictorRows(w, r, predictor, colors, rowSize, rowLen, bytesPerPixel)
+}
+
+func encodePredictorRows(w io.Writer, r io.Reader, predictor, colors, rowSize, rowLen, bytesPerPixel int) (int64, error) {
+	current := make([]byte, rowSize)
+	previous := make([]byte, rowSize)
+	encoded := make([]byte, rowLen)
+	var candidate []byte
+	if predictor == PredictorOptimum {
+		candidate = make([]byte, rowSize)
+	}
+	var written int64
+	for {
+		n, err := io.ReadFull(r, current)
+		if err == io.EOF {
+			return written, nil
+		}
+		if err != nil {
+			return written, fmt.Errorf("flate encode: incomplete predictor row: %w", err)
+		}
+		written += int64(n)
+		if predictor == PredictorTIFF {
+			encodeTIFFRow(encoded, current, colors)
+		} else {
+			filter := byte(predictor - PredictorNone)
+			if predictor == PredictorOptimum {
+				filter = bestPNGFilter(encoded[1:], candidate, current, previous, bytesPerPixel)
+			} else {
+				filterPNGRow(encoded[1:], current, previous, filter, bytesPerPixel)
+			}
+			encoded[0] = filter
+		}
+		n, err = w.Write(encoded)
+		if err != nil {
+			return written, err
+		}
+		if n != len(encoded) {
+			return written, io.ErrShortWrite
+		}
+		current, previous = previous, current
+	}
+}
+
+func encodeTIFFRow(dst, src []byte, colors int) {
+	copy(dst, src)
+	for i := len(src) - 1; i >= colors; i-- {
+		dst[i] -= src[i-colors]
+	}
+}
+
+func bestPNGFilter(dst, candidate, current, previous []byte, bytesPerPixel int) byte {
+	var best byte
+	bestScore := int64(-1)
+	for filter := byte(PNGNone); filter <= PNGPaeth; filter++ {
+		filterPNGRow(candidate, current, previous, filter, bytesPerPixel)
+		var score int64
+		for _, b := range candidate {
+			score += int64(abs(int(int8(b))))
+		}
+		if bestScore < 0 || score < bestScore {
+			best, bestScore = filter, score
+			copy(dst, candidate)
+		}
+	}
+	return best
+}
+
+func filterPNGRow(dst, current, previous []byte, filter byte, bytesPerPixel int) {
+	for i, b := range current {
+		var left, upperLeft byte
+		if i >= bytesPerPixel {
+			left = current[i-bytesPerPixel]
+			upperLeft = previous[i-bytesPerPixel]
+		}
+		above := previous[i]
+		switch filter {
+		case PNGNone:
+			dst[i] = b
+		case PNGSub:
+			dst[i] = b - left
+		case PNGUp:
+			dst[i] = b - above
+		case PNGAverage:
+			dst[i] = b - byte((int(left)+int(above))/2)
+		case PNGPaeth:
+			dst[i] = b - paeth(left, above, upperLeft)
+		}
+	}
 }
 
 // Decode implements decoding for a Flate filter.
@@ -285,52 +396,6 @@ func predictorRowParams(predictor, colors, bpc, columns int) (rowSize, rowLen, b
 
 	return rowSize, rowLen, bytesPerPixel, nil
 }
-
-// Each prediction value implies (a) certain row filter(s).
-// func validateRowFilter(f, p int) error {
-
-// 	switch p {
-
-// 	case PredictorNone:
-// 		if !intMemberOf(f, []int{PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth}) {
-// 			return fmt.Errorf("pdfcpu: validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
-// 		}
-// 		// if f != PNGNone {
-// 		// 	return fmt.Errorf("validateRowFilter: expected row filter #%02x, got: #%02x", PNGNone, f)
-// 		// }
-
-// 	case PredictorSub:
-// 		if f != PNGSub {
-// 			return fmt.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGSub, f)
-// 		}
-
-// 	case PredictorUp:
-// 		if f != PNGUp {
-// 			return fmt.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGUp, f)
-// 		}
-
-// 	case PredictorAverage:
-// 		if f != PNGAverage {
-// 			return fmt.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGAverage, f)
-// 		}
-
-// 	case PredictorPaeth:
-// 		if f != PNGPaeth {
-// 			return fmt.Errorf("pdfcpu: validateRowFilter: expected row filter #%02x, got: #%02x", PNGPaeth, f)
-// 		}
-
-// 	case PredictorOptimum:
-// 		if !intMemberOf(f, []int{PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth}) {
-// 			return fmt.Errorf("pdfcpu: validateRowFilter: PredictorOptimum, unexpected row filter #%02x", f)
-// 		}
-
-// 	default:
-// 		return fmt.Errorf("pdfcpu: validateRowFilter: unexpected predictor #%02x", p)
-
-// 	}
-
-// 	return nil
-// }
 
 func applyHorDiff(row []byte, colors int) ([]byte, error) {
 	// This works for 8 bits per color only.
