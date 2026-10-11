@@ -14,9 +14,12 @@ import (
 )
 
 const (
-	maxBERDepth   = 64
+	maxBERDepth = 64
+
+	// maxBERObjects bounds allocated parser nodes; validated definite-length subtrees share one node.
 	maxBERObjects = 100_000
-	maxBERBytes   = 64 << 20
+
+	maxBERBytes = 64 << 20
 )
 
 type asn1Object interface {
@@ -275,6 +278,21 @@ func readObjectWithState(ber []byte, offset, depth int, state *berParseState) (a
 	}
 	if depth >= maxBERDepth {
 		return nil, 0, fmt.Errorf("BER depth exceeds limit %d", maxBERDepth)
+	}
+
+	if !indefinite {
+		unchanged, err := scanBERContent(ber, offset, contentEnd, depth+1)
+		if err != nil {
+			return nil, 0, fmt.Errorf("read constructed content at offset %d: %w", offset, err)
+		}
+		if unchanged {
+			// Preserve validated content as a slice instead of allocating an object for every nested value.
+			obj := asn1Primitive{tagBytes: ber[tagStart:tagEnd], content: ber[offset:contentEnd]}
+			if _, err := obj.encodedLen(); err != nil {
+				return nil, 0, err
+			}
+			return obj, contentEnd, nil
+		}
 	}
 
 	content, contentEnd, contentLength, err := readStructuredContentWithState(ber, offset, contentEnd, indefinite, depth+1, state)
