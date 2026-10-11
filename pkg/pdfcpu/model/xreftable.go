@@ -3444,14 +3444,30 @@ func weaveInPage(c context.Context, ctx *Context, parent types.IndirectRef, page
 	if err != nil {
 		return nil, err
 	}
+	materializeInheritedPageAttrs(d1, inhPAttrs)
 	d1["Parent"] = parent
-	if _, found := d1["Rotate"]; !found {
-		d1["Rotate"] = types.Integer(inhPAttrs.Rotate)
-	}
-	if _, found := d1["MediaBox"]; !found {
-		d1["MediaBox"] = inhPAttrs.MediaBox.Array()
-	}
 	return indRef, nil
+}
+
+// materializeInheritedPageAttrs preserves effective attributes before a page acquires new ancestors.
+// See PDF 2.0, 7.7.3.4 and Table 31.
+func materializeInheritedPageAttrs(d types.Dict, attrs *InheritedPageAttrs) {
+	if _, found := d["Rotate"]; !found {
+		d["Rotate"] = types.Integer(attrs.Rotate)
+	}
+	if _, found := d["MediaBox"]; !found {
+		d["MediaBox"] = attrs.MediaBox.Array()
+	}
+	if _, found := d["CropBox"]; !found {
+		crop := attrs.CropBox
+		if crop == nil {
+			crop = attrs.MediaBox
+		}
+		d["CropBox"] = crop.Array()
+	}
+	if _, found := d["Resources"]; !found && attrs.Resources != nil {
+		d["Resources"] = attrs.Resources.Clone()
+	}
 }
 
 // Weave in ctx's pages: for each page weave in the corresponding ctx page as long as there is one.
@@ -3589,13 +3605,8 @@ func (xRefTable *XRefTable) AppendPages(c context.Context, rootPageIndRef *types
 		if err != nil {
 			return 0, err
 		}
+		materializeInheritedPageAttrs(d, inhPAttrs)
 		d["Parent"] = *indRef1
-		if _, found := d["Rotate"]; !found {
-			d["Rotate"] = types.Integer(inhPAttrs.Rotate)
-		}
-		if _, found := d["MediaBox"]; !found {
-			d["MediaBox"] = inhPAttrs.MediaBox.Array()
-		}
 		kids1 = append(kids1, *indRef2)
 	}
 	d1["Kids"] = kids1
