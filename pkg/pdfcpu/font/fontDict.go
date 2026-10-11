@@ -827,33 +827,22 @@ func bf(b *bytes.Buffer, ttf font.TTFLight, usedGIDs map[uint16]bool, subFont bo
 	}
 	sort.Ints(gids)
 
-	c := 100
-	if len(gids) < 100 {
-		c = len(gids)
-	}
-	l := c
-
-	fmt.Fprintf(b, "%d beginbfchar\n", c)
-	j := 1
-	for i := 0; i < l; i++ {
-		gid := gids[i]
-		fmt.Fprintf(b, "<%04X> <", gid)
-		u := ttf.ToUnicode[uint16(gid)]
-		s := utf16.Encode([]rune{rune(u)})
-		for _, v := range s {
-			fmt.Fprintf(b, "%04X", v)
-		}
-		fmt.Fprintf(b, ">\n")
-		if j%100 == 0 {
-			b.WriteString("endbfchar\n")
-			if l-i < 100 {
-				c = l - i
+	// A bfchar block holds at most 100 mappings (9.10.3; Adobe Technical Note 5014).
+	l := len(gids)
+	for start := 0; start == 0 || start < l; start += 100 {
+		end := min(start+100, l)
+		fmt.Fprintf(b, "%d beginbfchar\n", end-start)
+		for _, gid := range gids[start:end] {
+			fmt.Fprintf(b, "<%04X> <", gid)
+			u := ttf.ToUnicode[uint16(gid)]
+			s := utf16.Encode([]rune{rune(u)})
+			for _, v := range s {
+				fmt.Fprintf(b, "%04X", v)
 			}
-			fmt.Fprintf(b, "%d beginbfchar\n", c)
+			fmt.Fprintf(b, ">\n")
 		}
-		j++
+		b.WriteString("endbfchar\n")
 	}
-	b.WriteString("endbfchar\n")
 }
 
 // toUnicodeCMap returns a stream dict containing a CMap file that maps character codes to Unicode values (see 9.10).

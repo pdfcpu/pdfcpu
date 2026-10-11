@@ -17,10 +17,14 @@ limitations under the License.
 package font
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
+	corefont "github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -129,5 +133,77 @@ func TestUsedGIDsFromCMapPreservesScannerFailure(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "read beginbfchar header") {
 		t.Fatalf("expected scan phase in %q", err.Error())
+	}
+}
+
+// TestToUnicodeBFCharBlocks preserves every mapping across block boundaries for full fonts and subsets.
+func TestToUnicodeBFCharBlocks(t *testing.T) {
+	for _, n := range []int{0, 1, 99, 100, 101, 199, 200, 201, 250, 300} {
+		for _, subset := range []bool{false, true} {
+			t.Run(fmt.Sprintf("count=%d/subset=%t", n, subset), func(t *testing.T) {
+				ttf := corefont.TTFLight{Chars: map[uint32]uint16{}, ToUnicode: map[uint16]uint32{}}
+				used := map[uint16]bool{}
+				want := make([]string, n)
+				for i := n - 1; i >= 0; i-- {
+					gid := uint16(2*i + 3)
+					u := uint32(0x40 + i)
+					dst := fmt.Sprintf("%04X", u)
+					if i == n-1 {
+						u, dst = 0x1f600, "D83DDE00"
+					}
+					ttf.Chars[u] = gid
+					ttf.ToUnicode[gid] = u
+					used[gid] = true
+					want[i] = fmt.Sprintf("<%04X> <%s>", gid, dst)
+				}
+				if subset {
+					// An unused glyph in the font must not leak into the subset CMap.
+					ttf.Chars[0x3000], ttf.ToUnicode[65535] = 65535, 0x3000
+				} else {
+					// Full-font mappings must not depend on the subset selection.
+					used = nil
+				}
+				var b bytes.Buffer
+				bf(&b, ttf, used, subset)
+				checkBFCharBlocks(t, b.String(), want)
+				gids, err := usedGIDsFromCMap("endcodespacerange\n" + b.String() + "endcmap\n")
+				if err != nil || len(gids) != n {
+					t.Fatalf("read generated CMap: got %d glyphs, error %v; want %d", len(gids), err, n)
+				}
+			})
+		}
+	}
+}
+
+func checkBFCharBlocks(t *testing.T, content string, want []string) {
+	t.Helper()
+	lines := strings.Split(strings.TrimSuffix(content, "\n"), "\n")
+	mappings, blocks := 0, 0
+	for len(lines) > 0 {
+		header := strings.Fields(lines[0])
+		if len(header) != 2 || header[1] != "beginbfchar" {
+			t.Fatalf("invalid block header: %q", lines[0])
+		}
+		n, err := strconv.Atoi(header[0])
+		if err != nil || n < 0 || n > 100 || len(lines) < n+2 {
+			t.Fatalf("invalid block size: %q", lines[0])
+		}
+		if mappings+n > len(want) {
+			t.Fatal("extra mappings")
+		}
+		for i, line := range lines[1 : n+1] {
+			if line != want[mappings+i] {
+				t.Fatalf("mapping %d: got %q, want %q", mappings+i, line, want[mappings+i])
+			}
+		}
+		if lines[n+1] != "endbfchar" {
+			t.Fatalf("invalid block end: %q", lines[n+1])
+		}
+		mappings += n
+		blocks++
+		lines = lines[n+2:]
+	}
+	if mappings != len(want) || blocks != max(1, (len(want)+99)/100) {
+		t.Fatalf("got %d mappings in %d blocks for %d glyphs", mappings, blocks, len(want))
 	}
 }
