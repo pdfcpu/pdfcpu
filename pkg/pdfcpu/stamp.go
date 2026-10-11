@@ -755,13 +755,6 @@ func normalAppearanceObject(xRefTable *model.XRefTable, d types.Dict) (types.Obj
 	return o, found, nil
 }
 
-func ensureResourceDict(d types.Dict) types.Dict {
-	if d != nil {
-		return d
-	}
-	return types.Dict{}
-}
-
 func ensureXObjectResourceDict(ctx *model.Context, resDict types.Dict) (types.Dict, error) {
 	o, found := resDict.Find("XObject")
 	if !found {
@@ -942,8 +935,8 @@ func createPDFRes(c context.Context, ctx, otherCtx *model.Context, pageNrSrc, pa
 		return fmt.Errorf("source page contents: %w", err)
 	}
 
-	// Migrate external resource dict into ctx.
-	inhPAttrs.Resources = ensureResourceDict(inhPAttrs.Resources)
+	// Clone before migration because source pages may share their resource dictionary.
+	inhPAttrs.Resources = inhPAttrs.Resources.Clone().(types.Dict)
 	if _, err = migrateObject(c, inhPAttrs.Resources, otherCtx, ctx, migrated); err != nil {
 		return fmt.Errorf("migrate source page resources: %w", err)
 	}
