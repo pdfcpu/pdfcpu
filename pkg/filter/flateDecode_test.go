@@ -457,3 +457,75 @@ func BenchmarkFlateReaderReuse(b *testing.B) {
 		}
 	})
 }
+
+// TestFlateTIFFPredictorComponents verifies component arithmetic, row framing, and bounded decoding.
+func TestFlateTIFFPredictorComponents(t *testing.T) {
+	for _, tt := range []struct {
+		name                 string
+		bpc, colors, columns int
+		encoded, want        []byte
+	}{
+		{"1 bit", 1, 1, 8, []byte{0x80}, []byte{0xff}},
+		{"1 bit padding", 1, 1, 3, []byte{0x9f}, []byte{0xff}},
+		{"1 bit RGB", 1, 3, 3, []byte{0xaf, 0x55}, []byte{0xb8, 0x55}},
+		{"2 bit wrap", 2, 1, 4, []byte{0xc1}, []byte{0xfc}},
+		{"2 bit colors and padding", 2, 2, 3, []byte{0x6e, 0x5b}, []byte{0x60, 0x5b}},
+		{"4 bit colors", 4, 2, 2, []byte{0x12, 0x11}, []byte{0x12, 0x23}},
+		{"4 bit RGB", 4, 3, 2, []byte{0x12, 0x3f, 0xe1}, []byte{0x12, 0x30, 0x04}},
+		{"4 bit padding", 4, 1, 3, []byte{0x1f, 0x2b}, []byte{0x10, 0x2b}},
+		{"4 bit rows", 4, 2, 2, []byte{0x12, 0x11, 0xfe, 0x11}, []byte{0x12, 0x23, 0xfe, 0x0f}},
+		{"8 bit RGB", 8, 3, 3, []byte{10, 20, 30, 1, 2, 3, 255, 254, 253}, []byte{10, 20, 30, 11, 22, 33, 10, 20, 30}},
+		{"16 bit carry", 16, 1, 2, []byte{0x01, 0xff, 0, 1}, []byte{0x01, 0xff, 2, 0}},
+		{"16 bit wrap", 16, 1, 2, []byte{0xff, 0xff, 0, 1}, []byte{0xff, 0xff, 0, 0}},
+		{"16 bit RGB", 16, 3, 2,
+			[]byte{1, 0xff, 0xff, 0xff, 0x10, 0, 0, 1, 0, 1, 0xf0, 1},
+			[]byte{1, 0xff, 0xff, 0xff, 0x10, 0, 2, 0, 0, 0, 0, 1}},
+		{"16 bit rows", 16, 1, 2, []byte{1, 0xff, 0, 1, 0, 1, 0, 1}, []byte{1, 0xff, 2, 0, 0, 1, 0, 2}},
+		{"single pixel", 16, 3, 1, []byte{1, 2, 3, 4, 5, 6}, []byte{1, 2, 3, 4, 5, 6}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := NewFilter(Flate, map[string]int{
+				"Predictor": PredictorTIFF, "Colors": tt.colors,
+				"BitsPerComponent": tt.bpc, "Columns": tt.columns,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, limit := range []int64{-1, 0, 1, int64(len(tt.want) - 1), int64(len(tt.want))} {
+				r, err := f.DecodeLength(flateTestData(t, string(tt.encoded)), limit)
+				if err != nil {
+					t.Fatalf("limit %d: %v", limit, err)
+				}
+				got, err := io.ReadAll(r)
+				if err != nil {
+					t.Fatal(err)
+				}
+				want := tt.want
+				if limit >= 0 {
+					want = want[:limit]
+				}
+				if !bytes.Equal(got, want) {
+					t.Fatalf("limit %d: got % x, want % x", limit, got, want)
+				}
+			}
+		})
+	}
+}
+
+// TestFlateTIFFPredictorIncompleteRow rejects input missing part of a component or row.
+func TestFlateTIFFPredictorIncompleteRow(t *testing.T) {
+	for _, bpc := range []int{1, 2, 4, 8, 16} {
+		t.Run(fmt.Sprint(bpc), func(t *testing.T) {
+			f, err := NewFilter(Flate, map[string]int{
+				"Predictor": PredictorTIFF, "BitsPerComponent": bpc, "Columns": 9,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			rowSize := (9*bpc + 7) / 8
+			if _, err := f.Decode(flateTestData(t, string(make([]byte, rowSize-1)))); !errors.Is(err, io.ErrUnexpectedEOF) {
+				t.Fatalf("got %v, want unexpected EOF", err)
+			}
+		})
+	}
+}

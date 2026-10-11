@@ -397,19 +397,49 @@ func predictorRowParams(predictor, colors, bpc, columns int) (rowSize, rowLen, b
 	return rowSize, rowLen, bytesPerPixel, nil
 }
 
-func applyHorDiff(row []byte, colors int) ([]byte, error) {
-	// This works for 8 bits per color only.
-	for i := 1; i < len(row)/colors; i++ {
-		for j := range colors {
-			row[i*colors+j] += row[(i-1)*colors+j]
+// applyHorDiff undoes TIFF predictor 2 (horizontal differencing) on one row.
+// Each colour component of a sample is the difference from the same component
+// of the preceding sample, taken modulo 2^bpc on whole bpc-bit components
+// (see 7.4.4.4). 16-bit components are big-endian;
+// components narrower than a byte are packed MSB first and any padding bits at
+// the end of the row are left untouched.
+func applyHorDiff(row []byte, colors, bpc, columns int) ([]byte, error) {
+	switch bpc {
+
+	case 8:
+		for i := colors; i < len(row); i++ {
+			row[i] += row[i-colors]
+		}
+
+	case 16:
+		for i := 2 * colors; i+1 < len(row); i += 2 {
+			v := uint16(row[i])<<8 | uint16(row[i+1])
+			v += uint16(row[i-2*colors])<<8 | uint16(row[i-2*colors+1])
+			row[i], row[i+1] = byte(v>>8), byte(v)
+		}
+
+	default:
+		// bpc 1, 2 or 4: components are packed within bytes.
+		mask := byte(1<<bpc - 1)
+		get := func(k int) byte {
+			bit := k * bpc
+			return row[bit/8] >> (8 - bpc - bit%8) & mask
+		}
+		n := colors * columns
+		for k := colors; k < n; k++ {
+			bit := k * bpc
+			shift := 8 - bpc - bit%8
+			v := (get(k) + get(k-colors)) & mask
+			row[bit/8] = row[bit/8]&^(mask<<shift) | v<<shift
 		}
 	}
+
 	return row, nil
 }
 
-func processRow(pr, cr []byte, p, colors, bytesPerPixel int) ([]byte, error) {
+func processRow(pr, cr []byte, p, colors, bpc, columns, bytesPerPixel int) ([]byte, error) {
 	if p == PredictorTIFF {
-		return applyHorDiff(cr, colors)
+		return applyHorDiff(cr, colors, bpc, columns)
 	}
 
 	// Apply the filter.
@@ -496,8 +526,8 @@ func checkBufLen(b bytes.Buffer, maxLen int64) bool {
 	return maxLen < 0 || int64(b.Len()) < maxLen
 }
 
-func process(w io.Writer, pr, cr []byte, predictor, colors, bytesPerPixel int, remaining int64) error {
-	d, err := processRow(pr, cr, predictor, colors, bytesPerPixel)
+func process(w io.Writer, pr, cr []byte, predictor, colors, bpc, columns, bytesPerPixel int, remaining int64) error {
+	d, err := processRow(pr, cr, predictor, colors, bpc, columns, bytesPerPixel)
 	if err != nil {
 		return err
 	}
@@ -510,7 +540,7 @@ func process(w io.Writer, pr, cr []byte, predictor, colors, bytesPerPixel int, r
 	return err
 }
 
-func (f flate) decodePostProcessRows(r io.Reader, maxLen int64, m, predictor, colors, bytesPerPixel int) (*bytes.Buffer, error) {
+func (f flate) decodePostProcessRows(r io.Reader, maxLen int64, m, predictor, colors, bpc, columns, bytesPerPixel int) (*bytes.Buffer, error) {
 	// cr and pr are the bytes for the current and previous row.
 	cr := make([]byte, m)
 	pr := make([]byte, m)
@@ -544,7 +574,7 @@ func (f flate) decodePostProcessRows(r io.Reader, maxLen int64, m, predictor, co
 		if maxLen >= 0 {
 			remaining = maxLen - int64(b.Len())
 		}
-		if err := process(&b, pr, cr, predictor, colors, bytesPerPixel, remaining); err != nil {
+		if err := process(&b, pr, cr, predictor, colors, bpc, columns, bytesPerPixel, remaining); err != nil {
 			return nil, err
 		}
 
@@ -588,7 +618,7 @@ func (f flate) decodePostProcess(r io.Reader, maxLen int64) (io.Reader, error) {
 		return nil, ErrDecodeLimitExceeded
 	}
 
-	b, err := f.decodePostProcessRows(r, maxLen, rowLen, predictor, colors, bytesPerPixel)
+	b, err := f.decodePostProcessRows(r, maxLen, rowLen, predictor, colors, bpc, columns, bytesPerPixel)
 	if err != nil {
 		return nil, err
 	}
