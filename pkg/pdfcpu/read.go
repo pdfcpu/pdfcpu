@@ -1045,15 +1045,22 @@ func parseTrailerSize(xRefTable *model.XRefTable, d types.Dict) error {
 	// Not reliable!
 	// Patched after all read in.
 	v := i.Value()
-	if v <= 0 {
-		return fmt.Errorf("invalid trailer Size %d: %w", v, errCorruptTrailerDict)
-	}
 	limit := model.DefaultResourceLimits().MaxObjectCount
 	if xRefTable.Conf != nil {
 		limit = xRefTable.Conf.Limits.MaxObjectCount
 	}
-	if v > limit {
-		return fmt.Errorf("trailer Size %d exceeds limit %d: %w", v, limit, errCorruptTrailerDict)
+	if v <= 0 {
+		err = fmt.Errorf("invalid trailer Size %d: %w", v, errCorruptTrailerDict)
+	} else if v > limit {
+		err = fmt.Errorf("trailer Size %d exceeds limit %d: %w", v, limit, errCorruptTrailerDict)
+	}
+	if err != nil {
+		if xRefTable.ValidationMode == model.ValidationStrict {
+			return err
+		}
+		// Leave Size unset so an older trailer or the completed object walk can supply it.
+		xRefTable.AddValidationNotice(model.NewValidationNotice(model.NoticePhaseRead, model.NoticeRepaired, err.Error(), err))
+		return nil
 	}
 	xRefTable.Size = &v
 	return nil
@@ -1113,7 +1120,9 @@ func materializeDirectInfoDict(xRefTable *model.XRefTable) error {
 		return nil
 	}
 	if xRefTable.Size == nil {
-		return errMissingTrailerSize
+		// All existing objects have been read; allocate beyond their highest object number.
+		size := xRefTable.MaxObjNr + 1
+		xRefTable.Size = &size
 	}
 	if xRefTable.Table == nil {
 		xRefTable.Table = map[int]*model.XRefTableEntry{}

@@ -67,24 +67,90 @@ func TestReadContextRepairsFreeHeadWithoutMissingEntries(t *testing.T) {
 	}
 }
 
-func TestReadContextRejectsOversizedTraditionalTrailerSize(t *testing.T) {
-	for _, mode := range []struct {
-		name string
-		mode int
-	}{
-		{"strict", model.ValidationStrict},
-		{"relaxed", model.ValidationRelaxed},
-	} {
-		t.Run(mode.name, func(t *testing.T) {
-			conf := model.NewStatelessConfiguration()
-			conf.ValidationMode = mode.mode
-			conf.Limits.MaxInputBytes = 1024
-			conf.Limits.MaxObjectCount = 10
-			conf.Limits.MaxXRefEntries = 3
-			_, err := ReadContext(t.Context(), bytes.NewReader(freeHeadAtOnePDF(100000)), conf)
-			if err == nil || !strings.Contains(err.Error(), "trailer Size 100000 exceeds limit 10") {
-				t.Fatalf("got %v, want trailer Size limit error", err)
+// TestReadContextRepairsInvalidTraditionalTrailerSize preserves strict rejection and bounds relaxed repair.
+func TestReadContextRepairsInvalidTraditionalTrailerSize(t *testing.T) {
+	for _, size := range []int{0, -1, 100000} {
+		for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+			t.Run(fmt.Sprintf("size_%d/mode_%d", size, mode), func(t *testing.T) {
+				conf := model.NewStatelessConfiguration()
+				conf.ValidationMode = mode
+				conf.Limits.MaxInputBytes = 1024
+				conf.Limits.MaxObjectCount = 10
+				conf.Limits.MaxXRefEntries = 3
+				ctx, err := ReadContext(t.Context(), bytes.NewReader(freeHeadAtOnePDF(size)), conf)
+				if mode == model.ValidationStrict {
+					if err == nil || !strings.Contains(err.Error(), "trailer Size") {
+						t.Fatalf("got %v, want trailer Size error", err)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				if *ctx.Size != ctx.MaxObjNr+1 || len(ctx.Table) != 3 || *ctx.Size > 10 {
+					t.Fatalf("unexpected repaired size/table: %d/%d", *ctx.Size, len(ctx.Table))
+				}
+				assertTrailerSizeRepairNotice(t, ctx, size)
+			})
+		}
+	}
+}
+
+func assertTrailerSizeRepairNotice(t *testing.T, ctx *model.Context, size int) {
+	t.Helper()
+	count := 0
+	for _, notice := range ctx.ValidationReport().Notices() {
+		if strings.Contains(notice.Message, fmt.Sprintf("trailer Size %d", size)) {
+			count++
+			if notice.Phase != model.NoticePhaseRead || notice.Disposition != model.NoticeRepaired || notice.Cause == nil {
+				t.Fatalf("unexpected repair notice: %+v", notice)
 			}
-		})
+		}
+	}
+	if count != 1 {
+		t.Fatalf("got %d trailer Size repair notices, want 1", count)
+	}
+}
+
+// TestTrailerSizeRepairPreservesXRefLimits rejects actual oversized xref ranges and entry counts.
+func TestTrailerSizeRepairPreservesXRefLimits(t *testing.T) {
+	for _, objectRange := range []bool{false, true} {
+		conf := model.NewStatelessConfiguration()
+		conf.Limits.MaxObjectCount = 10
+		conf.Limits.MaxXRefEntries = 3
+		want := "xref entry count exceeds limit"
+		if objectRange {
+			conf.Limits.MaxObjectCount = 3
+			want = "xref subsection object range exceeds limit"
+		} else {
+			conf.Limits.MaxXRefEntries = 2
+		}
+		_, err := ReadContext(t.Context(), bytes.NewReader(freeHeadAtOnePDF(100000)), conf)
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Fatalf("got %v, want %s", err, want)
+		}
+	}
+}
+
+// TestTrailerSizeRepairReadsPreviousTrailer preserves incremental reading after discarding the newest invalid Size.
+func TestTrailerSizeRepairReadsPreviousTrailer(t *testing.T) {
+	for _, oldSize := range []int{4, 0} {
+		pdf := freeHeadAtOnePDF(oldSize)
+		previous := bytes.Index(pdf, []byte("xref\n"))
+		offset := len(pdf)
+		update := fmt.Sprintf("xref\n0 1\n0000000000 65535 f \ntrailer\n<< /Size -1 /Root 2 0 R /Prev %d >>\nstartxref\n%d\n%%%%EOF\n", previous, offset)
+		conf := model.NewStatelessConfiguration()
+		conf.Limits.MaxObjectCount = 10
+		ctx, err := ReadContext(t.Context(), bytes.NewReader(append(pdf, update...)), conf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if *ctx.Size != 4 || ctx.Root.ObjectNumber.Value() != 2 {
+			t.Fatalf("unexpected size/root: %d/%v", *ctx.Size, ctx.Root)
+		}
+		assertTrailerSizeRepairNotice(t, ctx, -1)
+		if oldSize == 0 {
+			assertTrailerSizeRepairNotice(t, ctx, 0)
+		}
 	}
 }

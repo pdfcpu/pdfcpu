@@ -187,3 +187,42 @@ func TestReadAndRewriteDirectPDF20Info(t *testing.T) {
 		})
 	}
 }
+
+// TestReadDirectInfoWithInvalidTrailerSize preserves Info after relaxed Size repair, including catalog version overrides.
+func TestReadDirectInfoWithInvalidTrailerSize(t *testing.T) {
+	for _, size := range []int{0, -1, 100000} {
+		for _, rootVersion := range []bool{false, true} {
+			conf := model.NewStatelessConfiguration()
+			conf.Limits.MaxObjectCount = 10
+			header := "2.0"
+			if rootVersion {
+				header = "1.7"
+			}
+			pdf := directInfoPDF20(header, rootVersion)
+			pdf = bytes.Replace(pdf, []byte("/Size 3"), []byte(fmt.Sprintf("/Size %d", size)), 1)
+			ctx, err := Read(t.Context(), bytes.NewReader(pdf), conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertReadDirectInfo(t, ctx)
+		}
+	}
+}
+
+// TestParseTrailerSizeDiscardsInvalidValue leaves room for an older trailer to supply a usable Size.
+func TestParseTrailerSizeDiscardsInvalidValue(t *testing.T) {
+	x := directInfoTrailerXRefTable(model.ValidationRelaxed, model.V20)
+	x.Size = nil
+	if err := parseTrailerSize(x, types.Dict{"Size": types.Integer(-1)}); err != nil {
+		t.Fatal(err)
+	}
+	if x.Size != nil {
+		t.Fatalf("stored invalid Size: %d", *x.Size)
+	}
+	if err := parseTrailerSize(x, types.Dict{"Size": types.Integer(3)}); err != nil {
+		t.Fatal(err)
+	}
+	if x.Size == nil || *x.Size != 3 {
+		t.Fatal("older usable Size was lost")
+	}
+}
