@@ -196,3 +196,63 @@ func TestStructureSemanticTraversalRechecksDeeperReuse(t *testing.T) {
 		t.Fatalf("got %v, want depth error", err)
 	}
 }
+
+// TestStructElementStructureType checks required structure types and relaxed compatibility.
+func TestStructElementStructureType(t *testing.T) {
+	for _, version := range []model.Version{model.V13, model.V17, model.V20} {
+		for _, mode := range []struct {
+			name  string
+			value int
+		}{
+			{"strict", model.ValidationStrict},
+			{"relaxed", model.ValidationRelaxed},
+		} {
+			for _, tt := range []struct {
+				name       string
+				value      types.Object
+				present    bool
+				strictErr  bool
+				relaxedErr bool
+			}{
+				{"missing", nil, false, true, false},
+				{"null", nil, true, true, false},
+				{"indirect null", *types.NewIndirectRef(6, 0), true, true, false},
+				{"name", types.Name("P"), true, false, false},
+				{"indirect name", *types.NewIndirectRef(7, 0), true, false, false},
+				{"integer", types.Integer(123), true, true, false},
+				{"boolean", types.Boolean(true), true, true, true},
+			} {
+				t.Run(version.String()+"/"+mode.name+"/"+tt.name, func(t *testing.T) {
+					ctx, err := model.NewContext(strings.NewReader(""), model.NewDefaultConfiguration())
+					if err != nil {
+						t.Fatal(err)
+					}
+					x := ctx.XRefTable
+					x.HeaderVersion = &version
+					x.ValidationMode = mode.value
+					x.Table[5] = model.NewXRefTableEntryGen0(types.Dict{"Type": types.Name("StructTreeRoot")})
+					x.Table[6] = model.NewXRefTableEntryGen0(nil)
+					x.Table[7] = model.NewXRefTableEntryGen0(types.Name("P"))
+					d := types.Dict{"Type": types.Name("StructElem"), "P": *types.NewIndirectRef(5, 0)}
+					if tt.present {
+						d["S"] = tt.value
+					}
+					wantErr := tt.relaxedErr
+					if mode.value == model.ValidationStrict {
+						wantErr = tt.strictErr
+					}
+					err = validateStructElementDictContext(t.Context(), x, d, false)
+					if (err != nil) != wantErr {
+						t.Fatalf("got %v, want error: %t", err, wantErr)
+					}
+					if err != nil && !strings.Contains(err.Error(), "entry=S") {
+						t.Fatalf("error does not identify S: %v", err)
+					}
+					if tt.name == "integer" && !wantErr && d["S"] != types.Name("123") {
+						t.Fatalf("integer S not repaired: %v", d["S"])
+					}
+				})
+			}
+		}
+	}
+}

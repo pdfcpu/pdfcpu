@@ -496,12 +496,18 @@ func validateStructElementDictEntryPg(xRefTable *model.XRefTable, d types.Dict) 
 }
 
 func validateStructElementDictEntryS(xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) error {
-	_, err := validateNameEntry(xRefTable, d, ownerObjNr, dictName, "S", OPTIONAL, model.V10, nil)
-	if err == nil {
-		return nil
-	}
+	// see 14.7.2
 	if xRefTable.ValidationMode == model.ValidationStrict {
+		_, err := validateNameEntry(xRefTable, d, ownerObjNr, dictName, "S", REQUIRED, model.V10, nil)
 		return err
+	}
+
+	n, err := validateNameEntry(xRefTable, d, ownerObjNr, dictName, "S", OPTIONAL, model.V10, nil)
+	if err == nil {
+		if n == nil {
+			model.ShowDigestedSpecViolation("structure element without required entry S")
+		}
+		return nil
 	}
 
 	i, err := validateIntegerEntry(xRefTable, d, ownerObjNr, dictName, "S", OPTIONAL, model.V10, nil)
