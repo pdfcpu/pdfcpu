@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"math"
 	"os"
 	"slices"
 	"sort"
@@ -110,6 +111,7 @@ var (
 	errMissingXRefStreamLength      = errors.New("missing xref stream Length")
 	errNilDereferencedObject        = errors.New("nil dereferenced object")
 	errObjectBufferLimit            = errors.New("object buffer limit exceeded")
+	errObjectReadBudget             = errors.New("object read budget exceeded")
 	errObjectStreamContainsStream   = errors.New("object stream contains stream object")
 	errObjectStreamObjectCountLimit = errors.New("object stream object count limit exceeded")
 	errTruncatedStreamMarker        = errors.New("truncated stream marker")
@@ -178,6 +180,8 @@ func Read(c context.Context, rs io.ReadSeeker, conf *model.Configuration) (*mode
 	if ctx.Read.FileSize == 0 {
 		return nil, ErrEmptyInput
 	}
+	// Share one parsing budget across xref construction and object loading.
+	c = context.WithValue(c, objectReadBudgetKey{}, &objectReadBudgetState{limit: objectReadBudgetLimit(ctx)})
 
 	if log.InfoEnabled() {
 		if ctx.Reader15 {
@@ -2702,6 +2706,75 @@ func parseObjectWithValidationPolicy(c context.Context, ctx *model.Context, line
 	return result.Object, nil
 }
 
+// Allow room for repair passes while bounding repeated reads of the same input.
+const objectReadBudgetFactor = 8
+
+type objectReadBudgetKey struct{}
+
+type objectReadBudgetState struct {
+	used  int64
+	limit int64
+}
+
+type countingReader struct {
+	r io.Reader
+	n int64
+}
+
+func (cr *countingReader) Read(p []byte) (int, error) {
+	n, err := cr.r.Read(p)
+	cr.n += int64(n)
+	return n, err
+}
+
+func objectReadBudgetLimit(ctx *model.Context) int64 {
+	limit := objectBufferLimit(ctx)
+	if ctx.Read.FileSize > (math.MaxInt64-limit)/objectReadBudgetFactor {
+		return math.MaxInt64
+	}
+	return limit + objectReadBudgetFactor*ctx.Read.FileSize
+}
+
+func objectExtent(bufLen, endInd, streamInd int, streamOffset int64) int64 {
+	if endInd >= 0 && (streamInd < 0 || streamInd > endInd) {
+		return int64(min(endInd+len("endobj"), bufLen))
+	}
+	if streamInd >= 0 {
+		return min(streamOffset, int64(bufLen))
+	}
+	return int64(bufLen)
+}
+
+func chargeObjectRead(c context.Context, ctx *model.Context, n int64) error {
+	state, ok := c.Value(objectReadBudgetKey{}).(*objectReadBudgetState)
+	if !ok {
+		return nil
+	}
+	if n > state.limit-state.used {
+		return fmt.Errorf("object parsing exceeded %d-byte budget for %d-byte input (%d counted, %d more): %w",
+			state.limit, ctx.Read.FileSize, state.used, n, errObjectReadBudget)
+	}
+	state.used += n
+	return nil
+}
+
+func bufferedObject(c context.Context, ctx *model.Context, rd io.Reader) ([]byte, int, int, int64, error) {
+	cr := &countingReader{r: rd}
+	buf, endInd, streamInd, streamOffset, err := buffer(c, cr, objectBufferLimit(ctx))
+	if err != nil {
+		// Failed reads can be retried in relaxed mode, so charge everything read.
+		if budgetErr := chargeObjectRead(c, ctx, cr.n); budgetErr != nil {
+			return nil, 0, 0, 0, budgetErr
+		}
+		return nil, 0, 0, 0, err
+	}
+	// Ignore read-ahead beyond this object's end.
+	if err := chargeObjectRead(c, ctx, objectExtent(len(buf), endInd, streamInd, streamOffset)); err != nil {
+		return nil, 0, 0, 0, err
+	}
+	return buf, endInd, streamInd, streamOffset, nil
+}
+
 func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr int) (o types.Object, endInd, streamInd int, streamOffset int64, err error) {
 	var rd io.Reader
 
@@ -2715,7 +2788,7 @@ func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr in
 	//                                    streamInd                        endInd
 	//                                  -1 if absent                    -1 if absent
 	var buf []byte
-	if buf, endInd, streamInd, streamOffset, err = buffer(c, rd, objectBufferLimit(ctx)); err != nil {
+	if buf, endInd, streamInd, streamOffset, err = bufferedObject(c, ctx, rd); err != nil {
 		return nil, 0, 0, 0, err
 	}
 
@@ -3724,6 +3797,10 @@ func updateBinaryTotalSize(ctx *model.Context, o types.Object) {
 	}
 }
 
+func unrecoverableObjectReadError(err error) bool {
+	return errors.Is(err, model.ErrCorruptObjectOffset) || errors.Is(err, errUnregisteredObject) || errors.Is(err, errObjectReadBudget)
+}
+
 func dereferenceAndLoad(c context.Context, ctx *model.Context, objNr int, entry *model.XRefTableEntry) error {
 	if log.ReadEnabled() {
 		log.Read.Printf("dereferenceAndLoad: dereferencing object %d\n", objNr)
@@ -3741,7 +3818,7 @@ func dereferenceAndLoad(c context.Context, ctx *model.Context, objNr int, entry 
 		if err != nil {
 			model.ShowSkipped(fmt.Sprintf("obj #%d reason: %v", objNr, err))
 		}
-		if errors.Is(err, model.ErrCorruptObjectOffset) || errors.Is(err, errUnregisteredObject) {
+		if unrecoverableObjectReadError(err) {
 			return err
 		}
 	}
