@@ -1663,11 +1663,7 @@ func validateAppearDictEntry(c context.Context, xRefTable *model.XRefTable, d ty
 }
 
 func validateDashPatternArray(xRefTable *model.XRefTable, arr types.Array) bool {
-	// len must be 0,1,2,3 numbers (dont'allow only 0s)
-
-	if len(arr) > 3 {
-		return false
-	}
+	// see 8.4.3.6
 
 	all0 := true
 	for j := 0; j < len(arr); j++ {
@@ -1725,8 +1721,7 @@ func validateBorderArray(xRefTable *model.XRefTable, a types.Array) bool {
 	for i := 0; i < len(a); i++ {
 
 		if i == 3 {
-			// validate dash pattern array
-			// len must be 0,1,2,3 numbers (dont'allow only 0s)
+			// Validate the optional dash array (see 12.5.2, Table 166).
 			dpa, err := xRefTable.DereferenceArray(a[i])
 			if err != nil || dpa == nil {
 				return xRefTable.ValidationMode == model.ValidationRelaxed
