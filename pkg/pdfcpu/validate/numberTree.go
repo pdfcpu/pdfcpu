@@ -116,6 +116,9 @@ func validateNumberTreeKey(xRefTable *model.XRefTable, o types.Object, ownerObjN
 
 func validateNumberTreeDictNumsEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, name string, useIDs bool) (firstKey, lastKey int, err error) {
 	// see 7.9.7
+	if name == "PageLabel" {
+		firstKey, lastKey = xRefTable.PageCount, -1
+	}
 	// Nums: array of the form [key1 value1 key2 value2 ... key n value n]
 	o, found := d.Find("Nums")
 	if !found {
@@ -167,12 +170,8 @@ func validateNumberTreeDictNumsEntry(c context.Context, xRefTable *model.XRefTab
 				continue
 			}
 
-			if !haveFirstKey {
-				firstKey = key
-				haveFirstKey = true
-			}
-
-			lastKey = key
+			firstKey, lastKey = numberTreeKeyRange(name, firstKey, lastKey, key, key, haveFirstKey)
+			haveFirstKey = true
 
 			continue
 		}
@@ -193,6 +192,17 @@ func validateNumberTreeDictNumsEntry(c context.Context, xRefTable *model.XRefTab
 	}
 
 	return firstKey, lastKey, nil
+}
+
+func numberTreeKeyRange(name string, first, last, nextFirst, nextLast int, haveFirst bool) (int, int) {
+	if !haveFirst {
+		return nextFirst, nextLast
+	}
+	if name == "PageLabel" {
+		// Include every index, even in an unsorted tree accepted in relaxed mode.
+		return min(first, nextFirst), max(last, nextLast)
+	}
+	return first, nextLast
 }
 
 func validateNumberTreeDictLimitsEntry(xRefTable *model.XRefTable, d types.Dict, ownerObjNr, firstKey, lastKey int) error {
@@ -248,6 +258,9 @@ func numberTreeKidContext(name string, o types.Object, i int) string {
 
 func validateNumberTreeDepth(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root, useIDs bool, depth int, visits ...*treeVisit) (firstKey, lastKey int, err error) {
 	// see 7.9.7
+	if name == "PageLabel" {
+		firstKey, lastKey = xRefTable.PageCount, -1
+	}
 	visit := treeTraversal(visits, false)
 	defer func() {
 		err = model.WithValidationErrorObject(err, ownerObjNr)
@@ -290,15 +303,13 @@ func validateNumberTreeDepth(c context.Context, xRefTable *model.XRefTable, name
 				return 0, 0, model.WithValidationErrorObject(err, kidObjNr)
 			}
 
-			var fk int
-			fk, lastKey, err = validateNumberTreeChild(c, xRefTable, name, d1, kidObjNr, o, useIDs, depth+1, visit)
+			var fk, lk int
+			fk, lk, err = validateNumberTreeChild(c, xRefTable, name, d1, kidObjNr, o, useIDs, depth+1, visit)
 			if err != nil {
 				return 0, 0, model.WrapRecursionError(numberTreeKidContext(name, o, i), err)
 			}
-			if !haveFirstKey {
-				firstKey = fk
-				haveFirstKey = true
-			}
+			firstKey, lastKey = numberTreeKeyRange(name, firstKey, lastKey, fk, lk, haveFirstKey)
+			haveFirstKey = true
 		}
 
 	} else {

@@ -55,11 +55,12 @@ func treePolicyObjects(nameTree bool, scenario string) []string {
 	}
 	objects := []string{
 		"<< /Type /Catalog /Pages 2 0 R " + entry + " >>",
-		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Pages /Kids [3 0 R 9 0 R] /Count 2 >>",
 		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << >> >>",
 		"<< /Kids [5 0 R 6 0 R] >>",
 		treePolicyLeaf(nameTree, 0, false), treePolicyLeaf(nameTree, 1, false),
 		treePolicyLeaf(nameTree, 0, false), value,
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << >> >>",
 	}
 	switch scenario {
 	case "self-cycle":
