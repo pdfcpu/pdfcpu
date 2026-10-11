@@ -739,18 +739,91 @@ func TestParseObjectStreamRejectsFirstBeyondDecodeLimit(t *testing.T) {
 	}
 }
 
-func TestDecodeObjectStreamClassifiesMissingEntry(t *testing.T) {
-	ctx, err := model.NewContext(bytes.NewReader(nil), nil)
-	if err != nil {
-		t.Fatal(err)
+// TestDecodeObjectStreamRejectsInvalidEntries checks the entry before its offset and generation are dereferenced.
+func TestDecodeObjectStreamRejectsInvalidEntries(t *testing.T) {
+	offset, generation := int64(0), 0
+	tests := []struct {
+		name  string
+		entry *model.XRefTableEntry
+	}{
+		{"missing", nil},
+		{"empty", &model.XRefTableEntry{}},
+		{"compressed", &model.XRefTableEntry{Compressed: true}},
+		{"compressed with offset", &model.XRefTableEntry{Compressed: true, Offset: &offset, Generation: &generation}},
+		{"free", &model.XRefTableEntry{Free: true, Offset: &offset, Generation: &generation}},
+		{"missing offset", &model.XRefTableEntry{Generation: &generation}},
+		{"missing generation", &model.XRefTableEntry{Offset: &offset}},
 	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, err := model.NewContext(bytes.NewReader(nil), model.NewStatelessConfiguration())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.entry != nil {
+				ctx.Table[7] = tc.entry
+			}
+			err = decodeObjectStream(t.Context(), ctx, 7)
+			if !errors.Is(err, errMissingObjectStreamEntry) {
+				t.Fatalf("got %v, want %v", err, errMissingObjectStreamEntry)
+			}
+			if !strings.Contains(err.Error(), "object stream obj#7") {
+				t.Fatalf("expected object stream context, got %q", err.Error())
+			}
+		})
+	}
+}
 
-	err = decodeObjectStream(t.Context(), ctx, 7)
-	if !errors.Is(err, errMissingObjectStreamEntry) {
-		t.Fatalf("got %v, want %v", err, errMissingObjectStreamEntry)
+func invalidObjectStreamEntryPDF(version model.Version, free bool) []byte {
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "%%PDF-%s\n", version)
+	offsets := make([]int, 7)
+	for i, body := range []string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << >> >>",
+	} {
+		offsets[i+1] = b.Len()
+		fmt.Fprintf(&b, "%d 0 obj\n%s\nendobj\n", i+1, body)
 	}
-	if !strings.Contains(err.Error(), "object stream obj#7") {
-		t.Fatalf("expected object stream context, got %q", err.Error())
+	offsets[6] = b.Len()
+	streamEntry := [3]int{2, 5, 0} // Object stream 5 incorrectly claims to live inside itself.
+	if free {
+		streamEntry = [3]int{0, 0, 0}
+	}
+	data := []byte{}
+	for _, row := range [][3]int{
+		{0, 0, 65535}, {1, offsets[1], 0}, {1, offsets[2], 0}, {1, offsets[3], 0},
+		{2, 5, 0}, streamEntry, {1, offsets[6], 0},
+	} {
+		data = append(data, byte(row[0]), byte(row[1]>>24), byte(row[1]>>16), byte(row[1]>>8), byte(row[1]),
+			byte(row[2]>>8), byte(row[2]))
+	}
+	fmt.Fprintf(&b, "6 0 obj\n<< /Type /XRef /Size 7 /W [1 4 2] /Root 1 0 R /Length %d >>\nstream\n", len(data))
+	b.Write(data)
+	fmt.Fprintf(&b, "\nendstream\nendobj\nstartxref\n%d\n%%%%EOF\n", offsets[6])
+	return b.Bytes()
+}
+
+// TestReadRejectsInvalidObjectStreamEntries verifies malformed cross-references return an error without panicking.
+func TestReadRejectsInvalidObjectStreamEntries(t *testing.T) {
+	for _, version := range []model.Version{model.V15, model.V17, model.V20} {
+		for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+			for _, free := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s/mode%d/free=%t", version, mode, free), func(t *testing.T) {
+					conf := model.NewStatelessConfiguration()
+					conf.ValidationMode = mode
+					conf.Offline = true
+					_, err := Read(t.Context(), bytes.NewReader(invalidObjectStreamEntryPDF(version, free)), conf)
+					if !errors.Is(err, errMissingObjectStreamEntry) {
+						t.Fatalf("got %v, want %v", err, errMissingObjectStreamEntry)
+					}
+					if !strings.Contains(err.Error(), "object stream obj#5") {
+						t.Fatalf("expected object stream context, got %q", err.Error())
+					}
+				})
+			}
+		}
 	}
 }
 

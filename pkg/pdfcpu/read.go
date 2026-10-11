@@ -3530,8 +3530,9 @@ func decodeObjectStreamObjects(c context.Context, ctx *model.Context, sd *types.
 }
 
 func decodeObjectStream(c context.Context, ctx *model.Context, objNr int) error {
+	// Stream objects cannot reside in object streams (7.5.7).
 	entry := ctx.Table[objNr]
-	if entry == nil {
+	if entry == nil || entry.Free || entry.Compressed || entry.Offset == nil || entry.Generation == nil {
 		return fmt.Errorf("object stream obj#%d: %w", objNr, errMissingObjectStreamEntry)
 	}
 
