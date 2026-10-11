@@ -959,9 +959,7 @@ func (ctx *Context) RemovePageBoundaries(c context.Context, selectedPages types.
 			return fmt.Errorf("page %d: page dictionary: %w", pageNr, err)
 		}
 		if pb.Crop != nil {
-			if oldVal := d.Delete("CropBox"); oldVal == nil {
-				d.Insert("CropBox", inhPAttrs.MediaBox.Array())
-			}
+			d["CropBox"] = inhPAttrs.MediaBox.Array()
 		}
 		if pb.Trim != nil {
 			d.Delete("TrimBox")
