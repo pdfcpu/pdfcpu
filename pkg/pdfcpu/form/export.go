@@ -632,7 +632,7 @@ func exportBtn(xRefTable *model.XRefTable, i int, form *Form, d types.Dict, id, 
 		return nil
 	}
 
-	if len(d.ArrayEntry("Kids")) > 1 {
+	if isRadioButtonGroup(ff) {
 
 		for _, rb := range form.RadioButtonGroups {
 			if rb.ID == id && rb.Name == name {

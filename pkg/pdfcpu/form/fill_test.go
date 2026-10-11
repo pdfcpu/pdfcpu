@@ -27,6 +27,7 @@ import (
 
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
@@ -291,6 +292,7 @@ func TestRadioButtonNameConsumersPreserveLiteralHash(t *testing.T) {
 	d := types.Dict{
 		"DV":   types.Name(state),
 		"V":    types.Name(state),
+		"Ff":   types.Integer(primitives.FieldRadio),
 		"Kids": types.Array{kid1, kid2},
 	}
 	ctx := emptyFormContext(t)

@@ -427,8 +427,12 @@ func collectRadioButtonGroup(xRefTable *model.XRefTable, d types.Dict, f *Field,
 	return nil
 }
 
+func isRadioButtonGroup(ff *types.Integer) bool {
+	return ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldRadio != 0
+}
+
 func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
-	ff, _, err := xRefTable.DereferenceIntegerEntry(d, "Ff")
+	ff, err := inheritedFieldFlags(xRefTable, d)
 	if err != nil {
 		return err
 	}
@@ -452,7 +456,7 @@ func collectBtn(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMet
 		f.Dv = dv
 	}
 
-	if len(d.ArrayEntry("Kids")) > 1 {
+	if isRadioButtonGroup(ff) {
 		return collectRadioButtonGroup(xRefTable, d, f, fm)
 	}
 
@@ -1541,7 +1545,7 @@ func RemoveFormFields(c context.Context, ctx *model.Context, fieldIDsOrNames []s
 }
 
 func resetBtn(xRefTable *model.XRefTable, d types.Dict) error {
-	ff, _, err := xRefTable.DereferenceIntegerEntry(d, "Ff")
+	ff, err := inheritedFieldFlags(xRefTable, d)
 	if err != nil {
 		return err
 	}
@@ -1562,8 +1566,7 @@ func resetBtn(xRefTable *model.XRefTable, d types.Dict) error {
 		d["AS"] = v
 	}
 
-	// RadiobuttonGroup
-
+	// Update every widget of a radio group or repeated check box.
 	for i, o := range d.ArrayEntry("Kids") {
 		d, err := xRefTable.DereferenceDict(o)
 		if err != nil {
@@ -1893,8 +1896,36 @@ func textFieldFlags(ff *types.Integer) (bool, bool) {
 		ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldComb > 0
 }
 
+func inheritedFieldFlags(xRefTable *model.XRefTable, d types.Dict) (*types.Integer, error) {
+	visit := model.NewFormFieldVisit()
+	for depth := 0; ; depth++ {
+		if err := xRefTable.CheckRecursionDepth("form field flags", depth); err != nil {
+			return nil, err
+		}
+		ff, _, err := xRefTable.DereferenceIntegerEntry(d, "Ff")
+		if err != nil || ff != nil {
+			return ff, err
+		}
+		parent := d.IndirectRefEntry("Parent")
+		if parent == nil {
+			return nil, nil
+		}
+		objNr := parent.ObjectNumber.Value()
+		if err := visit.Enter(objNr); err != nil {
+			return nil, err
+		}
+		d, err = xRefTable.DereferenceDict(*parent)
+		if err != nil {
+			return nil, fmt.Errorf("parent obj#%d: dereference: %w", objNr, err)
+		}
+		if d == nil {
+			return nil, fmt.Errorf("parent obj#%d: missing field", objNr)
+		}
+	}
+}
+
 func formFieldFlags(xRefTable *model.XRefTable, d types.Dict) (*types.Integer, bool, error) {
-	ff, _, err := xRefTable.DereferenceIntegerEntry(d, "Ff")
+	ff, err := inheritedFieldFlags(xRefTable, d)
 	if err != nil {
 		return nil, false, err
 	}
@@ -1903,7 +1934,7 @@ func formFieldFlags(xRefTable *model.XRefTable, d types.Dict) (*types.Integer, b
 }
 
 func lockFormField(xRefTable *model.XRefTable, d types.Dict) error {
-	ff, _, err := xRefTable.DereferenceIntegerEntry(d, "Ff")
+	ff, err := inheritedFieldFlags(xRefTable, d)
 	if err != nil {
 		return err
 	}
@@ -2078,7 +2109,7 @@ func LockFormFields(c context.Context, ctx *model.Context, fieldIDsOrNames []str
 }
 
 func unlockFormField(xRefTable *model.XRefTable, d types.Dict) error {
-	ff, _, err := xRefTable.DereferenceIntegerEntry(d, "Ff")
+	ff, err := inheritedFieldFlags(xRefTable, d)
 	if err != nil {
 		return err
 	}
