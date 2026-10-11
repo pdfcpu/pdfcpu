@@ -1170,7 +1170,30 @@ func validateExtGStateDictPart3(c context.Context, xRefTable *model.XRefTable, d
 	return err
 }
 
+func validateExtGStateDictPDF20(xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	// see 8.4.5, Table 57
+	if !xRefTable.PDF20() {
+		return nil
+	}
+	a, err := validateArrayEntry(xRefTable, d, 0, dictName, "HTO", OPTIONAL, model.V20,
+		func(a types.Array) bool { return len(a) == 2 })
+	if err != nil {
+		return err
+	}
+	objNr := validationEntryObjectNumber(0, d, "HTO")
+	for i, o := range a {
+		if _, err := xRefTable.DereferenceNumber(o); err != nil {
+			err = fmt.Errorf("%s.HTO[%d]: expected number: %w", dictName, i, err)
+			return model.WithValidationErrorObject(err, validationObjectNumber(objNr, o))
+		}
+	}
+	_, err = validateNameEntry(xRefTable, d, 0, dictName, "UseBlackPtComp", OPTIONAL, model.V20,
+		func(s string) bool { return types.MemberOf(s, []string{"ON", "OFF", "Default"}) })
+	return err
+}
+
 func validateExtGStateDict(c context.Context, xRefTable *model.XRefTable, o types.Object) (err error) {
+	// see 8.4.5
 	objNr := validationObjectNumber(0, o)
 	defer func() {
 		err = model.WithValidationErrorObject(err, objNr)
@@ -1219,7 +1242,7 @@ func validateExtGStateDict(c context.Context, xRefTable *model.XRefTable, o type
 		xRefTable.CustomExtensions = true
 	}
 
-	return nil
+	return validateExtGStateDictPDF20(xRefTable, d, dictName)
 }
 
 func validateExtGStateResourceDict(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) (err error) {
