@@ -941,6 +941,11 @@ func validateIndexedImageSamples(im *PDFImage, maxInd int) error {
 }
 
 func renderIndexed(xRefTable *model.XRefTable, im *PDFImage, cs types.Array) (io.Reader, string, error) {
+	// see 8.6.6.3
+	if len(cs) < 4 {
+		return nil, "", fmt.Errorf("renderIndexed: objNr=%d Indexed colorspace needs 4 entries, got %d", im.objNr, len(cs))
+	}
+
 	// Identify the base color space.
 	baseCS, _ := xRefTable.Dereference(cs[1])
 

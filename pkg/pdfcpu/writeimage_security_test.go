@@ -453,3 +453,33 @@ func TestRenderCMYKComponentStride(t *testing.T) {
 		}
 	}
 }
+
+// TestRenderIndexedRejectsMalformedColorSpaces checks array bounds before rendering an Indexed image.
+func TestRenderIndexedRejectsMalformedColorSpaces(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		cs   types.Array
+	}{
+		{"empty", types.Array{}},
+		{"missing base", types.Array{types.Name(model.IndexedCS)}},
+		{"missing hival and lookup", types.Array{types.Name(model.IndexedCS), types.Name(model.DeviceRGBCS)}},
+		{"missing lookup", types.Array{types.Name(model.IndexedCS), types.Name(model.DeviceRGBCS), types.Integer(0)}},
+		{"empty base", types.Array{types.Name(model.IndexedCS), types.Array{}, types.Integer(0), types.HexLiteral("000000")}},
+		{"missing ICC profile", types.Array{types.Name(model.IndexedCS), types.Array{types.Name(model.ICCBasedCS)}, types.Integer(0), types.HexLiteral("000000")}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sd := &types.StreamDict{
+				Dict: types.Dict{
+					"ColorSpace":       tc.cs,
+					"BitsPerComponent": types.Integer(8),
+					"Width":            types.Integer(1),
+					"Height":           types.Integer(1),
+				},
+				Content: []byte{0},
+			}
+			if _, _, err := RenderImage(xRefTable, sd, false, "", 7); err == nil {
+				t.Fatal("expected an error for malformed Indexed colorspace")
+			}
+		})
+	}
+}
