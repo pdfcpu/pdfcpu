@@ -68,9 +68,18 @@ func (e *dictionaryKeyError) Unwrap() error {
 	return e.err
 }
 
+// pdfWhitespace reports whether b is one of the six PDF whitespace bytes (7.2.3).
+func pdfWhitespace(b byte) bool {
+	switch b {
+	case 0x00, '\t', '\n', '\f', '\r', ' ':
+		return true
+	}
+	return false
+}
+
 func positionToNextWhitespace(s string) (int, string) {
-	for i, c := range s {
-		if unicode.IsSpace(c) || c == 0x00 {
+	for i := 0; i < len(s); i++ {
+		if pdfWhitespace(s[i]) {
 			return i, s[i:]
 		}
 	}
@@ -84,11 +93,9 @@ func positionToNextWhitespaceOrChar(s, chars string) (int, string) {
 		return positionToNextWhitespace(s)
 	}
 
-	for i, c := range s {
-		for _, m := range chars {
-			if c == m || unicode.IsSpace(c) || c == 0x00 {
-				return i, s[i:]
-			}
+	for i := 0; i < len(s); i++ {
+		if pdfWhitespace(s[i]) || strings.IndexByte(chars, s[i]) >= 0 {
+			return i, s[i:]
 		}
 	}
 
@@ -112,26 +119,17 @@ func trimLeftSpace(s string, relaxed bool) (string, bool) {
 		log.Parse.Printf("TrimLeftSpace: begin %s\n", s)
 	}
 
-	whitespace := func(c rune) bool { return unicode.IsSpace(c) || c == 0x00 }
-
-	whitespaceNoEol := func(r rune) bool {
-		switch r {
-		case '\t', '\v', '\f', ' ', 0x85, 0xA0, 0x00:
-			return true
-		}
-		return false
-	}
-
 	var eol bool
 
 	for {
-		if relaxed {
-			s = strings.TrimLeftFunc(s, whitespaceNoEol)
-			if len(s) >= 1 && (s[0] == '\n' || s[0] == '\r') {
+		i := 0
+		for i < len(s) && pdfWhitespace(s[i]) {
+			if relaxed && (s[i] == '\n' || s[i] == '\r') {
 				eol = true
 			}
+			i++
 		}
-		s = strings.TrimLeftFunc(s, whitespace)
+		s = s[i:]
 		if log.ParseEnabled() {
 			log.Parse.Printf("1 outstr: <%s>\n", s)
 		}

@@ -28,6 +28,74 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// TestObjectParserRegularSpaceBytes preserves bytes outside the six PDF whitespace characters.
+func TestObjectParserRegularSpaceBytes(t *testing.T) {
+	for _, regular := range []string{"\v", "\x85", "\xa0", "\u0085", "\u00a0", "\u2003", "\u2028", "\u3000", "\xff"} {
+		t.Run(fmt.Sprintf("%q", regular), func(t *testing.T) {
+			name := "A" + regular + "B"
+			line := "/" + name + " /Tail"
+			o, err := ParseObject(t.Context(), &line, 0)
+			if err != nil || o != types.Name(name) || line != " /Tail" {
+				t.Fatalf("name = %v, %v; remaining = %q", o, err, line)
+			}
+			for _, relaxed := range []bool{false, true} {
+				input := regular + "\n/Name"
+				got, eol := trimLeftSpace(" \t"+input, relaxed)
+				if got != input || eol {
+					t.Fatalf("trim relaxed=%t: got %q, eol=%t; want %q, false", relaxed, got, eol, input)
+				}
+			}
+			prefix := "12" + regular + "34"
+			if i, rest := positionToNextWhitespace(prefix + " 5"); i != len(prefix) || rest != " 5" {
+				t.Fatalf("whitespace boundary = %d, %q", i, rest)
+			}
+			if i, rest := positionToNextWhitespaceOrChar(prefix+"/Tail", "/"); i != len(prefix) || rest != "/Tail" {
+				t.Fatalf("delimiter boundary = %d, %q", i, rest)
+			}
+		})
+	}
+}
+
+// TestObjectParserPDFWhitespace checks all six PDF token separators.
+func TestObjectParserPDFWhitespace(t *testing.T) {
+	for _, ws := range []string{"\x00", "\t", "\n", "\f", "\r", " "} {
+		t.Run(fmt.Sprintf("%q", ws), func(t *testing.T) {
+			line := ws + "/Name" + ws + "17"
+			o, err := ParseObject(t.Context(), &line, 0)
+			if err != nil || o != types.Name("Name") || line != ws+"17" {
+				t.Fatalf("name = %v, %v; remaining = %q", o, err, line)
+			}
+			o, err = ParseObject(t.Context(), &line, 0)
+			if err != nil || o != types.Integer(17) || line != "" {
+				t.Fatalf("integer = %v, %v; remaining = %q", o, err, line)
+			}
+		})
+	}
+}
+
+// TestTrimLeftPDFWhitespace preserves comment handling and relaxed line-ending detection.
+func TestTrimLeftPDFWhitespace(t *testing.T) {
+	for _, tc := range []struct {
+		input string
+		want  string
+		eol   bool
+	}{
+		{"", "", false},
+		{"\x00\t\f /Name", "/Name", false},
+		{"\x00\t\n\f\r /Name", "/Name", true},
+		{"%comment\r\n/Name", "/Name", true},
+		{" %first\n\t%second\r/Name", "/Name", true},
+		{"%comment without line ending", "", false},
+	} {
+		for _, relaxed := range []bool{false, true} {
+			got, eol := trimLeftSpace(tc.input, relaxed)
+			if got != tc.want || eol != (relaxed && tc.eol) {
+				t.Errorf("trim %q relaxed=%t: got %q, eol=%t; want %q, eol=%t", tc.input, relaxed, got, eol, tc.want, relaxed && tc.eol)
+			}
+		}
+	}
+}
+
 // TestParseObjectAttributesWhitespace checks PDF separators keep object and generation numbers distinct.
 func TestParseObjectAttributesWhitespace(t *testing.T) {
 	whitespace := []string{"\x00", "\t", "\n", "\f", "\r", " ", "\r\n", "\x00\t\n\f\r "}
