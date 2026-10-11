@@ -196,6 +196,10 @@ func cryptFilterTestPDF(t *testing.T, raw []byte, filterSpec, parmsSpec, default
 		objects[2] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << /Properties << /TestData 6 0 R >> >> /Contents 4 0 R >>"
 		objects = append(objects, extraObjects...)
 	}
+	return cryptFilterObjectsPDF(objects, id)
+}
+
+func cryptFilterObjectsPDF(objects []string, id []byte) []byte {
 	var b bytes.Buffer
 	b.WriteString("%PDF-1.7\n%\xe2\xe3\xcf\xd3\n")
 	offsets := make([]int, len(objects))
@@ -269,5 +273,147 @@ func TestNamedCryptStreamFilters(t *testing.T) {
 				t.Fatalf("rewritten stream content: got %q, want %q", stream.Content, content)
 			}
 		})
+	}
+}
+
+// TestExplicitCryptFilterMethodCompatibility checks explicit methods against the document's encryption version.
+func TestExplicitCryptFilterMethodCompatibility(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		v, r    int
+		cfm     string
+		aes     bool
+		wantErr error
+	}{
+		{"RC4", 4, 4, "V2", false, nil},
+		{"AES128", 4, 4, "AESV2", true, nil},
+		{"AES256 revision 5", 5, 5, "AESV3", true, nil},
+		{"AES256 revision 6", 5, 6, "AESV3", true, nil},
+		{"AES256 with V4", 4, 4, "AESV3", false, ErrMalformedEncryption},
+		{"AES128 with V5", 5, 6, "AESV2", false, ErrMalformedEncryption},
+		{"RC4 with V5", 5, 6, "V2", false, ErrMalformedEncryption},
+		{"security handler", 4, 4, "None", false, ErrUnsupportedEncryptionFeature},
+		{"unknown method", 4, 4, "Unknown", false, ErrUnsupportedEncryptionFeature},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, err := model.NewContext(bytes.NewReader(nil), model.NewDefaultConfiguration())
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx.E = &model.Enc{V: tc.v, R: tc.r}
+			ctx.Encrypt = types.NewIndirectRef(1, 0)
+			ctx.Table[1] = model.NewXRefTableEntryGen0(types.Dict{
+				"CF":   types.Dict{"StdCF": types.Dict{"CFM": types.Name(tc.cfm)}},
+				"StmF": types.Name("Identity"), "StrF": types.Name("Identity"),
+			})
+			sd := &types.StreamDict{FilterPipeline: []types.PDFFilter{
+				{Name: "Crypt", DecodeParms: types.Dict{"Name": types.Name("StdCF")}},
+			}}
+			encrypted, aes, err := streamCryptMethod(ctx, sd)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("error: got %v, want %v", err, tc.wantErr)
+			}
+			if tc.wantErr == nil && (!encrypted || aes != tc.aes) {
+				t.Fatalf("encrypted=%t aes=%t, want encrypted=true aes=%t", encrypted, aes, tc.aes)
+			}
+		})
+	}
+}
+
+// TestReadExplicitCryptFilterMethodCompatibility rejects AESV3 with V=4/R=4 before decrypting a complete PDF.
+func TestReadExplicitCryptFilterMethodCompatibility(t *testing.T) {
+	content := []byte("q Q")
+	key := encKey("", &model.Enc{O: bytes.Repeat([]byte{0x11}, 32), P: -4, ID: bytes.Repeat([]byte{0x22}, 16), R: 4, L: 128, Emd: true})
+	raw, err := encryptStream(content, 4, 0, key, true, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := cryptFilterTestPDF(t, raw, "/Crypt", "<< /Name /StdCF >>", "/StmF /Identity /StrF /Identity", nil)
+	for _, version := range []string{"1.7", "2.0"} {
+		for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+			for _, method := range []string{"AESV2", "AESV3"} {
+				t.Run(fmt.Sprintf("PDF%s/mode%d/%s", version, mode, method), func(t *testing.T) {
+					// Equal-length replacements preserve xref offsets. There is no catalog Version or Extensions entry.
+					pdf := bytes.Replace(base, []byte("%PDF-1.7"), []byte("%PDF-"+version), 1)
+					pdf = bytes.Replace(pdf, []byte("/CFM /AESV2"), []byte("/CFM /"+method), 1)
+					conf := model.NewDefaultConfiguration()
+					conf.ValidationMode = mode
+					ctx, err := Read(t.Context(), bytes.NewReader(pdf), conf)
+					if method == "AESV3" {
+						if !errors.Is(err, ErrMalformedEncryption) {
+							t.Fatalf("V=4/R=4 with AESV3: got %v, want malformed encryption", err)
+						}
+						return
+					}
+					if err != nil {
+						t.Fatal(err)
+					}
+					sd, _, err := ctx.DereferenceStreamDict(*types.NewIndirectRef(4, 0))
+					if err != nil || sd == nil {
+						t.Fatalf("stream: %v", err)
+					}
+					if !bytes.Equal(sd.Content, content) {
+						t.Fatalf("content: got %q, want %q", sd.Content, content)
+					}
+				})
+			}
+		}
+	}
+}
+
+func adobeAES256CryptFilterPDF(t *testing.T, revision, extension int, content []byte) []byte {
+	t.Helper()
+	ctx, d := aes256PasswordContext(t, revision, "", "owner")
+	if err := calcOAndU(ctx, d); err != nil {
+		t.Fatal(err)
+	}
+	if err := writePermissions(ctx, d); err != nil {
+		t.Fatal(err)
+	}
+	d["StmF"], d["StrF"] = types.Name("Identity"), types.Name("Identity")
+	d.DictEntry("CF").DictEntry("StdCF")["Length"] = types.Integer(32)
+	raw, err := encryptStream(content, 4, 0, ctx.EncKey, true, revision)
+	if err != nil {
+		t.Fatal(err)
+	}
+	objects := []string{
+		fmt.Sprintf("<< /Type /Catalog /Pages 2 0 R /Extensions << /ADBE << /BaseVersion /1.7 /ExtensionLevel %d >> >> >>", extension),
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources <<>> /Contents 4 0 R >>",
+		fmt.Sprintf("<< /Length %d /Filter /Crypt /DecodeParms << /Name /StdCF >> >>\nstream\n%s\nendstream", len(raw), raw),
+		d.PDFString(),
+	}
+	return cryptFilterObjectsPDF(objects, ctx.E.ID)
+}
+
+// TestReadAdobeAES256CryptFilters preserves PDF 1.7 AESV3 input with Adobe extension declarations.
+func TestReadAdobeAES256CryptFilters(t *testing.T) {
+	for _, tc := range []struct{ revision, extension int }{
+		{5, 3}, // Adobe Extension Level 3, section 3.5, introduces V=5/R=5/AESV3.
+		{5, 5}, // Adobe extension levels are cumulative.
+		{6, 8}, // Reader compatibility coverage; this does not validate the extension-level mapping.
+	} {
+		content := []byte("q Q")
+		pdf := adobeAES256CryptFilterPDF(t, tc.revision, tc.extension, content)
+		for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+			t.Run(fmt.Sprintf("R%d/ADBE%d/mode%d", tc.revision, tc.extension, mode), func(t *testing.T) {
+				conf := model.NewDefaultConfiguration()
+				conf.ValidationMode = mode
+				ctx, err := Read(t.Context(), bytes.NewReader(pdf), conf)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if ctx.XRefTable.Version() != model.V17 || ctx.E.V != 5 || ctx.E.R != tc.revision {
+					t.Fatalf("unexpected PDF/encryption version: %s, V=%d, R=%d", ctx.XRefTable.Version(), ctx.E.V, ctx.E.R)
+				}
+				sd, _, err := ctx.DereferenceStreamDict(*types.NewIndirectRef(4, 0))
+				if err != nil || sd == nil {
+					t.Fatalf("stream: %v", err)
+				}
+				if !bytes.Equal(sd.Content, content) {
+					t.Fatalf("content: got %q, want %q", sd.Content, content)
+				}
+			})
+		}
 	}
 }
