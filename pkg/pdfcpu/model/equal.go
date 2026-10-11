@@ -74,7 +74,7 @@ func EqualObjects(c context.Context, o1, o2 types.Object, xRefTable *XRefTable, 
 	}
 
 	if o1 == nil {
-		return o2 != nil, nil
+		return o2 == nil, nil
 	}
 
 	o1Type := fmt.Sprintf("%T", o1)

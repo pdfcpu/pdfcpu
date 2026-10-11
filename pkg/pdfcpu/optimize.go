@@ -17,7 +17,6 @@ limitations under the License.
 package pdfcpu
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"errors"
@@ -35,7 +34,16 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func optimizeContentStreamUsage(ctx *model.Context, sd *types.StreamDict, objNr int) (*types.IndirectRef, error) {
+// keptObjectIndRef preserves the generation of the retained object (7.3.10).
+func keptObjectIndRef(ctx *model.Context, objNr int) *types.IndirectRef {
+	gen := 0
+	if e, found := ctx.FindTableEntryLight(objNr); found && e != nil && e.Generation != nil {
+		gen = *e.Generation
+	}
+	return types.NewIndirectRef(objNr, gen)
+}
+
+func optimizeContentStreamUsage(c context.Context, ctx *model.Context, sd *types.StreamDict, objNr int) (*types.IndirectRef, error) {
 	f := ctx.Optimize.ContentStreamCache
 	if len(f) == 0 {
 		f[objNr] = sd
@@ -57,10 +65,15 @@ func optimizeContentStreamUsage(ctx *model.Context, sd *types.StreamDict, objNr 
 		return nil, nil
 	}
 
-	for _, objNr := range cachedObjNrs {
-		sd1 := f[objNr]
-		if bytes.Equal(sd.Raw, sd1.Raw) {
-			ir := types.NewIndirectRef(objNr, 0)
+	for _, objNr1 := range cachedObjNrs {
+		sd1 := f[objNr1]
+		// Matching encoded bytes also need matching stream dictionaries to preserve their meaning.
+		ok, err := model.EqualObjects(c, *sd, *sd1, ctx.XRefTable, nil)
+		if err != nil {
+			return nil, fmt.Errorf("compare content stream obj#%d with obj#%d: %w", objNr, objNr1, err)
+		}
+		if ok {
+			ir := keptObjectIndRef(ctx, objNr1)
 			ctx.IncrementRefCount(ir)
 			return ir, nil
 		}
@@ -134,7 +147,7 @@ func removeEmptyContentStreams(ctx *model.Context, pageDict types.Dict, obj type
 	return nil
 }
 
-func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber int) error {
+func optimizePageContent(c context.Context, ctx *model.Context, pageDict types.Dict, pageObjNumber int) error {
 	o, found := pageDict.Find("Contents")
 	if !found {
 		return nil
@@ -165,7 +178,7 @@ func optimizePageContent(ctx *model.Context, pageDict types.Dict, pageObjNumber 
 
 		contentStreamDict, ok := entry.Object.(types.StreamDict)
 		if ok {
-			ir, err := optimizeContentStreamUsage(ctx, &contentStreamDict, objNr)
+			ir, err := optimizeContentStreamUsage(c, ctx, &contentStreamDict, objNr)
 			if err != nil {
 				return fmt.Errorf("content stream obj#%d: optimize usage: %w", objNr, err)
 			}
@@ -445,7 +458,7 @@ func optimizeFontResourcesDict(c context.Context, ctx *model.Context, rDict type
 		if originalObjNr != nil {
 			// We have identified a redundant fontDict!
 			// Update font resource dict so that rName points to the original.
-			ir := types.NewIndirectRef(*originalObjNr, 0)
+			ir := keptObjectIndRef(ctx, *originalObjNr)
 			rDict[rName] = *ir
 			ctx.IncrementRefCount(ir)
 			if log.OptimizeEnabled() {
@@ -576,7 +589,7 @@ func optimizeXObjectImage(c context.Context, ctx *model.Context, osd *types.Stre
 	if originalObjNr != nil {
 		// We have identified a redundant image!
 		// Update xobject resource dict so that rName points to the original.
-		ir := types.NewIndirectRef(*originalObjNr, 0)
+		ir := keptObjectIndRef(ctx, *originalObjNr)
 		ctx.IncrementRefCount(ir)
 		rDict[rName] = *ir
 		if log.OptimizeEnabled() {
@@ -627,7 +640,7 @@ func optimizeXObjectForm(c context.Context, ctx *model.Context, sd *types.Stream
 			return nil, fmt.Errorf("compare form XObject obj#%d with obj#%d: %w", objNr, objNr1, err)
 		}
 		if ok {
-			ir := types.NewIndirectRef(objNr1, 0)
+			ir := keptObjectIndRef(ctx, objNr1)
 			ctx.IncrementRefCount(ir)
 			return ir, nil
 		}
@@ -1086,7 +1099,7 @@ func parsePageTreeKid(c context.Context, ctx *model.Context, v types.Object, kid
 	}
 
 	if ctx.OptimizeDuplicateContentStreams {
-		if err = optimizePageContent(ctx, d, int(ir.ObjectNumber)); err != nil {
+		if err = optimizePageContent(c, ctx, d, int(ir.ObjectNumber)); err != nil {
 			return 0, fmt.Errorf("page %d obj#%d: optimize content: %w", pageNr+1, ir.ObjectNumber.Value(), err)
 		}
 	}
@@ -1276,22 +1289,18 @@ func calcRedundantObjects(c context.Context, ctx *model.Context) error {
 }
 
 func fixCorruptFontResDicts(ctx *model.Context) error {
-	// TODO: hacky, also because we don't reall y take the fontDict type into account.
+	// TODO: hacky, also because we don't really take the fontDict type into account.
 	for _, d := range ctx.Optimize.CorruptFontResDicts {
 		for k, v := range d {
 			if v == nil {
 				for fn, objNrs := range ctx.Optimize.Fonts {
-
 					if strings.HasPrefix(fn, "Arial") && (len(fn) == 5 || fn[5] != '-') {
 						model.ShowRepaired(fmt.Sprintf("font %s mapped to objNr %d", k, objNrs[0]))
-						d[k] = *types.NewIndirectRef(objNrs[0], 0)
+						d[k] = *keptObjectIndRef(ctx, objNrs[0])
 						break
 					}
 				}
 			}
-			// if d[k] == nil {
-			// 	d[k] = *types.NewIndirectRef(objNrs[0], 0)
-			// }
 		}
 	}
 	return nil
