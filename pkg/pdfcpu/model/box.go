@@ -1126,9 +1126,11 @@ func applyBoxDefinitions(d types.Dict, pb *PageBoundaries, b *boxes) {
 		b.cropBox = ApplyBox("CropBox", pb.Crop, d, parentBox)
 	}
 
-	if b.cropBox != nil {
-		parentBox = b.cropBox
+	if b.cropBox == nil {
+		// An absent crop box defaults to the effective media box.
+		b.cropBox = b.mediaBox
 	}
+	parentBox = b.cropBox
 	if pb.Trim != nil && pb.Trim.RefBox == "" {
 		//fmt.Println("add tb")
 		b.trimBox = ApplyBox("TrimBox", pb.Trim, d, parentBox)
