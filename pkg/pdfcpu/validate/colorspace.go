@@ -114,6 +114,7 @@ func validateAllColorSpaceNamesExceptPattern(s string) bool {
 }
 
 func validateCalGrayColorSpace(xRefTable *model.XRefTable, a types.Array, sinceVersion model.Version) error {
+	// see 8.6.5.2, Table 62
 	dictName := "calGrayCSDict"
 
 	// Version check
@@ -134,19 +135,70 @@ func validateCalGrayColorSpace(xRefTable *model.XRefTable, a types.Array, sinceV
 		return errors.New("CalGray color space parameters: missing dict")
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "WhitePoint", REQUIRED, sinceVersion, func(a types.Array) bool { return len(a) == 3 })
+	objNr := validationObjectNumber(0, a[1])
+	white, err := validateNumberArrayEntry(xRefTable, d, objNr, dictName, "WhitePoint", REQUIRED, sinceVersion, func(a types.Array) bool { return len(a) == 3 })
 	if err != nil {
 		return err
 	}
 
-	_, err = validateNumberArrayEntry(xRefTable, d, 0, dictName, "BlackPoint", OPTIONAL, sinceVersion, func(a types.Array) bool { return len(a) == 3 })
+	black, err := validateNumberArrayEntry(xRefTable, d, objNr, dictName, "BlackPoint", OPTIONAL, sinceVersion, func(a types.Array) bool { return len(a) == 3 })
 	if err != nil {
 		return err
 	}
 
-	_, err = validateNumberEntry(xRefTable, d, 0, dictName, "Gamma", OPTIONAL, sinceVersion, nil)
+	gamma, err := validateNumberEntry(xRefTable, d, objNr, dictName, "Gamma", OPTIONAL, sinceVersion, nil)
+	if err != nil {
+		return err
+	}
+	var g types.Array
+	if gamma != nil {
+		g = types.Array{gamma}
+	}
+	return validateCalGrayValues(xRefTable, d, objNr, white, black, g)
+}
 
-	return err
+func validateCalGrayValues(x *model.XRefTable, d types.Dict, ownerObjNr int, white, black, gamma types.Array) error {
+	// see 8.6.5.2, Table 62
+	for _, entry := range []struct {
+		name   string
+		values types.Array
+		valid  func(int, float64) bool
+	}{
+		{"WhitePoint", white, func(i int, v float64) bool {
+			if i == 1 {
+				return v == 1
+			}
+			return v > 0
+		}},
+		{"BlackPoint", black, func(_ int, v float64) bool { return v >= 0 }},
+		{"Gamma", gamma, func(_ int, v float64) bool { return v > 0 }},
+	} {
+		objNr := validationEntryObjectNumber(ownerObjNr, d, entry.name)
+		for i, o := range entry.values {
+
+			v, err := x.DereferenceNumber(o)
+			if err == nil && entry.valid(i, v) {
+				continue
+			}
+
+			if err == nil {
+				err = fmt.Errorf("invalid value %g", v)
+			}
+
+			name := entry.name
+			if len(entry.values) > 1 {
+				name = fmt.Sprintf("%s[%d]", name, i)
+			}
+
+			err = model.WithValidationErrorObject(fmt.Errorf("CalGray %s: %w", name, err), validationObjectNumber(objNr, o))
+			if x.ValidationMode != model.ValidationRelaxed {
+				return err
+			}
+
+			x.AddValidationNotice(model.NewValidationNotice(model.NoticePhaseValidate, model.NoticeDigested, err.Error(), err))
+		}
+	}
+	return nil
 }
 
 func validateCalRGBColorSpace(xRefTable *model.XRefTable, a types.Array, sinceVersion model.Version) error {
