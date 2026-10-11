@@ -698,6 +698,7 @@ func validateLegacySlideShowResources(c context.Context, xRefTable *model.XRefTa
 }
 
 func validateSlideShowResources(c context.Context, xRefTable *model.XRefTable, d types.Dict, startResource string) error {
+	// see 13.5
 	const (
 		dictName  = "slideShowDict"
 		entryName = "Resources"
@@ -722,6 +723,9 @@ func validateSlideShowResources(c context.Context, xRefTable *model.XRefTable, d
 	)
 	if err != nil {
 		return err
+	}
+	if tree == nil {
+		return fmt.Errorf("%s.StartResource: resource %q not found", dictName, startResource)
 	}
 	if _, found, err := tree.Value(c, startResource); err != nil {
 		return err
