@@ -2655,10 +2655,8 @@ func streamDictForObject(c context.Context, ctx *model.Context, d types.Dict, ob
 }
 
 func dict(c context.Context, ctx *model.Context, d1 types.Dict, objNr, genNr, endInd, streamInd int) (d2 types.Dict, err error) {
-	if ctx.EncKey != nil {
-		if _, err := decryptDeepObject(c, d1, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
-			return nil, err
-		}
+	if _, err := decryptObjectStrings(c, ctx, d1, objNr, genNr); err != nil {
+		return nil, err
 	}
 
 	if endInd >= 0 && (streamInd < 0 || streamInd > endInd) {
@@ -2856,33 +2854,8 @@ func resolveObject(c context.Context, ctx *model.Context, obj types.Object, offs
 		// StreamDict.
 		return streamDictForObject(c, ctx, o, objNr, streamInd, streamOffset, offset)
 
-	case types.Array:
-		if ctx.EncKey != nil {
-			if _, err := decryptDeepObject(c, o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
-				return nil, err
-			}
-		}
-		return o, nil
-
-	case types.StringLiteral:
-		if ctx.EncKey != nil {
-			sl, err := decryptStringLiteral(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
-			if err != nil {
-				return nil, err
-			}
-			return *sl, nil
-		}
-		return o, nil
-
-	case types.HexLiteral:
-		if ctx.EncKey != nil {
-			hl, err := decryptHexLiteral(o, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
-			if err != nil {
-				return nil, err
-			}
-			return *hl, nil
-		}
-		return o, nil
+	case types.Array, types.StringLiteral, types.HexLiteral:
+		return decryptObjectStrings(c, ctx, o, objNr, genNr)
 
 	default:
 		return o, nil

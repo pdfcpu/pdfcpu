@@ -1636,6 +1636,42 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (enc *model.Enc, err 
 	return enc, nil
 }
 
+// defaultCryptFilterEncrypted reports whether the selected default filter transforms data.
+func defaultCryptFilterEncrypted(ctx *model.Context, key string) (bool, error) {
+	if ctx.E == nil || ctx.E.V < 4 {
+		return true, nil
+	}
+	d, err := ctx.EncryptDict()
+	if err != nil {
+		return false, classifyEncryptionDictionaryError(err)
+	}
+	n, _, err := ctx.DereferenceNameEntry(d, key)
+	if err != nil {
+		return false, fmt.Errorf("%w: encrypt dict entry %q: %w", ErrMalformedEncryption, key, err)
+	}
+	// StmF and StrF default to Identity (PDF 2.0, Table 20).
+	return n != nil && n.Value() != "Identity", nil
+}
+
+func stringsEncrypted(ctx *model.Context) (bool, error) {
+	if ctx.EncKey == nil {
+		return false, nil
+	}
+	return defaultCryptFilterEncrypted(ctx, "StrF")
+}
+
+func decryptObjectStrings(c context.Context, ctx *model.Context, obj types.Object, objNr, genNr int) (types.Object, error) {
+	encrypted, err := stringsEncrypted(ctx)
+	if err != nil || !encrypted {
+		return obj, err
+	}
+	o, err := decryptDeepObject(c, obj, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
+	if o != nil || err != nil {
+		return o, err
+	}
+	return obj, nil
+}
+
 func streamCryptFilterName(ctx *model.Context, sd *types.StreamDict) (string, bool, error) {
 	if len(sd.FilterPipeline) == 0 || sd.FilterPipeline[0].Name != "Crypt" {
 		return "", false, nil
@@ -1660,7 +1696,8 @@ func streamCryptMethod(ctx *model.Context, sd *types.StreamDict) (encrypted, aes
 		return false, false, err
 	}
 	if !hasCrypt {
-		return true, ctx.AES4Streams, nil
+		encrypted, err := defaultCryptFilterEncrypted(ctx, "StmF")
+		return encrypted, ctx.AES4Streams, err
 	}
 	if name == "Identity" {
 		return false, false, nil

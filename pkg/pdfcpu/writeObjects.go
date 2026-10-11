@@ -318,7 +318,11 @@ func writeStringLiteralObject(ctx *model.Context, objNumber, genNumber int, sl t
 		return nil
 	}
 
-	if ctx.EncKey != nil {
+	encrypted, err := stringsEncrypted(ctx)
+	if err != nil {
+		return err
+	}
+	if encrypted {
 		sl1, err := encryptStringLiteral(sl, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return err
@@ -340,7 +344,11 @@ func writeHexLiteralObject(ctx *model.Context, objNumber, genNumber int, hl type
 		return nil
 	}
 
-	if ctx.EncKey != nil {
+	encrypted, err := stringsEncrypted(ctx)
+	if err != nil {
+		return err
+	}
+	if encrypted {
 		hl1, err := encryptHexLiteral(hl, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return err
@@ -451,7 +459,11 @@ func writeDictObject(c context.Context, ctx *model.Context, objNr, genNr int, d 
 		return nil
 	}
 
-	if ctx.EncKey != nil {
+	encrypted, err := stringsEncrypted(ctx)
+	if err != nil {
+		return err
+	}
+	if encrypted {
 		_, err := encryptDeepObject(c, d, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R)
 		if err != nil {
 			return err
@@ -479,7 +491,11 @@ func writeArrayObject(c context.Context, ctx *model.Context, objNumber, genNumbe
 		return nil
 	}
 
-	if ctx.EncKey != nil {
+	encrypted, err := stringsEncrypted(ctx)
+	if err != nil {
+		return err
+	}
+	if encrypted {
 		if _, err := encryptDeepObject(c, a, objNumber, genNumber, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
 			return err
 		}
@@ -736,7 +752,11 @@ func writeDeepStreamDict(c context.Context, ctx *model.Context, sd *types.Stream
 	if err := contextutil.Check(c); err != nil {
 		return err
 	}
-	if ctx.EncKey != nil {
+	encrypted, err := stringsEncrypted(ctx)
+	if err != nil {
+		return err
+	}
+	if encrypted {
 		if _, err := encryptDeepObject(c, *sd, objNr, genNr, ctx.EncKey, ctx.AES4Strings, ctx.E.R); err != nil {
 			return err
 		}
