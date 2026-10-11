@@ -19,7 +19,7 @@ package model
 import (
 	"errors"
 	"strings"
-	"unicode"
+	"unicode/utf8"
 
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
@@ -31,12 +31,13 @@ var (
 	errBIExpressionCorrupt = errors.New("corrupt BI expression")
 )
 
+// whitespaceOrEOL recognizes only PDF whitespace, including EOL markers (see 7.2.3).
 func whitespaceOrEOL(c rune) bool {
-	return unicode.IsSpace(c) || c == 0x0A || c == 0x0D || c == 0x00
+	return c >= 0 && c < utf8.RuneSelf && pdfWhitespace(byte(c))
 }
 
 func whitespaceOrEOLOrClosingBracket(c rune) bool {
-	return unicode.IsSpace(c) || c == 0x0A || c == 0x0D || c == 0x00 || c == 0x5D
+	return whitespaceOrEOL(c) || c == ']'
 }
 
 func skipDict(l *string) error {

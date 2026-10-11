@@ -18,6 +18,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"maps"
 	"reflect"
 	"testing"
@@ -237,6 +238,42 @@ func TestParseCorruptContent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if _, err := parseContent(tt.content, false); err == nil {
 				t.Fatal("expected corrupt content error")
+			}
+		})
+	}
+}
+
+// TestContentPDFWhitespace checks token and inline-image boundaries in both validation modes.
+func TestContentPDFWhitespace(t *testing.T) {
+	for _, ws := range []byte{0, 9, 10, 12, 13, 32} {
+		t.Run(fmt.Sprintf("%02x", ws), func(t *testing.T) {
+			sep := string(ws)
+			checkContentResources(t, "q"+sep+"/Im0"+sep+"Do"+sep+"Q", map[string][]string{"XObject": {"Im0"}})
+			checkContentResources(t, "BI"+sep+"/CS /G ID"+sep+"x"+sep+"EI"+sep+"Q /Im1 Do",
+				map[string][]string{"XObject": {"Im1"}})
+			checkContentResources(t, "BI /F /A85 ID z~>"+sep+"EI Q /Im1 Do",
+				map[string][]string{"XObject": {"Im1"}})
+		})
+	}
+}
+
+// TestContentNonPDFWhitespace keeps Unicode spaces and non-PDF whitespace bytes within tokens and image data.
+func TestContentNonPDFWhitespace(t *testing.T) {
+	for _, suffix := range []string{"\x0b", "\x85", "\xa0", "\u0085", "\u00a0", "\u2003", "\u2028", "\u0100", "\xff"} {
+		t.Run(fmt.Sprintf("%x", suffix), func(t *testing.T) {
+			checkContentResources(t, "q /Im0 "+suffix+"Do Q q /Im1 Do Q", map[string][]string{"XObject": {"Im1"}})
+			checkContentResources(t, "q BI"+suffix+"/Im1 Do Q", map[string][]string{"XObject": {"Im1"}})
+			// Misleading EI sequences remain image bytes; resources inside them must not escape into content.
+			checkContentResources(t, "BI /CS /G ID EI"+suffix+"Q/Fake Do\nEI Q /Real Do",
+				map[string][]string{"XObject": {"Real"}})
+			checkContentResources(t, "BI /CS /G ID EI"+suffix+"Q(\nEI Q", map[string][]string{})
+			// The relaxed missing-separator exception still requires a complete Q token.
+			checkContentResources(t, "BI /CS /G ID xEI Q"+suffix+"/Fake Do\nEI Q /Real Do",
+				map[string][]string{"XObject": {"Real"}})
+			for _, relaxed := range []bool{false, true} {
+				if _, err := parseContent("BI /F /A85 ID z~>"+suffix+"EI Q", relaxed); !errors.Is(err, errBIExpressionCorrupt) {
+					t.Errorf("relaxed=%t: got %v, want corrupt BI expression", relaxed, err)
+				}
 			}
 		})
 	}
