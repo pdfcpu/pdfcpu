@@ -1005,6 +1005,7 @@ func validateSetOCGStateActionDict(xRefTable *model.XRefTable, d types.Dict, dic
 }
 
 func validateRenditionScreenPage(c context.Context, xRefTable *model.XRefTable, annotationRef, pageRef types.IndirectRef) error {
+	// see 12.6.4.14
 	pageObjNr := pageRef.ObjectNumber.Value()
 	pageDict, err := xRefTable.DereferenceDict(pageRef)
 	if err != nil {
@@ -1018,24 +1019,15 @@ func validateRenditionScreenPage(c context.Context, xRefTable *model.XRefTable, 
 	); err != nil {
 		return err
 	}
-	pageNumber, err := xRefTable.PageNumber(c, pageObjNr)
-	if err != nil {
-		return model.WithValidationErrorObject(fmt.Errorf("Rendition.AN.P: locate page: %w", err), pageObjNr)
+	if err := validateRenditionPageMembership(c, xRefTable, pageObjNr); err != nil {
+		return err
 	}
-	if pageNumber == 0 {
-		return model.WithValidationErrorObject(errors.New("Rendition.AN.P: page is not in the page tree"), pageObjNr)
-	}
-	annots, err := validateArrayEntry(xRefTable, pageDict, pageObjNr, "pageDict", "Annots", REQUIRED, model.V10, nil)
+	annots, err := renditionPageAnnotations(c, xRefTable, pageDict, pageObjNr)
 	if err != nil {
 		return err
 	}
-	for _, o := range annots {
-		if err := contextutil.Check(c); err != nil {
-			return err
-		}
-		if ir, ok := o.(types.IndirectRef); ok && ir == annotationRef {
-			return nil
-		}
+	if annots[annotationRef] {
+		return nil
 	}
 	return model.WithValidationErrorObject(
 		errors.New("Rendition.AN: annotation is not in the page Annots array"), pageObjNr,

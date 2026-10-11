@@ -2228,6 +2228,9 @@ func validateAnnotationsArray(c context.Context, xRefTable *model.XRefTable, a t
 }
 
 func validatePageAnnotations(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+	// see 12.5
+	// Annotation validation may repair the array.
+	defer clearRenditionPageAnnotations(c, ownerObjNr)
 	annotsObjNr := validationEntryObjectNumber(ownerObjNr, d, "Annots")
 	a, err := validateArrayEntry(xRefTable, d, ownerObjNr, "pageDict", "Annots", OPTIONAL, model.V10, nil)
 	if err != nil || a == nil {

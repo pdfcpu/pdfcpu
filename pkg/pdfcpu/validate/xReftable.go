@@ -1856,9 +1856,11 @@ func validateRootEntries(
 }
 
 func validateRootObject(c context.Context, ctx *model.Context, rootDict types.Dict) (err error) {
+	// see 7.7.2
 	if err := contextutil.Check(c); err != nil {
 		return err
 	}
+	c, renditionPages := withRenditionPageIndex(c)
 	if log.ValidateEnabled() {
 		log.Validate.Println("*** validateRootObject begin ***")
 	}
@@ -1924,6 +1926,9 @@ func validateRootObject(c context.Context, ctx *model.Context, rootDict types.Di
 	rootPageNodeDict, err := validatePages(c, xRefTable, rootDict)
 	if err != nil {
 		return fmt.Errorf("pages: %w", err)
+	}
+	if err := renditionPages.finish(c); err != nil {
+		return err
 	}
 
 	if err = validateRootEntries(c, xRefTable, rootDict, rootObjNr); err != nil {

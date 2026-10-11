@@ -1485,6 +1485,7 @@ func processPagesKids(c context.Context, xRefTable *model.XRefTable, kids types.
 			}
 
 		case "Page":
+			recordRenditionPage(c, objNr)
 			*curPage++
 			xRefTable.CurPage = *curPage
 			dMediaBoxArr, err := validatePageDict(c, xRefTable, pageNodeDict, objNr, hasResources, len(mediaBoxArr) > 0)
