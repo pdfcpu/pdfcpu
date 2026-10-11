@@ -18,6 +18,7 @@ package model
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -159,6 +160,10 @@ func inlineImageEnd(s string, i int, relaxed bool) bool {
 	if !whitespaceOrEOL(rune(s[i-1])) {
 		return relaxed && relaxedEIEnd(s[i+2:])
 	}
+	return inlineImageEndBoundary(s, i)
+}
+
+func inlineImageEndBoundary(s string, i int) bool {
 	return i+2 == len(s) || whitespaceOrEOL(rune(s[i+2])) || delimiter(s[i+2]) || s[i+2] == '%'
 }
 
@@ -176,8 +181,45 @@ func lookupASCII85EI(s string, relaxed bool) (int, error) {
 	return 0, errBIExpressionCorrupt
 }
 
-func lookupEI(l *string, relaxed bool, firstFilter string) (int, error) {
+func inlineImageDataStart(s, firstFilter string) (int, error) {
+	if len(s) < 3 || !strings.HasPrefix(s, "ID") || !whitespaceOrEOL(rune(s[2])) {
+		return 0, errBIExpressionCorrupt
+	}
+	start := 3
+	if s[2] == '\r' && start < len(s) && s[start] == '\n' {
+		start++
+	}
+	if types.MemberOf(firstFilter, []string{"ASCII85Decode", "A85", "ASCIIHexDecode", "AHx"}) {
+		for start < len(s) && whitespaceOrEOL(rune(s[start])) {
+			start++
+		}
+	}
+	return start, nil
+}
+
+func lookupLengthEI(s string, length int, firstFilter string) (int, error) {
+	start, err := inlineImageDataStart(s, firstFilter)
+	if err != nil {
+		return 0, err
+	}
+	if length > len(s)-start {
+		return 0, errBIExpressionCorrupt
+	}
+	i := start + length
+	for i < len(s) && whitespaceOrEOL(rune(s[i])) {
+		i++
+	}
+	if i+2 > len(s) || s[i:i+2] != "EI" || !inlineImageEndBoundary(s, i) {
+		return 0, errBIExpressionCorrupt
+	}
+	return i, nil
+}
+
+func lookupEI(l *string, relaxed bool, firstFilter string, length *int) (int, error) {
 	s := *l
+	if length != nil {
+		return lookupLengthEI(s, *length, firstFilter)
+	}
 	if firstFilter == "ASCII85Decode" || firstFilter == "A85" {
 		return lookupASCII85EI(s, relaxed)
 	}
@@ -259,9 +301,54 @@ func firstInlineImageFilter(s string) (string, error) {
 	return string(*name), nil
 }
 
-func skipBI(l *string, prn PageResourceNames, relaxed bool) error {
+func inlineImageLength(s string, previous *int) (*int, error) {
+	s = strings.TrimLeftFunc(s, whitespaceOrEOL)
+	i, _ := positionToNextWhitespaceOrChar(s, "/[]<>()%")
+	if i <= 0 {
+		return nil, errBIExpressionCorrupt
+	}
+	n, err := strconv.Atoi(s[:i])
+	if err != nil || n < 0 || previous != nil && *previous != n {
+		return nil, errBIExpressionCorrupt
+	}
+	return &n, nil
+}
+
+type inlineImageState struct {
+	firstFilter string
+	length      *int
+}
+
+func skipBIEntry(s string, prn PageResourceNames, pdf20 bool, state *inlineImageState) (string, error) {
+	s = s[1:]
+	i, _ := positionToNextWhitespaceOrChar(s, "/")
+	if i < 0 {
+		return "", errBIExpressionCorrupt
+	}
+	switch s[:i] {
+	case "L", "Length":
+		if pdf20 {
+			var err error
+			state.length, err = inlineImageLength(s[i:], state.length)
+			if err != nil {
+				return "", err
+			}
+		}
+	case "CS", "ColorSpace":
+		return skipBIColorSpaceName(s[i:], prn)
+	case "F", "Filter":
+		var err error
+		state.firstFilter, err = firstInlineImageFilter(s[i:])
+		if err != nil {
+			return "", err
+		}
+	}
+	return s[i:], nil
+}
+
+func skipBI(l *string, prn PageResourceNames, relaxed, pdf20 bool) error {
 	s := *l
-	var firstFilter string
+	var state inlineImageState
 	//fmt.Printf("skipBI <%s>\n", s)
 	for {
 		s = strings.TrimLeftFunc(s, whitespaceOrEOLOrClosingBracket)
@@ -269,7 +356,10 @@ func skipBI(l *string, prn PageResourceNames, relaxed bool) error {
 			return errBIExpressionCorrupt
 		}
 		if len(s) > 2 && strings.HasPrefix(s, "ID") && whitespaceOrEOL(rune(s[2])) {
-			i, err := lookupEI(&s, relaxed, firstFilter)
+			if pdf20 && !relaxed && state.length == nil {
+				return errBIExpressionCorrupt
+			}
+			i, err := lookupEI(&s, relaxed, state.firstFilter, state.length)
 			if err != nil {
 				return err
 			}
@@ -277,28 +367,11 @@ func skipBI(l *string, prn PageResourceNames, relaxed bool) error {
 			break
 		}
 		if s[0] == '/' {
-			s = s[1:]
-			i, _ := positionToNextWhitespaceOrChar(s, "/")
-			if i < 0 {
-				return errBIExpressionCorrupt
+			var err error
+			s, err = skipBIEntry(s, prn, pdf20, &state)
+			if err != nil {
+				return err
 			}
-			token := s[:i]
-			switch token {
-			case "CS", "ColorSpace":
-				s1, err := skipBIColorSpaceName(s[i:], prn)
-				if err != nil {
-					return err
-				}
-				s = s1
-				continue
-			case "F", "Filter":
-				var err error
-				firstFilter, err = firstInlineImageFilter(s[i:])
-				if err != nil {
-					return err
-				}
-			}
-			s = s[i:]
 			continue
 		}
 		i, _ := positionToNextWhitespaceOrChar(s, "/]")
@@ -311,7 +384,7 @@ func skipBI(l *string, prn PageResourceNames, relaxed bool) error {
 	return nil
 }
 
-func skipInlineImage(l *string, prn PageResourceNames, relaxed bool) (bool, error) {
+func skipInlineImage(l *string, prn PageResourceNames, relaxed, pdf20 bool) (bool, error) {
 	s := *l
 	if !strings.HasPrefix(s, "BI") {
 		return false, nil
@@ -323,14 +396,14 @@ func skipInlineImage(l *string, prn PageResourceNames, relaxed bool) (bool, erro
 		return false, nil
 	}
 	s = s[2:]
-	if err := skipBI(&s, prn, relaxed); err != nil {
+	if err := skipBI(&s, prn, relaxed, pdf20); err != nil {
 		return false, err
 	}
 	*l = s
 	return true, nil
 }
 
-func positionToNextContentToken(line *string, prn PageResourceNames, relaxed bool) (bool, error) {
+func positionToNextContentToken(line *string, prn PageResourceNames, relaxed, pdf20 bool) (bool, error) {
 	l := *line
 	for {
 		l = strings.TrimLeftFunc(l, whitespaceOrEOL)
@@ -367,7 +440,7 @@ func positionToNextContentToken(line *string, prn PageResourceNames, relaxed boo
 			}
 			continue
 		}
-		ok, err := skipInlineImage(&l, prn, relaxed)
+		ok, err := skipInlineImage(&l, prn, relaxed, pdf20)
 		if err != nil {
 			return true, err
 		}
@@ -379,7 +452,7 @@ func positionToNextContentToken(line *string, prn PageResourceNames, relaxed boo
 	}
 }
 
-func nextContentToken(pre string, line *string, prn PageResourceNames, relaxed bool) (string, error) {
+func nextContentToken(pre string, line *string, prn PageResourceNames, relaxed, pdf20 bool) (string, error) {
 	// A token is either a name or some chunk terminated by white space or one of /, (, [
 	if noBuf(line) {
 		return "", nil
@@ -390,7 +463,7 @@ func nextContentToken(pre string, line *string, prn PageResourceNames, relaxed b
 	//log.Parse.Printf("nextContentToken: start buf= <%s>\n", *line)
 
 	// Skip Tj, TJ and inline images.
-	done, err := positionToNextContentToken(&l, prn, relaxed)
+	done, err := positionToNextContentToken(&l, prn, relaxed, pdf20)
 	if err != nil {
 		return t, err
 	}
@@ -521,7 +594,7 @@ func resourceNameAtPos2(s, name string, prn PageResourceNames) (string, bool) {
 	return "", false
 }
 
-func parseContent(s string, relaxed bool) (PageResourceNames, error) {
+func parseContent(s string, relaxed, pdf20 bool) (PageResourceNames, error) {
 	var (
 		pre  string
 		name string
@@ -533,7 +606,7 @@ func parseContent(s string, relaxed bool) (PageResourceNames, error) {
 	//fmt.Printf("parseContent:\n%s\n", hex.Dump([]byte(s)))
 
 	for pos := 0; ; {
-		t, err := nextContentToken(pre, &s, prn, relaxed)
+		t, err := nextContentToken(pre, &s, prn, relaxed, pdf20)
 		pre = ""
 		if log.ParseEnabled() {
 			log.Parse.Printf("t = <%s>\n", t)

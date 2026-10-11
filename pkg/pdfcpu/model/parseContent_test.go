@@ -33,7 +33,7 @@ func checkContentResources(t *testing.T, content string, want map[string][]strin
 
 func checkContentResourcesMode(t *testing.T, content string, want map[string][]string, relaxed bool) {
 	t.Helper()
-	got, err := parseContent(content, relaxed)
+	got, err := parseContent(content, relaxed, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +89,7 @@ func TestInlineImageMissingEndWhitespace(t *testing.T) {
 				want["XObject"] = []string{"Im1"}
 			}
 			checkContentResourcesMode(t, image+tail, want, true)
-			if _, err := parseContent(image+tail, false); !errors.Is(err, errBIExpressionCorrupt) {
+			if _, err := parseContent(image+tail, false, false); !errors.Is(err, errBIExpressionCorrupt) {
 				t.Fatalf("strict parsing error = %v, want corrupt BI expression", err)
 			}
 		})
@@ -115,7 +115,7 @@ func TestInlineImageASCII85EndMarker(t *testing.T) {
 	checkContentResources(t, "BI /F [/Fl /A85] ID x EI /Im1 Do", map[string][]string{"XObject": {"Im1"}})
 	content := "BI /F /A85 ID z~>EI Q /Im1 Do"
 	checkContentResourcesMode(t, content, map[string][]string{"XObject": {"Im1"}}, true)
-	if _, err := parseContent(content, false); !errors.Is(err, errBIExpressionCorrupt) {
+	if _, err := parseContent(content, false, false); !errors.Is(err, errBIExpressionCorrupt) {
 		t.Fatalf("strict parsing error = %v, want corrupt BI expression", err)
 	}
 }
@@ -129,11 +129,71 @@ func TestInlineImageASCII85MalformedEnd(t *testing.T) {
 	} {
 		t.Run(content, func(t *testing.T) {
 			for _, relaxed := range []bool{false, true} {
-				if _, err := parseContent(content, relaxed); !errors.Is(err, errBIExpressionCorrupt) {
+				if _, err := parseContent(content, relaxed, false); !errors.Is(err, errBIExpressionCorrupt) {
 					t.Errorf("relaxed=%t: error = %v, want corrupt BI expression", relaxed, err)
 				}
 			}
 		})
+	}
+}
+
+// TestInlineImagePDF20Length keeps EI-like image bytes out of the resource scan.
+func TestInlineImagePDF20Length(t *testing.T) {
+	for _, key := range []string{"L", "Length"} {
+		for _, relaxed := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/relaxed=%t", key, relaxed), func(t *testing.T) {
+				content := "BI /W 13 /H 1 /BPC 8 /CS /G /" + key + " 13 ID x EI /Fake Do EI /Real Do"
+				got, err := parseContent(content, relaxed, true)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !maps.Equal(got["XObject"], map[string]bool{"Real": true}) {
+					t.Fatalf("XObject resources = %v, want Real only", got["XObject"])
+				}
+			})
+		}
+	}
+}
+
+// TestInlineImagePDF20LengthBoundaries checks ID separators and ASCII filter whitespace.
+func TestInlineImagePDF20LengthBoundaries(t *testing.T) {
+	for _, content := range []string{
+		"BI /L 1 ID\r\nx EI /Real Do",
+		"BI /L 2 ID  x EI /Real Do",
+		"BI /L 3 /F /A85 ID \r\n z~> EI /Real Do",
+		"BI /L 3 /Filter /ASCIIHexDecode ID \n 61> EI /Real Do",
+	} {
+		t.Run(content, func(t *testing.T) {
+			got, err := parseContent(content, false, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !maps.Equal(got["XObject"], map[string]bool{"Real": true}) {
+				t.Fatalf("XObject resources = %v, want Real only", got["XObject"])
+			}
+		})
+	}
+}
+
+// TestInlineImagePDF20InvalidLength rejects missing or incorrect byte counts.
+func TestInlineImagePDF20InvalidLength(t *testing.T) {
+	for _, content := range []string{
+		"BI /CS /G ID x EI /Real Do",
+		"BI /L -1 ID x EI /Real Do",
+		"BI /L x ID x EI /Real Do",
+		"BI /L 1 /Length 2 ID x EI /Real Do",
+		"BI /L 1 ID ab EI /Real Do",
+		"BI /L 100 ID x EI /Real Do",
+	} {
+		t.Run(content, func(t *testing.T) {
+			if _, err := parseContent(content, false, true); !errors.Is(err, errBIExpressionCorrupt) {
+				t.Fatalf("error = %v, want corrupt BI expression", err)
+			}
+		})
+	}
+	// The Length entry was introduced in PDF 2.0; earlier files may omit it.
+	if _, err := parseContent("BI /CS /G ID x EI /Real Do", false, false); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -184,7 +244,7 @@ func TestContentMalformedExpressions(t *testing.T) {
 		`BI /CS [/I /RGB 0 (abc)`, `BI /CS [[] ID x EI Q`, `BI /CS /G ID x EIx Q`,
 	} {
 		t.Run(content, func(t *testing.T) {
-			if _, err := parseContent(content, false); err == nil {
+			if _, err := parseContent(content, false, false); err == nil {
 				t.Fatal("expected corrupt content error")
 			}
 		})
@@ -212,7 +272,7 @@ func TestParseContent(t *testing.T) {
 	want["Shading"]["SH1"] = true
 	want["XObject"]["Im5"] = true
 
-	got, err := parseContent(s, false)
+	got, err := parseContent(s, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +296,7 @@ func TestParseCorruptContent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := parseContent(tt.content, false); err == nil {
+			if _, err := parseContent(tt.content, false, false); err == nil {
 				t.Fatal("expected corrupt content error")
 			}
 		})
@@ -271,7 +331,7 @@ func TestContentNonPDFWhitespace(t *testing.T) {
 			checkContentResources(t, "BI /CS /G ID xEI Q"+suffix+"/Fake Do\nEI Q /Real Do",
 				map[string][]string{"XObject": {"Real"}})
 			for _, relaxed := range []bool{false, true} {
-				if _, err := parseContent("BI /F /A85 ID z~>"+suffix+"EI Q", relaxed); !errors.Is(err, errBIExpressionCorrupt) {
+				if _, err := parseContent("BI /F /A85 ID z~>"+suffix+"EI Q", relaxed, false); !errors.Is(err, errBIExpressionCorrupt) {
 					t.Errorf("relaxed=%t: got %v, want corrupt BI expression", relaxed, err)
 				}
 			}
