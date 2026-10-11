@@ -1861,6 +1861,7 @@ func validateRootObject(c context.Context, ctx *model.Context, rootDict types.Di
 		return err
 	}
 	c, renditionPages := withRenditionPageIndex(c)
+	c = withMediaValidation(c)
 	if log.ValidateEnabled() {
 		log.Validate.Println("*** validateRootObject begin ***")
 	}

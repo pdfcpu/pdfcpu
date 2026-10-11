@@ -1352,6 +1352,7 @@ func validateAnnotationDictRedact(xRefTable *model.XRefTable, d types.Dict, dict
 }
 
 func validateRichMediaAnnotation(c context.Context, xRefTable *model.XRefTable, d types.Dict, dictName string) error {
+	// see 13.7.2.1
 	// See Adobe Supplement to ISO 32000, extension level 3, 9.6.1.
 	rawContent := d["RichMediaContent"]
 	contentObjNr := validationObjectNumber(0, rawContent)
@@ -1359,7 +1360,15 @@ func validateRichMediaAnnotation(c context.Context, xRefTable *model.XRefTable, 
 	if err != nil {
 		return err
 	}
-	if _, err = validateNameEntry(
+	_, err = validateMediaObject(c, rawContent, richMediaContentValidation, func() error {
+		return validateRichMediaContent(c, xRefTable, content, contentObjNr)
+	})
+	return err
+}
+
+func validateRichMediaContent(c context.Context, xRefTable *model.XRefTable, content types.Dict, contentObjNr int) error {
+	// see 13.7.2.3
+	if _, err := validateNameEntry(
 		xRefTable,
 		content,
 		contentObjNr,
@@ -1380,7 +1389,10 @@ func validateRichMediaAnnotation(c context.Context, xRefTable *model.XRefTable, 
 	if err != nil || assets == nil {
 		return err
 	}
-	_, _, _, err = validateNameTree(c, xRefTable, "RichMediaAssets", assets, assetsObjNr, true, rawAssets)
+	_, err = validateMediaObject(c, rawAssets, richMediaAssetsValidation, func() error {
+		_, _, _, err := validateNameTree(c, xRefTable, "RichMediaAssets", assets, assetsObjNr, true, rawAssets)
+		return err
+	})
 	return err
 }
 

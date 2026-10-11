@@ -373,7 +373,38 @@ func collect3DOnInstantiate(xRefTable *model.XRefTable, d types.Dict, streamObjN
 	})
 }
 
+func validate3DOnInstantiate(xRefTable *model.XRefTable, d types.Dict, streamObjNr, ownerObjNr int) error {
+	// see 13.6.3.1
+	js, err := validateStreamDictEntry(xRefTable, d, streamObjNr, "3DStreamDict", "OnInstantiate", OPTIONAL, model.V16, nil)
+	if err != nil {
+		return err
+	}
+	// A shared script still needs a notice for each annotation that uses it.
+	if raw := d["OnInstantiate"]; js == nil && raw != nil {
+		js, _, err = xRefTable.DereferenceStreamDict(raw)
+		if err != nil {
+			return model.WithValidationErrorObject(err, validationObjectNumber(streamObjNr, raw))
+		}
+	}
+	if js != nil {
+		collect3DOnInstantiate(xRefTable, d, streamObjNr, ownerObjNr)
+	}
+	return nil
+}
+
+func validateShared3DStream(c context.Context, xRefTable *model.XRefTable, raw types.Object, sd types.StreamDict, streamObjNr, ownerObjNr int) error {
+	// see 13.6.3.1
+	cached, err := validateMediaObject(c, raw, threeDStreamValidation, func() error {
+		return validate3DStreamDict(c, xRefTable, sd, streamObjNr, ownerObjNr)
+	})
+	if err != nil || !cached {
+		return err
+	}
+	return validate3DOnInstantiate(xRefTable, sd.Dict, streamObjNr, ownerObjNr)
+}
+
 func validate3DStreamDict(c context.Context, xRefTable *model.XRefTable, sd types.StreamDict, streamObjNr, ownerObjNr int) error {
+	// see 13.6.3.1
 	if err := contextutil.Check(c); err != nil {
 		return err
 	}
@@ -397,12 +428,8 @@ func validate3DStreamDict(c context.Context, xRefTable *model.XRefTable, sd type
 	if err := validate3DResources(c, xRefTable, d, streamObjNr); err != nil {
 		return err
 	}
-	js, err := validateStreamDictEntry(xRefTable, d, streamObjNr, "3DStreamDict", "OnInstantiate", OPTIONAL, model.V16, nil)
-	if err != nil {
+	if err := validate3DOnInstantiate(xRefTable, d, streamObjNr, ownerObjNr); err != nil {
 		return err
-	}
-	if js != nil {
-		collect3DOnInstantiate(xRefTable, d, streamObjNr, ownerObjNr)
 	}
 	sinceVersion := threeDV17SinceVersion(xRefTable)
 	animation, err := validateDictEntry(xRefTable, d, streamObjNr, "3DStreamDict", "AN", OPTIONAL, sinceVersion, nil)
@@ -414,6 +441,7 @@ func validate3DStreamDict(c context.Context, xRefTable *model.XRefTable, sd type
 }
 
 func validate3DReferenceDict(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr, annotObjNr int) error {
+	// see 13.6.3.3
 	const dictName = "3DReferenceDict"
 	if _, err := validateNameEntry(xRefTable, d, ownerObjNr, dictName, "Type", OPTIONAL, model.V16, func(s string) bool {
 		return s == "3DRef"
@@ -435,10 +463,11 @@ func validate3DReferenceDict(c context.Context, xRefTable *model.XRefTable, d ty
 		err := fmt.Errorf("dict=%s entry=3DD: expected 3D stream, got %T", dictName, o)
 		return model.WithValidationErrorObject(err, streamObjNr)
 	}
-	return validate3DStreamDict(c, xRefTable, sd, streamObjNr, annotObjNr)
+	return validateShared3DStream(c, xRefTable, d["3DD"], sd, streamObjNr, annotObjNr)
 }
 
 func validate3DDataEntry(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int) error {
+	// see 13.6.2
 	raw, _ := d.Find("3DD")
 	o, err := validateEntry(xRefTable, d, ownerObjNr, "3D", "3DD", REQUIRED, model.V16)
 	if err != nil {
@@ -447,7 +476,7 @@ func validate3DDataEntry(c context.Context, xRefTable *model.XRefTable, d types.
 	objNr := validationObjectNumber(ownerObjNr, raw)
 	switch o := o.(type) {
 	case types.StreamDict:
-		return validate3DStreamDict(c, xRefTable, o, objNr, ownerObjNr)
+		return validateShared3DStream(c, xRefTable, raw, o, objNr, ownerObjNr)
 	case types.Dict:
 		return validate3DReferenceDict(c, xRefTable, o, objNr, ownerObjNr)
 	default:
