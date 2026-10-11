@@ -163,7 +163,7 @@ func TestNameTreeEncodedKeyCollision(t *testing.T) {
 			if err := n.Add(t.Context(), nil, key+"\x01", types.Integer(3), nil, nil); err != nil {
 				t.Fatal(err)
 			}
-			d := types.Dict{"Dest": types.NewHexLiteral([]byte(key))}
+			d := types.Dict{"Dest": types.NewHexLiteral([]byte(types.EncodeUTF16String(key)))}
 			x := locateNameTreeXRefTable()
 			refs := NameMap{key: {d}}
 			if merge {

@@ -80,11 +80,12 @@ func decodePDFDocEncoding(b []byte) string {
 	return string(rr)
 }
 
-func hasPDFDocEncodingControlByte(b []byte) bool {
+// isPDFDocEncodingASCII reports whether b can retain the existing ASCII byte representation.
+func isPDFDocEncodingASCII(b []byte) bool {
 	for _, c := range b {
-		if c >= 0x18 && c <= 0x1f {
-			return true
+		if c >= 0x80 || c >= 0x18 && c <= 0x1f {
+			return false
 		}
 	}
-	return false
+	return true
 }

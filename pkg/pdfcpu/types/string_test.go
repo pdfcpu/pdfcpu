@@ -165,7 +165,7 @@ func TestStringLiteralToStringPDFDocEncoding(t *testing.T) {
 		},
 		{
 			name: "UTF8",
-			in:   StringLiteral("caf\u00e9"),
+			in:   StringLiteral("\xef\xbb\xbfcaf\u00e9"),
 			want: "caf\u00e9",
 		},
 		{
