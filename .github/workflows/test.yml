@@ -34,6 +34,7 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
+          check-latest: true
 
       - name: Go version
         run: go version
@@ -93,6 +94,7 @@ jobs:
         uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
+          check-latest: true
 
       - name: Go version
         run: go version
