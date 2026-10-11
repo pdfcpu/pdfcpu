@@ -193,11 +193,8 @@ func newEncryptDict(pdf20, needAES bool, keyLength int, permissions int16) types
 			}
 		}
 		d1.Insert("CFM", types.Name(cfm))
-		kl := keyLength
-		if pdf20 {
-			kl /= 8
-		}
-		d1.Insert("Length", types.Integer(kl))
+		// Standard security handler crypt-filter lengths are in bytes (Table 25).
+		d1.Insert("Length", types.Integer(keyLength/8))
 
 		d2 := types.NewDict()
 		d2.Insert("StdCF", d1)
@@ -1082,11 +1079,7 @@ func validateOAndU(d types.Dict, r int, relaxed bool, specViolations *[]error) (
 }
 
 func checkCFLengthV2(length int, pdf20, relaxed bool) (specViolation, err error) {
-	bitLen := length
-	if pdf20 {
-		bitLen *= 8
-	}
-	if bitLen >= 40 && bitLen <= 128 && bitLen%8 == 0 {
+	if length >= 5 && length <= 16 {
 		return nil, nil
 	}
 
@@ -1095,8 +1088,8 @@ func checkCFLengthV2(length int, pdf20, relaxed bool) (specViolation, err error)
 		return nil, err
 	}
 
-	bitLen = length * 8
-	if bitLen < 40 || bitLen > 128 || bitLen%8 != 0 {
+	// Accept legacy bit counts only for earlier PDFs in relaxed mode.
+	if length < 40 || length > 128 || length%8 != 0 {
 		return nil, err
 	}
 
@@ -1104,18 +1097,14 @@ func checkCFLengthV2(length int, pdf20, relaxed bool) (specViolation, err error)
 }
 
 func checkCFLengthAESV2(length int, pdf20, relaxed bool) (specViolation, err error) {
-	const aesV2KeyLength = 128
+	const aesV2KeyLength = 16
 
-	bitLen := length
-	if pdf20 {
-		bitLen *= 8
-	}
-	if bitLen == aesV2KeyLength {
+	if length == aesV2KeyLength {
 		return nil, nil
 	}
 
 	err = fmt.Errorf("%w: invalid CF length, got %d want %d", ErrMalformedEncryption, length, aesV2KeyLength)
-	if pdf20 || !relaxed || length*8 != aesV2KeyLength {
+	if pdf20 || !relaxed || length != aesV2KeyLength*8 {
 		return nil, err
 	}
 
@@ -1123,7 +1112,9 @@ func checkCFLengthAESV2(length int, pdf20, relaxed bool) (specViolation, err err
 }
 
 func validateCFLength(length *int, cfm *string, pdf20, relaxed bool) (specViolation, err error) {
+	// see 7.6.6
 	// See table 25 Length
+	// The Standard security handler uses bytes in earlier versions too (PDF 1.7 errata, page 134).
 	// v = 4
 
 	if length == nil || cfm == nil {

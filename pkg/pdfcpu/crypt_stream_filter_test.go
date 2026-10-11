@@ -568,7 +568,7 @@ func TestReadCryptFilterEffectiveVersion(t *testing.T) {
 
 // TestReadEncryptedObjectStreamCatalog resolves the version only after decrypting the catalog's object stream.
 func TestReadEncryptedObjectStreamCatalog(t *testing.T) {
-	length := 128
+	length := 16
 	pdf := cryptFilterLengthPDF(t, "AESV2", 4, "", false, &length)
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationStrict
