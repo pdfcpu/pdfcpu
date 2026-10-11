@@ -1739,3 +1739,143 @@ func TestParseXRefTableEntryZeroOffsetPolicy(t *testing.T) {
 		})
 	}
 }
+
+// TestResolveObjectStreamErrorsReturnNil checks failed stream construction never returns a placeholder object.
+func TestResolveObjectStreamErrorsReturnNil(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		dict      types.Dict
+		streamInd int
+		wantErr   error
+	}{
+		{"filter", types.Dict{"Filter": types.Integer(5)}, 1, errCorruptFilterArray},
+		{"decode parameters", types.Dict{"Filter": types.Name("FlateDecode"), "DecodeParms": types.Integer(5)}, 1, errCorruptDecodeParms},
+		{"stream offset", types.Dict{}, 0, errMissingStreamOffset},
+	} {
+		for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+			t.Run(fmt.Sprintf("%s/mode%d", tc.name, mode), func(t *testing.T) {
+				conf := model.NewStatelessConfiguration()
+				conf.ValidationMode = mode
+				ctx, err := model.NewContext(bytes.NewReader(nil), conf)
+				if err != nil {
+					t.Fatal(err)
+				}
+				o, err := resolveObject(t.Context(), ctx, tc.dict, 0, 3, 0, -1, tc.streamInd, 0)
+				if o != nil || !errors.Is(err, tc.wantErr) {
+					t.Fatalf("got %T, %v; want nil, %v", o, err, tc.wantErr)
+				}
+			})
+		}
+	}
+}
+
+// TestReadMalformedStreamPolicy checks relaxed skipping, strict errors, and valid stream loading.
+func TestReadMalformedStreamPolicy(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		entry   string
+		wantErr error
+	}{
+		{"filter", "/Filter 5", errCorruptFilterArray},
+		{"decode parameters", "/Filter /FlateDecode/DecodeParms 5", errCorruptDecodeParms},
+		{"valid", "", nil},
+	} {
+		for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+			t.Run(fmt.Sprintf("%s/mode%d", tc.name, mode), func(t *testing.T) {
+				conf := model.NewStatelessConfiguration()
+				conf.ValidationMode = mode
+				ctx, err := Read(t.Context(), bytes.NewReader(selfReferencingStreamPDF(tc.entry)), conf)
+				if tc.wantErr != nil && mode == model.ValidationStrict {
+					if !errors.Is(err, tc.wantErr) {
+						t.Fatalf("got %v, want %v", err, tc.wantErr)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				entry := ctx.Table[3]
+				if entry == nil {
+					t.Fatal("missing stream xref entry")
+				}
+				if tc.wantErr != nil {
+					if entry.Object != nil {
+						t.Fatalf("skipped stream retained object %T", entry.Object)
+					}
+					return
+				}
+				sd, ok := entry.Object.(types.StreamDict)
+				if !ok || sd.Dict == nil || string(sd.Raw) != "x" {
+					t.Fatalf("valid stream not loaded: %T %v", entry.Object, entry.Object)
+				}
+			})
+		}
+	}
+}
+
+// TestRelaxedStreamReadSkipsOverdeepObject checks parsing stops at the limit before relaxed reading skips the object.
+func TestRelaxedStreamReadSkipsOverdeepObject(t *testing.T) {
+	pdf := []byte("3 0 obj\n<</Length 1/Filter 4 0 R>>\nstream\nx\nendstream\nendobj\n" +
+		"4 0 obj\n<</Length 1/Filter 5 0 R>>\nstream\nx\nendstream\nendobj\n" +
+		"5 0 obj\n/ASCIIHexDecode\nendobj\n")
+	conf := model.NewStatelessConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+	conf.Limits.MaxRecursionDepth = 2
+	ctx, err := model.NewContext(bytes.NewReader(pdf), conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, objNr := range []int{3, 4, 5} {
+		offset := int64(bytes.Index(pdf, []byte(fmt.Sprintf("%d 0 obj", objNr))))
+		generation := 0
+		ctx.Table[objNr] = &model.XRefTableEntry{Offset: &offset, Generation: &generation}
+	}
+	if _, err := ParseObject(t.Context(), ctx, 0, 3, 0); !errors.Is(err, model.ErrMaxRecursionDepthExceeded) {
+		t.Fatalf("got %v, want recursion limit error", err)
+	}
+	if err := dereferenceAndLoad(t.Context(), ctx, 3, ctx.Table[3]); err != nil {
+		t.Fatalf("relaxed skip: %v", err)
+	}
+	if ctx.Table[3].Object != nil {
+		t.Fatal("retained an object after hitting the recursion limit")
+	}
+}
+
+// TestReadSkipsOverdeepUnusedObject keeps relaxed recovery while enforcing the parser depth limit in both modes.
+func TestReadSkipsOverdeepUnusedObject(t *testing.T) {
+	var b bytes.Buffer
+	b.WriteString("%PDF-1.4\n")
+	var offsets []int
+	for i, body := range []string{
+		"<</Type/Catalog/Pages 2 0 R>>",
+		"<</Type/Pages/Kids[]/Count 0>>",
+		strings.Repeat("[", 20) + "0" + strings.Repeat("]", 20),
+	} {
+		offsets = append(offsets, b.Len())
+		fmt.Fprintf(&b, "%d 0 obj\n%s\nendobj\n", i+1, body)
+	}
+	xref := b.Len()
+	b.WriteString("xref\n0 4\n0000000000 65535 f \n")
+	for _, offset := range offsets {
+		fmt.Fprintf(&b, "%010d 00000 n \n", offset)
+	}
+	fmt.Fprintf(&b, "trailer\n<</Size 4/Root 1 0 R>>\nstartxref\n%d\n%%%%EOF\n", xref)
+	for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
+		conf := model.NewStatelessConfiguration()
+		conf.ValidationMode = mode
+		conf.Limits.MaxRecursionDepth = 8
+		ctx, err := Read(t.Context(), bytes.NewReader(b.Bytes()), conf)
+		if mode == model.ValidationStrict {
+			if !errors.Is(err, model.ErrMaxRecursionDepthExceeded) {
+				t.Fatalf("strict read: got %v, want recursion limit error", err)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if entry := ctx.Table[3]; entry == nil || entry.Object != nil {
+			t.Fatalf("expected skipped object, got %v", entry)
+		}
+	}
+}

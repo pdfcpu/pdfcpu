@@ -2852,7 +2852,11 @@ func resolveObject(c context.Context, ctx *model.Context, obj types.Object, offs
 			return d, err
 		}
 		// StreamDict.
-		return streamDictForObject(c, ctx, o, objNr, streamInd, streamOffset, offset)
+		sd, err := streamDictForObject(c, ctx, o, objNr, streamInd, streamOffset, offset)
+		if err != nil {
+			return nil, err
+		}
+		return sd, nil
 
 	case types.Array, types.StringLiteral, types.HexLiteral:
 		return decryptObjectStrings(c, ctx, o, objNr, genNr)
@@ -3777,7 +3781,10 @@ func updateBinaryTotalSize(ctx *model.Context, o types.Object) {
 }
 
 func unrecoverableObjectReadError(err error) bool {
-	return errors.Is(err, model.ErrCorruptObjectOffset) || errors.Is(err, errUnregisteredObject) || errors.Is(err, errObjectReadBudget)
+	return errors.Is(err, model.ErrCorruptObjectOffset) ||
+		errors.Is(err, errUnregisteredObject) ||
+		errors.Is(err, errObjectReadBudget) ||
+		errors.Is(err, errCircularObjectReference)
 }
 
 func dereferenceAndLoad(c context.Context, ctx *model.Context, objNr int, entry *model.XRefTableEntry) error {
