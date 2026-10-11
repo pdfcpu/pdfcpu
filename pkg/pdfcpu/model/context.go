@@ -44,12 +44,13 @@ var ErrMissingXRefTable = errors.New("missing PDF cross-reference table")
 type Context struct {
 	*Configuration
 	*XRefTable
-	Read             *ReadContext
-	Optimize         *OptimizationContext
-	Write            *WriteContext
-	validationReport ValidationReport
-	WritingPages     bool // true, when writing page dicts.
-	Dest             bool // true when writing a destination within a page.
+	Read              *ReadContext
+	Optimize          *OptimizationContext
+	Write             *WriteContext
+	validationReport  ValidationReport
+	WritingPages      bool // true, when writing page dicts.
+	Dest              bool // true when writing a destination within a page.
+	WritingAnnotation bool // WritingAnnotation tracks annotation context during writing.
 }
 
 // NewContext initializes a new Context.

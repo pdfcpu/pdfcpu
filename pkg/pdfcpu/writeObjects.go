@@ -645,7 +645,7 @@ func writeDirectDict(c context.Context, ctx *model.Context, d types.Dict) error 
 		if ctx.WritingPages && (k == "Dest" || k == "D") {
 			ctx.Dest = true
 		}
-		if _, _, err := writeDeepObject(c, ctx, v); err != nil {
+		if _, _, err := writeAnnotationAwareEntry(c, ctx, d, k, v); err != nil {
 			return err
 		}
 		ctx.Dest = false
@@ -739,7 +739,7 @@ func writeDeepDict(c context.Context, ctx *model.Context, d types.Dict, objNr, g
 		if ctx.WritingPages && (k == "Dest" || k == "D") {
 			ctx.Dest = true
 		}
-		if _, _, err := writeDeepObject(c, ctx, v); err != nil {
+		if _, _, err := writeAnnotationAwareEntry(c, ctx, d, k, v); err != nil {
 			return err
 		}
 		ctx.Dest = false
@@ -897,7 +897,29 @@ func writeIndirectObject(c context.Context, ctx *model.Context, ir types.Indirec
 	return err
 }
 
-func writeDeepObject(c context.Context, ctx *model.Context, objIn types.Object) (objOut types.Object, written bool, err error) {
+func writeDeepObject(c context.Context, ctx *model.Context, objIn types.Object) (types.Object, bool, error) {
+	if err := contextutil.Check(c); err != nil {
+		return nil, false, err
+	}
+	if ctx.PDF20() && !ctx.Write.Increment {
+		o, err := ctx.Dereference(objIn)
+		if err != nil {
+			return nil, false, err
+		}
+		if d, ok := o.(types.Dict); ok {
+			annotation, err := checkWrittenAnnotation(ctx, d)
+			if err != nil {
+				return nil, false, err
+			}
+			previous := ctx.WritingAnnotation
+			ctx.WritingAnnotation = annotation
+			defer func() { ctx.WritingAnnotation = previous }()
+		}
+	}
+	return writeDeepObjectUnchecked(c, ctx, objIn)
+}
+
+func writeDeepObjectUnchecked(c context.Context, ctx *model.Context, objIn types.Object) (objOut types.Object, written bool, err error) {
 	if err := contextutil.Check(c); err != nil {
 		return nil, false, err
 	}
@@ -936,7 +958,7 @@ func writeEntry(c context.Context, ctx *model.Context, d types.Dict, dictName, e
 		log.Write.Printf("writeEntry begin: dict=%s entry=%s offset=%d\n", dictName, entryName, ctx.Write.Offset)
 	}
 
-	o, _, err := writeDeepObject(c, ctx, o)
+	o, _, err := writeAnnotationAwareEntry(c, ctx, d, entryName, o)
 	if err != nil {
 		return nil, err
 	}

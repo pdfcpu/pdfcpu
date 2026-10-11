@@ -1907,9 +1907,17 @@ func validateAnnotationDictGeneralPart2(c context.Context, xRefTable *model.XRef
 }
 
 func validateAnnotationDictGeneral(c context.Context, xRefTable *model.XRefTable, d types.Dict, ownerObjNr int, dictName string) (*types.Name, error) {
+	// see 12.5.2
 	subType, err := validateAnnotationDictGeneralPart1(xRefTable, d, dictName)
 	if err != nil {
 		return nil, err
+	}
+	if err := xRefTable.CheckAnnotationAppearance(d); err != nil {
+		if xRefTable.ValidationMode != model.ValidationRelaxed {
+			return nil, model.WithValidationErrorObject(err, validationEntryObjectNumber(ownerObjNr, d, "AP"))
+		}
+		xRefTable.AddValidationNotice(model.NewValidationNotice(
+			model.NoticePhaseValidate, model.NoticeDigested, err.Error(), err))
 	}
 
 	return subType, validateAnnotationDictGeneralPart2(c, xRefTable, d, ownerObjNr, dictName)

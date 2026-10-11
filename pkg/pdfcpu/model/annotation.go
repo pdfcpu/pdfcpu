@@ -363,6 +363,42 @@ func (ann Annotation) HashString() uint32 {
 	return ann.Hash
 }
 
+// CheckAnnotationAppearance checks whether a PDF 2.0 annotation has its required appearance dictionary.
+// It does not validate the appearance streams.
+func (xRefTable *XRefTable) CheckAnnotationAppearance(d types.Dict) error {
+	// see 12.5.2, Table 166
+	if xRefTable.Version() < V20 {
+		return nil
+	}
+	subtype, err := xRefTable.DereferenceName(d["Subtype"], V10, nil)
+	if err != nil {
+		return err
+	}
+	switch subtype {
+	case "Popup", "Projection", "Link":
+		return nil
+	}
+	ap, err := xRefTable.DereferenceDict(d["AP"])
+	if err != nil || ap != nil {
+		return err
+	}
+	a, err := xRefTable.DereferenceArray(d["Rect"])
+	if err != nil {
+		return err
+	}
+	if len(a) != 4 {
+		return errors.New("annotation Rect: expected four numbers")
+	}
+	r, err := xRefTable.RectForArray(a)
+	if err != nil {
+		return err
+	}
+	if r.Width() == 0 && r.Height() == 0 {
+		return nil
+	}
+	return fmt.Errorf("PDF 2.0 %s annotation requires an appearance dictionary (AP)", subtype)
+}
+
 // RenderDict renders ann as dict.
 func (ann Annotation) RenderDict(c context.Context, xRefTable *XRefTable, pageIndRef *types.IndirectRef) (types.Dict, error) {
 	if err := contextutil.Check(c); err != nil {

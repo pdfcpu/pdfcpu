@@ -197,6 +197,9 @@ func WriteIncrement(c context.Context, ctx *model.Context) error {
 	if err := validateWriteContext(ctx); err != nil {
 		return err
 	}
+	if err := checkAnnotationAppearancesForWriting(c, ctx); err != nil {
+		return fmt.Errorf("write PDF: annotation appearances: %w", err)
+	}
 	if err := prepareCoreFontsForWriting(c, ctx); err != nil {
 		return err
 	}
