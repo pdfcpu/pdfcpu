@@ -80,7 +80,7 @@ func nestedColorSpace() types.Array {
 				colorSpaceFunction(),
 			},
 			types.Integer(1),
-			types.StringLiteral("lookup"),
+			types.HexLiteral("00ff"),
 		},
 	}
 }
@@ -151,7 +151,7 @@ func TestValidateColorSpaceEnforcesRecursiveRoles(t *testing.T) {
 // TestValidateColorSpaceAllowsConformingNestingAndSharing verifies legal nesting and shared references remain valid.
 func TestValidateColorSpaceAllowsConformingNestingAndSharing(t *testing.T) {
 	ir := *types.NewIndirectRef(1, 0)
-	shared := types.Array{types.Name(model.IndexedCS), types.Name(model.DeviceRGBCS), types.Integer(1), types.StringLiteral("x")}
+	shared := types.Array{types.Name(model.IndexedCS), types.Name(model.DeviceRGBCS), types.Integer(1), types.HexLiteral("000000ffffff")}
 	for _, mode := range []int{model.ValidationStrict, model.ValidationRelaxed} {
 		xRefTable := colorSpaceXRefTable(100, mode, map[int]types.Object{1: shared})
 		err := newColorSpaceTraversal(t.Context(), xRefTable).validateColorSpaceDepth(nestedColorSpace(), 0, colorSpaceAny, 0)

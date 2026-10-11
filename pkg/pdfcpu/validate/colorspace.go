@@ -24,6 +24,7 @@ import (
 	"slices"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
+	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
@@ -426,7 +427,7 @@ func (t *colorSpaceTraversal) validateIndexedColorSpace(a types.Array, ownerObjN
 
 	// arr[2] hival: 0 <= int <= 255
 	hivalObjNr := validationObjectNumber(ownerObjNr, a[2])
-	_, err = validateIntegerForObject(xRefTable, a[2], ownerObjNr, func(i int) bool { return i >= 0 && i <= 255 })
+	hival, err := validateIntegerForObject(xRefTable, a[2], ownerObjNr, func(i int) bool { return i >= 0 && i <= 255 })
 	if err != nil {
 		err = fmt.Errorf("Indexed color space hival: %w", err)
 		return model.WithValidationErrorObject(err, hivalObjNr)
@@ -436,7 +437,77 @@ func (t *colorSpaceTraversal) validateIndexedColorSpace(a types.Array, ownerObjN
 	if err := validateIndexedColorSpaceLookuptable(xRefTable, a[3], ownerObjNr, sinceVersion); err != nil {
 		return fmt.Errorf("Indexed color space lookup: %w", err)
 	}
+	return t.validateIndexedLookupLength(a, ownerObjNr, hival.Value())
+}
+
+func (t *colorSpaceTraversal) validateIndexedLookupLength(a types.Array, ownerObjNr, hival int) (err error) {
+	// see 8.6.6.3
+	x := t.xRefTable
+	defer func() {
+		if err == nil || t.c.Err() != nil {
+			return
+		}
+		err = model.WithValidationErrorObject(fmt.Errorf("Indexed color space lookup: %w", err), validationObjectNumber(ownerObjNr, a[3]))
+		if x.ValidationMode == model.ValidationRelaxed {
+			x.AddValidationNotice(model.NewValidationNotice(model.NoticePhaseValidate, model.NoticeDigested, err.Error(), err))
+			err = nil
+		}
+	}()
+	if err := contextutil.Check(t.c); err != nil {
+		return err
+	}
+	n, err := colorSpaceComponents(x, a[1], ownerObjNr)
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.New("cannot determine base colour-space component count")
+	}
+	bb, err := indexedLookupBytes(x, a[3])
+	if cancelErr := contextutil.Check(t.c); cancelErr != nil {
+		return cancelErr
+	}
+	if err != nil {
+		return err
+	}
+	want := int64(n) * int64(hival+1)
+	if int64(len(bb)) != want {
+		return fmt.Errorf("invalid length %d, expected %d", len(bb), want)
+	}
 	return nil
+}
+
+func indexedLookupBytes(x *model.XRefTable, o types.Object) ([]byte, error) {
+	o, err := x.Dereference(o)
+	if err != nil {
+		return nil, err
+	}
+	switch o := o.(type) {
+	case types.StringLiteral:
+		return types.Unescape(o.Value())
+	case types.HexLiteral:
+		return o.Bytes()
+	case types.StreamDict:
+		return indexedLookupStreamBytes(x, o)
+	}
+	return nil, errors.New("missing lookup data")
+}
+
+func indexedLookupStreamBytes(x *model.XRefTable, sd types.StreamDict) ([]byte, error) {
+	for _, f := range sd.FilterPipeline {
+		// These image filters may be preserved encoded by StreamDict.DecodeWithLimit.
+		if f.Name == filter.DCT || f.Name == filter.JPX || f.Name == filter.JBIG2 {
+			return nil, fmt.Errorf("cannot check decoded lookup length for %s: %w", f.Name, filter.ErrUnsupportedFilter)
+		}
+	}
+	limit := filter.DefaultMaxDecodeBytes
+	if x.Conf != nil {
+		limit = x.Conf.Limits.MaxDecodeBytes
+	}
+	if err := sd.DecodeWithLimit(limit); err != nil {
+		return nil, fmt.Errorf("decode lookup: %w", err)
+	}
+	return sd.Content, nil
 }
 
 func (t *colorSpaceTraversal) validatePatternColorSpace(a types.Array, ownerObjNr int, sinceVersion model.Version, depth int) error {
