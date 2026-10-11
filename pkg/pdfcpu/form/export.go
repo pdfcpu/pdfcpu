@@ -680,7 +680,7 @@ func exportCh(
 	id, name, altName string,
 	locked bool,
 	ok *bool) error {
-	ff, _, err := xRefTable.DereferenceIntegerEntry(d, "Ff")
+	ff, err := inheritedFieldFlags(xRefTable, d)
 	if err != nil {
 		return err
 	}

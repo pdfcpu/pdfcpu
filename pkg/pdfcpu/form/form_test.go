@@ -21,11 +21,86 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/primitives"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+// TestFieldHierarchyResolution covers merged fields, separate widgets, and local type overrides.
+func TestFieldHierarchyResolution(t *testing.T) {
+	for _, tc := range []struct {
+		name, ancestorType, localType, rootName, wantName string
+		merged                                            bool
+	}{
+		{"text widget", "Tx", "", "root", "root.field", false},
+		{"button widget", "Btn", "", "root", "root.field", false},
+		{"choice widget", "Ch", "", "root", "root.field", false},
+		{"merged text", "Tx", "", "root", "root.field", true},
+		{"local type", "Tx", "Ch", "root", "root.field", true},
+		{"unnamed ancestor", "Tx", "", "", "field", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := emptyFormContext(t)
+			root := types.Dict{"FT": types.Name(tc.ancestorType), "Kids": types.Array{*types.NewIndirectRef(2, 0)}}
+			if tc.rootName != "" {
+				root["T"] = types.StringLiteral(tc.rootName)
+			}
+			field := types.Dict{"T": types.StringLiteral("field"), "Parent": *types.NewIndirectRef(1, 0)}
+			wantType := tc.ancestorType
+			if tc.localType != "" {
+				field["FT"] = types.Name(tc.localType)
+				wantType = tc.localType
+			}
+			ctx.Table[1] = model.NewXRefTableEntryGen0(root)
+			ctx.Table[2] = model.NewXRefTableEntryGen0(field)
+			widgetRef := *types.NewIndirectRef(2, 0)
+			if !tc.merged {
+				widgetRef = *types.NewIndirectRef(3, 0)
+				field["Kids"] = types.Array{widgetRef}
+				ctx.Table[3] = model.NewXRefTableEntryGen0(types.Dict{"Parent": *types.NewIndirectRef(2, 0)})
+			}
+			found, fi, err := isField(t.Context(), ctx.XRefTable, widgetRef, types.Array{*types.NewIndirectRef(1, 0)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !found || fi.name != tc.wantName || fi.id != "1.2" || fi.ft == nil || fi.ft.Value() != wantType {
+				t.Fatalf("resolved field: %+v; want name %s, ID 1.2, type %s", fi, tc.wantName, wantType)
+			}
+			if !tc.merged && (fi.indRef == nil || fi.indRef.ObjectNumber.Value() != 2) {
+				t.Fatalf("widget resolved to %v, want terminal field 2", fi.indRef)
+			}
+		})
+	}
+}
+
+// TestInheritedFieldTypeRejectsCycles verifies that missing FT cannot cause unbounded parent traversal.
+func TestInheritedFieldTypeRejectsCycles(t *testing.T) {
+	ctx := emptyFormContext(t)
+	d := types.Dict{"Parent": *types.NewIndirectRef(1, 0)}
+	ctx.Table[1] = model.NewXRefTableEntryGen0(d)
+	if _, err := inheritedFieldType(t.Context(), ctx.XRefTable, d); !errors.Is(err, model.ErrFormFieldCycle) {
+		t.Fatalf("got %v, want a form field cycle error", err)
+	}
+}
+
+// TestCleanTextForListCmdDisplayWidth verifies that listing truncation preserves complete characters.
+func TestCleanTextForListCmdDisplayWidth(t *testing.T) {
+	for _, tc := range []struct {
+		text  string
+		width int
+		want  string
+	}{
+		{"héllo", 2, "hé"}, {"你好a", 3, "你"}, {"abcdef", 3, "abc"},
+		{"héllo", 0, "héllo"}, {"a\nb", 3, "a\\n"},
+	} {
+		got := cleanTextForListCmd(tc.text, tc.width)
+		if got != tc.want || !utf8.ValidString(got) {
+			t.Errorf("text %q width %d: got %q, want %q", tc.text, tc.width, got, tc.want)
+		}
+	}
+}
 
 // TestFormFieldHelpersRejectRecursionDepth verifies form field helpers respect recursion limits.
 func TestFormFieldHelpersRejectRecursionDepth(t *testing.T) {

@@ -799,11 +799,13 @@ func fillComboBox(
 	}
 	if changed {
 		if lock {
-			if err := primitives.EnsureComboBoxAP(c, ctx, d, vNew, da, fonts); err != nil {
+			if err := ensureChoiceComboAP(c, ctx, d, vNew, da, fonts); err != nil {
 				return fmt.Errorf("appearance: %w", err)
 			}
 		} else {
-			d.Delete("AP")
+			if err := deleteChoiceAP(c, ctx.XRefTable, d); err != nil {
+				return fmt.Errorf("appearance: %w", err)
+			}
 		}
 		*ok = true
 	}
@@ -958,7 +960,7 @@ func fillListBox(
 		return fmt.Errorf("entry DA: %w", err)
 	}
 
-	if err := primitives.EnsureListBoxAP(c, ctx, d, opts, ind, da, fonts); err != nil {
+	if err := ensureChoiceListAP(c, ctx, d, opts, ind, da, fonts); err != nil {
 		return fmt.Errorf("appearance: %w", err)
 	}
 
@@ -978,7 +980,7 @@ func fillCh(
 	fillDetails func(id, name string, fieldType FieldType, format DataFormat) ([]string, bool, bool),
 	ff *types.Integer,
 	ok *bool) error {
-	opts, err := parseOptions(ctx.XRefTable, d, OPTIONAL)
+	opts, err := parseChoiceOptions(ctx.XRefTable, d)
 	if err != nil {
 		return err
 	}

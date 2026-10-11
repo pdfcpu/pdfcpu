@@ -32,6 +32,41 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// TestChoiceSelectionIndices verifies blank options retain their positions for single and multiple selections.
+func TestChoiceSelectionIndices(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		multi  bool
+		values []string
+		want   []int
+	}{
+		{"blank", false, []string{""}, []int{0}},
+		{"after blanks", false, []string{"b"}, []int{3}},
+		{"multiple", true, []string{"a", "b"}, []int{1, 3}},
+		{"empty", false, nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := types.Dict{"Opt": types.Array{types.StringLiteral(""), types.StringLiteral("a"), types.StringLiteral(""), types.StringLiteral("b")}}
+			opts, err := parseChoiceOptions(emptyFormContext(t).XRefTable, d)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ind, err := updateListBoxValues(tc.multi, d, opts, tc.values)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(ind) != len(tc.want) {
+				t.Fatalf("indices = %v, want %v", ind, tc.want)
+			}
+			for i, want := range tc.want {
+				if ind[i] != types.Integer(want) {
+					t.Fatalf("indices = %v, want %v", ind, tc.want)
+				}
+			}
+		})
+	}
+}
+
 func useMissingGlobalFontDirectory(t *testing.T) {
 	t.Helper()
 	originalDir := font.UserFontDir

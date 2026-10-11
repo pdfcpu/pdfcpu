@@ -189,8 +189,11 @@ func fullyQualifiedFieldNameDepth(c context.Context, xRefTable *model.XRefTable,
 	}
 
 	*id += "." + thisID
-	if len(*name) > 0 && len(thisName) > 0 {
-		*name += "." + thisName
+	if thisName != "" {
+		if *name != "" {
+			*name += "."
+		}
+		*name += thisName
 	}
 
 	return true, nil
@@ -207,6 +210,34 @@ type fieldInfo struct {
 	indRef *types.IndirectRef
 }
 
+func inheritedFieldType(c context.Context, xRefTable *model.XRefTable, d types.Dict) (*types.Name, error) {
+	visit := model.NewFormFieldVisit()
+	for depth := 0; ; depth++ {
+		if err := checkFormTraversal(c, xRefTable, depth); err != nil {
+			return nil, err
+		}
+		ft, _, err := xRefTable.DereferenceNameEntry(d, "FT")
+		if err != nil || ft != nil {
+			return ft, err
+		}
+		parent := d.IndirectRefEntry("Parent")
+		if parent == nil {
+			return nil, nil
+		}
+		objNr := parent.ObjectNumber.Value()
+		if err := visit.Enter(objNr); err != nil {
+			return nil, err
+		}
+		d, err = xRefTable.DereferenceDict(*parent)
+		if err != nil {
+			return nil, fmt.Errorf("parent obj#%d: dereference: %w", objNr, err)
+		}
+		if len(d) == 0 {
+			return nil, fmt.Errorf("parent obj#%d: missing field", objNr)
+		}
+	}
+}
+
 func isField(c context.Context, xRefTable *model.XRefTable, indRef types.IndirectRef, fields types.Array) (bool, *fieldInfo, error) {
 	d, err := xRefTable.DereferenceDict(indRef)
 	if err != nil {
@@ -216,50 +247,42 @@ func isField(c context.Context, xRefTable *model.XRefTable, indRef types.Indirec
 		return false, nil, nil
 	}
 
-	var (
-		id, name string
-		ft       *types.Name
-	)
-
-	pIndRef := d.IndirectRefEntry("Parent")
-	if pIndRef != nil {
-		dp, err := xRefTable.DereferenceDict(*pIndRef)
+	fieldRef := indRef
+	_, named := d.Find("T")
+	if parent := d.IndirectRefEntry("Parent"); parent != nil && !named {
+		// A separate widget belongs to its terminal parent field (PDF 2.0, 12.7.4.2).
+		d, err = xRefTable.DereferenceDict(*parent)
 		if err != nil {
-			return false, nil, fmt.Errorf("widget obj#%d: parent obj#%d: dereference: %w", indRef.ObjectNumber.Value(), pIndRef.ObjectNumber.Value(), err)
+			return false, nil, fmt.Errorf("widget obj#%d: parent obj#%d: dereference: %w", indRef.ObjectNumber.Value(), parent.ObjectNumber.Value(), err)
 		}
-		if len(dp) == 0 {
+		if len(d) == 0 {
 			return false, nil, nil
 		}
-		ft, _, err = xRefTable.DereferenceNameEntry(dp, "FT")
-		if err != nil {
-			return false, nil, fmt.Errorf("widget obj#%d: parent obj#%d: entry FT: %w",
-				indRef.ObjectNumber.Value(), pIndRef.ObjectNumber.Value(), err)
-		}
-		if ft != nil && types.MemberOf(ft.Value(), []string{"Btn", "Tx"}) {
-			// rbg or text/datefield hierarchy
-			ok, err := fullyQualifiedFieldName(c, xRefTable, *pIndRef, fields, &id, &name)
-			if !ok || err != nil {
-				return false, nil, err
-			}
-			return true, &fieldInfo{id: id, name: name, ft: ft, indRef: pIndRef}, nil
-		}
+		fieldRef = *parent
 	}
 
-	ok, err := fullyQualifiedFieldName(c, xRefTable, indRef, fields, &id, &name)
+	var id, name string
+	ok, err := fullyQualifiedFieldName(c, xRefTable, fieldRef, fields, &id, &name)
 	if !ok || err != nil {
 		return false, nil, err
 	}
 
-	if ft == nil {
-		ft, _, err = xRefTable.DereferenceNameEntry(d, "FT")
-		if err != nil {
-			return false, nil, fmt.Errorf("widget obj#%d: entry FT: %w", indRef.ObjectNumber.Value(), err)
-		}
+	ft, err := inheritedFieldType(c, xRefTable, d)
+	if err != nil {
+		return false, nil, fmt.Errorf("field obj#%d: entry FT: %w", fieldRef.ObjectNumber.Value(), err)
 	}
-	return true, &fieldInfo{id: id, name: name, ft: ft}, nil
+	fi := &fieldInfo{id: id, name: name, ft: ft}
+	if fieldRef != indRef {
+		fi.indRef = &fieldRef
+	}
+	return true, fi, nil
 }
 
 func extractStringSlice(xRefTable *model.XRefTable, a types.Array) ([]string, error) {
+	return extractStrings(xRefTable, a, false)
+}
+
+func extractStrings(xRefTable *model.XRefTable, a types.Array, keepBlank bool) ([]string, error) {
 	var ss []string
 	for i, o := range a {
 		o, err := xRefTable.Dereference(o)
@@ -289,7 +312,7 @@ func extractStringSlice(xRefTable *model.XRefTable, a types.Array) ([]string, er
 		}
 
 		s = strings.TrimSpace(s)
-		if len(s) > 0 {
+		if len(s) > 0 || keepBlank {
 			ss = append(ss, s)
 		}
 	}
@@ -297,6 +320,15 @@ func extractStringSlice(xRefTable *model.XRefTable, a types.Array) ([]string, er
 }
 
 func parseOptions(xRefTable *model.XRefTable, d types.Dict, required bool) ([]string, error) {
+	return parseOpt(xRefTable, d, required, false)
+}
+
+// parseChoiceOptions preserves positions in Opt for selection indices and appearances.
+func parseChoiceOptions(xRefTable *model.XRefTable, d types.Dict) ([]string, error) {
+	return parseOpt(xRefTable, d, OPTIONAL, true)
+}
+
+func parseOpt(xRefTable *model.XRefTable, d types.Dict, required, keepBlank bool) ([]string, error) {
 	o, ok := d.Find("Opt")
 	if !ok {
 		if required {
@@ -308,7 +340,7 @@ func parseOptions(xRefTable *model.XRefTable, d types.Dict, required bool) ([]st
 	if err != nil {
 		return nil, fmt.Errorf("entry Opt: dereference: %w", err)
 	}
-	ss, err := extractStringSlice(xRefTable, a)
+	ss, err := extractStrings(xRefTable, a, keepBlank)
 	if err != nil {
 		return nil, fmt.Errorf("entry Opt: %w", err)
 	}
@@ -559,7 +591,7 @@ func collectListBox(xRefTable *model.XRefTable, multi bool, d types.Dict, f *Fie
 }
 
 func collectCh(xRefTable *model.XRefTable, d types.Dict, f *Field, fm *FieldMeta) error {
-	ff, _, err := xRefTable.DereferenceIntegerEntry(d, "Ff")
+	ff, err := inheritedFieldFlags(xRefTable, d)
 	if err != nil {
 		return err
 	}
@@ -658,8 +690,8 @@ func getDV(c context.Context, xRefTable *model.XRefTable, d types.Dict) (string,
 func cleanTextForListCmd(s string, maxWidth int) string {
 	s = strings.ReplaceAll(s, "\x0A", "\\n")
 	s = strings.ReplaceAll(s, "\x0D", "\\n")
-	if maxWidth > 0 && len(s) > maxWidth {
-		s = s[:maxWidth]
+	if maxWidth > 0 {
+		s = runewidth.Truncate(s, maxWidth, "")
 	}
 	return s
 }
@@ -1621,7 +1653,7 @@ func resetComboBoxOrRegularListBox(
 			d.Delete("V")
 		}
 	}
-	if primitives.FieldFlags(ff.Value())&primitives.FieldCombo > 0 {
+	if ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldCombo > 0 {
 		d.Delete("AP")
 	}
 	return ind, nil
@@ -1652,20 +1684,65 @@ func resetMultiListBox(xRefTable *model.XRefTable, d types.Dict, opts []string) 
 	return ind, nil
 }
 
+func forEachChoiceWidget(c context.Context, xRefTable *model.XRefTable, d types.Dict, fn func(types.Dict) error) error {
+	kids, err := xRefTable.DereferenceArray(d["Kids"])
+	if err != nil {
+		return fmt.Errorf("entry Kids: %w", err)
+	}
+	if len(kids) == 0 {
+		return fn(d)
+	}
+	for i, o := range kids {
+		if err := contextutil.Check(c); err != nil {
+			return err
+		}
+		widget, err := xRefTable.DereferenceDict(o)
+		if err != nil {
+			return fmt.Errorf("kid %d: dereference: %w", i+1, err)
+		}
+		if len(widget) == 0 {
+			continue
+		}
+		if err := fn(widget); err != nil {
+			return fmt.Errorf("kid %d: %w", i+1, err)
+		}
+	}
+	return nil
+}
+
+func ensureChoiceListAP(c context.Context, ctx *model.Context, d types.Dict, opts []string, ind types.Array, da *string, fonts map[string]types.IndirectRef) error {
+	return forEachChoiceWidget(c, ctx.XRefTable, d, func(widget types.Dict) error {
+		return primitives.EnsureListBoxAP(c, ctx, widget, opts, ind, da, fonts)
+	})
+}
+
+func ensureChoiceComboAP(c context.Context, ctx *model.Context, d types.Dict, value string, da *string, fonts map[string]types.IndirectRef) error {
+	return forEachChoiceWidget(c, ctx.XRefTable, d, func(widget types.Dict) error {
+		return primitives.EnsureComboBoxAP(c, ctx, widget, value, da, fonts)
+	})
+}
+
+func deleteChoiceAP(c context.Context, xRefTable *model.XRefTable, d types.Dict) error {
+	return forEachChoiceWidget(c, xRefTable, d, func(widget types.Dict) error {
+		widget.Delete("AP")
+		return nil
+	})
+}
+
 func resetCh(c context.Context, ctx *model.Context, d types.Dict, fonts map[string]types.IndirectRef) error {
-	ff, _, err := ctx.XRefTable.DereferenceIntegerEntry(d, "Ff")
+	ff, err := inheritedFieldFlags(ctx.XRefTable, d)
 	if err != nil {
 		return err
 	}
 
-	opts, err := parseOptions(ctx.XRefTable, d, OPTIONAL)
+	opts, err := parseChoiceOptions(ctx.XRefTable, d)
 	if err != nil {
 		return err
 	}
 
 	var ind types.Array
 
-	if ff != nil && (primitives.FieldFlags(ff.Value())&primitives.FieldCombo > 0 || primitives.FieldFlags(ff.Value())&primitives.FieldMultiselect == 0) {
+	if ff == nil || primitives.FieldFlags(ff.Value())&primitives.FieldCombo > 0 || primitives.FieldFlags(ff.Value())&primitives.FieldMultiselect == 0 {
 		ind, err = resetComboBoxOrRegularListBox(ctx.XRefTable, d, opts, ff)
 	} else {
 		ind, err = resetMultiListBox(ctx.XRefTable, d, opts)
@@ -1675,15 +1752,17 @@ func resetCh(c context.Context, ctx *model.Context, d types.Dict, fonts map[stri
 		return err
 	}
 
+	if ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldCombo > 0 {
+		return deleteChoiceAP(c, ctx.XRefTable, d)
+	}
+
 	da, _, err := ctx.DereferenceStringEntry(d, "DA")
 	if err != nil {
 		return fmt.Errorf("entry DA: %w", err)
 	}
 
-	if ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldCombo == 0 {
-		if err := primitives.EnsureListBoxAP(c, ctx, d, opts, ind, da, fonts); err != nil {
-			return fmt.Errorf("appearance: %w", err)
-		}
+	if err := ensureChoiceListAP(c, ctx, d, opts, ind, da, fonts); err != nil {
+		return fmt.Errorf("appearance: %w", err)
 	}
 
 	return nil
@@ -1717,7 +1796,7 @@ func resetTx(c context.Context, ctx *model.Context, d types.Dict, fonts map[stri
 		isDate = err == nil
 	}
 
-	ff, _, err := ctx.XRefTable.DereferenceIntegerEntry(d, "Ff")
+	ff, err := inheritedFieldFlags(ctx.XRefTable, d)
 	if err != nil {
 		return err
 	}
@@ -1934,6 +2013,9 @@ func formFieldFlags(xRefTable *model.XRefTable, d types.Dict) (*types.Integer, b
 }
 
 func lockFormField(xRefTable *model.XRefTable, d types.Dict) error {
+	if d == nil {
+		return nil
+	}
 	ff, err := inheritedFieldFlags(xRefTable, d)
 	if err != nil {
 		return err
@@ -1967,7 +2049,7 @@ func ensureAP(c context.Context, ctx *model.Context, d types.Dict, fi *fieldInfo
 
 	if ft.Value() == "Ch" {
 
-		ff, _, err := ctx.XRefTable.DereferenceIntegerEntry(d, "Ff")
+		ff, err := inheritedFieldFlags(ctx.XRefTable, d)
 		if err != nil {
 			return err
 		}
@@ -1982,7 +2064,7 @@ func ensureAP(c context.Context, ctx *model.Context, d types.Dict, fi *fieldInfo
 				v = *s
 			}
 
-			if err := primitives.EnsureComboBoxAP(c, ctx, d, v, da, fonts); err != nil {
+			if err := ensureChoiceComboAP(c, ctx, d, v, da, fonts); err != nil {
 				return err
 			}
 
@@ -2129,7 +2211,7 @@ func updateFieldLock(xRefTable *model.XRefTable, d types.Dict, locked, lock bool
 	return true, unlockFormField(xRefTable, d)
 }
 
-func deleteAP(xRefTable *model.XRefTable, d types.Dict, fi *fieldInfo) error {
+func deleteAP(c context.Context, xRefTable *model.XRefTable, d types.Dict, fi *fieldInfo) error {
 	ft := fi.ft
 	if ft == nil {
 		var err error
@@ -2142,12 +2224,12 @@ func deleteAP(xRefTable *model.XRefTable, d types.Dict, fi *fieldInfo) error {
 		}
 	}
 	if ft.Value() == "Ch" {
-		ff, _, err := xRefTable.DereferenceIntegerEntry(d, "Ff")
+		ff, err := inheritedFieldFlags(xRefTable, d)
 		if err != nil {
 			return err
 		}
 		if ff != nil && primitives.FieldFlags(ff.Value())&primitives.FieldCombo > 0 {
-			d.Delete("AP")
+			return deleteChoiceAP(c, xRefTable, d)
 		}
 	}
 	return nil
@@ -2204,7 +2286,7 @@ func unlockPageFields(c context.Context, xRefTable *model.XRefTable, fieldIDsOrN
 			}
 		}
 
-		if err := deleteAP(xRefTable, d, fi); err != nil {
+		if err := deleteAP(c, xRefTable, d, fi); err != nil {
 			return fmt.Errorf("field %s: appearance: %w", fi.id, err)
 		}
 
