@@ -43,9 +43,8 @@ import (
 )
 
 const (
-	defaultBufSize     = 1 << 10 // 1 KiB
-	maxBufSize         = 1 << 20 // 1 MiB
-	maxObjectBufferLen = 64 << 20
+	defaultBufSize = 1 << 10 // 1 KiB
+	maxBufSize     = 1 << 20 // 1 MiB
 )
 
 var (
@@ -1756,23 +1755,23 @@ func isCatalogForRepair(c context.Context, ctx *model.Context, d types.Dict) (bo
 	return t != nil && t.Value() == "Catalog", nil
 }
 
-func processObject(c context.Context, ctx *model.Context, line string, offset *int64, incr int, offsetPrev *int64) (*bufio.Scanner, error) {
+// processObject returns a scanner and whether it resumes before the current object's endobj marker.
+func processObject(c context.Context, ctx *model.Context, line string, offset *int64, incr int, offsetPrev *int64) (*bufio.Scanner, bool, error) {
+	withinObj := true
 	endInd, err := parseAndLoad(c, ctx, line, offset, incr, offsetPrev)
 	if err != nil {
 		if ctx.XRefTable.ValidationMode != model.ValidationRelaxed || endInd < 0 {
-			return nil, err
+			return nil, false, err
 		}
 		model.ShowSkipped(fmt.Sprintf("malformed object at offset %d: %v", *offset, err))
 		*offset += int64(endInd + len("endobj"))
+		withinObj = false
 	}
 	rd, err := newPositionedReader(ctx.Read.RS, offset)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	s := bufio.NewScanner(rd)
-	s.Buffer(make([]byte, 0, defaultBufSize), maxObjectBufferLen)
-	s.Split(scan.LinesSingleEOL)
-	return s, nil
+	return newRepairScanner(ctx, rd), withinObj, nil
 }
 
 func objCandidate(withinObj bool, line string) bool {
@@ -1818,9 +1817,7 @@ func registerXRefObjects(ctx *model.Context, incr int) error {
 		return err
 	}
 
-	s := bufio.NewScanner(rd)
-	s.Buffer(make([]byte, 0, defaultBufSize), maxObjectBufferLen)
-	s.Split(scan.LinesSingleEOL)
+	s := newRepairScanner(ctx, rd)
 
 	withinObj := false
 	for s.Scan() {
@@ -1922,9 +1919,7 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 		return err
 	}
 
-	s := bufio.NewScanner(rd)
-	s.Buffer(make([]byte, 0, defaultBufSize), maxObjectBufferLen)
-	s.Split(scan.LinesSingleEOL)
+	s := newRepairScanner(ctx, rd)
 	eolCount := 1
 
 	state := xrefRepairState{scanner: s}
@@ -1960,8 +1955,7 @@ func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wa
 		checkEndObj(&state.withinObj, &line)
 		if objCandidate(state.withinObj, line) {
 			if !strings.HasSuffix(line, "obj") {
-				state.withinObj = true
-				state.scanner, err = processObject(c, ctx, line, &state.offset, incr, state.offsetPrev)
+				state.scanner, state.withinObj, err = processObject(c, ctx, line, &state.offset, incr, state.offsetPrev)
 				if err != nil {
 					return err
 				}
@@ -2290,6 +2284,15 @@ func objectBufferLimit(ctx *model.Context) int64 {
 		return model.DefaultResourceLimits().MaxObjectBytes
 	}
 	return ctx.Configuration.Limits.MaxObjectBytes
+}
+
+func newRepairScanner(ctx *model.Context, rd io.Reader) *bufio.Scanner {
+	limit := int(max(0, min(objectBufferLimit(ctx), int64(math.MaxInt))))
+	s := bufio.NewScanner(rd)
+	// Scanner can use the full initial capacity even when it exceeds the configured maximum.
+	s.Buffer(make([]byte, 0, min(defaultBufSize, limit)), limit)
+	s.Split(scan.LinesSingleEOL)
+	return s
 }
 
 func growObjectBuffer(buf []byte, growSize int, rd io.Reader, maxObjectBytes int64) ([]byte, error) {

@@ -214,6 +214,7 @@ func TestOffsetLastXRefSectionPreservesReadError(t *testing.T) {
 	}
 }
 
+// TestProcessObjectSkipsBoundedMalformedObjectRelaxed checks the offset and state after a relaxed skip.
 func TestProcessObjectSkipsBoundedMalformedObjectRelaxed(t *testing.T) {
 	input := "1 0 obj\n<</D[0/a0 obj\n<</E 1>>\nendobj\n2 0 obj\nnull\nendobj\n"
 	ctx, err := model.NewContext(bytes.NewReader([]byte(input)), model.NewDefaultConfiguration())
@@ -222,12 +223,15 @@ func TestProcessObjectSkipsBoundedMalformedObjectRelaxed(t *testing.T) {
 	}
 
 	var offset int64
-	s, err := processObject(t.Context(), ctx, "1 0 obj", &offset, 1, nil)
+	s, withinObj, err := processObject(t.Context(), ctx, "1 0 obj", &offset, 1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if s == nil {
 		t.Fatal("missing scanner")
+	}
+	if withinObj {
+		t.Fatal("scanner remains inside the skipped object")
 	}
 	wantOffset := int64(strings.Index(input, "endobj") + len("endobj"))
 	if offset != wantOffset {
@@ -235,6 +239,7 @@ func TestProcessObjectSkipsBoundedMalformedObjectRelaxed(t *testing.T) {
 	}
 }
 
+// TestProcessObjectRejectsBoundedMalformedObjectStrict checks that strict parsing returns the malformed-object error.
 func TestProcessObjectRejectsBoundedMalformedObjectStrict(t *testing.T) {
 	input := "1 0 obj\n<</D[0/a0 obj\n<</E 1>>\nendobj\n"
 	conf := model.NewDefaultConfiguration()
@@ -245,7 +250,7 @@ func TestProcessObjectRejectsBoundedMalformedObjectStrict(t *testing.T) {
 	}
 
 	var offset int64
-	_, err = processObject(t.Context(), ctx, "1 0 obj", &offset, 1, nil)
+	_, _, err = processObject(t.Context(), ctx, "1 0 obj", &offset, 1, nil)
 	if err == nil || !strings.Contains(err.Error(), "unterminated array") {
 		t.Fatalf("got %v, want malformed object error", err)
 	}
@@ -1877,5 +1882,127 @@ func TestReadSkipsOverdeepUnusedObject(t *testing.T) {
 		if entry := ctx.Table[3]; entry == nil || entry.Object != nil {
 			t.Fatalf("expected skipped object, got %v", entry)
 		}
+	}
+}
+
+// TestRepairScannersRespectObjectLimit checks registration, repair, and scanners resumed after parsing.
+func TestRepairScannersRespectObjectLimit(t *testing.T) {
+	for _, limit := range []int64{32, 64 << 10} {
+		for _, path := range []string{"register", "repair", "resume"} {
+			t.Run(fmt.Sprintf("%s/limit=%d", path, limit), func(t *testing.T) {
+				input := "1 0 obj true endobj\n" + strings.Repeat("x", int(limit)*2) + "\n"
+				conf := model.NewStatelessConfiguration()
+				conf.Limits.MaxObjectBytes = limit
+				ctx, err := model.NewContext(strings.NewReader(input), conf)
+				if err != nil {
+					t.Fatal(err)
+				}
+				switch path {
+				case "register":
+					err = registerXRefObjects(ctx, 1)
+				case "repair":
+					err = bypassXrefSection(t.Context(), ctx, 0, nil, 1)
+				case "resume":
+					var offset int64
+					var scanner *bufio.Scanner
+					scanner, _, err = processObject(t.Context(), ctx, "1 0 obj", &offset, 1, nil)
+					if err != nil {
+						t.Fatal(err)
+					}
+					for scanner.Scan() {
+					}
+					err = scanner.Err()
+				}
+				if !errors.Is(err, bufio.ErrTooLong) {
+					t.Fatalf("got %v, want scanner buffer limit error", err)
+				}
+			})
+		}
+	}
+}
+
+// TestRepairScannerLimitBoundaries checks default selection, growth, and small buffer boundaries.
+func TestRepairScannerLimitBoundaries(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		limit int64
+		size  int
+		fail  bool
+	}{
+		{"default", 0, 2 * defaultBufSize, false},
+		{"grow", 4 * defaultBufSize, 2 * defaultBufSize, false},
+		{"small fits", 32, 31, false},
+		{"small exceeds", 32, 32, true},
+		{"negative", -1, 1, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			conf := model.NewStatelessConfiguration()
+			conf.Limits.MaxObjectBytes = tc.limit
+			ctx, err := model.NewContext(strings.NewReader(""), conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			s := newRepairScanner(ctx, strings.NewReader(strings.Repeat("x", tc.size)+"\n"))
+			if s.Scan() == tc.fail {
+				t.Fatalf("scan result: err=%v, want failure=%t", s.Err(), tc.fail)
+			}
+			if tc.fail && !errors.Is(s.Err(), bufio.ErrTooLong) {
+				t.Fatalf("got %v, want scanner buffer limit error", s.Err())
+			}
+		})
+	}
+}
+
+// TestRepairKeepsObjectsAfterMalformedSkip checks consecutive skips and subsequent dictionaries and streams.
+func TestRepairKeepsObjectsAfterMalformedSkip(t *testing.T) {
+	bad := "1 0 obj\n<</A ]>>\nendobj\n"
+	stream := "4 0 obj\n<</Length 3>>\nstream\nabc\nendstream\nendobj\n"
+	for _, tc := range []struct {
+		name, objects string
+		stream        bool
+	}{
+		{"catalog", bad, false},
+		{"consecutive malformed", bad + "5 0 obj\n<</B ]>>\nendobj\n", false},
+		{"stream", bad + stream, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := "%PDF-1.4\n" + tc.objects +
+				"2 0 obj\n<</Type/Catalog/Pages 3 0 R>>\nendobj\n" +
+				"3 0 obj\n<</Type/Pages/Kids[]/Count 0>>\nendobj\n"
+			conf := model.NewStatelessConfiguration()
+			conf.ValidationMode = model.ValidationRelaxed
+			ctx, err := Read(t.Context(), strings.NewReader(input), conf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ctx.Root == nil || ctx.Root.ObjectNumber.Value() != 2 {
+				t.Fatalf("root = %v, want 2 0 R", ctx.Root)
+			}
+			for _, objNr := range []int{2, 3} {
+				if e := ctx.Table[objNr]; e == nil || e.Object == nil {
+					t.Fatalf("obj#%d was lost", objNr)
+				}
+			}
+			if tc.stream {
+				sd, _, err := ctx.DereferenceStreamDict(*types.NewIndirectRef(4, 0))
+				if err != nil || sd == nil || sd.StreamLength == nil || string(sd.Raw) != "abc" {
+					t.Fatalf("stream after skipped object was not loaded: %v, %v", sd, err)
+				}
+			}
+		})
+	}
+}
+
+// TestProcessObjectResumesWithinValidObject checks the repair state after a successful parse.
+func TestProcessObjectResumesWithinValidObject(t *testing.T) {
+	input := "1 0 obj\ntrue\nendobj\n"
+	ctx, err := model.NewContext(strings.NewReader(input), model.NewStatelessConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var offset int64
+	s, withinObj, err := processObject(t.Context(), ctx, "1 0 obj", &offset, 1, nil)
+	if err != nil || s == nil || !withinObj {
+		t.Fatalf("scanner=%v, withinObj=%t, err=%v; want a scanner inside the object", s, withinObj, err)
 	}
 }
