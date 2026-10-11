@@ -905,18 +905,13 @@ func logP(enc *model.Enc) {
 
 }
 
-func maskExtract(mode model.CommandMode, secHandlerRev int) int {
+// maskExtract returns the general copy/extract permission bit required by mode.
+func maskExtract(mode model.CommandMode) int {
 	p, ok := perm[mode]
 
 	// no permissions defined or don't need extract permission
 	if !ok || p.extract == 0 {
 		return 0
-	}
-
-	// need extract permission
-
-	if secHandlerRev >= 3 {
-		return 0x0200 // need bit 10
 	}
 
 	return 0x0010 // need bit 5
@@ -957,7 +952,7 @@ func hasNeededPermissions(mode model.CommandMode, enc *model.Enc) bool {
 
 	logP(enc)
 
-	m := maskExtract(mode, enc.R)
+	m := maskExtract(mode)
 	if m > 0 {
 		if enc.P&m == 0 {
 			return false
@@ -1550,6 +1545,31 @@ func attributeEncryptionError(ctx *model.Context, err error) error {
 	return model.WithValidationErrorObject(err, ctx.Encrypt.ObjectNumber.Value())
 }
 
+func encryptionVersionParameters(ctx *model.Context, d types.Dict, pubKey bool, specViolations *[]error) (int, int, int, error) {
+	v, err := validateEncryptV(ctx, d)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	l, err := validateEncryptLength(ctx, d, v)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	if v == 4 || v == 5 || v == 6 {
+		if err := validateCryptFilters(ctx, d, v, pubKey, specViolations); err != nil {
+			return 0, 0, 0, err
+		}
+	}
+	r, err := getR(ctx, d)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	// Revisions 5 and 6 require V=5's 256-bit key; older revisions use smaller keys.
+	if (v == 5 && r < 5) || (v < 5 && r >= 5) {
+		return 0, 0, 0, fmt.Errorf("%w: encrypt \"R\" %d inconsistent with \"V\" %d", ErrMalformedEncryption, r, v)
+	}
+	return v, l, r, nil
+}
+
 // supportedEncryption returns a pointer to a struct encapsulating used encryption.
 func supportedEncryption(ctx *model.Context, d types.Dict) (enc *model.Enc, err error) {
 	defer func() {
@@ -1571,27 +1591,7 @@ func supportedEncryption(ctx *model.Context, d types.Dict) (enc *model.Enc, err 
 		return nil, err
 	}
 
-	// V
-	v, err := validateEncryptV(ctx, d)
-	if err != nil {
-		return nil, err
-	}
-
-	// Length
-	l, err := validateEncryptLength(ctx, d, v)
-	if err != nil {
-		return nil, err
-	}
-
-	// CF, StmF, StrF, EFF
-	if v == 4 || v == 5 || v == 6 {
-		if err := validateCryptFilters(ctx, d, v, pubKeySecHandler, &specViolations); err != nil {
-			return nil, err
-		}
-	}
-
-	// R
-	r, err := getR(ctx, d)
+	v, l, r, err := encryptionVersionParameters(ctx, d, pubKeySecHandler, &specViolations)
 	if err != nil {
 		return nil, err
 	}
