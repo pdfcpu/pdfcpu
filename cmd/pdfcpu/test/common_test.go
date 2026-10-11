@@ -28,6 +28,10 @@ import (
 var pdfcpuBin string
 
 func TestMain(m *testing.M) {
+	os.Exit(testMain(m))
+}
+
+func testMain(m *testing.M) int {
 	dir, err := os.MkdirTemp("", "pdfcpu-cmd-test-*")
 	if err != nil {
 		panic(err)
@@ -44,10 +48,10 @@ func TestMain(m *testing.M) {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		os.Stderr.Write(out)
-		os.Exit(1)
+		return 1
 	}
 
-	os.Exit(m.Run())
+	return m.Run()
 }
 
 func runPDFCPU(t *testing.T, args ...string) ([]byte, error) {
