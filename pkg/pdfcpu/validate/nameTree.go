@@ -50,12 +50,40 @@ func validateAPNameTreeValue(c context.Context, xRefTable *model.XRefTable, o ty
 	return validateXObjectStreamDict(c, xRefTable, o)
 }
 
+type javaScriptNameTreeVisitKey struct{}
+
+type javaScriptNameTreeVisit struct {
+	actions *model.ActionVisit
+	// Name-tree values have stricter subtype and payload checks than generic Next actions.
+	values map[int]bool
+}
+
+func newJavaScriptNameTreeVisit() *javaScriptNameTreeVisit {
+	return &javaScriptNameTreeVisit{actions: model.NewActionVisit(), values: map[int]bool{}}
+}
+
+func javaScriptNameTreeTraversal(c context.Context) *javaScriptNameTreeVisit {
+	if visit, ok := c.Value(javaScriptNameTreeVisitKey{}).(*javaScriptNameTreeVisit); ok {
+		return visit
+	}
+	return newJavaScriptNameTreeVisit()
+}
+
 func validateJavaScriptNameTreeValue(c context.Context, xRefTable *model.XRefTable, o types.Object, sinceVersion model.Version) error {
 	// see 12.6.4.17
+	if err := contextutil.Check(c); err != nil {
+		return err
+	}
 	// Version check
 	err := xRefTable.ValidateVersion("JavaScriptNameTreeValue", sinceVersion)
 	if err != nil {
 		return err
+	}
+
+	visit := javaScriptNameTreeTraversal(c)
+	objNr := validationObjectNumber(0, o)
+	if visit.values[objNr] {
+		return nil
 	}
 
 	d, err := xRefTable.DereferenceDict(o)
@@ -78,11 +106,14 @@ func validateJavaScriptNameTreeValue(c context.Context, xRefTable *model.XRefTab
 	}
 
 	origin := activeContentOrigin{owner: activeContentOwnerNameTree, source: activeContentSourceJavaScriptNameTree}
-	if err := validateActionDictObjectWithOrigin(c, xRefTable, d, o, "JavaScript name tree value", origin); err != nil {
+	if err := validateActionDictObjectDepth(c, xRefTable, d, o, "JavaScript name tree value", 0, visit.actions, origin); err != nil {
 		return err
 	}
 	if s == nil && hasJavaScriptPayload(xRefTable, d) {
 		addActionActiveContent(xRefTable, activeContentJavaScript, origin.source, o, 0, origin)
+	}
+	if objNr > 0 {
+		visit.values[objNr] = true
 	}
 	return nil
 }
@@ -1177,6 +1208,10 @@ func validateNameTreeKids(c context.Context, xRefTable *model.XRefTable, name st
 }
 
 func validateNameTreeDepth(c context.Context, xRefTable *model.XRefTable, name string, d types.Dict, ownerObjNr int, root bool, depth int, rootObject ...types.Object) (string, string, *model.Node, error) {
+	// see 7.9.6
+	if name == "JavaScript" && c != nil {
+		c = context.WithValue(c, javaScriptNameTreeVisitKey{}, newJavaScriptNameTreeVisit())
+	}
 	var specViolations []error
 	kmin, kmax, node, err := validateNameTreeDepthWithViolations(c,
 		xRefTable,
