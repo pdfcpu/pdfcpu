@@ -2049,9 +2049,12 @@ func (xRefTable *XRefTable) consolidateResources(obj types.Object, pAttrs *Inher
 			if err != nil {
 				return fmt.Errorf("resource %s: %w", k, err)
 			}
-			if o != nil {
-				pAttrs.Resources[k] = o.Clone()
+			if o == nil {
+				// A missing reference is null, equivalent to an omitted entry (PDF 2.0 7.3.9).
+				delete(pAttrs.Resources, k)
+				continue
 			}
+			pAttrs.Resources[k] = o.Clone()
 		}
 		if log.WriteEnabled() {
 			log.Write.Printf("pA:\n%s\n", pAttrs.Resources)
@@ -2228,31 +2231,32 @@ func (xRefTable *XRefTable) PageContent(d types.Dict, pageNr int) ([]byte, error
 }
 
 func (xRefTable *XRefTable) consolidateResourceSubDict(d types.Dict, key string, prn PageResourceNames, pageNr int) error {
-	o := d[key]
-	if o == nil {
-		if prn.HasResources(key) {
-			resources := make([]string, 0, len(prn.Resources(key)))
-			for resourceName := range prn.Resources(key) {
-				resources = append(resources, resourceName)
-			}
-			sort.Strings(resources)
-			s := fmt.Sprintf(
-				"missing required %s resource dictionary (referenced resources: %s)",
-				key,
-				strings.Join(resources, ", "),
-			)
-			if xRefTable.ValidationMode == ValidationStrict {
-				return errors.New(s)
-			}
-			ShowSkipped(fmt.Sprintf("page %d: %s", pageNr, s))
-		}
-		return nil
-	}
 	if !prn.HasResources(key) {
 		d.Delete(key)
 		return nil
 	}
-	d1 := o.(types.Dict)
+	d1, err := xRefTable.DereferenceDict(d[key])
+	if err != nil {
+		return fmt.Errorf("page %d: resource %s: %w", pageNr, key, err)
+	}
+	if d1 == nil {
+		d.Delete(key)
+		resources := make([]string, 0, len(prn.Resources(key)))
+		for resourceName := range prn.Resources(key) {
+			resources = append(resources, resourceName)
+		}
+		sort.Strings(resources)
+		s := fmt.Sprintf(
+			"missing required %s resource dictionary (referenced resources: %s)",
+			key,
+			strings.Join(resources, ", "),
+		)
+		if xRefTable.ValidationMode == ValidationStrict {
+			return errors.New(s)
+		}
+		ShowSkipped(fmt.Sprintf("page %d: %s", pageNr, s))
+		return nil
+	}
 	set := types.StringSet{}
 	res := prn.Resources(key)
 	// Iterate over inherited resource sub dict and remove any entries not required.
