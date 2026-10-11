@@ -47,6 +47,10 @@ func Lines(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		return indLF + 1, data[0:indLF], nil
 
 	case indCR >= 0:
+		if indCR == len(data)-1 && !atEOF {
+			// A LF may follow in the next read: request more data.
+			return 0, nil, nil
+		}
 		// \r
 		return indCR + 1, data[0:indCR], nil
 
