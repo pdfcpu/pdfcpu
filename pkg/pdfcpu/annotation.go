@@ -315,7 +315,7 @@ func annotationRendererRect(xRefTable *model.XRefTable, d types.Dict) (*types.Re
 	if xRefTable.ValidationMode == model.ValidationRelaxed {
 		return types.NewRectangle(0, 0, 0, 0), nil
 	}
-	return nil, nil
+	return nil, errors.New("annotation: missing or invalid Rect")
 }
 
 // Annotation returns an annotation renderer.
