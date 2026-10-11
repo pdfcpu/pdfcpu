@@ -871,6 +871,12 @@ func updateListBoxValues(multi bool, d types.Dict, opts, vNew []string) (types.A
 		return ind, nil
 	}
 
+	if len(vNew) == 0 {
+		d.Delete("I")
+		d.Delete("V")
+		return ind, nil
+	}
+
 	v := vNew[0]
 	s, err := types.EscapedUTF16String(v)
 	if err != nil {

@@ -196,6 +196,47 @@ func TestFillFormRejectsInvalidCallbacksAndFormats(t *testing.T) {
 	}
 }
 
+// TestFillFormClearsSingleSelectListBox verifies that an empty JSON value clears a list box without panicking.
+func TestFillFormClearsSingleSelectListBox(t *testing.T) {
+	ctx := emptyFormContext(t)
+	ctx.Table[0] = model.NewFreeHeadXRefTableEntry()
+	lb := types.Dict{
+		"Type":    types.Name("Annot"),
+		"Subtype": types.Name("Widget"),
+		"Rect":    types.NewRectangle(0, 0, 10, 10).Array(),
+		"FT":      types.Name("Ch"),
+		"T":       types.StringLiteral("lb"),
+		"I":       types.Array{types.Integer(0)},
+		"V":       types.StringLiteral("a"),
+		"DA":      types.StringLiteral("/Helv 12 Tf 0 g"),
+		"Opt":     types.Array{types.StringLiteral("a"), types.StringLiteral("b")},
+	}
+	ir, err := ctx.IndRefForObject(len(ctx.Table)+1, lb)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx.Form = types.Dict{"Fields": types.Array{*ir}}
+	ctx.PageCount = 1
+	refs := []types.IndirectRef{*ir}
+	ctx.PageAnnots = map[int]model.PgAnnots{1: {model.AnnWidget: model.Annot{IndRefs: &refs}}}
+	size := len(ctx.Table)
+	ctx.Size = &size
+
+	form := &Form{ListBoxes: []*ListBox{{ID: "1", Name: "lb"}}}
+	ok, _, err := FillForm(t.Context(), ctx, FillDetails(form, nil), nil, JSON)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("list box was not updated")
+	}
+	for _, key := range []string{"I", "V"} {
+		if _, found := lb.Find(key); found {
+			t.Fatalf("entry %s remains after clearing list box", key)
+		}
+	}
+}
+
 func TestFillDetailsHandlesNilForm(t *testing.T) {
 	fillDetails := FillDetails(nil, nil)
 	if values, _, found := fillDetails("1", "field", FTText, JSON); found || values != nil {
