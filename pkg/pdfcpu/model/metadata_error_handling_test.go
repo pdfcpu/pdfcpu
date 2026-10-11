@@ -17,8 +17,10 @@ limitations under the License.
 package model
 
 import (
+	"encoding/xml"
 	"errors"
 	"testing"
+	"time"
 )
 
 // TestRemoveKeywordsRejectsMissingMetadata verifies the public compatibility wrapper preserves the sentinel.
@@ -73,6 +75,62 @@ func TestRemoveKeywordsReportsContentChanges(t *testing.T) {
 			}
 			if got := string(metadata); got != tt.want {
 				t.Fatalf("metadata: got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestUserDateUnmarshalXML verifies XMP date forms and preserves explicit offsets and fractional seconds.
+func TestUserDateUnmarshalXML(t *testing.T) {
+	for _, tt := range []struct {
+		input string
+		want  string
+	}{
+		{"2020", "2020-01-01T00:00:00Z"},
+		{"2020-02", "2020-02-01T00:00:00Z"},
+		{"2020-02-29", "2020-02-29T00:00:00Z"},
+		{"2020-02-29T12:34", "2020-02-29T12:34:00Z"},
+		{"2020-02-29T12:34Z", "2020-02-29T12:34:00Z"},
+		{"2020-02-29T12:34+05:30", "2020-02-29T12:34:00+05:30"},
+		{"2020-02-29T12:34-03:30", "2020-02-29T12:34:00-03:30"},
+		{"2020-02-29T12:34:56", "2020-02-29T12:34:56Z"},
+		{"2020-02-29T12:34:56Z", "2020-02-29T12:34:56Z"},
+		{"2020-02-29T12:34:56+05:30", "2020-02-29T12:34:56+05:30"},
+		{"2020-02-29T12:34:56-03:30", "2020-02-29T12:34:56-03:30"},
+		{"2020-02-29T12:34:56.123456789", "2020-02-29T12:34:56.123456789Z"},
+		{"2020-02-29T12:34:56.123456789Z", "2020-02-29T12:34:56.123456789Z"},
+		{"2020-02-29T12:34:56.125+05:30", "2020-02-29T12:34:56.125+05:30"},
+		{"2020-02-29T12:34:56.125-03:30", "2020-02-29T12:34:56.125-03:30"},
+		{" 2020-02-29T12:34:56Z ", "2020-02-29T12:34:56Z"},
+	} {
+		t.Run(tt.input, func(t *testing.T) {
+			var date UserDate
+			if err := xml.Unmarshal([]byte("<date>"+tt.input+"</date>"), &date); err != nil {
+				t.Fatal(err)
+			}
+			if got := time.Time(date).Format(time.RFC3339Nano); got != tt.want {
+				t.Fatalf("date = %s, want %s", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestUserDateUnmarshalXMLRejectsInvalid retains the receiver when date or XML parsing fails.
+func TestUserDateUnmarshalXMLRejectsInvalid(t *testing.T) {
+	for _, input := range []string{
+		"", "not a date", "20", "2020-13", "2019-02-29", "2020-02-30",
+		"2020-02-29T24:00Z", "2020-02-29T12:60Z", "2020-02-29T12:34:60Z",
+		"2020-02-29T12:34:56+99:00", "2020-02-29junk", "2020-02-29T12:34:56Zjunk",
+		"2020-02-29</wrong>",
+	} {
+		t.Run(input, func(t *testing.T) {
+			before := time.Date(2001, 2, 3, 4, 5, 6, 0, time.UTC)
+			date := UserDate(before)
+			if err := xml.Unmarshal([]byte("<date>"+input+"</date>"), &date); err == nil {
+				t.Fatal("expected date or XML parse error")
+			}
+			if time.Time(date) != before {
+				t.Fatal("failed decode changed the receiver")
 			}
 		})
 	}

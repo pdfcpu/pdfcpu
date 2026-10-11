@@ -29,33 +29,37 @@ var ErrMissingMetadata = errors.New("missing metadata")
 // UserDate represents an XMP date and time value.
 type UserDate time.Time
 
-const userDateFormatNoTimeZone = "2006-01-02T15:04:05Z"
-const userDateFormatNegTimeZone = "2006-01-02T15:04:05-07:00"
-const userDateFormatPosTimeZone = "2006-01-02T15:04:05+07:00"
+// userDateFormats covers the XMP Date forms, including optional time zones and partial dates.
+// time.Parse also accepts fractional seconds after a seconds field.
+var userDateFormats = []string{
+	time.RFC3339,
+	"2006-01-02T15:04Z07:00",
+	"2006-01-02T15:04:05",
+	"2006-01-02T15:04",
+	"2006-01-02",
+	"2006-01",
+	"2006",
+}
 
 // UnmarshalXML unmarshals XML data.
 func (ud *UserDate) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	dateString := ""
-	err := d.DecodeElement(&dateString, &start)
-	if err != nil {
+	var dateString string
+	if err := d.DecodeElement(&dateString, &start); err != nil {
 		return err
 	}
-	dat, err := time.Parse(userDateFormatNoTimeZone, dateString)
-	if err == nil {
-		*ud = UserDate(dat)
-		return nil
+	dateString = strings.TrimSpace(dateString)
+	var parseErr error
+	for _, layout := range userDateFormats {
+		dat, err := time.Parse(layout, dateString)
+		if err == nil {
+			*ud = UserDate(dat)
+			return nil
+		}
+		if parseErr == nil {
+			parseErr = err
+		}
 	}
-	dat, err = time.Parse(userDateFormatPosTimeZone, dateString)
-	if err == nil {
-		*ud = UserDate(dat)
-		return nil
-	}
-	dat, err = time.Parse(userDateFormatNegTimeZone, dateString)
-	if err == nil {
-		*ud = UserDate(dat)
-		return nil
-	}
-	return err
+	return parseErr
 }
 
 // Alt represents an RDF alternative-value container.
