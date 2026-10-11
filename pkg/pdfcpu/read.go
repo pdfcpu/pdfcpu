@@ -1554,21 +1554,26 @@ func parseXRefSection(c context.Context, ctx *model.Context, s *bufio.Scanner, f
 	return processTrailer(c, ctx, s, line, offCurXRef, offExtra, incr, false)
 }
 
+// scanForVersion finds the first prefix and returns at least 18 bytes from its start, plus its file offset.
 func scanForVersion(rs io.ReadSeeker, prefix string) ([]byte, int, error) {
-	bufSize := 100
+	const bufSize = 100
+	const headerScanLookahead = 18
 
 	if _, err := rs.Seek(0, io.SeekStart); err != nil {
 		return nil, 0, fmt.Errorf("seek header: %w", err)
 	}
 
 	buf := make([]byte, bufSize)
-	var curBuf []byte
 
+	// data holds the bytes not yet ruled out, starting at file offset off.
+	// Between blocks only a tail shorter than prefix is carried over, so a
+	// prefix spanning two blocks is still found and every candidate position
+	// is checked exactly once.
+	var data []byte
 	off := 0
-	found := false
-	var buf2 []byte
+	first := true
 
-	for !found {
+	for {
 		n, err := fillBuffer(rs, buf)
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
@@ -1576,58 +1581,34 @@ func scanForVersion(rs io.ReadSeeker, prefix string) ([]byte, int, error) {
 			}
 			return nil, 0, ErrCorruptHeader
 		}
-		curBuf = buf[:n]
-		if off == 0 && hasPostScriptHeader(curBuf) {
+		if first && hasPostScriptHeader(buf[:n]) {
 			return nil, 0, ErrPostScriptInput
 		}
-		for {
-			i := bytes.IndexByte(curBuf, '%')
-			if i < 0 {
-				// no match, check next block
-				off += len(curBuf)
-				break
-			}
+		first = false
+		data = append(data, buf[:n]...)
 
-			// Check all occurrences
-			if i < len(curBuf)-18 {
-				if !bytes.HasPrefix(curBuf[i:], []byte(prefix)) {
-					// No match, keep checking
-					off += i + 1
-					curBuf = curBuf[i+1:]
-					continue
-				}
-				off += i
-				curBuf = curBuf[i:]
-				found = true
-				break
-			}
+		i := bytes.Index(data, []byte(prefix))
+		if i < 0 {
+			keep := min(len(prefix)-1, len(data))
+			off += len(data) - keep
+			data = append(data[:0], data[len(data)-keep:]...)
+			continue
+		}
 
-			// Partial match, need 2nd buffer
-			if len(buf2) == 0 {
-				buf2 = make([]byte, bufSize)
-			}
-			n, err := fillBuffer(rs, buf2)
+		off += i
+		data = data[i:]
+		for len(data) < headerScanLookahead {
+			n, err := fillBuffer(rs, buf)
 			if err != nil {
 				if !errors.Is(err, io.EOF) {
 					return nil, 0, fmt.Errorf("read header: %w", err)
 				}
 				return nil, 0, ErrCorruptHeader
 			}
-			buf3 := append(curBuf[i:], buf2[:n]...)
-			if !bytes.HasPrefix(buf3, []byte(prefix)) {
-				// No match, keep checking
-				off += len(curBuf)
-				curBuf = buf2
-				continue
-			}
-			off += i
-			curBuf = buf3
-			found = true
-			break
+			data = append(data, buf[:n]...)
 		}
+		return data, off, nil
 	}
-
-	return curBuf, off, nil
 }
 
 // Get version from first line of file.

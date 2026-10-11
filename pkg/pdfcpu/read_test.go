@@ -775,6 +775,59 @@ func TestDecodeObjectStreamClassifiesCorruptObjectStream(t *testing.T) {
 	}
 }
 
+// TestHeaderVersionAcrossBlockBoundaries verifies false prefixes cannot hide a later PDF header.
+func TestHeaderVersionAcrossBlockBoundaries(t *testing.T) {
+	for _, version := range []model.Version{model.V17, model.V20} {
+		for _, falsePrefix := range []string{"", "%", "%P", "%PD", "%%PDFX"} {
+			for pad := 0; pad < 205; pad++ {
+				in := strings.Repeat("a", pad) + falsePrefix + "%PDF-" + version.String() + "\r\n" + strings.Repeat("b", 200)
+				v, eol, off, err := headerVersion(strings.NewReader(in))
+				if err != nil {
+					t.Fatalf("version %s, padding %d, prefix %q: %v", version, pad, falsePrefix, err)
+				}
+				if v == nil || *v != version || eol != 2 || off != int64(pad+len(falsePrefix)) {
+					t.Fatalf("version %s, padding %d, prefix %q: got version %v, EOL %d, offset %d", version, pad, falsePrefix, v, eol, off)
+				}
+			}
+		}
+	}
+}
+
+// TestReadHeaderAfterFalsePrefix verifies header scanning preserves offsets for a complete PDF.
+func TestReadHeaderAfterFalsePrefix(t *testing.T) {
+	bb, err := os.ReadFile(filepath.Join("..", "testdata", "test.pdf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, pad := range []int{85, 98, 99, 185} {
+		in := append([]byte(strings.Repeat("a", pad)+"%"), bb...)
+		conf := model.NewDefaultConfiguration()
+		conf.ValidationMode = model.ValidationStrict
+		if _, err := Read(t.Context(), bytes.NewReader(in), conf); err != nil {
+			t.Fatalf("padding %d: %v", pad, err)
+		}
+	}
+}
+
+// TestHeaderVersionShortLookahead verifies the minimum header buffer at different block positions.
+func TestHeaderVersionShortLookahead(t *testing.T) {
+	for _, pad := range []int{0, 85, 95, 99, 100} {
+		for _, size := range []int{9, 17, 18, 19} {
+			in := strings.Repeat("a", pad) + "%PDF-1.7\n" + strings.Repeat("b", size-9)
+			v, eol, off, err := headerVersion(strings.NewReader(in))
+			if size < 18 {
+				if !errors.Is(err, ErrCorruptHeader) {
+					t.Fatalf("padding %d, size %d: got %v, want ErrCorruptHeader", pad, size, err)
+				}
+				continue
+			}
+			if err != nil || v == nil || *v != model.V17 || eol != 1 || off != int64(pad) {
+				t.Fatalf("padding %d, size %d: version %v, EOL %d, offset %d, error %v", pad, size, v, eol, off, err)
+			}
+		}
+	}
+}
+
 func TestHeaderVersionRejectsPostScript(t *testing.T) {
 	tests := []struct {
 		name string
