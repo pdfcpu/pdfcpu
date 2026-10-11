@@ -34,15 +34,32 @@ Entries link to GitHub releases or commits where available.
 
 <article class="changelog-entry">
   <div class="changelog-meta">
+    <time datetime="2026-10-11">2026-10-11</time>
+    <span class="changelog-kind">Release</span>
+    <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.2">v0.16.2</a>
+  </div>
+  <p>Security and stability update.</p>
+  <br>
+  <p><strong>Security:</strong> <br>
+  Fix plaintext exposure in encrypted output, stack overflows and malformed-input panics.
+  Strengthen resource limits and permission checks.</p>
+  <br>
+  <p><strong>Hardening:</strong> <br>Improve PDF validation, document preservation, forms, images, fonts and encryption compatibility.</p>
+  <br>
+  <p>Fix #1494–#1501, #1503–#1506, #1508.</p>
+</article>
+
+<article class="changelog-entry">
+  <div class="changelog-meta">
     <time datetime="2026-10-04">2026-10-04</time>
     <span class="changelog-kind">Release</span>
-    <span>v0.16.1</span>
+    <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.1">v0.16.1</a>
   </div>
   <p>
   Security and stability update.<br><br>
   Prevent grayscale, Indexed and CMYK image-rendering panics. <br><br>Harden cross-reference parsing and repair, image decoding,
   multi-page TIFF traversal, and CMS BER parsing.<br><br>
-  Limit JSON input to <a href="/config/config_limits/#json-input-limit">64 MiB</a>. Strengthen external-link checking
+  Limit JSON input to <a href="/config/config_limits/#json-input-limit">64 MB</a>. Strengthen external-link checking
   and redact URL passwords in reports and CLI output.<br><br>
   Improve structural validation of embedded files, 3D annotations and multimedia dictionaries. <br><br>
   Report JavaScript and

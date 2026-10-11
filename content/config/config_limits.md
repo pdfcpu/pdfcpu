@@ -9,7 +9,7 @@ pdfcpu uses limits to bound individual input-driven allocations and network requ
 CPU-time or disk-space budget for a command. A document can contain many objects, streams and images within their
 individual limits.
 
-The settings below follow their order in the default `config.yml`. Defaults refer to v0.16.0.
+The settings below follow their order in the default `config.yml`. Defaults refer to v0.16.2.
 Use [`pdfcpu config inspect`](/config/config_inspect) to see effective configured values and
 [`pdfcpu config validate`](/config/config_validate) after editing the file. Inspection does not include per-operation
 command-line overrides such as `--offline`.
@@ -119,13 +119,13 @@ Go callers set `Configuration.Limits.MaxInputBytes` and can recognize overflow w
 
 ## JSON input limit
 
-**Fixed limit since v0.16.1: 64 MiB (67,108,864 bytes).**
+**Fixed limit since v0.16.1: 64 MB (67,108,864 bytes).**
 
 Limits each JSON input used for PDF creation, bookmark import, form filling, and viewer preferences.
 Reader inputs are limited while reading; byte-slice inputs are checked before decoding. Inputs exactly at the limit
 are accepted; readers must reach EOF to confirm the size.
 
-This limit is not configurable through YAML or the Go API in v0.16.1.
+This limit is not configurable through YAML or the Go API.
 
 ## Object buffer limit
 
@@ -136,8 +136,8 @@ dictionary and opening stream delimiter. It covers ordinary indirect objects and
 Existing schema-1 files that omit this setting retain the default.
 
 It does not limit stream payloads, decoded objects inside object streams, total PDF size or process memory.
-Stream payloads use the separate encoded and decoded stream limits below. Reconstruction retains an independent
-64 MiB line-scanner cap.
+Stream payloads use the separate encoded and decoded stream limits below. Reconstruction line scanners also respect
+`maxObjectBytes`.
 
 Go callers set `Configuration.Limits.MaxObjectBytes`; zero selects the default. In YAML, use a positive value.
 
@@ -183,7 +183,7 @@ Go callers set `Configuration.Limits.MaxImageBytes`.
 
 ## Additional limits shown by inspection
 
-`config inspect` also reports the following structural limits. They are not keys in the v0.16.0 `config.yml` schema;
+`config inspect` also reports the following structural limits. They are not keys in the v0.16.2 `config.yml` schema;
 do not add their inspection names to the YAML file. Go callers configure the corresponding `Configuration.Limits`
 fields. They are listed here in inspection order, after the YAML limits above.
 
@@ -191,7 +191,7 @@ fields. They are listed here in inspection order, after the YAML limits above.
 |:-----------------|:---------|:--------|:------|
 | `max object count` | `MaxObjectCount` | 10,000,000 | Cross-reference stream `/Size` expansion and object-number ranges. This is not a total count of every object processed by a command. |
 | `max object stream count` | `MaxObjectStreamCount` | 1,000,000 | The `/N` count of objects in one object stream. |
-| `max object stream first` | `MaxObjectStreamFirst` | 16 MiB (16,777,216 bytes) | The `/First` offset defining the prolog before object data in an object stream. |
+| `max object stream first` | `MaxObjectStreamFirst` | 16 MB | The `/First` offset defining the prolog before object data in an object stream. |
 | `max xref entries` | `MaxXRefEntries` | 10,000,000 | Cross-reference stream `/Index` expansion, including the default range when `/Index` is absent. |
 | `max recursion depth` | `MaxRecursionDepth` | 100 | Nesting on guarded parser and object-graph traversal paths. This is not a bound on total traversal work or all command execution. |
 
