@@ -71,7 +71,7 @@ func (f asciiHexDecode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, erro
 		if bb[i] == eodHexDecode {
 			break
 		}
-		if !bytes.ContainsRune([]byte{0x09, 0x0A, 0x0C, 0x0D, 0x20}, rune(bb[i])) {
+		if !bytes.ContainsRune([]byte{0x00, 0x09, 0x0A, 0x0C, 0x0D, 0x20}, rune(bb[i])) {
 			p = append(p, bb[i])
 		}
 	}
