@@ -158,7 +158,7 @@ func (f Form) textFieldValueAndLock(id, name string) (string, bool, bool) {
 		if tf == nil {
 			continue
 		}
-		if tf.ID == id || tf.Name == name {
+		if tf.ID == id || (name != "" && tf.Name == name) {
 			return tf.Value, tf.Locked, true
 		}
 	}
@@ -170,7 +170,7 @@ func (f Form) dateFieldValueAndLock(id, name string) (string, bool, bool) {
 		if df == nil {
 			continue
 		}
-		if df.ID == id || df.Name == name {
+		if df.ID == id || (name != "" && df.Name == name) {
 			return df.Value, df.Locked, true
 		}
 	}
@@ -182,7 +182,7 @@ func (f Form) checkBoxValueAndLock(id, name string) (bool, bool, bool) {
 		if cb == nil {
 			continue
 		}
-		if cb.ID == id || cb.Name == name {
+		if cb.ID == id || (name != "" && cb.Name == name) {
 			return cb.Value, cb.Locked, true
 		}
 	}
@@ -194,7 +194,7 @@ func (f Form) radioButtonGroupValueAndLock(id, name string) (string, bool, bool)
 		if rbg == nil {
 			continue
 		}
-		if rbg.ID == id || rbg.Name == name {
+		if rbg.ID == id || (name != "" && rbg.Name == name) {
 			return rbg.Value, rbg.Locked, true
 		}
 	}
@@ -206,7 +206,7 @@ func (f Form) comboBoxValueAndLock(id, name string) (string, bool, bool) {
 		if cb == nil {
 			continue
 		}
-		if cb.ID == id || cb.Name == name {
+		if cb.ID == id || (name != "" && cb.Name == name) {
 			return cb.Value, cb.Locked, true
 		}
 	}
@@ -218,7 +218,7 @@ func (f Form) listBoxValuesAndLock(id, name string) ([]string, bool, bool) {
 		if lb == nil {
 			continue
 		}
-		if lb.ID == id || lb.Name == name {
+		if lb.ID == id || (name != "" && lb.Name == name) {
 			return lb.Values, lb.Locked, true
 		}
 	}

@@ -22,6 +22,7 @@ import (
 	"errors"
 	"io"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -241,6 +242,42 @@ func TestFillDetailsHandlesNilForm(t *testing.T) {
 	fillDetails := FillDetails(nil, nil)
 	if values, _, found := fillDetails("1", "field", FTText, JSON); found || values != nil {
 		t.Fatalf("expected missing field, got values=%v found=%t", values, found)
+	}
+}
+
+// TestFillDetailsMatchesUnnamedFieldsByID verifies that an empty name cannot match a different JSON field.
+func TestFillDetailsMatchesUnnamedFieldsByID(t *testing.T) {
+	form := &Form{
+		TextFields:        []*TextField{{ID: "1", Value: "a"}, {ID: "2", Value: "b"}},
+		DateFields:        []*DateField{{ID: "1", Value: "a"}, {ID: "2", Value: "b"}},
+		CheckBoxes:        []*CheckBox{{ID: "1"}, {ID: "2", Value: true}},
+		RadioButtonGroups: []*RadioButtonGroup{{ID: "1", Value: "a"}, {ID: "2", Value: "b"}},
+		ComboBoxes:        []*ComboBox{{ID: "1", Value: "a"}, {ID: "2", Value: "b"}},
+		ListBoxes:         []*ListBox{{ID: "1", Values: []string{"a"}}, {ID: "2", Values: []string{"b"}}},
+	}
+	fillDetails := FillDetails(form, nil)
+	tests := []struct {
+		name string
+		kind FieldType
+		want []string
+	}{
+		{name: "text", kind: FTText, want: []string{"b"}},
+		{name: "date", kind: FTDate, want: []string{"b"}},
+		{name: "check box", kind: FTCheckBox, want: []string{"t"}},
+		{name: "radio group", kind: FTRadioButtonGroup, want: []string{"b"}},
+		{name: "combo box", kind: FTComboBox, want: []string{"b"}},
+		{name: "list box", kind: FTListBox, want: []string{"b"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			values, _, found := fillDetails("2", "", tt.kind, JSON)
+			if !found || !slices.Equal(values, tt.want) {
+				t.Fatalf("field 2: got %v, found=%t; want %v", values, found, tt.want)
+			}
+			if values, _, found := fillDetails("3", "", tt.kind, JSON); found {
+				t.Fatalf("unknown field 3 matched: %v", values)
+			}
+		})
 	}
 }
 
