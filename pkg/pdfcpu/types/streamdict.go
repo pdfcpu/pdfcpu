@@ -250,7 +250,16 @@ func parmsForFilter(d Dict) map[string]int {
 	return m
 }
 
-// Encode applies sd's filter pipeline to sd.Content in order to produce sd.Raw.
+func (sd *StreamDict) nonCryptFilters() []PDFFilter {
+	// The security handler applies Crypt before decoding and after encoding (see 7.4.10).
+	fpl := sd.FilterPipeline
+	if len(fpl) > 0 && fpl[0].Name == "Crypt" {
+		return fpl[1:]
+	}
+	return fpl
+}
+
+// Encode applies sd's non-crypt filters to sd.Content in order to produce sd.Raw.
 func (sd *StreamDict) Encode() error {
 	if sd.Content == nil && sd.Raw != nil {
 		// Not decoded yet, no need to encode.
@@ -258,7 +267,8 @@ func (sd *StreamDict) Encode() error {
 	}
 
 	// No filter specified, nothing to encode.
-	if sd.FilterPipeline == nil {
+	fpl := sd.nonCryptFilters()
+	if len(fpl) == 0 {
 		if log.TraceEnabled() {
 			log.Trace.Println("encodeStream: returning uncompressed stream.")
 		}
@@ -274,8 +284,8 @@ func (sd *StreamDict) Encode() error {
 
 	// Apply each filter in the pipeline to result of preceding filter.
 
-	for i := len(sd.FilterPipeline) - 1; i >= 0; i-- {
-		f := sd.FilterPipeline[i]
+	for i := len(fpl) - 1; i >= 0; i-- {
+		f := fpl[i]
 		if log.TraceEnabled() {
 			if f.DecodeParms != nil {
 				log.Trace.Printf("encodeStream: encoding filter:%s\ndecodeParms:%s\n", f.Name, f.DecodeParms)
@@ -354,7 +364,7 @@ func decodedContent(r io.Reader) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Decode applies sd's filter pipeline to sd.Raw in order to produce sd.Content.
+// Decode applies sd's non-crypt filters to sd.Raw in order to produce sd.Content.
 func (sd *StreamDict) Decode() error {
 	_, err := sd.DecodeLengthWithLimit(-1, filter.DefaultMaxDecodeBytes)
 	return err
@@ -371,10 +381,11 @@ func (sd *StreamDict) decodeLength(maxLen, maxDecodeBytes int64) ([]byte, error)
 	b = bytes.NewReader(sd.Raw)
 
 	// Apply each filter in the pipeline to result of preceding filter.
-	for idx, f := range sd.FilterPipeline {
+	fpl := sd.nonCryptFilters()
+	for idx, f := range fpl {
 
 		if preserveEncodedImageFilter(f.Name) {
-			if idx != len(sd.FilterPipeline)-1 {
+			if idx != len(fpl)-1 {
 				return nil, fmt.Errorf("stream filter[%d] %q: decode: %w", idx, f.Name, filter.ErrUnsupportedFilter)
 			}
 			c = b
@@ -408,7 +419,7 @@ func (sd *StreamDict) decodeLength(maxLen, maxDecodeBytes int64) ([]byte, error)
 			return nil, fmt.Errorf("stream filter[%d] %q: construct: %w", idx, f.Name, err)
 		}
 
-		if maxLen >= 0 && idx == len(sd.FilterPipeline)-1 {
+		if maxLen >= 0 && idx == len(fpl)-1 {
 			c, err = fi.DecodeLength(b, maxLen)
 		} else {
 			c, err = fi.Decode(b)
@@ -463,11 +474,11 @@ func (sd *StreamDict) DecodeLengthWithLimit(maxLen, maxDecodeBytes int64) ([]byt
 		return sd.Content[:maxLen], nil
 	}
 
-	fpl := sd.FilterPipeline
+	fpl := sd.nonCryptFilters()
 
 	// No filter, sole DCT except CMYK, or terminal opaque image filters:
 	// nothing to decode for consumers that can preserve the original image stream.
-	if fpl == nil || len(fpl) == 1 && ((fpl[0].Name == filter.DCT && sd.CSComponents != 4) || preserveEncodedImageFilter(fpl[0].Name)) {
+	if len(fpl) == 0 || len(fpl) == 1 && ((fpl[0].Name == filter.DCT && sd.CSComponents != 4) || preserveEncodedImageFilter(fpl[0].Name)) {
 		sd.Content = sd.Raw
 		//fmt.Printf("decodedStream returning %d(#%02x)bytes: \n%s\n", len(sd.Content), len(sd.Content), hex.Dump(sd.Content))
 		if maxLen < 0 {
