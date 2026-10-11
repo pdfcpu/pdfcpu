@@ -26,6 +26,46 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
+// TestParseHexStringWhitespace verifies whitespace does not interrupt digit pairs or final padding.
+func TestParseHexStringWhitespace(t *testing.T) {
+	for _, ws := range []string{"\x00", "\t", "\n", "\f", "\r", " ", "\x00\t\n\f\r "} {
+		for _, tc := range []struct{ digits, want string }{
+			{"41", "A"}, {"4142", "AB"}, {"414", "A@"}, {"9aB", "\x9a\xb0"}, {"", ""},
+		} {
+			in := "<" + ws + strings.Join(strings.Split(tc.digits, ""), ws) + ws + ">"
+			checkParsedHexString(t, in, tc.want)
+		}
+	}
+	checkParsedHexString(t, "<>", "")
+	checkParsedHexString(t, "<901FA>", "\x90\x1f\xa0")
+}
+
+func checkParsedHexString(t *testing.T, in, want string) {
+	t.Helper()
+	line := in
+	o, err := ParseObject(t.Context(), &line, 0)
+	if err != nil {
+		t.Fatalf("%q: %v", in, err)
+	}
+	h, ok := o.(types.HexLiteral)
+	if !ok {
+		t.Fatalf("%q: got %T, want HexLiteral", in, o)
+	}
+	b, err := h.Bytes()
+	if err != nil || string(b) != want {
+		t.Fatalf("%q: decoded %q, want %q, error %v", in, b, want, err)
+	}
+}
+
+// TestHexStringRejectsInvalidCharacters verifies the hex decoder accepts only PDF whitespace and hex digits.
+func TestHexStringRejectsInvalidCharacters(t *testing.T) {
+	for _, s := range []string{"4\v1", "4\u00851", "4\u00a01", "4Z1", "4%1"} {
+		if _, ok := hexString(s); ok {
+			t.Errorf("accepted invalid hex string %q", s)
+		}
+	}
+}
+
 // TestDecodeNameHexInvalid verifies invalid name hex escapes are rejected.
 func TestDecodeNameHexInvalid(t *testing.T) {
 	testcases := []string{

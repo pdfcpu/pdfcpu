@@ -152,7 +152,7 @@ func trimLeftSpace(s string, relaxed bool) (string, bool) {
 	return s, eol
 }
 
-// HexString validates and formats a hex string to be of even length.
+// hexString validates and formats a hex string to be of even length.
 func hexString(s string) (*string, bool) {
 	if len(s) == 0 {
 		s1 := ""
@@ -163,11 +163,8 @@ func hexString(s string) (*string, bool) {
 	i := 0
 
 	for _, c := range strings.ToUpper(s) {
-		if strings.ContainsRune(" \x09\x0A\x0C\x0D", c) {
-			if i%2 > 0 {
-				sb.WriteString("0")
-				i = 0
-			}
+		if strings.ContainsRune("\x00\x09\x0A\x0C\x0D ", c) {
+			// Ignore whitespace within digit pairs (PDF 2.0, 7.3.4.3).
 			continue
 		}
 		isHexChar := false
