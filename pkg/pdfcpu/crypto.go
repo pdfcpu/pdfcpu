@@ -464,9 +464,17 @@ func keySalt(bb []byte) []byte {
 	return bb[40:48]
 }
 
+// userEntry48 returns the U bytes used by R5/R6 owner-password algorithms (PDF 2.0, 7.6.4.3.3 and 7.6.4.4.8).
+func userEntry48(u []byte) []byte {
+	if len(u) > 48 {
+		return u[:48:48]
+	}
+	return u
+}
+
 func decryptOE(ctx *model.Context, opw []byte) error {
 	b := append(opw, keySalt(ctx.E.O)...)
-	b = append(b, ctx.E.U...)
+	b = append(b, userEntry48(ctx.E.U)...)
 	key := sha256.Sum256(b)
 
 	cb, err := aes.NewCipher(key[:])
@@ -495,7 +503,7 @@ func validateOwnerPasswordAES256(ctx *model.Context) (ok bool, err error) {
 
 	// Algorithm 3.2a 3.
 	b := append(opw, validationSalt(ctx.E.O)...)
-	b = append(b, ctx.E.U...)
+	b = append(b, userEntry48(ctx.E.U)...)
 	s := sha256.Sum256(b)
 
 	if !passwordHashPrefixEqual(ctx.E.O, s[:]) {
@@ -609,9 +617,10 @@ func validateOwnerPasswordAES256Rev6(ctx *model.Context) (ok bool, err error) {
 	}
 
 	// Algorithm 12
+	u := userEntry48(ctx.E.U)
 	bb := append(opw, validationSalt(ctx.E.O)...)
-	bb = append(bb, ctx.E.U...)
-	s, _, err := hashRev6(bb, opw, ctx.E.U)
+	bb = append(bb, u...)
+	s, _, err := hashRev6(bb, opw, u)
 	if err != nil {
 		return false, err
 	}
@@ -621,8 +630,8 @@ func validateOwnerPasswordAES256Rev6(ctx *model.Context) (ok bool, err error) {
 	}
 
 	bb = append(opw, keySalt(ctx.E.O)...)
-	bb = append(bb, ctx.E.U...)
-	key, _, err := hashRev6(bb, opw, ctx.E.U)
+	bb = append(bb, u...)
+	key, _, err := hashRev6(bb, opw, u)
 	if err != nil {
 		return false, err
 	}
