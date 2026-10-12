@@ -7,24 +7,35 @@ project_cycle:
 active_flow: release_branch
 active_bug_id: BUG-013-free-list-hint-provenance
 release_cycle:
-  stage: team_pr_open_ci_verified
+  stage: v0_16_2_premerge_release_validation
+  full_race_executor: resolved
+  full_race_status: passed_go1_26_9_exit0_463_seconds
+  release_delta_review: passed
+  release_delta_review_scores: [100, 100]
+  release_delta_reviewers: []
   workflow: team-pr
-  commit_authorized: false
-  push_authorized: false
-  pr_authorized: false
-  authorization_scope: BUG-013 reviewed fix and related specs only
-  merge_authorized: false
-  tag_publish_authorized: false
-  version_approved: false
+  commit_authorized: true
+  push_authorized: true
+  pr_authorized: true
+  authorization_scope: PR4 merge and source-only v0.16.2 release
+  merge_authorized: true
+  tag_publish_authorized: true
+  version_approved: true
+  approved_version: v0.16.2
+  validation_go: go1.26.9
+  module_hygiene: tidy_diff_clean
+  api_comparison: fork_v0_16_1_module_apidiff_clean
+  toolchain_scan: zero_reachable_findings_on_go1_26_9
   repository: umats/pdfcpu
-  source_commits: [d2121f0c]
+  source_commits: [d2121f0c, e9e3ac44, f2072a0e]
   pr_number: 4
   pr_url: https://github.com/umats/pdfcpu/pull/4
   pr_base: master_current_remote_default
-  ci_verified: true
-  ci_verified_commit: 5d3e077751668742baadec464cb2bcb1b1dcc78c
-  ci_verified_source_commit: d2121f0c1d85181a92e70e820c8e2ab1aa87e464
-  ci_verified_at: '2026-10-12T08:30:35Z'
+  ci_verified: false
+  ci_status: documentation_receipt_tip_refresh_required
+  code_ci_verified_commit: f2072a0eafa34431ea36125755ec40a11c99655e
+  code_ci_runs: [38234437034, 38234442562]
+  code_ci_failed_job_rerun: passed_attempt2_fixture_clock_flake_logged
   ci_reported_checks: 18
   coverage_gate: owner_waived_project_percentage_policy
   coverage_waiver_scope: aggregate_percentage_thresholds_only
@@ -46,7 +57,7 @@ bug_cycle:
   compatibility_policy: relaxed_mode_validated_hints_only
   origin_unknown: deny_compatibility_and_deletion
   executors: []
-  latest_preflight: candidate_fresh_native_exit0_2026_10_12
+  latest_preflight: patched_go1_26_9_candidate_fresh_exit0_2026_10_12
   latest_focused_race: candidate_exit0
   private_sample_verified: false
   private_validation: owner_deferred
@@ -66,29 +77,32 @@ metrics:
       total_seconds: 142.0
       avg_seconds: 142.0
 handoff:
-  last_step_completed: BUG-013-team-PR4-open-with-green-CI
+  last_step_completed: v0_16_2_all_code_gates_passed
   next_skill: release-branch
-  paused: true
+  paused: false
   resume_note: >-
-    Owner explicitly authorized commit, push and team PR for the reviewed
-    BUG-013 fix and related specs. Source d2121f0c matches accepted source,
-    with fresh full Preflight/focused race and dual no-finding reviews.
-    Fork PR4 open against current default master; all18 reported CI checks
-    succeeded at 5d3e0777, source d2121f0c unchanged. CI hash binds the checked
-    candidate; a docs-only receipt follows and its tip checks are rechecked.
-    Commit/push/PR approvals are consumed by this task, not future authority.
-    No merge, tag, version selection or publication authorized. Do not invoke
-    automatic landing or cleanup. Check PR4 via explicit --repo umats/pdfcpu.
-    Private-sample and full consumer normalization checks remain owner-deferred;
-    no actual-sample fixed claim. Exact empty-free-list generation0 handling
-    only, no broader linked/compressed identity policy. Ordinary AES and hint
-    reference/origin/limit/cancellation checks retained; no flag clearing.
-    Prior metadata reconciliation remains preserved in named stash
-    metadata-reconciliation-preserved-before-BUG-013 on its separate branch.
-    Aggregate coverage thresholds are owner-waived; recorded values are
-    historical prior-release measurements, not this PR's current coverage.
-    No vendor/pdfrelay changes, private reads, mail or deployment performed.
+    Owner explicitly authorized merge of PR4 then source-only v0.16.2 release.
+    Test scheduling correction and display version are committed separately,
+    e9e3ac44 and f2072a0e. Patched fresh Preflight, focused-race count100 and
+    full unchanged race suite pass (exit0,463 seconds, adequate30m budget).
+    Prior default-budget timeout and reproduced test-harness race are logged.
+    No assertions or100-goroutine exercise removed; no API/locking changes.
+    Both independent release-delta reviews pass, no findings,6/6 each.
+    All assignments resolved. Known test-generated sample outputs cleaned.
+    Patched Go1.26.9 scan has zero reachable findings; one noncalled module
+    advisory noted. Module hygiene and exact fork v0.16.1 API comparison clean.
+    CLI reports v0.16.2; no module-floor/dependency changes. Current code-tip
+    push/PR CI runs successful; failed Windows fixture-clock job passed rerun.
+    Its preexisting OCSP setup flake is logged separately, not silently waived
+    or claimed fixed. Commit documentation receipts and refresh tip CI, then
+    merge authorized PR4 and publish source-only v0.16.2 at verified merge SHA.
+    No merge or publication yet. Current report is
+    specs/verifications/v0.16.2-release-validation.md.
+    Private-sample and consumer normalization validation remain owner-deferred,
+    not fixed/passed. No vendor/pdfrelay changes, private reads, mail or deploy.
+    Named prior metadata reconciliation stash remains preserved separately.
   required_reading:
+    - specs/bugs/BUG-2026-10-12-release-validation.md
     - specs/product/SCOPE_LATEST.yaml
     - specs/bugs/BUG-013-owner-evidence.md
     - specs/bugs/BUG-013-free-list-hint-provenance.md
@@ -97,6 +111,6 @@ handoff:
     - specs/verifications/BUG-013-self-audit.md
   open_decisions:
     - Private-sample acceptance is deferred, not passed.
-    - No merge, tag or publication without separate approval.
+    - Owner approved PR4 merge and source-only v0.16.2 after green gates.
     - pdfrelay integration remains a separate change.
     - Linked/compressed classification needs separate proof and scope.

@@ -1,4 +1,20 @@
 bugs:
+  - bug_id: BUG-2026-10-12-archived-ocsp-fixture-clock
+    status: open
+    date: 2026-10-12
+    severity: LOW
+    priority: MEDIUM
+    scope: tests-only
+    summary: Archived OCSP fixture couples expiry to a later wall clock
+    file: specs/bugs/BUG-2026-10-12-archived-ocsp-fixture-clock.md
+  - bug_id: BUG-2026-10-12-release-validation
+    status: verified
+    date: 2026-10-12
+    severity: LOW
+    priority: HIGH
+    scope: release-validation
+    summary: Patched full race and release-code CI verified
+    file: specs/bugs/BUG-2026-10-12-release-validation.md
   - bug_id: BUG-013-free-list-hint-provenance
     status: synthetic_verified_private_validation_deferred
     approach: Exact empty-free-head generation0 canonicalization
