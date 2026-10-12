@@ -7,11 +7,11 @@ project_cycle:
 active_flow: release_branch
 active_bug_id: BUG-013-free-list-hint-provenance
 release_cycle:
-  stage: team_pr_open_ci_pending
+  stage: team_pr_open_ci_verified
   workflow: team-pr
-  commit_authorized: true
-  push_authorized: true
-  pr_authorized: true
+  commit_authorized: false
+  push_authorized: false
+  pr_authorized: false
   authorization_scope: BUG-013 reviewed fix and related specs only
   merge_authorized: false
   tag_publish_authorized: false
@@ -21,7 +21,11 @@ release_cycle:
   pr_number: 4
   pr_url: https://github.com/umats/pdfcpu/pull/4
   pr_base: master_current_remote_default
-  ci_verified: false
+  ci_verified: true
+  ci_verified_commit: 5d3e077751668742baadec464cb2bcb1b1dcc78c
+  ci_verified_source_commit: d2121f0c1d85181a92e70e820c8e2ab1aa87e464
+  ci_verified_at: '2026-10-12T08:30:35Z'
+  ci_reported_checks: 18
   coverage_gate: owner_waived_project_percentage_policy
   coverage_waiver_scope: aggregate_percentage_thresholds_only
   coverage_measurement: prior_release_only_not_rerun_for_this_PR
@@ -62,14 +66,17 @@ metrics:
       total_seconds: 142.0
       avg_seconds: 142.0
 handoff:
-  last_step_completed: BUG-013-source-committed-pushed-team-PR4-open
+  last_step_completed: BUG-013-team-PR4-open-with-green-CI
   next_skill: release-branch
-  paused: false
+  paused: true
   resume_note: >-
     Owner explicitly authorized commit, push and team PR for the reviewed
     BUG-013 fix and related specs. Source d2121f0c matches accepted source,
     with fresh full Preflight/focused race and dual no-finding reviews.
-    Fork PR4 open against current default master; CI pending at this snapshot.
+    Fork PR4 open against current default master; all18 reported CI checks
+    succeeded at 5d3e0777, source d2121f0c unchanged. CI hash binds the checked
+    candidate; a docs-only receipt follows and its tip checks are rechecked.
+    Commit/push/PR approvals are consumed by this task, not future authority.
     No merge, tag, version selection or publication authorized. Do not invoke
     automatic landing or cleanup. Check PR4 via explicit --repo umats/pdfcpu.
     Private-sample and full consumer normalization checks remain owner-deferred;
@@ -86,9 +93,10 @@ handoff:
     - specs/bugs/BUG-013-owner-evidence.md
     - specs/bugs/BUG-013-free-list-hint-provenance.md
     - specs/verifications/BUG-013-verification.md
+    - specs/verifications/BUG-013-pr-handoff.md
     - specs/verifications/BUG-013-self-audit.md
   open_decisions:
     - Private-sample acceptance is deferred, not passed.
     - No merge, tag or publication without separate approval.
     - pdfrelay integration remains a separate change.
-    - Broader linked/compressed classification requires separate proof and scope.
+    - Linked/compressed classification needs separate proof and scope.
