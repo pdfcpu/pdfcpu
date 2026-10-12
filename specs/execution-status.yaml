@@ -1,2 +1,11 @@
 development_status:
   e01: in_progress
+gate_trace:
+  verdict: WAIVED
+  rationale: >-
+    No current BUG-013 story matrix or blind-spot inputs exist; the historical
+    e01 capsule has no stories. Automated story percentages cannot evaluate
+    this bug release. Explicit public regressions, RCA and dual review supply
+    scoped behavioral evidence. Private normalization remains owner-deferred,
+    not a passed acceptance check.
+  downgrade_applied: false

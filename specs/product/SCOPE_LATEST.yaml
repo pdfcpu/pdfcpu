@@ -1,1 +1,87 @@
-{}
+type: scope
+context: BUG-013 free-list normalization and plaintext-hint compatibility
+core_value: >-
+  Establish whether generation-only free-list-head normalization can safely
+  retain hint compatibility while preserving encrypted-stream correctness.
+summary: >-
+  Investigate the remaining pdfrelay BUG-013 failure in this pdfcpu checkout,
+  bound to fork v0.16.1 release commit 495db4e0. Owner-supplied scalar debugger
+  evidence shows object 0 generation normalization marks the xref repaired,
+  preventing hint discovery before reference and physical-origin audits.
+  This explains one rejection, not the entire private-sample failure.
+  Reproduce synthetically through public APIs, audit provenance and all repair
+  categories, and allow an implementation only after a narrow safety proof.
+in_scope:
+  - id: BUG-013-s01
+    outcome: >-
+      Synthetic public-API reproduction of generation-only object-0
+      normalization.
+  - id: BUG-013-s02
+    outcome: >-
+      Verified provenance and correctness audit covering object 0, neighboring
+      free entries, all repair assignments, and terminal unsafe repairs.
+  - id: BUG-013-s03
+    outcome: >-
+      Conditional minimal safe classification and public-API regressions, or
+      documented rejection with an explicit alternative-policy decision request.
+  - id: BUG-013-s04
+    outcome: >-
+      Offline private-sample eligibility tracing and full public normalization
+      acceptance, when private input and the consumer pipeline are available.
+out_of_scope:
+  - item: pdfrelay vendor or dependency edits
+    reason: Separate consumer change; no hand-edits to managed vendor files.
+  - item: Blanket repair-flag bypass or general plaintext fallback
+    reason: Could authorize ordinary encrypted content as plaintext.
+  - item: Production PDF mutation or arbitrary stream deletion
+    reason: Would destroy evidence or content rather than resolve provenance.
+  - item: Normative encryption-exemption or Annex F compliance claims
+    reason: This remains a bounded relaxed-mode compatibility repair.
+  - item: Deployment, mail, tags, publication or merge
+    reason: No authorization; commit, feature push and team PR only.
+constraints:
+  checkout: /home/umats/projects/pdfcpu
+  branch: fix/free-list-hint-provenance
+  baseline_commit: 495db4e004756e19bc1a717bbe92f11eb08fa24d
+  baseline_binding: >-
+    Fork umats/pdfcpu v0.16.1 peeled remote tag; local v0.16.1 is different.
+  workflow: team-pr
+  handoff_authorization: Owner approved commit, feature push and team PR.
+  private_validation: Owner deferred; no actual-sample success claim.
+  fixtures: Synthetic content only; no private bytes in committed artifacts.
+  private_input: Read-only; memory output; no passwords, keys or content logs.
+  safety: >-
+    Preserve authentication, ordinary AES terminal errors, hint reference and
+    physical-origin audits, identity checks, cancellation and resource limits.
+  existing_work: >-
+    Previous metadata reconciliation preserved in stash named
+    metadata-reconciliation-preserved-before-BUG-013; do not mix into code work.
+  acceptance_limit: >-
+    Private sample path and full consumer normalization pipeline are not yet
+    available. Synthetic success cannot prove the actual sample is fixed.
+success_criteria:
+  - >-
+    Public metadata/decrypt regression fails on the exact released baseline
+    for the demonstrated reason.
+  - >-
+    Safety proof distinguishes authorized normalization from untrustworthy
+    provenance.
+  - >-
+    Live-offset repair, rebuilt xrefs, skipped entries and duplicate identities
+    remain ineligible.
+  - >-
+    Free/in-use confusion, malformed free links and generation mismatches
+    cannot authorize ordinary plaintext.
+  - >-
+    Existing reference, physical-origin, ambiguous-syntax, cancellation and
+    resource-limit tests pass.
+  - Ordinary nonaligned AES streams remain terminal.
+  - Repository Preflight and required malformed-input regression checks pass.
+  - >-
+    Actual-sample acceptance requires offline metadata, decrypt, normalization,
+    validated output and no-encryption checks; otherwise report it unverified.
+references:
+  - specs/bugs/BUG-013-free-list-hint-provenance.md
+  - specs/bugs/BUG-013-owner-evidence.md
+  - specs/bugs/BUG-2026-10-08-plaintext-linearization-hints.md
+  - specs/tech-architecture/tech-stack.md

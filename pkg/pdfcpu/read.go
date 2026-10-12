@@ -2631,6 +2631,51 @@ func buildXRefTableStartingAt(c context.Context, ctx *model.Context, offset *int
 	return nil
 }
 
+type freeHeadIdentity struct {
+	free, compressed bool
+	offset           int64
+	generation       int
+}
+
+// emptyFreeHeadSnapshot recognizes only the proven generation-0 empty-list
+// case. Copy scalars, not aliased pointers: EnsureValidFreeList mutates them.
+// Missing or ambiguous identities fail closed; linked free lists are excluded.
+func emptyFreeHeadSnapshot(table map[int]*model.XRefTableEntry) map[int]freeHeadIdentity {
+	head := table[0]
+	if head == nil || !head.Free || head.Compressed || head.Offset == nil || head.Generation == nil ||
+		*head.Offset != 0 || *head.Generation != 0 {
+		return nil
+	}
+	before := make(map[int]freeHeadIdentity, len(table))
+	for nr, e := range table {
+		if nr < 0 || e == nil || e.Compressed || e.Offset == nil || e.Generation == nil ||
+			e.ObjectStream != nil || e.ObjectStreamInd != nil || (nr != 0 && e.Free) {
+			return nil
+		}
+		before[nr] = freeHeadIdentity{e.Free, e.Compressed, *e.Offset, *e.Generation}
+	}
+	return before
+}
+
+func unchangedEmptyFreeHead(table map[int]*model.XRefTableEntry, before map[int]freeHeadIdentity) bool {
+	if before == nil || len(table) != len(before) {
+		return false
+	}
+	for nr, old := range before {
+		e := table[nr]
+		if e == nil || e.Offset == nil || e.Generation == nil || e.ObjectStream != nil || e.ObjectStreamInd != nil {
+			return false
+		}
+		if nr == 0 {
+			old.generation = types.FreeHeadGeneration
+		}
+		if old != (freeHeadIdentity{e.Free, e.Compressed, *e.Offset, *e.Generation}) {
+			return false
+		}
+	}
+	return true
+}
+
 // Populate the cross reference table for this PDF file.
 // Goto offset of first xref table entry.
 // Can be "xref" or indirect object reference eg. "34 0 obj"
@@ -2677,11 +2722,15 @@ func readXRefTable(c context.Context, ctx *model.Context) (err error) {
 			before[nr] = freeIdentity{*e.Offset, *e.Generation}
 		}
 	}
+	emptyHeadBefore := emptyFreeHeadSnapshot(ctx.Table)
 	err = ctx.EnsureValidFreeList()
+	// This sole free-head generation canonicalization cannot change live origins.
+	// It does not clear earlier repairs or authorize a hint by itself.
+	benignHead := err == nil && unchangedEmptyFreeHead(ctx.Table, emptyHeadBefore)
 	for nr, e := range ctx.Table {
 		if e != nil && (e.Free || nr == 0) && e.Offset != nil && e.Generation != nil {
 			old, found := before[nr]
-			if !found || old != (freeIdentity{*e.Offset, *e.Generation}) {
+			if (!found || old != (freeIdentity{*e.Offset, *e.Generation})) && !(nr == 0 && benignHead) {
 				ctx.Read.RepairedXRef = true
 			}
 		}

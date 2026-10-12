@@ -1,4 +1,40 @@
 bugs:
+  - bug_id: BUG-2026-10-12-archived-ocsp-fixture-clock
+    status: open
+    date: 2026-10-12
+    severity: LOW
+    priority: MEDIUM
+    scope: tests-only
+    summary: Archived OCSP fixture couples expiry to a later wall clock
+    file: specs/bugs/BUG-2026-10-12-archived-ocsp-fixture-clock.md
+  - bug_id: BUG-2026-10-12-release-validation
+    status: verified
+    date: 2026-10-12
+    severity: LOW
+    priority: HIGH
+    scope: release-validation
+    summary: Patched full race and release-code CI verified
+    file: specs/bugs/BUG-2026-10-12-release-validation.md
+  - bug_id: BUG-013-free-list-hint-provenance
+    status: synthetic_verified_private_validation_deferred
+    approach: Exact empty-free-head generation0 canonicalization
+    source_commit: d2121f0c
+    pr_url: https://github.com/umats/pdfcpu/pull/4
+    private_sample_verified: false
+    private_validation: owner_deferred
+    files_changed:
+      - pkg/pdfcpu/read.go
+      - pkg/pdfcpu/model/context.go
+      - pkg/api/free_list_hint_reproduction_test.go
+      - pkg/pdfcpu/free_head_classification_test.go
+      - pkg/pdfcpu/free_list_provenance_audit_test.go
+    date: 2026-10-12
+    severity: MEDIUM
+    priority: HIGH
+    scope: reader-encryption
+    summary: Free-list-head normalization disqualifies hint compatibility
+    file: specs/bugs/BUG-013-free-list-hint-provenance.md
+    evidence: specs/verifications/BUG-013-verification.md
   - bug_id: BUG-release-coverage-gate
     status: owner_waived
     severity: HIGH

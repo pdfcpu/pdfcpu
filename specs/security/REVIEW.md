@@ -45,3 +45,34 @@ Final candidate receipts and limitations:
 Lead accepts both bounded reviews. No unresolved current security finding
 remains within the approved scope. This is not a universal security guarantee,
 standards-compliance statement, production reproduction or release approval.
+
+## BUG-013 / v0.16.2: scoped compatibility-boundary review
+
+Scope: `fix/free-list-hint-provenance` against exact fork v0.16.1 commit
+`495db4e0`, source `d2121f0c`, one-line VersionStr change to v0.16.2, and
+ConfigPath test scheduling correction `e9e3ac44` (no production locking change).
+Internal-library compatibility/correctness work; no incident or exploit shown.
+
+Independent A/B reviews (`result:free-list-review-a#1`,
+`result:free-list-review-b#1`) found no concrete findings. They read connected
+normalization, reader, hint and writer source and supplied regression evidence.
+The only normalization exception requires the existing empty free head and
+scalar proof of unchanged live identities. Earlier/later repairs remain
+monotonic, and authentication, normal AES handling, hint references/physical
+origins, parse provenance, strict mode, limits and cancellation are unchanged.
+Writer deletion inventory remains verified-only. No public field or broader
+linked/compressed classification, private input, vendor or consumer changes.
+
+VersionStr is release display data only; no new cryptography or input flow.
+No new HIGH-confidence finding in this scoped diff. This is not a blanket
+claim about all library inputs or the deferred private normalization pipeline.
+
+Patched Go1.26.9 scan reports zero reachable findings, with one noncalled
+module advisory; see `.pi-herdsman/free-list-release/govulncheck-patched.log`.
+Earlier Go1.26.8 scanner failure and full-race timeout remain recorded in
+`specs/bugs/BUG-2026-10-12-release-validation.md`. After correcting the
+reproduced global test-harness race, the full patched race suite passes.
+Independent release-delta A/B static reviews also have no findings,6/6 each.
+An unrelated OCSP fixture clock flake remains explicitly logged for follow-up,
+not asserted to be fixed by the green CI rerun. Current source-tip CI passes;
+documentation receipt tip must also pass before merge/publication.

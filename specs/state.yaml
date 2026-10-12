@@ -3,118 +3,114 @@ project_cycle:
   current_phase: 6
   mode: standard
   resume_strategy: verify_gap_loop
-  completed_phases:
-    - 1
-    - 2
-    - 3
-    - 4
-    - 5
+  completed_phases: []
 active_flow: release_branch
+active_bug_id: BUG-013-free-list-hint-provenance
 release_cycle:
-  stage: team_pr_open_ci_pending
-  phase5_owner_confirmed: true
+  stage: v0_16_2_premerge_release_validation
+  full_race_executor: resolved
+  full_race_status: passed_go1_26_9_exit0_463_seconds
+  release_delta_review: passed
+  release_delta_review_scores: [100, 100]
+  release_delta_reviewers: []
   workflow: team-pr
   commit_authorized: true
   push_authorized: true
   pr_authorized: true
+  authorization_scope: PR4 merge and source-only v0.16.2 release
+  merge_authorized: true
+  tag_publish_authorized: true
+  version_approved: true
+  approved_version: v0.16.2
+  validation_go: go1.26.9
+  module_hygiene: tidy_diff_clean
+  api_comparison: fork_v0_16_1_module_apidiff_clean
+  toolchain_scan: zero_reachable_findings_on_go1_26_9
   repository: umats/pdfcpu
-  source_commits: [05de1219, 6e083295]
-  metadata_commit: 563589d2
-  pr_number: 3
-  pr_url: https://github.com/umats/pdfcpu/pull/3
+  source_commits: [d2121f0c, e9e3ac44, f2072a0e]
+  pr_number: 4
+  pr_url: https://github.com/umats/pdfcpu/pull/4
+  pr_base: master_current_remote_default
   ci_verified: false
-  merge_authorized: false
-  tag_publish_authorized: false
-  version_approved: false
+  ci_status: documentation_receipt_tip_refresh_required
+  code_ci_verified_commit: f2072a0eafa34431ea36125755ec40a11c99655e
+  code_ci_runs: [38234437034, 38234442562]
+  code_ci_failed_job_rerun: passed_attempt2_fixture_clock_flake_logged
+  ci_reported_checks: 18
   coverage_gate: owner_waived_project_percentage_policy
   coverage_waiver_scope: aggregate_percentage_thresholds_only
-  coverage_overall: 74.8730
-  coverage_core: 74.2648
-  api_compatibility_gate: baseline_and_fork_v0_15_1_apidiff_pass_with_caveat
-  module_hygiene: passed
-  pr_base: master_current_remote_default
-  published_baseline: v0.15.1
-  published_baseline_commit: 57dc6e3f231abdb7e1ee07e9c1fd9aa0098ee95d
-  published_baseline_version_policy: api_checked_tag_version_deferred
+  coverage_measurement: prior_release_only_not_rerun_for_this_PR
+  prior_coverage_overall: 74.8730
+  prior_coverage_core: 74.2648
+  api_compatibility_gate: no_exported_identifier_or_module_changes
+  published_baseline: v0.16.1
+  published_baseline_commit: 495db4e004756e19bc1a717bbe92f11eb08fa24d
+  published_baseline_binding: remote_fork_tag_not_local_same_named_tag
 bug_cycle:
-  bug_id: BUG-2026-10-08-plaintext-linearization-hints
-  current_step: 4
-  completed_steps:
-    - 1
-    - 2
-    - 3
-    - 4
-  standards_gate: owner_waived_for_internal_compatibility
+  bug_id: BUG-013-free-list-hint-provenance
+  current_step: 3
+  completed_steps: [1, 2]
+  stage: synthetic_verified_private_validation_deferred
+  review_round: 1
+  independent_review: passed
+  review_scores: [100, 100]
   compatibility_policy: relaxed_mode_validated_hints_only
-  origin_policy: bounded_physical_header_anchored_envelope_chain
   origin_unknown: deny_compatibility_and_deletion
-  stage: verified_unreleased
-  paused_at: '2026-10-08T17:42:51Z'
-  review_round: 13
-  next_review_round: null
-  acceptance_scores: [100, 100]
-  scoped_security: passed
-  bug_scoped_completeness: passed
-  max_review_rounds: 20
-  review_cap_override: owner_authorized_10_additional_rounds_2026_10_09
-  latest_preflight: round13_current_candidate_exit0
-  latest_focused_race: round13_source_exit0
-  latest_static_checks: vet_build_passed
-  housekeeping_blocker: null
+  executors: []
+  latest_preflight: patched_go1_26_9_candidate_fresh_exit0_2026_10_12
+  latest_focused_race: candidate_exit0
+  private_sample_verified: false
+  private_validation: owner_deferred
 vcs:
   kind: git
-  branch: fix/plaintext-linearization-hints
-  baseline_commit: 870fbbf069d1c9501bb27b019d01bd80d1cb1d23
+  branch: fix/free-list-hint-provenance
+  baseline_commit: 495db4e004756e19bc1a717bbe92f11eb08fa24d
 metrics:
-  story_start: '2026-10-09T08:09:51Z'
+  story_start: '2026-10-12T07:41:15Z'
   skill_timings:
     survey-context:
       calls: 3
       total_seconds: 159.0
       avg_seconds: 53.0
+    release-branch:
+      calls: 1
+      total_seconds: 142.0
+      avg_seconds: 142.0
 handoff:
-  last_step_completed: fork-pr3-opened-no-merge
+  last_step_completed: v0_16_2_all_code_gates_passed
   next_skill: release-branch
   paused: false
   resume_note: >-
-    Approved synthetic scope passes runtime, owner behavioral UAT,
-    dual acceptance/security (100% each) and bug-scoped completeness.
-    Owner confirmed Phase 5, then authorized separate reviewed commits,
-    feature-branch push and team PR in umats/pdfcpu against master.
-    No merge, tag, package publication, migration or rollout authorized.
-    Reader fix 05de1219 and native32 test fix 6e083295 committed separately.
-    Metadata 563589d2 committed and pushed; fork PR3 opened against master.
-    No generated samples/runtime logs included. CI pending, not claimed green.
-    Owner permanently waives aggregate coverage percentage thresholds; measured
-    74.8730% overall and 74.2648% core remain recorded, not called PASS.
-    Tests/security/CI/API and integration approvals remain required.
-    Baseline apidiff and module hygiene pass; struct caveat remains.
-    Explicit fork master confirmed; fork v0.15.1 API comparison passes.
-    Use explicit --repo umats/pdfcpu, not gh's implicit parent selection.
-    Await green PR CI; merge/tag/version decisions remain separate.
-    Native Preflight/race and focused386 pass; ARM build only.
-    No production, Annex F, full386-suite or performance claim.
+    Owner explicitly authorized merge of PR4 then source-only v0.16.2 release.
+    Test scheduling correction and display version are committed separately,
+    e9e3ac44 and f2072a0e. Patched fresh Preflight, focused-race count100 and
+    full unchanged race suite pass (exit0,463 seconds, adequate30m budget).
+    Prior default-budget timeout and reproduced test-harness race are logged.
+    No assertions or100-goroutine exercise removed; no API/locking changes.
+    Both independent release-delta reviews pass, no findings,6/6 each.
+    All assignments resolved. Known test-generated sample outputs cleaned.
+    Patched Go1.26.9 scan has zero reachable findings; one noncalled module
+    advisory noted. Module hygiene and exact fork v0.16.1 API comparison clean.
+    CLI reports v0.16.2; no module-floor/dependency changes. Current code-tip
+    push/PR CI runs successful; failed Windows fixture-clock job passed rerun.
+    Its preexisting OCSP setup flake is logged separately, not silently waived
+    or claimed fixed. Commit documentation receipts and refresh tip CI, then
+    merge authorized PR4 and publish source-only v0.16.2 at verified merge SHA.
+    No merge or publication yet. Current report is
+    specs/verifications/v0.16.2-release-validation.md.
+    Private-sample and consumer normalization validation remain owner-deferred,
+    not fixed/passed. No vendor/pdfrelay changes, private reads, mail or deploy.
+    Named prior metadata reconciliation stash remains preserved separately.
   required_reading:
-    - specs/verifications/plaintext-hint-orchestration.md
-    - specs/verifications/plaintext-hint-release-preparation.md
-    - specs/verifications/plaintext-hint-release-gates.md
-    - specs/verifications/plaintext-hint-publication.md
-    - specs/bugs/BUG-release-coverage-gate.md
-    - specs/verifications/plaintext-hint-round13-acceptance.md
-    - specs/verifications/plaintext-hint-completeness.md
-    - specs/verifications/plaintext-hint-round13-verification.md
-    - specs/bugs/BUG-native32-crypto-test-constants.md
-    - specs/verifications/plaintext-hint-round12-acceptance-response.md
-    - specs/verifications/plaintext-hint-round12-verification.md
-    - specs/verifications/plaintext-hint-round11-acceptance-response.md
-    - specs/verifications/plaintext-hint-round11-verification.md
-    - specs/verifications/plaintext-hint-round10-acceptance-response.md
-    - specs/verifications/plaintext-hint-round10-runtime-verify.yaml
-    - specs/verifications/plaintext-hint-round10-review-response.md
-    - specs/bugs/BUG-2026-10-08-plaintext-linearization-hints.md
+    - specs/bugs/BUG-2026-10-12-release-validation.md
+    - specs/product/SCOPE_LATEST.yaml
+    - specs/bugs/BUG-013-owner-evidence.md
+    - specs/bugs/BUG-013-free-list-hint-provenance.md
+    - specs/verifications/BUG-013-verification.md
+    - specs/verifications/BUG-013-pr-handoff.md
+    - specs/verifications/BUG-013-self-audit.md
   open_decisions:
-    - Fork-specific private vulnerability reporting is not yet available.
+    - Private-sample acceptance is deferred, not passed.
+    - Owner approved PR4 merge and source-only v0.16.2 after green gates.
     - pdfrelay integration remains a separate change.
-    - Do not publish a package, tag, merge, or release without approval.
-    - Broader repair must prove complete compressed-reference coverage.
-    - No standards-compliance claim for the compatibility exception.
+    - Linked/compressed classification needs separate proof and scope.
