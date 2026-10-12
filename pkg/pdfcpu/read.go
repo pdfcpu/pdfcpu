@@ -2635,11 +2635,36 @@ type freeHeadIdentity struct {
 	free, compressed bool
 	offset           int64
 	generation       int
+	objectStream     int
+	objectStreamInd  int
 }
 
-// emptyFreeHeadSnapshot recognizes only the proven generation-0 empty-list
-// case. Copy scalars, not aliased pointers: EnsureValidFreeList mutates them.
-// Missing or ambiguous identities fail closed; linked free lists are excluded.
+func freeHeadEntryIdentity(table map[int]*model.XRefTableEntry, nr int) (freeHeadIdentity, bool) {
+	e := table[nr]
+	if nr < 0 || e == nil {
+		return freeHeadIdentity{}, false
+	}
+	if !e.Compressed {
+		if e.Offset == nil || e.Generation == nil || e.ObjectStream != nil || e.ObjectStreamInd != nil ||
+			(nr != 0 && (e.Free || *e.Offset <= 0)) {
+			return freeHeadIdentity{}, false
+		}
+		return freeHeadIdentity{free: e.Free, offset: *e.Offset, generation: *e.Generation}, true
+	}
+	if nr == 0 || e.Free || e.Offset != nil || e.Generation != nil || e.ObjectStream == nil || e.ObjectStreamInd == nil ||
+		*e.ObjectStream <= 0 || *e.ObjectStream == nr || *e.ObjectStreamInd < 0 {
+		return freeHeadIdentity{}, false
+	}
+	container := table[*e.ObjectStream]
+	if container == nil || container.Free || container.Compressed || container.Offset == nil || *container.Offset <= 0 ||
+		container.Generation == nil || *container.Generation != 0 || container.ObjectStream != nil || container.ObjectStreamInd != nil {
+		return freeHeadIdentity{}, false
+	}
+	return freeHeadIdentity{compressed: true, objectStream: *e.ObjectStream, objectStreamInd: *e.ObjectStreamInd}, true
+}
+
+// emptyFreeHeadSnapshot permits only generation-0 empty-list canonicalization.
+// Copy compressed member identities as scalars too; no live origin may change.
 func emptyFreeHeadSnapshot(table map[int]*model.XRefTableEntry) map[int]freeHeadIdentity {
 	head := table[0]
 	if head == nil || !head.Free || head.Compressed || head.Offset == nil || head.Generation == nil ||
@@ -2647,12 +2672,20 @@ func emptyFreeHeadSnapshot(table map[int]*model.XRefTableEntry) map[int]freeHead
 		return nil
 	}
 	before := make(map[int]freeHeadIdentity, len(table))
-	for nr, e := range table {
-		if nr < 0 || e == nil || e.Compressed || e.Offset == nil || e.Generation == nil ||
-			e.ObjectStream != nil || e.ObjectStreamInd != nil || (nr != 0 && e.Free) {
+	members := map[[2]int]bool{}
+	for nr := range table {
+		identity, ok := freeHeadEntryIdentity(table, nr)
+		if !ok {
 			return nil
 		}
-		before[nr] = freeHeadIdentity{e.Free, e.Compressed, *e.Offset, *e.Generation}
+		if identity.compressed {
+			member := [2]int{identity.objectStream, identity.objectStreamInd}
+			if members[member] {
+				return nil
+			}
+			members[member] = true
+		}
+		before[nr] = identity
 	}
 	return before
 }
@@ -2662,14 +2695,14 @@ func unchangedEmptyFreeHead(table map[int]*model.XRefTableEntry, before map[int]
 		return false
 	}
 	for nr, old := range before {
-		e := table[nr]
-		if e == nil || e.Offset == nil || e.Generation == nil || e.ObjectStream != nil || e.ObjectStreamInd != nil {
+		identity, ok := freeHeadEntryIdentity(table, nr)
+		if !ok {
 			return false
 		}
 		if nr == 0 {
 			old.generation = types.FreeHeadGeneration
 		}
-		if old != (freeHeadIdentity{e.Free, e.Compressed, *e.Offset, *e.Generation}) {
+		if old != identity {
 			return false
 		}
 	}
