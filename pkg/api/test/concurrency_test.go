@@ -24,9 +24,9 @@ import (
 	"github.com/umats/pdfcpu/pkg/pdfcpu/model"
 )
 
+// Both tests mutate process-wide ConfigPath; keep them out of the parallel test phase.
 // TestDisableConfigDir verifies disable config dir.
 func TestDisableConfigDir(t *testing.T) {
-	t.Parallel()
 	api.DisableConfigDir()
 
 	if model.ConfigPath != "disable" {
@@ -36,8 +36,6 @@ func TestDisableConfigDir(t *testing.T) {
 
 // TestDisableConfigDir_Parallel verifies disable config dir parallel.
 func TestDisableConfigDir_Parallel(t *testing.T) {
-	t.Parallel()
-
 	var wg sync.WaitGroup
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
