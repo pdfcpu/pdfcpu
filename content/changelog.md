@@ -34,6 +34,21 @@ Entries link to GitHub releases or commits where available.
 
 <article class="changelog-entry">
   <div class="changelog-meta">
+     <time datetime="2026-10-19">2026-10-19</time>
+    <span class="changelog-kind">Release</span>
+    <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.3">v0.16.3</a>
+  </div>
+  <p><strong>Security:</strong> Fix configured decoded-byte limit bypasses
+  (<a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-jp42-qm45-2x6g">GHSA-jp42-qm45-2x6g</a>).
+  Honor <code>Limits.MaxDecodeBytes</code> when decoding cross-reference streams, catalog metadata and other deferred
+  stream content. Bound combined page content and stop cross-reference repair after a decode-limit failure.</p>
+  <br>
+  <p>Strengthen Flate predictor and DCT output limits, check cached decoded content, and add regression tests for
+  strict/relaxed validation and eager/deferred decoding.</p>
+</article>
+
+<article class="changelog-entry">
+  <div class="changelog-meta">
     <time datetime="2026-10-11">2026-10-11</time>
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.2">v0.16.2</a>
@@ -44,6 +59,13 @@ Entries link to GitHub releases or commits where available.
   Fix plaintext exposure in encrypted output, stack overflows and malformed-input panics.
   Strengthen resource limits and permission checks.</p>
   <br>
+  <p><strong>Fixed security advisories:</strong></p>
+  <ul>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-ppm7-rg95-2c2p">GHSA-ppm7-rg95-2c2p</a>:
+    plaintext strings in encrypted PDFs containing object streams.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-gj7c-wpph-xx35">GHSA-gj7c-wpph-xx35</a>:
+    process termination from recursive PDF stream references.</li>
+  </ul>
   <p><strong>Hardening:</strong> <br>Improve PDF validation, document preservation, forms, images, fonts and encryption compatibility.</p>
   <br>
   <p>Fix #1494–#1501, #1503–#1506, #1508.</p>
@@ -67,6 +89,10 @@ Entries link to GitHub releases or commits where available.
   Update TIFF dependency to v1.0.7.<br><br>
   Fix #612, #1493
   </p>
+  <br>
+  <p><strong>Fixed security advisory:</strong><br>
+  <a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-6524-w46v-6399">GHSA-6524-w46v-6399</a>:
+  index-out-of-range panics in PDF image renderers.</p>
 </article>
 
 <article class="changelog-entry">
@@ -84,7 +110,22 @@ Entries link to GitHub releases or commits where available.
 
   Fix #1407, #1444, #1449, #1457, #1460, #1461, #1465-#1467, #1470, #1472-#1474, #1477, #1479, #1484,
   #1485, #1487.
-  </p>
+  </p><br>
+  <p><strong>Fixed security advisories:</strong></p>
+  <ul>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-g766-88fx-58h8">GHSA-g766-88fx-58h8</a>:
+    integer overflow in image buffer allocation.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-fjh6-rrhv-4g63">GHSA-fjh6-rrhv-4g63</a>:
+    configured cross-reference limits bypassed by traditional xref tables.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-9mmx-88p2-c8c6">GHSA-9mmx-88p2-c8c6</a>:
+    index-out-of-range panic when extracting packed RGB image samples.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-prvw-v9vv-6966">GHSA-prvw-v9vv-6966</a>:
+    nil-pointer panic when extracting images with missing BitsPerComponent.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-w2hj-54mc-76r4">GHSA-w2hj-54mc-76r4</a>:
+    denial of service from integer overflow in the xref stream /W array.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-7v74-phpq-xq6g">GHSA-7v74-phpq-xq6g</a>:
+    incorrect revision mapping in PDF signature modification reporting.</li>
+  </ul>
 </article>
 
 <article class="changelog-entry">
