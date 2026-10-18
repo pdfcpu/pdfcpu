@@ -91,7 +91,7 @@ func removeKeywordsFromMetadata(c context.Context, ctx *model.Context) (bool, er
 		return false, err
 	}
 
-	if err = sd.Decode(); err != nil {
+	if err = ctx.DecodeStream(sd); err != nil {
 		return false, fmt.Errorf("catalog Metadata stream: decode: %w", err)
 	}
 	if err := contextutil.Check(c); err != nil {

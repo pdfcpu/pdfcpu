@@ -87,6 +87,7 @@ func validateMetadata(xRefTable *model.XRefTable, d types.Dict, required bool, s
 }
 
 func catalogMetaData(xRefTable *model.XRefTable, rootDict types.Dict, required bool, sinceVersion model.Version) (xmpMeta *model.XMPMeta, err error) {
+	// see 14.3.2
 	rootObjNr := validationRootObjectNumber(xRefTable)
 	metadataObjNr := validationEntryObjectNumber(rootObjNr, rootDict, "Metadata")
 	defer func() {
@@ -106,7 +107,7 @@ func catalogMetaData(xRefTable *model.XRefTable, rootDict types.Dict, required b
 	// }
 
 	// Decode streamDict for supported filters only.
-	err = sd.Decode()
+	err = xRefTable.DecodeStream(sd)
 	if err == filter.ErrUnsupportedFilter {
 		return nil, nil
 	}

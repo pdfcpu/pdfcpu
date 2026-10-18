@@ -500,11 +500,7 @@ func indexedLookupStreamBytes(x *model.XRefTable, sd types.StreamDict) ([]byte, 
 			return nil, fmt.Errorf("cannot check decoded lookup length for %s: %w", f.Name, filter.ErrUnsupportedFilter)
 		}
 	}
-	limit := filter.DefaultMaxDecodeBytes
-	if x.Conf != nil {
-		limit = x.Conf.Limits.MaxDecodeBytes
-	}
-	if err := sd.DecodeWithLimit(limit); err != nil {
+	if err := x.DecodeStream(&sd); err != nil {
 		return nil, fmt.Errorf("decode lookup: %w", err)
 	}
 	return sd.Content, nil

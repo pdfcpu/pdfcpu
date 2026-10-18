@@ -722,7 +722,7 @@ func ExtractFont(c context.Context, ctx *model.Context, fontObject model.FontObj
 		}
 
 		// Decode streamDict if used filter is supported only.
-		err = sd.Decode()
+		err = ctx.DecodeStream(sd)
 		if ctxErr := contextutil.Check(c); ctxErr != nil {
 			return nil, ctxErr
 		}
@@ -930,7 +930,7 @@ func extractMetadataFromDict(
 		dt = t.Value()
 	}
 	// Decode streamDict for supported filters only.
-	err = sd.Decode()
+	err = ctx.DecodeStream(sd)
 	if ctxErr := contextutil.Check(c); ctxErr != nil {
 		return nil, ctxErr
 	}

@@ -1701,11 +1701,11 @@ func insertPageContentsForWM(ctx *model.Context, pageDict types.Dict, wm *model.
 	return nil
 }
 
-func patchFirstContentStreamForWatermark(sd *types.StreamDict, gsID, xoID string, wm *model.Watermark, isLast bool) error {
+func patchFirstContentStreamForWatermark(xRefTable *model.XRefTable, sd *types.StreamDict, gsID, xoID string, wm *model.Watermark, isLast bool) error {
 	if sd == nil {
 		return errors.New("missing content stream")
 	}
-	err := sd.Decode()
+	err := xRefTable.DecodeStream(sd)
 	if err == filter.ErrUnsupportedFilter {
 		return fmt.Errorf("decode stream: %w", err)
 	}
@@ -1806,11 +1806,11 @@ func contentObjectForIndRef(ctx *model.Context, ir types.IndirectRef) (*model.XR
 	return entry, entry.Object, objNr, nil
 }
 
-func patchPageWatermarkStream(d types.Dict, entry *model.XRefTableEntry, objNr int, sd types.StreamDict, gsID, xoID string, wm *model.Watermark, isLast bool) error {
+func patchPageWatermarkStream(ctx *model.Context, d types.Dict, entry *model.XRefTableEntry, objNr int, sd types.StreamDict, gsID, xoID string, wm *model.Watermark, isLast bool) error {
 	if objNr > 0 && wm.Objs[objNr] {
 		return nil
 	}
-	if err := patchFirstContentStreamForWatermark(&sd, gsID, xoID, wm, isLast); err != nil {
+	if err := patchFirstContentStreamForWatermark(ctx.XRefTable, &sd, gsID, xoID, wm, isLast); err != nil {
 		return err
 	}
 	if entry == nil {
@@ -1841,7 +1841,7 @@ func patchPageWatermarkContentArray(ctx *model.Context, d types.Dict, a types.Ar
 	if wm.Objs[objNr] {
 		return nil
 	}
-	if err := patchPageWatermarkStream(d, entry, objNr, sd, gsID, xoID, wm, len(a) == 1); err != nil {
+	if err := patchPageWatermarkStream(ctx, d, entry, objNr, sd, gsID, xoID, wm, len(a) == 1); err != nil {
 		return fmt.Errorf("content array entry 1 obj#%d: patch stream: %w", objNr, err)
 	}
 	if len(a) == 1 {
@@ -1882,7 +1882,7 @@ func updatePageContentsForWM(ctx *model.Context, d types.Dict, wm *model.Waterma
 
 	switch o := obj.(type) {
 	case types.StreamDict:
-		if err := patchPageWatermarkStream(d, entry, objNr, o, gsID, xoID, wm, true); err != nil {
+		if err := patchPageWatermarkStream(ctx, d, entry, objNr, o, gsID, xoID, wm, true); err != nil {
 			return fmt.Errorf("content stream: patch: %w", err)
 		}
 		return nil
@@ -2383,14 +2383,14 @@ func removeForms(ctx *model.Context, d types.Dict, ids []string, i int) error {
 	return removeResDictEntry(ctx, d, "XObject", ids, i)
 }
 
-func removeArtifacts(c context.Context, sd *types.StreamDict, i int) (ok bool, extGStates []string, forms []string, err error) {
+func removeArtifacts(c context.Context, xRefTable *model.XRefTable, sd *types.StreamDict, i int) (ok bool, extGStates []string, forms []string, err error) {
 	if err := contextutil.Check(c); err != nil {
 		return false, nil, nil, err
 	}
 	if sd == nil {
 		return false, nil, nil, errors.New("missing content stream")
 	}
-	err = sd.Decode()
+	err = xRefTable.DecodeStream(sd)
 	if err != nil {
 		return false, nil, nil, fmt.Errorf("decode content stream: %w", err)
 	}
@@ -2458,7 +2458,7 @@ func removeArtifactsFromPage(c context.Context, ctx *model.Context, sd *types.St
 	}
 	// Remove watermark artifacts and locate id's
 	// of used extGStates and forms.
-	ok, extGStates, forms, err := removeArtifacts(c, sd, i)
+	ok, extGStates, forms, err := removeArtifacts(c, ctx.XRefTable, sd, i)
 	if err != nil {
 		return false, fmt.Errorf("remove artifacts: %w", err)
 	}
@@ -2752,11 +2752,11 @@ func RemoveWatermarks(c context.Context, ctx *model.Context, selectedPages types
 	return contextutil.Check(c)
 }
 
-func detectArtifacts(sd *types.StreamDict) (bool, error) {
+func detectArtifacts(xRefTable *model.XRefTable, sd *types.StreamDict) (bool, error) {
 	if sd == nil {
 		return false, errors.New("missing content stream")
 	}
-	if err := sd.Decode(); err != nil {
+	if err := xRefTable.DecodeStream(sd); err != nil {
 		return false, fmt.Errorf("decode content stream: %w", err)
 	}
 	// Watermarks may begin or end the content stream.
@@ -2777,7 +2777,7 @@ func detectArtifactsFromContentRef(ctx *model.Context, o types.Object, pos int) 
 	if !ok {
 		return false, fmt.Errorf("content array entry %d obj#%d: expected stream dictionary, got %T", pos, objNr, obj)
 	}
-	found, err := detectArtifacts(&sd)
+	found, err := detectArtifacts(ctx.XRefTable, &sd)
 	if err != nil {
 		return false, fmt.Errorf("content array entry %d obj#%d: %w", pos, objNr, err)
 	}
@@ -2805,7 +2805,7 @@ func detectArtifactsFromContents(ctx *model.Context, o types.Object) (bool, erro
 	}
 	switch o := o.(type) {
 	case types.StreamDict:
-		return detectArtifacts(&o)
+		return detectArtifacts(ctx.XRefTable, &o)
 	case types.Array:
 		return detectArtifactsFromContentArray(ctx, o)
 	default:

@@ -1352,7 +1352,7 @@ func usedGIDsFromCMapIndRef(xRefTable *model.XRefTable, fontName string, cmapInd
 	if sd == nil {
 		return errors.New("missing ToUnicode CMap stream")
 	}
-	if err := sd.Decode(); err != nil {
+	if err := xRefTable.DecodeStream(sd); err != nil {
 		return fmt.Errorf("decode ToUnicode CMap: %w", err)
 	}
 	gids, err := usedGIDsFromCMap(string(sd.Content))

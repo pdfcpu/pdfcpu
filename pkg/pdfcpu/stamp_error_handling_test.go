@@ -520,7 +520,7 @@ func TestPatchPageWatermarkContentRejectsUnsupportedFilter(t *testing.T) {
 		},
 	}
 
-	err := patchFirstContentStreamForWatermark(&sd, "GS0", "Fm0", stampContentTestWatermark(), true)
+	err := patchFirstContentStreamForWatermark(nil, &sd, "GS0", "Fm0", stampContentTestWatermark(), true)
 	if !errors.Is(err, filter.ErrUnsupportedFilter) {
 		t.Fatalf("expected %v, got %v", filter.ErrUnsupportedFilter, err)
 	}
@@ -615,7 +615,7 @@ func TestRemoveArtifactsRejectsUnsupportedFilter(t *testing.T) {
 		},
 	}
 
-	_, _, _, err := removeArtifacts(t.Context(), &sd, 1)
+	_, _, _, err := removeArtifacts(t.Context(), nil, &sd, 1)
 	if !errors.Is(err, filter.ErrUnsupportedFilter) {
 		t.Fatalf("expected %v, got %v", filter.ErrUnsupportedFilter, err)
 	}

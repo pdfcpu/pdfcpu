@@ -143,7 +143,7 @@ type ConfigurationLimitsInspection struct {
 	// MaxStreamBytes limits encoded stream bytes read from a PDF.
 	MaxStreamBytes int64 `json:"maxStreamBytes"`
 
-	// MaxDecodeBytes limits decoded stream bytes produced by filters.
+	// MaxDecodeBytes limits decoded stream bytes produced by filters and combined page content.
 	MaxDecodeBytes int64 `json:"maxDecodeBytes"`
 
 	// MaxImagePixels limits decoded or rendered image dimensions.

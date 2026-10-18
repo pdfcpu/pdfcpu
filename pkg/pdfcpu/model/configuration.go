@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/internal/fileutil"
+	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/fault"
@@ -493,7 +494,7 @@ type ResourceLimits struct {
 	// MaxStreamBytes limits encoded stream bytes read from a PDF.
 	MaxStreamBytes int64
 
-	// MaxDecodeBytes limits decoded stream bytes produced by filters.
+	// MaxDecodeBytes limits decoded stream bytes produced by filters and combined page content.
 	MaxDecodeBytes int64
 
 	// MaxImagePixels limits decoded/rendered image dimensions.
@@ -518,6 +519,15 @@ type ResourceLimits struct {
 	MaxRecursionDepth int
 }
 
+// DecodeLimit returns the configured decoded-byte limit.
+// A nil configuration or zero value selects the default; negative values disable the limit.
+func (c *Configuration) DecodeLimit() int64 {
+	if c == nil || c.Limits.MaxDecodeBytes == 0 {
+		return filter.DefaultMaxDecodeBytes
+	}
+	return c.Limits.MaxDecodeBytes
+}
+
 // DefaultResourceLimits returns the default resource limits.
 func DefaultResourceLimits() ResourceLimits {
 	const (
@@ -528,7 +538,7 @@ func DefaultResourceLimits() ResourceLimits {
 	return ResourceLimits{
 		MaxObjectBytes:       64 * MB,
 		MaxStreamBytes:       512 * MB,
-		MaxDecodeBytes:       512 * MB,
+		MaxDecodeBytes:       filter.DefaultMaxDecodeBytes,
 		MaxImagePixels:       100 * MP,
 		MaxImageBytes:        512 * MB,
 		MaxObjectCount:       10_000_000,

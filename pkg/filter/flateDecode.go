@@ -540,13 +540,14 @@ func process(w io.Writer, pr, cr []byte, predictor, colors, bpc, columns, bytesP
 	return err
 }
 
-func (f flate) decodePostProcessRows(r io.Reader, maxLen int64, m, predictor, colors, bpc, columns, bytesPerPixel int) (*bytes.Buffer, error) {
+func (f flate) decodePostProcessRows(r io.Reader, maxLen int64, m, rowSize, predictor, colors, bpc, columns, bytesPerPixel int) (*bytes.Buffer, error) {
 	// cr and pr are the bytes for the current and previous row.
 	cr := make([]byte, m)
 	pr := make([]byte, m)
 
 	// Output buffer
 	var b bytes.Buffer
+	limit := f.decodeLimit(-1)
 
 	for checkBufLen(b, maxLen) {
 
@@ -570,18 +571,17 @@ func (f flate) decodePostProcessRows(r io.Reader, maxLen int64, m, predictor, co
 			return nil, fmt.Errorf("flate decode: read error, expected %d bytes, got: %d", m, n)
 		}
 
+		// Reject an oversized row before reconstructing it or growing the output buffer.
+		if maxLen < 0 && limit >= 0 && int64(rowSize) > limit-int64(b.Len()) {
+			return nil, ErrDecodeLimitExceeded
+		}
+
 		remaining := int64(-1)
 		if maxLen >= 0 {
 			remaining = maxLen - int64(b.Len())
 		}
 		if err := process(&b, pr, cr, predictor, colors, bpc, columns, bytesPerPixel, remaining); err != nil {
 			return nil, err
-		}
-
-		if maxLen < 0 {
-			if limit := f.decodeLimit(maxLen); limit >= 0 && int64(b.Len()) > limit {
-				return nil, ErrDecodeLimitExceeded
-			}
 		}
 
 		if err == io.EOF {
@@ -618,7 +618,7 @@ func (f flate) decodePostProcess(r io.Reader, maxLen int64) (io.Reader, error) {
 		return nil, ErrDecodeLimitExceeded
 	}
 
-	b, err := f.decodePostProcessRows(r, maxLen, rowLen, predictor, colors, bpc, columns, bytesPerPixel)
+	b, err := f.decodePostProcessRows(r, maxLen, rowLen, rowSize, predictor, colors, bpc, columns, bytesPerPixel)
 	if err != nil {
 		return nil, err
 	}

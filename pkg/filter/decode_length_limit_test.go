@@ -57,6 +57,58 @@ func TestDCTDecodeLengthUsesConfiguredLimit(t *testing.T) {
 	}
 }
 
+// TestDCTDecodeBoundsSerializedOutput checks the complete image representation, including gob overhead.
+func TestDCTDecodeBoundsSerializedOutput(t *testing.T) {
+	var encoded bytes.Buffer
+	if err := jpeg.Encode(&encoded, image.NewRGBA(image.Rect(0, 0, 2, 2)), nil); err != nil {
+		t.Fatal(err)
+	}
+	f, err := NewFilter(DCT, nil, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := f.Decode(bytes.NewReader(encoded.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, limit := range []int64{16, int64(len(want)) - 1, int64(len(want))} {
+		f, err := NewFilter(DCT, nil, limit)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r, err := f.DecodeLength(bytes.NewReader(encoded.Bytes()), 1)
+		if limit < int64(len(want)) {
+			if !errors.Is(err, ErrDecodeLimitExceeded) {
+				t.Fatalf("limit=%d: got %v", limit, err)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := io.ReadAll(r)
+		if err != nil || !bytes.Equal(got, want) {
+			t.Fatalf("limit=%d: decoded output mismatch: %v", limit, err)
+		}
+	}
+}
+
+// TestFlateDecodeLimitSurvivesToleratedUnexpectedEOF keeps truncation tolerance from masking a limit failure.
+func TestFlateDecodeLimitSurvivesToleratedUnexpectedEOF(t *testing.T) {
+	f, err := NewFilter(Flate, nil, 4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = f.Decode(flatePartialFlushTestData(t, []byte("hello")))
+	if !errors.Is(err, ErrDecodeLimitExceeded) {
+		t.Fatalf("got %v", err)
+	}
+}
+
 func encodedFilterData(t *testing.T, name string, parms map[string]int, data string) []byte {
 	t.Helper()
 	f, err := NewFilter(name, parms)

@@ -56,17 +56,6 @@ func (a Attachment) String() string {
 	return fmt.Sprintf("Attachment: id:%s desc:%s modTime:%s", a.ID, a.Desc, a.ModTime)
 }
 
-func decodeFileSpecStreamDict(sd *types.StreamDict) error {
-	fpl := sd.FilterPipeline
-
-	if fpl == nil {
-		sd.Content = sd.Raw
-		return nil
-	}
-
-	return sd.Decode()
-}
-
 func fileSpecStreamFileName(xRefTable *XRefTable, d types.Dict) (string, error) {
 	o, found := d.Find("UF")
 	if found {
@@ -211,7 +200,7 @@ func fileSpecStreamDictInfo(c context.Context, xRefTable *XRefTable, id string, 
 	}
 
 	if decode {
-		if err = decodeFileSpecStreamDict(sd); err != nil {
+		if err = xRefTable.DecodeStream(sd); err != nil {
 			return nil, desc, fileName, modDate, fmt.Errorf("file spec %q: decode stream: %w", id, err)
 		}
 	}

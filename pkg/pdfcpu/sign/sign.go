@@ -826,7 +826,7 @@ func extractCertsFromDSS(ctx *model.Context) ([]*x509.Certificate, error) {
 		if sd == nil {
 			return nil, fmt.Errorf("DSS dict entry Certs, array index %d: missing stream dictionary", i+1)
 		}
-		if err := sd.Decode(); err != nil {
+		if err := ctx.DecodeStream(sd); err != nil {
 			return nil, fmt.Errorf("DSS dict entry Certs, array index %d: decode stream: %w", i+1, err)
 		}
 		cert, err := parseCertificate(sd.Content)
@@ -878,7 +878,7 @@ func extractCRLsFromDSS(ctx *model.Context) ([][]byte, error) {
 		if sd == nil {
 			return nil, fmt.Errorf("DSS dict entry CRLs, array index %d: missing stream dictionary", i+1)
 		}
-		if err := sd.Decode(); err != nil {
+		if err := ctx.DecodeStream(sd); err != nil {
 			return nil, fmt.Errorf("DSS dict entry CRLs, array index %d: decode stream: %w", i+1, err)
 		}
 		crls = append(crls, sd.Content)
@@ -908,7 +908,7 @@ func extractOCSPsFromDSS(ctx *model.Context) ([][]byte, error) {
 		if sd == nil {
 			return nil, fmt.Errorf("DSS dict entry OCSPs, array index %d: missing stream dictionary", i+1)
 		}
-		if err := sd.Decode(); err != nil {
+		if err := ctx.DecodeStream(sd); err != nil {
 			return nil, fmt.Errorf("DSS dict entry OCSPs, array index %d: decode stream: %w", i+1, err)
 		}
 		ocsps = append(ocsps, sd.Content)

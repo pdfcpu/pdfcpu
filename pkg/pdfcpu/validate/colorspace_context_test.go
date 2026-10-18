@@ -22,9 +22,43 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+// TestIndexedLookupDecodeLimit checks configured limits and fallbacks for compressed indexed color-space lookups.
+func TestIndexedLookupDecodeLimit(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		conf *model.Configuration
+		fail bool
+	}{
+		{"nil configuration", nil, false},
+		{"zero", &model.Configuration{}, false},
+		{"below size", &model.Configuration{Limits: model.ResourceLimits{MaxDecodeBytes: 3}}, true},
+		{"exact size", &model.Configuration{Limits: model.ResourceLimits{MaxDecodeBytes: 4}}, false},
+		{"disabled", &model.Configuration{Limits: model.ResourceLimits{MaxDecodeBytes: -1}}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sd := types.StreamDict{Dict: types.NewDict(), Content: []byte{0, 85, 170, 255}, FilterPipeline: []types.PDFFilter{{Name: filter.Flate}}}
+			if err := sd.Encode(); err != nil {
+				t.Fatal(err)
+			}
+			sd.Content = nil
+			got, err := indexedLookupStreamBytes(&model.XRefTable{Conf: tc.conf}, sd)
+			if tc.fail {
+				if !errors.Is(err, filter.ErrDecodeLimitExceeded) {
+					t.Fatalf("got %v, want decode limit error", err)
+				}
+				return
+			}
+			if err != nil || string(got) != "\x00\x55\xaa\xff" {
+				t.Fatalf("decoded=%v error=%v", got, err)
+			}
+		})
+	}
+}
 
 type colorSpaceCancelContext struct {
 	context.Context

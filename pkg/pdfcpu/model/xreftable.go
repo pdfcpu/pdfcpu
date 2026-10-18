@@ -1393,10 +1393,13 @@ func objStr(entry *XRefTableEntry, objNr int) string {
 	return fmt.Sprintf("%5d:   offset=nil generation=%d %s \n%s\n", objNr, *entry.Generation, typeStr, entry.Object)
 }
 
-func dumpDecodedStream(c context.Context, sd types.StreamDict, objNr, mode int) (string, error) {
-	err := sd.Decode()
+func (xRefTable *XRefTable) dumpDecodedStream(c context.Context, sd types.StreamDict, objNr, mode int) (string, error) {
+	err := xRefTable.DecodeStream(&sd)
 	if ctxErr := c.Err(); ctxErr != nil {
 		return "", ctxErr
+	}
+	if errors.Is(err, filter.ErrDecodeLimitExceeded) {
+		return "", fmt.Errorf("dump object %d: decode stream: %w", objNr, err)
 	}
 	if err == filter.ErrUnsupportedFilter {
 		return "stream filter unsupported!", nil
@@ -1449,7 +1452,7 @@ func (xRefTable *XRefTable) DumpObject(c context.Context, objNr, mode int) error
 
 	if mode > 0 {
 		if sd, ok := entry.Object.(types.StreamDict); ok {
-			s, err := dumpDecodedStream(c, sd, objNr, mode)
+			s, err := xRefTable.dumpDecodedStream(c, sd, objNr, mode)
 			if err != nil {
 				return err
 			}
@@ -2163,8 +2166,18 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 	return xRefTable.consolidateResources(obj, pAttrs)
 }
 
+// DecodeStream decodes sd using the configured decoded-stream byte limit.
+// A nil table or missing configuration selects the default limit.
+func (xRefTable *XRefTable) DecodeStream(sd *types.StreamDict) error {
+	var conf *Configuration
+	if xRefTable != nil {
+		conf = xRefTable.Conf
+	}
+	return sd.DecodeWithLimit(conf.DecodeLimit())
+}
+
 func (xRefTable *XRefTable) decodeContentStream(sd *types.StreamDict, pageNr int) error {
-	err := sd.Decode()
+	err := xRefTable.DecodeStream(sd)
 	if errors.Is(err, filter.ErrUnsupportedFilter) {
 		return fmt.Errorf("page %d content decode: %w", pageNr, err)
 	}
@@ -2180,7 +2193,18 @@ func (xRefTable *XRefTable) decodeContentStream(sd *types.StreamDict, pageNr int
 	return nil
 }
 
+func (xRefTable *XRefTable) appendPageContent(bb []byte, sd *types.StreamDict, pageNr int) ([]byte, error) {
+	if err := xRefTable.decodeContentStream(sd, pageNr); err != nil {
+		return nil, err
+	}
+	if limit := xRefTable.Conf.DecodeLimit(); limit >= 0 && int64(len(sd.Content)) > limit-int64(len(bb)) {
+		return nil, fmt.Errorf("page %d combined content: %w", pageNr, filter.ErrDecodeLimitExceeded)
+	}
+	return append(bb, sd.Content...), nil
+}
+
 // PageContent returns the content in PDF syntax for page dict d.
+// The configured decode limit also bounds the combined content of a stream array.
 func (xRefTable *XRefTable) PageContent(d types.Dict, pageNr int) ([]byte, error) {
 	o, _ := d.Find("Contents")
 	if o == nil {
@@ -2198,10 +2222,10 @@ func (xRefTable *XRefTable) PageContent(d types.Dict, pageNr int) ([]byte, error
 
 	case types.StreamDict:
 		// no further processing.
-		if err := xRefTable.decodeContentStream(&o, pageNr); err != nil {
+		bb, err = xRefTable.appendPageContent(bb, &o, pageNr)
+		if err != nil {
 			return nil, err
 		}
-		bb = append(bb, o.Content...)
 
 	case types.Array:
 		// process array of content stream dicts.
@@ -2216,10 +2240,10 @@ func (xRefTable *XRefTable) PageContent(d types.Dict, pageNr int) ([]byte, error
 			if o == nil {
 				continue
 			}
-			if err := xRefTable.decodeContentStream(o, pageNr); err != nil {
+			bb, err = xRefTable.appendPageContent(bb, o, pageNr)
+			if err != nil {
 				return nil, err
 			}
-			bb = append(bb, o.Content...)
 		}
 
 	default:
@@ -3661,8 +3685,8 @@ func (xRefTable *XRefTable) insertContent(pageDict types.Dict, bb []byte) error 
 	return nil
 }
 
-func appendToContentStream(sd *types.StreamDict, bb []byte) error {
-	err := sd.Decode()
+func (xRefTable *XRefTable) appendToContentStream(sd *types.StreamDict, bb []byte) error {
+	err := xRefTable.DecodeStream(sd)
 	if err == filter.ErrUnsupportedFilter {
 		if log.InfoEnabled() {
 			log.Info.Println("unsupported filter: unable to patch content with watermark.")
@@ -3699,7 +3723,7 @@ func (xRefTable *XRefTable) AppendContent(pageDict types.Dict, bb []byte) error 
 	switch o := obj.(type) {
 
 	case types.StreamDict:
-		if err := appendToContentStream(&o, bb); err != nil {
+		if err := xRefTable.appendToContentStream(&o, bb); err != nil {
 			return err
 		}
 		entry.Object = o
@@ -3712,7 +3736,7 @@ func (xRefTable *XRefTable) AppendContent(pageDict types.Dict, bb []byte) error 
 		genNr := indRef.GenerationNumber.Value()
 		entry, _ = xRefTable.FindTableEntry(objNr, genNr)
 		sd, _ := (entry.Object).(types.StreamDict)
-		if err := appendToContentStream(&sd, bb); err != nil {
+		if err := xRefTable.appendToContentStream(&sd, bb); err != nil {
 			return err
 		}
 		entry.Object = sd

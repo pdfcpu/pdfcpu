@@ -96,7 +96,7 @@ func removeEmptyContentStreams(ctx *model.Context, pageDict types.Dict, obj type
 
 		contentStreamDict, ok := entry.Object.(types.StreamDict)
 		if ok {
-			if err := contentStreamDict.Decode(); err != nil {
+			if err := ctx.DecodeStream(&contentStreamDict); err != nil {
 				return fmt.Errorf("content stream obj#%d: decode: %w", objNr, err)
 			}
 			if len(contentStreamDict.Content) == 0 {
@@ -134,7 +134,7 @@ func removeEmptyContentStreams(ctx *model.Context, pageDict types.Dict, obj type
 			return fmt.Errorf("identifyPageContent: obj#:%d page content entry is no stream dict", pageObjNumber)
 		}
 
-		if err := contentStreamDict.Decode(); err != nil {
+		if err := ctx.DecodeStream(&contentStreamDict); err != nil {
 			return fmt.Errorf("content stream obj#%d: decode: %w", objNr, err)
 		}
 		if len(contentStreamDict.Content) > 0 {

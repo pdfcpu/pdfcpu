@@ -905,8 +905,8 @@ func xRefStreamDict(c context.Context, ctx *model.Context, o types.Object, objNr
 		return nil, err
 	}
 
-	// Decode xrefstream content
-	if err = saveDecodedStreamContent(nil, &sd, 0, 0, true); err != nil {
+	// Cross-reference streams are never encrypted; decode with the caller's resource limit.
+	if err = ctx.DecodeStream(&sd); err != nil {
 		return nil, fmt.Errorf("xRefStreamDict: cannot decode stream for obj#:%d: %w", objNr, err)
 	}
 
@@ -1913,6 +1913,9 @@ func discardPreEncryptionObjects(ctx *model.Context) {
 // It populates the xRefTable by reading in all indirect objects line by line
 // and works on the assumption of a single xref section - meaning no incremental updates.
 func bypassXrefSection(c context.Context, ctx *model.Context, offExtra int64, wasErr error, incr int) error {
+	if errors.Is(wasErr, filter.ErrDecodeLimitExceeded) {
+		return wasErr
+	}
 	ctx.Table = make(map[int]*model.XRefTableEntry)
 
 	var z int64
@@ -3211,11 +3214,12 @@ func ensureStreamLength(sd *types.StreamDict, fixLength bool) error {
 	return nil
 }
 
-func decodeLimit(ctx *model.Context) int64 {
-	if ctx == nil || ctx.Configuration == nil {
-		return model.DefaultResourceLimits().MaxDecodeBytes
+func decodeStream(ctx *model.Context, sd *types.StreamDict) error {
+	var conf *model.Configuration
+	if ctx != nil {
+		conf = ctx.Configuration
 	}
-	return ctx.Configuration.Limits.MaxDecodeBytes
+	return sd.DecodeWithLimit(conf.DecodeLimit())
 }
 
 func streamLimit(ctx *model.Context) int64 {
@@ -3330,7 +3334,7 @@ func validPlaintextMetadata(ctx *model.Context, sd *types.StreamDict) bool {
 	probe := *sd
 	probe.Raw = bytes.Clone(sd.Raw)
 	probe.Content = nil
-	if err := probe.DecodeWithLimit(decodeLimit(ctx)); err != nil {
+	if err := decodeStream(ctx, &probe); err != nil {
 		return false
 	}
 
@@ -3425,7 +3429,7 @@ func saveDecodedStreamContent(ctx *model.Context, sd *types.StreamDict, objNr, g
 	}
 
 	// Actual decoding of stream data.
-	err = sd.DecodeWithLimit(decodeLimit(ctx))
+	err = decodeStream(ctx, sd)
 	if errors.Is(err, filter.ErrUnsupportedFilter) {
 		err = nil
 	}

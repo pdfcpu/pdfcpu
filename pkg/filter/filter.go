@@ -185,11 +185,23 @@ func (f baseFilter) copyDecoded(r io.Reader, maxLen int64) (*bytes.Buffer, error
 
 	lr := &io.LimitedReader{R: r, N: limit + 1}
 	var b bytes.Buffer
-	if _, err := io.Copy(&b, lr); err != nil {
-		return &b, err
-	}
+	_, err := io.Copy(&b, lr)
 	if int64(b.Len()) > limit {
 		return nil, ErrDecodeLimitExceeded
 	}
-	return &b, nil
+	return &b, err
+}
+
+type decodeLimitWriter struct {
+	w         io.Writer
+	remaining int64
+}
+
+func (w *decodeLimitWriter) Write(p []byte) (int, error) {
+	if int64(len(p)) > w.remaining {
+		return 0, ErrDecodeLimitExceeded
+	}
+	n, err := w.w.Write(p)
+	w.remaining -= int64(n)
+	return n, err
 }

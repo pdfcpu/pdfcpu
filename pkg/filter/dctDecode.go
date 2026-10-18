@@ -73,8 +73,11 @@ func (f dctDecode) DecodeLength(r io.Reader, maxLen int64) (io.Reader, error) {
 	}
 
 	var b bytes.Buffer
-
-	enc := gob.NewEncoder(&b)
+	var w io.Writer = &b
+	if limit := f.decodeLimit(-1); limit >= 0 {
+		w = &decodeLimitWriter{w: &b, remaining: limit}
+	}
+	enc := gob.NewEncoder(w)
 
 	if err := enc.Encode(im); err != nil {
 		return nil, err

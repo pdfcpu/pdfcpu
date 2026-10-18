@@ -24,10 +24,33 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	corefont "github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
+
+// TestToUnicodeUsesConfiguredDecodeLimit bounds CMap decoding before parsing glyph IDs.
+func TestToUnicodeUsesConfiguredDecodeLimit(t *testing.T) {
+	conf := model.NewStatelessConfiguration()
+	conf.Limits.MaxDecodeBytes = 8
+	sd := types.StreamDict{
+		Dict:           types.NewDict(),
+		Content:        bytes.Repeat([]byte{' '}, 9),
+		FilterPipeline: []types.PDFFilter{{Name: filter.Flate}},
+	}
+	if err := sd.Encode(); err != nil {
+		t.Fatal(err)
+	}
+	sd.Content = nil
+	gen := 0
+	x := &model.XRefTable{Conf: conf, Table: map[int]*model.XRefTableEntry{
+		1: {Object: sd, Generation: &gen},
+	}}
+	if err := usedGIDsFromCMapIndRef(x, "test", *types.NewIndirectRef(1, 0)); !errors.Is(err, filter.ErrDecodeLimitExceeded) {
+		t.Fatalf("got %v", err)
+	}
+}
 
 func TestNameRejectsMissingSubtype(t *testing.T) {
 	for _, subtype := range []types.Object{nil, types.Name("")} {

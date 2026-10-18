@@ -86,7 +86,7 @@ func TestListAttachmentsSkipsEmbeddedStreamDecoding(t *testing.T) {
 		FilterPipeline: []types.PDFFilter{{Name: filter.Flate}},
 	}
 	probe := sd
-	if err := decodeFileSpecStreamDict(&probe); err == nil {
+	if err := xRefTable.DecodeStream(&probe); err == nil {
 		t.Fatal("expected intentionally undecodable embedded stream")
 	}
 	fileSpec := types.Dict{

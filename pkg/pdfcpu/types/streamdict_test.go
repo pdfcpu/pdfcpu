@@ -134,3 +134,38 @@ func TestDecodeLengthWithLimitRejectsOversizedPrefixWithoutFilters(t *testing.T)
 		})
 	}
 }
+
+// TestCachedFilterContentHonorsDecodeLimit checks stricter limits on previously decoded streams.
+func TestCachedFilterContentHonorsDecodeLimit(t *testing.T) {
+	for _, terminal := range []string{"", filter.JPX, filter.JBIG2} {
+		sd := StreamDict{Dict: NewDict(), Raw: []byte("68656c6c6f>"), FilterPipeline: []PDFFilter{{Name: filter.ASCIIHex}}}
+		if terminal != "" {
+			sd.FilterPipeline = append(sd.FilterPipeline, PDFFilter{Name: terminal})
+		}
+		if err := sd.DecodeWithLimit(5); err != nil {
+			t.Fatal(err)
+		}
+		if err := sd.DecodeWithLimit(4); !errors.Is(err, filter.ErrDecodeLimitExceeded) {
+			t.Fatalf("terminal=%q: got %v", terminal, err)
+		}
+		got, err := sd.DecodeLengthWithLimit(4, 4)
+		if err != nil || string(got) != "hell" {
+			t.Fatalf("terminal=%q: prefix=%q, err=%v", terminal, got, err)
+		}
+	}
+}
+
+// TestPreservedStreamContentDoesNotConsumeDecodeLimit keeps raw and opaque image passthrough unchanged.
+func TestPreservedStreamContentDoesNotConsumeDecodeLimit(t *testing.T) {
+	for _, name := range []string{"", "Crypt", filter.DCT, filter.JPX, filter.JBIG2} {
+		sd := StreamDict{Dict: NewDict(), Raw: []byte("hello")}
+		if name != "" {
+			sd.FilterPipeline = []PDFFilter{{Name: name}}
+		}
+		for range 2 {
+			if err := sd.DecodeWithLimit(4); err != nil || string(sd.Content) != "hello" {
+				t.Fatalf("filter=%q: content=%q, err=%v", name, sd.Content, err)
+			}
+		}
+	}
+}
