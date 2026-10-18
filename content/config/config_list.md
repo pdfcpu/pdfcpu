@@ -129,7 +129,7 @@ formFieldListMaxColWidth: 0
 # encoded stream bytes read from a PDF.
 maxStreamBytes: 512 MB
 
-# decoded stream bytes produced by filters.
+# decoded stream bytes produced by filters and combined page content.
 maxDecodeBytes: 512 MB
 
 # decoded/rendered image dimensions and buffers.

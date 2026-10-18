@@ -155,8 +155,14 @@ inputs you intend to accept. Go callers set `Configuration.Limits.MaxStreamBytes
 
 **`maxDecodeBytes` — default: `512 MB` (536,870,912 bytes).**
 
-Limits decoded stream bytes produced by filters on the bounded decoding paths. This controls expansion of
-compressed stream data independently of its encoded size. It is not an aggregate allowance shared by all streams.
+Limits decoded stream bytes produced by filters, independently of the encoded size. Starting with v0.16.3,
+the configured limit applies to deferred decoding as well as eager decoding, including cross-reference streams,
+metadata, page content, attachments, fonts, and signature evidence.
+
+The same limit also bounds the combined page content returned from a `Contents` stream array, including unfiltered
+streams. A page can therefore exceed the limit even when each individual stream fits. This is a per-stream and
+per-page bound, not a document-wide allowance or a cap on total process memory. Decode-limit failures stop xref
+processing instead of triggering repair.
 
 Go callers set `Configuration.Limits.MaxDecodeBytes`. Image dimension and buffer checks also apply when image
 processing requires them; passing this limit does not imply an image will fit those limits.
