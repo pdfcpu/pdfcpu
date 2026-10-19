@@ -173,6 +173,7 @@ and trust evidence that is not evaluated under a maintained external policy.
   * DocMDP: missing document checks for permissions levels 2 and 3.
   * FieldMDP: not yet processed.
   * UR3: missing document checks for permissions defined by the UR transform method in the UR3 reference dictionary.
+* Revocation: the local assessment checks the signer certificate only. Revocation of intermediate CA certificates is not yet assessed.  
 * Catalog DSS: missing processing of the VRI structure.
 * Embedded signature timestamps: RFC 3161 tokens are located and parsed, but their cryptographic signature, message
   imprint, profile, and TSA certificate path are not yet authenticated.

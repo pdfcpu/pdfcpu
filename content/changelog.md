@@ -38,13 +38,17 @@ Entries link to GitHub releases or commits where available.
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.3">v0.16.3</a>
   </div>
-  <p><strong>Security:</strong> Fix configured decoded-byte limit bypasses
-  (<a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-jp42-qm45-2x6g">GHSA-jp42-qm45-2x6g</a>).
-  Honor <code>Limits.MaxDecodeBytes</code> when decoding cross-reference streams, catalog metadata and other deferred
-  stream content. Bound combined page content and stop cross-reference repair after a decode-limit failure.</p>
+  <p>Security update.</p>
   <br>
-  <p>Strengthen Flate predictor and DCT output limits, check cached decoded content, and add regression tests for
-  strict/relaxed validation and eager/deferred decoding.</p>
+  <p><strong>Fixed security advisories:</strong></p>
+  <ul>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-jp42-qm45-2x6g">GHSA-jp42-qm45-2x6g</a>:
+    configured decoded-byte limit bypasses.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-44h9-p34h-2w4p">GHSA-44h9-p34h-2w4p</a>:
+    unrestricted local image access through create, form fill and form multifill.</li>
+  </ul>
+  <p>Add <code>localImageRoot</code> to configure the allowed directory for local images.
+  See <a href="/create/create/#local-image-access">local image access</a> for defaults and migration guidance.</p>
 </article>
 
 <article class="changelog-entry">

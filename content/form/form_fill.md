@@ -18,6 +18,11 @@ This command fills form fields with data via JSON.
 5. Run `pdfcpu form fill`. This will process the attributes `value` and `locked` only.
 
 ## Note
+
+Local images in JSON form data and JSON/CSV multifill data follow the same
+[local image access policy as create](/create/create/#local-image-access). See that guide for CLI/API defaults,
+configuration examples, path restrictions and migration instructions.
+
 pdfcpu generates all appearance streams for form fields, but if you do have form field display
 issues then the following configuration option may help:
 `needAppearances: true`

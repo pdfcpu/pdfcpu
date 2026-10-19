@@ -12,6 +12,10 @@ except here we import a collection of form instances and generate one PDF for ea
 
 Optionally this command can merge the output PDFs together.
 
+Image paths in JSON data and CSV `@img(...)` columns follow the
+[local image access policy as create](/create/create/#local-image-access). See that guide for CLI/API defaults,
+configuration examples, path restrictions and migration instructions.
+
 Have a look at some [examples](#examples). 
 
 ## Usage

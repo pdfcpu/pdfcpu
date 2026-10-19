@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "Security"
+title: "Security Policy"
 repositoryDocument: true
 ---
 
