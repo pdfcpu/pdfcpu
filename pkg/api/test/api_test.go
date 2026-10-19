@@ -69,6 +69,7 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "load test configuration: %v\\n", err)
 		os.Exit(1)
 	}
+	conf.LocalImageRoot = inDir
 	// Font installation still uses the process-wide font directory.
 	font.UserFontDir, _ = conf.UserFontStore()
 	if os.Getenv("GITHUB_ACTIONS") == "true" {

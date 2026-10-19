@@ -10,11 +10,11 @@
 		"Beige": "#F5F5DC"
 	},
 	"dirs": {
-		"images": "../../testdata/resources"
+		"images": "resources"
 	},
 	"files": {
 		"logo1": "$images/demo.png",
-		"logo2": "../../testdata/resources/demo.png",
+		"logo2": "resources/demo.png",
 		"logo_pdfcpu": "$images/logoVerySmall.png",
 		"logo_gh": "$images/github.png"
 	},
@@ -93,7 +93,7 @@
 		"1": {
 			"files": {
 				"logo1": "$images/pdfchip3.png",
-				"logo2": "../../testdata/resources/pdfchip3.png"
+				"logo2": "resources/pdfchip3.png"
 			},
 			"content": {
 				"guides": [
@@ -121,7 +121,7 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/pdfchip3.png",
+						"src": "resources/pdfchip3.png",
 						"anchor": "right",
 						"height": 100,
 						"url": "https://pdfcpu.io"
@@ -179,7 +179,7 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "right",
 						"height": 100,
 						"border": {

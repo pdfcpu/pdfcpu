@@ -487,6 +487,9 @@ func parseKeysPart4(k, v string, c *Configuration) (err error) {
 	case "offline":
 		c.Offline, err = boolean(k, v)
 
+	case "localImageRoot":
+		c.LocalImageRoot = strings.Trim(v, `"'`)
+
 	}
 
 	return err

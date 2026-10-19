@@ -69,6 +69,10 @@ needAppearances: false
 # internet availability.
 offline: false
 
+# Local create/form images: API disabled when empty; CLI defaults to the working directory.
+# Image paths are relative to this root; absolute paths and parent components are rejected.
+localImageRoot: ""
+
 # http timeout in seconds.
 timeout: 5
 

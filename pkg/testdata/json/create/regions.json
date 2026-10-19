@@ -7,7 +7,7 @@
 	"guides": true,
 	"bgcol": "#8fbc8f",
 	"dirs": {
-		"images": "../../testdata/resources"
+		"images": "resources"
 	},
 	"files": {
 		"logo1": "$images/logoVerySmall.png",

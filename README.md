@@ -49,6 +49,16 @@ pdfcpu merge merged.pdf in1.pdf in2.pdf
 
 See API documentation for usage examples.
 
+### Local images in create and form input
+
+Local images in `create`, `form fill`, and JSON/CSV `form multifill` are confined to
+an allowed directory. <br>
+API callers must set `conf.LocalImageRoot` to enable them. The CLI defaults to its working
+directory and `localImageRoot` in `config.yml` selects another root.
+
+See [local image access](https://pdfcpu.io/create/create/#local-image-access) for configuration examples, path
+restrictions, migration instructions and security limitations.
+
 ---
 
 ## Features

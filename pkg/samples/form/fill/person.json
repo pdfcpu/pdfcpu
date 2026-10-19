@@ -64,7 +64,7 @@
 				"1": {
 					"image": [
 						{
-							"src": "../../testdata/resources/qr.png",
+							"src": "resources/qr.png",
 							"pos": [
 								40,
 								350

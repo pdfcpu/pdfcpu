@@ -11,7 +11,7 @@
 	"bgcol": "#BEDED9",
 	"timestamp": "Monday, 2.Jan 2006 15:04:05",
 	"dirs": {
-		"images": "../../testdata/resources"
+		"images": "resources"
 	},
 	"files": {
 		"logo1": "$images/logoVerySmall.png",
@@ -566,7 +566,7 @@
 				"image": [
 					{
 						"anchor": "topleft",
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 100,
 						"margin": {
 							"width": 10
@@ -574,7 +574,7 @@
 					},
 					{
 						"anchor": "topcenter",
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 100,
 						"margin": {
 							"width": 10
@@ -585,7 +585,7 @@
 					},
 					{
 						"anchor": "topright",
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 100,
 						"margin": {
 							"width": 10
@@ -600,7 +600,7 @@
 
 					{
 						"anchor": "left",
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 100,
 						"margin": {
 							"width": 10
@@ -608,7 +608,7 @@
 					},
 					{
 						"anchor": "center",
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 100,
 						"margin": {
 							"width": 10
@@ -619,7 +619,7 @@
 					},
 					{
 						"anchor": "right",
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 100,
 						"margin": {
 							"width": 10
@@ -634,7 +634,7 @@
 
 					{
 						"anchor": "bottomleft",
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 100,
 						"margin": {
 							"width": 10
@@ -642,7 +642,7 @@
 					},
 					{
 						"anchor": "bottomcenter",
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 100,
 						"margin": {
 							"width": 10
@@ -653,7 +653,7 @@
 					},
 					{
 						"anchor": "bottomright",
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 100,
 						"margin": {
 							"width": 10
@@ -707,7 +707,7 @@
 							100,
 							100
 						],
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 70,
 						"margin": {
 							"width": 10
@@ -724,7 +724,7 @@
 							0,
 							500
 						],
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 70,
 						"margin": {
 							"width": 10
@@ -735,7 +735,7 @@
 							-1,
 							500
 						],
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 70,
 						"margin": {
 							"width": 10
@@ -749,50 +749,7 @@
 							1000,
 							500
 						],
-						"src": "../../testdata/resources/demo.png",
-						"height": 70,
-						"margin": {
-							"width": 10
-						},
-						"border": {
-							"name": "$myBorder"
-						},
-						"padding": {
-							"width": 10
-						}
-					},
-
-					{
-						"pos": [
-							0,
-							-1
-						],
-						"src": "../../testdata/resources/demo.png",
-						"height": 70,
-						"margin": {
-							"width": 10
-						}
-					},
-					{
-						"pos": [
-							-1,
-							-1
-						],
-						"src": "../../testdata/resources/demo.png",
-						"height": 70,
-						"margin": {
-							"width": 10
-						},
-						"border": {
-							"name": "$myBorder"
-						}
-					},
-					{
-						"pos": [
-							1000,
-							-1
-						],
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 70,
 						"margin": {
 							"width": 10
@@ -808,9 +765,52 @@
 					{
 						"pos": [
 							0,
+							-1
+						],
+						"src": "resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						}
+					},
+					{
+						"pos": [
+							-1,
+							-1
+						],
+						"src": "resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						}
+					},
+					{
+						"pos": [
+							1000,
+							-1
+						],
+						"src": "resources/demo.png",
+						"height": 70,
+						"margin": {
+							"width": 10
+						},
+						"border": {
+							"name": "$myBorder"
+						},
+						"padding": {
+							"width": 10
+						}
+					},
+
+					{
+						"pos": [
+							0,
 							0
 						],
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 70,
 						"margin": {
 							"width": 10
@@ -821,7 +821,7 @@
 							-1,
 							0
 						],
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 70,
 						"margin": {
 							"width": 10
@@ -835,7 +835,7 @@
 							1000,
 							0
 						],
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"height": 70,
 						"margin": {
 							"width": 10

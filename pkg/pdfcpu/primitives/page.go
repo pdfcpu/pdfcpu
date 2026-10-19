@@ -19,7 +19,6 @@ package primitives
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/color"
@@ -61,7 +60,7 @@ func (page *PDFPage) resolveFileName(s string) (string, error) {
 	if !ok {
 		return page.pdf.resolveFileName(s)
 	}
-	if filePath[0] != '$' {
+	if filePath == "" || filePath[0] != '$' {
 		return filePath, nil
 	}
 
@@ -79,7 +78,11 @@ func (page *PDFPage) resolveFileName(s string) (string, error) {
 		return "", fmt.Errorf("can't resolve dirname: %s", dirName)
 	}
 
-	s1 := filepath.Join(dirPath, fileName)
+	// Preserve parent components for the resource policy instead of cleaning them away.
+	if dirPath == "" {
+		return fileName[1:], nil
+	}
+	s1 := dirPath + fileName
 
 	return s1, nil
 }

@@ -10,7 +10,7 @@
 		"Beige": "#F5F5DC"
 	},
 	"dirs": {
-		"images": "../../testdata/resources"
+		"images": "resources"
 	},
 	"files": {
 		"logo1": "$images/logoVerySmall.png",
@@ -125,7 +125,7 @@
 				],
 				"image": [
 					{
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"pos": [
 							0,
 							0
@@ -139,7 +139,7 @@
 						}
 					},
 					{
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"pos": [
 							0,
 							150
@@ -153,7 +153,7 @@
 						}
 					},
 					{
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"pos": [
 							250,
 							0
@@ -166,7 +166,7 @@
 						}
 					},
 					{
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"pos": [
 							250,
 							150
@@ -254,7 +254,7 @@
 				"image": [
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"pos": [
 							0,
 							0
@@ -273,7 +273,7 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"pos": [
 							0,
 							150
@@ -292,7 +292,7 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"pos": [
 							250,
 							0
@@ -310,7 +310,7 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"pos": [
 							250,
 							150
@@ -401,7 +401,7 @@
 				"image": [
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "topleft",
 						"height": 100,
 						"border": {
@@ -412,7 +412,7 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "topcenter",
 						"height": 100,
 						"border": {
@@ -427,13 +427,13 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "topright",
 						"height": 100
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "left",
 						"height": 100,
 						"border": {
@@ -448,13 +448,13 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "center",
 						"height": 100
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "right",
 						"height": 100,
 						"border": {
@@ -465,13 +465,13 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "bottomleft",
 						"height": 100
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "bottomcenter",
 						"height": 100,
 						"border": {
@@ -482,7 +482,7 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "bottomright",
 						"height": 100,
 						"border": {
@@ -538,7 +538,7 @@
 				"image": [
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "topleft",
 						"width": 150,
 						"border": {
@@ -549,7 +549,7 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "topcenter",
 						"width": 150,
 						"border": {
@@ -564,13 +564,13 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "topright",
 						"width": 150
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "left",
 						"width": 150,
 						"border": {
@@ -585,13 +585,13 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "center",
 						"width": 150
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "right",
 						"width": 150,
 						"border": {
@@ -602,13 +602,13 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "bottomleft",
 						"width": 150
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "bottomcenter",
 						"width": 150,
 						"border": {
@@ -619,7 +619,7 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "bottomright",
 						"width": 150,
 						"border": {
@@ -669,7 +669,7 @@
 				"image": [
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "topleft",
 						"width": 100,
 						"height":100,
@@ -681,7 +681,7 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "topcenter",
 						"width": 100,
 						"height":100,
@@ -697,14 +697,14 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "topright",
 						"width": 100,
 						"height":100
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "left",
 						"width": 100,
 						"height":100,
@@ -720,14 +720,14 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "center",
 						"width": 100,
 						"height":100
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "right",
 						"width": 100,
 						"height":100,
@@ -739,14 +739,14 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "bottomleft",
 						"width": 100,
 						"height":100
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "bottomcenter",
 						"width": 100,
 						"height":100,
@@ -758,7 +758,7 @@
 					},
 					{
 						"hide": false,
-						"src": "../../testdata/resources/demo.png",
+						"src": "resources/demo.png",
 						"anchor": "bottomright",
 						"width": 100,
 						"height":100,

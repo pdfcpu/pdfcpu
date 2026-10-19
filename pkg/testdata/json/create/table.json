@@ -12,7 +12,7 @@
 	"bgcol": "#BEDED9",
 	"timestamp": "Monday, 2.Jan 2006 15:04:05",
 	"dirs": {
-		"images": "../../testdata/resources"
+		"images": "resources"
 	},
 	"files": {
 		"logo1": "$images/logoVerySmall.png",

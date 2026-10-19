@@ -55,6 +55,7 @@ type configuration struct {
 	CreateBookmarks                 bool             `yaml:"createBookmarks"`
 	NeedAppearances                 bool             `yaml:"needAppearances"`
 	Offline                         bool             `yaml:"offline"`
+	LocalImageRoot                  string           `yaml:"localImageRoot"`
 	Timeout                         int              `yaml:"timeout"`
 	TimeoutCRL                      int              `yaml:"timeoutCRL"`
 	TimeoutOCSP                     int              `yaml:"timeoutOCSP"`
@@ -271,6 +272,7 @@ func loadedConfig(c configuration, configPath string) *Configuration {
 	conf.MergeBookmarkMode = MergeBookmarkModeWrap
 	conf.NeedAppearances = c.NeedAppearances
 	conf.Offline = c.Offline
+	conf.LocalImageRoot = c.LocalImageRoot
 	conf.Timeout = c.Timeout
 	conf.TimeoutCRL = c.TimeoutCRL
 	conf.TimeoutOCSP = c.TimeoutOCSP
@@ -441,6 +443,9 @@ func loadedSchema1Config(c configuration, keys map[string]bool, configPath strin
 	overlaySchema1Formatting(c, keys, conf)
 	overlaySchema1Optimization(c, keys, conf)
 	overlaySchema1Network(c, keys, conf)
+	if keys["localImageRoot"] {
+		conf.LocalImageRoot = c.LocalImageRoot
+	}
 	applyConfigurationLimits(c, conf)
 
 	return conf

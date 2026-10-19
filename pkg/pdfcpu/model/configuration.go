@@ -59,6 +59,7 @@ var schema1ConfigurationKeys = map[string]struct{}{
 	"encryptUsingAES":                 {},
 	"eol":                             {},
 	"formFieldListMaxColWidth":        {},
+	"localImageRoot":                  {},
 	"maxDecodeBytes":                  {},
 	"maxImageBytes":                   {},
 	"maxImagePixels":                  {},
@@ -397,6 +398,11 @@ type Configuration struct {
 
 	// Internet availability.
 	Offline bool
+
+	// LocalImageRoot permits create and form images beneath this directory. Empty disables local images in the API.
+	// Image paths must be relative to this root and contain no parent-directory components.
+	// The CLI defaults an empty root to its working directory.
+	LocalImageRoot string
 
 	// HTTP timeout in seconds.
 	Timeout int

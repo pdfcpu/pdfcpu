@@ -10,9 +10,9 @@
 		"Beige": "#F5F5DC"
 	},
 	"files": {
-		"logo": "../../testdata/resources/demo.png",
-		"logo1": "../../testdata/resources/logoVerySmall.png",
-		"logo2": "../../testdata/resources/github.png"
+		"logo": "resources/demo.png",
+		"logo1": "resources/logoVerySmall.png",
+		"logo2": "resources/github.png"
 	},
 	"fonts": {
 		"myCourier": {

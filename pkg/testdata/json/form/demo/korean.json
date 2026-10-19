@@ -9,7 +9,7 @@
 		"DarkSeaGreen": "#8FBC8F"
 	},
 	"dirs": {
-		"images": "../../testdata/resources"
+		"images": "resources"
 	},
 	"files": {
 		"logo1": "$images/logoVerySmall.png",

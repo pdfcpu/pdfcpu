@@ -178,6 +178,12 @@ func Dispatch(c context.Context, cmd *Command) (out []string, err error) {
 		execution.Conf = cmd.Conf.Clone()
 	}
 	execution.Conf.Cmd = execution.Mode
+	if execution.Conf.LocalImageRoot == "" {
+		switch execution.Mode {
+		case model.CREATE, model.FILLFORMFIELDS, model.MULTIFILLFORMFIELDS:
+			execution.Conf.LocalImageRoot = "."
+		}
+	}
 
 	return f(c, &execution)
 }

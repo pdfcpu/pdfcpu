@@ -62,7 +62,7 @@
 				"1": {
 					"image": [
 						{
-							"src": "../../testdata/resources/qr.png",
+							"src": "resources/qr.png",
 							"pos": [
 								40,
 								350
@@ -137,7 +137,7 @@
 				"1": {
 					"image": [
 						{
-							"src": "../../testdata/resources/logoVerySmall.png",
+							"src": "resources/logoVerySmall.png",
 							"pos": [
 								40,
 								350
@@ -212,7 +212,7 @@
 				"1": {
 					"image": [
 						{
-							"src": "../../testdata/resources/pdfchip3.png",
+							"src": "resources/pdfchip3.png",
 							"pos": [
 								40,
 								350

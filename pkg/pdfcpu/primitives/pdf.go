@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -163,7 +162,7 @@ func (pdf *PDF) resolveFileName(s string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("can't resolve filename: %s", s)
 	}
-	if filePath[0] != '$' {
+	if filePath == "" || filePath[0] != '$' {
 		return filePath, nil
 	}
 
@@ -181,7 +180,11 @@ func (pdf *PDF) resolveFileName(s string) (string, error) {
 		return "", fmt.Errorf("can't resolve dirname: %s", dirName)
 	}
 
-	s1 := filepath.Join(dirPath, fileName)
+	// Preserve parent components for the resource policy instead of cleaning them away.
+	if dirPath == "" {
+		return fileName[1:], nil
+	}
+	s1 := dirPath + fileName
 
 	return s1, nil
 }

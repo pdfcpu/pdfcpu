@@ -112,6 +112,7 @@ func schema1DefaultValues(conf *Configuration) map[string]any {
 		"encryptUsingAES":                 conf.EncryptUsingAES,
 		"eol":                             schemaEOLName(conf.Eol),
 		"formFieldListMaxColWidth":        conf.FormFieldListMaxColWidth,
+		"localImageRoot":                  conf.LocalImageRoot,
 		"maxDecodeBytes":                  conf.Limits.MaxDecodeBytes,
 		"maxImageBytes":                   conf.Limits.MaxImageBytes,
 		"maxImagePixels":                  conf.Limits.MaxImagePixels,

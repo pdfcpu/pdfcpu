@@ -146,6 +146,11 @@
       "$ref": "#/$defs/boolean",
       "default": false
     },
+    "localImageRoot": {
+      "type": "string",
+      "default": "",
+      "description": "Root for local create/form images. Empty disables API local images; CLI uses the working directory."
+    },
     "offline": {
       "$ref": "#/$defs/boolean",
       "default": false

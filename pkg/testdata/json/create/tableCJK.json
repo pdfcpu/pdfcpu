@@ -12,7 +12,7 @@
 	"bgcol": "#BEDED9",
 	"timestamp": "2006-01-02 15:04:05",
 	"dirs": {
-		"images": "../../testdata/resources"
+		"images": "resources"
 	},
 	"files": {
 		"logo1": "$images/logoVerySmall.png",
@@ -131,7 +131,7 @@
 				],
 				"image": [
 					{
-						"src": "../../testdata/resources/pdfchip3.png",
+						"src": "resources/pdfchip3.png",
 						"anchor": "bottomright",
 						"height": 50,
 						"url": "https://pdfcpu.io"
