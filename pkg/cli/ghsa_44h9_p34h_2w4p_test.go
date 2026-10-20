@@ -81,7 +81,7 @@ func ghsaCLIAssertImage(t *testing.T, name string) {
 	}
 }
 
-func TestGHSA44h9P34h2w4pCLIDefaultAndExplicitRoot(t *testing.T) {
+func TestGHSA_44h9_p34h_2w4p_CLIDefaultAndExplicitRoot(t *testing.T) {
 	for _, explicit := range []bool{false, true} {
 		t.Run(map[bool]string{false: "workingDirectory", true: "explicitRoot"}[explicit], func(t *testing.T) {
 			dir := t.TempDir()

@@ -16,6 +16,9 @@ limitations under the License.
 
 package validate
 
+// GHSA-7v74-phpq-xq6g: signatures in the current revision must be reported as current, not historical.
+// https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-7v74-phpq-xq6g
+
 import (
 	"testing"
 
@@ -23,8 +26,9 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// TestCacheSignatureDictionaryRevision verifies field updates do not change the signature's revision.
-func TestCacheSignatureDictionaryRevision(t *testing.T) {
+// TestGHSA_7v74_phpq_xq6g_CacheSignatureDictionaryRevision verifies field updates do not change the signature's
+// revision.
+func TestGHSA_7v74_phpq_xq6g_CacheSignatureDictionaryRevision(t *testing.T) {
 	for _, revisions := range [][2]int{{1, 2}, {3, 1}} {
 		fieldRevision, signatureRevision := revisions[0], revisions[1]
 		entry := model.NewXRefTableEntryGen0(types.Dict{"Type": types.Name("Sig")})

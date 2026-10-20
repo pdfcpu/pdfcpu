@@ -100,8 +100,9 @@ func ghsaJP42PDF(t *testing.T, objects [][]byte, xrefSize int) []byte {
 	return b.Bytes()
 }
 
-// TestGHSAJP42ReadContextCompressedXRefDecodeLimit rejects excessive expansion before xref parsing or repair.
-func TestGHSAJP42ReadContextCompressedXRefDecodeLimit(t *testing.T) {
+// TestGHSA_jp42_qm45_2x6g_ReadContextCompressedXRefDecodeLimit rejects excessive expansion before xref parsing or
+// repair.
+func TestGHSA_jp42_qm45_2x6g_ReadContextCompressedXRefDecodeLimit(t *testing.T) {
 	const entries = 16 * 1024
 	const decodedBytes = entries * 7
 	objects := ghsaJP42Objects(t, nil)
@@ -156,8 +157,8 @@ func (r *ghsaJP42RepairWatchReader) Seek(offset int64, whence int) (int64, error
 	return r.Reader.Seek(offset, whence)
 }
 
-// TestGHSAJP42ReadContextXRefDecodeLimitStopsRepair rejects oversized xrefs without a repair scan.
-func TestGHSAJP42ReadContextXRefDecodeLimitStopsRepair(t *testing.T) {
+// TestGHSA_jp42_qm45_2x6g_ReadContextXRefDecodeLimitStopsRepair rejects oversized xrefs without a repair scan.
+func TestGHSA_jp42_qm45_2x6g_ReadContextXRefDecodeLimitStopsRepair(t *testing.T) {
 	objects := ghsaJP42Objects(t, nil)
 	data := ghsaJP42PDF(t, objects, 16*1024)
 	offset := bytes.Index(data, []byte(fmt.Sprintf("%d 0 obj\n", len(objects)+1)))
@@ -190,8 +191,9 @@ func TestGHSAJP42ReadContextXRefDecodeLimitStopsRepair(t *testing.T) {
 	}
 }
 
-// TestGHSAJP42ReadAndValidateCatalogMetadataDecodeLimit bounds catalog metadata through the direct read/validate API.
-func TestGHSAJP42ReadAndValidateCatalogMetadataDecodeLimit(t *testing.T) {
+// TestGHSA_jp42_qm45_2x6g_ReadAndValidateCatalogMetadataDecodeLimit bounds catalog metadata through the direct
+// read/validate API.
+func TestGHSA_jp42_qm45_2x6g_ReadAndValidateCatalogMetadataDecodeLimit(t *testing.T) {
 	const decodedBytes = 128 << 10
 	const prefix = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">"
 	const suffix = "</x:xmpmeta>"
@@ -243,8 +245,9 @@ func ghsaJP42DistinctContentPDF(t *testing.T, streams int) (data, content []byte
 	return ghsaJP42PDF(t, objects, 0), content
 }
 
-// TestGHSAJP42PageContentDistinctStreamsDecodeLimit scales the six-stream PoC to 7 KiB streams and an 8 KiB limit.
-func TestGHSAJP42PageContentDistinctStreamsDecodeLimit(t *testing.T) {
+// TestGHSA_jp42_qm45_2x6g_PageContentDistinctStreamsDecodeLimit scales the six-stream PoC to 7 KiB streams and an 8 KiB
+// limit.
+func TestGHSA_jp42_qm45_2x6g_PageContentDistinctStreamsDecodeLimit(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		streams int

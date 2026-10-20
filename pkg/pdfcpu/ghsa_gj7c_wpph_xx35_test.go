@@ -16,6 +16,9 @@ limitations under the License.
 
 package pdfcpu
 
+// GHSA-gj7c-wpph-xx35: a stream /Filter or /DecodeParms referring to itself must fail instead of overflowing the stack.
+// https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-gj7c-wpph-xx35
+
 import (
 	"bytes"
 	"errors"
@@ -50,8 +53,9 @@ func selfReferencingStreamPDF(entry string) []byte {
 	return b.Bytes()
 }
 
-// TestReadSelfReferencingStreamEntry isolates malformed input so a pre-fix stack overflow cannot crash the test suite.
-func TestReadSelfReferencingStreamEntry(t *testing.T) {
+// TestGHSA_gj7c_wpph_xx35_ReadSelfReferencingStreamEntry isolates malformed input so a pre-fix stack overflow cannot
+// crash the test suite.
+func TestGHSA_gj7c_wpph_xx35_ReadSelfReferencingStreamEntry(t *testing.T) {
 	const childEnv = "PDFCPU_SELF_REF_STREAM_ENTRY"
 	if entry := os.Getenv(childEnv); entry != "" {
 		debug.SetMaxStack(1 << 20)
@@ -87,7 +91,7 @@ func TestReadSelfReferencingStreamEntry(t *testing.T) {
 
 	for _, entry := range []string{"Filter", "DecodeParms"} {
 		t.Run(entry, func(t *testing.T) {
-			cmd := exec.Command(os.Args[0], "-test.run=^TestReadSelfReferencingStreamEntry$")
+			cmd := exec.Command(os.Args[0], "-test.run=^TestGHSA_gj7c_wpph_xx35_ReadSelfReferencingStreamEntry$")
 			cmd.Env = append(os.Environ(), childEnv+"="+entry)
 			out, err := cmd.CombinedOutput()
 			if err != nil {
@@ -100,8 +104,8 @@ func TestReadSelfReferencingStreamEntry(t *testing.T) {
 	}
 }
 
-// TestParseObjectAllowsIndirectFilter verifies that a valid indirection remains usable.
-func TestParseObjectAllowsIndirectFilter(t *testing.T) {
+// TestGHSA_gj7c_wpph_xx35_ParseObjectAllowsIndirectFilter verifies that a valid indirection remains usable.
+func TestGHSA_gj7c_wpph_xx35_ParseObjectAllowsIndirectFilter(t *testing.T) {
 	pdf := []byte("3 0 obj\n<</Length 3/Filter 4 0 R>>\nstream\n78>\nendstream\nendobj\n" +
 		"4 0 obj\n/ASCIIHexDecode\nendobj\n")
 	ctx, err := model.NewContext(bytes.NewReader(pdf), nil)
@@ -122,8 +126,8 @@ func TestParseObjectAllowsIndirectFilter(t *testing.T) {
 	}
 }
 
-// TestParseObjectLimitsReferenceChain checks the configured bound on distinct nested object parses.
-func TestParseObjectLimitsReferenceChain(t *testing.T) {
+// TestGHSA_gj7c_wpph_xx35_ParseObjectLimitsReferenceChain checks the configured bound on distinct nested object parses.
+func TestGHSA_gj7c_wpph_xx35_ParseObjectLimitsReferenceChain(t *testing.T) {
 	pdf := []byte("3 0 obj\n<</Length 1/Filter 4 0 R>>\nstream\nx\nendstream\nendobj\n" +
 		"4 0 obj\n<</Length 1/Filter 5 0 R>>\nstream\nx\nendstream\nendobj\n" +
 		"5 0 obj\n/ASCIIHexDecode\nendobj\n")

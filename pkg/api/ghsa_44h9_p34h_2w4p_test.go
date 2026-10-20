@@ -79,7 +79,7 @@ func ghsaCheckImageOutput(t *testing.T, data []byte) {
 	}
 }
 
-func TestGHSA44h9P34h2w4pCreateAndFill(t *testing.T) {
+func TestGHSA_44h9_p34h_2w4p_CreateAndFill(t *testing.T) {
 	root, template := ghsaImageAssets(t)
 	for _, fill := range []bool{false, true} {
 		for _, tc := range []struct {
@@ -123,7 +123,7 @@ func TestGHSA44h9P34h2w4pCreateAndFill(t *testing.T) {
 	}
 }
 
-func TestGHSA44h9P34h2w4pMultiFill(t *testing.T) {
+func TestGHSA_44h9_p34h_2w4p_MultiFill(t *testing.T) {
 	root, template := ghsaImageAssets(t)
 	input := filepath.Join(t.TempDir(), "template.pdf")
 	if err := os.WriteFile(input, template, 0600); err != nil {
@@ -166,7 +166,7 @@ func TestGHSA44h9P34h2w4pMultiFill(t *testing.T) {
 	}
 }
 
-func TestGHSA44h9P34h2w4pAliasesAndPolicyInjection(t *testing.T) {
+func TestGHSA_44h9_p34h_2w4p_AliasesAndPolicyInjection(t *testing.T) {
 	root, _ := ghsaImageAssets(t)
 	for _, tc := range []struct {
 		name, dirs, files, image string

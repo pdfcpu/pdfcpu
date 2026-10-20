@@ -16,6 +16,9 @@ limitations under the License.
 
 package pdfcpu
 
+// GHSA-7v74-phpq-xq6g: signatures in the current revision must be reported as current, not historical.
+// https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-7v74-phpq-xq6g
+
 import (
 	"bytes"
 	"strings"
@@ -24,8 +27,9 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-// TestSignatureReaderRevisionReporting verifies production ordinals preserve current and historical evidence.
-func TestSignatureReaderRevisionReporting(t *testing.T) {
+// TestGHSA_7v74_phpq_xq6g_SignatureReaderRevisionReporting verifies production ordinals preserve current and historical
+// evidence.
+func TestGHSA_7v74_phpq_xq6g_SignatureReaderRevisionReporting(t *testing.T) {
 	fixture := newUsageRightsSignatureFixture(t)
 	useTestCertificatePool(t, fixture.roots)
 	for _, ordinal := range []int{1, 2, 4} {
@@ -56,8 +60,9 @@ func TestSignatureReaderRevisionReporting(t *testing.T) {
 	}
 }
 
-// TestSignatureReaderCurrentBoundary verifies the dispatcher enforces coverage for reader ordinal 1.
-func TestSignatureReaderCurrentBoundary(t *testing.T) {
+// TestGHSA_7v74_phpq_xq6g_SignatureReaderCurrentBoundary verifies the dispatcher enforces coverage for reader ordinal
+// 1.
+func TestGHSA_7v74_phpq_xq6g_SignatureReaderCurrentBoundary(t *testing.T) {
 	ctx := signedRevisionBoundaryContext(12, "adbe.pkcs7.detached")
 	ctx.Signatures = map[int]map[int]model.Signature{
 		1: {7: {ObjNr: 7, Type: model.SigTypeForm, Signed: true}},

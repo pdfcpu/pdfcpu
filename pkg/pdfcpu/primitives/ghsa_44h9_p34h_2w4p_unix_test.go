@@ -32,7 +32,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func TestGHSA44h9P34h2w4pFIFO(t *testing.T) {
+func TestGHSA_44h9_p34h_2w4p_FIFO(t *testing.T) {
 	root := t.TempDir()
 	if err := syscall.Mkfifo(filepath.Join(root, "pipe"), 0600); err != nil {
 		t.Fatal(err)

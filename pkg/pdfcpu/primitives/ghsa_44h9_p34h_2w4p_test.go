@@ -29,7 +29,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func TestGHSA44h9P34h2w4pSymlinks(t *testing.T) {
+func TestGHSA_44h9_p34h_2w4p_Symlinks(t *testing.T) {
 	root := t.TempDir()
 	outside := t.TempDir()
 	for _, dir := range []string{root, outside} {
