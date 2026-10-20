@@ -72,6 +72,7 @@ Before starting larger changes, please open an issue or discussion first. This h
 Please do not report security vulnerabilities as public GitHub issues.
 
 See the [security policy](SECURITY.md) for private reporting instructions and the coordinated disclosure process.
+Security reports follow that policy, including its rules for AI-assisted reports and multiple findings.
 
 ## Test Files and PDFs
 
@@ -132,13 +133,43 @@ Do not add dependencies with GPL-only, AGPL-only, proprietary, unclear, or other
 
 ## AI-Assisted Contributions
 
-AI-assisted contributions are not accepted.
-
-Please do not submit pull requests, patches, generated code, documentation, tests, or issue comments that were created substantially by AI tools.
-
 This policy is intended to keep reviews focused, reduce provenance uncertainty, and avoid additional maintainer workload.
+It distinguishes between code and reports.
 
-Contributors are expected to understand and author the contributions they submit.
+### Code
+
+Pull requests, patches, tests and documentation created substantially by AI tools are not accepted.
+
+Contributors are expected to understand and author the contributions they submit, and to be able to explain every
+change in review. Limited help from tools, for example to search, to explain existing code or to check spelling, is
+fine. If an AI tool contributed to a commit, disclose it with an `Assisted-by:` or `Co-authored-by:` trailer naming the
+tool.
+
+Do not add AI instruction or configuration files, such as `AGENTS.md`, `CLAUDE.md`, Copilot or Cursor rules, to a pull
+request.
+
+### Issues and discussions
+
+Write in your own words. AI may assist your investigation, but every report must be understood, manually verified and
+independently reproduced by its author. AI-generated, bulk-generated or mechanically reformatted reports will be closed
+without investigation.
+
+### Security reports
+
+Security reports are assessed on their merits, whether or not AI tools were used. See the [security policy](SECURITY.md).
+
+## Findings from Reviews and Fuzzing
+
+If you or your organization have many findings, for example from a security review or a fuzzing campaign:
+
+- report security-relevant findings privately as described in the [security policy](SECURITY.md), starting with a
+  short list;
+- report other problems as individual issues, one per root cause, each with a reproducer, not as a bulk filing;
+- proposed patches are welcome as input. The maintainer decides how a problem is fixed and may implement the fix
+  independently; reporters are credited, for example with a `Co-authored-by:` trailer or in a security advisory.
+  Code incorporated from a contribution requires the CLA;
+- findings are handled in batches at the maintainer's pace. There is no guarantee that every finding is fixed, or fixed
+  by a particular date. Reporting a finding creates no entitlement.
 
 ## Maintainer Discretion
 

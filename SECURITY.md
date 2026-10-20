@@ -14,20 +14,21 @@ those changes.
 
 pdfcpu is designed to process untrusted PDF files within configurable resource limits. The following are in scope:
 
-- crashes, hangs or excessive memory, CPU or disk use caused by crafted input when the default resource limits apply;
-- input that bypasses configured resource limits, for example decoding more data than the configured maximum;
-- outbound network requests that violate the configured network policy;
+- crashes, hangs or excessive memory, CPU or disk use caused by crafted input when the default resource limits apply
+- input that bypasses configured resource limits, for example decoding more data than the configured maximum
+- outbound network requests that violate the configured network policy
 - results that contradict pdfcpu's documented encryption behaviour, for example content written unencrypted when
-  encryption was requested;
-- reading or writing files outside the paths a command or API call was given.
+  encryption was requested
+- input, whether a PDF file or JSON for `create` and form commands, causing pdfcpu to write outside the output directory it was given, or to read local files outside `localImageRoot` or other locations the calling application did not provide.
 
 The following are usually out of scope:
 
-- resource use within the configured limits, including slow processing of large but valid files;
-- behaviour after limits have been disabled or raised beyond their documented defaults;
-- issues that require control over pdfcpu's configuration, command-line arguments or execution environment;
-- legacy algorithms supported for compatibility with existing documents;
-- PDF permission flags, which are honoured by PDF readers rather than enforced by encryption;
+- resource use within the configured limits, including slow processing of large but valid files
+- behaviour after limits have been disabled or raised beyond their documented defaults
+- issues that require control over pdfcpu's configuration, command-line arguments or execution environment
+- pdfcpu's own configuration, font, certificate and temporary-file locations
+- legacy algorithms supported for compatibility with existing documents
+- PDF permission flags, which are honoured by PDF readers rather than enforced by encryption
 - vulnerabilities in dependencies that do not affect pdfcpu. Please report those upstream, and let us know if you
   believe pdfcpu is affected.
 
@@ -38,7 +39,7 @@ If you are unsure, report it. Minor issues may be fixed in a regular release wit
 Signature validation is under active development and is being reworked for v0.17.0. Until then:
 
 - limitations listed in the [signature validation documentation](https://pdfcpu.io/core/sign_validate) are known and
-  out of scope; please report other functional problems as regular issues;
+  out of scope; please report other functional problems as regular issues
 - reports where pdfcpu presents a modified document as intact, or a forged signature as cryptographically valid,
   remain in scope. Fixes will normally ship with v0.17.0 rather than in an interim release, unless there is evidence
   of active exploitation.
@@ -52,12 +53,12 @@ Use [GitHub private vulnerability reporting](https://github.com/pdfcpu/pdfcpu/se
 
 Please include what you know:
 
-- affected pdfcpu version or commit, and binary build information where available;
-- operating system and architecture;
-- command or API entry point and relevant configuration, including any non-default limits;
-- a minimal reproducer or input file, if it can be shared;
-- observed impact and any mitigation you have identified;
-- whether the issue is public, with links where available; and
+- affected pdfcpu version or commit, and binary build information where available
+- operating system and architecture
+- command or API entry point and relevant configuration, including any non-default limits
+- a minimal reproducer or input file, if it can be shared
+- observed impact and any mitigation you have identified
+- whether the issue is public, with links where available
 - whether you suspect exploitation outside testing, and when it was observed.
 
 Incomplete reports are welcome. If exploitation is suspected, identify that clearly in the subject or opening sentence.
