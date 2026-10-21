@@ -14,7 +14,7 @@
    - Do not add AI instruction files such as `AGENTS.md` or `CLAUDE.md`.
    - See [CONTRIBUTING.md](https://github.com/pdfcpu/pdfcpu/blob/master/CONTRIBUTING.md) for details.
 
-6. Complete the CLA Assistant check when requested.
+6. Accept the Developer Certificate of Origin when the CLA Assistant check asks for it.
 
 7. Do not use a pull request for a security vulnerability. Follow [SECURITY.md](https://github.com/pdfcpu/pdfcpu/blob/master/SECURITY.md) instead.
 

@@ -14,19 +14,13 @@ By contributing to pdfcpu, you agree that your contribution is submitted under t
 
 Contributions may be used, modified, distributed, sublicensed, and otherwise handled as permitted by the Apache License, Version 2.0.
 
-## Contributor License Agreement
-
-pdfcpu uses a Contributor License Agreement process for pull requests.
-
-Before a pull request can be accepted, the contributor must complete the CLA process as requested by the CLA Assistant check on GitHub. Pull requests may not be merged until the CLA Assistant check confirms that the required agreement has been completed.
-
-By submitting a pull request and completing the CLA process, you confirm that you have the right to submit the contribution and to grant the rights described in the applicable CLA.
-
-The CLA process is used to document the inbound rights needed by the project maintainers to review, modify, distribute, sublicense, and maintain contributions as part of the Apache-2.0 licensed project.
-
 ## Developer Certificate of Origin
 
-pdfcpu may also accept `Signed-off-by` lines in commits as an additional provenance signal, but the CLA Assistant check is the authoritative contribution gate for pull requests unless the maintainers state otherwise.
+Before a pull request can be merged, the contributor must accept the [Developer Certificate of Origin 1.1](https://cla-assistant.io/pdfcpu/pdfcpu) when the CLA Assistant check on GitHub asks for it. Pull requests may not be merged until the check confirms acceptance.
+
+By accepting it, you certify that you have the right to submit the contribution under the project's license. The Developer Certificate of Origin grants no rights beyond the Apache License, Version 2.0.
+
+`Signed-off-by` lines in commits are welcome as an additional provenance signal but are not required.
 
 A sign-off line looks like this:
 
@@ -112,7 +106,7 @@ Before opening a pull request:
 4. Keep the pull request focused on one topic.
 5. Include tests or a clear explanation if tests are not practical.
 6. Include a useful description of the problem and the solution.
-7. Complete the CLA Assistant process when requested.
+7. Accept the Developer Certificate of Origin when the CLA Assistant check asks for it.
 8. Do not include unrelated formatting or cleanup changes.
 
 The maintainers may ask for changes before merging. Not every contribution can be accepted.
@@ -167,7 +161,7 @@ If you or your organization have many findings, for example from a security revi
 - report other problems as individual issues, one per root cause, each with a reproducer, not as a bulk filing;
 - proposed patches are welcome as input. The maintainer decides how a problem is fixed and may implement the fix
   independently; reporters are credited, for example with a `Co-authored-by:` trailer or in a security advisory.
-  Code incorporated from a contribution requires the CLA;
+  Code incorporated from a contribution requires acceptance of the Developer Certificate of Origin;
 - findings are handled in batches at the maintainer's pace. There is no guarantee that every finding is fixed, or fixed
   by a particular date. Reporting a finding creates no entitlement.
 
