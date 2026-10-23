@@ -39,6 +39,7 @@ var (
 	offlineSet       bool
 	opw              string
 	perm             string
+	preserveMetadata bool
 	quiet            bool
 	removeEncryption bool
 	removeSignatures bool
@@ -69,6 +70,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&conf, "conf", "c", "", "set or disable config dir: $path | disable")
 	rootCmd.PersistentFlags().BoolVar(&force, "force", false, "allow overwriting files and other destructive operations")
 	rootCmd.PersistentFlags().BoolVarP(&offline, "offline", "o", false, "disable http traffic")
+	rootCmd.PersistentFlags().BoolVar(&preserveMetadata, "preserve-metadata", false, "keep input Info dictionary Producer, CreationDate and ModDate")
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "disable output")
 	rootCmd.PersistentFlags().CountVarP(&verbose, "verbose", "v", "Increase verbosity. Use -v or -vv.")
 	rootCmd.AddCommand(commands()...)
@@ -247,6 +249,7 @@ func getConfig() (*model.Configuration, error) {
 	conf.PrivateKeyPW = kpw
 	conf.RemoveSignatures = removeSignatures
 	conf.RemoveEncryption = removeEncryption
+	conf.PreserveInfoDict = preserveMetadata
 
 	if offlineSet {
 		conf.Offline = offline
