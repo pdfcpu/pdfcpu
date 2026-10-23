@@ -140,6 +140,27 @@ var AnnotTypeStrings = map[AnnotationType]string{
 	AnnCustom:         "Custom",
 }
 
+// RequiredVersion returns the PDF version that introduced this annotation subtype.
+// The values match strict validation. Custom annotations have no additional requirement.
+func (t AnnotationType) RequiredVersion() Version {
+	switch t {
+	case AnnSound, AnnMovie, AnnWidget:
+		return V12
+	case AnnFreeText, AnnLine, AnnSquare, AnnCircle, AnnHighLight, AnnUnderline, AnnStrikeOut, AnnStamp, AnnInk, AnnPopup, AnnFileAttachment, AnnTrapNet:
+		return V13
+	case AnnSquiggly, AnnPrinterMark:
+		return V14
+	case AnnPolygon, AnnPolyLine, AnnCaret, AnnScreen:
+		return V15
+	case AnnWatermark, Ann3D:
+		return V16
+	case AnnRedact:
+		return V17
+	default:
+		return V10
+	}
+}
+
 // BorderStyle (see table 168)
 type BorderStyle int
 

@@ -301,14 +301,40 @@ func (xRefTable *XRefTable) IsMerging() bool {
 	return cmd == MERGECREATE || cmd == MERGEAPPEND
 }
 
+func (xRefTable *XRefTable) preservingVersion() bool {
+	return xRefTable != nil && xRefTable.Conf != nil && xRefTable.Conf.PreserveVersion
+}
+
 // EnsureVersionForWriting raises the effective version to at least PDF 1.7.
 // This is necessary to allow validation after adding features not supported
 // by the original version of a document as during watermarking.
+// PreserveVersion skips this fixed bump and leaves version changes to EnsureMinimumVersion.
 func (xRefTable *XRefTable) EnsureVersionForWriting() {
+	if xRefTable.preservingVersion() {
+		return
+	}
 	if (xRefTable.HeaderVersion != nil || xRefTable.RootVersion != nil) && xRefTable.Version() >= V17 {
 		return
 	}
 	v := V17
+	xRefTable.RootVersion = &v
+}
+
+// EnsureMinimumVersion raises the effective version to at least min.
+// A version that is already high enough is left unchanged.
+func (xRefTable *XRefTable) EnsureMinimumVersion(min Version) {
+	if xRefTable == nil || min < V10 {
+		return
+	}
+	if xRefTable.HeaderVersion == nil && xRefTable.RootVersion == nil {
+		v := min
+		xRefTable.HeaderVersion = &v
+		return
+	}
+	if xRefTable.Version() >= min {
+		return
+	}
+	v := min
 	xRefTable.RootVersion = &v
 }
 
@@ -1954,6 +1980,7 @@ func (xRefTable *XRefTable) EnsureCollection() error {
 		return fmt.Errorf("portfolio: insert Collection object: %w", err)
 	}
 	rootDict.Insert("Collection", *indRef)
+	xRefTable.EnsureMinimumVersion(V17)
 
 	return nil
 }

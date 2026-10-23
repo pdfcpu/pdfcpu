@@ -114,6 +114,87 @@ func WriteContext(c context.Context, ctx *model.Context) error {
 	return writeContext(c, ctx)
 }
 
+func preservingOutputVersion(ctx *model.Context) bool {
+	return ctx != nil && ctx.Configuration != nil && ctx.PreserveVersion
+}
+
+func writtenHeaderVersion(ctx *model.Context) model.Version {
+	if !preservingOutputVersion(ctx) {
+		if ctx != nil && ctx.XRefTable != nil && ctx.PDF20() {
+			return model.V20
+		}
+		return model.V17
+	}
+
+	applyPreservedFeatureVersions(ctx)
+	if ctx.HeaderVersion == nil && ctx.RootVersion == nil {
+		ctx.EnsureMinimumVersion(model.V17)
+	}
+	v := ctx.XRefTable.Version()
+	// Xref streams and object streams are PDF 1.5 features. Keeping the original
+	// version means writing a classic cross-reference table instead.
+	if v < model.V15 {
+		ctx.WriteXRefStream = false
+		ctx.WriteObjectStream = false
+	}
+	return v
+}
+
+func applyPreservedFeatureVersions(ctx *model.Context) {
+	if min, ok := preservedCatalogVersion(ctx); ok {
+		ctx.EnsureMinimumVersion(min)
+	}
+	if min, ok := preservedEncryptionVersion(ctx); ok {
+		ctx.EnsureMinimumVersion(min)
+	}
+}
+
+func preservedCatalogVersion(ctx *model.Context) (model.Version, bool) {
+	if ctx == nil || ctx.RootDict == nil {
+		return 0, false
+	}
+	var min model.Version
+	found := false
+	for _, feature := range []struct {
+		key     string
+		version model.Version
+	}{
+		{"OCProperties", model.V15},
+		{"Perms", model.V15},
+		{"Collection", model.V17},
+		{"Extensions", model.V17},
+		{"Legal", model.V17},
+		{"Requirements", model.V17},
+		{"NeedsRendering", model.V17},
+		{"DSS", model.V17},
+		{"AF", model.V20},
+		{"DPartRoot", model.V20},
+	} {
+		if _, ok := ctx.RootDict.Find(feature.key); ok && (!found || feature.version > min) {
+			min = feature.version
+			found = true
+		}
+	}
+	return min, found
+}
+
+func preservedEncryptionVersion(ctx *model.Context) (model.Version, bool) {
+	if ctx == nil || ctx.Encrypt == nil || ctx.EncKey == nil || ctx.E == nil {
+		return 0, false
+	}
+	// AES-256 is a PDF 1.7 extension. AES-128 requires PDF 1.6. RC4-128 requires PDF 1.4.
+	if ctx.E.V >= 5 || ctx.E.L >= 256 {
+		return model.V17, true
+	}
+	if ctx.AES4Strings || ctx.AES4Streams || ctx.AES4EmbeddedStreams {
+		return model.V16, true
+	}
+	if ctx.E.L >= 128 {
+		return model.V14, true
+	}
+	return 0, false
+}
+
 func writeContext(c context.Context, ctx *model.Context) (err error) {
 	// Create a writer for dirname and filename if not already supplied.
 	if ctx.Write.Writer == nil {
@@ -134,12 +215,15 @@ func writeContext(c context.Context, ctx *model.Context) (err error) {
 	// else if v2 create from scratch
 	// else nothing just write info dict
 
-	// We support PDF Collections (since V1.7) for file attachments
-	v := model.V17
-
-	if ctx.XRefTable.PDF20() {
-		v = model.V20
-	}
+	// A preserved version below 1.5 cannot use xref streams. Restore the caller's
+	// configuration after this write so a later file is unaffected.
+	prevXRefStream := ctx.WriteXRefStream
+	prevObjectStream := ctx.WriteObjectStream
+	defer func() {
+		ctx.WriteXRefStream = prevXRefStream
+		ctx.WriteObjectStream = prevObjectStream
+	}()
+	v := writtenHeaderVersion(ctx)
 
 	if err = runWritePhase(c, func() error { return writeHeader(ctx.Write, v) }); err != nil {
 		return fmt.Errorf("write PDF: header: %w", err)

@@ -321,6 +321,10 @@ type Configuration struct {
 	// This is a runtime option and is not read from config.yml.
 	PreserveInfoDict bool
 
+	// PreserveVersion writes the input PDF version and raises it only when a written feature requires a newer version.
+	// This is a runtime option and is not read from config.yml.
+	PreserveVersion bool
+
 	// Check for broken links in LinkedAnnotations/URIActions.
 	ValidateLinks bool
 

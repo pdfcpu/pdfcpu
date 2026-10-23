@@ -53,6 +53,7 @@ type configurationScalarValues struct {
 	UnsupportedResourcePolicy       UnsupportedResourcePolicy
 	PostProcessValidate             bool
 	PreserveInfoDict                bool
+	PreserveVersion                 bool
 	ValidateLinks                   bool
 	Eol                             string
 	WriteObjectStream               bool
@@ -100,6 +101,7 @@ func scalarValues(c *Configuration) configurationScalarValues {
 		UnsupportedResourcePolicy:       c.UnsupportedResourcePolicy,
 		PostProcessValidate:             c.PostProcessValidate,
 		PreserveInfoDict:                c.PreserveInfoDict,
+		PreserveVersion:                 c.PreserveVersion,
 		ValidateLinks:                   c.ValidateLinks,
 		Eol:                             c.Eol,
 		WriteObjectStream:               c.WriteObjectStream,
@@ -149,6 +151,7 @@ func configurationCloneFixture() *Configuration {
 		UnsupportedResourcePolicy:       UnsupportedResourceFail,
 		PostProcessValidate:             true,
 		PreserveInfoDict:                true,
+		PreserveVersion:                 true,
 		ValidateLinks:                   true,
 		Eol:                             types.EolCRLF,
 		WriteObjectStream:               true,

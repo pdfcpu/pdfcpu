@@ -48,6 +48,13 @@ func mergeFileExists(filename string) bool {
 	return err == nil
 }
 
+func preserveMergedVersion(ctxDest, ctxSource *model.Context) {
+	if ctxDest == nil || ctxDest.Configuration == nil || !ctxDest.PreserveVersion || ctxSource == nil || ctxSource.XRefTable == nil {
+		return
+	}
+	ctxDest.EnsureMinimumVersion(ctxSource.XRefTable.Version())
+}
+
 // appendTo appends rs to ctxDest's page tree.
 func appendTo(c context.Context, rs io.ReadSeeker, fName string, ctxDest *model.Context, dividerPage bool) error {
 	source := mergeSourceLabel(fName)
@@ -66,6 +73,7 @@ func appendTo(c context.Context, rs io.ReadSeeker, fName string, ctxDest *model.
 	if ctxDest.XRefTable.Version() < model.V20 && ctxSource.XRefTable.Version() == model.V20 {
 		return fmt.Errorf("merge %s: validate version: %w", source, pdfcpu.ErrUnsupportedVersion)
 	}
+	preserveMergedVersion(ctxDest, ctxSource)
 
 	// Merge source context into dest context.
 	if err := pdfcpu.MergeXRefTables(c, fName, ctxSource, ctxDest, false, dividerPage); err != nil {
@@ -341,6 +349,7 @@ func MergeCreateZip(c context.Context, rs1, rs2 io.ReadSeeker, w io.Writer, conf
 	if ctxSrc.XRefTable.Version() == model.V20 {
 		return fmt.Errorf("merge zip source 2: validate version: %w", pdfcpu.ErrUnsupportedVersion)
 	}
+	preserveMergedVersion(ctxDest, ctxSrc)
 
 	if err := pdfcpu.MergeXRefTables(c, "", ctxSrc, ctxDest, true, false); err != nil {
 		return fmt.Errorf("merge zip: append pages: %w", err)

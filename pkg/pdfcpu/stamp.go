@@ -2115,6 +2115,7 @@ func AddWatermarks(c context.Context, ctx *model.Context, selectedPages types.In
 		return fmt.Errorf("update user fonts: %w", err)
 	}
 
+	ctx.EnsureMinimumVersion(model.V15)
 	ctx.EnsureVersionForWriting()
 
 	return contextutil.Check(c)
@@ -2230,6 +2231,7 @@ func AddWatermarksMap(c context.Context, ctx *model.Context, m map[int]*model.Wa
 		return fmt.Errorf("update user fonts: %w", err)
 	}
 
+	ctx.EnsureMinimumVersion(model.V15)
 	ctx.EnsureVersionForWriting()
 
 	return contextutil.Check(c)
@@ -2345,6 +2347,7 @@ func AddWatermarksSliceMap(c context.Context, ctx *model.Context, m map[int][]*m
 		return fmt.Errorf("update user fonts: %w", err)
 	}
 
+	ctx.EnsureMinimumVersion(model.V15)
 	ctx.EnsureVersionForWriting()
 
 	return contextutil.Check(c)

@@ -756,7 +756,7 @@ func addAnnotationToDirectObj(
 		// Mark page dict obj for incremental writing.
 		ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
 	}
-	ctx.EnsureVersionForWriting()
+	ensureAddedAnnotationVersion(ctx, ar)
 	return nil
 }
 
@@ -797,7 +797,7 @@ func addAnnotationToPageAnnots(
 			// Mark page dict obj for incremental writing.
 			ctx.Write.IncrementWithObjNr(pageDictIndRef.ObjectNumber.Value())
 		}
-		ctx.EnsureVersionForWriting()
+		ensureAddedAnnotationVersion(ctx, ar)
 		return nil
 	}
 
@@ -842,8 +842,15 @@ func addAnnotationToIndirectAnnots(
 		ctx.Write.IncrementWithObjNr(annotsIndRef.ObjectNumber.Value())
 	}
 
-	ctx.EnsureVersionForWriting()
+	ensureAddedAnnotationVersion(ctx, ar)
 	return nil
+}
+
+func ensureAddedAnnotationVersion(ctx *model.Context, ar model.AnnotationRenderer) {
+	if ar != nil {
+		ctx.EnsureMinimumVersion(ar.Type().RequiredVersion())
+	}
+	ctx.EnsureVersionForWriting()
 }
 
 func cleanupAddedAnnotation(c context.Context, ctx *model.Context, pageNr, objNr int, annotIndRef *types.IndirectRef) error {
