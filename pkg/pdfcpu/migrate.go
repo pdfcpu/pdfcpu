@@ -79,56 +79,87 @@ func migrateIndRef(
 	return o, nil
 }
 
-func migrateDict(
-	c context.Context,
-	d types.Dict,
-	ctxSource, ctxDest *model.Context,
-	migrated map[int]int,
-) (types.Object, error) {
-	for k, v := range d {
-		if err := contextutil.Check(c); err != nil {
-			return nil, err
-		}
-		o, err := migrateObject(c, v, ctxSource, ctxDest, migrated)
-		if err != nil {
-			return nil, err
-		}
-		d[k] = o
-	}
-	return d, contextutil.Check(c)
+// objectMigration copies the object graph reachable from one value into the destination context.
+// It walks the graph with an explicit stack in the order of a depth-first recursion.
+type objectMigration struct {
+	c                  context.Context
+	ctxSource, ctxDest *model.Context
+	migrated           map[int]int
+	stack              objectStack
 }
 
-func migrateStreamDict(
-	c context.Context,
-	sd types.StreamDict,
-	ctxSource, ctxDest *model.Context,
-	migrated map[int]int,
-) (types.Object, error) {
-	o, err := migrateDict(c, sd.Dict, ctxSource, ctxDest, migrated)
+func (m *objectMigration) push(o types.Object) {
+	switch o := o.(type) {
+	case types.Dict:
+		m.stack.pushDict(o, nil)
+	case types.StreamDict:
+		m.stack.pushDict(o.Dict, nil)
+	case types.Array:
+		m.stack.pushArray(o)
+	}
+}
+
+// migrateValue renumbers a reference, migrating its object on first use, and schedules containers for traversal.
+func (m *objectMigration) migrateValue(o types.Object) (types.Object, error) {
+	ir, ok := o.(types.IndirectRef)
+	if !ok {
+		m.push(o)
+		return o, nil
+	}
+	if objNr := m.migrated[ir.ObjectNumber.Value()]; objNr > 0 {
+		ir.ObjectNumber = types.Integer(objNr)
+		return ir, nil
+	}
+	o1, err := migrateIndRef(m.c, &ir, m.ctxSource, m.ctxDest, m.migrated)
 	if err != nil {
 		return nil, err
 	}
-	sd.Dict = o.(types.Dict)
-	return sd, contextutil.Check(c)
+	return ir, m.migrateReferenceValues(ir.ObjectNumber.Value(), o1)
 }
 
-func migrateArray(
-	c context.Context,
-	a types.Array,
-	ctxSource, ctxDest *model.Context,
-	migrated map[int]int,
-) (types.Object, error) {
-	for i, v := range a {
-		if err := contextutil.Check(c); err != nil {
-			return nil, err
+// migrateReferenceValues schedules o, the value of destination object holder. While o is itself a reference, its
+// object is migrated on first use and holder is updated to the renumbered reference, in a loop, not by recursion.
+func (m *objectMigration) migrateReferenceValues(holder int, o types.Object) error {
+	for {
+		ir, ok := o.(types.IndirectRef)
+		if !ok {
+			m.push(o)
+			return nil
 		}
-		o, err := migrateObject(c, v, ctxSource, ctxDest, migrated)
+		entry, found := m.ctxDest.FindTableEntryLight(holder)
+		if !found {
+			return fmt.Errorf("migrated obj#%d: missing destination entry", holder)
+		}
+		if objNr := m.migrated[ir.ObjectNumber.Value()]; objNr > 0 {
+			ir.ObjectNumber = types.Integer(objNr)
+			entry.Object = ir
+			return nil
+		}
+		next, err := migrateIndRef(m.c, &ir, m.ctxSource, m.ctxDest, m.migrated)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		a[i] = o
+		entry.Object = ir
+		holder, o = ir.ObjectNumber.Value(), next
 	}
-	return a, contextutil.Check(c)
+}
+
+func (m *objectMigration) run() error {
+	for !m.stack.empty() {
+		if err := contextutil.Check(m.c); err != nil {
+			return err
+		}
+		i, o, ok := m.stack.next()
+		if !ok {
+			continue
+		}
+		o, err := m.migrateValue(o)
+		if err != nil {
+			return err
+		}
+		m.stack.replace(i, o)
+	}
+	return nil
 }
 
 func migrateObject(
@@ -140,32 +171,14 @@ func migrateObject(
 	if err := contextutil.Check(c); err != nil {
 		return nil, err
 	}
-	switch o := o.(type) {
-	case types.IndirectRef:
-		objNr := o.ObjectNumber.Value()
-		if migrated[objNr] > 0 {
-			o.ObjectNumber = types.Integer(migrated[objNr])
-			return o, nil
-		}
-		o1, err := migrateIndRef(c, &o, ctxSource, ctxDest, migrated)
-		if err != nil {
-			return nil, err
-		}
-		if _, err := migrateObject(c, o1, ctxSource, ctxDest, migrated); err != nil {
-			return nil, err
-		}
-		return o, nil
-
-	case types.Dict:
-		return migrateDict(c, o, ctxSource, ctxDest, migrated)
-
-	case types.StreamDict:
-		return migrateStreamDict(c, o, ctxSource, ctxDest, migrated)
-
-	case types.Array:
-		return migrateArray(c, o, ctxSource, ctxDest, migrated)
+	m := objectMigration{c: c, ctxSource: ctxSource, ctxDest: ctxDest, migrated: migrated}
+	o, err := m.migrateValue(o)
+	if err != nil {
+		return nil, err
 	}
-
+	if err := m.run(); err != nil {
+		return nil, err
+	}
 	return o, contextutil.Check(c)
 }
 

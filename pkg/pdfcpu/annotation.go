@@ -1061,11 +1061,13 @@ func validateAnnotationObjectsForRemoval(ctx *model.Context, annots types.Array,
 	return nil
 }
 
+// annotationDeletionValidator walks the objects an annotation deletion would free with an explicit stack.
 type annotationDeletionValidator struct {
 	ctx             *model.Context
 	remainingRefs   map[int]int
 	deletedObjNrSet types.IntSet
 	pageNr          int
+	stack           objectStack
 }
 
 func validateAnnotationFreeList(ctx *model.Context, pageNr int) error {
@@ -1083,65 +1085,91 @@ func (v *annotationDeletionValidator) remainingRefCount(objNr int, entry *model.
 	return entry.RefCount
 }
 
+// validateIndirectRef checks a reference and schedules the object it frees.
+// An object whose value is another reference is followed in a loop, not by recursion.
 func (v *annotationDeletionValidator) validateIndirectRef(indRef types.IndirectRef, stripBackRefs bool) error {
+	for {
+		o, err := v.freedObject(indRef)
+		if err != nil || o == nil {
+			return err
+		}
+		next, ok := o.(types.IndirectRef)
+		if !ok {
+			return v.validateObject(o, stripBackRefs)
+		}
+		indRef = next
+	}
+}
+
+// freedObject returns the object a deletion of indRef frees, or nil if it stays referenced, is free or was seen.
+func (v *annotationDeletionValidator) freedObject(indRef types.IndirectRef) (types.Object, error) {
 	objNr := indRef.ObjectNumber.Value()
 	if v.deletedObjNrSet[objNr] {
-		return nil
+		return nil, nil
 	}
 	entry, found := v.ctx.FindTableEntryForIndRef(&indRef)
 	if !found {
-		return fmt.Errorf("page %d annotation deletion obj#%d: missing xref table entry", v.pageNr, objNr)
+		return nil, fmt.Errorf("page %d annotation deletion obj#%d: missing xref table entry", v.pageNr, objNr)
 	}
 	if entry.Free {
-		return nil
+		return nil, nil
 	}
 	refCount := v.remainingRefCount(objNr, entry)
 	if refCount > 1 {
 		v.remainingRefs[objNr] = refCount - 1
-		return nil
+		return nil, nil
 	}
 
 	o, err := v.ctx.Dereference(indRef)
 	if err != nil {
-		return fmt.Errorf("page %d annotation deletion obj#%d: dereference: %w", v.pageNr, objNr, err)
+		return nil, fmt.Errorf("page %d annotation deletion obj#%d: dereference: %w", v.pageNr, objNr, err)
 	}
-	if o == nil {
-		return nil
+	if o != nil {
+		v.deletedObjNrSet[objNr] = true
 	}
-	v.deletedObjNrSet[objNr] = true
-	return v.validateObject(o, stripBackRefs)
+	return o, nil
 }
 
-func (v *annotationDeletionValidator) validateDict(d types.Dict, stripBackRefs bool) error {
-	keys := make([]string, 0, len(d))
-	for key := range d {
-		if stripBackRefs && (key == "P" || key == "Parent") {
-			continue
-		}
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		if err := v.validateObject(d[key], false); err != nil {
-			return fmt.Errorf("entry %s: %w", key, err)
-		}
-	}
-	return nil
+func isAnnotationBackRef(key string) bool {
+	return key == "P" || key == "Parent"
 }
 
+func (v *annotationDeletionValidator) pushDict(d types.Dict, stripBackRefs bool) {
+	var skip func(string) bool
+	if stripBackRefs {
+		skip = isAnnotationBackRef
+	}
+	v.stack.pushDict(d, skip)
+	v.stack.sortTop()
+}
+
+// validateObject checks a reference or schedules the entries of a container.
 func (v *annotationDeletionValidator) validateObject(o types.Object, stripBackRefs bool) error {
 	switch obj := o.(type) {
 	case types.IndirectRef:
 		return v.validateIndirectRef(obj, stripBackRefs)
 	case types.Dict:
-		return v.validateDict(obj, stripBackRefs)
+		v.pushDict(obj, stripBackRefs)
 	case types.StreamDict:
-		return v.validateDict(obj.Dict, false)
+		v.pushDict(obj.Dict, false)
 	case types.Array:
-		for i, value := range obj {
-			if err := v.validateObject(value, false); err != nil {
-				return fmt.Errorf("array[%d]: %w", i, err)
-			}
+		v.stack.pushArray(obj)
+	}
+	return nil
+}
+
+// validateTarget walks one deletion target and reports errors with their entry path.
+func (v *annotationDeletionValidator) validateTarget(target types.Object) error {
+	if err := v.validateObject(target, true); err != nil {
+		return err
+	}
+	for !v.stack.empty() {
+		i, o, ok := v.stack.next()
+		if !ok {
+			continue
+		}
+		if err := v.validateObject(o, false); err != nil {
+			return fmt.Errorf("%s: %w", errorPath(i+1, v.stack.label), err)
 		}
 	}
 	return nil
@@ -1161,7 +1189,7 @@ func validateAnnotationDeletionTargets(ctx *model.Context, targets []types.Objec
 		pageNr:          pageNr,
 	}
 	for i, target := range targets {
-		if err := v.validateObject(target, true); err != nil {
+		if err := v.validateTarget(target); err != nil {
 			return fmt.Errorf("page %d annotation deletion target %d: %w", pageNr, i+1, err)
 		}
 	}
