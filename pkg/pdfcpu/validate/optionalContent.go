@@ -29,6 +29,7 @@ var errVisibilityExpressionCycle = errors.New("circular visibility expression")
 type visibilityExpressionTraversal struct {
 	xRefTable *model.XRefTable
 	ancestors map[int]bool
+	validated map[int]int
 }
 
 func visibilityExpressionIdentity(o types.Object) int {
@@ -53,6 +54,25 @@ func (t *visibilityExpressionTraversal) enter(objNr int) error {
 func (t *visibilityExpressionTraversal) leave(objNr int) {
 	if objNr > 0 {
 		delete(t.ancestors, objNr)
+	}
+}
+
+// alreadyValidated reports whether a shared expression succeeded at depth or deeper.
+// A deeper path needs revalidation to preserve descendant depth checks.
+func (t *visibilityExpressionTraversal) alreadyValidated(objNr, depth int) bool {
+	if objNr <= 0 {
+		return false
+	}
+	validatedDepth, ok := t.validated[objNr]
+	return ok && depth <= validatedDepth
+}
+
+func (t *visibilityExpressionTraversal) markValidated(objNr, depth int) {
+	if objNr <= 0 {
+		return
+	}
+	if previous, ok := t.validated[objNr]; !ok || depth > previous {
+		t.validated[objNr] = depth
 	}
 }
 
@@ -97,6 +117,9 @@ func (t *visibilityExpressionTraversal) validateArray(a types.Array, objNr, iden
 		return model.WithValidationErrorObject(err, objNr)
 	}
 	defer t.leave(identity)
+	if t.alreadyValidated(identity, depth) {
+		return nil
+	}
 	if len(a) == 0 {
 		err := fmt.Errorf("%s: invalid array length 0, expected an operator and one or more operands", path)
 		return model.WithValidationErrorObject(err, objNr)
@@ -120,6 +143,7 @@ func (t *visibilityExpressionTraversal) validateArray(a types.Array, objNr, iden
 			return model.WrapRecursionError(path, err)
 		}
 	}
+	t.markValidated(identity, depth)
 	return nil
 }
 
@@ -134,7 +158,7 @@ func validateVisibilityExpressionEntry(xRefTable *model.XRefTable, d types.Dict,
 		return err
 	}
 	objNr := validationEntryObjectNumber(ownerObjNr, d, entryName)
-	t := visibilityExpressionTraversal{xRefTable: xRefTable, ancestors: map[int]bool{}}
+	t := visibilityExpressionTraversal{xRefTable: xRefTable, ancestors: map[int]bool{}, validated: map[int]int{}}
 	return t.validateArray(a, objNr, visibilityExpressionIdentity(raw), dictName+"."+entryName, 0)
 }
 

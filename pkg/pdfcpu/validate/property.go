@@ -33,6 +33,7 @@ type propertiesTraversalContextKey struct{}
 
 type propertiesTraversal struct {
 	ancestors map[int]bool
+	validated validatedGraph
 }
 
 func propertiesTraversalFromContext(c context.Context) (context.Context, *propertiesTraversal) {
@@ -41,7 +42,7 @@ func propertiesTraversalFromContext(c context.Context) (context.Context, *proper
 			return c, t
 		}
 	}
-	t := &propertiesTraversal{ancestors: map[int]bool{}}
+	t := &propertiesTraversal{ancestors: map[int]bool{}, validated: validatedGraph{}}
 	if c == nil {
 		return nil, t
 	}
@@ -89,6 +90,10 @@ func (t *propertiesTraversal) validate(c context.Context, xRefTable *model.XRefT
 	if propertyObjNr > 0 {
 		defer delete(t.ancestors, propertyObjNr)
 	}
+	depths := currentGraphDepths(c)
+	if t.validated.alreadyValidated(propertyObjNr, depths) {
+		return nil
+	}
 
 	// see 14.6.2
 	// a dictionary containing private information meaningful to the conforming writer creating marked content.
@@ -123,6 +128,7 @@ func (t *propertiesTraversal) validate(c context.Context, xRefTable *model.XRefT
 		err := errors.New("property list stream dictionary accepted in relaxed mode")
 		model.ShowDigestedSpecViolationError(model.WithValidationErrorObject(err, objNr))
 	}
+	t.validated.markValidated(propertyObjNr, depths)
 	return nil
 }
 

@@ -68,6 +68,7 @@ type resourceTraversalContextKey struct{}
 type resourceTraversal struct {
 	xRefTable *model.XRefTable
 	active    types.IntSet
+	validated validatedGraph
 	depth     int
 }
 
@@ -77,7 +78,7 @@ func resourceTraversalFromContext(c context.Context, xRefTable *model.XRefTable)
 			return c, t
 		}
 	}
-	t := &resourceTraversal{xRefTable: xRefTable, active: types.IntSet{}, depth: -1}
+	t := &resourceTraversal{xRefTable: xRefTable, active: types.IntSet{}, validated: validatedGraph{}, depth: -1}
 	if c == nil {
 		return nil, t
 	}
@@ -94,7 +95,9 @@ func (t *resourceTraversal) validate(c context.Context, o types.Object) (hasReso
 	if err := contextutil.Check(c); err != nil {
 		return false, model.WithValidationErrorObject(err, resourceObjNr)
 	}
-	if objNr, ok := indirectRefObjectNumber(o); ok {
+	depths := currentGraphDepths(c)
+	objNr, indirect := indirectRefObjectNumber(o)
+	if indirect {
 		if t.active[objNr] {
 			return true, nil
 		}
@@ -105,6 +108,9 @@ func (t *resourceTraversal) validate(c context.Context, o types.Object) (hasReso
 	depth := t.depth + 1
 	if err := t.xRefTable.CheckRecursionDepth("resource graph", depth); err != nil {
 		return false, model.WithValidationErrorObject(err, resourceObjNr)
+	}
+	if t.validated.alreadyValidated(objNr, depths) {
+		return true, nil
 	}
 	t.depth = depth
 	defer func() {
@@ -140,6 +146,7 @@ func (t *resourceTraversal) validate(c context.Context, o types.Object) (hasReso
 		}
 	}
 
+	t.validated.markValidated(objNr, depths)
 	return true, nil
 }
 
