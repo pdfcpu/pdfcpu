@@ -106,6 +106,9 @@ func addImages(c context.Context, ctx *model.Context, pages map[string]*Page) ([
 		if err != nil {
 			return nil, fmt.Errorf("page %q: parse page number: %w", pageNr, err)
 		}
+		if nr < 1 || nr > ctx.PageCount {
+			return nil, fmt.Errorf("page %q: page number out of range 1..%d", pageNr, ctx.PageCount)
+		}
 		pageNrs = append(pageNrs, nr)
 	}
 

@@ -426,16 +426,32 @@ func (pdf *PDF) validateBordersMarginsPaddings() error {
 	return pdf.validatePaddings()
 }
 
+// maxAddedPages limits the pages a template may add beyond the existing document.
+// Page numbers beyond the existing pages create blank pages up to the highest page number, so this limit keeps the
+// memory a small template can make create allocate bounded.
+const maxAddedPages = 1000
+
 func (pdf *PDF) validatePages() ([]int, error) {
 	if len(pdf.Pages) == 0 {
 		return nil, errors.New("please supply \"pages\"")
 	}
 
+	pageCount := 0
+	if pdf.XRefTable != nil {
+		pageCount = pdf.XRefTable.PageCount
+	}
+
 	pageNrs := []int{}
 	for pageNr, p := range pdf.Pages {
 		nr, err := strconv.Atoi(pageNr)
-		if err != nil {
+		if err != nil || nr < 1 {
 			return nil, fmt.Errorf("invalid page number: %s", pageNr)
+		}
+		if nr > pageCount+maxAddedPages {
+			return nil, fmt.Errorf(
+				"invalid page number: %s: at most %d pages may be added to %d existing pages",
+				pageNr, maxAddedPages, pageCount,
+			)
 		}
 		pageNrs = append(pageNrs, nr)
 		p.number = nr
