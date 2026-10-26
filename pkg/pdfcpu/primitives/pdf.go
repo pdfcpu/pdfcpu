@@ -123,6 +123,7 @@ type PDF struct {
 	Offline         bool                       `json:"-"`
 	Timeout         int                        `json:"-"`
 	httpClient      *http.Client
+	tableLines      int // rows and columns of the tables validated so far
 }
 
 // Update returns true if this is a PDF update.
@@ -431,6 +432,18 @@ func (pdf *PDF) validateBordersMarginsPaddings() error {
 // memory a small template can make create allocate bounded.
 const maxAddedPages = 1000
 
+// maxTableLines limits the rows and columns of all tables in a template. Every table row and column adds content and
+// allocations, so this limit keeps the work a small template can make create perform bounded.
+const maxTableLines = 100_000
+
+func (pdf *PDF) chargeTableLines(rows, cols int) error {
+	if rows > maxTableLines-pdf.tableLines || cols > maxTableLines-pdf.tableLines-rows {
+		return fmt.Errorf("table \"rows\" and \"cols\": at most %d per document", maxTableLines)
+	}
+	pdf.tableLines += rows + cols
+	return nil
+}
+
 func (pdf *PDF) validatePages() ([]int, error) {
 	if len(pdf.Pages) == 0 {
 		return nil, errors.New("please supply \"pages\"")
@@ -470,6 +483,7 @@ func (pdf *PDF) Validate(c context.Context) error {
 		return err
 	}
 	pdf.ctx = c
+	pdf.tableLines = 0
 	if err := pdf.validatePageBoundaries(); err != nil {
 		return fmt.Errorf("page boundaries: %w", err)
 	}

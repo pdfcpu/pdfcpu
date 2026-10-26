@@ -43,17 +43,17 @@ func TestTableCellLowerLeft(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			r := types.RectForWidthAndHeight(0, 0, 20, tt.table.Height())
-			colWidths := []float64{20}
+			colOffsets := columnOffsets([]float64{20})
 
 			if tt.table.Header != nil {
-				_, y := tt.table.headerCellLowerLeft(r, colWidths, 0, 0)
+				_, y := tt.table.headerCellLowerLeft(r, colOffsets, 0, 0)
 				if y != tt.headerY {
 					t.Fatalf("header y: got %.2f want %.2f", y, tt.headerY)
 				}
 			}
 
 			for row, wantY := range tt.valueY {
-				_, y := tt.table.valueCellLowerLeft(r, colWidths, 0, row, 0)
+				_, y := tt.table.valueCellLowerLeft(r, colOffsets, 0, row, 0)
 				if y != wantY {
 					t.Fatalf("value row %d y: got %.2f want %.2f", row, y, wantY)
 				}
