@@ -19,6 +19,7 @@ package pdfcpu
 import (
 	"bytes"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
@@ -129,7 +130,8 @@ func TestLazyObjectStreamUsesConfiguredDecodeLimit(t *testing.T) {
 		t.Fatalf("prolog within limit: %v", err)
 	}
 	obj := osd.ObjArray[0].(types.LazyObjectStreamObject)
-	if _, err := obj.GetData(); !errors.Is(err, filter.ErrDecodeLimitExceeded) {
+	if _, err := obj.GetData(); !errors.Is(err, filter.ErrDecodeLimitExceeded) ||
+		!strings.Contains(err.Error(), "object stream decode exceeds 8-byte limit") {
 		t.Fatalf("lazy decode: got %v", err)
 	}
 }

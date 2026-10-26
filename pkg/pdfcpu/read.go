@@ -31,9 +31,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
+	"github.com/pdfcpu/pdfcpu/internal/streamlimit"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -576,7 +578,7 @@ func compressedObject(c context.Context, s string, validationMode int) (types.Ob
 	return nil, errObjectStreamContainsStream
 }
 
-func buildObjectArrayForObjectStream(c context.Context, osd *types.ObjectStreamDict, objs []string, fullContent bool, decodedContent []byte, decode types.DecodeLazyObjectStreamObjectFunc) (types.Array, error) {
+func buildObjectArrayForObjectStream(c context.Context, osd *types.ObjectStreamDict, objs []string, fullContent bool, decodedContent []byte, decode types.DecodeLazyObjectStreamObjectFunc, decodeStream types.DecodeStreamFunc) (types.Array, error) {
 	var objArray types.Array
 	var offsetOld int
 
@@ -603,12 +605,12 @@ func buildObjectArrayForObjectStream(c context.Context, osd *types.ObjectStreamD
 		}
 
 		if i > 0 {
-			o := types.NewLazyObjectStreamObject(osd, offsetOld, offset, decode)
+			o := types.NewLazyObjectStreamObjectWithDecoder(osd, offsetOld, offset, decode, decodeStream)
 			objArray = append(objArray, o)
 		}
 
 		if i == len(objs)-2 {
-			o := types.NewLazyObjectStreamObject(osd, offset, -1, decode)
+			o := types.NewLazyObjectStreamObjectWithDecoder(osd, offset, -1, decode, decodeStream)
 			objArray = append(objArray, o)
 		}
 
@@ -620,6 +622,115 @@ func buildObjectArrayForObjectStream(c context.Context, osd *types.ObjectStreamD
 
 // Parse all objects of an object stream and save them into objectStreamDict.ObjArray.
 func parseObjectStream(c context.Context, osd *types.ObjectStreamDict, limits model.ResourceLimits, validationMode int) error {
+	return parseObjectStreamWithBudget(c, osd, limits, validationMode, nil)
+}
+
+// objectStreamDecodeBudget tracks decoded buffer capacity retained by lazily materialized object streams.
+// Different object streams share this budget. The mutex guards the budget and covers each stream's first decode because
+// the remaining allowance caps that decode. It does not make lazy object materialization safe for concurrent use.
+type objectStreamDecodeBudget struct {
+	mu    sync.Mutex
+	limit int64
+	used  int64
+}
+
+func newObjectStreamDecodeBudget(conf *model.Configuration) *objectStreamDecodeBudget {
+	return &objectStreamDecodeBudget{limit: streamlimit.DecodeAllowance(conf.DecodeLimit())}
+}
+
+func streamContentAliasesRaw(sd *types.StreamDict) bool {
+	return len(sd.Content) > 0 && len(sd.Raw) > 0 && &sd.Content[0] == &sd.Raw[0]
+}
+
+func objectStreamDecodeLimitError(limit int64, err error) error {
+	return fmt.Errorf("object stream decode exceeds %d-byte limit: %w", limit, err)
+}
+
+func objectStreamCumulativeBudgetError(limit int64) error {
+	return fmt.Errorf("object stream decoding exceeded %d-byte cumulative budget: %w",
+		limit, filter.ErrDecodeLimitExceeded)
+}
+
+func decodeObjectStreamWithLimit(sd *types.StreamDict, limit int64) error {
+	err := sd.DecodeWithLimit(limit)
+	if err != nil {
+		sd.Content = nil
+	}
+	if errors.Is(err, filter.ErrDecodeLimitExceeded) {
+		return objectStreamDecodeLimitError(limit, err)
+	}
+	return err
+}
+
+func objectStreamDecodeError(err error, aggregateLimited bool, decodeLimit, budgetLimit int64) error {
+	if !errors.Is(err, filter.ErrDecodeLimitExceeded) {
+		return err
+	}
+	if aggregateLimited {
+		return objectStreamCumulativeBudgetError(budgetLimit)
+	}
+	return objectStreamDecodeLimitError(decodeLimit, err)
+}
+
+func compactObjectStreamContent(sd *types.StreamDict) int64 {
+	if streamContentAliasesRaw(sd) || cap(sd.Content) == 0 {
+		return 0
+	}
+	if len(sd.Content) < cap(sd.Content) {
+		content := make([]byte, len(sd.Content))
+		copy(content, sd.Content)
+		sd.Content = content
+	}
+	return int64(cap(sd.Content))
+}
+
+func (b *objectStreamDecodeBudget) decode(sd *types.StreamDict, decodeLimit int64) error {
+	if b == nil || b.limit < 0 || decodeLimit < 0 {
+		return decodeObjectStreamWithLimit(sd, decodeLimit)
+	}
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	remaining := b.limit - b.used
+	limit := decodeLimit
+	aggregateLimited := remaining < limit
+	if aggregateLimited {
+		limit = max(remaining, 1)
+	}
+	if err := sd.DecodeWithLimit(limit); err != nil {
+		sd.Content = nil
+		return objectStreamDecodeError(err, aggregateLimited, decodeLimit, b.limit)
+	}
+
+	n := compactObjectStreamContent(sd)
+	if n == 0 {
+		return nil
+	}
+	if n > remaining {
+		sd.Content = nil
+		return objectStreamCumulativeBudgetError(b.limit)
+	}
+	b.used += n
+	return nil
+}
+
+func objectStreamDecodeFunc(budget *objectStreamDecodeBudget, decodeLimit int64) types.DecodeStreamFunc {
+	if budget == nil {
+		return nil
+	}
+	// Content remains set after success: only lazy objects retain osd, while the xref table stores a value copy.
+	var once sync.Once
+	var err error
+	return func(sd *types.StreamDict) error {
+		once.Do(func() {
+			err = budget.decode(sd, decodeLimit)
+		})
+		return err
+	}
+}
+
+func parseObjectStreamWithBudget(c context.Context, osd *types.ObjectStreamDict, limits model.ResourceLimits, validationMode int, budget *objectStreamDecodeBudget) error {
 	if log.ReadEnabled() {
 		log.Read.Printf("parseObjectStream begin: decoding %d objects.\n", osd.ObjCount)
 	}
@@ -675,7 +786,8 @@ func parseObjectStream(c context.Context, osd *types.ObjectStreamDict, limits mo
 	decode := func(c context.Context, s string) (types.Object, error) {
 		return compressedObject(c, s, validationMode)
 	}
-	objArray, err := buildObjectArrayForObjectStream(c, osd, objs, fullContent, decodedContent, decode)
+	decodeStream := objectStreamDecodeFunc(budget, osd.MaxDecodeBytes)
+	objArray, err := buildObjectArrayForObjectStream(c, osd, objs, fullContent, decodedContent, decode, decodeStream)
 	if err != nil {
 		return fmt.Errorf("build object stream object array: %w", err)
 	}
@@ -3135,11 +3247,22 @@ func readStreamContentBlindly(rd io.Reader, maxStreamBytes int64) (buf []byte, e
 		buf = buf[:len(buf)-1]
 	}
 
-	return buf, nil
+	// Keep only the stream data; the read buffer can be much larger.
+	return bytes.Clone(buf), nil
+}
+
+// streamDataBeforeEOF returns the data in buf up to "endstream" when the input ends before the stream length.
+func streamDataBeforeEOF(buf []byte, err error) ([]byte, error) {
+	before, _, ok := bytes.Cut(buf, []byte("endstream"))
+	if !ok {
+		return nil, err
+	}
+	return before, nil
 }
 
 // Reads and returns a file buffer with length = stream length using provided reader positioned at offset.
-func readStreamContent(rd io.Reader, streamLength int, maxStreamBytes int64) ([]byte, error) {
+// available is the number of input bytes at offset; the buffer never exceeds it.
+func readStreamContent(rd io.Reader, streamLength int, available, maxStreamBytes int64) ([]byte, error) {
 	if log.ReadEnabled() {
 		log.Read.Printf("readStreamContent: begin streamLength:%d\n", streamLength)
 	}
@@ -3158,12 +3281,14 @@ func readStreamContent(rd io.Reader, streamLength int, maxStreamBytes int64) ([]
 		)
 	}
 
-	buf := make([]byte, streamLength)
+	// A stream length beyond the end of the input is corrupt; allocate only what the input can supply.
+	bufLen := int(min(int64(streamLength), max(available, 0)))
+	buf := make([]byte, bufLen)
 
 	totalCount := 0
-	for totalCount < streamLength {
+	for totalCount < bufLen {
 		count, err := fillBuffer(rd, buf[totalCount:])
-		if count < 0 || count > streamLength-totalCount {
+		if count < 0 || count > bufLen-totalCount {
 			return nil, fmt.Errorf("invalid stream read count=%d", count)
 		}
 		if count > 0 {
@@ -3181,16 +3306,17 @@ func readStreamContent(rd io.Reader, streamLength int, maxStreamBytes int64) ([]
 
 			// Search only the bytes actually read. Searching the whole
 			// preallocated buffer includes zero-filled unread bytes.
-			eob := bytes.Index(buf[:totalCount], []byte("endstream"))
-			if eob < 0 {
-				return nil, err
-			}
-			return buf[:eob], nil
+			return streamDataBeforeEOF(buf[:totalCount], err)
 		}
 
 		if count == 0 {
 			return nil, io.ErrNoProgress
 		}
+	}
+
+	if bufLen < streamLength {
+		// The input ended before the stream length.
+		return streamDataBeforeEOF(buf, io.EOF)
 	}
 
 	if log.ReadEnabled() {
@@ -3215,6 +3341,9 @@ func ensureStreamLength(sd *types.StreamDict, fixLength bool) error {
 }
 
 func decodeStream(ctx *model.Context, sd *types.StreamDict) error {
+	if ctx != nil && ctx.XRefTable != nil {
+		return ctx.DecodeStream(sd)
+	}
 	var conf *model.Configuration
 	if ctx != nil {
 		conf = ctx.Configuration
@@ -3283,9 +3412,24 @@ func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.S
 	if !fixLength && sd.StreamLength != nil {
 		l1 = int(*sd.StreamLength)
 	}
-	sd.Raw, err = readStreamContent(rd, l1, streamLimit(ctx))
+
+	// Stream data counts toward the read budget: before allocating for a known length, after reading otherwise.
+	available := max(ctx.Read.FileSize-sd.StreamOffset, 0)
+	if l1 > 0 {
+		if err := chargeObjectRead(c, ctx, min(int64(l1), available)); err != nil {
+			return err
+		}
+	}
+
+	sd.Raw, err = readStreamContent(rd, l1, available, streamLimit(ctx))
 	if err != nil {
 		return fmt.Errorf("read stream content: %w", err)
+	}
+
+	if l1 <= 0 {
+		if err := chargeObjectRead(c, ctx, int64(len(sd.Raw))); err != nil {
+			return err
+		}
 	}
 
 	if err := ensureStreamLength(sd, fixLength); err != nil {
@@ -3520,7 +3664,7 @@ func logStream(o types.Object) {
 
 }
 
-func decodeObjectStreamObjects(c context.Context, ctx *model.Context, sd *types.StreamDict, objNr int) (*types.ObjectStreamDict, error) {
+func decodeObjectStreamObjects(c context.Context, ctx *model.Context, sd *types.StreamDict, objNr int, budget *objectStreamDecodeBudget) (*types.ObjectStreamDict, error) {
 	first, _, err := bootstrapIntegerEntry(c, ctx, sd.Dict, "First")
 	if err != nil {
 		return nil, fmt.Errorf("object stream obj#%d: parse dictionary: object stream entry First: %w", objNr, err)
@@ -3533,13 +3677,15 @@ func decodeObjectStreamObjects(c context.Context, ctx *model.Context, sd *types.
 	if err != nil {
 		return nil, fmt.Errorf("object stream obj#%d: parse dictionary: %w", objNr, err)
 	}
+	osd.MaxDecodeBytes = ctx.Configuration.DecodeLimit()
 
 	if log.ReadEnabled() {
 		log.Read.Printf("decodeObjectStreamObjects: decoding object stream %d:\n", objNr)
 	}
 
 	// Parse all objects of this object stream and save them to ObjectStreamDict.ObjArray.
-	if err = parseObjectStream(c, osd, ctx.Configuration.Limits, ctx.XRefTable.ValidationMode); err != nil {
+	err = parseObjectStreamWithBudget(c, osd, ctx.Configuration.Limits, ctx.XRefTable.ValidationMode, budget)
+	if err != nil {
 		return nil, fmt.Errorf("object stream obj#%d: parse objects: %w", objNr, err)
 	}
 
@@ -3554,7 +3700,7 @@ func decodeObjectStreamObjects(c context.Context, ctx *model.Context, sd *types.
 	return osd, nil
 }
 
-func decodeObjectStream(c context.Context, ctx *model.Context, objNr int) error {
+func decodeObjectStream(c context.Context, ctx *model.Context, objNr int, budget *objectStreamDecodeBudget) error {
 	// Stream objects cannot reside in object streams (7.5.7).
 	entry := ctx.Table[objNr]
 	if entry == nil || entry.Free || entry.Compressed || entry.Offset == nil || entry.Generation == nil {
@@ -3600,7 +3746,7 @@ func decodeObjectStream(c context.Context, ctx *model.Context, objNr int) error 
 
 	ctx.Read.UsingObjectStreams = true
 
-	osd, err := decodeObjectStreamObjects(c, ctx, &sd, objNr)
+	osd, err := decodeObjectStreamObjects(c, ctx, &sd, objNr, budget)
 	if err != nil {
 		return err
 	}
@@ -3659,6 +3805,16 @@ func validateObjectStreamType(c context.Context, ctx *model.Context, objNr int) 
 	return err
 }
 
+func activeObjectStreams(ctx *model.Context) []int {
+	objectStreams := types.IntSet{}
+	for _, entry := range ctx.Table {
+		if entry != nil && !entry.Free && entry.ObjectStream != nil {
+			objectStreams[*entry.ObjectStream] = true
+		}
+	}
+	return slices.Sorted(maps.Keys(objectStreams))
+}
+
 // Decode all object streams so contained objects are ready to be used.
 func decodeObjectStreams(c context.Context, ctx *model.Context) error {
 	// Note:
@@ -3669,19 +3825,16 @@ func decodeObjectStreams(c context.Context, ctx *model.Context) error {
 		log.Read.Println("decodeObjectStreams: begin")
 	}
 
-	// Get sorted slice of object numbers.
-	var keys []int
-	for k := range ctx.Read.ObjectStreams {
-		keys = append(keys, k)
-	}
-	sort.Ints(keys)
+	// Only current compressed entries contribute object streams. References from superseded revisions are stale.
+	keys := activeObjectStreams(ctx)
+	budget := newObjectStreamDecodeBudget(ctx.Configuration)
 
 	for _, objNr := range keys {
 
 		if err := c.Err(); err != nil {
 			return err
 		}
-		if err := decodeObjectStream(c, ctx, objNr); err != nil {
+		if err := decodeObjectStream(c, ctx, objNr, budget); err != nil {
 			return err
 		}
 	}
@@ -4157,6 +4310,36 @@ func identifyRootVersion(xRefTable *model.XRefTable) error {
 	return nil
 }
 
+type objectStreamLocation struct {
+	stream int
+	index  int
+}
+
+func validateObjectStreamIndexUniqueness(ctx *model.Context) error {
+	// see 7.5.7 and 7.5.8.3
+	if len(ctx.Read.ObjectStreams) == 0 {
+		return nil
+	}
+	seen := map[objectStreamLocation]int{}
+	for _, objNr := range slices.Sorted(maps.Keys(ctx.Table)) {
+		entry := ctx.Table[objNr]
+		if entry == nil || entry.Free || entry.ObjectStream == nil || entry.ObjectStreamInd == nil {
+			continue
+		}
+		if objNr == *entry.ObjectStream {
+			// decodeObjectStream reports the more specific invalid object-stream entry.
+			continue
+		}
+		location := objectStreamLocation{*entry.ObjectStream, *entry.ObjectStreamInd}
+		if prior, ok := seen[location]; ok {
+			return fmt.Errorf("compressed objects %d and %d share object stream %d index %d: %w",
+				prior, objNr, location.stream, location.index, errCorruptXRefStream)
+		}
+		seen[location] = objNr
+	}
+	return nil
+}
+
 // Parse all Objects including stream content from file and save to the corresponding xRefTableEntries.
 // This includes processing of object streams and linearization dicts.
 func dereferenceXRefTable(c context.Context, ctx *model.Context) error {
@@ -4165,6 +4348,9 @@ func dereferenceXRefTable(c context.Context, ctx *model.Context) error {
 	}
 
 	xRefTable := ctx.XRefTable
+	if err := validateObjectStreamIndexUniqueness(ctx); err != nil {
+		return err
+	}
 
 	// Note for encrypted files:
 	// Mandatory provide userpw to open & display file.

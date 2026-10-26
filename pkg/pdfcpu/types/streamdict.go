@@ -105,25 +105,37 @@ func (sd StreamDict) Image() bool {
 // DecodeLazyObjectStreamObjectFunc decodes one serialized object from an object stream.
 type DecodeLazyObjectStreamObjectFunc func(c context.Context, s string) (Object, error)
 
+// DecodeStreamFunc decodes a stream dictionary.
+type DecodeStreamFunc func(sd *StreamDict) error
+
 // LazyObjectStreamObject defers decoding an object-stream entry until it is accessed.
 type LazyObjectStreamObject struct {
 	osd         *ObjectStreamDict
 	startOffset int
 	endOffset   int
 
-	decodeFunc    DecodeLazyObjectStreamObjectFunc
-	decodedObject Object
-	decodedError  error
+	decodeFunc       DecodeLazyObjectStreamObjectFunc
+	decodeStreamFunc DecodeStreamFunc
+	decodedObject    Object
+	decodedError     error
 }
 
 // NewLazyObjectStreamObject returns a lazy object stream object.
 func NewLazyObjectStreamObject(osd *ObjectStreamDict, startOffset, endOffset int, decodeFunc DecodeLazyObjectStreamObjectFunc) Object {
+	return NewLazyObjectStreamObjectWithDecoder(osd, startOffset, endOffset, decodeFunc, nil)
+}
+
+// NewLazyObjectStreamObjectWithDecoder returns a lazy object stream object.
+// A non-nil decodeStreamFunc receives &osd.StreamDict and must decode it, leaving Content set on success.
+// A nil decodeStreamFunc uses the default object stream decoder.
+func NewLazyObjectStreamObjectWithDecoder(osd *ObjectStreamDict, startOffset, endOffset int, decodeFunc DecodeLazyObjectStreamObjectFunc, decodeStreamFunc DecodeStreamFunc) Object {
 	return LazyObjectStreamObject{
 		osd:         osd,
 		startOffset: startOffset,
 		endOffset:   endOffset,
 
-		decodeFunc: decodeFunc,
+		decodeFunc:       decodeFunc,
+		decodeStreamFunc: decodeStreamFunc,
 	}
 }
 
@@ -134,9 +146,10 @@ func (l LazyObjectStreamObject) Clone() Object {
 		startOffset: l.startOffset,
 		endOffset:   l.endOffset,
 
-		decodeFunc:    l.decodeFunc,
-		decodedObject: l.decodedObject,
-		decodedError:  l.decodedError,
+		decodeFunc:       l.decodeFunc,
+		decodeStreamFunc: l.decodeStreamFunc,
+		decodedObject:    l.decodedObject,
+		decodedError:     l.decodedError,
 	}
 }
 
@@ -157,8 +170,22 @@ func (l LazyObjectStreamObject) String() string {
 
 // GetData returns the stream data.
 func (l *LazyObjectStreamObject) GetData() ([]byte, error) {
-	if err := l.osd.DecodeWithLimit(l.osd.MaxDecodeBytes); err != nil {
+	var err error
+	if l.decodeStreamFunc == nil {
+		err = l.osd.DecodeWithLimit(l.osd.MaxDecodeBytes)
+	} else {
+		err = l.decodeStreamFunc(&l.osd.StreamDict)
+	}
+	if err != nil {
+		if l.decodeStreamFunc == nil && errors.Is(err, filter.ErrDecodeLimitExceeded) {
+			return nil, fmt.Errorf("object stream decode exceeds %d-byte limit: %w", l.osd.MaxDecodeBytes, err)
+		}
 		return nil, err
+	}
+	if !l.osd.preserveRawContent() && len(l.osd.Content) < cap(l.osd.Content) {
+		content := make([]byte, len(l.osd.Content))
+		copy(content, l.osd.Content)
+		l.osd.Content = content
 	}
 
 	var data []byte

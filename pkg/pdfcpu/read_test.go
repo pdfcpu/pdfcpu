@@ -700,7 +700,7 @@ func TestDecodeObjectStreamRejectsInvalidEntries(t *testing.T) {
 			if tc.entry != nil {
 				ctx.Table[7] = tc.entry
 			}
-			err = decodeObjectStream(t.Context(), ctx, 7)
+			err = decodeObjectStream(t.Context(), ctx, 7, nil)
 			if !errors.Is(err, errMissingObjectStreamEntry) {
 				t.Fatalf("got %v, want %v", err, errMissingObjectStreamEntry)
 			}
@@ -776,7 +776,7 @@ func TestDecodeObjectStreamClassifiesCorruptObjectStream(t *testing.T) {
 		Generation: &zeroGen,
 	}
 
-	err = decodeObjectStream(t.Context(), ctx, 7)
+	err = decodeObjectStream(t.Context(), ctx, 7, nil)
 	if !errors.Is(err, errCorruptObjectStream) {
 		t.Fatalf("got %v, want %v", err, errCorruptObjectStream)
 	}
@@ -1289,7 +1289,7 @@ func TestReadLargeDictObject(t *testing.T) {
 
 // TestReadStreamContentRejectsStreamLimit verifies stream limits are enforced.
 func TestReadStreamContentRejectsStreamLimit(t *testing.T) {
-	_, err := readStreamContent(bytes.NewReader([]byte("abc")), 3, 2)
+	_, err := readStreamContent(bytes.NewReader([]byte("abc")), 3, 3, 2)
 	if err == nil || !strings.Contains(err.Error(), "exceeds maximum") {
 		t.Fatalf("got %v, want stream limit error", err)
 	}
@@ -1298,7 +1298,7 @@ func TestReadStreamContentRejectsStreamLimit(t *testing.T) {
 func TestReadStreamContentAcceptsWrappedEOF(t *testing.T) {
 	rd := &wrappedEOFReader{data: []byte("abc\nendstream\n")}
 
-	buf, err := readStreamContent(rd, 20, 20)
+	buf, err := readStreamContent(rd, 20, 20, 20)
 	if err != nil {
 		t.Fatal(err)
 	}

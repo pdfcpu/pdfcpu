@@ -500,7 +500,9 @@ type ResourceLimits struct {
 	// MaxStreamBytes limits encoded stream bytes read from a PDF.
 	MaxStreamBytes int64
 
-	// MaxDecodeBytes limits decoded stream bytes produced by filters and combined page content.
+	// MaxDecodeBytes limits each decoded stream and combined page content. XRefTable.DecodeStream calls and object
+	// streams each share separate cumulative limits of at least 1 GiB or twice this value. Zero selects the default;
+	// negative disables these decode limits.
 	MaxDecodeBytes int64
 
 	// MaxImagePixels limits decoded/rendered image dimensions.

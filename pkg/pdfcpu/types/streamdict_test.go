@@ -169,3 +169,79 @@ func TestPreservedStreamContentDoesNotConsumeDecodeLimit(t *testing.T) {
 		}
 	}
 }
+
+func TestLazyObjectStreamGetDataPreservesDecodeErrorText(t *testing.T) {
+	sd := StreamDict{
+		Dict:           NewDict(),
+		Raw:            []byte("not flate data"),
+		FilterPipeline: []PDFFilter{{Name: filter.Flate}},
+	}
+	wantSD := sd
+	wantErr := wantSD.DecodeWithLimit(1 << 20)
+	if wantErr == nil {
+		t.Fatal("corrupt Flate stream decoded without error")
+	}
+
+	osd := &ObjectStreamDict{StreamDict: sd, MaxDecodeBytes: 1 << 20}
+	o := NewLazyObjectStreamObject(osd, 0, -1, nil)
+	lazy := o.(LazyObjectStreamObject)
+	if _, err := lazy.GetData(); err == nil || err.Error() != wantErr.Error() {
+		t.Fatalf("got %v, want unchanged decode error %v", err, wantErr)
+	}
+}
+
+func TestLazyObjectStreamGetDataCompactsDecodedContent(t *testing.T) {
+	// An odd length that is not an allocation size class, so a rounded-up copy would leave len < cap.
+	sd := StreamDict{
+		Dict:           NewDict(),
+		Content:        bytes.Repeat([]byte{'0'}, 256<<10+3),
+		FilterPipeline: []PDFFilter{{Name: filter.Flate}},
+	}
+	if err := sd.Encode(); err != nil {
+		t.Fatal(err)
+	}
+	sd.Content = nil
+	osd := &ObjectStreamDict{StreamDict: sd, MaxDecodeBytes: 1 << 20}
+	lazy := NewLazyObjectStreamObject(osd, 0, -1, nil).(LazyObjectStreamObject)
+	if _, err := lazy.GetData(); err != nil {
+		t.Fatal(err)
+	}
+	if len(osd.Content) != cap(osd.Content) {
+		t.Fatalf("decoded object stream length=%d capacity=%d", len(osd.Content), cap(osd.Content))
+	}
+	if allocs := testing.AllocsPerRun(10, func() { _, _ = lazy.GetData() }); allocs != 0 {
+		t.Fatalf("repeated GetData allocated %.0f times, want 0", allocs)
+	}
+}
+
+func TestLazyObjectStreamGetDataPreservesRawAlias(t *testing.T) {
+	raw := make([]byte, 4, 1<<20)
+	osd := &ObjectStreamDict{StreamDict: StreamDict{Dict: NewDict(), Raw: raw}, MaxDecodeBytes: 1 << 20}
+	lazy := NewLazyObjectStreamObject(osd, 0, -1, nil).(LazyObjectStreamObject)
+	if _, err := lazy.GetData(); err != nil {
+		t.Fatal(err)
+	}
+	if &osd.Content[0] != &osd.Raw[0] {
+		t.Fatal("unfiltered object stream content no longer aliases raw data")
+	}
+}
+
+func TestLazyObjectStreamGetDataUsesDecoder(t *testing.T) {
+	wantErr := errors.New("shared decode budget")
+	osd := &ObjectStreamDict{StreamDict: StreamDict{Dict: NewDict(), Raw: []byte("encoded")}}
+	called := 0
+	decodeStream := func(sd *StreamDict) error {
+		called++
+		if sd != &osd.StreamDict {
+			t.Fatalf("got stream dict %p, want %p", sd, &osd.StreamDict)
+		}
+		return wantErr
+	}
+	lazy := NewLazyObjectStreamObjectWithDecoder(osd, 0, -1, nil, decodeStream).(LazyObjectStreamObject)
+	if _, err := lazy.GetData(); !errors.Is(err, wantErr) {
+		t.Fatalf("got %v, want %v", err, wantErr)
+	}
+	if called != 1 {
+		t.Fatalf("decoder called %d times, want 1", called)
+	}
+}

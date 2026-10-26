@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
+	"github.com/pdfcpu/pdfcpu/internal/streamlimit"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -111,6 +112,10 @@ type AnnotMap map[int]AnnotationRenderer
 type Annot struct {
 	IndRefs *[]types.IndirectRef
 	Map     AnnotMap
+}
+
+type decodedStreamBudget struct {
+	used int64
 }
 
 // PgAnnots represents a map of page annotations by type.
@@ -202,8 +207,9 @@ type XRefTable struct {
 	AppendOnly     bool
 
 	// Fonts
-	UsedGIDs  map[string]map[uint16]bool
-	FillFonts map[string]types.IndirectRef
+	UsedGIDs            map[string]map[uint16]bool
+	FillFonts           map[string]types.IndirectRef
+	decodedStreamBudget decodedStreamBudget
 }
 
 // NewXRefTable creates a new XRefTable.
@@ -2166,14 +2172,59 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 	return xRefTable.consolidateResources(obj, pAttrs)
 }
 
-// DecodeStream decodes sd using the configured decoded-stream byte limit.
-// A nil table or missing configuration selects the default limit.
+func decodedStreamBufferLimit(conf *Configuration) int64 {
+	return streamlimit.DecodeAllowance(conf.DecodeLimit())
+}
+
+func decodedContentAliasesRaw(sd *types.StreamDict) bool {
+	return len(sd.Content) > 0 && len(sd.Raw) > 0 && &sd.Content[0] == &sd.Raw[0]
+}
+
+func decodeBufferBudgetError(limit int64) error {
+	return fmt.Errorf("stream decoding exceeded %d-byte cumulative budget: %w", limit, filter.ErrDecodeLimitExceeded)
+}
+
+// DecodeStream decodes sd using the configured per-stream and cumulative decoded-byte limits.
+// A nil table or missing configuration selects the default per-stream limit without cumulative accounting.
 func (xRefTable *XRefTable) DecodeStream(sd *types.StreamDict) error {
 	var conf *Configuration
 	if xRefTable != nil {
 		conf = xRefTable.Conf
 	}
-	return sd.DecodeWithLimit(conf.DecodeLimit())
+	decodeLimit := conf.DecodeLimit()
+	if xRefTable == nil || sd.Content != nil {
+		return sd.DecodeWithLimit(decodeLimit)
+	}
+
+	bufferLimit := decodedStreamBufferLimit(conf)
+	if bufferLimit < 0 {
+		return sd.DecodeWithLimit(decodeLimit)
+	}
+
+	remaining := bufferLimit - xRefTable.decodedStreamBudget.used
+	aggregateLimited := decodeLimit < 0 || remaining < decodeLimit
+	if aggregateLimited {
+		// DecodeWithLimit treats zero as the default limit, so use one byte when the budget is exhausted.
+		decodeLimit = max(remaining, 1)
+	}
+
+	if err := sd.DecodeWithLimit(decodeLimit); err != nil {
+		if aggregateLimited && errors.Is(err, filter.ErrDecodeLimitExceeded) {
+			return decodeBufferBudgetError(bufferLimit)
+		}
+		return err
+	}
+	if decodedContentAliasesRaw(sd) || cap(sd.Content) == 0 {
+		return nil
+	}
+
+	n := int64(cap(sd.Content))
+	if n > remaining {
+		sd.Content = nil
+		return decodeBufferBudgetError(bufferLimit)
+	}
+	xRefTable.decodedStreamBudget.used += n
+	return nil
 }
 
 func (xRefTable *XRefTable) decodeContentStream(sd *types.StreamDict, pageNr int) error {

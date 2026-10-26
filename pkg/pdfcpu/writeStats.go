@@ -69,12 +69,21 @@ func logWriteStats(ctx *model.Context) {
 	log.Stats.Printf("%d original redundant info entries: %s", l, str)
 
 	// ObjectStreams
-	l, str = ctx.Read.ObjectStreamsString()
+	l, str = currentObjectStreamsString(ctx)
 	log.Stats.Printf("%d original objectStream entries: %s", l, str)
 
 	// Linearization objects
 	l, str = ctx.LinearizationObjsString()
 	log.Stats.Printf("%d original linearization entries: %s", l, str)
+}
+
+func currentObjectStreamsString(ctx *model.Context) (int, string) {
+	objs := activeObjectStreams(ctx)
+	ss := make([]string, len(objs))
+	for i, objNr := range objs {
+		ss[i] = fmt.Sprint(objNr)
+	}
+	return len(objs), strings.Join(ss, ",")
 }
 
 func statsHeadLine() *string {
