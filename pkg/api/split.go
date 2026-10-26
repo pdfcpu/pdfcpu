@@ -49,6 +49,11 @@ func pageSpan(c context.Context, ctx *model.Context, from, thru int) (*PageSpan,
 	if err := contextutil.Check(c); err != nil {
 		return nil, err
 	}
+	// Bookmark page numbers come from the document: reject spans beyond the last page before listing their pages.
+	if thru > ctx.PageCount {
+		return nil, fmt.Errorf("extract page span %d-%d: %w: %d outside 1..%d",
+			from, thru, pdfcpu.ErrInvalidPageNumber, thru, ctx.PageCount)
+	}
 	ctxNew, err := pdfcpu.ExtractPages(c, ctx, PagesForPageRange(from, thru), false)
 	if err != nil {
 		return nil, fmt.Errorf("extract page span %d-%d: %w", from, thru, err)
