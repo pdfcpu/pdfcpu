@@ -34,6 +34,36 @@ Entries link to GitHub releases or commits where available.
 
 <article class="changelog-entry">
   <div class="changelog-meta">
+    <time datetime="2026-10-27">2026-10-27</time>
+    <span class="changelog-kind">Release</span>
+    <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.4">v0.16.4</a>
+  </div>
+  <p>Security update.</p>
+  <br>
+  <p><strong>Fixed security advisories:</strong></p>
+  <ul>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-g5q6-53hx-f68j">GHSA-g5q6-53hx-f68j</a>:
+    unbounded poster tile grids from crafted page dimensions.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-vwmc-mhq7-fqhc">GHSA-vwmc-mhq7-fqhc</a>:
+    repeated validation of shared resource graphs.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-8pv5-h3hv-xhc9">GHSA-8pv5-h3hv-xhc9</a>:
+    exponential work comparing shared object graphs.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-2623-w998-vcr4">GHSA-2623-w998-vcr4</a>:
+    stack exhaustion from long object chains.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-gx4m-7r76-vpww">GHSA-gx4m-7r76-vpww</a>:
+    unbounded page numbers in create and form fill.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-pr6x-vqwr-4hj2">GHSA-pr6x-vqwr-4hj2</a>:
+    repeated stream data and unbounded aggregate decoding.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-p2r6-9jcq-fp7v">GHSA-p2r6-9jcq-fp7v</a>:
+    unbounded bookmark split page ranges.</li>
+    <li><a href="https://github.com/pdfcpu/pdfcpu/security/advisories/GHSA-cphg-88q6-whwh">GHSA-cphg-88q6-whwh</a>:
+    unbounded create table dimensions.</li>
+  </ul>
+  <p>No breaking Go API changes. Two additive helpers support bounded lazy object-stream decoding.</p>
+</article>
+
+<article class="changelog-entry">
+  <div class="changelog-meta">
      <time datetime="2026-10-19">2026-10-19</time>
     <span class="changelog-kind">Release</span>
     <a href="https://github.com/pdfcpu/pdfcpu/releases/tag/v0.16.3">v0.16.3</a>
