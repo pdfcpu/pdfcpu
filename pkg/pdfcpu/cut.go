@@ -360,7 +360,6 @@ func handleCutMargin(
 	c context.Context,
 	ctxSrc *model.Context,
 	d, d1 types.Dict,
-	pageNr int,
 	cropBox, cb *types.Rectangle,
 	i, j int,
 	w, h float64,
@@ -427,31 +426,42 @@ func handleCutMargin(
 	var trans bytes.Buffer
 	fmt.Fprintf(&trans, "q %.5f %.5f %.5f %.5f %.5f %.5f cm ", m[0][0], m[0][1], m[1][0], m[1][1], m[2][0], m[2][1])
 
-	bbOrig, err := cutPageContent(c, ctxSrc, d, pageNr)
+	// Tiles share the page content stream and wrap it in their own streams instead of copying it.
+	contents, ok := d["Contents"].(types.IndirectRef)
+	if !ok {
+		return errors.New("missing page content stream")
+	}
+
+	prefix, err := newCutContentStream(ctxSrc, trans.Bytes())
 	if err != nil {
 		return err
 	}
 
-	bb := append(trans.Bytes(), bbOrig...)
-	bb = append(bb, []byte(" Q ")...)
-	bb = append(bb, buf.Bytes()...)
-
-	sd, err := ctxSrc.NewStreamDictForBuf(bb)
+	suffix, err := newCutContentStream(ctxSrc, append([]byte(" Q "), buf.Bytes()...))
 	if err != nil {
-		return fmt.Errorf("create content stream: %w", err)
-	}
-	if err := sd.Encode(); err != nil {
-		return fmt.Errorf("encode content stream: %w", err)
+		return err
 	}
 
-	indRef, err := ctxSrc.IndRefForNewObject(*sd)
-	if err != nil {
-		return fmt.Errorf("insert content stream: %w", err)
-	}
-
-	d1["Contents"] = *indRef
+	d1["Contents"] = types.Array{*prefix, contents, *suffix}
 
 	return contextutil.Check(c)
+}
+
+func newCutContentStream(ctx *model.Context, bb []byte) (*types.IndirectRef, error) {
+	sd, err := ctx.NewStreamDictForBuf(bb)
+	if err != nil {
+		return nil, fmt.Errorf("create content stream: %w", err)
+	}
+	if err := sd.Encode(); err != nil {
+		return nil, fmt.Errorf("encode content stream: %w", err)
+	}
+
+	indRef, err := ctx.IndRefForNewObject(*sd)
+	if err != nil {
+		return nil, fmt.Errorf("insert content stream: %w", err)
+	}
+
+	return indRef, nil
 }
 
 func validateCutMargin(pageNr, row, column int, w, h, margin float64) error {
@@ -471,7 +481,7 @@ type cutTileBuilder struct {
 	pagesDict, d    types.Dict
 	pageNr          int
 	cropBox         *types.Rectangle
-	inhPAttrs       *model.InheritedPageAttrs
+	resources       types.IndirectRef
 	migrated        map[int]int
 	cut             *model.Cut
 }
@@ -494,14 +504,14 @@ func (b *cutTileBuilder) create(
 
 	cb := types.NewRectangle(llx, lly, urx, ury)
 	d := b.d.Clone().(types.Dict)
-	d["Resources"] = b.inhPAttrs.Resources.Clone()
+	d["Resources"] = b.resources
 	d["Parent"] = b.pagesIndRef
 	d["MediaBox"] = cb.Array()
 	d["CropBox"] = cb.Array()
 
 	if b.cut.Margin > 0 {
 		if err := handleCutMargin(
-			c, b.ctxSrc, b.d, d, b.pageNr, b.cropBox, cb, row-1, column-1, w, h, sc, b.cut,
+			c, b.ctxSrc, b.d, d, b.cropBox, cb, row-1, column-1, w, h, sc, b.cut,
 		); err != nil {
 			return fmt.Errorf("tile row %d column %d: apply margin: %w", row, column, err)
 		}
@@ -540,10 +550,18 @@ func createTiles(
 	if err := contextutil.Check(c); err != nil {
 		return err
 	}
+	// Tiles share one copy of the page resources instead of cloning them per tile.
+	resources, err := ctxSrc.IndRefForNewObject(inhPAttrs.Resources.Clone())
+	if err != nil {
+		return fmt.Errorf("insert page resources: %w", err)
+	}
+	tileDict := d.Clone().(types.Dict)
+	tileDict.Delete("Resources")
+
 	var sc float64
 	b := cutTileBuilder{
-		ctxSrc: ctxSrc, ctxDest: ctxDest, pagesIndRef: pagesIndRef, pagesDict: pagesDict, d: d, pageNr: pageNr,
-		cropBox: cropBox, inhPAttrs: inhPAttrs, migrated: migrated, cut: cut,
+		ctxSrc: ctxSrc, ctxDest: ctxDest, pagesIndRef: pagesIndRef, pagesDict: pagesDict, d: tileDict, pageNr: pageNr,
+		cropBox: cropBox, resources: *resources, migrated: migrated, cut: cut,
 	}
 
 	for i := 0; i < len(cut.Hor); i++ {
@@ -717,6 +735,34 @@ func NDownPage(c context.Context, ctxSrc *model.Context, pageNr, n int, cut *mod
 	return ctxDest, contextutil.Check(c)
 }
 
+// maxPosterTiles bounds the work and output pages generated for one source page.
+const maxPosterTiles = 1000
+
+// positiveFinite reports whether v is greater than zero and not infinite; NaN fails the comparison.
+func positiveFinite(v float64) bool {
+	return v > 0 && !math.IsInf(v, 1)
+}
+
+func posterCutPoints(c context.Context, size, tileSize float64, limit int) ([]float64, error) {
+	points := []float64{0.}
+	for x := 0.; ; x += tileSize {
+		if err := contextutil.Check(c); err != nil {
+			return nil, err
+		}
+		f := (x + tileSize) / size
+		fr := math.Round(f*100) / 100
+		if fr != 1 {
+			if len(points) >= limit {
+				return nil, fmt.Errorf("poster tile count exceeds limit of %d", maxPosterTiles)
+			}
+			points = append(points, f)
+		}
+		if fr >= 1 {
+			return points, nil
+		}
+	}
+}
+
 func createPosterCuts(
 	c context.Context,
 	cropBox *types.Rectangle,
@@ -725,34 +771,18 @@ func createPosterCuts(
 	if err := contextutil.Check(c); err != nil {
 		return nil, nil, err
 	}
-	vert := []float64{0.}
-	for x := 0.; ; x += dim.Width {
-		if err := contextutil.Check(c); err != nil {
-			return nil, nil, err
-		}
-		f := (x + dim.Width) / cropBox.Width()
-		fr := math.Round(f*100) / 100
-		if fr != 1 {
-			vert = append(vert, f)
-		}
-		if fr >= 1 {
-			break
-		}
+	w, h := cropBox.Width(), cropBox.Height()
+	if !positiveFinite(w) || !positiveFinite(h) || !positiveFinite(dim.Width) || !positiveFinite(dim.Height) {
+		return nil, nil, errors.New("poster dimensions must be finite and > 0")
 	}
 
-	hor := []float64{0.}
-	for y := 0.; ; y += dim.Height {
-		if err := contextutil.Check(c); err != nil {
-			return nil, nil, err
-		}
-		f := (y + dim.Height) / cropBox.Height()
-		fr := math.Round(f*100) / 100
-		if fr != 1 {
-			hor = append(hor, f)
-		}
-		if fr >= 1 {
-			break
-		}
+	vert, err := posterCutPoints(c, w, dim.Width, maxPosterTiles)
+	if err != nil {
+		return nil, nil, err
+	}
+	hor, err := posterCutPoints(c, h, dim.Height, maxPosterTiles/len(vert))
+	if err != nil {
+		return nil, nil, err
 	}
 	return hor, vert, contextutil.Check(c)
 }
@@ -785,6 +815,10 @@ func PosterPage(c context.Context, ctxSrc *model.Context, pageNr int, cut *model
 		cropBox.UR.X = cropBox.LL.X + cropBox.Height()
 		cropBox.UR.Y = cropBox.LL.Y + w
 	}
+	hor, vert, err := createPosterCuts(c, cropBox, dim)
+	if err != nil {
+		return nil, err
+	}
 
 	d["MediaBox"] = cropBox.Array()
 	d["CropBox"] = cropBox.Array()
@@ -802,10 +836,6 @@ func PosterPage(c context.Context, ctxSrc *model.Context, pageNr int, cut *model
 		return nil, fmt.Errorf("transform page content: %w", err)
 	}
 
-	hor, vert, err := createPosterCuts(c, cropBox, dim)
-	if err != nil {
-		return nil, err
-	}
 	cutLocal := *cut
 	cutLocal.Hor = hor
 	cutLocal.Vert = vert
