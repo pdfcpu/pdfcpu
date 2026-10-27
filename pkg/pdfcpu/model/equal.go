@@ -26,49 +26,100 @@ import (
 	"strings"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
+	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-func appendPair(pairs []int, a, b int) []int {
+var errObjectComparisonLimit = errors.New("object comparison limit exceeded")
+
+type objectPair struct {
+	a int
+	b int
+}
+
+func newObjectPair(a, b int) objectPair {
 	if a > b {
 		a, b = b, a
 	}
-	return append(pairs, a, b)
+	return objectPair{a, b}
 }
 
-func containsPair(c context.Context, pairs []int, a, b int) (bool, error) {
-	if a > b {
-		a, b = b, a
+type objectComparator struct {
+	xRefTable *XRefTable
+	pairs     map[objectPair]struct{}
+	pairCount int
+	pairLimit int
+}
+
+func newObjectComparator(c context.Context, xRefTable *XRefTable, pairs []int) (objectComparator, error) {
+	pairLimit := 1
+	if xRefTable != nil && len(xRefTable.Table) > pairLimit {
+		// Equal objects with isomorphic reference graphs need at most one pair per object.
+		// Larger comparisons are treated as unequal.
+		pairLimit = len(xRefTable.Table)
+	}
+	oc := objectComparator{
+		xRefTable: xRefTable,
+		pairLimit: pairLimit,
 	}
 	for i := 0; i+1 < len(pairs); i += 2 {
 		if err := contextutil.Check(c); err != nil {
-			return false, err
+			return objectComparator{}, err
 		}
-		if pairs[i] == a && pairs[i+1] == b {
-			return true, nil
+		if oc.pairs == nil {
+			oc.pairs = map[objectPair]struct{}{}
 		}
+		oc.pairs[newObjectPair(pairs[i], pairs[i+1])] = struct{}{}
 	}
-	return false, nil
+	return oc, nil
 }
 
 // EqualObjects returns true if two objects are equal in the context of xrefTable.
 // An object and an indirect reference to it are treated as equal.
-// Objects may be object trees. Comparison stops when c is canceled or its deadline expires.
-func EqualObjects(c context.Context, o1, o2 types.Object, xRefTable *XRefTable, pairs []int) (ok bool, err error) {
-	if err := contextutil.Check(c); err != nil {
-		return false, err
-	}
-	pairs, ok, err = equalObjectReferences(c, o1, o2, pairs)
-	if err != nil || ok {
-		return ok, err
-	}
-
-	o1, err = xRefTable.Dereference(o1)
+// Objects may be object trees.
+// Exceeding the configured recursion depth or the indirect-reference pair budget, which equals the xref table size,
+// returns false without an error.
+// Canceling c or reaching its deadline returns an error.
+// The pairs argument contains indirect-object-number pairs already being compared by the caller.
+func EqualObjects(c context.Context, o1, o2 types.Object, xRefTable *XRefTable, pairs []int) (bool, error) {
+	oc, err := newObjectComparator(c, xRefTable, pairs)
 	if err != nil {
 		return false, err
 	}
 
-	o2, err = xRefTable.Dereference(o2)
+	ok, err := oc.equalObjects(c, o1, o2, 0)
+	if errors.Is(err, errObjectComparisonLimit) {
+		return false, nil
+	}
+
+	return ok, err
+}
+
+func (oc *objectComparator) equalObjects(c context.Context, o1, o2 types.Object, depth int) (ok bool, err error) {
+	if err := contextutil.Check(c); err != nil {
+		return false, err
+	}
+
+	maxDepth := oc.maxRecursionDepth()
+	if err := CheckRecursionDepth("object comparison", depth, maxDepth); err != nil {
+		if log.OptimizeEnabled() {
+			log.Optimize.Printf(
+				"EqualObjects: recursion depth %d exceeds limit %d; treating objects as unequal\n", depth, maxDepth)
+		}
+		return false, errObjectComparisonLimit
+	}
+
+	ok, err = oc.equalObjectReferences(o1, o2)
+	if err != nil || ok {
+		return ok, err
+	}
+
+	o1, err = oc.xRefTable.Dereference(o1)
+	if err != nil {
+		return false, err
+	}
+
+	o2, err = oc.xRefTable.Dereference(o2)
 	if err != nil {
 		return false, err
 	}
@@ -90,15 +141,15 @@ func EqualObjects(c context.Context, o1, o2 types.Object, xRefTable *XRefTable, 
 		ok = o1 == o2
 
 	case types.Dict:
-		ok, err = equalDicts(c, o1.(types.Dict), o2.(types.Dict), xRefTable, pairs)
+		ok, err = oc.equalDicts(c, o1.(types.Dict), o2.(types.Dict), depth)
 
 	case types.StreamDict:
 		sd1 := o1.(types.StreamDict)
 		sd2 := o2.(types.StreamDict)
-		ok, err = equalStreamDicts(c, &sd1, &sd2, xRefTable, pairs)
+		ok, err = oc.equalStreamDicts(c, &sd1, &sd2, depth)
 
 	case types.Array:
-		ok, err = equalArrays(c, o1.(types.Array), o2.(types.Array), xRefTable, pairs)
+		ok, err = oc.equalArrays(c, o1.(types.Array), o2.(types.Array), depth)
 
 	default:
 		err = fmt.Errorf("unhandled compare for type %s", o1Type)
@@ -107,33 +158,57 @@ func EqualObjects(c context.Context, o1, o2 types.Object, xRefTable *XRefTable, 
 	return ok, err
 }
 
-func equalObjectReferences(c context.Context, o1, o2 types.Object, pairs []int) ([]int, bool, error) {
+func (oc *objectComparator) maxRecursionDepth() int {
+	if oc.xRefTable == nil {
+		return DefaultResourceLimits().MaxRecursionDepth
+	}
+	return oc.xRefTable.MaxRecursionDepth()
+}
+
+func (oc *objectComparator) equalObjectReferences(o1, o2 types.Object) (bool, error) {
 	ir1, ok1 := o1.(types.IndirectRef)
 	ir2, ok2 := o2.(types.IndirectRef)
 	if !ok1 || !ok2 {
-		return pairs, false, nil
+		return false, nil
 	}
+
 	if ir1 == ir2 {
-		return pairs, true, nil
+		return true, nil
 	}
-	a, b := ir1.ObjectNumber.Value(), ir2.ObjectNumber.Value()
-	found, err := containsPair(c, pairs, a, b)
-	if err != nil || found {
-		return pairs, found, err
+
+	pair := newObjectPair(ir1.ObjectNumber.Value(), ir2.ObjectNumber.Value())
+	if _, found := oc.pairs[pair]; found {
+		return true, nil
 	}
-	return appendPair(pairs, a, b), false, nil
+
+	if oc.pairCount >= oc.pairLimit {
+		if log.OptimizeEnabled() {
+			log.Optimize.Printf(
+				"EqualObjects: indirect-reference pair budget %d reached; treating objects as unequal\n", oc.pairLimit)
+		}
+		return false, errObjectComparisonLimit
+	}
+
+	if oc.pairs == nil {
+		oc.pairs = map[objectPair]struct{}{}
+	}
+	oc.pairs[pair] = struct{}{}
+	oc.pairCount++
+
+	return false, nil
 }
 
-func equalArrays(c context.Context, a1, a2 types.Array, xRefTable *XRefTable, pairs []int) (bool, error) {
+func (oc *objectComparator) equalArrays(c context.Context, a1, a2 types.Array, depth int) (bool, error) {
 	if err := contextutil.Check(c); err != nil {
 		return false, err
 	}
+
 	if len(a1) != len(a2) {
 		return false, nil
 	}
 
 	for i, o1 := range a1 {
-		ok, err := EqualObjects(c, o1, a2[i], xRefTable, pairs)
+		ok, err := oc.equalObjects(c, o1, a2[i], depth+1)
 		if err != nil {
 			return false, err
 		}
@@ -146,8 +221,8 @@ func equalArrays(c context.Context, a1, a2 types.Array, xRefTable *XRefTable, pa
 }
 
 // equalStreamDicts returns true if two stream dicts are equal and contain the same bytes.
-func equalStreamDicts(c context.Context, sd1, sd2 *types.StreamDict, xRefTable *XRefTable, pairs []int) (bool, error) {
-	ok, err := equalDicts(c, sd1.Dict, sd2.Dict, xRefTable, pairs)
+func (oc *objectComparator) equalStreamDicts(c context.Context, sd1, sd2 *types.StreamDict, depth int) (bool, error) {
+	ok, err := oc.equalDicts(c, sd1.Dict, sd2.Dict, depth)
 	if err != nil {
 		return false, err
 	}
@@ -156,7 +231,7 @@ func equalStreamDicts(c context.Context, sd1, sd2 *types.StreamDict, xRefTable *
 		return false, nil
 	}
 
-	if sd1.Raw == nil || sd2 == nil {
+	if sd1.Raw == nil || sd2.Raw == nil {
 		return false, errors.New("stream dict not loaded")
 	}
 
@@ -167,9 +242,11 @@ func equalStreamBytes(c context.Context, a, b []byte) (bool, error) {
 	if err := contextutil.Check(c); err != nil {
 		return false, err
 	}
+
 	if len(a) != len(b) {
 		return false, nil
 	}
+
 	const chunkSize = 64 * 1024
 	for start := 0; start < len(a); start += chunkSize {
 		if err := contextutil.Check(c); err != nil {
@@ -180,6 +257,7 @@ func equalStreamBytes(c context.Context, a, b []byte) (bool, error) {
 			return false, nil
 		}
 	}
+
 	return true, contextutil.Check(c)
 }
 
@@ -222,6 +300,7 @@ func fontDictPair(d1, d2 types.Dict, xRefTable *XRefTable) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("first dict Type: %w", err)
 	}
+
 	t2, _, err := xRefTable.DereferenceNameEntry(d2, "Type")
 	if err != nil {
 		return false, fmt.Errorf("second dict Type: %w", err)
@@ -234,18 +313,20 @@ func fontNameEntry(fontDicts bool, key string) bool {
 	if !fontDicts {
 		return false
 	}
+
 	return key == "BaseFont" || key == "FontName" || key == "Name"
 }
 
-func equalDicts(c context.Context, d1, d2 types.Dict, xRefTable *XRefTable, pairs []int) (bool, error) {
+func (oc *objectComparator) equalDicts(c context.Context, d1, d2 types.Dict, depth int) (bool, error) {
 	if err := contextutil.Check(c); err != nil {
 		return false, err
 	}
+
 	if d1.Len() != d2.Len() {
 		return false, nil
 	}
 
-	fontDicts, err := fontDictPair(d1, d2, xRefTable)
+	fontDicts, err := fontDictPair(d1, d2, oc.xRefTable)
 	if err != nil {
 		return false, err
 	}
@@ -263,7 +344,7 @@ func equalDicts(c context.Context, d1, d2 types.Dict, xRefTable *XRefTable, pair
 
 		// Special treatment for font dicts
 		if fontNameEntry(fontDicts, key) {
-			ok, err := equalFontNames(v1, v2, xRefTable)
+			ok, err := equalFontNames(v1, v2, oc.xRefTable)
 			if err != nil {
 				return false, fmt.Errorf("dict entry %s: %w", key, err)
 			}
@@ -275,7 +356,7 @@ func equalDicts(c context.Context, d1, d2 types.Dict, xRefTable *XRefTable, pair
 			continue
 		}
 
-		ok, err := EqualObjects(c, v1, v2, xRefTable, pairs)
+		ok, err := oc.equalObjects(c, v1, v2, depth+1)
 		if err != nil {
 			return false, fmt.Errorf("dict entry %s: %w", key, err)
 		}
