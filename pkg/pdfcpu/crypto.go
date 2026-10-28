@@ -1562,7 +1562,43 @@ func validateEncryptV(ctx *model.Context, d types.Dict) (int, error) {
 	}
 }
 
-func validateEncryptLength(ctx *model.Context, d types.Dict, v int) (int, error) {
+func v4StandardKeyLength(ctx *model.Context, d types.Dict) (int, error) {
+	// see 7.6.4, 7.6.6
+	cf := d.DictEntry("CF")
+	if cf == nil {
+		return 128, nil
+	}
+	stdCF := cf.DictEntry("StdCF")
+	if stdCF == nil {
+		return 128, nil
+	}
+	cfm, err := cryptFilterCFM(ctx, stdCF, 4)
+	if err != nil {
+		return 0, err
+	}
+	if cfm == nil || *cfm != "V2" {
+		return 128, nil
+	}
+	length, err := encryptionIntegerEntry(ctx, stdCF, "Length", "crypt filter")
+	if err != nil {
+		return 0, err
+	}
+	if length == nil {
+		// Without any stated length, V=4 uses a 128-bit file encryption key (Table 20).
+		return 128, nil
+	}
+	if _, err := checkCFLengthV2(*length, false, ctx.XRefTable.ValidationMode == model.ValidationRelaxed); err != nil {
+		return 0, err
+	}
+	// The standard handler uses bytes; relaxed earlier inputs may use legacy bit counts.
+	if *length <= 16 {
+		return *length * 8, nil
+	}
+	return *length, nil
+}
+
+func validateEncryptLength(ctx *model.Context, d types.Dict, v int, pubKey bool) (int, error) {
+	// see 7.6.2
 	switch v {
 	case 1:
 		return 40, nil
@@ -1572,6 +1608,13 @@ func validateEncryptLength(ctx *model.Context, d types.Dict, v int) (int, error)
 			return 0, err
 		}
 		if i == nil {
+			if v == 4 {
+				// Earlier standard-handler V=4 files can use the RC4 crypt-filter key length (Table 25).
+				if !pubKey {
+					return v4StandardKeyLength(ctx, d)
+				}
+				return 128, nil
+			}
 			return 40, nil
 		}
 		if *i < 40 || *i > 128 || *i%8 != 0 {
@@ -1659,7 +1702,7 @@ func encryptionVersionParameters(ctx *model.Context, d types.Dict, pubKey bool) 
 		return 0, 0, 0, err
 	}
 
-	l, err := validateEncryptLength(ctx, d, v)
+	l, err := validateEncryptLength(ctx, d, v, pubKey)
 	if err != nil {
 		return 0, 0, 0, err
 	}

@@ -117,6 +117,7 @@ func TestEncryptionDictionaryErrorsClassified(t *testing.T) {
 					&model.Context{XRefTable: &model.XRefTable{}},
 					types.Dict{"Length": types.Integer(44)},
 					2,
+					false,
 				)
 				return err
 			}(),
@@ -140,9 +141,129 @@ func TestEncryptionDictionaryErrorsClassified(t *testing.T) {
 
 func TestValidateEncryptLengthClassifiesInvalidVersion(t *testing.T) {
 	t.Parallel()
-	_, err := validateEncryptLength(&model.Context{XRefTable: &model.XRefTable{}}, nil, 7)
+	_, err := validateEncryptLength(&model.Context{XRefTable: &model.XRefTable{}}, nil, 7, false)
 	if !errors.Is(err, ErrMalformedEncryption) {
 		t.Fatalf("got %v, want ErrMalformedEncryption", err)
+	}
+}
+
+func TestValidateEncryptLengthDefaults(t *testing.T) {
+	t.Parallel()
+	ctx := &model.Context{XRefTable: &model.XRefTable{}}
+	for _, tc := range []struct {
+		version, want int
+	}{
+		{2, 40},
+		{4, 128},
+	} {
+		got, err := validateEncryptLength(ctx, nil, tc.version, false)
+		if err != nil {
+			t.Fatalf("V=%d: %v", tc.version, err)
+		}
+		if got != tc.want {
+			t.Errorf("V=%d: got %d, want %d", tc.version, got, tc.want)
+		}
+	}
+}
+
+func TestV4StandardKeyLength(t *testing.T) {
+	t.Parallel()
+	stdCF := func(cfm string, length types.Object) types.Dict {
+		f := types.Dict{"CFM": types.Name(cfm)}
+		if length != nil {
+			f["Length"] = length
+		}
+		return types.Dict{"CF": types.Dict{"StdCF": f}}
+	}
+	for _, tc := range []struct {
+		name    string
+		d       types.Dict
+		relaxed bool
+		want    int
+	}{
+		{"no crypt filters", types.Dict{}, false, 128},
+		{"AESV2", stdCF("AESV2", types.Integer(16)), false, 128},
+		{"RC4 bytes 40-bit", stdCF("V2", types.Integer(5)), false, 40},
+		{"RC4 bytes 128-bit", stdCF("V2", types.Integer(16)), false, 128},
+		{"RC4 without Length", stdCF("V2", nil), false, 128},
+		{"RC4 legacy bits relaxed", stdCF("V2", types.Integer(40)), true, 40},
+		{"RC4 legacy bits strict", stdCF("V2", types.Integer(40)), false, 0},
+		{"RC4 invalid relaxed", stdCF("V2", types.Integer(17)), true, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mode := model.ValidationStrict
+			if tc.relaxed {
+				mode = model.ValidationRelaxed
+			}
+			ctx := &model.Context{XRefTable: &model.XRefTable{ValidationMode: mode}}
+			got, err := v4StandardKeyLength(ctx, tc.d)
+			if tc.want == 0 {
+				if !errors.Is(err, ErrMalformedEncryption) {
+					t.Fatalf("got %d, %v; want ErrMalformedEncryption", got, err)
+				}
+				return
+			}
+			if err != nil || got != tc.want {
+				t.Fatalf("got %d, %v; want %d", got, err, tc.want)
+			}
+		})
+	}
+}
+
+func TestValidateEncryptLengthPublicKeyV4(t *testing.T) {
+	t.Parallel()
+	ctx := &model.Context{XRefTable: &model.XRefTable{}}
+	d := types.Dict{"CF": types.Dict{"StdCF": types.Dict{"CFM": types.Name("V2"), "Length": types.Integer(5)}}}
+	got, err := validateEncryptLength(ctx, d, 4, true)
+	if err != nil || got != 128 {
+		t.Fatalf("got %d, %v; want 128", got, err)
+	}
+}
+
+func TestV4RC440WithoutEncryptLength(t *testing.T) {
+	t.Parallel()
+	version := model.V17
+	writer, err := model.NewContext(bytes.NewReader(nil), model.NewStatelessConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer.HeaderVersion = &version
+	writer.UserPW, writer.OwnerPW = "secret", "owner"
+	id := bytes.Repeat([]byte{1}, 16)
+	writer.E = &model.Enc{L: 40, R: 4, V: 4, P: -4, Emd: true, ID: id}
+
+	d := newEncryptDict(false, false, 128, -4)
+	delete(d, "Length")
+	d.DictEntry("CF").DictEntry("StdCF")["Length"] = types.Integer(5)
+	if err := calcOAndU(writer, d); err != nil {
+		t.Fatal(err)
+	}
+
+	reader, err := model.NewContext(bytes.NewReader(nil), model.NewStatelessConfiguration())
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader.HeaderVersion = &version
+	reader.E, err = supportedEncryption(reader, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader.E.ID = id
+	if reader.E.L != 40 {
+		t.Fatalf("file key length = %d, want 40", reader.E.L)
+	}
+
+	reader.UserPW = "secret"
+	if ok, err := validateUserPassword(reader); err != nil || !ok {
+		t.Fatalf("user password rejected: ok=%t err=%v", ok, err)
+	}
+	reader.UserPW = "incorrect"
+	if ok, err := validateUserPassword(reader); err != nil || ok {
+		t.Fatalf("wrong user password accepted: ok=%t err=%v", ok, err)
+	}
+	reader.UserPW, reader.OwnerPW = "", "owner"
+	if ok, err := validateOwnerPassword(reader); err != nil || !ok {
+		t.Fatalf("owner password rejected: ok=%t err=%v", ok, err)
 	}
 }
 
