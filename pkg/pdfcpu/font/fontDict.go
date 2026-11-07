@@ -21,15 +21,14 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 	"unicode/utf16"
 
 	"golang.org/x/text/encoding/charmap"
@@ -1370,12 +1369,39 @@ func usedGIDsFromCMapIndRef(xRefTable *model.XRefTable, fontName string, cmapInd
 	return nil
 }
 
-func subFontPrefix() string {
-	s := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	var r *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+// subFontPrefix returns the 6-letter subset tag for fontName's subset
+// made of gids (ISO 32000-1 9.6.4).
+//
+// The tag is derived from the font name and the glyph set, so the same
+// input always produces the same tag (reproducible output), while
+// different subsets of a font get different tags.
+//
+// The first letter is never 'D': MuPDF forces TrueType hinting for any
+// font whose name starts with "DF" or "DLC" (its DynaLab heuristic), so a
+// random tag starting that way changed how such a subset rasterized.
+func subFontPrefix(fontName string, gids map[uint16]bool) string {
+	ids := make([]int, 0, len(gids))
+	for gid, used := range gids {
+		if used {
+			ids = append(ids, int(gid))
+		}
+	}
+	sort.Ints(ids)
+
+	h := sha256.New()
+	h.Write([]byte(fontName))
+	h.Write([]byte{0})
+	for _, gid := range ids {
+		h.Write([]byte{byte(gid >> 8), byte(gid)})
+	}
+	sum := h.Sum(nil)
+
+	const first = "ABCEFGHIJKLMNOPQRSTUVWXYZ" // no 'D', see above
+	const rest = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	bb := make([]byte, 6)
-	for i := range bb {
-		bb[i] = s[r.Intn(len(s))]
+	bb[0] = first[int(sum[0])%len(first)]
+	for i := 1; i < len(bb); i++ {
+		bb[i] = rest[int(sum[i])%len(rest)]
 	}
 	return string(bb)
 }
@@ -1476,7 +1502,7 @@ func type0FontDictData(c context.Context, xRefTable *model.XRefTable, ttf font.T
 	subFont := script == ""
 	baseFontName := fontName
 	if subFont {
-		baseFontName = subFontPrefix() + "+" + fontName
+		baseFontName = subFontPrefix(fontName, xRefTable.UsedGIDs[fontName]) + "+" + fontName
 	}
 
 	var parms *cjk
@@ -1655,7 +1681,16 @@ func FontResources(c context.Context, xRefTable *model.XRefTable, fm model.FontM
 	}
 	d := types.Dict{}
 
-	for fontName, font := range fm {
+	// Create the font objects in a stable order, so identical input
+	// produces identical object numbers.
+	fontNames := make([]string, 0, len(fm))
+	for fontName := range fm {
+		fontNames = append(fontNames, fontName)
+	}
+	sort.Strings(fontNames)
+
+	for _, fontName := range fontNames {
+		font := fm[fontName]
 		if err := c.Err(); err != nil {
 			return nil, err
 		}
