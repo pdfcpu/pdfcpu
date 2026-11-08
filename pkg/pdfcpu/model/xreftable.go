@@ -118,6 +118,7 @@ type decodedStreamBudget struct {
 	objStm  int64 // object stream bytes, counted apart from used unless MaxTotalDecodeBytes is set
 	entries int   // object stream entries declared so far
 	parsed  int64 // estimated heap of the array elements and dictionary entries parsed so far
+	streams int64 // encoded stream bytes read so far
 }
 
 // PgAnnots represents a map of page annotations by type.
@@ -2206,6 +2207,23 @@ var ErrParsedLimitExceeded = fmt.Errorf("parsed objects over MaxParsedBytes: %w"
 // ErrObjectBytesExceeded is the refusal of a MaxObjectBytes set away from its default; it also satisfies
 // errors.Is(err, ErrLimitExceeded), so a relaxed read does not skip the object.
 var ErrObjectBytesExceeded = fmt.Errorf("object over MaxObjectBytes: %w", ErrLimitExceeded)
+
+// ErrStreamTotalLimitExceeded is the MaxStreamTotalBytes refusal; it also satisfies errors.Is(err, ErrLimitExceeded).
+var ErrStreamTotalLimitExceeded = fmt.Errorf("stream bytes read over MaxStreamTotalBytes: %w", ErrLimitExceeded)
+
+// ChargeStreamBytes counts n encoded stream bytes against MaxStreamTotalBytes; it is called before they are read when
+// the length is known and after otherwise. Zero disables the limit.
+func (xRefTable *XRefTable) ChargeStreamBytes(n int64) error {
+	if xRefTable == nil || xRefTable.Conf == nil || xRefTable.Conf.Limits.MaxStreamTotalBytes <= 0 {
+		return nil
+	}
+	b := &xRefTable.decodedStreamBudget
+	if max := xRefTable.Conf.Limits.MaxStreamTotalBytes; n > max-b.streams {
+		return fmt.Errorf("%w: %d bytes read, %d more, limit %d", ErrStreamTotalLimitExceeded, b.streams, n, max)
+	}
+	b.streams += n
+	return nil
+}
 
 type parsedChargeKey struct{}
 

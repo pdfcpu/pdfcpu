@@ -534,6 +534,11 @@ type ResourceLimits struct {
 	// Zero disables the limit.
 	MaxParsedBytes int64
 
+	// MaxStreamTotalBytes limits the encoded stream bytes read over one parse, summed over every stream read:
+	// a stream named by several xref entries, or covered by several overlapping /Length values, is read and held
+	// once for each. Zero disables the limit.
+	MaxStreamTotalBytes int64
+
 	// MaxObjectStreamFirst limits object stream /First prolog bytes.
 	MaxObjectStreamFirst int64
 

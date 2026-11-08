@@ -3375,6 +3375,9 @@ func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.S
 		if err := chargeObjectRead(c, ctx, min(int64(l1), available)); err != nil {
 			return err
 		}
+		if err := ctx.XRefTable.ChargeStreamBytes(min(int64(l1), available)); err != nil {
+			return err
+		}
 	}
 
 	sd.Raw, err = readStreamContent(rd, l1, available, streamLimit(ctx))
@@ -3384,6 +3387,9 @@ func loadEncodedStreamContent(c context.Context, ctx *model.Context, sd *types.S
 
 	if l1 <= 0 {
 		if err := chargeObjectRead(c, ctx, int64(len(sd.Raw))); err != nil {
+			return err
+		}
+		if err := ctx.XRefTable.ChargeStreamBytes(int64(len(sd.Raw))); err != nil {
 			return err
 		}
 	}
