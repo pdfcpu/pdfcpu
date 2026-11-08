@@ -528,8 +528,8 @@ type ResourceLimits struct {
 	// Zero disables the limit.
 	MaxObjectStreamTotalCount int
 
-	// MaxParsedBytes limits the estimated heap of the objects parsed over one parse: array elements and dictionary
-	// entries are charged as they are parsed, before they are stored, so a single huge object is refused while
+	// MaxParsedBytes limits the estimated heap of the objects parsed over one parse: array elements, dictionary
+	// entries and the bytes of strings, hex strings and names are charged as they are parsed, before they are stored, so a single huge object is refused while
 	// it grows. The decoded-byte limits do not see this: a few bytes of "[]" parse into tens of bytes of heap.
 	// Zero disables the limit.
 	MaxParsedBytes int64

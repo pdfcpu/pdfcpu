@@ -33,6 +33,7 @@ import (
 	"strings"
 	"sync"
 	"unicode"
+	"unsafe"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
@@ -2279,15 +2280,23 @@ func repairableLastXRefSection(ctx *model.Context, err error) bool {
 	return ctx.XRefTable.ValidationMode == model.ValidationRelaxed && errors.Is(err, errMissingXRefEOF)
 }
 
-func growBufBy(buf []byte, size int, rd io.Reader) ([]byte, error) {
-	b := make([]byte, size)
+// bufString views b as a string without copying: b's bytes must not change while the string is in use.
+// Reads and appends only touch bytes beyond len(b).
+func bufString(b []byte) string {
+	return unsafe.String(unsafe.SliceData(b), len(b))
+}
 
-	if _, err := fillBuffer(rd, b); err != nil {
+func growBufBy(buf []byte, size int, rd io.Reader) ([]byte, error) {
+	n := len(buf)
+	// Grows in place: no temporary chunk to copy.
+	buf = append(buf, make([]byte, size)...)
+
+	if _, err := fillBuffer(rd, buf[n:]); err != nil {
 		return nil, err
 	}
 	//log.Read.Printf("growBufBy: Read %d bytes\n", n)
 
-	return append(buf, b...), nil
+	return buf, nil
 }
 
 func nextStreamOffset(line string, streamInd int) (int, error) {
@@ -2391,7 +2400,7 @@ func streamOffsetForBuffer(buf []byte, line string, streamInd int, rd io.Reader,
 		if err != nil {
 			return nil, 0, err
 		}
-		line = string(buf)
+		line = bufString(buf)
 	}
 }
 
@@ -2416,7 +2425,7 @@ func buffer(c context.Context, rd io.Reader, maxObjectBytes int64) (buf []byte, 
 		}
 
 		growSize = min(growSize*2, maxBufSize)
-		line := string(buf)
+		line := bufString(buf)
 
 		endInd, streamInd, err = model.DetectKeywords(c, line)
 		if err != nil {
@@ -2852,7 +2861,7 @@ func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr in
 
 	//log.Read.Printf("buflen=%d\n%s", len(buf), hex.Dump(buf))
 
-	line := string(buf)
+	line := bufString(buf)
 
 	var l string
 

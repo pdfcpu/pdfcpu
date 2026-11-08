@@ -635,7 +635,7 @@ func processDictKeys(c context.Context, line *string, level, maxDepth, validatio
 		// Specifying the null object as the value of a dictionary entry (7.3.7, "Dictionary Objects")
 		// shall be equivalent to omitting the entry entirely.
 		// Retain null entries until duplicate keys have been checked.
-		if err := chargeParsed(c, parsedDictEntryBytes); err != nil {
+		if err := chargeParsed(c, parsedDictEntryBytes+int64(len(*keyName))); err != nil {
 			return nil, err
 		}
 		if err := insertKey(d, string(*keyName), val, validationMode); err != nil {
@@ -1021,6 +1021,19 @@ func parseObjectValue(c context.Context, l *string, level, depthLimit, validatio
 	}
 }
 
+// parsedScalarBytes is the heap held by a string, hex string or name.
+func parsedScalarBytes(o types.Object) int64 {
+	switch v := o.(type) {
+	case types.StringLiteral:
+		return int64(len(v))
+	case types.HexLiteral:
+		return int64(len(v))
+	case types.Name:
+		return int64(len(v))
+	}
+	return 0
+}
+
 // parseObject applies validationMode independently of the missing-value and junk recovery enabled by repair.
 func parseObject(c context.Context, line *string, level, depthLimit, validationMode int, repair bool) (types.Object, error) {
 	if noBuf(line) {
@@ -1049,6 +1062,9 @@ func parseObject(c context.Context, line *string, level, depthLimit, validationM
 
 	value, err := parseObjectValue(c, &l, level, depthLimit, validationMode, repair)
 	if err != nil {
+		return nil, err
+	}
+	if err := chargeParsed(c, parsedScalarBytes(value)); err != nil {
 		return nil, err
 	}
 
