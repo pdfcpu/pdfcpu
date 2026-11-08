@@ -83,19 +83,16 @@ func TestGHSA_pr6x_vqwr_4hj2_CumulativeDecodeBudgetSemantics(t *testing.T) {
 	}
 }
 
-func TestGHSA_pr6x_vqwr_4hj2_CumulativeDecodeBudgetCountsLengthOnce(t *testing.T) {
+func TestGHSA_pr6x_vqwr_4hj2_CumulativeDecodeBudgetCountsCapacityOnce(t *testing.T) {
 	conf := NewStatelessConfiguration()
 	x := newXRefTable(conf)
 	sd := decodeLimitTestStream(t, true, false)
 	if err := x.DecodeStream(&sd); err != nil {
 		t.Fatal(err)
 	}
-	want := int64(len(sd.Content))
-	if cap(sd.Content) != len(sd.Content) {
-		t.Fatalf("decoded capacity %d not compacted to length %d", cap(sd.Content), len(sd.Content))
-	}
+	want := int64(cap(sd.Content))
 	if got := x.decodedStreamBudget.used; got != want {
-		t.Fatalf("charged %d bytes, want length %d", got, want)
+		t.Fatalf("charged %d bytes, want capacity %d", got, want)
 	}
 	if err := x.DecodeStream(&sd); err != nil {
 		t.Fatal(err)
@@ -149,10 +146,13 @@ func TestGHSA_pr6x_vqwr_4hj2_FailedChargeDropsContent(t *testing.T) {
 	if err := newXRefTable(conf).DecodeStream(&probe); err != nil {
 		t.Fatal(err)
 	}
+	if cap(probe.Content) <= len(probe.Content) {
+		t.Fatalf("decoded capacity %d equals length %d; the charge failure path needs spare capacity", cap(probe.Content), len(probe.Content))
+	}
 
-	// The remaining budget is one byte short of the decoded length.
+	// The remaining budget admits the decoded length but not the buffer capacity.
 	x := newXRefTable(conf)
-	used := decodedStreamBufferLimit(conf) - int64(len(probe.Content)) + 1
+	used := decodedStreamBufferLimit(conf) - int64(len(probe.Content))
 	x.decodedStreamBudget.used = used
 	sd := decodeLimitTestStream(t, true, false)
 	err := x.DecodeStream(&sd)

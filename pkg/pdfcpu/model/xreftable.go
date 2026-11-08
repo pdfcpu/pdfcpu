@@ -2193,16 +2193,20 @@ func decodedContentAliasesRaw(sd *types.StreamDict) bool {
 	return len(sd.Content) > 0 && len(sd.Raw) > 0 && &sd.Content[0] == &sd.Raw[0]
 }
 
-// compactContent drops the spare capacity of the decoded buffer so the retained size equals the charged size.
+// compactContent drops the spare capacity of a decoded object stream buffer, as pdfcpu's object stream budget did.
 func compactContent(sd *types.StreamDict) {
 	if len(sd.Content) < cap(sd.Content) {
 		sd.Content = append(make([]byte, 0, len(sd.Content)), sd.Content...)
 	}
 }
 
-func decodeBufferBudgetError(limit int64) error {
-	return fmt.Errorf("stream decoding exceeded %d-byte cumulative budget: %w: %w",
-		limit, filter.ErrDecodeLimitExceeded, ErrLimitExceeded)
+func decodeBufferBudgetError(limit int64, objStm bool) error {
+	what := "stream"
+	if objStm {
+		what = "object stream"
+	}
+	return fmt.Errorf("%s decoding exceeded %d-byte cumulative budget: %w: %w",
+		what, limit, filter.ErrDecodeLimitExceeded, ErrLimitExceeded)
 }
 
 // DecodeStream decodes sd using the configured per-stream and cumulative decoded-byte limits.
@@ -2257,20 +2261,22 @@ func (xRefTable *XRefTable) decodeStream(sd *types.StreamDict, objStm bool) erro
 
 	if err := sd.DecodeWithLimit(decodeLimit); err != nil {
 		if aggregateLimited && errors.Is(err, filter.ErrDecodeLimitExceeded) {
-			return decodeBufferBudgetError(bufferLimit)
+			return decodeBufferBudgetError(bufferLimit, objStm)
 		}
 		return err
 	}
-	if decodedContentAliasesRaw(sd) || len(sd.Content) == 0 {
+	if decodedContentAliasesRaw(sd) || cap(sd.Content) == 0 {
 		return nil
 	}
+	if objStm {
+		compactContent(sd)
+	}
 
-	n := int64(len(sd.Content))
+	n := int64(cap(sd.Content))
 	if n > remaining {
 		sd.Content = nil
-		return decodeBufferBudgetError(bufferLimit)
+		return decodeBufferBudgetError(bufferLimit, objStm)
 	}
-	compactContent(sd)
 	*used += n
 	return nil
 }

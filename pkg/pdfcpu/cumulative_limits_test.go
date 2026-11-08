@@ -98,14 +98,15 @@ func TestTotalDecodeBytesOneBudgetPerParse(t *testing.T) {
 		return sd
 	}
 	conf := model.NewDefaultConfiguration()
-	conf.Limits.MaxTotalDecodeBytes = 25
+	conf.Limits.MaxTotalDecodeBytes = 10
 	x := &model.XRefTable{Conf: conf}
 
 	if err := newObjectStreamDecodeBudget(x).decode(sd(), conf.DecodeLimit()); err != nil {
 		t.Fatalf("object stream: %v", err)
 	}
-	if err := x.DecodeStream(sd()); err != nil {
-		t.Fatalf("content stream: %v", err)
+	// The object stream spent the whole budget (compacted to its 10 bytes), so other streams are refused too.
+	if err := x.DecodeStream(sd()); !errors.Is(err, model.ErrLimitExceeded) {
+		t.Fatalf("content stream: got %v, want ErrLimitExceeded", err)
 	}
 	if _, err := streamBytes(x, sd(), "image"); !errors.Is(err, model.ErrLimitExceeded) {
 		t.Fatalf("image: got %v, want ErrLimitExceeded", err)
