@@ -114,7 +114,7 @@ func TestTotalDecodeBytesOneBudgetPerParse(t *testing.T) {
 }
 
 // bigArrayPDF is a catalog whose /X is one array of n copies of elem, written in place
-// or packed in a Flate object stream. "[]" parses into about 40 bytes per 2 bytes of input.
+// or packed in a Flate object stream. "[]" parses into about 55 bytes live per 2 bytes of input.
 func bigArrayPDF(elem string, n int, packed bool) []byte {
 	body := "[" + strings.Repeat(elem, n) + "]"
 	var out bytes.Buffer

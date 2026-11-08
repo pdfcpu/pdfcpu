@@ -2190,11 +2190,12 @@ func (xRefTable *XRefTable) ChargeObjectStreamEntries(n int) error {
 	return nil
 }
 
-// Estimated live heap per parsed array element (interface plus a boxed slice header) and per dictionary entry
-// (map slot, key string, interface) and per dictionary (map header and its first group of slots). Measured: "[]"
-// elements at about 40 bytes per 2 input bytes, "<</a 1>>" elements at about 360 bytes per 8.
+// Estimated live heap per parsed array element (interface plus a boxed slice header, plus slice growth on append)
+// and per dictionary entry (map slot, key string, interface) and per dictionary (map header and its first group of
+// slots). Measured: "[]" elements at about 55 bytes each, so 64 leaves headroom; "<</a 1>>" elements at about 360
+// bytes per 8 input bytes.
 const (
-	parsedArrayElemBytes = 40
+	parsedArrayElemBytes = 64
 	parsedDictEntryBytes = 96
 	parsedDictBytes      = 256
 )
