@@ -112,7 +112,7 @@ var (
 	errMissingXRefStreamDict        = errors.New("missing xref stream dictionary")
 	errMissingXRefStreamLength      = errors.New("missing xref stream Length")
 	errNilDereferencedObject        = errors.New("nil dereferenced object")
-	errObjectBufferLimit            = model.ErrObjectBytesExceeded
+	errObjectBufferLimit            = errors.New("object buffer limit exceeded")
 	errObjectReadBudget             = errors.New("object read budget exceeded")
 	errObjectStreamContainsStream   = errors.New("object stream contains stream object")
 	errObjectStreamObjectCountLimit = errors.New("object stream object count limit exceeded")
@@ -2378,6 +2378,10 @@ func newRepairScanner(ctx *model.Context, rd io.Reader) *bufio.Scanner {
 func growObjectBuffer(buf []byte, growSize int, rd io.Reader, maxObjectBytes int64) ([]byte, error) {
 	remaining := maxObjectBytes - int64(len(buf))
 	if remaining <= 0 {
+		if maxObjectBytes != model.DefaultResourceLimits().MaxObjectBytes {
+			// A caller-set limit is a limit error; the built-in default keeps skipping the object as before.
+			return nil, fmt.Errorf("maximum length %d: %w: %w", maxObjectBytes, errObjectBufferLimit, model.ErrObjectBytesExceeded)
+		}
 		return nil, fmt.Errorf("maximum length %d: %w", maxObjectBytes, errObjectBufferLimit)
 	}
 	if int64(growSize) > remaining {

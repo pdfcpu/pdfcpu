@@ -101,3 +101,12 @@ func TestMaxObjectBytesRefusal(t *testing.T) {
 		t.Fatalf("got %v, want ErrObjectBytesExceeded", err)
 	}
 }
+
+// TestDefaultObjectBytesStaysSkippable: the built-in 64 MiB default is not a limit error, as before.
+func TestDefaultObjectBytesStaysSkippable(t *testing.T) {
+	max := model.DefaultResourceLimits().MaxObjectBytes
+	_, err := growObjectBuffer(make([]byte, max), 1, nil, max)
+	if !errors.Is(err, errObjectBufferLimit) || errors.Is(err, model.ErrLimitExceeded) {
+		t.Fatalf("got %v, want the plain object buffer error", err)
+	}
+}

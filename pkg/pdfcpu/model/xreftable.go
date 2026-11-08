@@ -2203,8 +2203,8 @@ const (
 // ErrParsedLimitExceeded is the MaxParsedBytes refusal; it also satisfies errors.Is(err, ErrLimitExceeded).
 var ErrParsedLimitExceeded = fmt.Errorf("parsed objects over MaxParsedBytes: %w", ErrLimitExceeded)
 
-// ErrObjectBytesExceeded is the MaxObjectBytes refusal; it also satisfies errors.Is(err, ErrLimitExceeded), so
-// a relaxed read does not skip the object.
+// ErrObjectBytesExceeded is the refusal of a MaxObjectBytes set away from its default; it also satisfies
+// errors.Is(err, ErrLimitExceeded), so a relaxed read does not skip the object.
 var ErrObjectBytesExceeded = fmt.Errorf("object over MaxObjectBytes: %w", ErrLimitExceeded)
 
 type parsedChargeKey struct{}
