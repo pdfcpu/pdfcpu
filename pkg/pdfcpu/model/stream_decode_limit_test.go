@@ -114,3 +114,20 @@ func TestDeferredModelDecodesUseConfiguredLimit(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeStreamTotalDecodeBytesLimit(t *testing.T) {
+	sd := func() *types.StreamDict {
+		return &types.StreamDict{
+			Raw:            []byte("31323334353637383930>"),
+			FilterPipeline: []types.PDFFilter{{Name: filter.ASCIIHex}},
+		}
+	}
+	x := &XRefTable{Conf: &Configuration{Limits: ResourceLimits{MaxTotalDecodeBytes: 15}}}
+	a, b := sd(), sd()
+	if err := x.DecodeStream(a); err != nil {
+		t.Fatalf("first decode: %v", err)
+	}
+	if err := x.DecodeStream(b); !errors.Is(err, ErrLimitExceeded) {
+		t.Fatalf("second decode: got %v, want ErrLimitExceeded", err)
+	}
+}

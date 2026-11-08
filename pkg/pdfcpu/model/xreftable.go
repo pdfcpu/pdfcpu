@@ -35,7 +35,6 @@ import (
 	"time"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
-	"github.com/pdfcpu/pdfcpu/internal/streamlimit"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/font"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
@@ -115,7 +114,8 @@ type Annot struct {
 }
 
 type decodedStreamBudget struct {
-	used int64
+	used    int64
+	entries int // object stream entries declared so far
 }
 
 // PgAnnots represents a map of page annotations by type.
@@ -2173,7 +2173,19 @@ func (xRefTable *XRefTable) checkInheritedPageAttrs(pageDict types.Dict, pAttrs 
 }
 
 func decodedStreamBufferLimit(conf *Configuration) int64 {
-	return streamlimit.DecodeAllowance(conf.DecodeLimit())
+	return conf.TotalDecodeLimit()
+}
+
+// ChargeObjectStreamEntries adds the n entries of another object stream to the parse total
+// and fails with ErrLimitExceeded once MaxObjectStreamTotalCount is passed.
+func (xRefTable *XRefTable) ChargeObjectStreamEntries(n int) error {
+	max := xRefTable.Conf.Limits.MaxObjectStreamTotalCount
+	xRefTable.decodedStreamBudget.entries += n
+	if max > 0 && xRefTable.decodedStreamBudget.entries > max {
+		return fmt.Errorf("%w: object stream entries %d exceed MaxObjectStreamTotalCount %d",
+			ErrLimitExceeded, xRefTable.decodedStreamBudget.entries, max)
+	}
+	return nil
 }
 
 func decodedContentAliasesRaw(sd *types.StreamDict) bool {
@@ -2181,7 +2193,8 @@ func decodedContentAliasesRaw(sd *types.StreamDict) bool {
 }
 
 func decodeBufferBudgetError(limit int64) error {
-	return fmt.Errorf("stream decoding exceeded %d-byte cumulative budget: %w", limit, filter.ErrDecodeLimitExceeded)
+	return fmt.Errorf("stream decoding exceeded %d-byte cumulative budget: %w: %w",
+		limit, filter.ErrDecodeLimitExceeded, ErrLimitExceeded)
 }
 
 // DecodeStream decodes sd using the configured per-stream and cumulative decoded-byte limits.

@@ -35,7 +35,6 @@ import (
 	"unicode"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
-	"github.com/pdfcpu/pdfcpu/internal/streamlimit"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
 	"github.com/pdfcpu/pdfcpu/pkg/log"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
@@ -635,7 +634,7 @@ type objectStreamDecodeBudget struct {
 }
 
 func newObjectStreamDecodeBudget(conf *model.Configuration) *objectStreamDecodeBudget {
-	return &objectStreamDecodeBudget{limit: streamlimit.DecodeAllowance(conf.DecodeLimit())}
+	return &objectStreamDecodeBudget{limit: conf.TotalDecodeLimit()}
 }
 
 func streamContentAliasesRaw(sd *types.StreamDict) bool {
@@ -647,8 +646,8 @@ func objectStreamDecodeLimitError(limit int64, err error) error {
 }
 
 func objectStreamCumulativeBudgetError(limit int64) error {
-	return fmt.Errorf("object stream decoding exceeded %d-byte cumulative budget: %w",
-		limit, filter.ErrDecodeLimitExceeded)
+	return fmt.Errorf("object stream decoding exceeded %d-byte cumulative budget: %w: %w",
+		limit, filter.ErrDecodeLimitExceeded, model.ErrLimitExceeded)
 }
 
 func decodeObjectStreamWithLimit(sd *types.StreamDict, limit int64) error {
@@ -3678,6 +3677,9 @@ func decodeObjectStreamObjects(c context.Context, ctx *model.Context, sd *types.
 		return nil, fmt.Errorf("object stream obj#%d: parse dictionary: %w", objNr, err)
 	}
 	osd.MaxDecodeBytes = ctx.Configuration.DecodeLimit()
+	if err := ctx.XRefTable.ChargeObjectStreamEntries(osd.ObjCount); err != nil {
+		return nil, fmt.Errorf("object stream obj#%d: %w", objNr, err)
+	}
 
 	if log.ReadEnabled() {
 		log.Read.Printf("decodeObjectStreamObjects: decoding object stream %d:\n", objNr)
