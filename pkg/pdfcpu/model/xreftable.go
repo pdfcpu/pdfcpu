@@ -117,6 +117,7 @@ type decodedStreamBudget struct {
 	used    int64
 	objStm  int64 // object stream bytes, counted apart from used unless MaxTotalDecodeBytes is set
 	entries int   // object stream entries declared so far
+	parsed  int64 // estimated heap of the array elements and dictionary entries parsed so far
 }
 
 // PgAnnots represents a map of page annotations by type.
@@ -2185,6 +2186,37 @@ func (xRefTable *XRefTable) ChargeObjectStreamEntries(n int) error {
 	if max > 0 && xRefTable.decodedStreamBudget.entries > max {
 		return fmt.Errorf("%w: object stream entries %d exceed MaxObjectStreamTotalCount %d",
 			ErrLimitExceeded, xRefTable.decodedStreamBudget.entries, max)
+	}
+	return nil
+}
+
+// Estimated live heap per parsed array element (interface plus a boxed slice header) and per dictionary entry
+// (map slot, key string, interface); measured on arrays of "[]", the worst case at about 40 bytes per 2 input bytes.
+const (
+	parsedArrayElemBytes = 40
+	parsedDictEntryBytes = 96
+)
+
+type parsedChargeKey struct{}
+
+// WithParsedCharge returns a context under which the object parser charges what it parses to xRefTable's
+// MaxParsedBytes.
+func WithParsedCharge(c context.Context, xRefTable *XRefTable) context.Context {
+	if xRefTable == nil || xRefTable.Conf == nil || xRefTable.Conf.Limits.MaxParsedBytes <= 0 {
+		return c
+	}
+	return context.WithValue(c, parsedChargeKey{}, xRefTable)
+}
+
+func chargeParsed(c context.Context, n int64) error {
+	x, _ := c.Value(parsedChargeKey{}).(*XRefTable)
+	if x == nil {
+		return nil
+	}
+	x.decodedStreamBudget.parsed += n
+	if max := x.Conf.Limits.MaxParsedBytes; x.decodedStreamBudget.parsed > max {
+		return fmt.Errorf("%w: parsed objects hold an estimated %d bytes, over MaxParsedBytes %d",
+			ErrLimitExceeded, x.decodedStreamBudget.parsed, max)
 	}
 	return nil
 }

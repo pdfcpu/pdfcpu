@@ -723,6 +723,9 @@ func parseObjectStreamWithBudget(c context.Context, osd *types.ObjectStreamDict,
 	// e.g., 10 0 11 25 = 2 Objects: #10 @ offset 0, #11 @ offset 25
 
 	decode := func(c context.Context, s string) (types.Object, error) {
+		if budget != nil {
+			c = model.WithParsedCharge(c, budget.xrt)
+		}
 		return compressedObject(c, s, validationMode)
 	}
 	decodeStream := objectStreamDecodeFunc(budget, osd.MaxDecodeBytes)
@@ -2741,6 +2744,7 @@ func dict(c context.Context, ctx *model.Context, d1 types.Dict, objNr, genNr, en
 }
 
 func parseObjectWithValidationPolicy(c context.Context, ctx *model.Context, line *string, objNr int) (types.Object, error) {
+	c = model.WithParsedCharge(c, ctx.XRefTable)
 	result, err := model.ParseObjectWithPolicy(c, line, 0, ctx.XRefTable.ValidationMode, recursionLimit(ctx))
 	if result.StrictFailure == nil {
 		return result.Object, err
@@ -3900,6 +3904,7 @@ func unrecoverableObjectReadError(err error) bool {
 	return errors.Is(err, model.ErrCorruptObjectOffset) ||
 		errors.Is(err, errUnregisteredObject) ||
 		errors.Is(err, errObjectReadBudget) ||
+		errors.Is(err, model.ErrLimitExceeded) ||
 		errors.Is(err, errCircularObjectReference)
 }
 

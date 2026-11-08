@@ -112,3 +112,86 @@ func TestTotalDecodeBytesOneBudgetPerParse(t *testing.T) {
 		t.Fatalf("image: got %v, want ErrLimitExceeded", err)
 	}
 }
+
+// bigArrayPDF is a catalog whose /X is one array of n empty arrays, written in place
+// or packed in a Flate object stream. It parses into about 40 bytes per 2 bytes of input.
+func bigArrayPDF(n int, packed bool) []byte {
+	body := "[" + strings.Repeat("[]", n) + "]"
+	var out bytes.Buffer
+	offs := map[int]int{}
+	obj := func(nr int, b string) {
+		offs[nr] = out.Len()
+		fmt.Fprintf(&out, "%d 0 obj\n%s\nendobj\n", nr, b)
+	}
+	out.WriteString("%PDF-1.5\n")
+	obj(1, "<< /Type /Catalog /Pages 2 0 R /X 5 0 R >>")
+	obj(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>")
+	obj(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 10 10] >>")
+	if !packed {
+		obj(5, body)
+		xo := out.Len()
+		out.WriteString("xref\n0 6\n0000000000 65535 f \n")
+		for i := 1; i < 6; i++ {
+			if o, ok := offs[i]; ok {
+				fmt.Fprintf(&out, "%010d 00000 n \n", o)
+			} else {
+				out.WriteString("0000000000 00000 f \n")
+			}
+		}
+		fmt.Fprintf(&out, "trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", xo)
+		return out.Bytes()
+	}
+	var z bytes.Buffer
+	w := zlib.NewWriter(&z)
+	w.Write([]byte("5 0 " + body))
+	w.Close()
+	obj(4, fmt.Sprintf("<< /Type /ObjStm /N 1 /First 4 /Filter /FlateDecode /Length %d >>\nstream\n%s\nendstream", z.Len(), z.Bytes()))
+	var rows bytes.Buffer
+	for i := 0; i < 7; i++ {
+		t, f2 := byte(1), uint32(offs[i])
+		switch i {
+		case 0:
+			t, f2 = 0, 0
+		case 5:
+			t, f2 = 2, 4
+		case 6:
+			f2 = uint32(out.Len())
+		}
+		rows.WriteByte(t)
+		binary.Write(&rows, binary.BigEndian, f2)
+		rows.Write([]byte{0, 0})
+	}
+	xo := out.Len()
+	fmt.Fprintf(&out, "6 0 obj\n<< /Type /XRef /Size 7 /W [1 4 2] /Root 1 0 R /Length %d >>\nstream\n", rows.Len())
+	out.Write(rows.Bytes())
+	fmt.Fprintf(&out, "\nendstream\nendobj\nstartxref\n%d\n%%%%EOF\n", xo)
+	return out.Bytes()
+}
+
+func TestMaxParsedBytesLimit(t *testing.T) {
+	for _, packed := range []bool{false, true} {
+		pdf := bigArrayPDF(100_000, packed)
+		read := func(max int64) error {
+			conf := model.NewDefaultConfiguration()
+			conf.Limits.MaxParsedBytes = max
+			ctx, err := Read(context.Background(), bytes.NewReader(pdf), conf)
+			if err != nil {
+				return err
+			}
+			// Packed objects are parsed when first read.
+			if l, ok := ctx.Table[5].Object.(types.LazyObjectStreamObject); ok {
+				_, err = l.DecodedObject(context.Background())
+			}
+			return err
+		}
+		if err := read(0); err != nil {
+			t.Fatalf("packed=%v limit unset: %v", packed, err)
+		}
+		if err := read(1 << 20); !errors.Is(err, model.ErrLimitExceeded) {
+			t.Fatalf("packed=%v: got %v, want ErrLimitExceeded", packed, err)
+		}
+		if err := read(100_000 * 40 * 2); err != nil {
+			t.Fatalf("packed=%v limit above the estimate: %v", packed, err)
+		}
+	}
+}

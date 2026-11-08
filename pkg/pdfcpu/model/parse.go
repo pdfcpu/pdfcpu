@@ -385,6 +385,9 @@ func parseArray(c context.Context, line *string, level, maxDepth, validationMode
 		if log.ParseEnabled() {
 			log.Parse.Printf("ParseArray: new array obj=%v\n", obj)
 		}
+		if err := chargeParsed(c, parsedArrayElemBytes); err != nil {
+			return nil, err
+		}
 		a = append(a, obj)
 
 		// we are positioned on the char behind the last parsed array entry.
@@ -629,6 +632,9 @@ func processDictKeys(c context.Context, line *string, level, maxDepth, validatio
 		// Specifying the null object as the value of a dictionary entry (7.3.7, "Dictionary Objects")
 		// shall be equivalent to omitting the entry entirely.
 		// Retain null entries until duplicate keys have been checked.
+		if err := chargeParsed(c, parsedDictEntryBytes); err != nil {
+			return nil, err
+		}
 		if err := insertKey(d, string(*keyName), val, validationMode); err != nil {
 			return nil, err
 		}
