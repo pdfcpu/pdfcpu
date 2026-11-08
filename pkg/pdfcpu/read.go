@@ -112,7 +112,7 @@ var (
 	errMissingXRefStreamDict        = errors.New("missing xref stream dictionary")
 	errMissingXRefStreamLength      = errors.New("missing xref stream Length")
 	errNilDereferencedObject        = errors.New("nil dereferenced object")
-	errObjectBufferLimit            = errors.New("object buffer limit exceeded")
+	errObjectBufferLimit            = model.ErrObjectBytesExceeded
 	errObjectReadBudget             = errors.New("object read budget exceeded")
 	errObjectStreamContainsStream   = errors.New("object stream contains stream object")
 	errObjectStreamObjectCountLimit = errors.New("object stream object count limit exceeded")

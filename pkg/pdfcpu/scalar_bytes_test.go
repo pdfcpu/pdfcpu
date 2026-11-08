@@ -91,3 +91,13 @@ func TestObjectBufferAllocs(t *testing.T) {
 		t.Fatalf("allocated %d MiB for a %d MiB object", got>>20, n>>20)
 	}
 }
+
+// TestMaxObjectBytesRefusal: an object over MaxObjectBytes is a limit error, not a silently skipped object.
+func TestMaxObjectBytesRefusal(t *testing.T) {
+	pdf := scalarPDF("(" + strings.Repeat("A", 1<<20) + ")")
+	conf := model.NewDefaultConfiguration()
+	conf.Limits.MaxObjectBytes = 256 << 10
+	if _, err := Read(context.Background(), bytes.NewReader(pdf), conf); !errors.Is(err, model.ErrObjectBytesExceeded) || !errors.Is(err, model.ErrLimitExceeded) {
+		t.Fatalf("got %v, want ErrObjectBytesExceeded", err)
+	}
+}
