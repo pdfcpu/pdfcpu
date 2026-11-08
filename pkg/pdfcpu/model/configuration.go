@@ -502,13 +502,14 @@ type ResourceLimits struct {
 	MaxStreamBytes int64
 
 	// MaxDecodeBytes limits each decoded stream and combined page content. XRefTable.DecodeStream calls and object
-	// streams each share separate cumulative limits of at least 1 GiB or twice this value. Zero selects the default;
+	// streams each have a separate cumulative limit of at least 1 GiB or twice this value; images have none,
+	// unless MaxTotalDecodeBytes is set. Zero selects the default;
 	// negative disables these decode limits.
 	MaxDecodeBytes int64
 
-	// MaxTotalDecodeBytes limits the decoded bytes retained over one parse. It replaces the default cumulative
-	// allowance of XRefTable.DecodeStream calls and of object streams, each of which is counted separately.
-	// Zero keeps the default allowance derived from MaxDecodeBytes.
+	// MaxTotalDecodeBytes limits the decoded bytes charged over one parse, one budget shared by XRefTable.DecodeStream
+	// calls, object streams and images. Decoding the same stream again charges it again. Zero keeps the separate
+	// default limits described at MaxDecodeBytes.
 	MaxTotalDecodeBytes int64
 
 	// MaxImagePixels limits decoded/rendered image dimensions.

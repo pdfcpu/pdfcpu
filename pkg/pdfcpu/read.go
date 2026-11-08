@@ -644,7 +644,7 @@ func (b *objectStreamDecodeBudget) decode(sd *types.StreamDict, decodeLimit int6
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	err := b.xrt.DecodeStream(sd)
+	err := b.xrt.DecodeObjectStream(sd)
 	if err != nil {
 		sd.Content = nil
 	}

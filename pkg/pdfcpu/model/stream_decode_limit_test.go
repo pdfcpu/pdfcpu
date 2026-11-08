@@ -131,3 +131,24 @@ func TestDecodeStreamTotalDecodeBytesLimit(t *testing.T) {
 		t.Fatalf("second decode: got %v, want ErrLimitExceeded", err)
 	}
 }
+
+// With MaxTotalDecodeBytes unset, a spent DecodeStream allowance leaves images and object streams unaffected.
+func TestZeroTotalDecodeBytesKeepsSeparateLimits(t *testing.T) {
+	sd := func() *types.StreamDict {
+		return &types.StreamDict{
+			Raw:            []byte("31323334353637383930>"),
+			FilterPipeline: []types.PDFFilter{{Name: filter.ASCIIHex}},
+		}
+	}
+	x := &XRefTable{Conf: NewDefaultConfiguration()}
+	x.decodedStreamBudget.used = x.Conf.TotalDecodeLimit()
+	if err := x.DecodeStream(sd()); !errors.Is(err, ErrLimitExceeded) {
+		t.Fatalf("DecodeStream: got %v, want ErrLimitExceeded", err)
+	}
+	if err := x.DecodeImageStream(sd()); err != nil {
+		t.Fatalf("DecodeImageStream: %v", err)
+	}
+	if err := x.DecodeObjectStream(sd()); err != nil {
+		t.Fatalf("DecodeObjectStream: %v", err)
+	}
+}

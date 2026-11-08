@@ -115,7 +115,8 @@ type Annot struct {
 
 type decodedStreamBudget struct {
 	used    int64
-	entries int // object stream entries declared so far
+	objStm  int64 // object stream bytes, counted apart from used unless MaxTotalDecodeBytes is set
+	entries int   // object stream entries declared so far
 }
 
 // PgAnnots represents a map of page annotations by type.
@@ -2207,6 +2208,28 @@ func decodeBufferBudgetError(limit int64) error {
 // DecodeStream decodes sd using the configured per-stream and cumulative decoded-byte limits.
 // A nil table or missing configuration selects the default per-stream limit without cumulative accounting.
 func (xRefTable *XRefTable) DecodeStream(sd *types.StreamDict) error {
+	return xRefTable.decodeStream(sd, false)
+}
+
+// DecodeObjectStream is DecodeStream for object streams. Without MaxTotalDecodeBytes they keep their own
+// default allowance, apart from the one of DecodeStream.
+func (xRefTable *XRefTable) DecodeObjectStream(sd *types.StreamDict) error {
+	return xRefTable.decodeStream(sd, true)
+}
+
+// DecodeImageStream is DecodeStream for images. Without MaxTotalDecodeBytes images have no cumulative cap.
+func (xRefTable *XRefTable) DecodeImageStream(sd *types.StreamDict) error {
+	if xRefTable == nil || xRefTable.Conf == nil || xRefTable.Conf.Limits.MaxTotalDecodeBytes <= 0 {
+		var conf *Configuration
+		if xRefTable != nil {
+			conf = xRefTable.Conf
+		}
+		return sd.DecodeWithLimit(conf.DecodeLimit())
+	}
+	return xRefTable.decodeStream(sd, false)
+}
+
+func (xRefTable *XRefTable) decodeStream(sd *types.StreamDict, objStm bool) error {
 	var conf *Configuration
 	if xRefTable != nil {
 		conf = xRefTable.Conf
@@ -2221,7 +2244,11 @@ func (xRefTable *XRefTable) DecodeStream(sd *types.StreamDict) error {
 		return sd.DecodeWithLimit(decodeLimit)
 	}
 
-	remaining := bufferLimit - xRefTable.decodedStreamBudget.used
+	used := &xRefTable.decodedStreamBudget.used
+	if objStm && conf.Limits.MaxTotalDecodeBytes <= 0 {
+		used = &xRefTable.decodedStreamBudget.objStm
+	}
+	remaining := bufferLimit - *used
 	aggregateLimited := decodeLimit < 0 || remaining < decodeLimit
 	if aggregateLimited {
 		// DecodeWithLimit treats zero as the default limit, so use one byte when the budget is exhausted.
@@ -2244,7 +2271,7 @@ func (xRefTable *XRefTable) DecodeStream(sd *types.StreamDict) error {
 		return decodeBufferBudgetError(bufferLimit)
 	}
 	compactContent(sd)
-	xRefTable.decodedStreamBudget.used += n
+	*used += n
 	return nil
 }
 

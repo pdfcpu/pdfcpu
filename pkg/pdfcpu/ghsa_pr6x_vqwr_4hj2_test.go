@@ -374,6 +374,7 @@ func TestGHSA_pr6x_vqwr_4hj2_ObjectStreamCountIgnoresStaleRevisions(t *testing.T
 
 func TestGHSA_pr6x_vqwr_4hj2_LazyObjectStreamsUseCumulativeBudget(t *testing.T) {
 	conf := model.NewDefaultConfiguration()
+	conf.Limits.MaxTotalDecodeBytes = 2<<20 + 1
 	ctx, err := model.NewContext(bytes.NewReader(nil), conf)
 	if err != nil {
 		t.Fatal(err)
@@ -413,7 +414,6 @@ func TestGHSA_pr6x_vqwr_4hj2_LazyObjectStreamsUseCumulativeBudget(t *testing.T) 
 	}
 
 	// The accepted stream decoded to exactly 2 MiB.
-	conf.Limits.MaxTotalDecodeBytes = 2<<20 + 1
 	rejected := lazyObject(2 << 20)
 	if _, err := rejected.DecodedObject(context.Background()); !errors.Is(err, filter.ErrDecodeLimitExceeded) ||
 		!strings.Contains(err.Error(), "stream decoding exceeded") ||
