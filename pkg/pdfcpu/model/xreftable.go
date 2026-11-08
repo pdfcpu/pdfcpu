@@ -2191,10 +2191,12 @@ func (xRefTable *XRefTable) ChargeObjectStreamEntries(n int) error {
 }
 
 // Estimated live heap per parsed array element (interface plus a boxed slice header) and per dictionary entry
-// (map slot, key string, interface); measured on arrays of "[]", the worst case at about 40 bytes per 2 input bytes.
+// (map slot, key string, interface) and per dictionary (map header and its first group of slots). Measured: "[]"
+// elements at about 40 bytes per 2 input bytes, "<</a 1>>" elements at about 360 bytes per 8.
 const (
 	parsedArrayElemBytes = 40
 	parsedDictEntryBytes = 96
+	parsedDictBytes      = 256
 )
 
 // ErrParsedLimitExceeded is the MaxParsedBytes refusal; it also satisfies errors.Is(err, ErrLimitExceeded).

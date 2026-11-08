@@ -584,6 +584,9 @@ func dictString(l string) bool {
 func processDictKeys(c context.Context, line *string, level, maxDepth, validationMode int, repair bool) (types.Dict, error) {
 	l := *line
 	var eol bool
+	if err := chargeParsed(c, parsedDictBytes); err != nil {
+		return nil, err
+	}
 	d := types.NewDict()
 
 	for dictString(l) {

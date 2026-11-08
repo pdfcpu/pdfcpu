@@ -113,10 +113,10 @@ func TestTotalDecodeBytesOneBudgetPerParse(t *testing.T) {
 	}
 }
 
-// bigArrayPDF is a catalog whose /X is one array of n empty arrays, written in place
-// or packed in a Flate object stream. It parses into about 40 bytes per 2 bytes of input.
-func bigArrayPDF(n int, packed bool) []byte {
-	body := "[" + strings.Repeat("[]", n) + "]"
+// bigArrayPDF is a catalog whose /X is one array of n copies of elem, written in place
+// or packed in a Flate object stream. "[]" parses into about 40 bytes per 2 bytes of input.
+func bigArrayPDF(elem string, n int, packed bool) []byte {
+	body := "[" + strings.Repeat(elem, n) + "]"
 	var out bytes.Buffer
 	offs := map[int]int{}
 	obj := func(nr int, b string) {
@@ -168,9 +168,20 @@ func bigArrayPDF(n int, packed bool) []byte {
 	return out.Bytes()
 }
 
+// TestMaxParsedBytesDictElements: a "<</a 1>>" element holds about 360 bytes live (measured), which the
+// limit must charge, not the 136 of one array slot and one entry.
+func TestMaxParsedBytesDictElements(t *testing.T) {
+	pdf := bigArrayPDF("<</a 1>>", 10_000, false)
+	conf := model.NewDefaultConfiguration()
+	conf.Limits.MaxParsedBytes = 10_000 * 300
+	if _, err := Read(context.Background(), bytes.NewReader(pdf), conf); !errors.Is(err, model.ErrParsedLimitExceeded) {
+		t.Fatalf("got %v, want ErrParsedLimitExceeded", err)
+	}
+}
+
 func TestMaxParsedBytesLimit(t *testing.T) {
 	for _, packed := range []bool{false, true} {
-		pdf := bigArrayPDF(100_000, packed)
+		pdf := bigArrayPDF("[]", 100_000, packed)
 		read := func(max int64) error {
 			conf := model.NewDefaultConfiguration()
 			conf.Limits.MaxParsedBytes = max
