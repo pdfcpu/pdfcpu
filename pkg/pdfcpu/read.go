@@ -624,94 +624,34 @@ func parseObjectStream(c context.Context, osd *types.ObjectStreamDict, limits mo
 	return parseObjectStreamWithBudget(c, osd, limits, validationMode, nil)
 }
 
-// objectStreamDecodeBudget tracks decoded buffer capacity retained by lazily materialized object streams.
-// Different object streams share this budget. The mutex guards the budget and covers each stream's first decode because
-// the remaining allowance caps that decode. It does not make lazy object materialization safe for concurrent use.
+// objectStreamDecodeBudget serializes the first decode of lazily materialized object streams.
+// Their decoded bytes are charged to the XRefTable, which holds the one cumulative budget of the parse.
+// The mutex does not make lazy object materialization safe for concurrent use.
 type objectStreamDecodeBudget struct {
-	mu    sync.Mutex
-	limit int64
-	used  int64
+	mu  sync.Mutex
+	xrt *model.XRefTable
 }
 
-func newObjectStreamDecodeBudget(conf *model.Configuration) *objectStreamDecodeBudget {
-	return &objectStreamDecodeBudget{limit: conf.TotalDecodeLimit()}
-}
-
-func streamContentAliasesRaw(sd *types.StreamDict) bool {
-	return len(sd.Content) > 0 && len(sd.Raw) > 0 && &sd.Content[0] == &sd.Raw[0]
+func newObjectStreamDecodeBudget(xrt *model.XRefTable) *objectStreamDecodeBudget {
+	return &objectStreamDecodeBudget{xrt: xrt}
 }
 
 func objectStreamDecodeLimitError(limit int64, err error) error {
 	return fmt.Errorf("object stream decode exceeds %d-byte limit: %w", limit, err)
 }
 
-func objectStreamCumulativeBudgetError(limit int64) error {
-	return fmt.Errorf("object stream decoding exceeded %d-byte cumulative budget: %w: %w",
-		limit, filter.ErrDecodeLimitExceeded, model.ErrLimitExceeded)
-}
-
-func decodeObjectStreamWithLimit(sd *types.StreamDict, limit int64) error {
-	err := sd.DecodeWithLimit(limit)
-	if err != nil {
-		sd.Content = nil
-	}
-	if errors.Is(err, filter.ErrDecodeLimitExceeded) {
-		return objectStreamDecodeLimitError(limit, err)
-	}
-	return err
-}
-
-func objectStreamDecodeError(err error, aggregateLimited bool, decodeLimit, budgetLimit int64) error {
-	if !errors.Is(err, filter.ErrDecodeLimitExceeded) {
-		return err
-	}
-	if aggregateLimited {
-		return objectStreamCumulativeBudgetError(budgetLimit)
-	}
-	return objectStreamDecodeLimitError(decodeLimit, err)
-}
-
-func compactObjectStreamContent(sd *types.StreamDict) int64 {
-	if streamContentAliasesRaw(sd) || cap(sd.Content) == 0 {
-		return 0
-	}
-	if len(sd.Content) < cap(sd.Content) {
-		content := make([]byte, len(sd.Content))
-		copy(content, sd.Content)
-		sd.Content = content
-	}
-	return int64(cap(sd.Content))
-}
-
 func (b *objectStreamDecodeBudget) decode(sd *types.StreamDict, decodeLimit int64) error {
-	if b == nil || b.limit < 0 || decodeLimit < 0 {
-		return decodeObjectStreamWithLimit(sd, decodeLimit)
-	}
-
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	remaining := b.limit - b.used
-	limit := decodeLimit
-	aggregateLimited := remaining < limit
-	if aggregateLimited {
-		limit = max(remaining, 1)
-	}
-	if err := sd.DecodeWithLimit(limit); err != nil {
+	err := b.xrt.DecodeStream(sd)
+	if err != nil {
 		sd.Content = nil
-		return objectStreamDecodeError(err, aggregateLimited, decodeLimit, b.limit)
 	}
-
-	n := compactObjectStreamContent(sd)
-	if n == 0 {
-		return nil
+	if errors.Is(err, filter.ErrDecodeLimitExceeded) && !errors.Is(err, model.ErrLimitExceeded) {
+		return objectStreamDecodeLimitError(decodeLimit, err)
 	}
-	if n > remaining {
-		sd.Content = nil
-		return objectStreamCumulativeBudgetError(b.limit)
-	}
-	b.used += n
-	return nil
+	return err
 }
 
 func objectStreamDecodeFunc(budget *objectStreamDecodeBudget, decodeLimit int64) types.DecodeStreamFunc {
@@ -3829,7 +3769,7 @@ func decodeObjectStreams(c context.Context, ctx *model.Context) error {
 
 	// Only current compressed entries contribute object streams. References from superseded revisions are stale.
 	keys := activeObjectStreams(ctx)
-	budget := newObjectStreamDecodeBudget(ctx.Configuration)
+	budget := newObjectStreamDecodeBudget(ctx.XRefTable)
 
 	for _, objNr := range keys {
 

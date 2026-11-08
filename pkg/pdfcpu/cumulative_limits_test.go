@@ -82,27 +82,32 @@ func TestObjectStreamTotalCountLimit(t *testing.T) {
 	}
 }
 
-func TestTotalDecodeBytesLimitObjectStreams(t *testing.T) {
+// TestTotalDecodeBytesOneBudgetPerParse checks that object streams, other streams and images
+// are charged to the same MaxTotalDecodeBytes budget.
+func TestTotalDecodeBytesOneBudgetPerParse(t *testing.T) {
 	sd := func() *types.StreamDict {
-		return &types.StreamDict{
-			Raw:            []byte("31323334353637383930>"),
-			FilterPipeline: []types.PDFFilter{{Name: filter.ASCIIHex}},
+		sd := &types.StreamDict{
+			Dict:           types.NewDict(),
+			Content:        []byte("1234567890"),
+			FilterPipeline: []types.PDFFilter{{Name: filter.Flate}},
 		}
+		if err := sd.Encode(); err != nil {
+			t.Fatal(err)
+		}
+		sd.Content = nil
+		return sd
 	}
 	conf := model.NewDefaultConfiguration()
-	conf.Limits.MaxTotalDecodeBytes = 15
-	b := newObjectStreamDecodeBudget(conf)
-	if err := b.decode(sd(), conf.DecodeLimit()); err != nil {
-		t.Fatalf("first decode: %v", err)
+	conf.Limits.MaxTotalDecodeBytes = 25
+	x := &model.XRefTable{Conf: conf}
+
+	if err := newObjectStreamDecodeBudget(x).decode(sd(), conf.DecodeLimit()); err != nil {
+		t.Fatalf("object stream: %v", err)
 	}
-	if err := b.decode(sd(), conf.DecodeLimit()); !errors.Is(err, model.ErrLimitExceeded) {
-		t.Fatalf("second decode: got %v, want ErrLimitExceeded", err)
+	if err := x.DecodeStream(sd()); err != nil {
+		t.Fatalf("content stream: %v", err)
 	}
-	conf.Limits.MaxTotalDecodeBytes = 0
-	b = newObjectStreamDecodeBudget(conf)
-	for i := 0; i < 3; i++ {
-		if err := b.decode(sd(), conf.DecodeLimit()); err != nil {
-			t.Fatalf("limit unset, decode %d: %v", i, err)
-		}
+	if _, err := streamBytes(x, sd(), "image"); !errors.Is(err, model.ErrLimitExceeded) {
+		t.Fatalf("image: got %v, want ErrLimitExceeded", err)
 	}
 }

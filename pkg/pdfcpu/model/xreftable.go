@@ -2192,6 +2192,13 @@ func decodedContentAliasesRaw(sd *types.StreamDict) bool {
 	return len(sd.Content) > 0 && len(sd.Raw) > 0 && &sd.Content[0] == &sd.Raw[0]
 }
 
+// compactContent drops the spare capacity of the decoded buffer so the retained size equals the charged size.
+func compactContent(sd *types.StreamDict) {
+	if len(sd.Content) < cap(sd.Content) {
+		sd.Content = append(make([]byte, 0, len(sd.Content)), sd.Content...)
+	}
+}
+
 func decodeBufferBudgetError(limit int64) error {
 	return fmt.Errorf("stream decoding exceeded %d-byte cumulative budget: %w: %w",
 		limit, filter.ErrDecodeLimitExceeded, ErrLimitExceeded)
@@ -2227,15 +2234,16 @@ func (xRefTable *XRefTable) DecodeStream(sd *types.StreamDict) error {
 		}
 		return err
 	}
-	if decodedContentAliasesRaw(sd) || cap(sd.Content) == 0 {
+	if decodedContentAliasesRaw(sd) || len(sd.Content) == 0 {
 		return nil
 	}
 
-	n := int64(cap(sd.Content))
+	n := int64(len(sd.Content))
 	if n > remaining {
 		sd.Content = nil
 		return decodeBufferBudgetError(bufferLimit)
 	}
+	compactContent(sd)
 	xRefTable.decodedStreamBudget.used += n
 	return nil
 }

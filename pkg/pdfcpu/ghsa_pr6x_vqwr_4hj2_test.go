@@ -352,21 +352,6 @@ func TestGHSA_pr6x_vqwr_4hj2_ObjectStreamIndexAliasesBeyondTableSize(t *testing.
 	}
 }
 
-func TestGHSA_pr6x_vqwr_4hj2_ObjectStreamBudgetSemantics(t *testing.T) {
-	conf := model.NewDefaultConfiguration()
-	if got := newObjectStreamDecodeBudget(conf).limit; got != 1<<30 {
-		t.Fatalf("got default budget %d, want 1 GiB", got)
-	}
-	conf.Limits.MaxDecodeBytes = 2 << 30
-	if got := newObjectStreamDecodeBudget(conf).limit; got != 4<<30 {
-		t.Fatalf("got raised budget %d, want 4 GiB", got)
-	}
-	conf.Limits.MaxDecodeBytes = -1
-	if got := newObjectStreamDecodeBudget(conf).limit; got != -1 {
-		t.Fatalf("disabled limit: got %d, want -1", got)
-	}
-}
-
 func TestGHSA_pr6x_vqwr_4hj2_ObjectStreamCountIgnoresStaleRevisions(t *testing.T) {
 	ctx := &model.Context{
 		XRefTable: &model.XRefTable{Table: map[int]*model.XRefTableEntry{}},
@@ -393,7 +378,7 @@ func TestGHSA_pr6x_vqwr_4hj2_LazyObjectStreamsUseCumulativeBudget(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	budget := &objectStreamDecodeBudget{limit: 1 << 30}
+	budget := newObjectStreamDecodeBudget(ctx.XRefTable)
 
 	lazyObject := func(decodedBytes int) types.LazyObjectStreamObject {
 		content := append([]byte("6 0 "), bytes.Repeat([]byte(" "), decodedBytes-5)...)
@@ -426,14 +411,12 @@ func TestGHSA_pr6x_vqwr_4hj2_LazyObjectStreamsUseCumulativeBudget(t *testing.T) 
 	if _, err := accepted.DecodedObject(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if budget.used == 0 {
-		t.Fatal("decoded object stream was not charged")
-	}
 
-	budget.limit = budget.used + 1
+	// The accepted stream decoded to exactly 2 MiB.
+	conf.Limits.MaxTotalDecodeBytes = 2<<20 + 1
 	rejected := lazyObject(2 << 20)
 	if _, err := rejected.DecodedObject(context.Background()); !errors.Is(err, filter.ErrDecodeLimitExceeded) ||
-		!strings.Contains(err.Error(), "object stream decoding exceeded") ||
+		!strings.Contains(err.Error(), "stream decoding exceeded") ||
 		!strings.Contains(err.Error(), "cumulative budget") {
 		t.Fatalf("got %v, want cumulative object-stream budget error", err)
 	}
@@ -441,12 +424,15 @@ func TestGHSA_pr6x_vqwr_4hj2_LazyObjectStreamsUseCumulativeBudget(t *testing.T) 
 
 // ghsaPr6xTwoObjectStream returns a Flate object stream holding a 1 MiB string and an integer, decoded through budget,
 // its two lazy objects and the size of the string object.
-func ghsaPr6xTwoObjectStream(t *testing.T, budget *objectStreamDecodeBudget) (*types.ObjectStreamDict, []types.LazyObjectStreamObject, int) {
+func ghsaPr6xTwoObjectStream(t *testing.T, totalLimit int64) (*types.ObjectStreamDict, []types.LazyObjectStreamObject, int) {
 	t.Helper()
-	ctx, err := model.NewContext(bytes.NewReader(nil), model.NewDefaultConfiguration())
+	conf := model.NewDefaultConfiguration()
+	conf.Limits.MaxTotalDecodeBytes = totalLimit
+	ctx, err := model.NewContext(bytes.NewReader(nil), conf)
 	if err != nil {
 		t.Fatal(err)
 	}
+	budget := newObjectStreamDecodeBudget(ctx.XRefTable)
 
 	firstObject := "(" + strings.Repeat("a", 1<<20) + ") "
 	prolog := fmt.Sprintf("6 0 7 %d ", len(firstObject))
@@ -492,16 +478,15 @@ func ghsaPr6xGetDataConcurrently(objs []types.LazyObjectStreamObject) []error {
 }
 
 func TestGHSA_pr6x_vqwr_4hj2_RejectedObjectStreamStaysRejected(t *testing.T) {
-	budget := &objectStreamDecodeBudget{limit: 1}
-	osd, lazy, objectBytes := ghsaPr6xTwoObjectStream(t, budget)
+	osd, lazy, objectBytes := ghsaPr6xTwoObjectStream(t, 1)
 
 	var before, after runtime.MemStats
 	runtime.GC()
 	runtime.ReadMemStats(&before)
 	_, firstErr := lazy[0].GetData()
 	runtime.ReadMemStats(&after)
-	if !errors.Is(firstErr, filter.ErrDecodeLimitExceeded) || osd.Content != nil || budget.used != 0 {
-		t.Fatalf("first access: content=%d budget=%d err=%v", len(osd.Content), budget.used, firstErr)
+	if !errors.Is(firstErr, filter.ErrDecodeLimitExceeded) || osd.Content != nil {
+		t.Fatalf("first access: content=%d err=%v", len(osd.Content), firstErr)
 	}
 	if alloc := after.TotalAlloc - before.TotalAlloc; alloc > uint64(objectBytes/2) {
 		t.Fatalf("rejected decode allocated %d bytes, want at most %d", alloc, objectBytes/2)
@@ -514,19 +499,18 @@ func TestGHSA_pr6x_vqwr_4hj2_RejectedObjectStreamStaysRejected(t *testing.T) {
 			t.Fatalf("later access: err=%v, want %v", err, firstErr)
 		}
 	}
-	if osd.Content != nil || budget.used != 0 {
-		t.Fatalf("later accesses: content=%d budget=%d", len(osd.Content), budget.used)
+	if osd.Content != nil {
+		t.Fatalf("later accesses: content=%d", len(osd.Content))
 	}
 }
 
 func TestGHSA_pr6x_vqwr_4hj2_ObjectStreamCopiedOnce(t *testing.T) {
-	budget := &objectStreamDecodeBudget{limit: 1 << 30}
-	osd, lazy, _ := ghsaPr6xTwoObjectStream(t, budget)
+	osd, lazy, _ := ghsaPr6xTwoObjectStream(t, 0)
 	if _, err := lazy[0].GetData(); err != nil {
 		t.Fatal(err)
 	}
-	if len(osd.Content) != cap(osd.Content) || budget.used != int64(len(osd.Content)) {
-		t.Fatalf("decoded length=%d capacity=%d charged=%d", len(osd.Content), cap(osd.Content), budget.used)
+	if len(osd.Content) != cap(osd.Content) {
+		t.Fatalf("decoded length=%d capacity=%d", len(osd.Content), cap(osd.Content))
 	}
 	// Every later object access reuses the decoded stream without copying it again.
 	if allocs := testing.AllocsPerRun(10, func() { _, _ = lazy[1].GetData() }); allocs != 0 {

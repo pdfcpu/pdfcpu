@@ -249,7 +249,7 @@ func streamBytes(xRefTable *model.XRefTable, sd *types.StreamDict, context strin
 		if log.InfoEnabled() {
 			log.Info.Printf("streamBytes: no filter pipeline\n")
 		}
-		if err := sd.DecodeWithLimit(imageDecodeLimit(xRefTable)); err != nil {
+		if err := xRefTable.DecodeStream(sd); err != nil {
 			return nil, fmt.Errorf("%s decode: %w", context, err)
 		}
 		return sd.Content, nil
@@ -269,7 +269,7 @@ func streamBytes(xRefTable *model.XRefTable, sd *types.StreamDict, context strin
 
 	case filter.DCT, filter.Flate, filter.CCITTFax, filter.ASCII85, filter.RunLength, filter.JPX, filter.JBIG2:
 		// If color space is CMYK then write .tif else write .png
-		if err := sd.DecodeWithLimit(imageDecodeLimit(xRefTable)); err != nil {
+		if err := xRefTable.DecodeStream(sd); err != nil {
 			return nil, fmt.Errorf("%s decode: %w", context, err)
 		}
 
