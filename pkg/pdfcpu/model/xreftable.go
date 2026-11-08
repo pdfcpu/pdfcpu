@@ -2197,6 +2197,9 @@ const (
 	parsedDictEntryBytes = 96
 )
 
+// ErrParsedLimitExceeded is the MaxParsedBytes refusal; it also satisfies errors.Is(err, ErrLimitExceeded).
+var ErrParsedLimitExceeded = fmt.Errorf("parsed objects over MaxParsedBytes: %w", ErrLimitExceeded)
+
 type parsedChargeKey struct{}
 
 // WithParsedCharge returns a context under which the object parser charges what it parses to xRefTable's
@@ -2215,8 +2218,7 @@ func chargeParsed(c context.Context, n int64) error {
 	}
 	x.decodedStreamBudget.parsed += n
 	if max := x.Conf.Limits.MaxParsedBytes; x.decodedStreamBudget.parsed > max {
-		return fmt.Errorf("%w: parsed objects hold an estimated %d bytes, over MaxParsedBytes %d",
-			ErrLimitExceeded, x.decodedStreamBudget.parsed, max)
+		return fmt.Errorf("%w: an estimated %d bytes, limit %d", ErrParsedLimitExceeded, x.decodedStreamBudget.parsed, max)
 	}
 	return nil
 }

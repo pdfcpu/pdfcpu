@@ -187,7 +187,7 @@ func TestMaxParsedBytesLimit(t *testing.T) {
 		if err := read(0); err != nil {
 			t.Fatalf("packed=%v limit unset: %v", packed, err)
 		}
-		if err := read(1 << 20); !errors.Is(err, model.ErrLimitExceeded) {
+		if err := read(1 << 20); !errors.Is(err, model.ErrParsedLimitExceeded) || !errors.Is(err, model.ErrLimitExceeded) {
 			t.Fatalf("packed=%v: got %v, want ErrLimitExceeded", packed, err)
 		}
 		if err := read(100_000 * 40 * 2); err != nil {
