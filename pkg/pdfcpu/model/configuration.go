@@ -498,6 +498,10 @@ type ResourceLimits struct {
 	// Zero selects the default of 64 MiB.
 	MaxObjectBytes int64
 
+	// StrictObjectBytes makes an object over MaxObjectBytes a limit error (ErrObjectBytesExceeded)
+	// instead of a skipped object. Zero keeps skipping.
+	StrictObjectBytes bool
+
 	// MaxStreamBytes limits encoded stream bytes read from a PDF.
 	MaxStreamBytes int64
 

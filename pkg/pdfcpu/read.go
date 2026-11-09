@@ -33,7 +33,6 @@ import (
 	"strings"
 	"sync"
 	"unicode"
-	"unsafe"
 
 	"github.com/pdfcpu/pdfcpu/internal/contextutil"
 	"github.com/pdfcpu/pdfcpu/pkg/filter"
@@ -1019,7 +1018,7 @@ func parseXRefStream(c context.Context, ctx *model.Context, rd io.Reader, offset
 
 	buf, endInd, streamInd, streamOffset, err := buffer(c, rd, objectBufferLimit(ctx))
 	if err != nil {
-		return nil, err
+		return nil, strictObjectBytes(ctx, err)
 	}
 
 	if log.ReadEnabled() {
@@ -2280,23 +2279,15 @@ func repairableLastXRefSection(ctx *model.Context, err error) bool {
 	return ctx.XRefTable.ValidationMode == model.ValidationRelaxed && errors.Is(err, errMissingXRefEOF)
 }
 
-// bufString views b as a string without copying: b's bytes must not change while the string is in use.
-// Reads and appends only touch bytes beyond len(b).
-func bufString(b []byte) string {
-	return unsafe.String(unsafe.SliceData(b), len(b))
-}
-
 func growBufBy(buf []byte, size int, rd io.Reader) ([]byte, error) {
-	n := len(buf)
-	// Grows in place: no temporary chunk to copy.
-	buf = append(buf, make([]byte, size)...)
+	b := make([]byte, size)
 
-	if _, err := fillBuffer(rd, buf[n:]); err != nil {
+	if _, err := fillBuffer(rd, b); err != nil {
 		return nil, err
 	}
 	//log.Read.Printf("growBufBy: Read %d bytes\n", n)
 
-	return buf, nil
+	return append(buf, b...), nil
 }
 
 func nextStreamOffset(line string, streamInd int) (int, error) {
@@ -2375,13 +2366,17 @@ func newRepairScanner(ctx *model.Context, rd io.Reader) *bufio.Scanner {
 	return s
 }
 
+// strictObjectBytes makes an oversize object a limit error when Limits.StrictObjectBytes is set.
+func strictObjectBytes(ctx *model.Context, err error) error {
+	if err != nil && ctx.Configuration != nil && ctx.Configuration.Limits.StrictObjectBytes && errors.Is(err, errObjectBufferLimit) {
+		return fmt.Errorf("%w: %w", err, model.ErrObjectBytesExceeded)
+	}
+	return err
+}
+
 func growObjectBuffer(buf []byte, growSize int, rd io.Reader, maxObjectBytes int64) ([]byte, error) {
 	remaining := maxObjectBytes - int64(len(buf))
 	if remaining <= 0 {
-		if maxObjectBytes != model.DefaultResourceLimits().MaxObjectBytes {
-			// A caller-set limit is a limit error; the built-in default keeps skipping the object as before.
-			return nil, fmt.Errorf("maximum length %d: %w: %w", maxObjectBytes, errObjectBufferLimit, model.ErrObjectBytesExceeded)
-		}
 		return nil, fmt.Errorf("maximum length %d: %w", maxObjectBytes, errObjectBufferLimit)
 	}
 	if int64(growSize) > remaining {
@@ -2404,7 +2399,7 @@ func streamOffsetForBuffer(buf []byte, line string, streamInd int, rd io.Reader,
 		if err != nil {
 			return nil, 0, err
 		}
-		line = bufString(buf)
+		line = string(buf)
 	}
 }
 
@@ -2429,7 +2424,7 @@ func buffer(c context.Context, rd io.Reader, maxObjectBytes int64) (buf []byte, 
 		}
 
 		growSize = min(growSize*2, maxBufSize)
-		line := bufString(buf)
+		line := string(buf)
 
 		endInd, streamInd, err = model.DetectKeywords(c, line)
 		if err != nil {
@@ -2837,7 +2832,7 @@ func bufferedObject(c context.Context, ctx *model.Context, rd io.Reader) ([]byte
 		if budgetErr := chargeObjectRead(c, ctx, cr.n); budgetErr != nil {
 			return nil, 0, 0, 0, budgetErr
 		}
-		return nil, 0, 0, 0, err
+		return nil, 0, 0, 0, strictObjectBytes(ctx, err)
 	}
 	// Ignore read-ahead beyond this object's end.
 	if err := chargeObjectRead(c, ctx, objectExtent(len(buf), endInd, streamInd, streamOffset)); err != nil {
@@ -2865,7 +2860,7 @@ func object(c context.Context, ctx *model.Context, offset int64, objNr, genNr in
 
 	//log.Read.Printf("buflen=%d\n%s", len(buf), hex.Dump(buf))
 
-	line := bufString(buf)
+	line := string(buf)
 
 	var l string
 

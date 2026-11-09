@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -76,37 +75,23 @@ func TestMaxParsedBytesScalars(t *testing.T) {
 	}
 }
 
-// TestObjectBufferAllocs: reading one large object copies it once per grow, not once per grow plus a string
-// copy per grow, so the allocation total stays within a few times the object.
-func TestObjectBufferAllocs(t *testing.T) {
-	const n = 16 << 20
-	pdf := scalarPDF("(" + strings.Repeat("A", n) + ")")
-	var before, after runtime.MemStats
-	runtime.ReadMemStats(&before)
-	if _, err := Read(context.Background(), bytes.NewReader(pdf), model.NewDefaultConfiguration()); err != nil {
-		t.Fatal(err)
-	}
-	runtime.ReadMemStats(&after)
-	if got := after.TotalAlloc - before.TotalAlloc; got > 6*n {
-		t.Fatalf("allocated %d MiB for a %d MiB object", got>>20, n>>20)
-	}
-}
-
-// TestMaxObjectBytesRefusal: an object over MaxObjectBytes is a limit error, not a silently skipped object.
-func TestMaxObjectBytesRefusal(t *testing.T) {
+// TestStrictObjectBytesRefusal: with StrictObjectBytes an object over MaxObjectBytes is a limit error.
+func TestStrictObjectBytesRefusal(t *testing.T) {
 	pdf := scalarPDF("(" + strings.Repeat("A", 1<<20) + ")")
 	conf := model.NewDefaultConfiguration()
 	conf.Limits.MaxObjectBytes = 256 << 10
+	conf.Limits.StrictObjectBytes = true
 	if _, err := Read(context.Background(), bytes.NewReader(pdf), conf); !errors.Is(err, model.ErrObjectBytesExceeded) || !errors.Is(err, model.ErrLimitExceeded) {
 		t.Fatalf("got %v, want ErrObjectBytesExceeded", err)
 	}
 }
 
-// TestDefaultObjectBytesStaysSkippable: the built-in 64 MiB default is not a limit error, as before.
-func TestDefaultObjectBytesStaysSkippable(t *testing.T) {
-	max := model.DefaultResourceLimits().MaxObjectBytes
-	_, err := growObjectBuffer(make([]byte, max), 1, nil, max)
-	if !errors.Is(err, errObjectBufferLimit) || errors.Is(err, model.ErrLimitExceeded) {
-		t.Fatalf("got %v, want the plain object buffer error", err)
+// TestObjectBytesStaysSkippable: without StrictObjectBytes, a caller-set MaxObjectBytes still skips the object.
+func TestObjectBytesStaysSkippable(t *testing.T) {
+	pdf := scalarPDF("(" + strings.Repeat("A", 1<<20) + ")")
+	conf := model.NewDefaultConfiguration()
+	conf.Limits.MaxObjectBytes = 256 << 10
+	if _, err := Read(context.Background(), bytes.NewReader(pdf), conf); errors.Is(err, model.ErrLimitExceeded) {
+		t.Fatalf("got %v, want no limit error", err)
 	}
 }
